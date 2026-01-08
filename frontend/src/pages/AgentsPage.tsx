@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -534,8 +534,8 @@ function ChannelsTab() {
 export default function AgentsPage() {
   const [realtimeUpdates, setRealtimeUpdates] = useState<AgentUpdate[]>([])
   const [learningEvents, setLearningEvents] = useState<LearningEvent[]>([])
-  // Session 734: Added 'monitoring', 'tools', 'templates' tabs
-  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels' | 'monitoring' | 'tools' | 'templates'>('directory')
+  // Session 734: Added 'monitoring', 'tools', 'templates', 'orchestrations' tabs
+  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels' | 'monitoring' | 'tools' | 'templates' | 'orchestrations'>('directory')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['creation', 'research', 'strategy']))
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
@@ -741,6 +741,70 @@ export default function AgentsPage() {
     onSuccess: () => refetchTemplates(),
   })
 
+  // Session 734: Agent Orchestrations CRUD
+  const [orchestrationStatusFilter, setOrchestrationStatusFilter] = useState<string>('')
+  const [orchestrationModalOpen, setOrchestrationModalOpen] = useState(false)
+  const [editingOrchestration, setEditingOrchestration] = useState<{
+    id: string
+    name: string
+    description: string
+    execution_strategy: string
+    agent_sequence: string[]
+  } | null>(null)
+  const [orchestrationForm, setOrchestrationForm] = useState({
+    name: '',
+    description: '',
+    execution_strategy: 'sequential',
+    agent_sequence: '' as string, // Comma-separated for input
+  })
+
+  const { data: orchestrationsData, isLoading: orchestrationsLoading, refetch: refetchOrchestrations } = useQuery({
+    queryKey: ['agent-orchestrations', orchestrationStatusFilter],
+    queryFn: async () => {
+      const params: Record<string, string> = {}
+      if (orchestrationStatusFilter) params.status = orchestrationStatusFilter
+      const response = await agentOrchestrationsApi.list(params)
+      return response.data?.results || response.data?.data?.results || response.data || []
+    },
+    enabled: activeTab === 'orchestrations',
+  })
+
+  const createOrchestrationMutation = useMutation({
+    mutationFn: (data: {
+      name: string
+      description?: string
+      execution_strategy?: string
+      agent_sequence?: string[]
+    }) => agentOrchestrationsApi.create(data),
+    onSuccess: () => {
+      refetchOrchestrations()
+      setOrchestrationModalOpen(false)
+      setOrchestrationForm({
+        name: '', description: '', execution_strategy: 'sequential', agent_sequence: '',
+      })
+    },
+  })
+
+  const updateOrchestrationMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      agentOrchestrationsApi.update(id, data),
+    onSuccess: () => {
+      refetchOrchestrations()
+      setOrchestrationModalOpen(false)
+      setEditingOrchestration(null)
+    },
+  })
+
+  const deleteOrchestrationMutation = useMutation({
+    mutationFn: (id: string) => agentOrchestrationsApi.delete(id),
+    onSuccess: () => refetchOrchestrations(),
+  })
+
+  const executeOrchestrationMutation = useMutation({
+    mutationFn: (id: string) => agentOrchestrationsApi.execute(id),
+    onSuccess: () => refetchOrchestrations(),
+  })
+
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
     // Session 688: Filter out connection messages - only show real agent activity
@@ -905,7 +969,7 @@ export default function AgentsPage() {
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-dark-border pb-4">
-        {(['directory', 'activity', 'learning', 'channels', 'monitoring', 'tools', 'templates'] as const).map((tab) => (
+        {(['directory', 'activity', 'learning', 'channels', 'monitoring', 'tools', 'templates', 'orchestrations'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -2524,6 +2588,380 @@ export default function AgentsPage() {
                   <Loader2 size={16} className="animate-spin" />
                 )}
                 {editingTemplate ? 'Save Changes' : 'Create Template'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 734: Orchestrations Tab - Multi-agent workflow management */}
+      {activeTab === 'orchestrations' && (
+        <div className="space-y-6">
+          {/* Orchestrations Header */}
+          <div className="card bg-gradient-to-r from-accent-purple/10 to-accent-pink/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-lg bg-accent-purple/20 flex items-center justify-center">
+                  <GitMerge size={28} className="text-accent-purple" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Agent Orchestrations</h3>
+                  <p className="text-gray-400">
+                    Multi-agent workflows and coordination
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Status Filter */}
+                <select
+                  value={orchestrationStatusFilter}
+                  onChange={(e) => setOrchestrationStatusFilter(e.target.value)}
+                  className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="running">Running</option>
+                  <option value="completed">Completed</option>
+                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                <button
+                  onClick={() => refetchOrchestrations()}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingOrchestration(null)
+                    setOrchestrationForm({
+                      name: '', description: '', execution_strategy: 'sequential', agent_sequence: '',
+                    })
+                    setOrchestrationModalOpen(true)
+                  }}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Create Orchestration
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {orchestrationsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : Array.isArray(orchestrationsData) && orchestrationsData.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {orchestrationsData.map((orchestration: {
+                id: string
+                name: string
+                description?: string
+                status: string
+                status_display: string
+                execution_strategy: string
+                agent_sequence: string[]
+                progress_percentage: number
+                current_agent_name?: string
+                total_execution_time?: number
+                total_cost?: number
+                execution_count: number
+                created_at: string
+                updated_at: string
+              }) => (
+                <div
+                  key={orchestration.id}
+                  className="card hover:border-primary-500/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-10 w-10 rounded-lg flex items-center justify-center",
+                        orchestration.status === 'running' ? 'bg-accent-green/20' :
+                        orchestration.status === 'completed' ? 'bg-accent-cyan/20' :
+                        orchestration.status === 'failed' ? 'bg-accent-red/20' :
+                        orchestration.status === 'cancelled' ? 'bg-gray-500/20' :
+                        'bg-accent-amber/20'
+                      )}>
+                        {orchestration.status === 'running' ? (
+                          <Activity size={20} className="text-accent-green animate-pulse" />
+                        ) : orchestration.status === 'completed' ? (
+                          <CheckCircle size={20} className="text-accent-cyan" />
+                        ) : orchestration.status === 'failed' ? (
+                          <AlertTriangle size={20} className="text-accent-red" />
+                        ) : orchestration.status === 'cancelled' ? (
+                          <Pause size={20} className="text-gray-400" />
+                        ) : (
+                          <CircleDot size={20} className="text-accent-amber" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white">{orchestration.name}</h4>
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded capitalize",
+                          orchestration.status === 'running' ? 'bg-accent-green/20 text-accent-green' :
+                          orchestration.status === 'completed' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                          orchestration.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                          orchestration.status === 'cancelled' ? 'bg-gray-500/20 text-gray-400' :
+                          'bg-accent-amber/20 text-accent-amber'
+                        )}>
+                          {orchestration.status_display || orchestration.status}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {orchestration.execution_strategy}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                    {orchestration.description || 'No description provided'}
+                  </p>
+
+                  {/* Progress bar for running orchestrations */}
+                  {orchestration.status === 'running' && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-gray-400">Progress</span>
+                        <span className="text-accent-green">{orchestration.progress_percentage}%</span>
+                      </div>
+                      <div className="h-2 bg-dark-bg rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent-green transition-all"
+                          style={{ width: `${orchestration.progress_percentage}%` }}
+                        />
+                      </div>
+                      {orchestration.current_agent_name && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Current: {orchestration.current_agent_name}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Agent sequence preview */}
+                  {orchestration.agent_sequence && orchestration.agent_sequence.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-1">Agents ({orchestration.agent_sequence.length})</p>
+                      <div className="flex flex-wrap gap-1">
+                        {orchestration.agent_sequence.slice(0, 3).map((agent, idx) => (
+                          <span key={idx} className="text-xs bg-dark-bg px-2 py-0.5 rounded text-gray-300">
+                            {agent}
+                          </span>
+                        ))}
+                        {orchestration.agent_sequence.length > 3 && (
+                          <span className="text-xs text-gray-500">
+                            +{orchestration.agent_sequence.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 text-center border-t border-dark-border pt-3">
+                    <div>
+                      <p className="text-lg font-semibold text-white">{orchestration.execution_count}</p>
+                      <p className="text-xs text-gray-500">Executions</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-white">
+                        {orchestration.total_execution_time
+                          ? `${(orchestration.total_execution_time / 60).toFixed(1)}m`
+                          : '—'}
+                      </p>
+                      <p className="text-xs text-gray-500">Total Time</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-white">
+                        {orchestration.total_cost ? `$${orchestration.total_cost.toFixed(2)}` : '—'}
+                      </p>
+                      <p className="text-xs text-gray-500">Cost</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-dark-border flex items-center justify-between">
+                    <div className="text-xs text-gray-500">
+                      {new Date(orchestration.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {orchestration.status === 'pending' && (
+                        <button
+                          onClick={() => executeOrchestrationMutation.mutate(orchestration.id)}
+                          disabled={executeOrchestrationMutation.isPending}
+                          className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-green"
+                          title="Execute orchestration"
+                        >
+                          <Play size={14} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setEditingOrchestration({
+                            id: orchestration.id,
+                            name: orchestration.name,
+                            description: orchestration.description || '',
+                            execution_strategy: orchestration.execution_strategy,
+                            agent_sequence: orchestration.agent_sequence || [],
+                          })
+                          setOrchestrationForm({
+                            name: orchestration.name,
+                            description: orchestration.description || '',
+                            execution_strategy: orchestration.execution_strategy,
+                            agent_sequence: (orchestration.agent_sequence || []).join(', '),
+                          })
+                          setOrchestrationModalOpen(true)
+                        }}
+                        className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-cyan"
+                        title="Edit orchestration"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete orchestration "${orchestration.name}"?`)) {
+                            deleteOrchestrationMutation.mutate(orchestration.id)
+                          }
+                        }}
+                        className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-red"
+                        title="Delete orchestration"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card text-center py-12 text-gray-400">
+              <GitMerge className="mx-auto mb-3 opacity-50" size={48} />
+              <p className="text-lg font-medium">No Orchestrations Found</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {orchestrationStatusFilter
+                  ? 'Try adjusting your filter'
+                  : 'Create your first multi-agent orchestration'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session 734: Orchestration Create/Edit Modal */}
+      {orchestrationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <h2 className="text-xl font-bold">
+                {editingOrchestration ? 'Edit Orchestration' : 'Create New Orchestration'}
+              </h2>
+              <button
+                onClick={() => {
+                  setOrchestrationModalOpen(false)
+                  setEditingOrchestration(null)
+                }}
+                className="p-2 rounded-lg hover:bg-dark-border transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input
+                  type="text"
+                  value={orchestrationForm.name}
+                  onChange={(e) => setOrchestrationForm({ ...orchestrationForm, name: e.target.value })}
+                  placeholder="My Orchestration"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={orchestrationForm.description}
+                  onChange={(e) => setOrchestrationForm({ ...orchestrationForm, description: e.target.value })}
+                  placeholder="Describe what this orchestration does..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Execution Strategy</label>
+                <select
+                  value={orchestrationForm.execution_strategy}
+                  onChange={(e) => setOrchestrationForm({ ...orchestrationForm, execution_strategy: e.target.value })}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                >
+                  <option value="sequential">Sequential - One after another</option>
+                  <option value="parallel">Parallel - All at once</option>
+                  <option value="conditional">Conditional - Based on results</option>
+                  <option value="pipeline">Pipeline - Output feeds next input</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Agent Sequence (comma-separated)</label>
+                <input
+                  type="text"
+                  value={orchestrationForm.agent_sequence}
+                  onChange={(e) => setOrchestrationForm({ ...orchestrationForm, agent_sequence: e.target.value })}
+                  placeholder="ResearchAgent, ContentWriterAgent, SEOOptimizerAgent"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter agent names separated by commas
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-dark-border">
+              <button
+                onClick={() => {
+                  setOrchestrationModalOpen(false)
+                  setEditingOrchestration(null)
+                }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const agentSequence = orchestrationForm.agent_sequence
+                    .split(',')
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0)
+
+                  if (editingOrchestration) {
+                    updateOrchestrationMutation.mutate({
+                      id: editingOrchestration.id,
+                      data: {
+                        name: orchestrationForm.name,
+                        description: orchestrationForm.description,
+                        execution_strategy: orchestrationForm.execution_strategy,
+                        agent_sequence: agentSequence,
+                      },
+                    })
+                  } else {
+                    createOrchestrationMutation.mutate({
+                      name: orchestrationForm.name,
+                      description: orchestrationForm.description || undefined,
+                      execution_strategy: orchestrationForm.execution_strategy,
+                      agent_sequence: agentSequence.length > 0 ? agentSequence : undefined,
+                    })
+                  }
+                }}
+                disabled={!orchestrationForm.name || createOrchestrationMutation.isPending || updateOrchestrationMutation.isPending}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                {(createOrchestrationMutation.isPending || updateOrchestrationMutation.isPending) && (
+                  <Loader2 size={16} className="animate-spin" />
+                )}
+                {editingOrchestration ? 'Save Changes' : 'Create Orchestration'}
               </button>
             </div>
           </div>
