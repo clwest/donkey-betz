@@ -10,11 +10,11 @@
 
 This document tracks ALL backend APIs that have NO corresponding frontend UI. These are fully functional backend features waiting for frontend exposure.
 
-**Gap Summary (Session 731 Verification):**
+**Gap Summary (Session 732 Update):**
 
 | System | Backend APIs | Frontend | Priority |
 |--------|--------------|----------|----------|
-| **RAG/Documents** | 6 endpoints | ❌ None | HIGH |
+| **RAG/Documents** | 6 endpoints | ✅ COMPLETE | DONE |
 | **Agent Channels** | 10 endpoints | ❌ None | HIGH |
 | **Mythology** | 11 endpoints | ❌ None | HIGH |
 | **Intelligence/Income** | 15+ endpoints | ⚠️ Partial | MEDIUM |
@@ -25,42 +25,31 @@ This document tracks ALL backend APIs that have NO corresponding frontend UI. Th
 
 ---
 
-## HIGH PRIORITY GAPS
+## COMPLETED (Session 732)
 
-### 1. RAG/Document Embedding System (Session 731)
+### RAG/Document Embedding System - DONE
 
-**Backend:** Fully functional with 7,239 document embeddings using pgvector
+**Status:** ✅ Implemented in Session 732
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/v1/rag/upload-document/` | POST | Upload documents for RAG processing |
-| `/api/v1/rag/semantic-search/` | POST | Semantic search across documents |
-| `/api/v1/rag/generate/` | POST | Generate responses with RAG context |
-| `/api/v1/rag/stats/` | GET | Get embedding statistics |
-| `/api/v1/rag/advanced-query/` | POST | Multi-collection search |
-| `/api/v1/rag/optimize/` | POST | Optimize embedding storage |
+**Implementation:**
+- `ragApi` added to `frontend/src/lib/api.ts` (13 endpoints)
+- `DocumentsPage.tsx` created (~600 lines)
+- Route `/documents` added to `App.tsx`
+- Navigation link added to `Sidebar.tsx`
 
-**Frontend API Needed:**
-```typescript
-export const ragApi = {
-  uploadDocument: (file: File, options?: { collection_id?: string }) =>
-    api.postForm('/v1/rag/upload-document/', { file, ...options }),
-  semanticSearch: (query: string, options?: { limit?: number, threshold?: number }) =>
-    api.post('/v1/rag/semantic-search/', { query, ...options }),
-  generate: (query: string, options?: { max_context_chunks?: number }) =>
-    api.post('/v1/rag/generate/', { query, ...options }),
-  stats: () => api.get('/v1/rag/stats/'),
-  advancedQuery: (query: string, collection_ids?: string[]) =>
-    api.post('/v1/rag/advanced-query/', { query, collection_ids }),
-  optimize: () => api.post('/v1/rag/optimize/'),
-};
-```
-
-**UI Page Needed:** `DocumentsPage.tsx` with document upload, semantic search, and stats display.
+**Features Delivered:**
+- Document upload with drag-and-drop
+- Semantic search interface with similarity scores
+- Statistics dashboard (embeddings, documents, collections, chunks, storage)
+- Document list with status badges and delete
+- Collection organization support
+- Storage optimization button
 
 ---
 
-### 2. Mythology System (Session 729)
+## HIGH PRIORITY GAPS
+
+### 1. Mythology System (Session 729)
 
 **Backend:** Fully functional with 10 MythPatterns, 56 Events, 4 Alerts
 
