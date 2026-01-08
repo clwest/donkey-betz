@@ -805,6 +805,11 @@ export default function AgentsPage() {
     onSuccess: () => refetchOrchestrations(),
   })
 
+  const resetOrchestrationMutation = useMutation({
+    mutationFn: (id: string) => agentOrchestrationsApi.reset(id),
+    onSuccess: () => refetchOrchestrations(),
+  })
+
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
     // Session 688: Filter out connection messages - only show real agent activity
@@ -2794,6 +2799,16 @@ export default function AgentsPage() {
                           title="Execute orchestration"
                         >
                           <Play size={14} />
+                        </button>
+                      )}
+                      {(orchestration.status === 'failed' || orchestration.status === 'completed') && (
+                        <button
+                          onClick={() => resetOrchestrationMutation.mutate(orchestration.id)}
+                          disabled={resetOrchestrationMutation.isPending}
+                          className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-amber"
+                          title="Reset orchestration to run again"
+                        >
+                          <RefreshCw size={14} />
                         </button>
                       )}
                       <button
