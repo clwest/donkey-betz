@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi } from '@/lib/api'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -230,10 +230,311 @@ const CATEGORY_CONFIG: Record<string, { name: string; color: string }> = {
   general: { name: 'Specialized', color: 'bg-slate-500' },
 }
 
+// =============================================================================
+// Session 734: Channels Tab Component - "Slack for AI Agents"
+// =============================================================================
+
+interface Channel {
+  id: string
+  name: string
+  display_name?: string
+  description: string
+  channel_type: string
+  topic?: string
+  is_public: boolean
+  is_archived: boolean
+  member_count: number
+  message_count: number
+  last_activity?: string
+  created_at: string
+}
+
+interface ChannelMessage {
+  id: string
+  channel: string
+  content: string
+  message_type: string
+  sender_agent?: { id: string; name: string }
+  sender_user?: { id: string; username: string }
+  created_at: string
+  reactions?: Record<string, number>
+}
+
+interface ChannelMembership {
+  id: string
+  agent?: { id: string; name: string }
+  role: string
+  is_active: boolean
+  presence_status: string
+  joined_at: string
+}
+
+function ChannelsTab() {
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
+  const [newMessage, setNewMessage] = useState('')
+  const queryClient = useQueryClient()
+
+  // Fetch channels
+  const { data: channelsData, isLoading: channelsLoading } = useQuery({
+    queryKey: ['agent-channels'],
+    queryFn: async () => {
+      const response = await agentChannelsApi.list()
+      return response.data
+    },
+  })
+
+  // Fetch messages for selected channel
+  const { data: messagesData, isLoading: messagesLoading } = useQuery({
+    queryKey: ['channel-messages', selectedChannel?.id],
+    queryFn: async () => {
+      if (!selectedChannel) return { results: [] }
+      const response = await agentChannelsApi.messages(selectedChannel.id, { limit: 50 })
+      return response.data
+    },
+    enabled: !!selectedChannel,
+  })
+
+  // Fetch memberships for selected channel
+  const { data: membershipsData } = useQuery({
+    queryKey: ['channel-memberships', selectedChannel?.id],
+    queryFn: async () => {
+      if (!selectedChannel) return { results: [] }
+      const response = await agentChannelsApi.memberships(selectedChannel.id)
+      return response.data
+    },
+    enabled: !!selectedChannel,
+  })
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!selectedChannel) throw new Error('No channel selected')
+      return agentChannelsApi.sendMessage({
+        channel: selectedChannel.id,
+        content,
+        message_type: 'text',
+      })
+    },
+    onSuccess: () => {
+      setNewMessage('')
+      queryClient.invalidateQueries({ queryKey: ['channel-messages', selectedChannel?.id] })
+    },
+  })
+
+  const channels: Channel[] = channelsData?.results || channelsData || []
+  const messages: ChannelMessage[] = messagesData?.results || messagesData || []
+  const memberships: ChannelMembership[] = membershipsData?.results || membershipsData || []
+
+  const handleSendMessage = () => {
+    if (newMessage.trim() && selectedChannel) {
+      sendMessageMutation.mutate(newMessage.trim())
+    }
+  }
+
+  const getChannelTypeColor = (type: string) => {
+    switch (type) {
+      case 'project': return 'bg-accent-purple/20 text-accent-purple'
+      case 'topic': return 'bg-accent-cyan/20 text-accent-cyan'
+      case 'team': return 'bg-accent-green/20 text-accent-green'
+      default: return 'bg-gray-500/20 text-gray-400'
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-300px)] min-h-[500px]">
+      {/* Channel List */}
+      <div className="lg:col-span-1 card overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-dark-border">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Hash size={18} className="text-accent-cyan" />
+            Channels
+            <span className="text-xs text-gray-500 ml-auto">{channels.length}</span>
+          </h3>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {channelsLoading ? (
+            <div className="p-4 text-center text-gray-400">Loading channels...</div>
+          ) : channels.length === 0 ? (
+            <div className="p-4 text-center text-gray-400">
+              <Hash size={32} className="mx-auto mb-2 opacity-50" />
+              <p>No channels yet</p>
+              <p className="text-xs text-gray-500 mt-1">Channels will appear here when agents collaborate</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-dark-border">
+              {channels.map((channel) => (
+                <button
+                  key={channel.id}
+                  onClick={() => setSelectedChannel(channel)}
+                  className={cn(
+                    'w-full p-3 text-left hover:bg-dark-bg/50 transition-colors',
+                    selectedChannel?.id === channel.id && 'bg-primary-600/20 border-l-2 border-primary-500'
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Hash size={14} className="text-gray-400" />
+                    <span className="font-medium text-white truncate">
+                      {channel.display_name || channel.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={cn('px-1.5 py-0.5 rounded', getChannelTypeColor(channel.channel_type))}>
+                      {channel.channel_type}
+                    </span>
+                    <span className="text-gray-500">{channel.member_count} members</span>
+                  </div>
+                  {channel.description && (
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{channel.description}</p>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Message Thread */}
+      <div className="lg:col-span-2 card overflow-hidden flex flex-col">
+        {selectedChannel ? (
+          <>
+            {/* Channel Header */}
+            <div className="p-4 border-b border-dark-border">
+              <div className="flex items-center gap-2">
+                <Hash size={20} className="text-accent-cyan" />
+                <h3 className="font-semibold text-white">
+                  {selectedChannel.display_name || selectedChannel.name}
+                </h3>
+                <span className={cn('text-xs px-2 py-0.5 rounded', getChannelTypeColor(selectedChannel.channel_type))}>
+                  {selectedChannel.channel_type}
+                </span>
+              </div>
+              {selectedChannel.topic && (
+                <p className="text-sm text-gray-400 mt-1">{selectedChannel.topic}</p>
+              )}
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messagesLoading ? (
+                <div className="text-center text-gray-400">Loading messages...</div>
+              ) : messages.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">
+                  <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
+                  <p>No messages yet</p>
+                  <p className="text-xs text-gray-500 mt-1">Be the first to send a message!</p>
+                </div>
+              ) : (
+                messages.map((message) => (
+                  <div key={message.id} className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary-600/30 flex items-center justify-center flex-shrink-0">
+                      <Bot size={16} className="text-primary-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-white text-sm">
+                          {message.sender_agent?.name || message.sender_user?.username || 'System'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(message.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-300 whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="p-4 border-t border-dark-border">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder={`Message #${selectedChannel.display_name || selectedChannel.name}`}
+                  className="flex-1 px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send size={18} />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="text-center">
+              <Hash size={48} className="mx-auto mb-3 opacity-30" />
+              <p className="text-lg">Select a channel</p>
+              <p className="text-sm text-gray-500 mt-1">Choose a channel from the list to view messages</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Members Panel */}
+      <div className="lg:col-span-1 card overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-dark-border">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Users size={18} className="text-accent-green" />
+            Members
+            {selectedChannel && (
+              <span className="text-xs text-gray-500 ml-auto">{memberships.length}</span>
+            )}
+          </h3>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {!selectedChannel ? (
+            <div className="p-4 text-center text-gray-500 text-sm">
+              Select a channel to see members
+            </div>
+          ) : memberships.length === 0 ? (
+            <div className="p-4 text-center text-gray-400">
+              <Users size={24} className="mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No members yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-dark-border">
+              {memberships.map((membership) => (
+                <div key={membership.id} className="p-3 flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-8 h-8 rounded-full bg-primary-600/30 flex items-center justify-center">
+                      <Bot size={14} className="text-primary-400" />
+                    </div>
+                    <span
+                      className={cn(
+                        'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-dark-card',
+                        membership.presence_status === 'online' ? 'bg-accent-green' :
+                        membership.presence_status === 'busy' ? 'bg-accent-amber' :
+                        'bg-gray-500'
+                      )}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">
+                      {membership.agent?.name || 'Unknown Agent'}
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">{membership.role}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AgentsPage() {
   const [realtimeUpdates, setRealtimeUpdates] = useState<AgentUpdate[]>([])
   const [learningEvents, setLearningEvents] = useState<LearningEvent[]>([])
-  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning'>('directory')
+  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels'>('directory')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['creation', 'research', 'strategy']))
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
@@ -494,7 +795,7 @@ export default function AgentsPage() {
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-dark-border pb-4">
-        {(['directory', 'activity', 'learning'] as const).map((tab) => (
+        {(['directory', 'activity', 'learning', 'channels'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1203,6 +1504,11 @@ export default function AgentsPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Session 734: Channels Tab - Slack for AI Agents */}
+      {activeTab === 'channels' && (
+        <ChannelsTab />
       )}
 
       {/* Session 695: Dream Gallery Modal */}

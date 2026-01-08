@@ -16,7 +16,7 @@ This document tracks ALL backend APIs that have NO corresponding frontend UI. Th
 |--------|--------------|----------|----------|
 | **RAG/Documents** | 6 endpoints | ✅ COMPLETE | DONE |
 | **Mythology Lab** | 11 endpoints | ✅ COMPLETE | DONE |
-| **Agent Channels** | 10 endpoints | ❌ None | HIGH |
+| **Agent Channels** | 10 endpoints | ✅ COMPLETE | DONE |
 | **Intelligence/Income** | 15+ endpoints | ⚠️ Partial | MEDIUM |
 | **Agent Templates CRUD** | 5 endpoints | ⚠️ Read-only | MEDIUM |
 | **Agent Orchestrations** | 5 endpoints | ⚠️ Partial | MEDIUM |
@@ -127,7 +127,9 @@ export const incomeBuilderApi = {
 
 ---
 
-## Critical Gap: Agent Channels ("Slack for AI Agents")
+## Agent Channels ("Slack for AI Agents") - DONE
+
+**Status:** ✅ Implemented in Session 734
 
 ### What It Is
 A full communication system for AI agents, similar to Slack:
@@ -142,54 +144,30 @@ ChannelMessage: 0 records
 ChannelMembership: 5 records
 ```
 
-### Backend APIs (Fully Functional)
+### Implementation (Session 734)
+- `agentChannelsApi` added to `frontend/src/lib/api.ts` (12 endpoints)
+- `ChannelsTab` component added to `AgentsPage.tsx` (~300 lines)
+- Accessible via Agents → Channels tab (no new route needed)
+
+**Features Delivered:**
+- **Channel List:** Type badges (project/topic/team), member count, descriptions
+- **Message Thread:** Real-time message display, sender info, timestamps
+- **Members Panel:** Agent list with presence indicators (online/busy/offline)
+- **Message Input:** Send messages with Enter key support
+- **Responsive Layout:** 3-column grid on desktop, stacked on mobile
+
+### Backend APIs Connected
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/v1/agents/channels/` | GET | List all channels |
 | `/api/v1/agents/channels/` | POST | Create channel |
 | `/api/v1/agents/channels/{id}/` | GET | Channel detail |
-| `/api/v1/agents/channels/{id}/` | PUT/PATCH | Update channel |
-| `/api/v1/agents/channels/{id}/` | DELETE | Delete channel |
+| `/api/v1/agents/channels/{id}/join/` | POST | Join channel |
+| `/api/v1/agents/channels/{id}/leave/` | POST | Leave channel |
 | `/api/v1/agents/messages/` | GET | List messages |
 | `/api/v1/agents/messages/` | POST | Send message |
-| `/api/v1/agents/messages/{id}/` | GET | Message detail |
 | `/api/v1/agents/memberships/` | GET | List memberships |
 | `/api/v1/agents/memberships/` | POST | Add member |
-
-### Frontend API Needed (`frontend/src/lib/api.ts`)
-```typescript
-export const agentChannelsApi = {
-  // Channels
-  list: () => api.get('/v1/agents/channels/'),
-  create: (data: { name: string; description?: string; channel_type?: string }) =>
-    api.post('/v1/agents/channels/', data),
-  detail: (id: string) => api.get(`/v1/agents/channels/${id}/`),
-  update: (id: string, data: Record<string, unknown>) =>
-    api.patch(`/v1/agents/channels/${id}/`, data),
-  delete: (id: string) => api.delete(`/v1/agents/channels/${id}/`),
-
-  // Messages
-  messages: (channelId: string, params?: { limit?: number }) =>
-    api.get(`/v1/agents/messages/`, { params: { channel: channelId, ...params } }),
-  sendMessage: (data: { channel: string; content: string; message_type?: string }) =>
-    api.post('/v1/agents/messages/', data),
-
-  // Memberships
-  memberships: (channelId: string) =>
-    api.get('/v1/agents/memberships/', { params: { channel: channelId } }),
-  addMember: (data: { channel: string; agent_template?: string; role?: string }) =>
-    api.post('/v1/agents/memberships/', data),
-}
-```
-
-### UI Page Needed
-Create `frontend/src/pages/AgentChannelsPage.tsx`:
-- Channel list sidebar
-- Message thread view
-- Member management panel
-- Create/edit channel modal
-
-**Priority: HIGH** - This is a complete feature with data, just missing UI.
 
 ---
 

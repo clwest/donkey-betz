@@ -1,7 +1,7 @@
 # UI-Backend Connection Map
 
 **Created:** Session 309
-**Updated:** Session 734 (Mythology Lab Rich Data Display)
+**Updated:** Session 734 (Mythology Lab + Agent Channels)
 **Purpose:** Map what's connected, what exists but isn't connected, and opportunities for integration
 
 ---
@@ -20,6 +20,7 @@ The platform has **excellent coverage** - most UI components are properly wired 
 | Memory Clusters | 1 tab | 10 endpoints | **100% Connected** |
 | RAG/Documents | 1 page | 6 endpoints | **100% Connected** |
 | Mythology Lab | 1 page | 11 endpoints | **100% Connected** |
+| Agent Channels | 1 tab | 10 endpoints | **100% Connected** |
 
 ---
 
@@ -135,6 +136,24 @@ The platform has **excellent coverage** - most UI components are properly wired 
   - Agent chain cleanup ("Learned from X: Learned from Y:" → blue agent badges)
   - 15 pattern types with human-readable labels and icons
   - Collapsible raw content view for debugging
+
+### Agent Channels (Session 734)
+| UI Component | Backend API | Status |
+|--------------|-------------|--------|
+| Channel List | `/api/v1/agents/channels/` | CONNECTED |
+| Channel Detail | `/api/v1/agents/channels/{id}/` | CONNECTED |
+| Join Channel | `/api/v1/agents/channels/{id}/join/` | CONNECTED |
+| Leave Channel | `/api/v1/agents/channels/{id}/leave/` | CONNECTED |
+| Message List | `/api/v1/agents/messages/` | CONNECTED |
+| Send Message | `/api/v1/agents/messages/` | CONNECTED |
+| Member List | `/api/v1/agents/memberships/` | CONNECTED |
+| Add Member | `/api/v1/agents/memberships/` | CONNECTED |
+
+**Frontend:** AgentsPage.tsx → Channels tab (~300 lines)
+- **Channel List:** Sidebar with type badges (project/topic/team), member count
+- **Message Thread:** 2-column view with sender info, timestamps, content
+- **Members Panel:** Agent list with presence indicators (online/busy/offline)
+- **Message Input:** Send with Enter key, loading state during submission
 
 ---
 
