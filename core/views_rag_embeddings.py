@@ -338,12 +338,12 @@ def embeddings_stats(request):
     user = request.user
 
     try:
-        # Get REAL document stats
-        total_documents = Document.objects.filter(user=user).count()
-        processed_documents = Document.objects.filter(user=user, status='processed').count()
+        # Get REAL document stats (Session 733: Fixed user -> owner)
+        total_documents = Document.objects.filter(owner=user).count()
+        processed_documents = Document.objects.filter(owner=user, status='processed').count()
 
         # Get REAL embedding stats
-        embeddings = DocumentEmbedding.objects.filter(document__user=user)
+        embeddings = DocumentEmbedding.objects.filter(document__owner=user)
         total_embeddings = embeddings.count()
 
         if total_embeddings > 0:
@@ -361,11 +361,11 @@ def embeddings_stats(request):
             primary_model = 'none'
 
         # Get knowledge base stats
-        knowledge_bases = KnowledgeBase.objects.filter(user=user)
+        knowledge_bases = KnowledgeBase.objects.filter(owner=user)
         total_kb = knowledge_bases.count()
 
         # Get recent activity
-        recent_docs = Document.objects.filter(user=user).order_by('-created_at')[:5]
+        recent_docs = Document.objects.filter(owner=user).order_by('-created_at')[:5]
         recent_activity = [
             {
                 'type': 'document_upload',
@@ -398,9 +398,9 @@ def embeddings_stats(request):
             },
             'recent_activity': recent_activity,
             'storage_breakdown': {
-                'text_documents': Document.objects.filter(user=user, document_type='text').count(),
-                'markdown_documents': Document.objects.filter(user=user, document_type='markdown').count(),
-                'other_documents': Document.objects.filter(user=user).exclude(document_type__in=['text', 'markdown']).count(),
+                'text_documents': Document.objects.filter(owner=user, document_type='text').count(),
+                'markdown_documents': Document.objects.filter(owner=user, document_type='markdown').count(),
+                'other_documents': Document.objects.filter(owner=user).exclude(document_type__in=['text', 'markdown']).count(),
             }
         })
 
@@ -492,7 +492,8 @@ def list_knowledge_collections(request):
     user = request.user
 
     try:
-        knowledge_bases = KnowledgeBase.objects.filter(user=user).order_by('-created_at')
+        # Session 733: Fixed user -> owner
+        knowledge_bases = KnowledgeBase.objects.filter(owner=user).order_by('-created_at')
 
         collections = []
         total_documents = 0

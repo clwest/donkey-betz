@@ -1312,11 +1312,11 @@ export const ragApi = {
   // Optimize embedding storage
   optimize: () => api.post('/v1/rag/optimize/'),
 
-  // Collections management
-  listCollections: () => api.get('/v1/rag/collections/'),
-  createCollection: (data: { name: string; description?: string }) =>
-    api.post('/v1/rag/collections/', data),
-  deleteCollection: (id: string) => api.delete(`/v1/rag/collections/${id}/`),
+  // Collections management (knowledge collections)
+  listCollections: () => api.get('/v1/knowledge/collections/list/'),
+  createCollection: (data: { name: string; description?: string; document_ids?: string[]; tags?: string[] }) =>
+    api.post('/v1/knowledge/collections/create/', data),
+  // Note: Delete collection endpoint not available in backend
 
   // Documents management (Session 402 ingestion system)
   listDocuments: (params?: { collection_id?: string; limit?: number }) =>
