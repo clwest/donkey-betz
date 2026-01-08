@@ -52,6 +52,7 @@
 | ✅ Spider pipeline fixed | `scan-spider-opportunities` task added to Celery Beat database (was missing) |
 | ✅ revenue_integration.py fixed | Fixed `analyze_external_opportunity` response handling and async DB saves |
 | ✅ monitor_and_process_opportunities fixed | Task now creates ActionPlans from opportunities |
+| ✅ Intelligent prompting metrics | Added `IntelligentPromptMetric` + `IntelligentPromptStats` models, wired tracking into `_build_intelligent_prompt()` |
 
 ---
 

@@ -149,3 +149,114 @@ class AgentPerformanceStats(models.Model):
 
     def __str__(self):
         return f"{self.agent_name} ({self.avg_success_rate:.1%} success)"
+
+
+class IntelligentPromptMetric(models.Model):
+    """
+    Session 729: Track intelligent prompting usage and effectiveness.
+
+    Records each time _build_intelligent_prompt() is called by agents,
+    including which context components were included and their impact.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Agent identification
+    agent_name = models.CharField(max_length=100, db_index=True)
+    agent_category = models.CharField(max_length=50, blank=True)
+
+    # Context components included in prompt
+    included_mood = models.BooleanField(default=False)
+    included_memory_palace = models.BooleanField(default=False)
+    included_spider_intel = models.BooleanField(default=False)
+    included_evolution = models.BooleanField(default=False)
+    included_policy = models.BooleanField(default=False)
+    included_learned_knowledge = models.BooleanField(default=False)
+    included_temporal = models.BooleanField(default=True)  # Always included
+
+    # Prompt metrics
+    base_prompt_tokens = models.IntegerField(default=0)
+    context_tokens_added = models.IntegerField(default=0)
+    total_prompt_tokens = models.IntegerField(default=0)
+
+    # Context details (JSON for flexibility)
+    mood_context = models.JSONField(default=dict, blank=True)
+    spider_summary = models.JSONField(default=dict, blank=True)
+    memory_summary = models.JSONField(default=dict, blank=True)
+
+    # Task info
+    task_type = models.CharField(max_length=100, blank=True)
+    task_preview = models.CharField(max_length=255, blank=True)
+
+    # Effectiveness tracking (updated post-execution)
+    response_quality_score = models.FloatField(null=True, blank=True)
+    user_satisfied = models.BooleanField(null=True, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        indexes = [
+            models.Index(fields=['agent_name', '-created_at']),
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['task_type', '-created_at']),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        components = []
+        if self.included_mood:
+            components.append('mood')
+        if self.included_memory_palace:
+            components.append('memory')
+        if self.included_spider_intel:
+            components.append('spider')
+        if self.included_evolution:
+            components.append('evolution')
+        if self.included_policy:
+            components.append('policy')
+        return f"{self.agent_name} prompt with [{', '.join(components)}]"
+
+
+class IntelligentPromptStats(models.Model):
+    """
+    Session 729: Aggregated statistics for intelligent prompting system.
+
+    Provides overview of prompting effectiveness across all agents.
+    """
+
+    # Primary key is the stat type for singleton-like behavior
+    stat_type = models.CharField(max_length=50, primary_key=True, default='global')
+
+    # Overall usage
+    total_prompts_built = models.IntegerField(default=0)
+    total_agents_using = models.IntegerField(default=0)
+
+    # Context usage rates
+    mood_usage_rate = models.FloatField(default=0.0)
+    memory_usage_rate = models.FloatField(default=0.0)
+    spider_usage_rate = models.FloatField(default=0.0)
+    evolution_usage_rate = models.FloatField(default=0.0)
+    policy_usage_rate = models.FloatField(default=0.0)
+
+    # Token efficiency
+    avg_base_tokens = models.FloatField(default=0.0)
+    avg_context_tokens = models.FloatField(default=0.0)
+    avg_total_tokens = models.FloatField(default=0.0)
+
+    # Effectiveness
+    avg_quality_score = models.FloatField(null=True, blank=True)
+    satisfaction_rate = models.FloatField(null=True, blank=True)
+
+    # Per-agent breakdown (JSON)
+    agent_breakdown = models.JSONField(default=dict)
+
+    # Timestamps
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+
+    def __str__(self):
+        return f"Intelligent Prompting Stats ({self.total_prompts_built} prompts)"
