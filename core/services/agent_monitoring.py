@@ -360,19 +360,54 @@ class PerformanceAnalyzer:
         # Get system metrics
         try:
             import psutil
-            
+
+            # Calculate uptime
+            boot_time = psutil.boot_time()
+            uptime_seconds = time.time() - boot_time
+            days = int(uptime_seconds // 86400)
+            hours = int((uptime_seconds % 86400) // 3600)
+            minutes = int((uptime_seconds % 3600) // 60)
+            if days > 0:
+                uptime_str = f"{days}d {hours}h {minutes}m"
+            elif hours > 0:
+                uptime_str = f"{hours}h {minutes}m"
+            else:
+                uptime_str = f"{minutes}m"
+
             metrics['system'] = {
-                'cpu_percent': psutil.cpu_percent(interval=1),
+                'cpu_percent': psutil.cpu_percent(interval=0.1),
                 'memory_percent': psutil.virtual_memory().percent,
-                'disk_usage': psutil.disk_usage('/').percent
+                'disk_usage': psutil.disk_usage('/').percent,
+                'uptime': uptime_str,
+                'uptime_seconds': uptime_seconds
             }
-        except:
-            pass
-        
-        # Get cache statistics
-        cache_stats = cache.get('cache_stats', {})
-        metrics['cache'] = cache_stats
-        
+        except Exception as e:
+            logger.warning(f"Could not get system metrics: {e}")
+
+        # Get cache statistics from Redis
+        try:
+            import redis
+            redis_conn = redis.Redis(host='localhost', port=6379, db=0)
+            info = redis_conn.info()
+
+            # Calculate hit rate
+            hits = info.get('keyspace_hits', 0)
+            misses = info.get('keyspace_misses', 0)
+            total = hits + misses
+            hit_rate = (hits / total * 100) if total > 0 else 0
+
+            metrics['cache'] = {
+                'hit_rate': round(hit_rate, 1),
+                'hits': hits,
+                'misses': misses,
+                'used_memory': info.get('used_memory_human', 'N/A'),
+                'connected_clients': info.get('connected_clients', 0),
+                'total_keys': redis_conn.dbsize()
+            }
+        except Exception as e:
+            logger.warning(f"Could not get cache stats: {e}")
+            metrics['cache'] = {'hit_rate': 0, 'hits': 0, 'misses': 0}
+
         return metrics
     
     @staticmethod
@@ -472,9 +507,15 @@ def get_agent_metrics_summary():
         recent_executions = AgentExecution.objects.filter(
             created_at__gte=since
         )
-        
+
         summary['total_executions_24h'] = recent_executions.count()
-        
+
+        # Count active/running agents
+        active_count = AgentExecution.objects.filter(
+            status__in=['running', 'in_progress', 'pending']
+        ).count()
+        summary['active_agents'] = active_count
+
         # Calculate averages
         stats = recent_executions.aggregate(
             avg_time=Avg('execution_time_seconds'),
