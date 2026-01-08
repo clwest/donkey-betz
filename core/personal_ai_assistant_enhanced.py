@@ -1402,6 +1402,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_check_resource_budget(arguments)
             elif function_name == 'get_system_alerts':
                 result = self._handle_get_system_alerts(arguments)
+            # Session 725: Intelligence Tools - Connect Brain to Intelligence System
+            elif function_name == 'predictions_tool':
+                result = self._handle_predictions_tool(arguments)
+            elif function_name == 'gates_tool':
+                result = self._handle_gates_tool(arguments)
+            elif function_name == 'pilots_tool':
+                result = self._handle_pilots_tool(arguments)
             else:
                 result = {
                     'success': False,
@@ -11715,3 +11722,468 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'tool': 'get_system_alerts',
                 'alerts': []
             }
+
+    # =========================================================================
+    # Session 725: Intelligence Tools - Connect Brain to Intelligence System
+    # =========================================================================
+
+    def _handle_predictions_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle predictions_tool - Query agent predictions from Intelligence system.
+
+        Actions: list, get, stats, leaderboard, by_agent, by_category
+        """
+        try:
+            from core.models_unified_system import AgentPrediction, Agent
+            from django.db.models import Count, Avg
+
+            action = arguments.get('action', 'list')
+            limit = arguments.get('limit', 20)
+
+            if action == 'list':
+                # Get recent predictions
+                predictions = AgentPrediction.objects.select_related('agent').order_by('-created_at')
+
+                # Apply filters
+                if arguments.get('status'):
+                    predictions = predictions.filter(status=arguments['status'])
+                if arguments.get('category'):
+                    predictions = predictions.filter(category=arguments['category'])
+
+                predictions = predictions[:limit]
+
+                return {
+                    'success': True,
+                    'tool': 'predictions_tool',
+                    'action': action,
+                    'count': len(predictions),
+                    'predictions': [
+                        {
+                            'id': str(p.id),
+                            'title': p.title,
+                            'prediction': p.prediction[:500] if p.prediction else '',
+                            'category': p.category,
+                            'status': p.status,
+                            'confidence': p.confidence,
+                            'agent_name': p.agent.name if p.agent else 'Unknown',
+                            'created_at': p.created_at.isoformat() if p.created_at else None,
+                        }
+                        for p in predictions
+                    ]
+                }
+
+            elif action == 'get':
+                prediction_id = arguments.get('prediction_id')
+                if not prediction_id:
+                    return {'success': False, 'error': 'prediction_id required for get action'}
+
+                try:
+                    p = AgentPrediction.objects.select_related('agent').get(id=prediction_id)
+                    return {
+                        'success': True,
+                        'tool': 'predictions_tool',
+                        'prediction': {
+                            'id': str(p.id),
+                            'title': p.title,
+                            'prediction': p.prediction,
+                            'category': p.category,
+                            'status': p.status,
+                            'confidence': p.confidence,
+                            'source': p.source,
+                            'agent_name': p.agent.name if p.agent else 'Unknown',
+                            'created_at': p.created_at.isoformat() if p.created_at else None,
+                            'deadline': p.deadline.isoformat() if hasattr(p, 'deadline') and p.deadline else None,
+                        }
+                    }
+                except AgentPrediction.DoesNotExist:
+                    return {'success': False, 'error': f'Prediction {prediction_id} not found'}
+
+            elif action == 'stats':
+                total = AgentPrediction.objects.count()
+                by_status = dict(AgentPrediction.objects.values('status').annotate(count=Count('id')).values_list('status', 'count'))
+                by_category = dict(AgentPrediction.objects.values('category').annotate(count=Count('id')).values_list('category', 'count'))
+
+                verified_true = by_status.get('verified_true', 0)
+                verified_false = by_status.get('verified_false', 0)
+                verified_total = verified_true + verified_false
+                accuracy = (verified_true / verified_total * 100) if verified_total > 0 else 0
+
+                return {
+                    'success': True,
+                    'tool': 'predictions_tool',
+                    'action': 'stats',
+                    'total_predictions': total,
+                    'accuracy_rate': round(accuracy, 1),
+                    'by_status': by_status,
+                    'by_category': by_category,
+                }
+
+            elif action == 'leaderboard':
+                # Agents ranked by prediction accuracy
+                from django.db.models import Q
+                agents_with_predictions = Agent.objects.filter(
+                    predictions__status__in=['verified_true', 'verified_false']
+                ).annotate(
+                    total_verified=Count('predictions'),
+                    correct=Count('predictions', filter=Q(predictions__status='verified_true'))
+                ).order_by('-correct')[:limit]
+
+                return {
+                    'success': True,
+                    'tool': 'predictions_tool',
+                    'action': 'leaderboard',
+                    'agents': [
+                        {
+                            'name': a.name,
+                            'total_verified': a.total_verified,
+                            'correct': a.correct,
+                            'accuracy': round(a.correct / a.total_verified * 100, 1) if a.total_verified > 0 else 0
+                        }
+                        for a in agents_with_predictions
+                    ]
+                }
+
+            elif action == 'by_agent':
+                agent_id = arguments.get('agent_id')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required for by_agent action'}
+
+                predictions = AgentPrediction.objects.filter(agent_id=agent_id).order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'tool': 'predictions_tool',
+                    'action': 'by_agent',
+                    'count': len(predictions),
+                    'predictions': [
+                        {
+                            'id': str(p.id),
+                            'title': p.title,
+                            'category': p.category,
+                            'status': p.status,
+                            'confidence': p.confidence,
+                        }
+                        for p in predictions
+                    ]
+                }
+
+            elif action == 'by_category':
+                category = arguments.get('category')
+                if not category:
+                    return {'success': False, 'error': 'category required for by_category action'}
+
+                predictions = AgentPrediction.objects.filter(category=category).order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'tool': 'predictions_tool',
+                    'action': 'by_category',
+                    'category': category,
+                    'count': len(predictions),
+                    'predictions': [
+                        {
+                            'id': str(p.id),
+                            'title': p.title,
+                            'status': p.status,
+                            'agent_name': p.agent.name if p.agent else 'Unknown',
+                        }
+                        for p in predictions
+                    ]
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in predictions_tool: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'tool': 'predictions_tool'}
+
+    def _handle_gates_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle gates_tool - Query pilot readiness gates from Intelligence system.
+
+        Actions: list, get, stats, checklist, by_status, by_risk
+        """
+        try:
+            from core.models_pilot_readiness import PilotReadinessGate, ChecklistItem
+            from django.db.models import Count
+
+            action = arguments.get('action', 'list')
+            limit = arguments.get('limit', 20)
+
+            if action == 'list':
+                gates = PilotReadinessGate.objects.select_related('decision').order_by('-created_at')
+
+                if arguments.get('status'):
+                    gates = gates.filter(status=arguments['status'])
+                if arguments.get('risk_level'):
+                    gates = gates.filter(risk_level=arguments['risk_level'])
+
+                gates = gates[:limit]
+
+                return {
+                    'success': True,
+                    'tool': 'gates_tool',
+                    'action': action,
+                    'count': len(gates),
+                    'gates': [
+                        {
+                            'id': str(g.id),
+                            'status': g.status,
+                            'risk_level': g.risk_level,
+                            'summary': g.summary[:200] if g.summary else '',
+                            'decision_title': g.decision.title if g.decision else 'Unknown',
+                            'created_at': g.created_at.isoformat() if g.created_at else None,
+                        }
+                        for g in gates
+                    ]
+                }
+
+            elif action == 'get':
+                gate_id = arguments.get('gate_id')
+                if not gate_id:
+                    return {'success': False, 'error': 'gate_id required for get action'}
+
+                try:
+                    g = PilotReadinessGate.objects.select_related('decision').get(id=gate_id)
+                    return {
+                        'success': True,
+                        'tool': 'gates_tool',
+                        'gate': {
+                            'id': str(g.id),
+                            'status': g.status,
+                            'risk_level': g.risk_level,
+                            'risk_factors': g.risk_factors,
+                            'summary': g.summary,
+                            'success_criteria': g.success_criteria,
+                            'failure_criteria': g.failure_criteria,
+                            'approved_by': g.approved_by,
+                            'approval_notes': g.approval_notes,
+                            'decision_title': g.decision.title if g.decision else 'Unknown',
+                            'created_at': g.created_at.isoformat() if g.created_at else None,
+                        }
+                    }
+                except PilotReadinessGate.DoesNotExist:
+                    return {'success': False, 'error': f'Gate {gate_id} not found'}
+
+            elif action == 'stats':
+                total = PilotReadinessGate.objects.count()
+                by_status = dict(PilotReadinessGate.objects.values('status').annotate(count=Count('id')).values_list('status', 'count'))
+                by_risk = dict(PilotReadinessGate.objects.values('risk_level').annotate(count=Count('id')).values_list('risk_level', 'count'))
+
+                return {
+                    'success': True,
+                    'tool': 'gates_tool',
+                    'action': 'stats',
+                    'total_gates': total,
+                    'by_status': by_status,
+                    'by_risk_level': by_risk,
+                    'pending_approval': by_status.get('ready', 0),
+                    'blocked': by_status.get('blocked', 0),
+                }
+
+            elif action == 'checklist':
+                gate_id = arguments.get('gate_id')
+                if not gate_id:
+                    return {'success': False, 'error': 'gate_id required for checklist action'}
+
+                items = ChecklistItem.objects.filter(gate_id=gate_id).order_by('order')
+                return {
+                    'success': True,
+                    'tool': 'gates_tool',
+                    'action': 'checklist',
+                    'gate_id': gate_id,
+                    'item_count': len(items),
+                    'items': [
+                        {
+                            'id': str(item.id),
+                            'title': item.title,
+                            'category': item.category,
+                            'status': item.status,
+                            'is_required': item.is_required,
+                            'completed_at': item.completed_at.isoformat() if item.completed_at else None,
+                        }
+                        for item in items
+                    ]
+                }
+
+            elif action == 'by_status':
+                status = arguments.get('status')
+                if not status:
+                    return {'success': False, 'error': 'status required for by_status action'}
+
+                gates = PilotReadinessGate.objects.filter(status=status).order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'tool': 'gates_tool',
+                    'action': 'by_status',
+                    'status': status,
+                    'count': len(gates),
+                    'gates': [{'id': str(g.id), 'summary': g.summary[:100] if g.summary else '', 'risk_level': g.risk_level} for g in gates]
+                }
+
+            elif action == 'by_risk':
+                risk_level = arguments.get('risk_level')
+                if not risk_level:
+                    return {'success': False, 'error': 'risk_level required for by_risk action'}
+
+                gates = PilotReadinessGate.objects.filter(risk_level=risk_level).order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'tool': 'gates_tool',
+                    'action': 'by_risk',
+                    'risk_level': risk_level,
+                    'count': len(gates),
+                    'gates': [{'id': str(g.id), 'summary': g.summary[:100] if g.summary else '', 'status': g.status} for g in gates]
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in gates_tool: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'tool': 'gates_tool'}
+
+    def _handle_pilots_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle pilots_tool - Query pilot executions from Intelligence system.
+
+        Actions: list, get, stats, running, completed, by_outcome
+        """
+        try:
+            from core.models_pilot_readiness import PilotExecution
+            from django.db.models import Count
+
+            action = arguments.get('action', 'list')
+            limit = arguments.get('limit', 20)
+
+            if action == 'list':
+                pilots = PilotExecution.objects.select_related('gate').order_by('-created_at')
+
+                if arguments.get('status'):
+                    pilots = pilots.filter(status=arguments['status'])
+                if arguments.get('outcome'):
+                    pilots = pilots.filter(outcome=arguments['outcome'])
+
+                pilots = pilots[:limit]
+
+                return {
+                    'success': True,
+                    'tool': 'pilots_tool',
+                    'action': action,
+                    'count': len(pilots),
+                    'pilots': [
+                        {
+                            'id': str(p.id),
+                            'name': p.name,
+                            'status': p.status,
+                            'outcome': p.outcome,
+                            'started_at': p.started_at.isoformat() if p.started_at else None,
+                            'completed_at': p.completed_at.isoformat() if p.completed_at else None,
+                        }
+                        for p in pilots
+                    ]
+                }
+
+            elif action == 'get':
+                pilot_id = arguments.get('pilot_id')
+                if not pilot_id:
+                    return {'success': False, 'error': 'pilot_id required for get action'}
+
+                try:
+                    p = PilotExecution.objects.select_related('gate').get(id=pilot_id)
+                    return {
+                        'success': True,
+                        'tool': 'pilots_tool',
+                        'pilot': {
+                            'id': str(p.id),
+                            'name': p.name,
+                            'description': p.description,
+                            'status': p.status,
+                            'outcome': p.outcome,
+                            'outcome_summary': p.outcome_summary,
+                            'scope': p.scope,
+                            'constraints': p.constraints,
+                            'metrics': p.metrics,
+                            'learnings': p.learnings,
+                            'kill_switch_triggered': p.kill_switch_triggered,
+                            'kill_switch_reason': p.kill_switch_reason,
+                            'started_at': p.started_at.isoformat() if p.started_at else None,
+                            'completed_at': p.completed_at.isoformat() if p.completed_at else None,
+                        }
+                    }
+                except PilotExecution.DoesNotExist:
+                    return {'success': False, 'error': f'Pilot {pilot_id} not found'}
+
+            elif action == 'stats':
+                total = PilotExecution.objects.count()
+                by_status = dict(PilotExecution.objects.values('status').annotate(count=Count('id')).values_list('status', 'count'))
+                by_outcome = dict(PilotExecution.objects.values('outcome').annotate(count=Count('id')).values_list('outcome', 'count'))
+
+                return {
+                    'success': True,
+                    'tool': 'pilots_tool',
+                    'action': 'stats',
+                    'total_pilots': total,
+                    'by_status': by_status,
+                    'by_outcome': by_outcome,
+                    'running': by_status.get('running', 0),
+                    'completed': by_status.get('completed', 0),
+                    'success_rate': round(by_outcome.get('success', 0) / total * 100, 1) if total > 0 else 0,
+                }
+
+            elif action == 'running':
+                pilots = PilotExecution.objects.filter(status='running').order_by('-started_at')[:limit]
+                return {
+                    'success': True,
+                    'tool': 'pilots_tool',
+                    'action': 'running',
+                    'count': len(pilots),
+                    'pilots': [
+                        {
+                            'id': str(p.id),
+                            'name': p.name,
+                            'started_at': p.started_at.isoformat() if p.started_at else None,
+                            'scope': p.scope[:200] if p.scope else '',
+                        }
+                        for p in pilots
+                    ]
+                }
+
+            elif action == 'completed':
+                pilots = PilotExecution.objects.filter(status='completed').order_by('-completed_at')[:limit]
+                return {
+                    'success': True,
+                    'tool': 'pilots_tool',
+                    'action': 'completed',
+                    'count': len(pilots),
+                    'pilots': [
+                        {
+                            'id': str(p.id),
+                            'name': p.name,
+                            'outcome': p.outcome,
+                            'completed_at': p.completed_at.isoformat() if p.completed_at else None,
+                        }
+                        for p in pilots
+                    ]
+                }
+
+            elif action == 'by_outcome':
+                outcome = arguments.get('outcome')
+                if not outcome:
+                    return {'success': False, 'error': 'outcome required for by_outcome action'}
+
+                pilots = PilotExecution.objects.filter(outcome=outcome).order_by('-completed_at')[:limit]
+                return {
+                    'success': True,
+                    'tool': 'pilots_tool',
+                    'action': 'by_outcome',
+                    'outcome': outcome,
+                    'count': len(pilots),
+                    'pilots': [{'id': str(p.id), 'name': p.name, 'status': p.status} for p in pilots]
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in pilots_tool: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'tool': 'pilots_tool'}

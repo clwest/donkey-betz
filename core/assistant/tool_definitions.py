@@ -73,9 +73,13 @@ def get_tool_definitions() -> List[Dict]:
         # Session 695: SKIN Layer - Workspace Tool for project execution
         _get_workspace_tool_definition(),             # Manage workspaces where agents write code
         # Session 709: Body Vitals - Connect Brain to Body Systems
-        _get_body_vitals_tool_definition(),           # Query all 7 body systems
+        _get_body_vitals_tool_definition(),           # Query all 10 body systems
         _get_check_budget_tool_definition(),          # Check LUNGS before expensive ops
         _get_system_alerts_tool_definition(),         # Get critical body alerts
+        # Session 725: Intelligence Tools - Connect Brain to Intelligence System
+        _get_predictions_tool_definition(),           # Query agent predictions
+        _get_gates_tool_definition(),                 # Query pilot readiness gates
+        _get_pilots_tool_definition(),                # Query pilot executions
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -1368,5 +1372,139 @@ def _get_system_alerts_tool_definition() -> Dict:
                 }
             },
             "required": []
+        }
+    }
+
+
+# =============================================================================
+# Session 725: Intelligence Tools - Connect Brain to Intelligence System
+# =============================================================================
+
+def _get_predictions_tool_definition() -> Dict:
+    """
+    Session 725: Tool for PA to query agent predictions.
+    Connects the Brain (AI Assistant) to the Intelligence system.
+    """
+    return {
+        "type": "function",
+        "name": "predictions_tool",
+        "description": get_tool_description("predictions_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "get", "stats", "leaderboard", "by_agent", "by_category"],
+                    "description": "Action: 'list' (recent predictions), 'get' (by ID), 'stats' (overview), 'leaderboard' (top agents), 'by_agent' (filter by agent), 'by_category' (filter by type)"
+                },
+                "prediction_id": {
+                    "type": "string",
+                    "description": "Prediction ID (required for 'get' action)"
+                },
+                "agent_id": {
+                    "type": "string",
+                    "description": "Agent ID (for 'by_agent' action)"
+                },
+                "category": {
+                    "type": "string",
+                    "enum": ["trend", "market", "technology", "creative", "opportunity", "user_behavior", "seasonal", "competition", "general"],
+                    "description": "Filter by prediction category"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["pending", "verified_true", "verified_false", "partially_true", "expired"],
+                    "description": "Filter by prediction status"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Maximum results to return"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+def _get_gates_tool_definition() -> Dict:
+    """
+    Session 725: Tool for PA to query pilot readiness gates.
+    Connects the Brain to the governance/approval system.
+    """
+    return {
+        "type": "function",
+        "name": "gates_tool",
+        "description": get_tool_description("gates_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "get", "stats", "checklist", "by_status", "by_risk"],
+                    "description": "Action: 'list' (all gates), 'get' (by ID), 'stats' (overview), 'checklist' (items for gate), 'by_status' (filter), 'by_risk' (filter by risk level)"
+                },
+                "gate_id": {
+                    "type": "string",
+                    "description": "Gate ID (required for 'get' and 'checklist' actions)"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["not_started", "in_progress", "ready", "approved", "blocked", "waived"],
+                    "description": "Filter by gate status"
+                },
+                "risk_level": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "critical"],
+                    "description": "Filter by risk level"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Maximum results to return"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+def _get_pilots_tool_definition() -> Dict:
+    """
+    Session 725: Tool for PA to query pilot executions.
+    Connects the Brain to experiment tracking.
+    """
+    return {
+        "type": "function",
+        "name": "pilots_tool",
+        "description": get_tool_description("pilots_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "get", "stats", "running", "completed", "by_outcome"],
+                    "description": "Action: 'list' (all pilots), 'get' (by ID), 'stats' (overview), 'running' (active pilots), 'completed' (finished), 'by_outcome' (filter by result)"
+                },
+                "pilot_id": {
+                    "type": "string",
+                    "description": "Pilot ID (required for 'get' action)"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["planned", "running", "paused", "completed", "stopped", "failed"],
+                    "description": "Filter by pilot status"
+                },
+                "outcome": {
+                    "type": "string",
+                    "enum": ["pending", "success", "partial", "failure", "inconclusive"],
+                    "description": "Filter by pilot outcome"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Maximum results to return"
+                }
+            },
+            "required": ["action"]
         }
     }
