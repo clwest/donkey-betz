@@ -844,6 +844,80 @@ Examples of alerts:
 - DIGESTIVE: "Queue backlog: 5000 items pending" - severity: warning
 - MUSCULAR: "Agent execution: paralyzed" - severity: warning""",
 
+    # -------------------------------------------------------------------------
+    # Session 725: INTELLIGENCE TOOLS - Connect Brain to Intelligence System
+    # -------------------------------------------------------------------------
+
+    "predictions_tool": """Query agent predictions from the Intelligence system.
+
+Use this tool when:
+- User asks "what predictions have agents made?"
+- User wants to see agent forecasts or prophecies
+- User asks about trends agents have predicted
+- User wants to check prediction accuracy or leaderboard
+- User asks which agents are most accurate predictors
+
+Actions:
+- 'list': Get recent predictions (default 20)
+- 'get': Get a specific prediction by ID
+- 'stats': Get prediction statistics (total, accuracy rate, by category)
+- 'leaderboard': Get agents ranked by prediction accuracy
+- 'by_agent': Get predictions from a specific agent
+- 'by_category': Filter predictions by type (trend, market, technology, etc.)
+
+Returns prediction data including:
+- title, prediction text, category, source
+- confidence score and deadline
+- status (pending, verified_true, verified_false, etc.)
+- agent who made the prediction""",
+
+    "gates_tool": """Query pilot readiness gates from the Intelligence system.
+
+Use this tool when:
+- User asks "what gates are pending?" or "what needs approval?"
+- User wants to see decision governance status
+- User asks about blocked or waived decisions
+- User wants to check checklist items for a gate
+- User asks which decisions are ready for pilots
+
+Actions:
+- 'list': Get all gates (default 20)
+- 'get': Get a specific gate by ID
+- 'stats': Get gate statistics (by status, by risk level)
+- 'checklist': Get checklist items for a specific gate
+- 'by_status': Filter gates by status (not_started, in_progress, approved, etc.)
+- 'by_risk': Filter gates by risk level (low, medium, high, critical)
+
+Returns gate data including:
+- decision info, summary, success/failure criteria
+- status (not_started, in_progress, ready, approved, blocked, waived)
+- risk level and risk factors
+- approval tracking (who approved, when)""",
+
+    "pilots_tool": """Query pilot executions from the Intelligence system.
+
+Use this tool when:
+- User asks "what pilots are running?"
+- User wants to see experiment status
+- User asks about pilot outcomes or results
+- User wants to check pilot metrics and learnings
+- User asks which pilots succeeded or failed
+
+Actions:
+- 'list': Get all pilots (default 20)
+- 'get': Get a specific pilot by ID
+- 'stats': Get pilot statistics (by status, by outcome)
+- 'running': Get currently active pilots
+- 'completed': Get finished pilots
+- 'by_outcome': Filter by outcome (success, partial, failure, etc.)
+
+Returns pilot data including:
+- name, description, scope, constraints
+- status (planned, running, paused, completed, failed)
+- outcome (pending, success, partial, failure, inconclusive)
+- metrics collected and learnings
+- whether kill switch was triggered""",
+
 }
 
 
