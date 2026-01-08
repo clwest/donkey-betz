@@ -562,18 +562,19 @@ class AgentChannelViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['channel_type', 'is_active', 'is_archived']
-    
+    filterset_fields = ['channel_type', 'is_active', 'is_archived', 'is_public']
+
     def get_serializer_class(self):
         if self.action == 'list':
             return AgentChannelListSerializer
         elif self.action == 'create':
             return CreateChannelSerializer
         return AgentChannelSerializer
-    
+
     def get_queryset(self):
         """Filter channels based on user access"""
-        queryset = self.queryset.filter(is_active=True)
+        # Session 735: Fixed - AgentChannel uses is_archived, not is_active
+        queryset = self.queryset.filter(is_archived=False)
         
         # Filter by search query
         search = self.request.query_params.get('search')
