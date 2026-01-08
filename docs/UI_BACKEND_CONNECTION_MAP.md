@@ -126,10 +126,15 @@ The platform has **excellent coverage** - most UI components are properly wired 
 | Quarantine Approve | `/api/v1/mythology/quarantine/{id}/approve/` | CONNECTED |
 | Quarantine Reject | `/api/v1/mythology/quarantine/{id}/reject/` | CONNECTED |
 
-**Frontend:** MythologyLabPage.tsx - Rich display of:
+**Frontend:** MythologyLabPage.tsx (~900 lines) - Rich display with smart formatting:
 - **Stats:** 16 metrics including total_flagged, pending_review, prevention_success_rate, avg_risk_score
 - **Events:** risk_level, mutation_type, patterns_detected, confidence_score, was_prevented, prevention_method
 - **Quarantine:** teacher/student agents, violation_type, violation_patterns, mythology_warning, spider_sources
+- **Content Formatting (Session 734):**
+  - Automatic source extraction (e.g., "Venturebeat - Startup News Intelligence" → cyan badge)
+  - Agent chain cleanup ("Learned from X: Learned from Y:" → blue agent badges)
+  - 15 pattern types with human-readable labels and icons
+  - Collapsible raw content view for debugging
 
 ---
 
