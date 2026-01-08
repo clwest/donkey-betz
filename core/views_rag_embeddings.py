@@ -906,11 +906,16 @@ def ingest_url(request):
     """
     Ingest a URL (YouTube video or web page) and create a document.
     Session 402: Document ingestion system.
+    Session 733: Added multi-page crawling support.
 
     Accepts:
     - url: The URL to ingest (YouTube or web page)
     - title: Optional custom title
     - generate_embeddings: Whether to generate embeddings (default: true)
+    - crawl_site: Enable multi-page crawling (default: false)
+    - max_pages: Maximum pages to crawl (default: 10, max: 50)
+    - max_depth: Maximum link depth (default: 2, max: 3)
+    - url_pattern: Regex pattern to filter URLs (e.g., '/tutorial/')
     """
     user = request.user
     data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
@@ -919,79 +924,158 @@ def ingest_url(request):
     title = data.get('title', '').strip()
     generate_embeddings = data.get('generate_embeddings', True)
 
+    # Session 733: Multi-page crawling options
+    crawl_site = data.get('crawl_site', False)
+    max_pages = min(int(data.get('max_pages', 10)), 50)  # Cap at 50 pages
+    max_depth = min(int(data.get('max_depth', 2)), 3)    # Cap at depth 3
+    url_pattern = data.get('url_pattern', None)
+
     if not url:
         return Response({
             'success': False,
             'error': 'URL is required'
         }, status=400)
 
+    # YouTube URLs don't support crawling
+    is_youtube = 'youtube.com' in url or 'youtu.be' in url
+    if is_youtube and crawl_site:
+        return Response({
+            'success': False,
+            'error': 'Multi-page crawling is not supported for YouTube videos'
+        }, status=400)
+
     try:
-        from content.processors import DocumentProcessingPipeline
+        from content.processors import DocumentProcessingPipeline, URLProcessor
 
-        pipeline = DocumentProcessingPipeline()
-        result = pipeline.process_url(url)
+        if crawl_site and not is_youtube:
+            # Session 733: Multi-page crawling
+            url_processor = URLProcessor()
+            crawl_result = url_processor.crawl_site(
+                start_url=url,
+                max_pages=max_pages,
+                max_depth=max_depth,
+                same_domain_only=True,
+                url_pattern=url_pattern
+            )
 
-        if not result.success:
+            if not crawl_result.success:
+                return Response({
+                    'success': False,
+                    'error': crawl_result.error_message or 'Failed to crawl site'
+                }, status=400)
+
+            # Create a single document with combined content
+            doc_type = DocumentType.URL
+            combined_title = title or f"Site Crawl: {crawl_result.metadata.get('crawled_urls', [{}])[0].get('title', url)}"
+
+            document = Document.objects.create(
+                owner=user,
+                title=combined_title,
+                document_type=doc_type,
+                raw_content='',  # Don't store raw HTML for crawls (too large)
+                processed_content=crawl_result.combined_content,
+                source_url=url,
+                metadata={
+                    'crawl_metadata': crawl_result.metadata,
+                    'pages_crawled': crawl_result.pages_crawled,
+                    'total_word_count': crawl_result.total_word_count,
+                },
+                status='processed',
+                tags=['site-crawl']
+            )
+
+            if generate_embeddings and crawl_result.total_word_count > 50:
+                from core.tasks import generate_document_embeddings
+                generate_document_embeddings.delay(str(document.id))
+                document.status = 'embedding'
+                document.save(update_fields=['status'])
+
             return Response({
-                'success': False,
-                'error': result.error or 'Failed to process URL'
-            }, status=400)
+                'success': True,
+                'document': {
+                    'id': str(document.id),
+                    'title': document.title,
+                    'document_type': document.document_type,
+                    'status': document.status,
+                    'source_url': document.source_url,
+                    'word_count': crawl_result.total_word_count,
+                    'metadata': document.metadata,
+                    'created_at': document.created_at.isoformat(),
+                },
+                'crawl_stats': {
+                    'pages_crawled': crawl_result.pages_crawled,
+                    'total_words': crawl_result.total_word_count,
+                    'crawled_urls': crawl_result.metadata.get('crawled_urls', []),
+                    'failed_urls': crawl_result.metadata.get('failed_urls', []),
+                },
+                'message': f"Successfully crawled {crawl_result.pages_crawled} pages from {url}"
+            })
 
-        # Determine document type
-        is_youtube = 'youtube.com' in url or 'youtu.be' in url
-        doc_type = DocumentType.YOUTUBE if is_youtube else DocumentType.URL
+        else:
+            # Single page ingestion (original behavior)
+            pipeline = DocumentProcessingPipeline()
+            result = pipeline.process_url(url)
 
-        # Check if we got meaningful content
-        has_content = result.processed_content and len(result.processed_content.strip()) > 50
-        warning_message = None
+            if not result.success:
+                return Response({
+                    'success': False,
+                    'error': result.error or 'Failed to process URL'
+                }, status=400)
 
-        if not has_content:
-            # Check if it's likely a JavaScript-rendered SPA
-            if result.raw_content and '<script' in result.raw_content and len(result.raw_content) < 10000:
-                warning_message = "This page appears to be JavaScript-rendered (SPA). Content may be incomplete."
-            else:
-                warning_message = "Limited content extracted from this page."
+            # Determine document type
+            doc_type = DocumentType.YOUTUBE if is_youtube else DocumentType.URL
 
-        # Create document
-        document = Document.objects.create(
-            owner=user,
-            title=title or result.metadata.get('title', url[:100]),
-            document_type=doc_type,
-            raw_content=result.raw_content,
-            processed_content=result.processed_content or '',
-            source_url=url,
-            metadata=result.metadata,
-            status='processed' if has_content else 'processed',  # Still mark as processed
-            tags=[]
-        )
+            # Check if we got meaningful content
+            has_content = result.processed_content and len(result.processed_content.strip()) > 50
+            warning_message = None
 
-        embedding_count = 0
-        if generate_embeddings and has_content:
-            # Generate embeddings in background
-            from core.tasks import generate_document_embeddings
-            generate_document_embeddings.delay(str(document.id))
-            document.status = 'embedding'
-            document.save(update_fields=['status'])
+            if not has_content:
+                # Check if it's likely a JavaScript-rendered SPA
+                if result.raw_content and '<script' in result.raw_content and len(result.raw_content) < 10000:
+                    warning_message = "This page appears to be JavaScript-rendered (SPA). Content may be incomplete."
+                else:
+                    warning_message = "Limited content extracted from this page."
 
-        response_data = {
-            'success': True,
-            'document': {
-                'id': str(document.id),
-                'title': document.title,
-                'document_type': document.document_type,
-                'status': document.status,
-                'source_url': document.source_url,
-                'word_count': len(result.processed_content.split()) if result.processed_content else 0,
-                'metadata': result.metadata,
-                'created_at': document.created_at.isoformat(),
-            },
-            'message': f"Successfully ingested {'YouTube video' if is_youtube else 'web page'}"
-        }
+            # Create document
+            document = Document.objects.create(
+                owner=user,
+                title=title or result.metadata.get('title', url[:100]),
+                document_type=doc_type,
+                raw_content=result.raw_content,
+                processed_content=result.processed_content or '',
+                source_url=url,
+                metadata=result.metadata,
+                status='processed' if has_content else 'processed',  # Still mark as processed
+                tags=[]
+            )
 
-        if warning_message:
-            response_data['warning'] = warning_message
+            embedding_count = 0
+            if generate_embeddings and has_content:
+                # Generate embeddings in background
+                from core.tasks import generate_document_embeddings
+                generate_document_embeddings.delay(str(document.id))
+                document.status = 'embedding'
+                document.save(update_fields=['status'])
 
-        return Response(response_data)
+            response_data = {
+                'success': True,
+                'document': {
+                    'id': str(document.id),
+                    'title': document.title,
+                    'document_type': document.document_type,
+                    'status': document.status,
+                    'source_url': document.source_url,
+                    'word_count': len(result.processed_content.split()) if result.processed_content else 0,
+                    'metadata': result.metadata,
+                    'created_at': document.created_at.isoformat(),
+                },
+                'message': f"Successfully ingested {'YouTube video' if is_youtube else 'web page'}"
+            }
+
+            if warning_message:
+                response_data['warning'] = warning_message
+
+            return Response(response_data)
 
     except Exception as e:
         logger.error(f"Error ingesting URL: {e}")

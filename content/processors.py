@@ -1193,6 +1193,189 @@ class URLProcessor(BaseProcessor):
 
         return metadata
 
+    def _extract_links(self, html_content: str, base_url: str, same_domain_only: bool = True,
+                       url_pattern: str = None) -> List[str]:
+        """
+        Extract links from HTML content.
+
+        Session 733: Added for multi-page crawling support.
+
+        Args:
+            html_content: Raw HTML content
+            base_url: Base URL for resolving relative links
+            same_domain_only: Only return links from the same domain
+            url_pattern: Optional regex pattern to filter URLs (e.g., '/tutorial/' or '/docs/')
+
+        Returns:
+            List of absolute URLs
+        """
+        from urllib.parse import urlparse, urljoin
+        import re
+
+        soup = BeautifulSoup(html_content, 'html.parser')
+        parsed_base = urlparse(base_url)
+        base_domain = parsed_base.netloc
+
+        links = set()
+
+        for a_tag in soup.find_all('a', href=True):
+            href = a_tag['href'].strip()
+
+            # Skip empty, anchor-only, javascript, and mailto links
+            if not href or href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                continue
+
+            # Convert to absolute URL
+            absolute_url = urljoin(base_url, href)
+            parsed_url = urlparse(absolute_url)
+
+            # Skip non-http(s) URLs
+            if parsed_url.scheme not in ('http', 'https'):
+                continue
+
+            # Filter by domain if requested
+            if same_domain_only and parsed_url.netloc != base_domain:
+                continue
+
+            # Filter by URL pattern if provided
+            if url_pattern:
+                if not re.search(url_pattern, absolute_url):
+                    continue
+
+            # Remove fragment and normalize
+            clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+            if parsed_url.query:
+                clean_url += f"?{parsed_url.query}"
+
+            links.add(clean_url)
+
+        return list(links)
+
+    def crawl_site(self, start_url: str, max_pages: int = 10, max_depth: int = 2,
+                   same_domain_only: bool = True, url_pattern: str = None,
+                   use_playwright: bool = False, **kwargs) -> 'MultiPageCrawlResult':
+        """
+        Crawl multiple pages starting from a URL.
+
+        Session 733: Multi-page crawling for documentation sites.
+
+        Args:
+            start_url: Starting URL to crawl from
+            max_pages: Maximum number of pages to crawl (default: 10)
+            max_depth: Maximum link depth to follow (default: 2)
+            same_domain_only: Only crawl pages on the same domain (default: True)
+            url_pattern: Optional regex to filter URLs (e.g., '/tutorial/' for Python tutorial)
+            use_playwright: Force Playwright for JS-rendered sites
+
+        Returns:
+            MultiPageCrawlResult with combined content from all pages
+        """
+        from urllib.parse import urlparse
+        import time
+
+        visited = set()
+        to_visit = [(start_url, 0)]  # (url, depth)
+        results = []
+        all_content = []
+        all_metadata = {
+            'start_url': start_url,
+            'pages_crawled': 0,
+            'max_pages': max_pages,
+            'max_depth': max_depth,
+            'url_pattern': url_pattern,
+            'crawled_urls': [],
+            'failed_urls': [],
+        }
+
+        parsed_start = urlparse(start_url)
+        base_domain = parsed_start.netloc
+
+        while to_visit and len(visited) < max_pages:
+            url, depth = to_visit.pop(0)
+
+            # Skip if already visited
+            if url in visited:
+                continue
+
+            visited.add(url)
+
+            # Process this page
+            try:
+                result = self.process(url, use_playwright=use_playwright, **kwargs)
+
+                if result.success and result.processed_content:
+                    results.append(result)
+
+                    # Add page header for context
+                    page_title = result.metadata.get('title', url)
+                    page_content = f"\n\n{'='*60}\n## {page_title}\nSource: {url}\n{'='*60}\n\n{result.processed_content}"
+                    all_content.append(page_content)
+                    all_metadata['crawled_urls'].append({
+                        'url': url,
+                        'title': page_title,
+                        'word_count': result.word_count,
+                        'depth': depth
+                    })
+
+                    # Extract links if we haven't reached max depth
+                    if depth < max_depth and result.raw_content:
+                        new_links = self._extract_links(
+                            result.raw_content,
+                            url,
+                            same_domain_only=same_domain_only,
+                            url_pattern=url_pattern
+                        )
+                        for link in new_links:
+                            if link not in visited:
+                                to_visit.append((link, depth + 1))
+                else:
+                    all_metadata['failed_urls'].append({
+                        'url': url,
+                        'error': result.error_message or 'No content extracted'
+                    })
+
+            except Exception as e:
+                all_metadata['failed_urls'].append({
+                    'url': url,
+                    'error': str(e)
+                })
+
+            # Small delay to be respectful
+            time.sleep(0.5)
+
+        all_metadata['pages_crawled'] = len(results)
+
+        # Combine all content
+        combined_content = '\n'.join(all_content)
+        total_words = sum(r.word_count for r in results)
+
+        return MultiPageCrawlResult(
+            success=len(results) > 0,
+            pages_crawled=len(results),
+            combined_content=combined_content,
+            individual_results=results,
+            metadata=all_metadata,
+            total_word_count=total_words,
+            error_message=None if results else "No pages successfully crawled"
+        )
+
+
+class MultiPageCrawlResult:
+    """
+    Result of a multi-page crawl operation.
+    Session 733: Added for site-wide document ingestion.
+    """
+    def __init__(self, success: bool, pages_crawled: int, combined_content: str,
+                 individual_results: List[ProcessingResult], metadata: Dict[str, Any],
+                 total_word_count: int, error_message: str = None):
+        self.success = success
+        self.pages_crawled = pages_crawled
+        self.combined_content = combined_content
+        self.individual_results = individual_results
+        self.metadata = metadata
+        self.total_word_count = total_word_count
+        self.error_message = error_message
+
 
 class DocumentProcessingPipeline:
     """Main document processing pipeline"""
