@@ -1588,7 +1588,7 @@ export default function AgentsPage() {
                     <div>
                       <p className="text-sm text-gray-400">Success Rate</p>
                       <p className="text-2xl font-bold">
-                        {monitoringData.summary?.success_rate?.toFixed(1) || '0'}%
+                        {((1 - (monitoringData.summary?.error_rate || 0)) * 100).toFixed(1)}%
                       </p>
                     </div>
                   </div>
@@ -1599,9 +1599,9 @@ export default function AgentsPage() {
                       <Activity size={20} className="text-accent-cyan" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Total Executions</p>
+                      <p className="text-sm text-gray-400">Executions (24h)</p>
                       <p className="text-2xl font-bold">
-                        {monitoringData.summary?.total_executions?.toLocaleString() || '0'}
+                        {(monitoringData.summary?.total_executions_24h || 0).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -1612,9 +1612,9 @@ export default function AgentsPage() {
                       <Clock size={20} className="text-accent-amber" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Avg Response Time</p>
+                      <p className="text-sm text-gray-400">Avg Execution Time</p>
                       <p className="text-2xl font-bold">
-                        {monitoringData.summary?.avg_response_time?.toFixed(2) || '0'}s
+                        {(monitoringData.summary?.average_execution_time || 0).toFixed(2)}s
                       </p>
                     </div>
                   </div>
@@ -1779,26 +1779,27 @@ export default function AgentsPage() {
                       </thead>
                       <tbody className="divide-y divide-dark-border">
                         {Object.entries(monitoringData.agents).slice(0, 10).map(([name, stats]: [string, unknown]) => {
-                          const agentStats = stats as { executions?: number; success_rate?: number; avg_time?: number }
+                          const agentStats = stats as { total_executions?: number; success_rate?: number; avg_execution_time?: number }
+                          const successRate = (agentStats.success_rate || 0) * 100
                           return (
                             <tr key={name} className="hover:bg-dark-hover/50">
                               <td className="py-3">
                                 <span className="font-medium">{name}</span>
                               </td>
                               <td className="py-3 text-gray-300">
-                                {agentStats.executions?.toLocaleString() || 0}
+                                {(agentStats.total_executions || 0).toLocaleString()}
                               </td>
                               <td className="py-3">
                                 <span className={cn(
                                   "text-sm",
-                                  (agentStats.success_rate || 0) >= 90 ? "text-accent-green" :
-                                  (agentStats.success_rate || 0) >= 70 ? "text-accent-amber" : "text-accent-red"
+                                  successRate >= 90 ? "text-accent-green" :
+                                  successRate >= 70 ? "text-accent-amber" : "text-accent-red"
                                 )}>
-                                  {agentStats.success_rate?.toFixed(1) || 0}%
+                                  {successRate.toFixed(1)}%
                                 </span>
                               </td>
                               <td className="py-3 text-gray-300">
-                                {agentStats.avg_time?.toFixed(2) || 0}s
+                                {(agentStats.avg_execution_time || 0).toFixed(2)}s
                               </td>
                             </tr>
                           )
