@@ -144,6 +144,24 @@ export const agentTemplatesApi = {
   delete: (id: string) => api.delete(`/v1/agents/templates/${id}/`),
 }
 
+// Session 734: Agent Orchestrations API - Multi-agent workflow management
+export const agentOrchestrationsApi = {
+  list: (params?: { status?: string; execution_strategy?: string }) =>
+    api.get('/v1/agents/orchestrations/', { params }),
+  detail: (id: string) => api.get(`/v1/agents/orchestrations/${id}/`),
+  create: (data: {
+    name: string
+    description?: string
+    workflow_definition?: Record<string, unknown>
+    agent_sequence?: string[]
+    execution_strategy?: string
+  }) => api.post('/v1/agents/orchestrations/', data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/v1/agents/orchestrations/${id}/`, data),
+  delete: (id: string) => api.delete(`/v1/agents/orchestrations/${id}/`),
+  execute: (id: string) => api.post(`/v1/agents/orchestrations/${id}/execute/`),
+}
+
 export const activityApi = {
   recent: (limit = 20, hours = 72) => api.get(`/recent-activity/?limit=${limit}&hours=${hours}`),
   learning: (limit = 20) => api.get(`/agent-learning/activity/?limit=${limit}`),
