@@ -11400,7 +11400,6 @@ def generate_document_embeddings(self, document_id: str, embedding_model: str = 
         document_id: ID of the Document (UUID string)
         embedding_model: Which embedding model to use (openai_small, openai_large, etc.)
     """
-    import asyncio
     from content.models import Document, DocumentEmbedding, EmbeddingModel
     from content.embeddings import RAGSystem
 
@@ -11413,31 +11412,23 @@ def generate_document_embeddings(self, document_id: str, embedding_model: str = 
             logger.warning(f"🔢 [SESSION 402] No content to embed for document {document_id}")
             return {'status': 'skipped', 'reason': 'No content'}
 
-        # Map string model name to enum
+        # Map string model name to enum (Session 733: Fixed SENTENCE_TRANSFORMER typo)
         model_map = {
             'openai_small': EmbeddingModel.OPENAI_SMALL,
             'openai_large': EmbeddingModel.OPENAI_LARGE,
             'openai_ada': EmbeddingModel.OPENAI_ADA,
-            'sentence_transformers': EmbeddingModel.SENTENCE_TRANSFORMERS,
+            'sentence_transformer': EmbeddingModel.SENTENCE_TRANSFORMER,
+            'sentence_transformers': EmbeddingModel.SENTENCE_TRANSFORMER,  # alias
             'cohere': EmbeddingModel.COHERE,
+            'local': EmbeddingModel.LOCAL,
         }
         model_enum = model_map.get(embedding_model, EmbeddingModel.OPENAI_SMALL)
 
         # Initialize RAG system and process document
         rag = RAGSystem()
 
-        # Run async method in sync context
-        async def run_embedding():
-            return await rag.process_document_for_rag(document, model_enum)
-
-        # Get or create event loop
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        success = loop.run_until_complete(run_embedding())
+        # Session 733: Use synchronous method to avoid nested async/sync recursion
+        success = rag.process_document_for_rag_sync(document, model_enum)
 
         if success:
             # Count embeddings created

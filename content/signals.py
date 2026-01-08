@@ -187,25 +187,30 @@ def set_document_processing_timestamp(sender, instance, **kwargs):
         try:
             old_instance = Document.objects.get(pk=instance.pk)
             # If status changed to processing, record start time
+            # Session 733: Don't call add_processing_log() as it triggers save() and causes recursion
+            # Instead, directly append to the list - the outer save() will persist it
             if (old_instance.status != 'processing' and
                 instance.status == 'processing'):
-                instance.add_processing_log(
-                    step='processing_started',
-                    status='info',
-                    details={'timestamp': timezone.now().isoformat()}
-                )
+                if not instance.processing_log:
+                    instance.processing_log = []
+                instance.processing_log.append({
+                    'step': 'processing_started',
+                    'status': 'info',
+                    'timestamp': timezone.now().isoformat(),
+                    'details': {}
+                })
 
             # If status changed to processed/failed, record completion
             elif (old_instance.status in ['pending', 'processing'] and
                   instance.status in ['processed', 'failed']):
-                instance.add_processing_log(
-                    step='processing_completed',
-                    status='info' if instance.status == 'processed' else 'error',
-                    details={
-                        'timestamp': timezone.now().isoformat(),
-                        'final_status': instance.status
-                    }
-                )
+                if not instance.processing_log:
+                    instance.processing_log = []
+                instance.processing_log.append({
+                    'step': 'processing_completed',
+                    'status': 'info' if instance.status == 'processed' else 'error',
+                    'timestamp': timezone.now().isoformat(),
+                    'details': {'final_status': instance.status}
+                })
         except Document.DoesNotExist:
             pass
 

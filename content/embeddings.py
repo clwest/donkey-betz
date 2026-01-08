@@ -16,6 +16,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from django.conf import settings
 from django.core.cache import cache
+from asgiref.sync import sync_to_async
 
 from .models import Document, DocumentEmbedding, KnowledgeBase, EmbeddingModel
 
@@ -320,9 +321,12 @@ class EmbeddingManager:
                 "text-embedding-ada-002"
             )
         
-        # Sentence Transformer provider
+        # Sentence Transformer provider (Session 733: Wrap in try/except to prevent errors from blocking OpenAI)
         if HAS_SENTENCE_TRANSFORMERS:
-            self.providers[EmbeddingModel.SENTENCE_TRANSFORMER] = SentenceTransformerProvider()
+            try:
+                self.providers[EmbeddingModel.SENTENCE_TRANSFORMER] = SentenceTransformerProvider()
+            except Exception as e:
+                logger.warning(f"Failed to initialize SentenceTransformerProvider: {e}. Local embeddings unavailable.")
         
         # Cohere provider
         if HAS_COHERE and settings.AI_PROVIDERS.get('COHERE_API_KEY'):
@@ -497,9 +501,9 @@ class RAGSystem:
                 logger.warning(f"Document {document.id} has no content to process")
                 return False
             
-            # Update document status
+            # Update document status (Session 733: Use sync_to_async for ORM calls)
             document.status = 'processing'
-            document.save()
+            await sync_to_async(document.save)()
             
             # Split text into chunks
             splitter = TextSplitter(chunk_size, chunk_overlap)
@@ -525,8 +529,8 @@ class RAGSystem:
                     )
                     
                     if result.success:
-                        # Create DocumentEmbedding
-                        embedding_obj = DocumentEmbedding.objects.create(
+                        # Create DocumentEmbedding (Session 733: Use sync_to_async)
+                        embedding_obj = await sync_to_async(DocumentEmbedding.objects.create)(
                             document=document,
                             embedding_model=embedding_model,
                             chunk_index=i,
@@ -552,6 +556,100 @@ class RAGSystem:
                     logger.error(f"Error processing chunk {i} of document {document.id}: {str(e)}")
                     continue
             
+            # Update document status (Session 733: Use sync_to_async for ORM calls)
+            if successful_chunks > 0:
+                document.status = 'processed'
+                document.add_processing_log(
+                    step='embedding_generation',
+                    status='success',
+                    details={
+                        'chunks_processed': successful_chunks,
+                        'total_chunks': len(chunks),
+                        'total_cost': total_cost,
+                        'embedding_model': str(embedding_model)
+                    }
+                )
+            else:
+                document.status = 'failed'
+                document.error_message = "Failed to generate any embeddings"
+
+            await sync_to_async(document.save)()
+
+            return successful_chunks > 0
+
+        except Exception as e:
+            logger.error(f"Error processing document {document.id} for RAG: {str(e)}")
+            document.status = 'failed'
+            document.error_message = str(e)
+            await sync_to_async(document.save)()
+            return False
+
+    def process_document_for_rag_sync(self, document: Document,
+                                      embedding_model: EmbeddingModel = EmbeddingModel.OPENAI_SMALL,
+                                      chunk_size: int = 1000,
+                                      chunk_overlap: int = 200) -> bool:
+        """
+        Synchronous version of process_document_for_rag for use in Celery tasks.
+        Session 733: Added to avoid nested async/sync recursion issues.
+        """
+        try:
+            # Get document content
+            content = document.get_content()
+            if not content or not content.strip():
+                logger.warning(f"Document {document.id} has no content to process")
+                return False
+
+            # Update document status
+            document.status = 'processing'
+            document.save()
+
+            # Split text into chunks
+            splitter = TextSplitter(chunk_size, chunk_overlap)
+            chunks = splitter.split_text(content, {
+                'document_id': str(document.id),
+                'document_title': document.title,
+                'document_type': document.document_type,
+            })
+
+            # Get provider
+            provider = self.embedding_manager.get_provider(embedding_model)
+            if not provider:
+                raise ValueError(f"No provider available for model: {embedding_model}")
+
+            total_cost = 0.0
+            successful_chunks = 0
+
+            for i, chunk_data in enumerate(chunks):
+                try:
+                    # Generate embedding synchronously (OpenAI client is sync)
+                    result = self._generate_embedding_sync(provider, chunk_data['text'])
+
+                    if result.success:
+                        # Create DocumentEmbedding
+                        DocumentEmbedding.objects.create(
+                            document=document,
+                            embedding_model=embedding_model,
+                            chunk_index=i,
+                            chunk_text=chunk_data['text'],
+                            chunk_size=chunk_data['size'],
+                            overlap_size=chunk_overlap if i > 0 else 0,
+                            embedding_vector=result.embedding,
+                            embedding_dimension=result.dimension,
+                            processing_time_ms=result.processing_time_ms,
+                            embedding_cost=result.cost,
+                            metadata=chunk_data['metadata']
+                        )
+
+                        total_cost += result.cost
+                        successful_chunks += 1
+                        logger.debug(f"Created embedding for chunk {i} of document {document.id}")
+                    else:
+                        logger.error(f"Failed to generate embedding for chunk {i}: {result.error_message}")
+
+                except Exception as e:
+                    logger.error(f"Error processing chunk {i} of document {document.id}: {str(e)}")
+                    continue
+
             # Update document status
             if successful_chunks > 0:
                 document.status = 'processed'
@@ -568,18 +666,70 @@ class RAGSystem:
             else:
                 document.status = 'failed'
                 document.error_message = "Failed to generate any embeddings"
-            
+
             document.save()
-            
             return successful_chunks > 0
-            
+
         except Exception as e:
             logger.error(f"Error processing document {document.id} for RAG: {str(e)}")
             document.status = 'failed'
             document.error_message = str(e)
             document.save()
             return False
-    
+
+    def _generate_embedding_sync(self, provider, text: str) -> EmbeddingResult:
+        """Synchronously generate embedding using a provider."""
+        try:
+            import time
+            start_time = time.time()
+
+            if hasattr(provider, 'client') and hasattr(provider.client, 'embeddings'):
+                # OpenAI-style provider
+                response = provider.client.embeddings.create(
+                    input=text,
+                    model=provider.model_name
+                )
+                processing_time = int((time.time() - start_time) * 1000)
+                embedding = response.data[0].embedding
+                tokens_used = response.usage.total_tokens
+                cost = tokens_used * provider.cost_per_token
+
+                return EmbeddingResult(
+                    success=True,
+                    embedding=embedding,
+                    dimension=len(embedding),
+                    processing_time_ms=processing_time,
+                    cost=cost,
+                    model_used=provider.model_name
+                )
+            elif hasattr(provider, 'model') and hasattr(provider.model, 'encode'):
+                # Sentence Transformer provider
+                embedding = provider.model.encode(text, convert_to_tensor=False)
+                processing_time = int((time.time() - start_time) * 1000)
+
+                return EmbeddingResult(
+                    success=True,
+                    embedding=embedding.tolist(),
+                    dimension=len(embedding),
+                    processing_time_ms=processing_time,
+                    cost=0.0,
+                    model_used=provider.model_name
+                )
+            else:
+                return EmbeddingResult(
+                    success=False,
+                    error_message="Unknown provider type",
+                    model_used="unknown"
+                )
+
+        except Exception as e:
+            logger.error(f"Embedding generation failed: {str(e)}")
+            return EmbeddingResult(
+                success=False,
+                error_message=str(e),
+                model_used=getattr(provider, 'model_name', 'unknown')
+            )
+
     async def semantic_search(self, query: str, 
                             knowledge_base: KnowledgeBase = None,
                             embedding_model: EmbeddingModel = EmbeddingModel.OPENAI_SMALL,
