@@ -1,7 +1,7 @@
-# Deep Audit Status - Session 729
+# Deep Audit Status - Session 731
 
 **Last Updated:** January 7, 2026
-**Sessions:** 726 (Started), 727 (Main Audit), 728 (Fixes + Migration), 729 (HIGH Priority Fixes)
+**Sessions:** 726 (Started), 727 (Main Audit), 728 (Fixes + Migration), 729 (HIGH Priority Fixes), 730 (pgvector), 731 (Verification)
 
 ---
 
@@ -9,16 +9,18 @@
 
 | Area | Original Score | Current Score | Status |
 |------|---------------|---------------|--------|
-| mythology/ | 30% | **90%** | ✅ FIXED (10 patterns seeded, quarantine cleared) |
-| Memory System | 0% validated | **90.5%** | ✅ FIXED (MemoryConnection + AgentExecutionMemory) |
-| intelligence/ | 40% | **75%** | ✅ FIXED (app_label corrected) |
-| agents/ | 50% | **90%** | ✅ MIGRATED |
+| mythology/ | 30% | **90%** | ✅ VERIFIED (10 patterns, 56 events, 4 alerts) |
+| Memory System | 0% validated | **100%** | ✅ VERIFIED (pgvector, 9 HNSW indexes) |
+| intelligence/ | 40% | **80%** | ✅ VERIFIED (41 ActionPlans populating) |
+| agents/ | 50% | **90%** | ✅ MIGRATED + VERIFIED |
 | PA Tools | 95% | 95% | ✅ HEALTHY |
 | Services | 100% | 100% | ✅ HEALTHY |
 | Celery Tasks | 65% | **90%** | ✅ FIXED |
-| Intelligent Prompting | 85% | **95%** | ✅ FIXED (metrics tracking added) |
+| Intelligent Prompting | 85% | **95%** | ✅ FIXED |
+| **Embedding System** | N/A | **100%** | ✅ NEW (pgvector complete) |
+| **Frontend APIs** | N/A | **70%** | ⚠️ GAPS DOCUMENTED |
 
-**Average Reality Score: 90%** (up from ~60% pre-audit)
+**Average Reality Score: 93%** (up from ~60% pre-audit)
 
 ---
 
@@ -54,17 +56,55 @@
 | ✅ monitor_and_process_opportunities fixed | Task now creates ActionPlans from opportunities |
 | ✅ Intelligent prompting metrics | Added `IntelligentPromptMetric` + `IntelligentPromptStats` models, wired tracking into `_build_intelligent_prompt()` |
 
+### Session 730
+
+| Fix | Details |
+|-----|---------|
+| ✅ pgvector migration complete | All 9 embedding models migrated to native pgvector VectorField |
+| ✅ HNSW indexes created | 9 indexes for fast cosine similarity search (m=16, ef_construction=64) |
+| ✅ Embedding dimensions verified | All models use 1536 dimensions (OpenAI text-embedding-3-small) |
+
+### Session 731
+
+| Fix | Details |
+|-----|---------|
+| ✅ Deep audit verification | All systems verified operational via shell commands |
+| ✅ Frontend API gaps documented | 9 systems with 59+ endpoints needing frontend exposure |
+| ✅ UI_GAPS document updated | Added RAG, Mythology, Income Builder sections |
+| ✅ UI_BACKEND_CONNECTION_MAP updated | Added Section 3: NOT CONNECTED for RAG system |
+| ✅ Similarity search tested | End-to-end pgvector queries working across all models |
+
 ---
 
 ## Remaining Issues
 
-### MEDIUM Priority
+### HIGH Priority (Frontend Gaps)
 
-#### 4. Agent Channels UI (NO FRONTEND)
+#### 1. RAG/Document Management UI (NO FRONTEND)
+**Location:** Backend complete at `/api/v1/rag/`
+**Issue:** 6 endpoints, 7,239 embeddings - no frontend UI
+**Impact:** Users can't upload documents or use semantic search via UI
+**Fix:** See `docs/UI_GAPS_AGENTS_MIGRATION.md` for implementation details
+
+#### 2. Mythology Lab UI (NO FRONTEND)
+**Location:** Backend complete at `/api/v1/mythology/`
+**Issue:** 11 endpoints for hallucination detection - no frontend UI
+**Impact:** Can't review flagged content or manage quarantine via UI
+**Fix:** Create `MythologyLabPage.tsx`
+
+#### 3. Agent Channels UI (NO FRONTEND)
 **Location:** Backend complete at `/api/v1/agents/channels/`
 **Issue:** "Slack for AI Agents" feature has no UI (2 channels, 5 memberships exist)
 **Impact:** Feature is unusable
-**Fix:** Create `AgentChannelsPage.tsx` (see `docs/UI_GAPS_AGENTS_MIGRATION.md`)
+**Fix:** Create `AgentChannelsPage.tsx`
+
+### MEDIUM Priority
+
+#### 4. Income Builder UI Enhancement
+**Location:** Backend complete at `/api/v1/intelligence/income-builder/`
+**Issue:** 8 endpoints, 41 ActionPlans - partial frontend coverage
+**Impact:** Users miss revenue generation features
+**Fix:** Add Income Builder tab to `IntelligencePage.tsx`
 
 #### 5. Intelligence App Consolidation (NOT DONE)
 **Location:** `intelligence/` + `ai_core/intelligence/`
@@ -73,7 +113,7 @@
 **Fix:** Consider merging into single app
 
 #### 6. Intelligence Tables (MOSTLY FIXED)
-**Status:** ActionPlan now populating, RevenueMetrics/EarningRecord need time
+**Status:** ActionPlan now populating (41 records), RevenueMetrics/EarningRecord need time
 **Note:** `monitor_and_process_opportunities` task fixed to create ActionPlans
 **Remaining:** RevenueMetrics and EarningRecord will populate as plans execute
 
@@ -124,28 +164,45 @@ print(f'ChannelMembership: {ChannelMembership.objects.count()}')
 
 ## Recommended Next Steps (Priority Order)
 
-### Immediate (Session 729) - ✅ COMPLETED
+### Completed (Sessions 729-731)
 
 1. ~~**Fix intelligence app_label**~~ ✅ Done - 9 Meta classes updated
 2. ~~**Review 9 quarantine items**~~ ✅ Done - All approved as false positives
 3. ~~**Seed mythology patterns**~~ ✅ Done - 10 patterns created
+4. ~~**pgvector migration**~~ ✅ Done - All 9 embedding models migrated
+5. ~~**Deep audit verification**~~ ✅ Done - All systems verified operational
+6. ~~**Document frontend gaps**~~ ✅ Done - 59+ endpoints documented
 
-### Short-term
+### Short-term (Session 732+)
 
-4. **Create Agent Channels UI**
-   - Add `agentChannelsApi` to `frontend/src/lib/api.ts`
-   - Create `AgentChannelsPage.tsx`
+7. **Create RAG/Documents UI** (HIGH)
+   - Add `ragApi` to `frontend/src/lib/api.ts`
+   - Create `DocumentsPage.tsx` with upload, search, stats
    - See `docs/UI_GAPS_AGENTS_MIGRATION.md` for details
 
-5. **Monitor intelligence tables** (passive)
-   - Check if ActionPlan, RevenueMetrics, EarningRecord populate
-   - Celery tasks are scheduled, should start creating records
+8. **Create Mythology Lab UI** (HIGH)
+   - Add `mythologyApi` to `frontend/src/lib/api.ts`
+   - Create `MythologyLabPage.tsx` for hallucination review
+
+9. **Create Agent Channels UI** (HIGH)
+   - Add `agentChannelsApi` to `frontend/src/lib/api.ts`
+   - Create `AgentChannelsPage.tsx`
+
+### Medium-term
+
+10. **Enhance Income Builder UI**
+    - Add Income Builder tab to IntelligencePage.tsx
+    - Connect to action plan endpoints
+
+11. **Monitor intelligence tables** (passive)
+    - ActionPlan at 41 records and growing
+    - RevenueMetrics/EarningRecord will populate as plans execute
 
 ### Long-term
 
-6. **Consider intelligence app consolidation**
-   - Evaluate if 66K lines can be reduced
-   - Plan migration if beneficial
+12. **Consider intelligence app consolidation**
+    - Evaluate if 66K lines can be reduced
+    - Plan migration if beneficial
 
 ---
 
@@ -160,9 +217,12 @@ print(f'ChannelMembership: {ChannelMembership.objects.count()}')
 | `docs/audits/SESSION_727_PA_TOOLS_AUDIT.md` | PA Tools findings (HEALTHY) |
 | `docs/audits/SESSION_727_SERVICES_AUDIT.md` | Services findings (HEALTHY) |
 | `docs/audits/SESSION_727_INTELLIGENT_PROMPTING_AUDIT.md` | Prompting findings |
+| `docs/audits/SESSION_730_PGVECTOR_EMBEDDING_AUDIT.md` | pgvector migration |
+| `docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md` | Embedding verification |
 | `docs/handoffs/SESSION_726_DEEP_SYSTEM_AUDIT.md` | Original audit plan |
 | `docs/handoffs/SESSION_728_AGENTS_MIGRATION.md` | Migration details |
-| `docs/UI_GAPS_AGENTS_MIGRATION.md` | UI gaps from migration |
+| `docs/UI_GAPS_AGENTS_MIGRATION.md` | **Complete frontend gaps (updated Session 731)** |
+| `docs/UI_BACKEND_CONNECTION_MAP.md` | **UI-Backend connection map (updated Session 731)** |
 
 ---
 

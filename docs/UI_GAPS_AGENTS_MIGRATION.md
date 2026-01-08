@@ -1,14 +1,143 @@
-# UI Gaps: agents/ Migration to core/
+# UI Gaps: Complete System Frontend Audit
 
-**Session:** 728
-**Date:** January 7, 2026
-**Status:** Documentation of frontend APIs needed
+**Sessions:** 728 (agents migration), 731 (deep audit verification)
+**Updated:** January 7, 2026
+**Status:** Comprehensive frontend API gap documentation
 
 ---
 
 ## Overview
 
-The Session 728 migration of `agents/` to `core/` revealed several backend APIs that have NO corresponding frontend UI. These are fully functional backend features waiting for frontend exposure.
+This document tracks ALL backend APIs that have NO corresponding frontend UI. These are fully functional backend features waiting for frontend exposure.
+
+**Gap Summary (Session 731 Verification):**
+
+| System | Backend APIs | Frontend | Priority |
+|--------|--------------|----------|----------|
+| **RAG/Documents** | 6 endpoints | ❌ None | HIGH |
+| **Agent Channels** | 10 endpoints | ❌ None | HIGH |
+| **Mythology** | 11 endpoints | ❌ None | HIGH |
+| **Intelligence/Income** | 15+ endpoints | ⚠️ Partial | MEDIUM |
+| **Agent Templates CRUD** | 5 endpoints | ⚠️ Read-only | MEDIUM |
+| **Agent Orchestrations** | 5 endpoints | ⚠️ Partial | MEDIUM |
+| **Agent Tools** | 3 endpoints | ❌ None | MEDIUM |
+| **Agent Monitoring** | 6 endpoints | ❌ None | MEDIUM |
+
+---
+
+## HIGH PRIORITY GAPS
+
+### 1. RAG/Document Embedding System (Session 731)
+
+**Backend:** Fully functional with 7,239 document embeddings using pgvector
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/rag/upload-document/` | POST | Upload documents for RAG processing |
+| `/api/v1/rag/semantic-search/` | POST | Semantic search across documents |
+| `/api/v1/rag/generate/` | POST | Generate responses with RAG context |
+| `/api/v1/rag/stats/` | GET | Get embedding statistics |
+| `/api/v1/rag/advanced-query/` | POST | Multi-collection search |
+| `/api/v1/rag/optimize/` | POST | Optimize embedding storage |
+
+**Frontend API Needed:**
+```typescript
+export const ragApi = {
+  uploadDocument: (file: File, options?: { collection_id?: string }) =>
+    api.postForm('/v1/rag/upload-document/', { file, ...options }),
+  semanticSearch: (query: string, options?: { limit?: number, threshold?: number }) =>
+    api.post('/v1/rag/semantic-search/', { query, ...options }),
+  generate: (query: string, options?: { max_context_chunks?: number }) =>
+    api.post('/v1/rag/generate/', { query, ...options }),
+  stats: () => api.get('/v1/rag/stats/'),
+  advancedQuery: (query: string, collection_ids?: string[]) =>
+    api.post('/v1/rag/advanced-query/', { query, collection_ids }),
+  optimize: () => api.post('/v1/rag/optimize/'),
+};
+```
+
+**UI Page Needed:** `DocumentsPage.tsx` with document upload, semantic search, and stats display.
+
+---
+
+### 2. Mythology System (Session 729)
+
+**Backend:** Fully functional with 10 MythPatterns, 56 Events, 4 Alerts
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/mythology/stats/` | GET | Dashboard statistics |
+| `/api/v1/mythology/flagged-content/` | GET | List flagged content |
+| `/api/v1/mythology/flagged-content/{id}/` | GET | Flagged content detail |
+| `/api/v1/mythology/review/` | POST | Submit review |
+| `/api/v1/mythology/recent-events/` | GET | Recent mythology events |
+| `/api/v1/mythology/report/` | POST | Report content |
+| `/api/v1/mythology/notifications/` | GET | Notifications list |
+| `/api/v1/mythology/quarantine/` | GET | Quarantine list |
+| `/api/v1/mythology/quarantine/stats/` | GET | Quarantine statistics |
+| `/api/v1/mythology/quarantine/{id}/approve/` | POST | Approve quarantined item |
+| `/api/v1/mythology/quarantine/{id}/reject/` | POST | Reject quarantined item |
+
+**Frontend API Needed:**
+```typescript
+export const mythologyApi = {
+  stats: () => api.get('/v1/mythology/stats/'),
+  flaggedContent: () => api.get('/v1/mythology/flagged-content/'),
+  flaggedContentDetail: (id: string) => api.get(`/v1/mythology/flagged-content/${id}/`),
+  submitReview: (data: { content_id: string; verdict: string; notes?: string }) =>
+    api.post('/v1/mythology/review/', data),
+  recentEvents: () => api.get('/v1/mythology/recent-events/'),
+  reportContent: (data: { content: string; reason: string }) =>
+    api.post('/v1/mythology/report/', data),
+  notifications: () => api.get('/v1/mythology/notifications/'),
+  quarantine: () => api.get('/v1/mythology/quarantine/'),
+  quarantineStats: () => api.get('/v1/mythology/quarantine/stats/'),
+  approveQuarantine: (id: string, data?: { notes?: string }) =>
+    api.post(`/v1/mythology/quarantine/${id}/approve/`, data),
+  rejectQuarantine: (id: string, data?: { notes?: string }) =>
+    api.post(`/v1/mythology/quarantine/${id}/reject/`, data),
+};
+```
+
+**UI Page Needed:** `MythologyLabPage.tsx` - Hallucination detection dashboard with review queue.
+
+### 3. Intelligence/Income Builder System (Session 729)
+
+**Backend:** 41 ActionPlans, Income Builder fully functional
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/intelligence/income-builder/` | GET | Income analysis |
+| `/api/v1/intelligence/income-builder/action-plan/` | GET/POST | Action plan management |
+| `/api/v1/intelligence/income-builder/plans/` | GET | List persisted plans |
+| `/api/v1/intelligence/income-builder/execute/` | POST | Execute action plan |
+| `/api/v1/intelligence/revenue/opportunities/` | GET | Revenue opportunities |
+| `/api/v1/intelligence/revenue/metrics/` | GET | Revenue metrics |
+| `/api/v1/intelligence/automation/workflows/` | GET | Automation workflows |
+| `/api/v1/intelligence/automation/execute/` | POST | Execute automation |
+
+**Current Frontend:** `intelligenceApi` has basic status/opportunities but missing Income Builder
+
+**Frontend API Addition Needed:**
+```typescript
+// Add to intelligenceApi
+export const incomeBuilderApi = {
+  analyze: () => api.get('/v1/intelligence/income-builder/'),
+  getActionPlan: () => api.get('/v1/intelligence/income-builder/action-plan/'),
+  createActionPlan: (data: { opportunity_id?: string; focus_area?: string }) =>
+    api.post('/v1/intelligence/income-builder/action-plan/', data),
+  listPlans: () => api.get('/v1/intelligence/income-builder/plans/'),
+  executePlan: (planId: string) =>
+    api.post('/v1/intelligence/income-builder/execute/', { plan_id: planId }),
+  revenueOpportunities: () => api.get('/v1/intelligence/revenue/opportunities/'),
+  revenueMetrics: () => api.get('/v1/intelligence/revenue/metrics/'),
+  automationWorkflows: () => api.get('/v1/intelligence/automation/workflows/'),
+  executeAutomation: (workflowId: string) =>
+    api.post('/v1/intelligence/automation/execute/', { workflow_id: workflowId }),
+};
+```
+
+**UI Enhancement Needed:** Add Income Builder tab to `IntelligencePage.tsx`
 
 ---
 
@@ -248,15 +377,41 @@ export const agentMonitoringApi = {
 
 ---
 
-## Summary
+## Summary (Updated Session 731)
 
 | Feature | Backend | Frontend | Data | Priority |
 |---------|---------|----------|------|----------|
-| Agent Channels | ✅ Complete | ❌ Missing | ✅ Has data | **HIGH** |
-| Agent Templates CRUD | ✅ Complete | ⚠️ Read-only | ✅ Has data | MEDIUM |
-| Agent Orchestrations | ✅ Complete | ⚠️ Partial | ✅ Has data | MEDIUM |
-| Agent Tools | ✅ Complete | ❌ Missing | ✅ Has data | MEDIUM |
-| Agent Monitoring | ✅ Complete | ⚠️ Basic | N/A | MEDIUM |
-| Agent Registry | ✅ Complete | ⚠️ Partial | ✅ Has data | LOW |
+| **RAG/Documents** | ✅ 6 endpoints | ❌ Missing | ✅ 7,239 embeddings | **HIGH** |
+| **Agent Channels** | ✅ 10 endpoints | ❌ Missing | ✅ 2 channels, 5 members | **HIGH** |
+| **Mythology Lab** | ✅ 11 endpoints | ❌ Missing | ✅ 10 patterns, 56 events | **HIGH** |
+| **Income Builder** | ✅ 8 endpoints | ⚠️ Partial | ✅ 41 action plans | **MEDIUM** |
+| Agent Templates CRUD | ✅ 5 endpoints | ⚠️ Read-only | ✅ Has data | MEDIUM |
+| Agent Orchestrations | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | MEDIUM |
+| Agent Tools | ✅ 3 endpoints | ❌ Missing | ✅ Has data | MEDIUM |
+| Agent Monitoring | ✅ 6 endpoints | ⚠️ Basic | N/A | MEDIUM |
+| Agent Registry | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | LOW |
 
-**Total: 6 features with backend APIs needing frontend exposure**
+**Total: 9 systems with 59+ backend API endpoints needing frontend exposure**
+
+---
+
+## Implementation Priority Order
+
+1. **RAG/Documents** - HIGH - 7,239 embeddings ready, enables semantic search UI
+2. **Agent Channels** - HIGH - Complete "Slack for AI Agents" with data
+3. **Mythology Lab** - HIGH - Hallucination detection needs review UI
+4. **Income Builder** - MEDIUM - Revenue generation UI
+5. **Agent Monitoring** - MEDIUM - Performance dashboards
+6. **Agent Tools/Templates/Orchestrations** - MEDIUM - Agent management CRUD
+
+---
+
+## Verification Status (Session 731)
+
+All systems verified operational via shell commands:
+- ✅ pgvector embeddings working (9 models, 9 HNSW indexes)
+- ✅ Mythology patterns seeded (10 patterns)
+- ✅ Intelligence ActionPlans populating (41 records)
+- ✅ Agent Channels ready (2 channels, 5 memberships)
+- ✅ Body Systems APIs exposed (10 systems)
+- ✅ Memory Clusters connected (6 clusters, 843 memories)
