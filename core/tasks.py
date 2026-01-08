@@ -10078,6 +10078,66 @@ def backfill_memory_embeddings(self, batch_size: int = 50):
 
 
 # =============================================================================
+# Session 729: Conversation Memory Embedding Backfill Task
+# =============================================================================
+
+@shared_task(bind=True, name='core.tasks.backfill_conversation_embeddings')
+def backfill_conversation_embeddings(self, batch_size: int = 50):
+    """
+    Session 729: Backfill embeddings for ConversationMemory records that don't have them.
+
+    Uses pgvector VectorField for fast semantic search.
+    Runs periodically to ensure all conversation memories have embeddings.
+    """
+    logger.info(f"💬 [CONVERSATION BACKFILL] Starting backfill (batch_size={batch_size})")
+
+    try:
+        from core.models import ConversationMemory
+        from core.services.memory_embedding_service import get_memory_embedding_service
+
+        service = get_memory_embedding_service()
+
+        # Find conversations without embeddings
+        conversations = ConversationMemory.objects.filter(embedding__isnull=True)[:batch_size]
+
+        stats = {'processed': 0, 'succeeded': 0, 'failed': 0}
+
+        for conv in conversations:
+            stats['processed'] += 1
+            try:
+                # Build text from message and response
+                text = f"User: {conv.message}\nAssistant: {conv.response}"
+                embedding = service._generate_embedding(text)
+
+                if embedding:
+                    # pgvector expects a list, which is what we get from OpenAI
+                    conv.embedding = embedding
+                    conv.save(update_fields=['embedding'])
+                    stats['succeeded'] += 1
+                else:
+                    stats['failed'] += 1
+            except Exception as e:
+                logger.debug(f"Failed to generate embedding for conversation {conv.id}: {e}")
+                stats['failed'] += 1
+
+        logger.info(
+            f"💬 [CONVERSATION BACKFILL] Completed: "
+            f"{stats['succeeded']}/{stats['processed']} succeeded (pgvector)"
+        )
+
+        return {
+            'status': 'completed',
+            'processed': stats['processed'],
+            'succeeded': stats['succeeded'],
+            'failed': stats['failed']
+        }
+
+    except Exception as e:
+        logger.error(f"💬 [CONVERSATION BACKFILL] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+# =============================================================================
 # Session 252: Agent Mood System Tasks
 # =============================================================================
 

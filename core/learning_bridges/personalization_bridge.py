@@ -381,22 +381,43 @@ except ImportError:
 
 
 # Session 461: Signal integration for ConversationMemory (chat preference extraction)
+# Session 729: Extended to generate embeddings for semantic search
 try:
     from core.models import ConversationMemory
 
     @receiver(post_save, sender=ConversationMemory)
     def on_conversation_for_personalization(sender, instance, created, **kwargs):
         """
-        Extract preferences from chat conversations.
+        Extract preferences from chat conversations and generate embeddings.
 
         Session 461: Listens for new ConversationMemory entries and extracts
         user preferences like work style, industry interests, skills, etc.
+
+        Session 729: Also generates embeddings for semantic search across
+        conversation history.
         """
         if created:
             try:
                 personalization_feedback_loop.process_conversation(instance)
             except Exception as e:
                 logger.error(f"Error in conversation personalization signal: {e}", exc_info=True)
+
+            # Session 729: Generate embedding for semantic search
+            try:
+                if not instance.embedding:
+                    from core.services.memory_embedding_service import get_memory_embedding_service
+                    service = get_memory_embedding_service()
+
+                    # Build text from message and response for embedding
+                    text = f"User: {instance.message}\nAssistant: {instance.response}"
+                    embedding = service._generate_embedding(text)
+
+                    if embedding:
+                        instance.embedding = embedding
+                        instance.save(update_fields=['embedding'])
+                        logger.debug(f"✅ Generated embedding for ConversationMemory {instance.id}")
+            except Exception as e:
+                logger.debug(f"Embedding generation failed for ConversationMemory (non-critical): {e}")
 
     logger.info("✅ ConversationMemory personalization signal registered")
 except ImportError:
