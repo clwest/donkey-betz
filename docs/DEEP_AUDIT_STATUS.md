@@ -49,6 +49,7 @@
 | ✅ Intelligence app_label fixed | Changed `intelligence_rt` to `intelligence` in 9 model Meta classes |
 | ✅ MythPattern seeded | 10 detection patterns created (all PATTERN_TYPES covered) |
 | ✅ Quarantine cleared | 9 items reviewed and approved as false positives (overly aggressive regex) |
+| ✅ Spider pipeline fixed | `scan-spider-opportunities` task added to Celery Beat database (was missing) |
 
 ---
 
