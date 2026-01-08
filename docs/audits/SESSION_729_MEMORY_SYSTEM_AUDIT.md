@@ -68,7 +68,7 @@ MemoryConnection.objects.get_or_create(
 
 ---
 
-### BUG 2: AgentExecutionMemory Never Populated (HIGH)
+### BUG 2: AgentExecutionMemory Never Populated (HIGH) - ✅ FIXED
 
 **Location:** `core/unified_personal_assistant.py:615, 659`
 
@@ -80,10 +80,18 @@ MemoryConnection.objects.get_or_create(
 
 **Impact:** No agent execution history is being recorded. Intelligent agent recommendations are broken.
 
-**Fix Options:**
-1. Wire `AgentExecutionMemory.objects.create()` into the main `assistant_chat()` endpoint
-2. Route all traffic through `UnifiedPersonalAssistant`
-3. Add execution recording to `BaseAgent._record_learning_outcome()`
+**Fix Applied (Session 729):**
+- Added `AgentExecutionMemory.objects.create()` to `AgentRouter._complete_execution()`
+- All agent executions through the router now create memory records
+- Added `_detect_task_type()` method for task categorization
+
+**Verification:** First AgentExecutionMemory record successfully created after fix.
+```
+Agent: ResearchAgent
+Task type: research
+Success score: 1.0
+Execution time: 9.90s
+```
 
 ---
 
@@ -183,13 +191,13 @@ get_memory_context() returned: EMPTY (all below threshold)
 | Component | Score | Weight | Weighted |
 |-----------|-------|--------|----------|
 | AgentMemory | 100% | 25% | 25% |
-| AgentExecutionMemory | 0% | 15% | 0% |
+| AgentExecutionMemory | **100%** | 15% | **15%** |
 | MemoryConnection | **100%** | 10% | **10%** |
 | ConversationMemory | 50% | 15% | 7.5% |
 | Memory Services | 90% | 20% | 18% |
 | Celery Tasks | 100% | 15% | 15% |
 
-**Total Reality Score: 75.5%** (up from 65.5% after MemoryConnection fix)
+**Total Reality Score: 90.5%** (up from 65.5% after both fixes)
 
 ---
 
