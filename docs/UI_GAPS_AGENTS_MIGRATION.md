@@ -17,11 +17,11 @@ This document tracks ALL backend APIs that have NO corresponding frontend UI. Th
 | **RAG/Documents** | 6 endpoints | ✅ COMPLETE | DONE |
 | **Mythology Lab** | 11 endpoints | ✅ COMPLETE | DONE |
 | **Agent Channels** | 10 endpoints | ✅ COMPLETE | DONE |
-| **Intelligence/Income** | 15+ endpoints | ⚠️ Partial | MEDIUM |
+| **Intelligence/Income** | 15+ endpoints | ✅ COMPLETE | DONE |
+| **Agent Monitoring** | 6 endpoints | ✅ COMPLETE | DONE |
 | **Agent Templates CRUD** | 5 endpoints | ⚠️ Read-only | MEDIUM |
 | **Agent Orchestrations** | 5 endpoints | ⚠️ Partial | MEDIUM |
 | **Agent Tools** | 3 endpoints | ❌ None | MEDIUM |
-| **Agent Monitoring** | 6 endpoints | ❌ None | MEDIUM |
 
 ---
 
@@ -349,13 +349,13 @@ export const agentMonitoringApi = {
 | **Mythology Lab** | ✅ 11 endpoints | ✅ COMPLETE | ✅ 10 patterns, 56 events | **DONE** |
 | **Agent Channels** | ✅ 12 endpoints | ✅ COMPLETE | ✅ 1 channel, 5 members | **DONE** |
 | **Income Builder** | ✅ 10 endpoints | ✅ COMPLETE | ✅ 150 revenue plans | **DONE** |
+| **Agent Monitoring** | ✅ 6 endpoints | ✅ COMPLETE | N/A (metrics) | **DONE** |
 | Agent Templates CRUD | ✅ 5 endpoints | ⚠️ Read-only | ✅ Has data | MEDIUM |
 | Agent Orchestrations | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | MEDIUM |
 | Agent Tools | ✅ 3 endpoints | ❌ Missing | ✅ Has data | MEDIUM |
-| Agent Monitoring | ✅ 6 endpoints | ⚠️ Basic | N/A | MEDIUM |
 | Agent Registry | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | LOW |
 
-**Total: 7 systems with 42+ backend API endpoints needing frontend exposure** (4 completed: RAG, Mythology, Agent Channels, Income Builder)
+**Total: 7 systems with 42+ backend API endpoints needing frontend exposure** (5 completed: RAG, Mythology, Agent Channels, Income Builder, Agent Monitoring)
 
 ---
 
@@ -365,7 +365,7 @@ export const agentMonitoringApi = {
 2. ~~**Mythology Lab** - DONE (Sessions 733-734)~~
 3. ~~**Agent Channels** - DONE (Session 734) - "Slack for AI Agents" tab in AgentsPage~~
 4. ~~**Income Builder** - DONE (Session 734) - "Income Builder" tab in IntelligencePage~~
-5. **Agent Monitoring** - MEDIUM - Performance dashboards
+5. ~~**Agent Monitoring** - DONE (Session 734) - "Monitoring" tab in AgentsPage~~
 6. **Agent Tools/Templates/Orchestrations** - MEDIUM - Agent management CRUD
 
 ---
