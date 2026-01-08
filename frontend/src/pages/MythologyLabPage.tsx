@@ -2,15 +2,15 @@
  * Mythology Lab Page
  *
  * Session 733: Hallucination detection and review interface.
+ * Session 734: Updated to display all rich data from backend API.
  *
  * The Mythology Lab monitors AI outputs for potential hallucinations,
  * providing tools for reviewing flagged content and managing quarantine.
  *
  * Features:
- * 1. Dashboard stats - total events, patterns, alerts, flagged content
- * 2. Recent events - severity badges, event type, agent source
- * 3. Pattern library - detection patterns and statistics
- * 4. Quarantine review - approve/reject flagged content
+ * 1. Dashboard stats - comprehensive real-time metrics
+ * 2. Recent events - mutation types, risk levels, prevention status
+ * 3. Quarantine review - teacher/student agents, violation details, spider sources
  */
 
 import { useState } from 'react'
@@ -20,7 +20,6 @@ import {
   XCircle,
   Shield,
   Activity,
-  BookOpen,
   Clock,
   Flag,
   AlertCircle,
@@ -31,60 +30,131 @@ import {
   Skull,
   User,
   FileQuestion,
+  Zap,
+  TrendingUp,
+  Timer,
+  Target,
+  ShieldCheck,
+  ArrowRight,
+  ExternalLink,
+  AlertTriangle,
+  Ban,
 } from 'lucide-react'
 import { mythologyApi } from '@/lib/api'
 import Breadcrumb from '@/components/Breadcrumb'
 
-// Types
+// =============================================================================
+// Types - Matching actual backend API responses
+// =============================================================================
+
+// Stats from /api/v1/mythology/stats/
 interface MythologyStats {
-  total_events: number
-  patterns_count: number
-  active_alerts: number
-  flagged_content_count: number
-  quarantine_pending: number
-  events_by_severity?: Record<string, number>
+  // Main dashboard stats
+  total_flagged: number
+  pending_review: number
+  high_priority: number
+  resolved_today: number
+  false_positive_rate: number
+  avg_review_time: number
+  recent_events_24h: number
+  unacknowledged_alerts: number
+  // Neural Processing Stats
+  total_processed: number
+  events_last_hour: number
+  prevention_success_rate: number
+  avg_risk_score: number
+  processing_rate_per_hour: number
+  system_efficiency: number
+  // Pattern tracking
+  active_patterns?: number
 }
 
+// Events from /api/v1/mythology/recent-events/
 interface MythologyEvent {
   id: string
   event_type: string
-  severity: 'low' | 'medium' | 'high' | 'critical'
-  agent_name?: string
-  description: string
+  mutation_type?: string
+  patterns_detected: string[]
+  risk_level: number
+  confidence_score: number
+  was_prevented: boolean
+  prevention_method?: string
   created_at: string
-  details?: Record<string, unknown>
+  content_preview: string
 }
 
+// Quarantine from /api/v1/mythology/quarantine/
 interface QuarantineItem {
   id: string
-  content_type: string
-  content_preview: string
-  reason: string
-  severity: 'low' | 'medium' | 'high' | 'critical'
-  agent_name?: string
+  teacher: string
+  student: string
+  blocked_title: string
+  blocked_content: string
+  violation_type: string
+  violation_count: number
+  violation_patterns: string[]
+  mythology_warning: string
+  spider_sources: string[]
+  status: 'pending' | 'approved' | 'rejected' | 'edited'
   created_at: string
-  status: 'pending' | 'approved' | 'rejected'
+  reviewed_at?: string
+  reviewed_by?: string
 }
 
-// Tabs
+// =============================================================================
+// Utility Components
+// =============================================================================
+
 type TabKey = 'events' | 'quarantine'
 
-// Severity Badge Component
-function SeverityBadge({ severity }: { severity: string }) {
-  const colors: Record<string, string> = {
-    low: 'bg-blue-500/20 text-blue-300',
-    medium: 'bg-yellow-500/20 text-yellow-300',
-    high: 'bg-orange-500/20 text-orange-300',
-    critical: 'bg-red-500/20 text-red-300',
+// Risk Level Badge - converts 0-1 float to visual indicator
+function RiskBadge({ level }: { level: number }) {
+  const getRiskInfo = (risk: number) => {
+    if (risk >= 0.8) return { label: 'Critical', color: 'bg-red-500/20 text-red-300' }
+    if (risk >= 0.6) return { label: 'High', color: 'bg-orange-500/20 text-orange-300' }
+    if (risk >= 0.4) return { label: 'Medium', color: 'bg-yellow-500/20 text-yellow-300' }
+    return { label: 'Low', color: 'bg-blue-500/20 text-blue-300' }
+  }
+
+  const { label, color } = getRiskInfo(level)
+
+  return (
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${color}`}>
+      {label} ({(level * 100).toFixed(0)}%)
+    </span>
+  )
+}
+
+// Status Badge for quarantine items
+function StatusBadge({ status }: { status: string }) {
+  const statusColors: Record<string, string> = {
+    pending: 'bg-yellow-500/20 text-yellow-300',
+    approved: 'bg-green-500/20 text-green-300',
+    rejected: 'bg-red-500/20 text-red-300',
+    edited: 'bg-blue-500/20 text-blue-300',
   }
 
   return (
-    <span
-      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-        colors[severity] || colors.low
-      }`}
-    >
-      {severity.charAt(0).toUpperCase() + severity.slice(1)}
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${statusColors[status] || statusColors.pending}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  )
+}
+
+// Prevention Badge
+function PreventionBadge({ prevented, method }: { prevented: boolean; method?: string }) {
+  if (prevented) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-300">
+        <ShieldCheck className="h-3 w-3" />
+        Prevented {method && `(${method})`}
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-300">
+      <AlertTriangle className="h-3 w-3" />
+      Not Prevented
     </span>
   )
 }
@@ -96,12 +166,14 @@ function StatCard({
   icon: Icon,
   color = 'text-primary-400',
   subtitle,
+  trend,
 }: {
   title: string
   value: number | string
   icon: React.ElementType
   color?: string
   subtitle?: string
+  trend?: 'up' | 'down' | 'neutral'
 }) {
   return (
     <div className="rounded-lg border border-dark-border bg-dark-card p-4">
@@ -109,8 +181,17 @@ function StatCard({
         <div className={`rounded-lg bg-dark-bg p-2 ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
-        <div>
-          <div className="text-2xl font-bold text-white">{value}</div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-white">{value}</div>
+            {trend && (
+              <TrendingUp
+                className={`h-4 w-4 ${
+                  trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400 rotate-180' : 'text-gray-400'
+                }`}
+              />
+            )}
+          </div>
           <div className="text-sm text-gray-400">{title}</div>
           {subtitle && <div className="text-xs text-gray-500">{subtitle}</div>}
         </div>
@@ -119,7 +200,10 @@ function StatCard({
   )
 }
 
-// Event Row Component
+// =============================================================================
+// Event Row Component - Shows rich event data
+// =============================================================================
+
 function EventRow({
   event,
   isExpanded,
@@ -138,18 +222,41 @@ function EventRow({
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <SeverityBadge severity={event.severity} />
+          {/* Header Row */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <RiskBadge level={event.risk_level} />
             <span className="font-medium text-white">{event.event_type}</span>
-          </div>
-          <p className="text-sm text-gray-400 truncate">{event.description}</p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-            {event.agent_name && (
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {event.agent_name}
+            {event.mutation_type && (
+              <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                {event.mutation_type}
               </span>
             )}
+            <PreventionBadge prevented={event.was_prevented} method={event.prevention_method} />
+          </div>
+
+          {/* Content Preview */}
+          <p className="text-sm text-gray-300 line-clamp-2 mb-2">{event.content_preview}</p>
+
+          {/* Patterns Detected */}
+          {event.patterns_detected && event.patterns_detected.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {event.patterns_detected.map((pattern, idx) => (
+                <span
+                  key={idx}
+                  className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400 border border-dark-border"
+                >
+                  {pattern}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Meta Info */}
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <Target className="h-3 w-3" />
+              Confidence: {(event.confidence_score * 100).toFixed(0)}%
+            </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {new Date(event.created_at).toLocaleString()}
@@ -163,19 +270,60 @@ function EventRow({
         )}
       </div>
 
-      {isExpanded && event.details && (
-        <div className="mt-4 pt-4 border-t border-dark-border">
-          <h4 className="text-sm font-medium text-white mb-2">Event Details</h4>
-          <pre className="text-xs text-gray-400 bg-dark-bg rounded p-3 overflow-x-auto">
-            {JSON.stringify(event.details, null, 2)}
-          </pre>
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div className="mt-4 pt-4 border-t border-dark-border space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Risk Level</div>
+              <div className="text-white font-medium">{(event.risk_level * 100).toFixed(1)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Confidence</div>
+              <div className="text-white font-medium">{(event.confidence_score * 100).toFixed(1)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Prevention</div>
+              <div className="text-white font-medium">{event.was_prevented ? 'Yes' : 'No'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Method</div>
+              <div className="text-white font-medium">{event.prevention_method || 'N/A'}</div>
+            </div>
+          </div>
+
+          {event.patterns_detected && event.patterns_detected.length > 0 && (
+            <div>
+              <div className="text-xs text-gray-500 mb-2">All Patterns Detected</div>
+              <div className="flex flex-wrap gap-2">
+                {event.patterns_detected.map((pattern, idx) => (
+                  <span
+                    key={idx}
+                    className="text-sm px-3 py-1 rounded bg-dark-bg text-gray-300 border border-dark-border"
+                  >
+                    {pattern}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <div className="text-xs text-gray-500 mb-2">Full Content Preview</div>
+            <div className="text-sm text-gray-400 bg-dark-bg rounded p-3 max-h-40 overflow-y-auto">
+              {event.content_preview}
+            </div>
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-// Quarantine Row Component
+// =============================================================================
+// Quarantine Row Component - Shows teacher/student, violations, spider sources
+// =============================================================================
+
 function QuarantineRow({
   item,
   isExpanded,
@@ -192,45 +340,52 @@ function QuarantineRow({
   isProcessing: boolean
 }) {
   return (
-    <div
-      className={`border-b border-dark-border p-4 ${
-        isExpanded ? 'bg-dark-bg' : ''
-      }`}
-    >
-      <div
-        className="flex items-start justify-between cursor-pointer"
-        onClick={onToggle}
-      >
+    <div className={`border-b border-dark-border p-4 ${isExpanded ? 'bg-dark-bg' : ''}`}>
+      <div className="flex items-start justify-between cursor-pointer" onClick={onToggle}>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <SeverityBadge severity={item.severity} />
-            <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-300">
-              {item.content_type}
+          {/* Header Row */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <StatusBadge status={item.status} />
+            <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-300">
+              {item.violation_type}
             </span>
-            {item.status === 'pending' && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300">
-                Pending Review
-              </span>
-            )}
+            <span className="text-xs text-gray-500">
+              {item.violation_count} violation{item.violation_count !== 1 ? 's' : ''}
+            </span>
           </div>
-          <p className="text-sm text-gray-300 line-clamp-2">
-            {item.content_preview}
-          </p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <Flag className="h-3 w-3" />
-              {item.reason}
-            </span>
-            {item.agent_name && (
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {item.agent_name}
-              </span>
-            )}
+
+          {/* Title */}
+          <h4 className="font-medium text-white mb-1">{item.blocked_title}</h4>
+
+          {/* Agent Flow */}
+          <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+            <User className="h-4 w-4 text-blue-400" />
+            <span className="text-blue-300">{item.teacher}</span>
+            <ArrowRight className="h-4 w-4" />
+            <User className="h-4 w-4 text-green-400" />
+            <span className="text-green-300">{item.student}</span>
+          </div>
+
+          {/* Mythology Warning */}
+          {item.mythology_warning && (
+            <div className="flex items-start gap-2 text-sm text-yellow-400 mb-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span className="line-clamp-2">{item.mythology_warning}</span>
+            </div>
+          )}
+
+          {/* Meta Info */}
+          <div className="flex items-center gap-4 text-xs text-gray-500">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {new Date(item.created_at).toLocaleString()}
             </span>
+            {item.reviewed_by && (
+              <span className="flex items-center gap-1">
+                <User className="h-3 w-3" />
+                Reviewed by {item.reviewed_by}
+              </span>
+            )}
           </div>
         </div>
         {isExpanded ? (
@@ -240,19 +395,56 @@ function QuarantineRow({
         )}
       </div>
 
+      {/* Expanded Details */}
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-dark-border">
-          <div className="mb-4">
-            <h4 className="text-sm font-medium text-white mb-2">
-              Full Content Preview
-            </h4>
-            <div className="text-sm text-gray-400 bg-dark-bg rounded p-3 max-h-40 overflow-y-auto">
-              {item.content_preview}
+        <div className="mt-4 pt-4 border-t border-dark-border space-y-4">
+          {/* Violation Patterns */}
+          {item.violation_patterns && item.violation_patterns.length > 0 && (
+            <div>
+              <div className="text-xs text-gray-500 mb-2">Violation Patterns</div>
+              <div className="flex flex-wrap gap-2">
+                {item.violation_patterns.map((pattern, idx) => (
+                  <span
+                    key={idx}
+                    className="text-sm px-3 py-1 rounded bg-red-500/10 text-red-300 border border-red-500/30"
+                  >
+                    <Ban className="h-3 w-3 inline mr-1" />
+                    {pattern}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Spider Sources */}
+          {item.spider_sources && item.spider_sources.length > 0 && (
+            <div>
+              <div className="text-xs text-gray-500 mb-2">Spider Sources</div>
+              <div className="flex flex-wrap gap-2">
+                {item.spider_sources.map((source, idx) => (
+                  <span
+                    key={idx}
+                    className="text-sm px-3 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/30"
+                  >
+                    <ExternalLink className="h-3 w-3 inline mr-1" />
+                    {source}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Blocked Content */}
+          <div>
+            <div className="text-xs text-gray-500 mb-2">Blocked Content</div>
+            <div className="text-sm text-gray-400 bg-dark-bg rounded p-3 max-h-60 overflow-y-auto whitespace-pre-wrap">
+              {item.blocked_content}
             </div>
           </div>
 
+          {/* Actions */}
           {item.status === 'pending' && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -262,7 +454,7 @@ function QuarantineRow({
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Approve
+                Approve (False Positive)
               </button>
               <button
                 onClick={(e) => {
@@ -273,7 +465,7 @@ function QuarantineRow({
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
               >
                 <XCircle className="h-4 w-4" />
-                Reject
+                Reject (Confirm Myth)
               </button>
             </div>
           )}
@@ -283,7 +475,10 @@ function QuarantineRow({
   )
 }
 
+// =============================================================================
 // Main Page Component
+// =============================================================================
+
 export default function MythologyLabPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('events')
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
@@ -297,7 +492,7 @@ export default function MythologyLabPage() {
     queryKey: ['mythology-stats'],
     queryFn: async () => {
       const response = await mythologyApi.stats()
-      return response.data
+      return response.data as MythologyStats
     },
     staleTime: 30000,
   })
@@ -356,19 +551,16 @@ export default function MythologyLabPage() {
     },
   })
 
-  const stats: MythologyStats | undefined = statsData
-  const events: MythologyEvent[] = eventsData?.events || eventsData || []
-  const quarantineItems: QuarantineItem[] =
-    quarantineData?.items || quarantineData || []
+  const stats = statsData
+  const events: MythologyEvent[] = eventsData?.events || []
+  const quarantineItems: QuarantineItem[] = quarantineData?.items || []
 
   const isLoading = statsLoading || eventsLoading || quarantineLoading
 
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="animate-pulse text-gray-400">
-          Loading Mythology Lab...
-        </div>
+        <div className="animate-pulse text-gray-400">Loading Mythology Lab...</div>
       </div>
     )
   }
@@ -399,56 +591,103 @@ export default function MythologyLabPage() {
             <Beaker className="h-8 w-8 text-purple-400" />
             Mythology Lab
           </h1>
-          <p className="text-gray-400 mt-1">
-            Hallucination detection and content review system
-          </p>
+          <p className="text-gray-400 mt-1">Hallucination detection, prevention, and content review system</p>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Primary Stats Grid */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
-            title="Total Events"
-            value={stats.total_events || 0}
-            icon={Activity}
-            color="text-blue-400"
-          />
-          <StatCard
-            title="Detection Patterns"
-            value={stats.patterns_count || 0}
-            icon={BookOpen}
-            color="text-green-400"
-          />
-          <StatCard
-            title="Active Alerts"
-            value={stats.active_alerts || 0}
-            icon={AlertCircle}
-            color="text-yellow-400"
+            title="Total Flagged"
+            value={stats.total_flagged || 0}
+            icon={Flag}
+            color="text-red-400"
           />
           <StatCard
             title="Pending Review"
-            value={stats.quarantine_pending || quarantineItems.length || 0}
+            value={stats.pending_review || 0}
             icon={FileQuestion}
+            color="text-yellow-400"
+          />
+          <StatCard
+            title="High Priority"
+            value={stats.high_priority || 0}
+            icon={AlertCircle}
             color="text-orange-400"
+          />
+          <StatCard
+            title="Resolved Today"
+            value={stats.resolved_today || 0}
+            icon={CheckCircle2}
+            color="text-green-400"
           />
         </div>
       )}
 
-      {/* Severity Breakdown */}
-      {stats?.events_by_severity && (
+      {/* Neural Processing Stats */}
+      {stats && (
         <div className="rounded-lg border border-dark-border bg-dark-card p-4">
-          <h3 className="text-sm font-medium text-white mb-3">
-            Events by Severity
+          <h3 className="flex items-center gap-2 text-sm font-medium text-white mb-4">
+            <Zap className="h-4 w-4 text-purple-400" />
+            Neural Processing Stats
           </h3>
-          <div className="flex items-center gap-6">
-            {Object.entries(stats.events_by_severity).map(([severity, count]) => (
-              <div key={severity} className="flex items-center gap-2">
-                <SeverityBadge severity={severity} />
-                <span className="text-white font-medium">{count as number}</span>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{stats.total_processed || 0}</div>
+              <div className="text-xs text-gray-500">Total Processed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{stats.events_last_hour || 0}</div>
+              <div className="text-xs text-gray-500">Events/Hour</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">{stats.prevention_success_rate?.toFixed(1) || 0}%</div>
+              <div className="text-xs text-gray-500">Prevention Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-400">{stats.avg_risk_score?.toFixed(2) || 0}</div>
+              <div className="text-xs text-gray-500">Avg Risk Score</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-400">{stats.false_positive_rate?.toFixed(1) || 0}%</div>
+              <div className="text-xs text-gray-500">False Positive Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-400">{stats.active_patterns || 0}</div>
+              <div className="text-xs text-gray-500">Active Patterns</div>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Secondary Stats */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            title="Recent Events (24h)"
+            value={stats.recent_events_24h || 0}
+            icon={Activity}
+            color="text-blue-400"
+          />
+          <StatCard
+            title="Unacknowledged Alerts"
+            value={stats.unacknowledged_alerts || 0}
+            icon={AlertCircle}
+            color="text-red-400"
+          />
+          <StatCard
+            title="Avg Review Time"
+            value={`${stats.avg_review_time?.toFixed(1) || 0}s`}
+            icon={Timer}
+            color="text-cyan-400"
+          />
+          <StatCard
+            title="System Efficiency"
+            value={`${stats.system_efficiency?.toFixed(1) || 0}%`}
+            icon={Target}
+            color="text-green-400"
+          />
         </div>
       )}
 
@@ -467,15 +706,13 @@ export default function MythologyLabPage() {
             <tab.icon className="h-4 w-4" />
             {tab.label}
             {tab.count > 0 && (
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-dark-bg text-xs">
-                {tab.count}
-              </span>
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-dark-bg text-xs">{tab.count}</span>
             )}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content - Events */}
       {activeTab === 'events' && (
         <div className="rounded-lg border border-dark-border bg-dark-card overflow-hidden">
           {events.length === 0 ? (
@@ -492,17 +729,14 @@ export default function MythologyLabPage() {
                 key={event.id}
                 event={event}
                 isExpanded={expandedEventId === event.id}
-                onToggle={() =>
-                  setExpandedEventId(
-                    expandedEventId === event.id ? null : event.id
-                  )
-                }
+                onToggle={() => setExpandedEventId(expandedEventId === event.id ? null : event.id)}
               />
             ))
           )}
         </div>
       )}
 
+      {/* Tab Content - Quarantine */}
       {activeTab === 'quarantine' && (
         <div className="rounded-lg border border-dark-border bg-dark-card overflow-hidden">
           {quarantineItems.length === 0 ? (
@@ -510,7 +744,7 @@ export default function MythologyLabPage() {
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
               <p className="text-gray-400">No items pending review</p>
               <p className="text-sm text-gray-500 mt-1">
-                Quarantined content will appear here for approval
+                Quarantined knowledge transfers will appear here for approval
               </p>
             </div>
           ) : (
@@ -520,9 +754,7 @@ export default function MythologyLabPage() {
                 item={item}
                 isExpanded={expandedQuarantineId === item.id}
                 onToggle={() =>
-                  setExpandedQuarantineId(
-                    expandedQuarantineId === item.id ? null : item.id
-                  )
+                  setExpandedQuarantineId(expandedQuarantineId === item.id ? null : item.id)
                 }
                 onApprove={() => approveMutation.mutate(item.id)}
                 onReject={() => rejectMutation.mutate(item.id)}
@@ -541,27 +773,30 @@ export default function MythologyLabPage() {
         </h3>
         <div className="text-sm text-gray-400 space-y-2">
           <p>
-            The Mythology Lab is the AI hallucination detection and review system.
-            It monitors all AI-generated content for potential fabrications,
-            inconsistencies, and unsupported claims.
+            The Mythology Lab is the AI hallucination detection and review system. It monitors all
+            AI-generated content for potential fabrications, inconsistencies, and unsupported claims.
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>
-              <strong className="text-gray-300">Detection Patterns</strong> -
-              Rules that identify suspicious content patterns
+              <strong className="text-gray-300">Detection Patterns</strong> - Rules that identify
+              suspicious content patterns (numeric inflation, false claims, context loss)
             </li>
             <li>
-              <strong className="text-gray-300">Events</strong> - Logged
-              instances where potential hallucinations were detected
+              <strong className="text-gray-300">Events</strong> - Logged instances with risk levels,
+              confidence scores, and prevention status
             </li>
             <li>
-              <strong className="text-gray-300">Quarantine</strong> - Content
-              held for human review before release
+              <strong className="text-gray-300">Quarantine</strong> - Blocked knowledge transfers
+              between agents awaiting human review
+            </li>
+            <li>
+              <strong className="text-gray-300">Spider Sources</strong> - External data sources that
+              may have contributed to flagged content
             </li>
           </ul>
           <p>
-            Review quarantined items to approve safe content or reject
-            hallucinated outputs before they reach users.
+            Review quarantined items to approve false positives or reject confirmed myths before they
+            propagate through the agent network.
           </p>
         </div>
       </div>
