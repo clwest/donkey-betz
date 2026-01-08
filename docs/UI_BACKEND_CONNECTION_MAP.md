@@ -1,7 +1,7 @@
 # UI-Backend Connection Map
 
 **Created:** Session 309
-**Updated:** Session 731 (RAG/Embedding System Audit)
+**Updated:** Session 734 (Mythology Lab Rich Data Display)
 **Purpose:** Map what's connected, what exists but isn't connected, and opportunities for integration
 
 ---
@@ -18,7 +18,8 @@ The platform has **excellent coverage** - most UI components are properly wired 
 | Clean Agents | 11 agents | Router active | **100% Connected** |
 | Deprecated Agents | 14 agents | Learning hooks | **100% Connected** |
 | Memory Clusters | 1 tab | 10 endpoints | **100% Connected** |
-| **RAG/Documents** | **None** | **6 endpoints** | **0% Connected** |
+| RAG/Documents | 1 page | 6 endpoints | **100% Connected** |
+| Mythology Lab | 1 page | 11 endpoints | **100% Connected** |
 
 ---
 
@@ -115,6 +116,20 @@ The platform has **excellent coverage** - most UI components are properly wired 
 | Embedding Coverage | `/api/spider-health/embedding-coverage/` | CONNECTED |
 
 **Frontend:** MemoryPalacePage.tsx (Clusters tab), SpiderIntegrationPage.tsx
+
+### Mythology Lab (Sessions 733-734)
+| UI Component | Backend API | Status |
+|--------------|-------------|--------|
+| Dashboard Stats | `/api/v1/mythology/stats/` | CONNECTED |
+| Recent Events | `/api/v1/mythology/recent-events/` | CONNECTED |
+| Quarantine List | `/api/v1/mythology/quarantine/` | CONNECTED |
+| Quarantine Approve | `/api/v1/mythology/quarantine/{id}/approve/` | CONNECTED |
+| Quarantine Reject | `/api/v1/mythology/quarantine/{id}/reject/` | CONNECTED |
+
+**Frontend:** MythologyLabPage.tsx - Rich display of:
+- **Stats:** 16 metrics including total_flagged, pending_review, prevention_success_rate, avg_risk_score
+- **Events:** risk_level, mutation_type, patterns_detected, confidence_score, was_prevented, prevention_method
+- **Quarantine:** teacher/student agents, violation_type, violation_patterns, mythology_warning, spider_sources
 
 ---
 
