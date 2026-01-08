@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -534,7 +534,8 @@ function ChannelsTab() {
 export default function AgentsPage() {
   const [realtimeUpdates, setRealtimeUpdates] = useState<AgentUpdate[]>([])
   const [learningEvents, setLearningEvents] = useState<LearningEvent[]>([])
-  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels'>('directory')
+  // Session 734: Added 'monitoring' tab
+  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels' | 'monitoring'>('directory')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['creation', 'research', 'strategy']))
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
@@ -630,6 +631,26 @@ export default function AgentsPage() {
     refetchInterval: 60000,
   })
   const experiments: Experiment[] = experimentsResponse?.data?.experiments || []
+
+  // Session 734: Monitoring dashboard state and queries
+  const [monitoringPeriod, setMonitoringPeriod] = useState<'1h' | '24h' | '7d' | '30d'>('24h')
+  const { data: monitoringData, isLoading: monitoringLoading, refetch: refetchMonitoring } = useQuery({
+    queryKey: ['agent-monitoring', monitoringPeriod],
+    queryFn: async () => {
+      const response = await agentMonitoringApi.dashboard(monitoringPeriod)
+      return response.data
+    },
+    enabled: activeTab === 'monitoring',
+  })
+
+  const { data: alertsData } = useQuery({
+    queryKey: ['agent-alerts'],
+    queryFn: async () => {
+      const response = await agentMonitoringApi.alerts()
+      return response.data
+    },
+    enabled: activeTab === 'monitoring',
+  })
 
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
@@ -795,7 +816,7 @@ export default function AgentsPage() {
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-dark-border pb-4">
-        {(['directory', 'activity', 'learning', 'channels'] as const).map((tab) => (
+        {(['directory', 'activity', 'learning', 'channels', 'monitoring'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1509,6 +1530,295 @@ export default function AgentsPage() {
       {/* Session 734: Channels Tab - Slack for AI Agents */}
       {activeTab === 'channels' && (
         <ChannelsTab />
+      )}
+
+      {/* Session 734: Monitoring Tab - Agent Performance Dashboard */}
+      {activeTab === 'monitoring' && (
+        <div className="space-y-6">
+          {/* Monitoring Header */}
+          <div className="card bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-lg bg-accent-cyan/20 flex items-center justify-center">
+                  <BarChart3 size={28} className="text-accent-cyan" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Agent Monitoring</h3>
+                  <p className="text-gray-400">
+                    Performance metrics and system health
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Period Selector */}
+                <select
+                  value={monitoringPeriod}
+                  onChange={(e) => setMonitoringPeriod(e.target.value as '1h' | '24h' | '7d' | '30d')}
+                  className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="1h">Last Hour</option>
+                  <option value="24h">Last 24 Hours</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                </select>
+                <button
+                  onClick={() => refetchMonitoring()}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {monitoringLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : monitoringData ? (
+            <>
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent-green/20 flex items-center justify-center">
+                      <CheckCircle size={20} className="text-accent-green" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Success Rate</p>
+                      <p className="text-2xl font-bold">
+                        {monitoringData.summary?.success_rate?.toFixed(1) || '0'}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent-cyan/20 flex items-center justify-center">
+                      <Activity size={20} className="text-accent-cyan" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Total Executions</p>
+                      <p className="text-2xl font-bold">
+                        {monitoringData.summary?.total_executions?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent-amber/20 flex items-center justify-center">
+                      <Clock size={20} className="text-accent-amber" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Avg Response Time</p>
+                      <p className="text-2xl font-bold">
+                        {monitoringData.summary?.avg_response_time?.toFixed(2) || '0'}s
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary-600/20 flex items-center justify-center">
+                      <Bot size={20} className="text-primary-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Active Agents</p>
+                      <p className="text-2xl font-bold">
+                        {monitoringData.summary?.active_agents || '0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* System & Cache Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* System Metrics */}
+                <div className="card">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Cpu size={18} className="text-accent-cyan" />
+                    System Metrics
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-400">CPU Usage</span>
+                        <span className="text-sm font-medium">
+                          {monitoringData.system?.cpu_percent?.toFixed(1) || '0'}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all",
+                            (monitoringData.system?.cpu_percent || 0) > 80 ? "bg-accent-red" :
+                            (monitoringData.system?.cpu_percent || 0) > 60 ? "bg-accent-amber" : "bg-accent-green"
+                          )}
+                          style={{ width: `${monitoringData.system?.cpu_percent || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-400">Memory Usage</span>
+                        <span className="text-sm font-medium">
+                          {monitoringData.system?.memory_percent?.toFixed(1) || '0'}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all",
+                            (monitoringData.system?.memory_percent || 0) > 80 ? "bg-accent-red" :
+                            (monitoringData.system?.memory_percent || 0) > 60 ? "bg-accent-amber" : "bg-accent-cyan"
+                          )}
+                          style={{ width: `${monitoringData.system?.memory_percent || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-dark-border">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Uptime</span>
+                        <span className="text-gray-200">{monitoringData.system?.uptime || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cache Metrics */}
+                <div className="card">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Database size={18} className="text-accent-purple" />
+                    Cache Performance
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-400">Hit Rate</span>
+                        <span className="text-sm font-medium text-accent-green">
+                          {monitoringData.cache?.hit_rate?.toFixed(1) || '0'}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent-green transition-all"
+                          style={{ width: `${monitoringData.cache?.hit_rate || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="bg-dark-hover rounded-lg p-3">
+                        <p className="text-xs text-gray-400">Cache Hits</p>
+                        <p className="text-lg font-semibold text-accent-green">
+                          {monitoringData.cache?.hits?.toLocaleString() || '0'}
+                        </p>
+                      </div>
+                      <div className="bg-dark-hover rounded-lg p-3">
+                        <p className="text-xs text-gray-400">Cache Misses</p>
+                        <p className="text-lg font-semibold text-accent-red">
+                          {monitoringData.cache?.misses?.toLocaleString() || '0'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alerts Section */}
+              {alertsData?.alerts && alertsData.alerts.length > 0 && (
+                <div className="card border-accent-amber/30">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <AlertTriangle size={18} className="text-accent-amber" />
+                    Active Alerts
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-accent-amber/20 text-accent-amber">
+                      {alertsData.alerts.length}
+                    </span>
+                  </h4>
+                  <div className="space-y-2">
+                    {alertsData.alerts.slice(0, 5).map((alert: { id: string; level: string; message: string; timestamp: string }, idx: number) => (
+                      <div
+                        key={alert.id || idx}
+                        className={cn(
+                          "p-3 rounded-lg border",
+                          alert.level === 'critical' ? 'bg-accent-red/10 border-accent-red/30' :
+                          alert.level === 'warning' ? 'bg-accent-amber/10 border-accent-amber/30' :
+                          'bg-dark-hover border-dark-border'
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">{alert.message}</span>
+                          <span className="text-xs text-gray-400">
+                            {new Date(alert.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Agent Performance Table */}
+              {monitoringData.agents && Object.keys(monitoringData.agents).length > 0 && (
+                <div className="card">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Bot size={18} className="text-primary-400" />
+                    Agent Performance
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-dark-border text-left">
+                          <th className="pb-3 text-sm font-medium text-gray-400">Agent</th>
+                          <th className="pb-3 text-sm font-medium text-gray-400">Executions</th>
+                          <th className="pb-3 text-sm font-medium text-gray-400">Success Rate</th>
+                          <th className="pb-3 text-sm font-medium text-gray-400">Avg Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-dark-border">
+                        {Object.entries(monitoringData.agents).slice(0, 10).map(([name, stats]: [string, unknown]) => {
+                          const agentStats = stats as { executions?: number; success_rate?: number; avg_time?: number }
+                          return (
+                            <tr key={name} className="hover:bg-dark-hover/50">
+                              <td className="py-3">
+                                <span className="font-medium">{name}</span>
+                              </td>
+                              <td className="py-3 text-gray-300">
+                                {agentStats.executions?.toLocaleString() || 0}
+                              </td>
+                              <td className="py-3">
+                                <span className={cn(
+                                  "text-sm",
+                                  (agentStats.success_rate || 0) >= 90 ? "text-accent-green" :
+                                  (agentStats.success_rate || 0) >= 70 ? "text-accent-amber" : "text-accent-red"
+                                )}>
+                                  {agentStats.success_rate?.toFixed(1) || 0}%
+                                </span>
+                              </td>
+                              <td className="py-3 text-gray-300">
+                                {agentStats.avg_time?.toFixed(2) || 0}s
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="card text-center py-12 text-gray-400">
+              <BarChart3 className="mx-auto mb-3" size={48} />
+              <p className="text-lg font-medium">No Monitoring Data</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Monitoring metrics will appear as agents execute tasks
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Session 695: Dream Gallery Modal */}

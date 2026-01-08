@@ -80,6 +80,23 @@ export const agentChannelsApi = {
     api.post('/v1/agents/memberships/', data),
 }
 
+// Session 734: Agent Monitoring API - Performance dashboards and metrics
+export const agentMonitoringApi = {
+  // Dashboard & Metrics
+  dashboard: (period?: '1h' | '24h' | '7d' | '30d') =>
+    api.get('/v1/agents/monitoring/dashboard/', { params: { period } }),
+  agentPerformance: (agentName: string) =>
+    api.get(`/v1/agents/monitoring/agent/${agentName}/`),
+  report: () => api.get('/v1/agents/monitoring/report/'),
+
+  // Real-time & Alerts
+  realTime: () => api.get('/v1/agents/monitoring/real-time/'),
+  alerts: () => api.get('/v1/agents/monitoring/alerts/'),
+
+  // Actions
+  clearCache: () => api.post('/v1/agents/monitoring/cache/clear/'),
+}
+
 export const activityApi = {
   recent: (limit = 20, hours = 72) => api.get(`/recent-activity/?limit=${limit}&hours=${hours}`),
   learning: (limit = 20) => api.get(`/agent-learning/activity/?limit=${limit}`),
