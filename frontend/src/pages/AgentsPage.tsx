@@ -611,7 +611,7 @@ export default function AgentsPage() {
   // Session 695: Conversations for Conversation Thread Viewer
   const { data: conversationsResponse } = useQuery({
     queryKey: ['agent-conversations'],
-    queryFn: () => conversationsApi.list(50),
+    queryFn: () => conversationsApi.list({ limit: 50, timeRange: '7d' }),
     refetchInterval: 60000,
   })
   const conversations: Conversation[] = conversationsResponse?.data?.conversations || []
