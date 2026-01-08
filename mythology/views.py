@@ -632,9 +632,13 @@ def recent_events(request):
                 'risk_level': event.risk_level,
                 'confidence_score': event.confidence_score,
                 'was_prevented': event.was_prevented,
-                'prevention_method': event.prevention_method,
+                'prevention_method': event.prevention_method if event.prevention_method else None,
                 'created_at': event.created_at.isoformat(),
-                'content_preview': event.original_content[:100] + '...' if len(event.original_content) > 100 else event.original_content,
+                'content_preview': event.original_content[:150] + '...' if len(event.original_content) > 150 else event.original_content,
+                'original_content': event.original_content,  # Full content for expanded view
+                'mutated_content': event.mutated_content if event.mutated_content else None,  # If mutation occurred
+                'source_type': event.source_type if event.source_type else None,
+                'metadata': event.metadata if event.metadata else {},
             })
         
         return Response({

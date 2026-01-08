@@ -78,9 +78,13 @@ interface MythologyEvent {
   risk_level: number
   confidence_score: number
   was_prevented: boolean
-  prevention_method?: string
+  prevention_method?: string | null
   created_at: string
   content_preview: string
+  original_content?: string  // Full content for expanded view
+  mutated_content?: string | null  // If mutation occurred
+  source_type?: string | null
+  metadata?: Record<string, unknown>
 }
 
 // Quarantine from /api/v1/mythology/quarantine/
@@ -142,19 +146,19 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // Prevention Badge
-function PreventionBadge({ prevented, method }: { prevented: boolean; method?: string }) {
+function PreventionBadge({ prevented, method }: { prevented: boolean; method?: string | null }) {
   if (prevented) {
     return (
       <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-300">
         <ShieldCheck className="h-3 w-3" />
-        Prevented {method && `(${method})`}
+        {method ? `Prevented (${method})` : 'Auto-blocked'}
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-300">
       <AlertTriangle className="h-3 w-3" />
-      Not Prevented
+      Detected
     </span>
   )
 }
@@ -288,9 +292,18 @@ function EventRow({
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Method</div>
-              <div className="text-white font-medium">{event.prevention_method || 'N/A'}</div>
+              <div className="text-white font-medium">
+                {event.prevention_method || (event.was_prevented ? 'Auto-blocked' : 'Not prevented')}
+              </div>
             </div>
           </div>
+
+          {event.source_type && (
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Source Type</div>
+              <div className="text-white font-medium">{event.source_type}</div>
+            </div>
+          )}
 
           {event.patterns_detected && event.patterns_detected.length > 0 && (
             <div>
@@ -309,11 +322,29 @@ function EventRow({
           )}
 
           <div>
-            <div className="text-xs text-gray-500 mb-2">Full Content Preview</div>
-            <div className="text-sm text-gray-400 bg-dark-bg rounded p-3 max-h-40 overflow-y-auto">
-              {event.content_preview}
+            <div className="text-xs text-gray-500 mb-2">Original Content</div>
+            <div className="text-sm text-gray-400 bg-dark-bg rounded p-3 max-h-60 overflow-y-auto whitespace-pre-wrap">
+              {event.original_content || event.content_preview}
             </div>
           </div>
+
+          {event.mutated_content && (
+            <div>
+              <div className="text-xs text-gray-500 mb-2">Mutated Content</div>
+              <div className="text-sm text-red-400 bg-red-500/10 rounded p-3 max-h-40 overflow-y-auto whitespace-pre-wrap border border-red-500/30">
+                {event.mutated_content}
+              </div>
+            </div>
+          )}
+
+          {event.metadata && Object.keys(event.metadata).length > 0 && (
+            <div>
+              <div className="text-xs text-gray-500 mb-2">Additional Metadata</div>
+              <pre className="text-xs text-gray-400 bg-dark-bg rounded p-3 overflow-x-auto">
+                {JSON.stringify(event.metadata, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       )}
     </div>
