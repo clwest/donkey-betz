@@ -484,3 +484,61 @@ def delete_workflow(request, workflow_id):
         'success': True,
         'message': f'Workflow "{name}" deleted successfully'
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_workflow_output(request, execution_id):
+    """
+    Session 735: Get full orchestration output including all agent results.
+
+    Returns the complete intermediate_results and final_result for viewing
+    what each agent actually produced.
+    """
+    user = request.user
+
+    try:
+        orchestration = AgentOrchestration.objects.get(id=execution_id)
+    except AgentOrchestration.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': f'Workflow execution {execution_id} not found'
+        }, status=404)
+
+    # Get all agent executions for this orchestration
+    executions = AgentExecution.objects.filter(
+        parent_orchestration=orchestration
+    ).order_by('created_at')
+
+    agent_outputs = []
+    for exec in executions:
+        result = exec.result or {}
+        agent_outputs.append({
+            'agent_name': exec.template.name if exec.template else 'Unknown',
+            'execution_id': exec.execution_id,
+            'status': exec.status,
+            'task_description': exec.task_description,
+            'full_output': result.get('message', ''),
+            'data': result.get('data'),
+            'execution_time_ms': result.get('execution_time_ms', 0),
+            'cost': result.get('cost', 0.0),
+            'tokens_used': result.get('tokens_used', 0),
+            'created_at': exec.created_at.isoformat(),
+            'completed_at': exec.completed_at.isoformat() if exec.completed_at else None,
+        })
+
+    return Response({
+        'success': True,
+        'orchestration': {
+            'id': str(orchestration.id),
+            'name': orchestration.name,
+            'status': orchestration.status,
+            'total_execution_time': orchestration.total_execution_time,
+            'total_cost': float(orchestration.total_cost) if orchestration.total_cost else 0.0,
+            'created_at': orchestration.created_at.isoformat(),
+        },
+        'agent_outputs': agent_outputs,
+        'intermediate_results': orchestration.intermediate_results or [],
+        'final_result': orchestration.final_result,
+        'raw_output_count': len(agent_outputs),
+    })
