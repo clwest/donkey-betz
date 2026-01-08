@@ -416,7 +416,7 @@ class AgentChannelMessageSerializer(serializers.ModelSerializer):
         model = AgentChannelMessage
         fields = [
             'id', 'channel', 'channel_name', 'message_type',
-            'agent_template', 'agent_name', 'user', 'user_username',
+            'agent_instance', 'agent_name', 'user', 'user_username',
             'content', 'rich_content', 'timestamp', 'thread_id',
             'parent_message', 'reactions', 'reactions_count',
             'edited_at', 'is_active',
@@ -426,11 +426,11 @@ class AgentChannelMessageSerializer(serializers.ModelSerializer):
             'id', 'channel_name', 'agent_name', 'user_username',
             'timestamp', 'reactions_count', 'created_at', 'updated_at'
         ]
-    
+
     def get_agent_name(self, obj):
         """Get agent template name if agent message"""
-        if obj.agent_template:
-            return obj.agent_template.display_name or obj.agent_template.name
+        if obj.agent_instance and obj.agent_instance.template:
+            return obj.agent_instance.template.display_name or obj.agent_instance.template.name
         return None
     
     def get_reactions_count(self, obj):
@@ -455,8 +455,8 @@ class AgentChannelMessageListSerializer(serializers.ModelSerializer):
     
     def get_agent_name(self, obj):
         """Get agent name for quick display"""
-        if obj.agent_template:
-            return obj.agent_template.name
+        if obj.agent_instance and obj.agent_instance.template:
+            return obj.agent_instance.template.name
         return None
 
 

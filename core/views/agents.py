@@ -792,7 +792,7 @@ class AgentChannelMessageViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(channel_id__in=accessible_channels)
         
         return queryset.select_related(
-            'channel', 'user', 'agent_template', 'parent_message'
+            'channel', 'user', 'agent_instance__template', 'parent_message'
         ).order_by('-created_at')
     
     def perform_create(self, serializer):
