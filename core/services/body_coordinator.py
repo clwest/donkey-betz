@@ -70,6 +70,21 @@ class CoordinationEventType(Enum):
     SPINE_STRAINED = 'spine_strained'            # High latency
     SPINE_ALIGNED = 'spine_aligned'              # Normal routing
 
+    # BRAIN events (Session 725)
+    BRAIN_OVERLOADED = 'brain_overloaded'        # Too many inferences
+    BRAIN_CONFUSED = 'brain_confused'            # Model errors
+    BRAIN_FOCUSED = 'brain_focused'              # Operating normally
+
+    # SKIN events (Session 725)
+    SKIN_IRRITATED = 'skin_irritated'            # Write failures
+    SKIN_DAMAGED = 'skin_damaged'                # Critical workspace issues
+    SKIN_HEALTHY = 'skin_healthy'                # Normal operations
+
+    # NERVOUS events (Session 725)
+    NERVOUS_DAMAGED = 'nervous_damaged'          # WebSocket infrastructure down
+    NERVOUS_OVERLOADED = 'nervous_overloaded'    # Too many connections
+    NERVOUS_RESPONSIVE = 'nervous_responsive'    # Normal operations
+
 
 @dataclass
 class CoordinationEvent:
@@ -148,6 +163,21 @@ class BodyCoordinator:
             CoordinationEventType.SPINE_INJURED: self._handle_spine_issue,
             CoordinationEventType.SPINE_STRAINED: self._handle_spine_issue,
             CoordinationEventType.SPINE_ALIGNED: self._handle_spine_recovered,
+
+            # BRAIN handlers (Session 725)
+            CoordinationEventType.BRAIN_OVERLOADED: self._handle_brain_issue,
+            CoordinationEventType.BRAIN_CONFUSED: self._handle_brain_issue,
+            CoordinationEventType.BRAIN_FOCUSED: self._handle_brain_recovered,
+
+            # SKIN handlers (Session 725)
+            CoordinationEventType.SKIN_IRRITATED: self._handle_skin_issue,
+            CoordinationEventType.SKIN_DAMAGED: self._handle_skin_issue,
+            CoordinationEventType.SKIN_HEALTHY: self._handle_skin_recovered,
+
+            # NERVOUS handlers (Session 725)
+            CoordinationEventType.NERVOUS_DAMAGED: self._handle_nervous_issue,
+            CoordinationEventType.NERVOUS_OVERLOADED: self._handle_nervous_issue,
+            CoordinationEventType.NERVOUS_RESPONSIVE: self._handle_nervous_recovered,
         }
 
         self._response_log: List[CoordinationResponse] = []
@@ -221,6 +251,22 @@ class BodyCoordinator:
             events_detected.extend(self._detect_spine_events())
         except Exception as e:
             logger.error(f"Error detecting SPINE events: {e}")
+
+        # Session 725: Added BRAIN, SKIN, NERVOUS detection
+        try:
+            events_detected.extend(self._detect_brain_events())
+        except Exception as e:
+            logger.error(f"Error detecting BRAIN events: {e}")
+
+        try:
+            events_detected.extend(self._detect_skin_events())
+        except Exception as e:
+            logger.error(f"Error detecting SKIN events: {e}")
+
+        try:
+            events_detected.extend(self._detect_nervous_events())
+        except Exception as e:
+            logger.error(f"Error detecting NERVOUS events: {e}")
 
         # Handle each detected event
         for event in events_detected:
@@ -538,6 +584,110 @@ class BodyCoordinator:
 
         return events
 
+    # Session 725: BRAIN, SKIN, NERVOUS detection methods
+
+    def _detect_brain_events(self) -> List[CoordinationEvent]:
+        """Detect BRAIN (cognitive/ML processing) events."""
+        events = []
+        try:
+            from core.services.brain import get_brain_service
+            brain = get_brain_service()
+            vitals = brain.get_vitals()
+
+            status = vitals.get('status', 'unknown')
+            health_score = vitals.get('health_score', 100)
+
+            if status == 'overloaded' or health_score < 30:
+                events.append(CoordinationEvent(
+                    event_type=CoordinationEventType.BRAIN_OVERLOADED,
+                    source_system='brain',
+                    severity='critical',
+                    message=f'Cognitive processing overloaded: {health_score:.0f}% health',
+                    data={'status': status, 'health_score': health_score}
+                ))
+            elif status in ['confused', 'error'] or health_score < 50:
+                events.append(CoordinationEvent(
+                    event_type=CoordinationEventType.BRAIN_CONFUSED,
+                    source_system='brain',
+                    severity='warning',
+                    message=f'Cognitive processing issues: {status}',
+                    data={'status': status, 'health_score': health_score}
+                ))
+
+        except Exception as e:
+            logger.error(f"Error detecting BRAIN events: {e}")
+
+        return events
+
+    def _detect_skin_events(self) -> List[CoordinationEvent]:
+        """Detect SKIN (workspace output) events."""
+        events = []
+        try:
+            from core.services.skin import get_skin_service
+            skin = get_skin_service()
+            vitals = skin.get_vitals()
+
+            status = vitals.get('status', 'unknown')
+            health_score = vitals.get('health_score', 100)
+            failed_writes = vitals.get('failed_writes_24h', 0)
+
+            if status == 'damaged' or health_score < 30:
+                events.append(CoordinationEvent(
+                    event_type=CoordinationEventType.SKIN_DAMAGED,
+                    source_system='skin',
+                    severity='critical',
+                    message=f'Workspace operations damaged: {failed_writes} failed writes',
+                    data={'status': status, 'health_score': health_score, 'failed_writes': failed_writes}
+                ))
+            elif status == 'irritated' or failed_writes > 10:
+                events.append(CoordinationEvent(
+                    event_type=CoordinationEventType.SKIN_IRRITATED,
+                    source_system='skin',
+                    severity='warning',
+                    message=f'Workspace write issues: {failed_writes} failures',
+                    data={'status': status, 'health_score': health_score, 'failed_writes': failed_writes}
+                ))
+
+        except Exception as e:
+            logger.error(f"Error detecting SKIN events: {e}")
+
+        return events
+
+    def _detect_nervous_events(self) -> List[CoordinationEvent]:
+        """Detect NERVOUS (WebSocket communication) events."""
+        events = []
+        try:
+            from core.services.nervous import get_nervous_service
+            nervous = get_nervous_service()
+            vitals = nervous.get_vitals()
+
+            status = vitals.get('status', 'unknown')
+            health_score = vitals.get('health_score', 100)
+
+            # Only alert on actual infrastructure issues, not normal idle behavior
+            if status == 'damaged' or health_score < 20:
+                events.append(CoordinationEvent(
+                    event_type=CoordinationEventType.NERVOUS_DAMAGED,
+                    source_system='nervous',
+                    severity='critical',
+                    message='WebSocket infrastructure damaged - check Redis and Daphne',
+                    data={'status': status, 'health_score': health_score}
+                ))
+            elif status == 'overloaded':
+                events.append(CoordinationEvent(
+                    event_type=CoordinationEventType.NERVOUS_OVERLOADED,
+                    source_system='nervous',
+                    severity='warning',
+                    message='WebSocket system overloaded - too many connections',
+                    data={'status': status, 'health_score': health_score}
+                ))
+            # Note: 'dormant', 'sluggish', 'numb' are normal states - no events
+
+        except Exception as e:
+            logger.error(f"Error detecting NERVOUS events: {e}")
+
+        return events
+
     # =========================================================================
     # Event Handlers - Automated Responses
     # =========================================================================
@@ -797,6 +947,94 @@ class BodyCoordinator:
         """Handle SPINE recovered."""
         actions = []
         actions.append("Spine aligned - routing normal")
+        return actions
+
+    # Session 725: BRAIN, SKIN, NERVOUS handlers
+
+    def _handle_brain_issue(self, event: CoordinationEvent) -> List[str]:
+        """Handle BRAIN issues - cognitive/ML problems."""
+        actions = []
+
+        try:
+            from core.services.discord_notifications import send_status_notification
+            is_overloaded = event.event_type == CoordinationEventType.BRAIN_OVERLOADED
+            send_status_notification(
+                f"🧠 BRAIN {'Overloaded' if is_overloaded else 'Confused'}",
+                f"Cognitive processing issue: {event.message}",
+                "critical" if is_overloaded else "warning"
+            )
+            actions.append("Sent brain alert")
+        except Exception as e:
+            logger.error(f"Failed to send brain alert: {e}")
+
+        # If overloaded, recommend reducing ML workload
+        if event.event_type == CoordinationEventType.BRAIN_OVERLOADED:
+            self.set_throttle_mode(True)
+            actions.append("Enabled throttle mode to reduce ML load")
+
+        return actions
+
+    def _handle_brain_recovered(self, event: CoordinationEvent) -> List[str]:
+        """Handle BRAIN recovered."""
+        actions = []
+        actions.append("Brain focused - cognitive processing normal")
+        return actions
+
+    def _handle_skin_issue(self, event: CoordinationEvent) -> List[str]:
+        """Handle SKIN issues - workspace write problems."""
+        actions = []
+
+        try:
+            from core.services.discord_notifications import send_status_notification
+            is_damaged = event.event_type == CoordinationEventType.SKIN_DAMAGED
+            send_status_notification(
+                f"🖐️ SKIN {'Damaged' if is_damaged else 'Irritated'}",
+                f"Workspace issue: {event.message}",
+                "critical" if is_damaged else "warning"
+            )
+            actions.append("Sent skin alert")
+        except Exception as e:
+            logger.error(f"Failed to send skin alert: {e}")
+
+        # Recommend checking workspace permissions
+        actions.append("Check workspace file permissions and disk space")
+
+        return actions
+
+    def _handle_skin_recovered(self, event: CoordinationEvent) -> List[str]:
+        """Handle SKIN recovered."""
+        actions = []
+        actions.append("Skin healthy - workspace operations normal")
+        return actions
+
+    def _handle_nervous_issue(self, event: CoordinationEvent) -> List[str]:
+        """Handle NERVOUS issues - WebSocket infrastructure problems."""
+        actions = []
+
+        try:
+            from core.services.discord_notifications import send_status_notification
+            is_damaged = event.event_type == CoordinationEventType.NERVOUS_DAMAGED
+            send_status_notification(
+                f"⚡ NERVOUS {'Damaged' if is_damaged else 'Overloaded'}",
+                f"WebSocket issue: {event.message}",
+                "critical" if is_damaged else "warning"
+            )
+            actions.append("Sent nervous alert")
+        except Exception as e:
+            logger.error(f"Failed to send nervous alert: {e}")
+
+        # If damaged, recommend checking Redis and Daphne
+        if event.event_type == CoordinationEventType.NERVOUS_DAMAGED:
+            actions.append("Check Redis connection and Daphne WebSocket server")
+        else:
+            actions.append("Consider scaling WebSocket infrastructure")
+
+        return actions
+
+    def _handle_nervous_recovered(self, event: CoordinationEvent) -> List[str]:
+        """Handle NERVOUS recovered."""
+        actions = []
+        actions.append("Nervous system responsive - WebSocket communication normal")
         return actions
 
     # =========================================================================
