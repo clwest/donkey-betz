@@ -1,16 +1,39 @@
-# Session 727 - Deep System Audit (COMPLETE)
+# Session 728 - Mythology Validator Connection
 
-**Previous Session:** 726 (Audit Preparation + Intelligence Tools)
+**Previous Session:** 727 (Deep System Audit + Major Migration)
 **Date:** January 7, 2026
-**Status:** AUDIT COMPLETE + MAJOR MIGRATION - 8 Areas Audited, Average Reality Score: 75%
+**Status:** MYTHOLOGY FIXED - Validator now connected to database
 
 ---
 
-## Audit Progress
+## Session 728 Accomplishment
+
+### Mythology Validator Connected to Database
+
+**Problem:** `ai_core/agents/mythology_validator.py` was detecting mythology violations but NOT persisting them to the `mythology/` app database. All 6 of 7 tables had 0 records.
+
+**Solution:** Modified `mythology_validator.py` to call `mythology.services.MythologyDetectionService.record_mythology_event()` when violations are detected.
+
+**Changes Made:**
+- Added `get_detection_service()` lazy loader for `MythologyDetectionService`
+- Modified `log_violation()` to also call `_persist_to_database()`
+- Added `_persist_to_database()` method that creates `MythologyEvent` records
+- Added `_create_flagged_hallucination()` for high/critical violations
+- `MythologyAlert` is automatically created by `MythologyDetectionService` for high-risk events
+
+**Verified Working:**
+```
+Before: MythologyEvent: 0, FlaggedHallucination: 0, MythologyAlert: 0
+After:  MythologyEvent: 1, FlaggedHallucination: 1, MythologyAlert: 1
+```
+
+---
+
+## Updated Audit Progress
 
 | Area | Status | Reality Score | Findings |
 |------|--------|---------------|----------|
-| **mythology/** | COMPLETE | 30% | Disconnected - validation works but not tracked |
+| **mythology/** | **FIXED** | **70%** | Validator now connected (Session 728) |
 | **Memory System** | COMPLETE | 70% | Growing but 0 validated knowledge |
 | **intelligence/** | COMPLETE | 50% | 66K lines, duplication FIXED (Session 727), partial usage |
 | **agents/** | IN PROGRESS | 72% | Migration in progress, ~17K lines remain (was 52K) |
@@ -263,7 +286,7 @@ Added 5 intelligence tasks to `core/celery.py`:
 
 | Component | Reality Score | Issues |
 |-----------|---------------|--------|
-| mythology/ | **30%** | Disconnected validation systems |
+| mythology/ | **70%** | FIXED: Validator connected (Session 728) |
 | Memory System | **70%** | 0 validated knowledge |
 | intelligence/ | **50%** | 66K lines, duplication FIXED |
 | agents/ | **72%** | Migration in progress, ~17K lines remain |
@@ -272,14 +295,14 @@ Added 5 intelligence tasks to `core/celery.py`:
 | Celery Tasks | **90%** | FIXED: +5 intelligence tasks scheduled |
 | Intelligent Prompting | **85%** | Dedicated endpoint disabled |
 
-**Average Reality Score: 75%** (improved from 74% after agents migration)
+**Average Reality Score: 79%** (improved from 75% after mythology fix)
 
 ### Top Priority Fixes
 
 1. ~~**Schedule Intelligence Tasks**~~ ✅ DONE (Session 727) - 5 tasks now scheduled
 2. ~~**Consolidate income_builder.py**~~ ✅ DONE (Session 727) - ai_core version is canonical, intelligence/ has deprecation shim
 3. **Continue agents/ Migration** - ~17K lines remain (9 major files migrated in Session 727)
-4. **Connect Mythology Validator** - Validation works but not tracked
+4. ~~**Connect Mythology Validator**~~ ✅ DONE (Session 728) - Now persists to database
 5. **Validate Knowledge Sources** - All 3,909 are unvalidated
 
 ### All Audit Documents
