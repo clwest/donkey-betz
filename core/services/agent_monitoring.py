@@ -313,9 +313,9 @@ class PerformanceAnalyzer:
             
             stats = query.aggregate(
                 total_executions=Count('id'),
-                avg_execution_time=Avg('execution_time'),
-                max_execution_time=Max('execution_time'),
-                min_execution_time=Min('execution_time'),
+                avg_execution_time=Avg('execution_time_seconds'),
+                max_execution_time=Max('execution_time_seconds'),
+                min_execution_time=Min('execution_time_seconds'),
                 success_count=Count('id', filter=Q(status='completed')),
                 failure_count=Count('id', filter=Q(status='failed'))
             )
@@ -477,18 +477,18 @@ def get_agent_metrics_summary():
         
         # Calculate averages
         stats = recent_executions.aggregate(
-            avg_time=Avg('execution_time'),
+            avg_time=Avg('execution_time_seconds'),
             error_count=Count('id', filter=models.Q(status='failed'))
         )
-        
+
         summary['average_execution_time'] = stats['avg_time'] or 0
-        
+
         if summary['total_executions_24h'] > 0:
             summary['error_rate'] = stats['error_count'] / summary['total_executions_24h']
-        
+
         # Identify top performers and problematic agents
         agent_stats = recent_executions.values('template__name').annotate(
-            avg_time=Avg('execution_time'),
+            avg_time=Avg('execution_time_seconds'),
             count=Count('id'),
             errors=Count('id', filter=models.Q(status='failed'))
         ).order_by('avg_time')
