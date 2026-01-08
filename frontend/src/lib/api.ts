@@ -1358,3 +1358,44 @@ export const neuralOrchestraApi = {
   // Trigger reality check (force refresh)
   triggerRealityCheck: () => api.post('/neural-orchestra/reality-check/'),
 }
+
+// Session 733: Mythology Lab API - Hallucination detection and review
+export const mythologyApi = {
+  // Dashboard statistics
+  stats: () => api.get('/v1/mythology/stats/'),
+
+  // Flagged content management
+  flaggedContent: (params?: { limit?: number; status?: string }) =>
+    api.get('/v1/mythology/flagged-content/', { params }),
+  flaggedContentDetail: (contentId: string) =>
+    api.get(`/v1/mythology/flagged-content/${contentId}/`),
+  submitReview: (data: { content_id: string; decision: string; notes?: string }) =>
+    api.post('/v1/mythology/review/', data),
+
+  // Recent events for Neural Scan section
+  recentEvents: (params?: { limit?: number; severity?: string }) =>
+    api.get('/v1/mythology/recent-events/', { params }),
+
+  // User reporting
+  reportContent: (data: { content_id: string; reason: string; details?: string }) =>
+    api.post('/v1/mythology/report/', data),
+
+  // Notifications
+  notifications: (params?: { limit?: number; unread_only?: boolean }) =>
+    api.get('/v1/mythology/notifications/', { params }),
+  markNotificationRead: (notificationId: string) =>
+    api.post(`/v1/mythology/notifications/${notificationId}/read/`),
+  markAllNotificationsRead: () =>
+    api.post('/v1/mythology/notifications/mark-all-read/'),
+
+  // Quarantine management (Session 541)
+  quarantine: (params?: { limit?: number; status?: string }) =>
+    api.get('/v1/mythology/quarantine/', { params }),
+  quarantineStats: () => api.get('/v1/mythology/quarantine/stats/'),
+  quarantineDetail: (quarantineId: string) =>
+    api.get(`/v1/mythology/quarantine/${quarantineId}/`),
+  quarantineApprove: (quarantineId: string, data?: { notes?: string }) =>
+    api.post(`/v1/mythology/quarantine/${quarantineId}/approve/`, data || {}),
+  quarantineReject: (quarantineId: string, data?: { reason?: string }) =>
+    api.post(`/v1/mythology/quarantine/${quarantineId}/reject/`, data || {}),
+}

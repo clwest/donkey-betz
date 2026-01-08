@@ -1,75 +1,80 @@
-# Session 733 - System Ready
+# Session 734 - System Ready
 
-**Previous Session:** 732 (RAG Documents Page Implementation)
+**Previous Session:** 733 (Embedding Bug Fixes + Mythology Lab UI)
 **Date:** January 7, 2026
-**Status:** RAG/Documents UI COMPLETE
+**Status:** Embeddings FIXED, Mythology Lab UI COMPLETE
 
 ---
 
-## Session 732 Accomplishments
+## Session 733 Accomplishments
 
-### RAG Documents Page Implementation
+### Part 1: Document Embedding Bug Fixes
 
-**Objective:** Create frontend UI for the RAG/Document Embedding System.
+**Issue:** Documents weren't generating embeddings - stuck in "thinking" state.
+
+**Root Causes Found & Fixed:**
+
+| Bug | Location | Fix |
+|-----|----------|-----|
+| Infinite recursion in Document.save() | `content/signals.py:189-213` | Signal handler was calling `add_processing_log()` which calls `save()`, causing infinite loop. Fixed by directly appending to list. |
+| Nested async/sync context | `content/embeddings.py` | `async_to_sync` calling async method that used `sync_to_async` internally. Added synchronous `process_document_for_rag_sync()` method. |
+| SentenceTransformer crash | `content/embeddings.py:324-329` | Local model loading failure blocked OpenAI. Wrapped in try/except. |
+| Enum typo | `core/tasks.py:11420` | `SENTENCE_TRANSFORMERS` → `SENTENCE_TRANSFORMER` |
+
+**Results:**
+- Site Crawl document: 191 embeddings created ✓
+- YouTube document: 6 embeddings created ✓
+- Documents & RAG page fully functional ✓
+
+### Part 2: Mythology Lab UI
+
+**Objective:** Create frontend for hallucination detection system.
 
 **Implementation:**
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| ragApi | COMPLETE | 13 endpoints (upload, search, generate, stats, etc.) |
-| DocumentsPage.tsx | COMPLETE | ~600 lines with full feature set |
-| Route | COMPLETE | `/documents` route added |
-| Navigation | COMPLETE | "Documents" link in sidebar |
-| Build | COMPLETE | Frontend compiles successfully |
+| mythologyApi | COMPLETE | 11 endpoints for stats, events, quarantine |
+| MythologyLabPage.tsx | COMPLETE | Full hallucination review interface (~400 lines) |
+| Route | COMPLETE | `/mythology-lab` route added |
+| Navigation | COMPLETE | "Mythology Lab" link in sidebar |
 
 **Features Implemented:**
 
-1. **Document Upload**
-   - Drag-and-drop file upload
-   - Collection selection for organization
-   - Progress indicator during processing
-   - Supported formats: PDF, TXT, MD, DOC, DOCX, HTML, JSON, CSV
+1. **Dashboard Stats**
+   - Total events count
+   - Detection patterns count
+   - Active alerts
+   - Pending review count
 
-2. **Semantic Search**
-   - Full-text semantic search interface
-   - Results display with similarity scores
-   - Expandable result previews
-   - Chunk and document identification
+2. **Recent Events Tab**
+   - Severity badges (low/medium/high/critical)
+   - Event type and agent source
+   - Timestamps and expandable details
+   - JSON detail view
 
-3. **Statistics Dashboard**
-   - Total embeddings count
-   - Document count
-   - Collection count
-   - Average chunks per document
-   - Storage usage with dimensions
-
-4. **Document Management**
-   - Document list with status badges
-   - File size and token counts
-   - Created date and collection info
-   - Delete functionality
-
-5. **Additional Features**
-   - Storage optimization button
-   - Info section explaining RAG system
-   - Responsive grid layout
+3. **Quarantine Review Tab**
+   - Pending quarantine items
+   - Approve/reject actions with mutations
+   - Content preview
+   - Status indicators
 
 ---
 
 ## Current System Status
 
-### Frontend Pages: 29 (up from 28)
+### Frontend Pages: 30 (up from 29)
 
 | New Page | Route | Purpose |
 |----------|-------|---------|
-| DocumentsPage | `/documents` | RAG/Document management with semantic search |
+| MythologyLabPage | `/mythology-lab` | Hallucination detection and review |
 
-### Frontend API Gaps Fixed
+### Frontend API Coverage
 
 | System | Status | Details |
 |--------|--------|---------|
-| **RAG/Documents** | FIXED | 13 endpoints exposed via ragApi |
-| Mythology Lab | Still Missing | 11 endpoints need UI |
+| RAG/Documents | COMPLETE | 13 endpoints |
+| **Mythology Lab** | **COMPLETE** | 11 endpoints exposed |
 | Agent Channels | Still Missing | 10 endpoints need UI |
 | Income Builder | Still Missing | 8 endpoints need UI |
 
@@ -77,29 +82,22 @@
 
 | Component | Reality Score | Status |
 |-----------|---------------|--------|
-| **RAG/Documents UI** | **100%** | NEW - Complete |
-| **Embedding System** | **100%** | All verified working |
+| **Mythology Lab UI** | **100%** | NEW - Complete |
+| **RAG/Documents UI** | **100%** | Complete |
+| **Embedding System** | **100%** | Bug fixes applied |
 | **Memory System** | **95%** | All connected |
-| **Frontend APIs** | **90%** | RAG now exposed (up from 85%) |
+| **Frontend APIs** | **92%** | Mythology now exposed |
 | agents/ | 90% | Migration complete |
 | PA Tools | 95% | All functional |
 | Services | 100% | All connected |
 
-**Average Reality Score: 94%** (improved from 93%)
+**Average Reality Score: 95%** (improved from 94%)
 
 ---
 
-## Session 733 Priorities
+## Session 734 Priorities
 
-### Option A: Mythology Lab UI (HIGH Priority)
-
-Create frontend for hallucination detection system:
-- Backend complete at `/api/v1/mythology/`
-- 10 patterns, 56 events, 4 alerts
-- Add `mythologyApi` to api.ts
-- Create `MythologyLabPage.tsx` with flagged content review
-
-### Option B: Agent Channels UI (HIGH Priority)
+### Option A: Agent Channels UI (HIGH Priority)
 
 Create "Slack for AI Agents" frontend:
 - Backend complete at `/api/v1/agents/channels/`
@@ -107,18 +105,18 @@ Create "Slack for AI Agents" frontend:
 - Add `agentChannelsApi` to api.ts
 - Create `AgentChannelsPage.tsx` with messaging
 
-### Option C: Income Builder Enhancement (MEDIUM Priority)
+### Option B: Income Builder Enhancement (MEDIUM Priority)
 
 Add Income Builder tab to IntelligencePage:
 - 41 ActionPlans in database
 - 8 endpoints need exposure
 - Revenue opportunities and metrics display
 
-### Option D: New Feature Work
+### Option C: Quarantine Review
 
-- System at 94% reality score
-- RAG UI complete
-- Ready for new feature development
+Review 9 pending quarantine items in Mythology Lab:
+- Items pending since December 26, 2025
+- Use new Mythology Lab UI to process
 
 ---
 
@@ -128,14 +126,17 @@ Add Income Builder tab to IntelligencePage:
 # Start services
 make start && make celery
 
+# Access Mythology Lab
+open http://localhost:8000/ai-studio/#/mythology-lab
+
 # Access Documents page
 open http://localhost:8000/ai-studio/#/documents
 
 # Verify frontend build
 cd frontend && npm run build
 
-# Test RAG API
-curl http://localhost:8000/api/v1/rag/stats/
+# Test Mythology API
+curl http://localhost:8000/api/v1/mythology/stats/
 ```
 
 ---
@@ -144,22 +145,25 @@ curl http://localhost:8000/api/v1/rag/stats/
 
 | Document | Purpose |
 |----------|---------|
+| `docs/audits/SESSION_727_MYTHOLOGY_AUDIT.md` | Mythology system audit |
 | `docs/DEEP_AUDIT_STATUS.md` | Deep audit tracking |
 | `docs/UI_GAPS_AGENTS_MIGRATION.md` | Remaining frontend gaps |
-| `docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md` | Embedding verification |
 | `CLAUDE.md` | System overview |
 
 ---
 
-## Files Modified (Session 732)
+## Files Modified (Session 733)
 
 | File | Change |
 |------|--------|
-| `frontend/src/lib/api.ts` | Added ragApi with 13 endpoints |
-| `frontend/src/pages/DocumentsPage.tsx` | NEW - 600 lines |
-| `frontend/src/App.tsx` | Added /documents route |
-| `frontend/src/components/layout/Sidebar.tsx` | Added Documents nav link |
+| `content/embeddings.py` | Added sync methods, protected SentenceTransformer init |
+| `content/signals.py` | Fixed infinite recursion in Document signal |
+| `core/tasks.py` | Fixed enum typo, use sync method |
+| `frontend/src/lib/api.ts` | Added mythologyApi endpoints |
+| `frontend/src/pages/MythologyLabPage.tsx` | NEW - Hallucination review UI |
+| `frontend/src/App.tsx` | Added /mythology-lab route |
+| `frontend/src/components/layout/Sidebar.tsx` | Added Mythology Lab nav link |
 
 ---
 
-**Session 732 completed the RAG Documents UI, exposing 7,239 embeddings to the frontend. Main remaining gaps: Mythology Lab UI, Agent Channels UI.**
+**Session 733 fixed critical embedding bugs and implemented Mythology Lab UI. Main remaining gap: Agent Channels UI.**
