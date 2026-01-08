@@ -134,15 +134,29 @@ function StatCard({
 }
 
 // URL Ingestion Component
+// Session 733: Crawl options interface
+interface CrawlOptions {
+  crawl_site?: boolean
+  max_pages?: number
+  max_depth?: number
+  url_pattern?: string
+}
+
 function URLIngestZone({
   onIngestUrl,
   isIngesting,
 }: {
-  onIngestUrl: (url: string, title?: string) => void
+  onIngestUrl: (url: string, title?: string, crawlOptions?: CrawlOptions) => void
   isIngesting: boolean
 }) {
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
+
+  // Session 733: Multi-page crawling settings
+  const [crawlEnabled, setCrawlEnabled] = useState(false)
+  const [maxPages, setMaxPages] = useState(10)
+  const [maxDepth, setMaxDepth] = useState(2)
+  const [urlPattern, setUrlPattern] = useState('')
 
   const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
   const isValidUrl = url.trim().startsWith('http://') || url.trim().startsWith('https://')
@@ -150,9 +164,18 @@ function URLIngestZone({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (url.trim() && isValidUrl) {
-      onIngestUrl(url.trim(), title.trim() || undefined)
+      const crawlOptions: CrawlOptions | undefined = crawlEnabled && !isYouTube ? {
+        crawl_site: true,
+        max_pages: maxPages,
+        max_depth: maxDepth,
+        url_pattern: urlPattern.trim() || undefined,
+      } : undefined
+
+      onIngestUrl(url.trim(), title.trim() || undefined, crawlOptions)
       setUrl('')
       setTitle('')
+      setCrawlEnabled(false)
+      setUrlPattern('')
     }
   }
 
@@ -205,6 +228,71 @@ function URLIngestZone({
           />
         </div>
 
+        {/* Session 733: Multi-Page Crawl Settings */}
+        {!isYouTube && isValidUrl && (
+          <div className="p-3 rounded-lg bg-dark-bg/50 border border-dark-border space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={crawlEnabled}
+                onChange={(e) => setCrawlEnabled(e.target.checked)}
+                className="rounded border-dark-border bg-dark-bg text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-300">
+                Crawl multiple pages (for documentation sites)
+              </span>
+            </label>
+
+            {crawlEnabled && (
+              <div className="space-y-3 pt-2 border-t border-dark-border">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Max Pages</label>
+                    <select
+                      value={maxPages}
+                      onChange={(e) => setMaxPages(Number(e.target.value))}
+                      className="w-full px-2 py-1 rounded border border-dark-border bg-dark-bg text-white text-sm"
+                    >
+                      <option value={5}>5 pages</option>
+                      <option value={10}>10 pages</option>
+                      <option value={20}>20 pages</option>
+                      <option value={30}>30 pages</option>
+                      <option value={50}>50 pages</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Max Depth</label>
+                    <select
+                      value={maxDepth}
+                      onChange={(e) => setMaxDepth(Number(e.target.value))}
+                      className="w-full px-2 py-1 rounded border border-dark-border bg-dark-bg text-white text-sm"
+                    >
+                      <option value={1}>1 level</option>
+                      <option value={2}>2 levels</option>
+                      <option value={3}>3 levels</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    URL Pattern Filter (optional regex)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., /tutorial/ or /docs/api/"
+                    value={urlPattern}
+                    onChange={(e) => setUrlPattern(e.target.value)}
+                    className="w-full px-2 py-1 rounded border border-dark-border bg-dark-bg text-white text-sm placeholder-gray-600"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    Only crawl URLs matching this pattern
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Submit Button */}
         <button
           type="submit"
@@ -214,23 +302,30 @@ function URLIngestZone({
               ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
               : isYouTube
                 ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-primary-600 text-white hover:bg-primary-700'
+                : crawlEnabled
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-primary-600 text-white hover:bg-primary-700'
           }`}
         >
           {isIngesting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Importing...
+              {crawlEnabled ? 'Crawling...' : 'Importing...'}
             </>
           ) : isYouTube ? (
             <>
               <Youtube className="h-4 w-4" />
               Import YouTube Video
             </>
+          ) : crawlEnabled ? (
+            <>
+              <Layers className="h-4 w-4" />
+              Crawl Site ({maxPages} pages max)
+            </>
           ) : (
             <>
               <Globe className="h-4 w-4" />
-              Import Web Page
+              Import Single Page
             </>
           )}
         </button>
@@ -242,7 +337,10 @@ function URLIngestZone({
           <Info className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
           <div className="text-xs text-gray-500">
             <p className="mb-1">
-              <strong className="text-gray-400">Web Pages:</strong> Extracts text content from any public URL
+              <strong className="text-gray-400">Single Page:</strong> Extracts text content from one URL
+            </p>
+            <p className="mb-1">
+              <strong className="text-gray-400">Multi-Page Crawl:</strong> Follows links to crawl entire documentation sites
             </p>
             <p>
               <strong className="text-gray-400">YouTube:</strong> Extracts video transcript for semantic search
@@ -727,16 +825,27 @@ export default function DocumentsPage() {
     },
   })
 
-  // URL ingestion mutation
+  // URL ingestion mutation - Session 733: Added crawl options support
   const ingestUrlMutation = useMutation({
-    mutationFn: async ({ url, title }: { url: string; title?: string }) => {
-      const response = await ragApi.ingestUrl(url, { title, generate_embeddings: true })
+    mutationFn: async ({ url, title, crawlOptions }: {
+      url: string;
+      title?: string;
+      crawlOptions?: CrawlOptions;
+    }) => {
+      const response = await ragApi.ingestUrl(url, {
+        title,
+        generate_embeddings: true,
+        ...crawlOptions,
+      })
       return response.data
     },
     onSuccess: (data) => {
       setIngestError(null)
       if (data.warning) {
         setIngestWarning(data.warning)
+      } else if (data.crawl_stats) {
+        // Session 733: Show crawl success message
+        setIngestWarning(`Crawled ${data.crawl_stats.pages_crawled} pages, ${data.crawl_stats.total_words.toLocaleString()} words extracted`)
       } else {
         setIngestWarning(null)
       }
@@ -786,8 +895,9 @@ export default function DocumentsPage() {
     uploadMutation.mutate(file)
   }
 
-  const handleIngestUrl = (url: string, title?: string) => {
-    ingestUrlMutation.mutate({ url, title })
+  // Session 733: Updated to accept crawl options
+  const handleIngestUrl = (url: string, title?: string, crawlOptions?: CrawlOptions) => {
+    ingestUrlMutation.mutate({ url, title, crawlOptions })
   }
 
   const handleSearch = (query: string) => {

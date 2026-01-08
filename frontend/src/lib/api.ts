@@ -1291,8 +1291,15 @@ export const ragApi = {
   },
 
   // URL ingestion (YouTube videos or web pages) - Session 402
-  ingestUrl: (url: string, options?: { title?: string; generate_embeddings?: boolean }) =>
-    api.post('/documents/ingest-url/', { url, ...options }),
+  // Session 733: Added multi-page crawling support
+  ingestUrl: (url: string, options?: {
+    title?: string;
+    generate_embeddings?: boolean;
+    crawl_site?: boolean;
+    max_pages?: number;
+    max_depth?: number;
+    url_pattern?: string;
+  }) => api.post('/documents/ingest-url/', { url, ...options }),
 
   // Semantic search
   semanticSearch: (query: string, options?: { limit?: number; similarity_threshold?: number }) =>
