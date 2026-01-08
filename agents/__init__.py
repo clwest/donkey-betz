@@ -30,10 +30,14 @@ Session 280: Added deprecation warnings, migration to core.agents
 import warnings
 from typing import TYPE_CHECKING
 
-# Keep legacy exports for backwards compatibility (with warnings)
-from agents.base_agent import BaseContentAgent, AgentResult as LegacyAgentResult
+# Session 728: Make imports lazy to avoid circular import during Django app loading
+# The imports from agents.base_agent are now lazy-loaded via __getattr__
 
 default_app_config = 'agents.apps.AgentsConfig'
+
+# Lazy-loaded modules
+_BaseContentAgent = None
+_LegacyAgentResult = None
 
 
 def _deprecated_warning(name: str, stacklevel: int = 3):
@@ -126,9 +130,20 @@ def __getattr__(name: str):
         module = importlib.import_module(module_name)
         return getattr(module, class_name)
 
-    # Handle legacy base classes
+    # Handle legacy base classes (Session 728: lazy-loaded)
     if name == 'BaseContentAgent':
-        return BaseContentAgent
+        global _BaseContentAgent
+        if _BaseContentAgent is None:
+            from core.agents.base_content_agent import BaseContentAgent as _BC
+            _BaseContentAgent = _BC
+        return _BaseContentAgent
+
+    if name == 'LegacyAgentResult':
+        global _LegacyAgentResult
+        if _LegacyAgentResult is None:
+            from core.agents.base_content_agent import AgentResult as _AR
+            _LegacyAgentResult = _AR
+        return _LegacyAgentResult
 
     if name == 'AgentResult':
         _deprecated_warning(name)
