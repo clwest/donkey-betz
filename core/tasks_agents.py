@@ -440,20 +440,34 @@ def execute_orchestration(self, orchestration_id: str):
     """
     Execute an agent orchestration with multiple agents.
 
+    Session 735: Updated to use REAL agent execution via AgentRouter.
+    Each agent in the sequence is actually invoked and produces real output.
+
     Args:
         orchestration_id: The ID of the AgentOrchestration instance
     """
+    import uuid
+    from core.agent_router import AgentRouter, AgentNotFoundError
+
     try:
         orchestration = AgentOrchestration.objects.get(id=orchestration_id)
 
-        logger.info(f"Starting orchestration {orchestration_id}: {orchestration.name}")
+        logger.info(f"🚀 Starting REAL orchestration {orchestration_id}: {orchestration.name}")
 
         # Update orchestration status to running
         orchestration.status = AgentStatus.RUNNING
+        orchestration.started_at = timezone.now()
         orchestration.save()
 
         # Get the prompt from workflow definition
-        prompt = orchestration.workflow_definition.get('prompt', 'Execute workflow')
+        workflow_def = orchestration.workflow_definition or {}
+        base_prompt = workflow_def.get('prompt', '')
+        workflow_type = workflow_def.get('type', 'general')
+        domain = workflow_def.get('domain', 'general')
+
+        # Build a meaningful prompt if none provided
+        if not base_prompt:
+            base_prompt = f"Execute {workflow_type} workflow for {domain} domain. Orchestration: {orchestration.name}"
 
         # Session 735: Helper to normalize agent info (can be string or dict)
         def get_agent_name(agent_info):
@@ -461,22 +475,15 @@ def execute_orchestration(self, orchestration_id: str):
                 return agent_info
             return agent_info.get('name', agent_info.get('agent', 'Unknown'))
 
-        def get_agent_id(agent_info):
-            if isinstance(agent_info, str):
-                return None  # Will be looked up by name
-            return agent_info.get('agent_id')
-
         # Session 735: Helper to find or create a template for an agent name
         def get_or_create_template(agent_name):
             """Find template by name or create a placeholder"""
             template = UnifiedAgentTemplate.objects.filter(name=agent_name).first()
             if not template:
-                # Try without 'Agent' suffix
                 template = UnifiedAgentTemplate.objects.filter(
                     name=agent_name.replace('Agent', '')
                 ).first()
             if not template:
-                # Create a placeholder template
                 template = UnifiedAgentTemplate.objects.create(
                     name=agent_name,
                     display_name=agent_name.replace('Agent', ' Agent'),
@@ -486,13 +493,27 @@ def execute_orchestration(self, orchestration_id: str):
                 )
             return template
 
+        # Initialize the AgentRouter with the orchestration user
+        router = AgentRouter(user=orchestration.user)
+
+        # Track total execution time and cost
+        total_execution_time_ms = 0
+        total_cost = 0.0
+
         # Execute agents based on strategy
         if orchestration.execution_strategy == 'sequential':
-            # Sequential execution
+            # Sequential execution - each agent builds on previous results
             previous_result = None
+            accumulated_context = {
+                'orchestration_id': str(orchestration_id),
+                'orchestration_name': orchestration.name,
+                'workflow_type': workflow_type,
+                'domain': domain,
+            }
+
             for i, agent_info in enumerate(orchestration.agent_sequence):
                 agent_name = get_agent_name(agent_info)
-                logger.info(f"Executing agent {i+1}/{len(orchestration.agent_sequence)}: {agent_name}")
+                logger.info(f"🤖 [{i+1}/{len(orchestration.agent_sequence)}] Executing REAL agent: {agent_name}")
 
                 # Update orchestration progress
                 orchestration.current_agent_index = i
@@ -502,46 +523,108 @@ def execute_orchestration(self, orchestration_id: str):
                 # Get template for this agent
                 template = get_or_create_template(agent_name)
 
-                # Create execution record with correct field names
-                import uuid
+                # Build task for this agent
+                if i == 0:
+                    # First agent gets the base prompt
+                    task = base_prompt
+                else:
+                    # Subsequent agents get context from previous results
+                    task = f"""Continue the {workflow_type} workflow.
+
+Previous agent ({orchestration.agent_sequence[i-1]}) produced:
+{previous_result[:2000] if previous_result else 'No previous output'}
+
+Your task as {agent_name}: Build on the above and contribute your expertise."""
+
+                # Create execution record
                 execution = AgentExecution.objects.create(
                     template=template,
                     user=orchestration.user,
                     parent_orchestration=orchestration,
                     execution_id=f"orch_{orchestration.id}_{i}_{uuid.uuid4().hex[:6]}",
-                    task_description=prompt if i == 0 else f"Continue from: {previous_result[:100] if previous_result else 'previous step'}",
+                    task_description=task[:500],
                     context={
-                        'orchestration_id': str(orchestration_id),
+                        **accumulated_context,
                         'step': i + 1,
                         'total_steps': len(orchestration.agent_sequence),
-                        'previous_result': previous_result,
-                        'agent_name': agent_name
+                        'previous_result': previous_result[:1000] if previous_result else None,
                     },
                     status=AgentStatus.RUNNING
                 )
 
-                # Mock execution (replace with actual agent execution)
-                execution.result = {
-                    'output': f"Agent {agent_name} completed successfully",
-                    'data': f"Processed: {prompt[:50]}..." if prompt else "Processed workflow"
-                }
-                execution.status = AgentStatus.COMPLETED
-                execution.save()
+                # REAL AGENT EXECUTION via AgentRouter
+                try:
+                    agent_result = router.route(
+                        agent_name=agent_name,
+                        task=task,
+                        context={
+                            **accumulated_context,
+                            'previous_result': previous_result,
+                            'step': i + 1,
+                        }
+                    )
+
+                    # Extract result data
+                    result_data = {
+                        'success': agent_result.success,
+                        'message': agent_result.message,
+                        'data': agent_result.data if hasattr(agent_result, 'data') else None,
+                        'execution_time_ms': agent_result.execution_time_ms,
+                    }
+
+                    execution.result = result_data
+                    execution.status = AgentStatus.COMPLETED if agent_result.success else AgentStatus.FAILED
+                    execution.completed_at = timezone.now()
+                    execution.save()
+
+                    # Track metrics
+                    total_execution_time_ms += agent_result.execution_time_ms or 0
+
+                    # Update accumulated context with this result
+                    previous_result = agent_result.message or json.dumps(result_data)
+
+                    logger.info(f"✅ {agent_name} completed: success={agent_result.success}, time={agent_result.execution_time_ms}ms")
+
+                except AgentNotFoundError as e:
+                    # Agent not in router - log but continue
+                    logger.warning(f"⚠️ Agent {agent_name} not found in router: {e}")
+                    execution.result = {
+                        'success': False,
+                        'error': f'Agent {agent_name} not found in router',
+                        'message': str(e)
+                    }
+                    execution.status = AgentStatus.FAILED
+                    execution.save()
+                    previous_result = f"Agent {agent_name} was skipped (not in router)"
+
+                except Exception as e:
+                    logger.error(f"❌ Agent {agent_name} failed: {e}")
+                    execution.result = {
+                        'success': False,
+                        'error': str(e),
+                    }
+                    execution.status = AgentStatus.FAILED
+                    execution.error_message = str(e)
+                    execution.save()
+                    previous_result = f"Agent {agent_name} failed: {str(e)[:200]}"
 
                 # Store in intermediate results
                 orchestration.intermediate_results.append({
                     'agent': agent_name,
                     'step': i + 1,
-                    'result': execution.result
+                    'result': execution.result,
+                    'status': execution.status,
                 })
                 orchestration.save()
 
-                previous_result = json.dumps(execution.result)
-
         elif orchestration.execution_strategy == 'parallel':
-            # Parallel execution (simplified - in production use celery group)
+            # Parallel execution - all agents work on the same prompt independently
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
             executions = []
-            import uuid
+            futures_map = {}
+
+            # Create all execution records first
             for i, agent_info in enumerate(orchestration.agent_sequence):
                 agent_name = get_agent_name(agent_info)
                 template = get_or_create_template(agent_name)
@@ -551,7 +634,7 @@ def execute_orchestration(self, orchestration_id: str):
                     user=orchestration.user,
                     parent_orchestration=orchestration,
                     execution_id=f"orch_{orchestration.id}_{i}_{uuid.uuid4().hex[:6]}",
-                    task_description=prompt,
+                    task_description=base_prompt[:500],
                     context={
                         'orchestration_id': str(orchestration_id),
                         'parallel': True,
@@ -559,50 +642,88 @@ def execute_orchestration(self, orchestration_id: str):
                     },
                     status=AgentStatus.RUNNING
                 )
-                executions.append((execution, agent_name))
+                executions.append((execution, agent_name, i))
 
-            # Mock parallel completion
-            for execution, agent_name in executions:
-                execution.result = {
-                    'output': f"Agent {agent_name} completed in parallel",
-                    'data': f"Processed: {prompt[:50]}..." if prompt else "Processed"
-                }
-                execution.status = AgentStatus.COMPLETED
-                execution.save()
+            # Execute all agents in parallel using ThreadPoolExecutor
+            def execute_agent_task(execution, agent_name, task):
+                try:
+                    result = router.route(agent_name=agent_name, task=task, context={
+                        'orchestration_id': str(orchestration_id),
+                        'parallel': True,
+                    })
+                    return {
+                        'success': result.success,
+                        'message': result.message,
+                        'data': result.data if hasattr(result, 'data') else None,
+                        'execution_time_ms': result.execution_time_ms,
+                    }
+                except AgentNotFoundError:
+                    return {'success': False, 'error': f'Agent {agent_name} not in router'}
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
 
-                orchestration.intermediate_results.append({
-                    'agent': agent_name,
-                    'result': execution.result
-                })
-            orchestration.save()  # Save after parallel loop
+            with ThreadPoolExecutor(max_workers=min(4, len(executions))) as executor:
+                for execution, agent_name, i in executions:
+                    future = executor.submit(execute_agent_task, execution, agent_name, base_prompt)
+                    futures_map[future] = (execution, agent_name, i)
+
+                for future in as_completed(futures_map):
+                    execution, agent_name, i = futures_map[future]
+                    try:
+                        result_data = future.result()
+                        execution.result = result_data
+                        execution.status = AgentStatus.COMPLETED if result_data.get('success') else AgentStatus.FAILED
+                        execution.completed_at = timezone.now()
+                        execution.save()
+
+                        total_execution_time_ms += result_data.get('execution_time_ms', 0) or 0
+
+                        orchestration.intermediate_results.append({
+                            'agent': agent_name,
+                            'result': result_data,
+                            'status': execution.status,
+                        })
+
+                        logger.info(f"✅ [Parallel] {agent_name} completed")
+
+                    except Exception as e:
+                        execution.result = {'success': False, 'error': str(e)}
+                        execution.status = AgentStatus.FAILED
+                        execution.save()
+                        logger.error(f"❌ [Parallel] {agent_name} failed: {e}")
+
+            orchestration.save()
 
         # Mark orchestration as completed
         orchestration.status = AgentStatus.COMPLETED
         orchestration.progress_percentage = 100
+        orchestration.total_execution_time = total_execution_time_ms / 1000.0  # Convert to seconds
+        orchestration.completed_at = timezone.now()
         orchestration.save()
 
-        logger.info(f"Orchestration {orchestration_id} completed successfully")
+        logger.info(f"🎉 Orchestration {orchestration_id} completed successfully with REAL agent execution!")
 
-        # Send WebSocket notification if needed
+        # Send WebSocket notification
         send_execution_update(str(orchestration_id), {
             'status': 'completed',
-            'message': f'Workflow {orchestration.name} completed successfully'
+            'message': f'Workflow {orchestration.name} completed with real agent execution',
+            'total_time_ms': total_execution_time_ms,
         })
 
         return {
             'success': True,
             'orchestration_id': str(orchestration_id),
-            'message': f'Executed {len(orchestration.agent_sequence)} agents successfully'
+            'message': f'Executed {len(orchestration.agent_sequence)} REAL agents successfully',
+            'total_execution_time_ms': total_execution_time_ms,
         }
 
     except AgentOrchestration.DoesNotExist:
         logger.error(f"Orchestration {orchestration_id} not found")
         raise
     except Exception as e:
-        logger.error(f"Error executing orchestration {orchestration_id}: {e}")
+        logger.error(f"Error executing orchestration {orchestration_id}: {e}", exc_info=True)
         if 'orchestration' in locals():
             orchestration.status = AgentStatus.FAILED
-            orchestration.error_message = str(e)
             orchestration.completed_at = timezone.now()
             orchestration.save()
         raise
