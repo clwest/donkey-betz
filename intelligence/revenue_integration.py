@@ -7,6 +7,9 @@ from typing import Dict, List, Optional
 from datetime import datetime
 import logging
 
+# Initialize logger FIRST before any import error handling uses it
+logger = logging.getLogger(__name__)
+
 
 # Import with error handling for missing modules
 try:
@@ -33,8 +36,6 @@ except ImportError:
     class SpiderNetwork:
         def get_new_opportunities(self):
             return []
-
-logger = logging.getLogger(__name__)
 
 
 class RevenueIncomeIntegration:
@@ -76,8 +77,9 @@ class RevenueIncomeIntegration:
             analysis = await self.analyze_opportunity(opportunity)
 
             # 2. Generate action plan
+            opportunity_id = opportunity.get('id') or f"opp_{datetime.now().strftime('%Y%m%d%H%M%S')}"
             plan = await self.create_revenue_action_plan(
-                opportunity_id=opportunity.get('id'),
+                opportunity_id=opportunity_id,
                 opportunity=opportunity,
                 analysis=analysis
             )
@@ -167,6 +169,9 @@ class RevenueIncomeIntegration:
 
         Returns:
             Action plan dictionary
+
+        Session 729 Fix: Updated to handle analyze_external_opportunity response format
+        which returns 'revenue_activation_ready' and 'action_steps' (not 'success' and 'steps')
         """
         # Prepare Income Builder request
         request_data = {
@@ -188,25 +193,64 @@ class RevenueIncomeIntegration:
             request_data
         )
 
-        if plan_result and plan_result.get('success', False):
-            plan = plan_result
+        # Session 729: Check for revenue_activation_ready instead of success
+        if plan_result and plan_result.get('revenue_activation_ready', False):
+            # Build plan structure from analysis result
+            plan = {
+                'id': f"plan_{opportunity_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                'success': True,
+                'success_probability': plan_result.get('success_probability', 0.5),
+                'ml_score': plan_result.get('ml_score', {}),
+                'recommended_approach': plan_result.get('recommended_approach', 'standard'),
+                'steps': plan_result.get('action_steps', []),  # Use action_steps, not steps
+                'proposal_template': plan_result.get('proposal_template', ''),
+                'success_factors': plan_result.get('success_factors', {}),
+                'priority_level': plan_result.get('priority_level', 'medium'),
+                'market_context': plan_result.get('market_context', {}),
+                'description': f"Action plan for: {opportunity.get('title', 'Unknown opportunity')}"
+            }
 
-            # Enhance plan with revenue-specific steps if steps exist
-            if 'steps' in plan:
-                revenue_steps = self._generate_revenue_steps(opportunity, analysis)
-                plan['steps'].extend(revenue_steps)
+            # Add revenue-specific steps
+            revenue_steps = self._generate_revenue_steps(opportunity, analysis)
+            plan['steps'].extend(revenue_steps)
 
-            # Store opportunity linkage if plan has ID
-            if 'id' in plan:
-                await self._link_opportunity_to_plan(
-                    opportunity_id,
-                    plan['id'],
-                    opportunity['platform']
-                )
+            # Save ActionPlan to database
+            # Session 729: Use sync_to_async for Django ORM in async context
+            try:
+                from .models import ActionPlan
+                from asgiref.sync import sync_to_async
+
+                @sync_to_async
+                def create_action_plan():
+                    return ActionPlan.objects.create(
+                        opportunity_id=opportunity_id,
+                        opportunity_title=opportunity.get('title', 'Unknown'),
+                        opportunity_data=opportunity,
+                        plan_data=plan,
+                        steps=plan['steps'],
+                        timeline=plan.get('recommended_approach', 'standard'),
+                        expected_outcome=f"Success probability: {plan['success_probability']:.1%}",
+                        status='created'
+                    )
+
+                action_plan = await create_action_plan()
+                plan['id'] = str(action_plan.id)
+                plan['db_id'] = str(action_plan.id)
+                logger.info(f"✅ Created ActionPlan {action_plan.id} for opportunity {opportunity_id}")
+            except Exception as db_error:
+                logger.warning(f"Could not save ActionPlan to database: {db_error}")
+                # Continue without database save - plan is still valid
+
+            # Link opportunity to plan
+            await self._link_opportunity_to_plan(
+                opportunity_id,
+                plan['id'],
+                opportunity['platform']
+            )
 
             return plan
         else:
-            error_msg = plan_result.get('error', 'Unknown error') if plan_result else 'No response from Income Builder'
+            error_msg = plan_result.get('error', 'Analysis returned no actionable plan') if plan_result else 'No response from Income Builder'
             raise Exception(f"Failed to create action plan: {error_msg}")
 
     async def generate_proposal_from_plan(self, plan: Dict, opportunity: Dict) -> Dict:

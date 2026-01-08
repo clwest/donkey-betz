@@ -50,6 +50,8 @@
 | ✅ MythPattern seeded | 10 detection patterns created (all PATTERN_TYPES covered) |
 | ✅ Quarantine cleared | 9 items reviewed and approved as false positives (overly aggressive regex) |
 | ✅ Spider pipeline fixed | `scan-spider-opportunities` task added to Celery Beat database (was missing) |
+| ✅ revenue_integration.py fixed | Fixed `analyze_external_opportunity` response handling and async DB saves |
+| ✅ monitor_and_process_opportunities fixed | Task now creates ActionPlans from opportunities |
 
 ---
 
@@ -69,10 +71,10 @@
 **Impact:** Confusing architecture, maintenance burden
 **Fix:** Consider merging into single app
 
-#### 6. Empty Intelligence Tables (PARTIAL)
-**Issue:** ActionPlan, RevenueMetrics, EarningRecord still have 0 records
-**Note:** Celery tasks are now scheduled but may need time to populate
-**Check:** Monitor after 24-48 hours of Celery running
+#### 6. Intelligence Tables (MOSTLY FIXED)
+**Status:** ActionPlan now populating, RevenueMetrics/EarningRecord need time
+**Note:** `monitor_and_process_opportunities` task fixed to create ActionPlans
+**Remaining:** RevenueMetrics and EarningRecord will populate as plans execute
 
 ### LOW Priority
 

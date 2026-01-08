@@ -39,6 +39,19 @@ Diagnosed why intelligence tables (ActionPlan, RevenueMetrics, EarningRecord) we
 - **Fix:** Added task to PeriodicTask table, restarted Celery Beat
 - **Result:** 150 new opportunities created, pipeline now flows every 15 minutes
 
+### 5. Revenue Integration Fixed
+Fixed `intelligence/revenue_integration.py` to properly create ActionPlans:
+- **Issue 1:** `analyze_external_opportunity` returns `revenue_activation_ready`, not `success`
+- **Issue 2:** Django ORM called from async context without `sync_to_async`
+- **Fix:** Updated response handling and wrapped DB operations with `sync_to_async`
+- **Result:** ActionPlans now create successfully from opportunities
+
+### 6. monitor_and_process_opportunities Task Fixed
+Fixed broken Celery task in `intelligence/tasks.py`:
+- **Issue:** Imported non-existent `ai_core.spiders.spider_network` module
+- **Fix:** Rewrote to query Opportunity model directly from database
+- **Result:** Task now processes opportunities and creates ActionPlans
+
 ### Reality Score Improvement
 - **Mythology:** 70% → **90%** (patterns seeded, quarantine cleared)
 - **Intelligence:** 60% → **75%** (app_label fixed)

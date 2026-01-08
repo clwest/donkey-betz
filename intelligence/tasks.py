@@ -1087,50 +1087,84 @@ Execute this task with maximum efficiency and creativity. You have full autonomy
 @shared_task(bind=True)
 def monitor_and_process_opportunities(self):
     """
-    Continuously monitor platforms and process new opportunities
-    Runs every hour to check for new opportunities from spider network
+    Continuously monitor platforms and process new opportunities.
+    Runs every hour to check for new opportunities from spider network.
+
+    Session 729 Fix: Updated to use spider_decision_bridge instead of
+    non-existent SpiderNetwork module.
     """
     try:
         from .revenue_integration import RevenueIncomeIntegration
-        from ai_core.spiders.spider_network import SpiderNetwork
+        from .spider_decision_bridge import spider_decision_bridge
+        from core.models_unified_system import Opportunity
+        from .models import ActionPlan
 
         logger.info("🔍 Monitoring for new revenue opportunities...")
 
         integration = RevenueIncomeIntegration()
-        spider_network = SpiderNetwork()
 
-        # Get new opportunities from spiders
-        opportunities = spider_network.get_new_opportunities()
+        # Get high-scoring opportunities without action plans
+        # Session 729: Query database directly instead of broken SpiderNetwork
+        # Note: ActionPlan.opportunity_id is CharField, Opportunity.id is UUID
+        existing_plan_ids = set(ActionPlan.objects.values_list('opportunity_id', flat=True))
+        opportunities = Opportunity.objects.filter(
+            status='active'
+        ).order_by('-created_at')[:50]
+        # Filter out opportunities that already have action plans
+        opportunities = [opp for opp in opportunities if str(opp.id) not in existing_plan_ids][:20]
+
+        logger.info(f"Found {len(opportunities)} unprocessed opportunities")
+
         processed_count = 0
+        action_plans_created = 0
 
         for opp in opportunities:
             try:
+                # Convert to dict for processing
+                # Session 729: Use correct field names from Opportunity model
+                opp_data = {
+                    'id': str(opp.id),
+                    'title': opp.title,
+                    'description': opp.description or '',
+                    'platform': opp.source or 'unknown',
+                    'budget': float(opp.potential_revenue) if opp.potential_revenue else 0,
+                    'skills_required': opp.requirements or [],
+                    'url': opp.url or '',
+                    'match_score': opp.match_score,
+                    'opportunity_type': opp.opportunity_type,
+                }
+
                 # Process each opportunity
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 result = loop.run_until_complete(
-                    integration.process_opportunity(opp)
+                    integration.process_opportunity(opp_data)
                 )
 
-                if result['success']:
+                if result.get('success'):
                     processed_count += 1
-                    logger.info(f"✅ Processed opportunity: {opp.get('title', 'Unknown')}")
+                    logger.info(f"✅ Processed opportunity: {opp.title[:50]}")
+
+                    # Check if action plan was created
+                    if result.get('plan_id'):
+                        action_plans_created += 1
 
                     # Trigger proposal submission if confidence is high
                     if result.get('success_probability', 0) > 0.7:
                         submit_proposal_automatically.delay(
-                            result['proposal'],
+                            result.get('proposal', {}),
                             result.get('tracking_id')
                         )
 
             except Exception as e:
-                logger.error(f"Error processing opportunity {opp.get('id')}: {e}")
+                logger.error(f"Error processing opportunity {opp.id}: {e}")
                 continue
 
-        logger.info(f"📊 Processed {processed_count} opportunities")
+        logger.info(f"📊 Processed {processed_count} opportunities, created {action_plans_created} action plans")
         return {
             'status': 'success',
             'processed': processed_count,
+            'action_plans_created': action_plans_created,
             'total': len(opportunities)
         }
 
