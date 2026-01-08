@@ -366,7 +366,9 @@ class MemoryEmbeddingService:
         total_chars = len(lines[0])
 
         for result in results:
-            if result.similarity < 0.4:  # Skip low-relevance memories
+            # Session 729: Lowered threshold from 0.4 to 0.2
+            # Testing showed best matches were 0.13-0.33, causing 100% empty returns
+            if result.similarity < 0.2:  # Skip low-relevance memories
                 continue
 
             memory_line = f"- [{result.memory_type}] {result.title}: {result.content[:200]}..."
