@@ -298,13 +298,14 @@ class AgentOrchestrationViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Reset to initial state
+        from decimal import Decimal
         orchestration.status = 'pending'
         orchestration.current_agent_index = 0
         orchestration.progress_percentage = 0
         orchestration.intermediate_results = []
         orchestration.final_result = None
         orchestration.total_execution_time = None
-        orchestration.total_cost = None
+        orchestration.total_cost = Decimal('0.000000')  # Reset to 0, not None (NOT NULL constraint)
         orchestration.save()
 
         logger.info(f"Reset orchestration: {orchestration.name}")
