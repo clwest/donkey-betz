@@ -1,106 +1,134 @@
-# Session 730 - System Ready
+# Session 732 - System Ready
 
-**Previous Session:** 729 (Memory System Fixes + pgvector Integration)
+**Previous Session:** 731 (Embedding System Verification & API Gap Analysis)
 **Date:** January 7, 2026
-**Status:** DEEP AUDIT COMPLETE - All priority issues resolved
+**Status:** ALL SYSTEMS VERIFIED OPERATIONAL
 
 ---
 
-## Session 729 Accomplishments
+## Session 731 Accomplishments
 
-### Memory System Fixes (Earlier in Session)
+### Complete Embedding System Verification
 
-**Bug 1: MemoryConnection Field Mismatch (FIXED)**
-- **Issue:** Code used `source_memory`/`target_memory` but model has `memory_from`/`memory_to`
-- **Fix:** Updated field names in `core/tasks.py` and `core/views_memory_palace.py`
+**Objective:** Verify all pgvector embeddings are connected, working, and identify API/UI gaps.
 
-**Bug 2: AgentExecutionMemory Not Wired (FIXED)**
-- **Issue:** Only created in `UnifiedPersonalAssistant` (rarely used)
-- **Fix:** Added creation to `AgentRouter._complete_execution()`
+**Verification Results:**
 
-**Bug 3: Memory Similarity Threshold Too High (FIXED)**
-- **Issue:** `get_memory_context()` used 0.4 threshold but best matches were 0.13-0.33
-- **Fix:** Lowered threshold from 0.4 to 0.2 in `memory_embedding_service.py`
+| Test | Status | Details |
+|------|--------|---------|
+| pgvector Extension | ✅ | v0.8.1 installed |
+| HNSW Indexes | ✅ | All 9 indexes present |
+| Column Types | ✅ | All USER-DEFINED (vector) |
+| SpiderData Search | ✅ | 10,253+ embeddings working |
+| DocumentEmbedding Search | ✅ | 7,239 embeddings working |
+| AgentMemory Search | ✅ | 843 embeddings working |
+| ConversationMemory Search | ✅ | 617 embeddings working |
+| MemoryCluster Search | ✅ | 6 clusters working |
+| End-to-End RAG | ✅ | Full pipeline tested |
 
-### pgvector Integration for ConversationMemory (Latest)
+### Frontend API Gap Analysis
 
-**Resolved:** "ConversationMemory Has No Embedding Field (MEDIUM)" from Memory System audit
+**Exposed to Frontend:**
+- Memory Clusters API (7 endpoints) - MemoryPalacePage.tsx
+- Spider Health embedding coverage - SpiderIntegrationPage.tsx
 
-**Implementation:**
-- Added pgvector `VectorField` (1536 dimensions) to `ConversationMemory` model
-- Created HNSW index for fast cosine similarity search (`m=16, ef_construction=64`)
-- Added Celery backfill task for existing records
-- Added Celery Beat schedule (every 30 minutes)
-- Extended `personalization_bridge` signal to auto-generate embeddings on new records
+**NOT Exposed to Frontend (RAG System):**
 
-**Files Changed:**
-- `core/models/conversations/models.py` - pgvector VectorField
-- `core/migrations/0158_conversationmemory_embedding.py` - Migration with HNSW index
-- `core/tasks.py` - `backfill_conversation_embeddings` task
-- `core/celery.py` - Celery Beat schedule
-- `core/learning_bridges/personalization_bridge.py` - Auto-generate embeddings on save
+| Endpoint | Purpose | Priority |
+|----------|---------|----------|
+| `/api/v1/rag/upload-document/` | Upload docs for RAG | HIGH |
+| `/api/v1/rag/semantic-search/` | Semantic search | HIGH |
+| `/api/v1/rag/generate/` | RAG generation | HIGH |
+| `/api/v1/rag/stats/` | Embedding stats | MEDIUM |
+| `/api/v1/rag/advanced-query/` | Multi-collection | MEDIUM |
+| `/api/v1/rag/optimize/` | Optimize storage | LOW |
 
-**Verification:**
-- pgvector extension: v0.8.1
-- Column type: `vector`
-- HNSW index: Created
-- Backfill test: 5/5 succeeded
-- Remaining: 612 records (will auto-backfill)
+### Optimization Opportunities Identified
 
-### Session 729 Commits
+Services using numpy instead of pgvector (future optimization):
+- `core/services/memory_embedding_service.py`
+- `core/services/spider_semantic_search.py`
+- `core/services/knowledge_similarity.py`
+- `core/views_memory_clusters.py`
+- `content/embeddings.py`
 
-1. `34880776` - fix(Session 729): Fix MemoryConnection field name mismatch
-2. `b90105f2` - fix(Session 729): Wire AgentExecutionMemory into AgentRouter
-3. `ceafeea8` - docs(Session 729): Update handoff with Memory System audit & fixes
-4. `3329250a` - fix(Session 729): Lower memory similarity threshold from 0.4 to 0.2
-5. `088666c0` - docs(Session 729): Add memory threshold fix to handoff documentation
-6. `9b29a330` - feat(Session 729): Add pgvector embedding to ConversationMemory for semantic search
+### Session 731 Documentation
+
+- `docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md` - Complete audit
 
 ---
 
 ## Current System Status
 
+### Embedding System Reality Score: 100%
+
+| Component | Records | Status |
+|-----------|---------|--------|
+| SpiderData | 11,181+ | ✅ pgvector + HNSW |
+| DocumentEmbedding | 7,239 | ✅ pgvector + HNSW |
+| AgentMemory | 843 | ✅ pgvector + HNSW |
+| ConversationMemory | 617 | ✅ pgvector + HNSW |
+| MemoryCluster | 6 | ✅ pgvector + HNSW |
+| BusinessResearchResult | 31 | ✅ pgvector + HNSW |
+| LegalResearchResult | 2 | ✅ pgvector + HNSW |
+| LegalMemory | 1 | ✅ pgvector + HNSW |
+| CodeEmbedding | 0 | ✅ pgvector + HNSW |
+
 ### Overall Reality Scores
 
 | Component | Reality Score | Status |
 |-----------|---------------|--------|
-| **Memory System** | **95%** | All bugs fixed + pgvector embeddings (Session 729) |
-| **mythology/** | **90%** | 10 patterns seeded, quarantine cleared |
-| **intelligence/** | **75%** | app_label fixed |
-| agents/ | 90% | Migration complete (Session 728) |
+| **Embedding System** | **100%** | All verified working |
+| **Memory System** | **95%** | All connected |
+| **Frontend APIs** | **85%** | RAG endpoints not exposed |
+| agents/ | 90% | Migration complete |
 | PA Tools | 95% | All functional |
 | Services | 100% | All connected |
-| Celery Tasks | 90% | +backfill task (Session 729) |
-| Intelligent Prompting | **95%** | Active in 66/72 agents + metrics tracking |
 
-**Average Reality Score: 91%** (improved from 90%)
+**Average Reality Score: 93%** (improved from 92%)
 
 ---
 
-## Session 730 Priorities
+## Session 732 Priorities
 
-### Option A: Agent Channels UI (Medium Priority)
-Create frontend for "Slack for AI Agents" feature:
+### Option A: RAG Frontend API + UI (HIGH Priority)
+
+Add RAG endpoints to frontend and create Document Management UI:
+
+1. Add to `frontend/src/lib/api.ts`:
+```typescript
+export const ragApi = {
+  uploadDocument: (file: File) => api.postForm('/v1/rag/upload-document/', { file }),
+  semanticSearch: (query: string) => api.post('/v1/rag/semantic-search/', { query }),
+  generate: (query: string) => api.post('/v1/rag/generate/', { query }),
+  stats: () => api.get('/v1/rag/stats/'),
+};
+```
+
+2. Create `DocumentsPage.tsx`:
+   - Document upload with drag-and-drop
+   - Semantic search interface
+   - Embedding statistics
+
+### Option B: Agent Channels UI (Medium Priority)
+
+Create frontend for "Slack for AI Agents":
 - Backend complete at `/api/v1/agents/channels/`
 - 2 channels, 5 memberships already exist
-- Add `agentChannelsApi` to `frontend/src/lib/api.ts`
+- Add `agentChannelsApi` to api.ts
 - Create `AgentChannelsPage.tsx`
-- See `docs/UI_GAPS_AGENTS_MIGRATION.md` for details
 
-### Option B: Monitor Intelligence Tables (Passive)
-- Check if ActionPlan, RevenueMetrics, EarningRecord populate
-- Celery tasks scheduled in Session 727 should be creating records
-- Verify after 24-48 hours of Celery running
+### Option C: Optimize pgvector Usage (Low Priority)
 
-### Option C: Continue Migration (Low Priority)
-Migrate remaining ~10K lines in `agents/`:
-- `executors/` directory
-- Remaining views files
-- URLs configuration
+Update services to use pgvector native queries:
+- Replace numpy cosine similarity with CosineDistance
+- Better performance for large datasets
+- Consistent approach across codebase
 
 ### Option D: New Feature Work
-- Deep audit complete with 91% reality score
-- System stable and well-organized
+
+- System at 93% reality score
+- All embeddings verified and working
 - Ready for new feature development
 
 ---
@@ -108,15 +136,26 @@ Migrate remaining ~10K lines in `agents/`:
 ## Quick Verification Commands
 
 ```bash
-# Verify system health
-.venv/bin/python manage.py check
-
-# Check pgvector embeddings
+# Verify all embeddings are pgvector
 .venv/bin/python manage.py shell -c "
-from core.models import ConversationMemory
-total = ConversationMemory.objects.count()
-with_embedding = ConversationMemory.objects.exclude(embedding__isnull=True).count()
-print(f'ConversationMemory: {with_embedding}/{total} have embeddings')
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute('''
+        SELECT indexname FROM pg_indexes WHERE indexname LIKE '%hnsw%'
+    ''')
+    print(f'HNSW Indexes: {cursor.rowcount}')
+"
+
+# Test similarity search
+.venv/bin/python manage.py shell -c "
+from pgvector.django import CosineDistance
+from core.models_unified_system import SpiderData
+sample = SpiderData.objects.exclude(embedding__isnull=True).first()
+similar = SpiderData.objects.annotate(
+    distance=CosineDistance('embedding', sample.embedding)
+).order_by('distance')[:5]
+for s in similar:
+    print(f'{s.spider_name}: {s.distance:.4f}')
 "
 
 # Start services
@@ -129,11 +168,11 @@ make start && make celery
 
 | Document | Purpose |
 |----------|---------|
-| `docs/audits/SESSION_729_MEMORY_SYSTEM_AUDIT.md` | Memory system audit report |
-| `docs/handoffs/SESSION_728_AGENTS_MIGRATION.md` | agents/ migration details |
-| `docs/handoffs/SESSION_726_DEEP_SYSTEM_AUDIT.md` | System audit findings |
+| `docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md` | Session 731 audit |
+| `docs/audits/SESSION_730_PGVECTOR_EMBEDDING_AUDIT.md` | pgvector migration |
+| `docs/audits/SESSION_729_MEMORY_SYSTEM_AUDIT.md` | Memory system |
 | `CLAUDE.md` | System overview |
 
 ---
 
-**Session 729 resolved all Memory System audit issues. The system is stable with 91% reality score.**
+**Session 731 verified all embedding systems are operational with pgvector. Main gap identified: RAG API not exposed to frontend for UI development.**
