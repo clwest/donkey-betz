@@ -638,7 +638,8 @@ export default function AgentsPage() {
     queryKey: ['agent-monitoring', monitoringPeriod],
     queryFn: async () => {
       const response = await agentMonitoringApi.dashboard(monitoringPeriod)
-      return response.data
+      // API returns { success: true, data: { summary: {...}, system: {...} } }
+      return response.data?.data || response.data
     },
     enabled: activeTab === 'monitoring',
   })
@@ -647,7 +648,8 @@ export default function AgentsPage() {
     queryKey: ['agent-alerts'],
     queryFn: async () => {
       const response = await agentMonitoringApi.alerts()
-      return response.data
+      // API returns { success: true, data: { alerts: [...] } }
+      return response.data?.data || response.data
     },
     enabled: activeTab === 'monitoring',
   })
