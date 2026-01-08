@@ -131,6 +131,11 @@ const PATTERN_INFO: Record<string, { label: string; description: string; icon: s
     description: 'Exaggerated or false technical capabilities',
     icon: '🔧',
   },
+  spider_data_myth: {
+    label: 'Spider Data Issue',
+    description: 'Suspicious claims from spider-collected data sources',
+    icon: '🕷️',
+  },
   // Standard pattern types from MythPattern model
   capability_exaggeration: {
     label: 'Capability Exaggeration',
@@ -190,6 +195,75 @@ function getPatternInfo(pattern: string): { label: string; description: string; 
     description: 'Pattern detected in content',
     icon: '🔍',
   }
+}
+
+// =============================================================================
+// Content Formatting - Clean up messy content for better readability
+// =============================================================================
+
+interface FormattedContent {
+  source: string | null // e.g. "TechCrunch", "Gumroad", "Venturebeat"
+  sourceType: string | null // e.g. "Spider Fetch Intelligence", "Article Intelligence"
+  agents: string[] // List of agents mentioned
+  cleanContent: string // The actual content, cleaned up
+}
+
+function formatMythologyContent(content: string): FormattedContent {
+  const result: FormattedContent = {
+    source: null,
+    sourceType: null,
+    agents: [],
+    cleanContent: content,
+  }
+
+  if (!content) return result
+
+  let cleanContent = content
+
+  // Extract source header pattern: "SourceName - Intelligence Type"
+  // Examples: "Gumroad - Spider Fetch Intelligence", "Techcrunch - Article Intelligence"
+  const sourceMatch = cleanContent.match(/^(\[Learned\]\s*)?([A-Za-z0-9_]+)\s*-\s*([A-Za-z\s]+Intelligence)/i)
+  if (sourceMatch) {
+    result.source = sourceMatch[2].charAt(0).toUpperCase() + sourceMatch[2].slice(1).toLowerCase()
+    result.sourceType = sourceMatch[3]
+    // Remove the header from content
+    cleanContent = cleanContent.replace(/^(\[Learned\]\s*)?[A-Za-z0-9_]+\s*-\s*[A-Za-z\s]+Intelligence\s*/i, '')
+  }
+
+  // Remove [Learned] prefix if still present
+  cleanContent = cleanContent.replace(/^\[Learned\]\s*/i, '')
+
+  // Clean up "Learned from X:" chains - remove nested ones, keep just the info
+  // Pattern: "Learned from AgentName: Learned from AnotherAgent: Learned from..."
+  const learnedFromPattern = /(?:Learned\s+from\s+[A-Za-z]+(?:Agent)?:\s*)+/gi
+  const learnedMatches = cleanContent.match(/Learned\s+from\s+([A-Za-z]+(?:Agent)?)/gi)
+  if (learnedMatches) {
+    learnedMatches.forEach(match => {
+      const agentMatch = match.match(/Learned\s+from\s+([A-Za-z]+(?:Agent)?)/i)
+      if (agentMatch && !result.agents.includes(agentMatch[1])) {
+        result.agents.push(agentMatch[1])
+      }
+    })
+    // Remove the "Learned from X:" chains from content
+    cleanContent = cleanContent.replace(learnedFromPattern, '')
+  }
+
+  // Clean up "Aggregated X data points from source" noise
+  cleanContent = cleanContent.replace(/Aggregated\s+\d+\s+[a-z]+\s+data\s+points\s+from\s+[a-z0-9_]+\s*/gi, '')
+
+  // Clean up multiple spaces and trim
+  cleanContent = cleanContent.replace(/\s+/g, ' ').trim()
+
+  // If content starts with agent commentary like "Building on X's point," or "I strongly disagree with X"
+  // Extract the mentioned agent
+  const agentRefMatch = cleanContent.match(/(?:Building on|I(?:'d| would)?\s+(?:strongly\s+)?(?:dis)?agree with|from)\s+([A-Za-z]+(?:Agent)?)'?s?\s+/i)
+  if (agentRefMatch && !result.agents.includes(agentRefMatch[1])) {
+    result.agents.push(agentRefMatch[1])
+  }
+
+  result.cleanContent = cleanContent
+
+  return result
 }
 
 // =============================================================================
@@ -304,6 +378,9 @@ function EventRow({
   isExpanded: boolean
   onToggle: () => void
 }) {
+  // Format the content for cleaner display
+  const formatted = formatMythologyContent(event.original_content || event.content_preview)
+
   return (
     <div
       className={`border-b border-dark-border p-4 cursor-pointer transition-colors ${
@@ -325,8 +402,38 @@ function EventRow({
             <PreventionBadge prevented={event.was_prevented} method={event.prevention_method} />
           </div>
 
-          {/* Content Preview */}
-          <p className="text-sm text-gray-300 line-clamp-2 mb-2">{event.content_preview}</p>
+          {/* Source Header (if spider data) */}
+          {formatted.source && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-medium">
+                {formatted.source}
+              </span>
+              {formatted.sourceType && (
+                <span className="text-xs text-gray-500">{formatted.sourceType}</span>
+              )}
+            </div>
+          )}
+
+          {/* Agents Involved */}
+          {formatted.agents.length > 0 && (
+            <div className="flex items-center gap-1 mb-2 text-xs">
+              <User className="h-3 w-3 text-blue-400" />
+              <span className="text-gray-500">Agents:</span>
+              {formatted.agents.slice(0, 3).map((agent, idx) => (
+                <span key={idx} className="text-blue-300">
+                  {agent}{idx < Math.min(formatted.agents.length - 1, 2) ? ',' : ''}
+                </span>
+              ))}
+              {formatted.agents.length > 3 && (
+                <span className="text-gray-500">+{formatted.agents.length - 3} more</span>
+              )}
+            </div>
+          )}
+
+          {/* Content Preview (cleaned) */}
+          <p className="text-sm text-gray-300 line-clamp-2 mb-2">
+            {formatted.cleanContent.slice(0, 200)}{formatted.cleanContent.length > 200 ? '...' : ''}
+          </p>
 
           {/* Patterns Detected */}
           {event.patterns_detected && event.patterns_detected.length > 0 && (
@@ -419,12 +526,50 @@ function EventRow({
             </div>
           )}
 
+          {/* Formatted Content (cleaned up) */}
           <div>
-            <div className="text-xs text-gray-500 mb-2">Original Content</div>
-            <div className="text-sm text-gray-400 bg-dark-bg rounded p-3 max-h-60 overflow-y-auto whitespace-pre-wrap">
-              {event.original_content || event.content_preview}
+            <div className="text-xs text-gray-500 mb-2">Content Analysis</div>
+            <div className="bg-dark-bg rounded p-3 space-y-3">
+              {/* Source Info */}
+              {formatted.source && (
+                <div className="flex items-center gap-2 pb-2 border-b border-dark-border">
+                  <span className="text-xs px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 font-medium">
+                    {formatted.source}
+                  </span>
+                  {formatted.sourceType && (
+                    <span className="text-xs text-gray-500">{formatted.sourceType}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Agents Involved */}
+              {formatted.agents.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-dark-border">
+                  <span className="text-xs text-gray-500">Agents involved:</span>
+                  {formatted.agents.map((agent, idx) => (
+                    <span key={idx} className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                      {agent}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Clean Content */}
+              <div className="text-sm text-gray-300 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                {formatted.cleanContent}
+              </div>
             </div>
           </div>
+
+          {/* Raw Original Content (collapsible) */}
+          <details className="group">
+            <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
+              View Raw Original Content
+            </summary>
+            <div className="mt-2 text-sm text-gray-500 bg-dark-bg/50 rounded p-3 max-h-40 overflow-y-auto whitespace-pre-wrap border border-dark-border">
+              {event.original_content || event.content_preview}
+            </div>
+          </details>
 
           {event.mutated_content && (
             <div>
@@ -438,7 +583,7 @@ function EventRow({
           {event.metadata && Object.keys(event.metadata).length > 0 && (() => {
             // Filter out technical fields (regex patterns, internal keys)
             const technicalKeys = ['time_myth', 'dangerous_myth', 'financial_myth', 'technical_myth',
-              'regex', 'pattern', 'patterns', 'matcher', 'rule']
+              'spider_data_myth', 'regex', 'pattern', 'patterns', 'matcher', 'rule', '_myth']
             const displayableEntries = Object.entries(event.metadata).filter(([key, value]) => {
               // Skip if key is a known technical field
               if (technicalKeys.some(tk => key.toLowerCase().includes(tk))) return false
