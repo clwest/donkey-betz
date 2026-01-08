@@ -2268,47 +2268,94 @@ function DetailLoading() {
 // ============================================================================
 
 function CoordinationPanel() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['bodyCoordination'],
     queryFn: () => bodyApi.coordination?.status?.() || Promise.resolve({ data: null }),
     enabled: !!bodyApi.coordination,
+    refetchInterval: 30000, // Refresh every 30 seconds
   })
 
   const { data: throttleData } = useQuery({
     queryKey: ['bodyThrottle'],
     queryFn: () => bodyApi.throttle?.() || Promise.resolve({ data: null }),
     enabled: !!bodyApi.throttle,
+    refetchInterval: 30000,
   })
 
   const status = data?.data
   const throttle = throttleData?.data
+  const handlersRegistered = status?.handlers_registered || 0
+  const systemsMonitored = Math.floor(handlersRegistered / 3) // 3 handlers per system
 
   // If coordination API not available, don't show panel
   if (!status && !isLoading) return null
 
+  // Trigger manual coordination
+  const runCoordination = async () => {
+    try {
+      await bodyApi.coordination?.run?.()
+      refetch()
+    } catch (e) {
+      console.error('Failed to run coordination:', e)
+    }
+  }
+
   return (
     <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-zinc-300 flex items-center gap-2">
-          <Zap className="w-5 h-5 text-cyan-500" />
-          Body Coordination
-        </h2>
-        {throttle?.is_throttled && (
-          <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-sm rounded-full">
-            Throttled ({((throttle.throttle_factor || 1) * 100).toFixed(0)}% capacity)
-          </span>
-        )}
+        <div>
+          <h2 className="text-lg font-medium text-zinc-300 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-cyan-500" />
+            Body Coordinator
+          </h2>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Autonomic nervous system coordinating all {systemsMonitored} body systems
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {throttle?.is_throttled && (
+            <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-sm rounded-full">
+              Throttled
+            </span>
+          )}
+          <button
+            onClick={runCoordination}
+            disabled={isFetching}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm',
+              'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30',
+              'transition-all',
+              isFetching && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
+            Run
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* Systems Monitored - Key metric from Session 725 */}
         <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-          <div className="text-xl font-bold text-cyan-400">{status?.events_detected || 0}</div>
-          <div className="text-xs text-zinc-500">Events Detected</div>
+          <div className="text-xl font-bold text-cyan-400">{systemsMonitored}/10</div>
+          <div className="text-xs text-zinc-500">Systems</div>
         </div>
+        {/* Handlers - Shows full coordination coverage */}
         <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-          <div className="text-xl font-bold text-green-400">{status?.responses_triggered || 0}</div>
+          <div className={cn(
+            'text-xl font-bold',
+            handlersRegistered >= 30 ? 'text-green-400' : 'text-yellow-400'
+          )}>
+            {handlersRegistered}
+          </div>
+          <div className="text-xs text-zinc-500">Handlers</div>
+        </div>
+        {/* Recent Responses */}
+        <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+          <div className="text-xl font-bold text-purple-400">{status?.recent_responses || 0}</div>
           <div className="text-xs text-zinc-500">Responses</div>
         </div>
+        {/* Throttle Status */}
         <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
           <div className={cn(
             'text-xl font-bold',
@@ -2318,6 +2365,7 @@ function CoordinationPanel() {
           </div>
           <div className="text-xs text-zinc-500">Throttled</div>
         </div>
+        {/* Capacity */}
         <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
           <div className="text-xl font-bold text-zinc-300">
             {((throttle?.throttle_factor || 1) * 100).toFixed(0)}%
@@ -2326,10 +2374,18 @@ function CoordinationPanel() {
         </div>
       </div>
 
-      {status?.last_coordination && (
-        <p className="text-xs text-zinc-600 mt-4 flex items-center gap-1">
+      {/* Status bar showing all systems are coordinated */}
+      {handlersRegistered >= 30 && (
+        <div className="mt-4 flex items-center gap-2 text-xs text-green-400 bg-green-500/10 rounded-lg px-3 py-2">
+          <CheckCircle className="w-3.5 h-3.5" />
+          All 10 body systems coordinated (HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN, NERVOUS)
+        </div>
+      )}
+
+      {status?.last_check && (
+        <p className="text-xs text-zinc-600 mt-3 flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          Last coordination: {new Date(status.last_coordination).toLocaleString()}
+          Last check: {new Date(status.last_check).toLocaleString()}
         </p>
       )}
     </div>
@@ -2376,7 +2432,7 @@ export default function BodyHealthPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Body Health Dashboard</h1>
           <p className="text-sm text-zinc-500">
-            Real-time monitoring of all 9 body systems
+            Real-time monitoring of all 10 body systems
           </p>
         </div>
         <button
