@@ -87,25 +87,33 @@ export default function AgentSocialPage() {
   const [activeTab, setActiveTab] = useState<'dreams' | 'conversations'>('dreams')
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null)
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d')
-  const [dreams, setDreams] = useState<Dream[]>([])
-  const [dreamsOffset, setDreamsOffset] = useState(0)
-  const [loadingMore, setLoadingMore] = useState(false)
   const queryClient = useQueryClient()
 
-  const DREAMS_PER_PAGE = 25
+  // Dreams pagination state
+  const [dreamsTimeRange, setDreamsTimeRange] = useState<TimeRange>('7d')
+  const [dreams, setDreams] = useState<Dream[]>([])
+  const [dreamsOffset, setDreamsOffset] = useState(0)
+  const [loadingMoreDreams, setLoadingMoreDreams] = useState(false)
+
+  // Conversations pagination state
+  const [conversationsTimeRange, setConversationsTimeRange] = useState<TimeRange>('7d')
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [conversationsOffset, setConversationsOffset] = useState(0)
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false)
+
+  const ITEMS_PER_PAGE = 25
 
   // Fetch dreams with pagination
   const { data: dreamsData, isLoading: loadingDreams, refetch: refetchDreams } = useQuery({
-    queryKey: ['agent-dreams', timeRange],
+    queryKey: ['agent-dreams', dreamsTimeRange],
     queryFn: async () => {
       const response = await dreamsApi.list({
-        limit: DREAMS_PER_PAGE,
+        limit: ITEMS_PER_PAGE,
         offset: 0,
-        timeRange,
+        timeRange: dreamsTimeRange,
       })
       setDreams(response.data.dreams || [])
-      setDreamsOffset(DREAMS_PER_PAGE)
+      setDreamsOffset(ITEMS_PER_PAGE)
       return response.data
     },
     staleTime: 30000,
@@ -113,37 +121,67 @@ export default function AgentSocialPage() {
 
   // Load more dreams handler
   const loadMoreDreams = async () => {
-    setLoadingMore(true)
+    setLoadingMoreDreams(true)
     try {
       const response = await dreamsApi.list({
-        limit: DREAMS_PER_PAGE,
+        limit: ITEMS_PER_PAGE,
         offset: dreamsOffset,
-        timeRange,
+        timeRange: dreamsTimeRange,
       })
       const newDreams = response.data.dreams || []
       setDreams(prev => [...prev, ...newDreams])
-      setDreamsOffset(prev => prev + DREAMS_PER_PAGE)
+      setDreamsOffset(prev => prev + ITEMS_PER_PAGE)
     } finally {
-      setLoadingMore(false)
+      setLoadingMoreDreams(false)
     }
   }
 
-  // Handle time range change
-  const handleTimeRangeChange = (newRange: TimeRange) => {
-    setTimeRange(newRange)
+  // Handle dreams time range change
+  const handleDreamsTimeRangeChange = (newRange: TimeRange) => {
+    setDreamsTimeRange(newRange)
     setDreams([])
     setDreamsOffset(0)
   }
 
-  // Fetch conversations
+  // Fetch conversations with pagination
   const { data: conversationsData, isLoading: loadingConversations, refetch: refetchConversations } = useQuery({
-    queryKey: ['agent-conversations'],
+    queryKey: ['agent-conversations', conversationsTimeRange],
     queryFn: async () => {
-      const response = await conversationsApi.list(50)
+      const response = await conversationsApi.list({
+        limit: ITEMS_PER_PAGE,
+        offset: 0,
+        timeRange: conversationsTimeRange,
+      })
+      setConversations(response.data.conversations || [])
+      setConversationsOffset(ITEMS_PER_PAGE)
       return response.data
     },
     staleTime: 30000,
   })
+
+  // Load more conversations handler
+  const loadMoreConversations = async () => {
+    setLoadingMoreConversations(true)
+    try {
+      const response = await conversationsApi.list({
+        limit: ITEMS_PER_PAGE,
+        offset: conversationsOffset,
+        timeRange: conversationsTimeRange,
+      })
+      const newConversations = response.data.conversations || []
+      setConversations(prev => [...prev, ...newConversations])
+      setConversationsOffset(prev => prev + ITEMS_PER_PAGE)
+    } finally {
+      setLoadingMoreConversations(false)
+    }
+  }
+
+  // Handle conversations time range change
+  const handleConversationsTimeRangeChange = (newRange: TimeRange) => {
+    setConversationsTimeRange(newRange)
+    setConversations([])
+    setConversationsOffset(0)
+  }
 
   // Trigger dreams mutation
   const triggerDreamsMutation = useMutation({
@@ -170,17 +208,14 @@ export default function AgentSocialPage() {
     },
   })
 
-  // Parse data
-  const conversations: Conversation[] = Array.isArray(conversationsData?.conversations)
-    ? conversationsData.conversations
-    : []
-
   // Stats - use pagination info from API
   const totalDreams = dreamsData?.total_count || dreams.length
   const unreadDreams = dreamsData?.unread_count || dreams.filter(d => !d.shown_to_user).length
   const hasMoreDreams = dreamsData?.pagination?.has_more || false
+
+  const totalConversations = conversationsData?.total_count || conversations.length
   const activeConversations = conversations.filter(c => c.status === 'active').length
-  const totalConversations = conversationsData?.count || conversations.length
+  const hasMoreConversations = conversationsData?.pagination?.has_more || false
 
   const isLoading = activeTab === 'dreams' ? loadingDreams : loadingConversations
 
@@ -242,9 +277,9 @@ export default function AgentSocialPage() {
             <div>
               <p className="text-2xl font-bold text-white">{totalDreams.toLocaleString()}</p>
               <p className="text-xs text-gray-400">
-                {timeRange === '24h' ? 'Dreams Today' :
-                 timeRange === '7d' ? 'Dreams (7 Days)' :
-                 timeRange === '30d' ? 'Dreams (30 Days)' :
+                {dreamsTimeRange === '24h' ? 'Dreams Today' :
+                 dreamsTimeRange === '7d' ? 'Dreams (7 Days)' :
+                 dreamsTimeRange === '30d' ? 'Dreams (30 Days)' :
                  'Total Dreams'}
               </p>
             </div>
@@ -281,8 +316,13 @@ export default function AgentSocialPage() {
               <MessageCircle className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{totalConversations}</p>
-              <p className="text-xs text-gray-400">Total Conversations</p>
+              <p className="text-2xl font-bold text-white">{totalConversations.toLocaleString()}</p>
+              <p className="text-xs text-gray-400">
+                {conversationsTimeRange === '24h' ? 'Conversations Today' :
+                 conversationsTimeRange === '7d' ? 'Conversations (7 Days)' :
+                 conversationsTimeRange === '30d' ? 'Conversations (30 Days)' :
+                 'Total Conversations'}
+              </p>
             </div>
           </div>
         </div>
@@ -325,27 +365,28 @@ export default function AgentSocialPage() {
               )}
             >
               <MessageCircle size={16} className="inline mr-2" />
-              Conversations ({conversations.length})
+              Conversations ({conversations.length}{totalConversations > conversations.length ? ` of ${totalConversations}` : ''})
             </button>
             </div>
 
-            {/* Time Range Selector - only show for dreams tab */}
-            {activeTab === 'dreams' && (
-              <div className="relative">
-                <select
-                  value={timeRange}
-                  onChange={(e) => handleTimeRangeChange(e.target.value as TimeRange)}
-                  className="appearance-none bg-dark-bg border border-dark-border rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-300 hover:border-gray-500 focus:outline-none focus:border-purple-500 cursor-pointer"
-                >
-                  {TIME_RANGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
-            )}
+            {/* Time Range Selector - show for both tabs */}
+            <div className="relative">
+              <select
+                value={activeTab === 'dreams' ? dreamsTimeRange : conversationsTimeRange}
+                onChange={(e) => activeTab === 'dreams'
+                  ? handleDreamsTimeRangeChange(e.target.value as TimeRange)
+                  : handleConversationsTimeRangeChange(e.target.value as TimeRange)
+                }
+                className="appearance-none bg-dark-bg border border-dark-border rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-300 hover:border-gray-500 focus:outline-none focus:border-purple-500 cursor-pointer"
+              >
+                {TIME_RANGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
           </div>
 
           {activeTab === 'dreams' && (
@@ -419,10 +460,10 @@ export default function AgentSocialPage() {
                 <div className="p-4 border-t border-dark-border">
                   <button
                     onClick={loadMoreDreams}
-                    disabled={loadingMore}
+                    disabled={loadingMoreDreams}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-dark-bg hover:bg-dark-border rounded-lg text-gray-300 hover:text-white transition-colors disabled:opacity-50"
                   >
-                    {loadingMore ? (
+                    {loadingMoreDreams ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
                         Loading more...
@@ -512,6 +553,28 @@ export default function AgentSocialPage() {
                   ))
                 )}
               </div>
+              {/* Load More Button for Conversations */}
+              {hasMoreConversations && !loadingConversations && (
+                <div className="p-4 border-t border-dark-border">
+                  <button
+                    onClick={loadMoreConversations}
+                    disabled={loadingMoreConversations}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-dark-bg hover:bg-dark-border rounded-lg text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {loadingMoreConversations ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Loading more...
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={16} />
+                        Load More Conversations ({totalConversations - conversations.length} remaining)
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

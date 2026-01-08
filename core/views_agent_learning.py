@@ -418,29 +418,48 @@ def get_all_preferences(request):
 # Session 564: Removed @login_required - now public for Command Center UI
 def get_agent_conversations(request):
     """
-    Get recent agent conversations for display in UI.
+    Get recent agent conversations for display in UI with pagination.
 
     GET /api/agent-conversations/
 
     Query params:
-    - limit: Max conversations to return (default 10)
+    - limit: Max conversations to return (default 20)
+    - offset: Number of conversations to skip for pagination (default 0)
+    - time_range: Time filter - '24h', '7d', '30d', 'all' (default '7d')
     - status: Filter by status (active, concluded, paused)
-    - today_only: If 'true', only return today's conversations
+    - today_only: If 'true', only return today's conversations (legacy, overrides time_range)
 
     Session 431: Now includes HiveMindSession records (preferred)
     in addition to legacy AgentConversation records.
+    Session 735: Added time_range and pagination support.
     """
     try:
         from django.utils import timezone
         from core.models import AgentConversation, Agent
         from core.models_unified_system import HiveMindSession
 
-        limit = int(request.GET.get('limit', 10))
+        limit = int(request.GET.get('limit', 20))
+        offset = int(request.GET.get('offset', 0))
+        time_range = request.GET.get('time_range', '7d')
         status_filter = request.GET.get('status')
         today_only = request.GET.get('today_only', 'false').lower() == 'true'
 
         conversations_data = []
         today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Session 735: Calculate time cutoff based on time_range parameter
+        time_deltas = {
+            '24h': timezone.timedelta(hours=24),
+            '7d': timezone.timedelta(days=7),
+            '30d': timezone.timedelta(days=30),
+            'all': None
+        }
+        # today_only overrides time_range for backwards compatibility
+        if today_only:
+            time_cutoff = today_start
+        else:
+            delta = time_deltas.get(time_range, timezone.timedelta(days=7))
+            time_cutoff = timezone.now() - delta if delta else None
 
         # =====================================================================
         # Session 494 FIX: Fetch from BOTH sources, then combine and sort
@@ -459,8 +478,9 @@ def get_agent_conversations(request):
         if status_filter:
             hivemind_qs = hivemind_qs.filter(status=status_filter)
 
-        if today_only:
-            hivemind_qs = hivemind_qs.filter(created_at__gte=today_start)
+        # Session 735: Apply time filter
+        if time_cutoff:
+            hivemind_qs = hivemind_qs.filter(created_at__gte=time_cutoff)
 
         for session in hivemind_qs[:limit]:
             # Get participant names from participant_ids
@@ -536,8 +556,9 @@ def get_agent_conversations(request):
         if status_filter:
             legacy_qs = legacy_qs.filter(status=status_filter)
 
-        if today_only:
-            legacy_qs = legacy_qs.filter(started_at__gte=today_start)
+        # Session 735: Apply time filter
+        if time_cutoff:
+            legacy_qs = legacy_qs.filter(started_at__gte=time_cutoff)
 
         for conv in legacy_qs[:limit]:
             messages_data = []
@@ -583,7 +604,13 @@ def get_agent_conversations(request):
             reverse=True
         )
 
-        # Get today's combined count
+        # Session 735: Get total count before pagination
+        total_count = len(conversations_data)
+
+        # Session 735: Apply pagination (offset and limit)
+        paginated_data = conversations_data[offset:offset + limit]
+
+        # Get today's combined count (for backwards compatibility)
         hivemind_today = HiveMindSession.objects.filter(
             session_mode='conversation',
             created_at__gte=today_start
@@ -593,9 +620,15 @@ def get_agent_conversations(request):
 
         return JsonResponse({
             'success': True,
-            'conversations': conversations_data[:limit],
-            'count': len(conversations_data[:limit]),
-            'today_count': today_count
+            'conversations': paginated_data,
+            'count': len(paginated_data),
+            'total_count': total_count,
+            'today_count': today_count,
+            'pagination': {
+                'limit': limit,
+                'offset': offset,
+                'has_more': offset + limit < total_count
+            }
         })
 
     except Exception as e:

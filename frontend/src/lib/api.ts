@@ -201,9 +201,23 @@ export const dreamsApi = {
 
 // Session 695: Conversations API for Conversation Thread Viewer
 // Session 716: Enhanced with trigger
+// Session 735: Added time_range and pagination support
 export const conversationsApi = {
-  list: (limit = 20, status?: string, todayOnly = false) =>
-    api.get(`/agent-conversations/?limit=${limit}${status ? `&status=${status}` : ''}${todayOnly ? '&today_only=true' : ''}`),
+  list: (params?: {
+    limit?: number
+    offset?: number
+    timeRange?: TimeRange
+    status?: string
+  }) => {
+    const { limit = 20, offset = 0, timeRange = '7d', status } = params || {}
+    const queryParams = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+      time_range: timeRange,
+    })
+    if (status) queryParams.append('status', status)
+    return api.get(`/agent-conversations/?${queryParams.toString()}`)
+  },
   detail: (conversationId: string) => api.get(`/agent-conversations/${conversationId}/`),
   trigger: () => api.post('/agent-conversations/trigger/'),
 }
