@@ -435,25 +435,42 @@ function EventRow({
             </div>
           )}
 
-          {event.metadata && Object.keys(event.metadata).length > 0 && (
-            <div>
-              <div className="text-xs text-gray-500 mb-2">Additional Metadata</div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-dark-bg rounded p-3">
-                {Object.entries(event.metadata).map(([key, value]) => (
-                  <div key={key} className="text-sm">
-                    <div className="text-gray-500 text-xs capitalize">{key.replace(/_/g, ' ')}</div>
-                    <div className="text-gray-300 font-medium">
-                      {typeof value === 'boolean'
-                        ? (value ? 'Yes' : 'No')
-                        : typeof value === 'object'
-                          ? JSON.stringify(value)
-                          : String(value)}
+          {event.metadata && Object.keys(event.metadata).length > 0 && (() => {
+            // Filter out technical fields (regex patterns, internal keys)
+            const technicalKeys = ['time_myth', 'dangerous_myth', 'financial_myth', 'technical_myth',
+              'regex', 'pattern', 'patterns', 'matcher', 'rule']
+            const displayableEntries = Object.entries(event.metadata).filter(([key, value]) => {
+              // Skip if key is a known technical field
+              if (technicalKeys.some(tk => key.toLowerCase().includes(tk))) return false
+              // Skip if value looks like a regex pattern
+              if (typeof value === 'string' && (value.includes('(?:') || value.includes('\\b'))) return false
+              // Skip if value is an array of regex patterns
+              if (Array.isArray(value) && value.some(v => typeof v === 'string' && (v.includes('(?:') || v.includes('\\b')))) return false
+              return true
+            })
+
+            if (displayableEntries.length === 0) return null
+
+            return (
+              <div>
+                <div className="text-xs text-gray-500 mb-2">Additional Metadata</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-dark-bg rounded p-3">
+                  {displayableEntries.map(([key, value]) => (
+                    <div key={key} className="text-sm">
+                      <div className="text-gray-500 text-xs capitalize">{key.replace(/_/g, ' ')}</div>
+                      <div className="text-gray-300 font-medium">
+                        {typeof value === 'boolean'
+                          ? (value ? 'Yes' : 'No')
+                          : typeof value === 'object'
+                            ? JSON.stringify(value)
+                            : String(value)}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
         </div>
       )}
     </div>
