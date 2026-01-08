@@ -16,6 +16,10 @@ import logging
 # Import content models for database persistence
 from content.models import ContentGeneration, ContentStatus
 
+# Import content pipeline models for gallery/library
+from core.models_content_pipeline import ContentAsset, AssetType, ContentPackage
+from core.models_podcast_studio import PodcastEpisode, PodcastShow
+
 # Import image generation service
 try:
     from content.image_generation import image_generation_service
@@ -1086,30 +1090,40 @@ def supported_file_formats(request):
 @permission_classes([IsAuthenticated])
 def gallery_list(request):
     """
-    Get gallery images - endpoint that frontend expects
+    Get gallery images - Session 735: Now returns REAL data from ContentAsset.
     """
+    user = request.user
     limit = int(request.GET.get('limit', 50))
-    
-    # Get images from ContentGeneration model
+
+    # Query REAL images from ContentAsset
+    image_assets = ContentAsset.objects.filter(
+        asset_type=AssetType.IMAGE,
+        package__creator=user
+    ).select_related('package').order_by('-created_at')[:limit]
+
     images = []
-    
-    # Mock some sample images for now since we don't have actual images stored yet
-    sample_images = [
-        {
-            'id': 1,
-            'title': 'Sample Image 1',
-            'image_url': '/media/images/sample1.jpg',
-            'tags': ['sample', 'test'],
-            'category': 'generated',
-            'saved_at': '2024-01-01T00:00:00Z',
-            'is_public': False,
-            'style_used': 'realistic'
-        }
-    ]
-    
+    for asset in image_assets:
+        metadata = asset.metadata or {}
+        images.append({
+            'id': str(asset.id),
+            'title': asset.name,
+            'description': asset.description,
+            'image_url': asset.file_url,
+            'tags': metadata.get('tags', []),
+            'category': asset.package.category if asset.package else 'generated',
+            'saved_at': asset.created_at.isoformat(),
+            'is_public': asset.is_preview,
+            'style_used': metadata.get('style', 'default'),
+            'width': metadata.get('width'),
+            'height': metadata.get('height'),
+            'file_size': asset.file_size_display,
+        })
+
     return JsonResponse({
         'success': True,
-        'images': sample_images[:limit]
+        'images': images[:limit],
+        'total_count': len(images),
+        'source': 'database'
     })
 
 
@@ -1117,194 +1131,185 @@ def gallery_list(request):
 @permission_classes([IsAuthenticated])
 def gallery_videos(request):
     """
-    Get video gallery content.
+    Get video gallery content - Session 735: Now returns REAL data from ContentAsset.
     """
     user = request.user
-    limit = request.GET.get('limit', 50)
-    
-    # Mock video data - matching frontend expectations
-    videos = [
-        {
-            'id': 1,
-            'title': 'Business Strategy Presentation',
-            'description': 'Comprehensive business strategy analysis and recommendations',
-            'video_url': 'https://example.com/videos/business-strategy.mp4',
-            'thumbnail_url': 'https://example.com/thumbnails/business-strategy.jpg',
-            'duration': '15:30',
-            'size': '45.2MB',
-            'saved_at': datetime.now().isoformat(),
-            'views': 234,
-            'tags': ['business', 'strategy', 'analysis'],
+    limit = int(request.GET.get('limit', 50))
+
+    # Query REAL videos from ContentAsset
+    video_assets = ContentAsset.objects.filter(
+        asset_type=AssetType.VIDEO,
+        package__creator=user
+    ).select_related('package').order_by('-created_at')[:limit]
+
+    videos = []
+    for asset in video_assets:
+        metadata = asset.metadata or {}
+        # Format duration from seconds to MM:SS
+        duration_secs = metadata.get('duration', 0)
+        duration_str = f"{duration_secs // 60}:{duration_secs % 60:02d}" if duration_secs else 'Unknown'
+
+        videos.append({
+            'id': str(asset.id),
+            'title': asset.name,
+            'description': asset.description,
+            'video_url': asset.file_url,
+            'thumbnail_url': metadata.get('thumbnail_url', ''),
+            'duration': duration_str,
+            'size': asset.file_size_display,
+            'saved_at': asset.created_at.isoformat(),
+            'views': metadata.get('views', 0),
+            'tags': metadata.get('tags', []),
             'source_type': 'generated',
-            'original_prompt': 'Create a business strategy presentation video',
-            'motion_prompt': 'Professional presentation with charts and graphs',
-            'category': 'business'
-        },
-        {
-            'id': 2,
-            'title': 'Market Analysis Deep Dive',
-            'description': 'In-depth market research and competitive analysis',
-            'video_url': 'https://example.com/videos/market-analysis.mp4',
-            'thumbnail_url': 'https://example.com/thumbnails/market-analysis.jpg',
-            'duration': '22:45',
-            'size': '78.1MB',
-            'saved_at': datetime.now().isoformat(),
-            'views': 189,
-            'tags': ['market', 'research', 'competitive'],
-            'source_type': 'generated',
-            'original_prompt': 'Create a market analysis video with data visualization',
-            'motion_prompt': 'Animated charts and market trends',
-            'category': 'research'
-        },
-        {
-            'id': 3,
-            'title': 'Product Launch Campaign',
-            'description': 'Complete product launch strategy and execution plan',
-            'video_url': 'https://example.com/videos/product-launch.mp4',
-            'thumbnail_url': 'https://example.com/thumbnails/product-launch.jpg',
-            'duration': '18:20',
-            'size': '52.7MB',
-            'saved_at': datetime.now().isoformat(),
-            'views': 312,
-            'tags': ['product', 'launch', 'campaign'],
-            'source_type': 'generated',
-            'original_prompt': 'Create a product launch campaign video',
-            'motion_prompt': 'Dynamic product showcase with transitions',
-            'category': 'marketing'
-        }
-    ]
-    
+            'original_prompt': metadata.get('prompt', ''),
+            'motion_prompt': metadata.get('motion_prompt', ''),
+            'category': asset.package.category if asset.package else 'generated',
+            'resolution': metadata.get('resolution', ''),
+            'fps': metadata.get('fps', 30),
+        })
+
     return Response({
         'success': True,
-        'videos': videos[:int(limit)],
+        'videos': videos[:limit],
         'total_count': len(videos),
-        'page_size': int(limit)
+        'page_size': limit,
+        'source': 'database'
     })
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def content_library(request):
     """
-    Get content library items by type.
+    Get content library items by type - Session 735: Now returns REAL data.
     """
     user = request.user
     content_type = request.GET.get('type', 'all')
-    
-    # Mock library content
+    limit = int(request.GET.get('limit', 50))
+
     library_items = []
-    
+
+    # Get REAL podcasts from PodcastEpisode
     if content_type in ['podcast', 'all']:
-        library_items.extend([
-            {
-                'id': str(uuid.uuid4()),
+        podcast_episodes = PodcastEpisode.objects.filter(
+            user=user,
+            status='complete'
+        ).order_by('-created_at')[:limit]
+
+        for ep in podcast_episodes:
+            duration_secs = ep.audio_duration_seconds or 0
+            duration_str = f"{duration_secs // 60}:{duration_secs % 60:02d}" if duration_secs else 'Unknown'
+            library_items.append({
+                'id': str(ep.id),
                 'type': 'podcast',
-                'title': 'AI Business Transformation Podcast',
-                'description': 'Weekly insights on AI-driven business transformation',
-                'url': 'https://example.com/podcasts/ai-business.mp3',
-                'thumbnail': 'https://example.com/thumbnails/ai-business.jpg',
-                'duration': '45:30',
-                'episode_number': 23,
-                'published_at': datetime.now().isoformat(),
-                'downloads': 1456
-            },
-            {
-                'id': str(uuid.uuid4()),
-                'type': 'podcast',
-                'title': 'Market Strategy Deep Dive',
-                'description': 'Expert analysis of market trends and strategic opportunities',
-                'url': 'https://example.com/podcasts/market-strategy.mp3',
-                'thumbnail': 'https://example.com/thumbnails/market-strategy.jpg',
-                'duration': '38:15',
-                'episode_number': 24,
-                'published_at': datetime.now().isoformat(),
-                'downloads': 892
-            }
-        ])
-    
+                'title': ep.title,
+                'description': ep.description,
+                'url': ep.audio_url or '',
+                'thumbnail': '',
+                'duration': duration_str,
+                'episode_number': ep.episode_number,
+                'published_at': ep.published_at.isoformat() if ep.published_at else ep.created_at.isoformat(),
+                'downloads': ep.listen_count,
+            })
+
+    # Get REAL documents from ContentAsset
     if content_type in ['document', 'all']:
-        library_items.extend([
-            {
-                'id': str(uuid.uuid4()),
+        doc_assets = ContentAsset.objects.filter(
+            asset_type=AssetType.DOCUMENT,
+            package__creator=user
+        ).select_related('package').order_by('-created_at')[:limit]
+
+        for asset in doc_assets:
+            metadata = asset.metadata or {}
+            library_items.append({
+                'id': str(asset.id),
                 'type': 'document',
-                'title': 'Strategic Planning Guide 2024',
-                'description': 'Comprehensive guide to strategic business planning',
-                'url': 'https://example.com/docs/strategic-planning-2024.pdf',
-                'thumbnail': 'https://example.com/thumbnails/strategic-planning.jpg',
-                'pages': 45,
-                'size': '2.3MB',
-                'published_at': datetime.now().isoformat(),
-                'downloads': 567
-            }
-        ])
-    
+                'title': asset.name,
+                'description': asset.description,
+                'url': asset.file_url,
+                'thumbnail': metadata.get('thumbnail', ''),
+                'pages': metadata.get('pages', 0),
+                'size': asset.file_size_display,
+                'published_at': asset.created_at.isoformat(),
+                'downloads': metadata.get('downloads', 0),
+            })
+
+    # Get REAL audio from ContentAsset
+    if content_type in ['audio', 'all']:
+        audio_assets = ContentAsset.objects.filter(
+            asset_type=AssetType.AUDIO,
+            package__creator=user
+        ).select_related('package').order_by('-created_at')[:limit]
+
+        for asset in audio_assets:
+            metadata = asset.metadata or {}
+            duration_secs = metadata.get('duration', 0)
+            duration_str = f"{duration_secs // 60}:{duration_secs % 60:02d}" if duration_secs else 'Unknown'
+            library_items.append({
+                'id': str(asset.id),
+                'type': 'audio',
+                'title': asset.name,
+                'description': asset.description,
+                'url': asset.file_url,
+                'thumbnail': metadata.get('thumbnail', ''),
+                'duration': duration_str,
+                'size': asset.file_size_display,
+                'published_at': asset.created_at.isoformat(),
+            })
+
     return Response({
         'success': True,
         'library_items': library_items,
         'total_count': len(library_items),
-        'content_type': content_type
+        'content_type': content_type,
+        'source': 'database'
     })
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def podcasts_list(request):
     """
-    Get podcast episodes list.
+    Get podcast episodes list - Session 735: Now returns REAL data from PodcastEpisode.
     """
     user = request.user
-    
-    # Mock podcast data
-    podcasts = [
-        {
-            'id': str(uuid.uuid4()),
-            'title': 'AI Business Transformation',
-            'description': 'Weekly insights on AI-driven business transformation and strategy',
-            'host': 'Business Strategy Team',
-            'url': 'https://example.com/podcasts/ai-business.mp3',
-            'thumbnail': 'https://example.com/thumbnails/ai-business.jpg',
-            'duration': '45:30',
-            'episode_number': 23,
-            'season': 2,
-            'published_at': datetime.now().isoformat(),
-            'downloads': 1456,
-            'rating': 4.7,
-            'transcript_available': True
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'title': 'Market Strategy Deep Dive',
-            'description': 'Expert analysis of market trends, competitive landscapes, and strategic opportunities',
-            'host': 'Market Analysis Team',
-            'url': 'https://example.com/podcasts/market-strategy.mp3',
-            'thumbnail': 'https://example.com/thumbnails/market-strategy.jpg',
-            'duration': '38:15',
-            'episode_number': 24,
-            'season': 2,
-            'published_at': datetime.now().isoformat(),
-            'downloads': 892,
-            'rating': 4.5,
-            'transcript_available': True
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'title': 'Product Innovation Spotlight',
-            'description': 'Featuring innovative products and breakthrough technologies shaping the future',
-            'host': 'Innovation Team',
-            'url': 'https://example.com/podcasts/product-innovation.mp3',
-            'thumbnail': 'https://example.com/thumbnails/product-innovation.jpg',
-            'duration': '52:10',
-            'episode_number': 25,
-            'season': 2,
-            'published_at': datetime.now().isoformat(),
-            'downloads': 1203,
-            'rating': 4.8,
-            'transcript_available': False
-        }
-    ]
-    
+    limit = int(request.GET.get('limit', 50))
+    status_filter = request.GET.get('status', None)
+
+    # Query REAL podcasts from PodcastEpisode
+    queryset = PodcastEpisode.objects.filter(user=user).select_related('show').order_by('-created_at')
+
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+
+    podcasts = []
+    for ep in queryset[:limit]:
+        duration_secs = ep.audio_duration_seconds or 0
+        duration_str = f"{duration_secs // 60}:{duration_secs % 60:02d}" if duration_secs else 'Unknown'
+
+        podcasts.append({
+            'id': str(ep.id),
+            'title': ep.title,
+            'topic': ep.topic,
+            'description': ep.description,
+            'host': ep.show.name if ep.show else 'AI Podcast Studio',
+            'url': ep.audio_url or '',
+            'thumbnail': '',
+            'duration': duration_str,
+            'episode_number': ep.episode_number,
+            'season': 1,  # Could be derived from show if needed
+            'published_at': ep.published_at.isoformat() if ep.published_at else ep.created_at.isoformat(),
+            'downloads': ep.listen_count,
+            'rating': None,  # Could implement rating system
+            'transcript_available': bool(ep.script),
+            'status': ep.status,
+            'progress_percent': ep.progress_percent,
+            'show_notes': ep.show_notes,
+        })
+
     return Response({
         'success': True,
         'podcasts': podcasts,
-        'total_count': len(podcasts)
+        'total_count': queryset.count(),
+        'source': 'database'
     })
 
 

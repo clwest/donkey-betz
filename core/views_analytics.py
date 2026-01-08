@@ -79,7 +79,7 @@ def analytics_dashboard(request):
     completed_revenue = float(revenue_data['completed_revenue'] or 0)
     revenue_count = revenue_data['count']
 
-    # REAL DATA: Agent executions
+    # REAL DATA: Agent executions with response time tracking (Session 735)
     try:
         from core.models.agents_registry import AgentExecution, AgentStatus
         agent_executions = AgentExecution.objects.filter(
@@ -95,10 +95,19 @@ def analytics_dashboard(request):
             created_at__gte=start_date,
             status=AgentStatus.FAILED
         ).count()
+
+        # REAL DATA: Average response time from completed executions
+        avg_response_data = AgentExecution.objects.filter(
+            created_at__gte=start_date,
+            status=AgentStatus.COMPLETED,
+            execution_time_seconds__isnull=False
+        ).aggregate(avg_time=Avg('execution_time_seconds'))
+        avg_response_time = round(avg_response_data['avg_time'] or 0, 2)
     except Exception:
         agent_executions = 0
         completed_executions = 0
         failed_executions = 0
+        avg_response_time = 0
 
     # REAL DATA: Calculate success rate
     total_actions = applications_count + agent_executions
@@ -165,7 +174,7 @@ def analytics_dashboard(request):
             'successful_requests': successful_actions,
             'failed_requests': failed_executions,
             'success_rate': round(success_rate, 1),
-            'avg_response_time': 1.2,  # Placeholder - response time tracking not implemented
+            'avg_response_time': avg_response_time,  # Session 735: Real avg from AgentExecution
             'total_cost': total_revenue,  # Using revenue as proxy for value
             'opportunities_found': opportunities_count,
             'applications_submitted': applications_count,
@@ -326,6 +335,79 @@ def cost_breakdown(request):
     avg_daily = sum(daily_costs) / len(daily_costs) if daily_costs else 0
     projected_monthly = avg_daily * 30
 
+    # REAL DATA: Budget alerts from LUNGS system (Session 735)
+    alerts = []
+    try:
+        from core.models_lungs import Budget, BreathCycle
+        from django.utils import timezone as tz
+
+        # Get all active budgets
+        active_budgets = Budget.objects.filter(is_active=True)
+
+        for budget in active_budgets:
+            # Get current cycle for this budget
+            now = tz.now()
+            current_cycle = BreathCycle.objects.filter(
+                budget=budget,
+                period_start__lte=now,
+                period_end__gte=now
+            ).first()
+
+            if current_cycle:
+                # Calculate utilization
+                utilization = current_cycle.utilization_percent
+                budget_limit = float(budget.cost_limit) if budget.cost_limit else 0
+                cost_used = float(current_cycle.cost_incurred)
+
+                # Generate alerts based on thresholds
+                if budget_limit > 0:
+                    if utilization >= budget.critical_threshold * 100:
+                        alerts.append({
+                            'type': 'critical',
+                            'message': f'{budget.name} at {utilization:.1f}% of budget (${cost_used:.2f}/${budget_limit:.2f})',
+                            'budget_id': str(budget.id),
+                            'scope': budget.scope,
+                            'utilization': utilization,
+                            'threshold': budget.critical_threshold * 100,
+                        })
+                    elif utilization >= budget.warning_threshold * 100:
+                        alerts.append({
+                            'type': 'warning',
+                            'message': f'{budget.name} at {utilization:.1f}% of budget (${cost_used:.2f}/${budget_limit:.2f})',
+                            'budget_id': str(budget.id),
+                            'scope': budget.scope,
+                            'utilization': utilization,
+                            'threshold': budget.warning_threshold * 100,
+                        })
+
+                # Check token limits too
+                token_limit = budget.token_limit
+                tokens_used = current_cycle.tokens_used
+                if token_limit and token_limit > 0:
+                    token_util = (tokens_used / token_limit) * 100
+                    if token_util >= budget.critical_threshold * 100:
+                        alerts.append({
+                            'type': 'critical',
+                            'message': f'{budget.name} token usage at {token_util:.1f}% ({tokens_used:,}/{token_limit:,} tokens)',
+                            'budget_id': str(budget.id),
+                            'scope': budget.scope,
+                            'utilization': token_util,
+                            'threshold': budget.critical_threshold * 100,
+                        })
+                    elif token_util >= budget.warning_threshold * 100:
+                        alerts.append({
+                            'type': 'warning',
+                            'message': f'{budget.name} token usage at {token_util:.1f}% ({tokens_used:,}/{token_limit:,} tokens)',
+                            'budget_id': str(budget.id),
+                            'scope': budget.scope,
+                            'utilization': token_util,
+                            'threshold': budget.warning_threshold * 100,
+                        })
+    except Exception as e:
+        logger.warning(f"Could not fetch budget alerts: {e}")
+
+    logger.info(f"✅ Budget alerts: {len(alerts)} alerts generated")
+
     return Response({
         'success': True,
         'time_range': time_range,
@@ -338,7 +420,7 @@ def cost_breakdown(request):
             'daily_costs': daily_costs,
             'projected_monthly': round(projected_monthly, 2)
         },
-        'alerts': []  # Budget alerts not implemented
+        'alerts': alerts  # Session 735: Real budget alerts from LUNGS system
     })
 
 @api_view(['POST'])
