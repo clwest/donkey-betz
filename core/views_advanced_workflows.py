@@ -1,481 +1,486 @@
 """
 Advanced Workflow Orchestration System.
-Phase 2 enhancement - provides comprehensive workflow management and automation.
-Compatible with existing frontend connections.
+
+Session 735: UPDATED to use REAL orchestration execution!
+No more mock data - connects to AgentOrchestration and real agent execution.
 """
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from datetime import datetime, timedelta
 import json
 import uuid
+import logging
+
+from core.models.agents_registry import (
+    AgentOrchestration, AgentExecution, UnifiedAgentTemplate, AgentStatus
+)
+from core.tasks_agents import execute_orchestration
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_advanced_workflow(request):
     """
     Create advanced multi-step workflow with conditional logic.
-    Enhanced version with more sophisticated orchestration.
+    Session 735: Now creates a REAL AgentOrchestration in the database.
     """
     user = request.user
     data = json.loads(request.body or b"{}")
-    
+
     workflow_name = data.get('name', 'Untitled Workflow')
     description = data.get('description', '')
     steps = data.get('steps', [])
-    triggers = data.get('triggers', [])
-    conditions = data.get('conditions', [])
-    notifications = data.get('notifications', {})
-    
-    workflow_id = str(uuid.uuid4())
-    
-    # Process and validate workflow steps
-    processed_steps = []
-    for i, step in enumerate(steps):
-        processed_step = {
-            'id': str(uuid.uuid4()),
-            'step_number': i + 1,
-            'type': step.get('type', 'agent_task'),
-            'name': step.get('name', f'Step {i + 1}'),
-            'agent_type': step.get('agent_type', 'business'),
-            'task_description': step.get('task_description', ''),
-            'conditions': step.get('conditions', []),
-            'retry_policy': step.get('retry_policy', {'max_retries': 3, 'delay_seconds': 30}),
-            'timeout_seconds': step.get('timeout_seconds', 300),
-            'dependencies': step.get('dependencies', []),
-            'outputs': step.get('outputs', [])
-        }
-        processed_steps.append(processed_step)
-    
+    execution_strategy = data.get('execution_strategy', 'sequential')
+
+    # Build agent sequence from steps
+    agent_sequence = []
+    for step in steps:
+        agent_name = step.get('agent_type', step.get('name', 'ResearchAgent'))
+        # Normalize agent name
+        if not agent_name.endswith('Agent'):
+            agent_name = f"{agent_name.title()}Agent"
+        agent_sequence.append(agent_name)
+
+    # If no steps provided, use a default research workflow
+    if not agent_sequence:
+        agent_sequence = ['ResearchAgent', 'ContentWriterAgent']
+
+    # Create REAL orchestration in database
+    orchestration = AgentOrchestration.objects.create(
+        name=workflow_name,
+        description=description,
+        user=user,
+        agent_sequence=agent_sequence,
+        execution_strategy=execution_strategy,
+        workflow_definition={
+            'type': 'advanced_workflow',
+            'domain': 'general',
+            'steps': steps,
+            'triggers': data.get('triggers', []),
+            'conditions': data.get('conditions', []),
+            'notifications': data.get('notifications', {}),
+        },
+        status='pending'
+    )
+
+    logger.info(f"Created REAL advanced workflow: {orchestration.name} ({orchestration.id})")
+
     return Response({
         'success': True,
         'workflow': {
-            'id': workflow_id,
-            'name': workflow_name,
-            'description': description,
-            'status': 'draft',
-            'steps': processed_steps,
-            'triggers': triggers,
-            'conditions': conditions,
-            'notifications': notifications,
-            'created_at': datetime.now().isoformat(),
-            'estimated_duration': f'{len(steps) * 2}-{len(steps) * 5} minutes',
-            'complexity_score': min(10, len(steps) + len(conditions)),
+            'id': str(orchestration.id),
+            'name': orchestration.name,
+            'description': orchestration.description,
+            'status': orchestration.status,
+            'agent_sequence': orchestration.agent_sequence,
+            'execution_strategy': orchestration.execution_strategy,
+            'created_at': orchestration.created_at.isoformat(),
+            'estimated_duration': f'{len(agent_sequence) * 30}-{len(agent_sequence) * 60} seconds',
+            'complexity_score': min(10, len(agent_sequence)),
             'version': 1,
             'is_template': False
         }
     })
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def execute_advanced_workflow(request):
     """
     Execute advanced workflow with real-time monitoring.
-    Enhanced execution with conditional logic and error handling.
+    Session 735: Now triggers REAL agent execution via Celery task!
     """
     user = request.user
     data = json.loads(request.body or b"{}")
-    
+
     workflow_id = data.get('workflow_id', '')
     input_parameters = data.get('input_parameters', {})
-    execution_mode = data.get('execution_mode', 'async')  # async, sync, scheduled
-    priority = data.get('priority', 'normal')  # low, normal, high, urgent
-    
-    execution_id = str(uuid.uuid4())
-    
-    # Mock workflow execution
-    execution_data = {
-        'id': execution_id,
-        'workflow_id': workflow_id,
-        'status': 'running',
-        'progress': {
-            'current_step': 1,
-            'total_steps': 5,
-            'completed_steps': 0,
-            'progress_percentage': 0
-        },
-        'input_parameters': input_parameters,
-        'execution_mode': execution_mode,
-        'priority': priority,
-        'started_at': datetime.now().isoformat(),
-        'estimated_completion': (datetime.now() + timedelta(minutes=8)).isoformat(),
-        'step_results': [],
-        'logs': [
-            {
-                'timestamp': datetime.now().isoformat(),
-                'level': 'info',
-                'message': 'Workflow execution initiated',
-                'step_id': None
-            }
-        ],
-        'resource_usage': {
-            'tokens_used': 0,
-            'cost_incurred': 0.0,
-            'execution_time_seconds': 0
-        }
-    }
-    
+    execution_mode = data.get('execution_mode', 'async')
+
+    try:
+        # Get the orchestration
+        orchestration = AgentOrchestration.objects.get(id=workflow_id, user=user)
+    except AgentOrchestration.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': f'Workflow {workflow_id} not found'
+        }, status=404)
+
+    # Check if already running
+    if orchestration.status == 'running':
+        return Response({
+            'success': False,
+            'error': 'Workflow is already running'
+        }, status=400)
+
+    # Update workflow definition with input parameters
+    if input_parameters:
+        workflow_def = orchestration.workflow_definition or {}
+        workflow_def['prompt'] = input_parameters.get('prompt', workflow_def.get('prompt', ''))
+        workflow_def['input_parameters'] = input_parameters
+        orchestration.workflow_definition = workflow_def
+
+    # Reset and start execution
+    orchestration.status = 'running'
+    orchestration.current_agent_index = 0
+    orchestration.progress_percentage = 0
+    orchestration.intermediate_results = []
+    orchestration.save()
+
+    # Queue REAL execution via Celery
+    execute_orchestration.delay(orchestration_id=str(orchestration.id))
+
+    logger.info(f"🚀 Started REAL workflow execution: {orchestration.name} ({orchestration.id})")
+
     return Response({
         'success': True,
-        'execution': execution_data,
+        'execution': {
+            'id': str(orchestration.id),
+            'workflow_id': str(orchestration.id),
+            'status': 'running',
+            'progress': {
+                'current_step': 0,
+                'total_steps': len(orchestration.agent_sequence),
+                'completed_steps': 0,
+                'progress_percentage': 0
+            },
+            'input_parameters': input_parameters,
+            'execution_mode': execution_mode,
+            'started_at': timezone.now().isoformat(),
+            'estimated_completion': (timezone.now() + timedelta(seconds=len(orchestration.agent_sequence) * 40)).isoformat(),
+            'step_results': [],
+            'logs': [
+                {
+                    'timestamp': timezone.now().isoformat(),
+                    'level': 'info',
+                    'message': f'REAL workflow execution initiated with {len(orchestration.agent_sequence)} agents',
+                    'step_id': None
+                }
+            ],
+            'resource_usage': {
+                'tokens_used': 0,
+                'cost_incurred': 0.0,
+                'execution_time_seconds': 0
+            }
+        },
         'monitoring': {
-            'websocket_channel': f'workflow_execution_{execution_id}',
-            'status_endpoint': f'/api/workflows/execution/{execution_id}/status/',
-            'logs_endpoint': f'/api/workflows/execution/{execution_id}/logs/'
+            'websocket_channel': f'workflow_execution_{orchestration.id}',
+            'status_endpoint': f'/api/workflows/execution/{orchestration.id}/status/',
+            'logs_endpoint': f'/api/workflows/execution/{orchestration.id}/logs/'
         }
     })
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_workflow_execution_status(request, execution_id):
     """
     Get real-time workflow execution status.
+    Session 735: Returns REAL status from AgentOrchestration!
     """
     user = request.user
-    
-    # Mock execution status with detailed progress
+
+    try:
+        orchestration = AgentOrchestration.objects.get(id=execution_id)
+    except AgentOrchestration.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': f'Workflow execution {execution_id} not found'
+        }, status=404)
+
+    # Build step results from intermediate_results
+    step_results = []
+    total_tokens = 0
+    total_cost = 0.0
+    total_time = 0.0
+
+    for i, result in enumerate(orchestration.intermediate_results or []):
+        agent_name = result.get('agent', f'Step {i+1}')
+        result_data = result.get('result', {})
+        execution_time_ms = result_data.get('execution_time_ms', 0) or 0
+
+        step_results.append({
+            'step_id': f'step_{i+1}',
+            'name': agent_name,
+            'status': 'completed' if result_data.get('success') else 'failed',
+            'result': result_data.get('message', '')[:500] if result_data.get('message') else 'Completed',
+            'execution_time_seconds': execution_time_ms / 1000,
+            'tokens_used': 0,  # Would need token tracking in agent execution
+            'cost': 0.0
+        })
+        total_time += execution_time_ms / 1000
+
+    # Add current running step if in progress
+    current_idx = orchestration.current_agent_index or 0
+    if orchestration.status == 'running' and current_idx < len(orchestration.agent_sequence):
+        current_agent = orchestration.agent_sequence[current_idx]
+        if isinstance(current_agent, dict):
+            current_agent = current_agent.get('name', current_agent.get('agent', f'Step {current_idx+1}'))
+
+        step_results.append({
+            'step_id': f'step_{current_idx+1}',
+            'name': current_agent,
+            'status': 'running',
+            'result': None,
+            'execution_time_seconds': 0,
+            'tokens_used': 0,
+            'cost': 0.0
+        })
+
     status = {
-        'id': execution_id,
-        'status': 'running',
+        'id': str(orchestration.id),
+        'status': orchestration.status,
         'progress': {
-            'current_step': 3,
-            'total_steps': 5,
-            'completed_steps': 2,
-            'progress_percentage': 60,
-            'current_step_name': 'Market Analysis Generation',
-            'current_step_progress': 75
+            'current_step': (orchestration.current_agent_index or 0) + 1,
+            'total_steps': len(orchestration.agent_sequence),
+            'completed_steps': len(orchestration.intermediate_results or []),
+            'progress_percentage': orchestration.progress_percentage or 0,
+            'current_step_name': orchestration.agent_sequence[orchestration.current_agent_index] if orchestration.current_agent_index and orchestration.current_agent_index < len(orchestration.agent_sequence) else None,
+            'current_step_progress': 50 if orchestration.status == 'running' else 100
         },
-        'step_results': [
-            {
-                'step_id': 'step_1',
-                'name': 'Research Data Collection',
-                'status': 'completed',
-                'result': 'Successfully collected 15 relevant sources',
-                'execution_time_seconds': 45.2,
-                'tokens_used': 850,
-                'cost': 0.034
-            },
-            {
-                'step_id': 'step_2',
-                'name': 'Content Analysis',
-                'status': 'completed',
-                'result': 'Analysis complete with key insights extracted',
-                'execution_time_seconds': 67.8,
-                'tokens_used': 1200,
-                'cost': 0.048
-            },
-            {
-                'step_id': 'step_3',
-                'name': 'Market Analysis Generation',
-                'status': 'running',
-                'result': None,
-                'execution_time_seconds': 32.1,
-                'tokens_used': 450,
-                'cost': 0.018
-            }
-        ],
+        'step_results': step_results,
         'resource_usage': {
-            'total_tokens_used': 2500,
-            'total_cost_incurred': 0.100,
-            'total_execution_time_seconds': 145.1
+            'total_tokens_used': total_tokens,
+            'total_cost_incurred': float(orchestration.total_cost or 0),
+            'total_execution_time_seconds': orchestration.total_execution_time or total_time
         },
-        'started_at': datetime.now().isoformat(),
-        'updated_at': datetime.now().isoformat(),
-        'estimated_completion': (datetime.now() + timedelta(minutes=3)).isoformat()
+        'started_at': orchestration.created_at.isoformat(),
+        'updated_at': orchestration.updated_at.isoformat(),
+        'estimated_completion': None
     }
-    
+
     return Response({
         'success': True,
         'execution_status': status
     })
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_workflow_templates(request):
     """
-    Get available workflow templates.
+    Get available workflow templates from REAL orchestrations.
+    Session 735: Returns templates based on actual system orchestrations.
     """
     user = request.user
     category = request.GET.get('category', 'all')
-    
-    templates = [
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Business Strategy Development',
-            'description': 'Comprehensive business strategy analysis and planning workflow',
-            'category': 'business',
-            'steps': [
-                'Market Research',
-                'Competitive Analysis', 
-                'SWOT Analysis',
-                'Strategy Formulation',
-                'Implementation Plan'
-            ],
-            'estimated_duration': '15-25 minutes',
-            'complexity': 'high',
-            'usage_count': 45,
-            'rating': 4.8,
-            'last_updated': datetime.now().isoformat()
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Content Marketing Campaign',
-            'description': 'End-to-end content creation and marketing workflow',
-            'category': 'marketing',
-            'steps': [
-                'Audience Research',
-                'Content Strategy',
-                'Content Creation',
-                'SEO Optimization',
-                'Distribution Planning'
-            ],
-            'estimated_duration': '20-30 minutes',
-            'complexity': 'medium',
-            'usage_count': 67,
-            'rating': 4.6,
-            'last_updated': datetime.now().isoformat()
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Product Launch Analysis',
-            'description': 'Comprehensive product launch planning and analysis',
-            'category': 'product',
-            'steps': [
-                'Market Validation',
-                'Competitor Analysis',
-                'Launch Strategy',
-                'Risk Assessment',
-                'Success Metrics'
-            ],
-            'estimated_duration': '18-28 minutes',
-            'complexity': 'high',
-            'usage_count': 23,
-            'rating': 4.9,
-            'last_updated': datetime.now().isoformat()
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Research Report Generation',
-            'description': 'Automated research compilation and report generation',
-            'category': 'research',
-            'steps': [
-                'Data Collection',
-                'Source Validation',
-                'Analysis & Synthesis',
-                'Report Structuring',
-                'Executive Summary'
-            ],
-            'estimated_duration': '10-15 minutes',
-            'complexity': 'medium',
-            'usage_count': 89,
-            'rating': 4.7,
-            'last_updated': datetime.now().isoformat()
+
+    # Get predefined orchestrations as templates
+    from core.management.commands.sync_orchestrations import ORCHESTRATIONS
+
+    templates = []
+    for orch in ORCHESTRATIONS:
+        workflow_def = orch.get('workflow_definition', {})
+        domain = workflow_def.get('domain', 'general')
+
+        # Map domains to categories
+        category_map = {
+            'blockchain': 'technical',
+            'stocks': 'business',
+            'markets': 'business',
+            'culture': 'creative',
+            'content': 'marketing',
+            'media': 'creative',
         }
-    ]
-    
-    # Filter by category if specified
-    if category != 'all':
-        templates = [t for t in templates if t['category'] == category]
-    
+        orch_category = category_map.get(domain, 'business')
+
+        if category != 'all' and orch_category != category:
+            continue
+
+        templates.append({
+            'id': orch['name'].lower().replace(' ', '_'),
+            'name': orch['name'],
+            'description': orch['description'],
+            'category': orch_category,
+            'steps': orch['agent_sequence'],
+            'execution_strategy': orch['execution_strategy'],
+            'estimated_duration': f'{len(orch["agent_sequence"]) * 30}-{len(orch["agent_sequence"]) * 60} seconds',
+            'complexity': 'high' if len(orch['agent_sequence']) > 4 else 'medium',
+            'usage_count': AgentOrchestration.objects.filter(name=orch['name']).count(),
+            'rating': 4.5,
+            'last_updated': timezone.now().isoformat()
+        })
+
+    # Also include any user-created orchestrations as templates
+    user_orchestrations = AgentOrchestration.objects.filter(
+        user=user, status='completed'
+    ).order_by('-created_at')[:5]
+
+    for orch in user_orchestrations:
+        templates.append({
+            'id': str(orch.id),
+            'name': orch.name,
+            'description': orch.description or 'User-created workflow',
+            'category': 'custom',
+            'steps': orch.agent_sequence,
+            'execution_strategy': orch.execution_strategy,
+            'estimated_duration': f'{orch.total_execution_time:.0f} seconds' if orch.total_execution_time else 'Unknown',
+            'complexity': 'high' if len(orch.agent_sequence) > 4 else 'medium',
+            'usage_count': 1,
+            'rating': 5.0,
+            'last_updated': orch.updated_at.isoformat()
+        })
+
     return Response({
         'success': True,
         'templates': templates,
         'total_templates': len(templates),
-        'categories': ['business', 'marketing', 'product', 'research', 'technical', 'creative'],
+        'categories': ['business', 'marketing', 'technical', 'creative', 'custom'],
         'popular_templates': sorted(templates, key=lambda x: x['usage_count'], reverse=True)[:3]
     })
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_workflow_from_template(request):
     """
     Create workflow from template with customization.
+    Session 735: Creates REAL AgentOrchestration from template.
     """
     user = request.user
     data = json.loads(request.body or b"{}")
-    
+
     template_id = data.get('template_id', '')
     customizations = data.get('customizations', {})
     workflow_name = data.get('name', 'Workflow from Template')
-    
-    workflow_id = str(uuid.uuid4())
-    
-    # Mock template-based workflow creation
-    workflow = {
-        'id': workflow_id,
-        'name': workflow_name,
-        'template_id': template_id,
-        'status': 'draft',
-        'customizations_applied': customizations,
-        'steps': [
-            {
-                'id': str(uuid.uuid4()),
-                'name': 'Market Research',
-                'type': 'agent_task',
-                'agent_type': 'research',
-                'customized': 'market_focus' in customizations
-            },
-            {
-                'id': str(uuid.uuid4()),
-                'name': 'Competitive Analysis',
-                'type': 'agent_task', 
-                'agent_type': 'business',
-                'customized': 'competitor_list' in customizations
-            },
-            {
-                'id': str(uuid.uuid4()),
-                'name': 'Strategy Formulation',
-                'type': 'agent_task',
-                'agent_type': 'business',
-                'customized': 'strategy_focus' in customizations
+
+    # Find the template
+    from core.management.commands.sync_orchestrations import ORCHESTRATIONS
+
+    template = None
+    for orch in ORCHESTRATIONS:
+        if orch['name'].lower().replace(' ', '_') == template_id or orch['name'] == template_id:
+            template = orch
+            break
+
+    # Also check user orchestrations
+    if not template:
+        try:
+            existing = AgentOrchestration.objects.get(id=template_id, user=user)
+            template = {
+                'name': existing.name,
+                'description': existing.description,
+                'agent_sequence': existing.agent_sequence,
+                'execution_strategy': existing.execution_strategy,
+                'workflow_definition': existing.workflow_definition,
             }
-        ],
-        'created_at': datetime.now().isoformat(),
-        'estimated_duration': '12-18 minutes',
-        'ready_to_execute': True
-    }
-    
+        except (AgentOrchestration.DoesNotExist, ValueError):
+            pass
+
+    if not template:
+        return Response({
+            'success': False,
+            'error': f'Template {template_id} not found'
+        }, status=404)
+
+    # Create new orchestration from template
+    orchestration = AgentOrchestration.objects.create(
+        name=workflow_name,
+        description=template.get('description', ''),
+        user=user,
+        agent_sequence=customizations.get('agent_sequence', template['agent_sequence']),
+        execution_strategy=customizations.get('execution_strategy', template['execution_strategy']),
+        workflow_definition={
+            **template.get('workflow_definition', {}),
+            'from_template': template_id,
+            'customizations': customizations,
+        },
+        status='pending'
+    )
+
+    logger.info(f"Created workflow from template: {orchestration.name} ({orchestration.id})")
+
     return Response({
         'success': True,
-        'workflow': workflow
+        'workflow': {
+            'id': str(orchestration.id),
+            'name': orchestration.name,
+            'template_id': template_id,
+            'status': 'pending',
+            'customizations_applied': customizations,
+            'agent_sequence': orchestration.agent_sequence,
+            'execution_strategy': orchestration.execution_strategy,
+            'created_at': orchestration.created_at.isoformat()
+        }
     })
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def workflow_analytics(request):
+def list_user_workflows(request):
     """
-    Get comprehensive workflow analytics and performance metrics.
+    List all workflows for the current user.
+    Session 735: Returns REAL orchestrations from database.
     """
     user = request.user
-    time_range = request.GET.get('time_range', '30d')
-    
-    analytics = {
-        'execution_summary': {
-            'total_executions': 156,
-            'successful_executions': 142,
-            'failed_executions': 14,
-            'success_rate': 91.0,
-            'avg_execution_time': '14.5 minutes',
-            'total_cost': 89.45
-        },
-        'workflow_performance': {
-            'most_used_workflows': [
-                {'name': 'Research Report Generation', 'executions': 45, 'success_rate': 95.6},
-                {'name': 'Content Marketing Campaign', 'executions': 32, 'success_rate': 87.5},
-                {'name': 'Business Strategy Development', 'executions': 28, 'success_rate': 92.9}
-            ],
-            'avg_steps_per_workflow': 4.2,
-            'avg_tokens_per_execution': 3450,
-            'most_reliable_templates': [
-                {'template': 'Research Report Generation', 'reliability_score': 98.5},
-                {'template': 'Business Strategy Development', 'reliability_score': 94.2}
-            ]
-        },
-        'resource_usage': {
-            'total_tokens_consumed': 489000,
-            'total_execution_time_hours': 38.2,
-            'cost_breakdown': {
-                'agent_execution': 67.20,
-                'model_inference': 18.90,
-                'infrastructure': 3.35
-            }
-        },
-        'trends': {
-            'daily_executions': [12, 8, 15, 9, 18, 14, 11],
-            'success_rate_trend': [89.0, 92.0, 88.0, 95.0, 91.0, 93.0, 89.0],
-            'avg_duration_trend': [15.2, 14.8, 16.1, 13.9, 14.2, 15.0, 14.1]
-        },
-        'optimization_suggestions': [
-            {
-                'type': 'cost_optimization',
-                'suggestion': 'Use faster models for simple validation steps',
-                'potential_saving': '$12.40 per month'
-            },
-            {
-                'type': 'performance_optimization', 
-                'suggestion': 'Parallel execution for independent steps',
-                'potential_improvement': '25% faster execution'
-            }
-        ]
-    }
-    
+    status_filter = request.GET.get('status', None)
+
+    queryset = AgentOrchestration.objects.filter(user=user).order_by('-created_at')
+
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+
+    workflows = []
+    for orch in queryset[:50]:
+        workflows.append({
+            'id': str(orch.id),
+            'name': orch.name,
+            'description': orch.description,
+            'status': orch.status,
+            'agent_sequence': orch.agent_sequence,
+            'execution_strategy': orch.execution_strategy,
+            'progress_percentage': orch.progress_percentage,
+            'total_execution_time': orch.total_execution_time,
+            'total_cost': float(orch.total_cost) if orch.total_cost else None,
+            'created_at': orch.created_at.isoformat(),
+            'updated_at': orch.updated_at.isoformat(),
+            'steps_completed': len(orch.intermediate_results or []),
+            'total_steps': len(orch.agent_sequence)
+        })
+
     return Response({
         'success': True,
-        'time_range': time_range,
-        'analytics': analytics
+        'workflows': workflows,
+        'total_count': queryset.count()
     })
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def schedule_workflow(request):
-    """
-    Schedule workflow for automated execution.
-    """
-    user = request.user
-    data = json.loads(request.body or b"{}")
-    
-    workflow_id = data.get('workflow_id', '')
-    schedule_type = data.get('schedule_type', 'once')  # once, daily, weekly, monthly, cron
-    schedule_time = data.get('schedule_time', '')
-    input_parameters = data.get('input_parameters', {})
-    notifications = data.get('notifications', {'email': True, 'webhook': False})
-    
-    schedule_id = str(uuid.uuid4())
-    
-    schedule = {
-        'id': schedule_id,
-        'workflow_id': workflow_id,
-        'schedule_type': schedule_type,
-        'schedule_time': schedule_time,
-        'input_parameters': input_parameters,
-        'notifications': notifications,
-        'status': 'active',
-        'next_execution': schedule_time,
-        'created_at': datetime.now().isoformat(),
-        'executions_count': 0,
-        'last_execution': None,
-        'timezone': 'UTC'
-    }
-    
-    return Response({
-        'success': True,
-        'schedule': schedule,
-        'message': f'Workflow scheduled for {schedule_type} execution'
-    })
 
-@api_view(['POST'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def workflow_collaboration(request):
+def delete_workflow(request, workflow_id):
     """
-    Share and collaborate on workflows.
+    Delete a workflow.
+    Session 735: Deletes REAL orchestration from database.
     """
     user = request.user
-    data = json.loads(request.body or b"{}")
-    
-    workflow_id = data.get('workflow_id', '')
-    action = data.get('action', 'share')  # share, invite, publish, fork
-    target_users = data.get('target_users', [])
-    permissions = data.get('permissions', ['view', 'execute'])  # view, execute, edit, admin
-    
-    collaboration_id = str(uuid.uuid4())
-    
-    result = {
-        'id': collaboration_id,
-        'workflow_id': workflow_id,
-        'action': action,
-        'shared_with': target_users,
-        'permissions': permissions,
-        'share_link': f'https://platform.donkeybetz.com/workflows/shared/{collaboration_id}',
-        'created_at': datetime.now().isoformat(),
-        'expires_at': (datetime.now() + timedelta(days=30)).isoformat(),
-        'is_public': action == 'publish'
-    }
-    
+
+    try:
+        orchestration = AgentOrchestration.objects.get(id=workflow_id, user=user)
+    except AgentOrchestration.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': f'Workflow {workflow_id} not found'
+        }, status=404)
+
+    if orchestration.status == 'running':
+        return Response({
+            'success': False,
+            'error': 'Cannot delete a running workflow'
+        }, status=400)
+
+    name = orchestration.name
+    orchestration.delete()
+
+    logger.info(f"Deleted workflow: {name} ({workflow_id})")
+
     return Response({
         'success': True,
-        'collaboration': result
+        'message': f'Workflow "{name}" deleted successfully'
     })
