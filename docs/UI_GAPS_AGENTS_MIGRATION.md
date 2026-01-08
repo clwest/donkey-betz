@@ -19,7 +19,7 @@ This document tracks ALL backend APIs that have NO corresponding frontend UI. Th
 | **Agent Channels** | 10 endpoints | ✅ COMPLETE | DONE |
 | **Intelligence/Income** | 15+ endpoints | ✅ COMPLETE | DONE |
 | **Agent Monitoring** | 6 endpoints | ✅ COMPLETE | DONE |
-| **Agent Templates CRUD** | 5 endpoints | ⚠️ Read-only | MEDIUM |
+| **Agent Templates CRUD** | 5 endpoints | ✅ COMPLETE | DONE |
 | **Agent Orchestrations** | 5 endpoints | ⚠️ Partial | MEDIUM |
 | **Agent Tools** | 5 endpoints | ✅ COMPLETE | DONE |
 
@@ -204,32 +204,42 @@ A registry of tools available to AI agents for task execution:
 
 ---
 
+## Agent Templates CRUD - DONE
+
+**Status:** ✅ Implemented in Session 734
+
+### What It Is
+Full CRUD management for agent templates - reusable configurations for AI agents:
+- **Create** - New templates with full configuration
+- **Edit** - Update existing template settings
+- **Delete** - Remove templates with confirmation
+- **List** - Browse with search and specialization filter
+
+### Implementation (Session 734)
+- `agentTemplatesApi` added to `frontend/src/lib/api.ts` (5 endpoints)
+- `TemplatesTab` component added to `AgentsPage.tsx` (~450 lines)
+- Create/Edit modal with full form fields
+- Accessible via Agents → Templates tab (no new route needed)
+
+**Features Delivered:**
+- **Template Cards:** Display name, specialization, usage stats, success rate, rating
+- **Search & Filter:** Text search + specialization dropdown
+- **Create Modal:** All template fields (name, description, system prompt, LLM config, etc.)
+- **Edit/Delete:** Inline buttons on each card with confirmation
+- **Visual Indicators:** Verified badge, public/private icons
+
+### Backend APIs Connected
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/agents/templates/` | GET | List templates with filters |
+| `/api/v1/agents/templates/` | POST | Create new template |
+| `/api/v1/agents/templates/{id}/` | GET | Template detail |
+| `/api/v1/agents/templates/{id}/` | PATCH | Update template |
+| `/api/v1/agents/templates/{id}/` | DELETE | Delete template |
+
+---
+
 ## Medium Priority Gaps
-
-### 1. Agent Templates Management
-
-**Backend:** `UnifiedAgentTemplateViewSet` at `/api/v1/agents/templates/`
-
-**Current Frontend:** Read-only via `agentsApi.list()` and `agentsApi.comprehensive()`
-
-**Missing:**
-- Create new agent template
-- Edit agent template
-- Delete agent template
-- Template configuration UI
-
-**Frontend API Addition:**
-```typescript
-export const agentTemplatesApi = {
-  list: () => api.get('/v1/agents/templates/'),
-  create: (data: { name: string; description: string; category?: string }) =>
-    api.post('/v1/agents/templates/', data),
-  detail: (id: string) => api.get(`/v1/agents/templates/${id}/`),
-  update: (id: string, data: Record<string, unknown>) =>
-    api.patch(`/v1/agents/templates/${id}/`, data),
-  delete: (id: string) => api.delete(`/v1/agents/templates/${id}/`),
-}
-```
 
 ---
 
@@ -365,12 +375,12 @@ export const agentMonitoringApi = {
 | **Agent Channels** | ✅ 12 endpoints | ✅ COMPLETE | ✅ 1 channel, 5 members | **DONE** |
 | **Income Builder** | ✅ 10 endpoints | ✅ COMPLETE | ✅ 150 revenue plans | **DONE** |
 | **Agent Monitoring** | ✅ 6 endpoints | ✅ COMPLETE | N/A (metrics) | **DONE** |
-| Agent Templates CRUD | ✅ 5 endpoints | ⚠️ Read-only | ✅ Has data | MEDIUM |
+| **Agent Templates CRUD** | ✅ 5 endpoints | ✅ COMPLETE | ✅ Has data | **DONE** |
 | Agent Orchestrations | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | MEDIUM |
 | **Agent Tools** | ✅ 5 endpoints | ✅ COMPLETE | ✅ Has data | **DONE** |
 | Agent Registry | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | LOW |
 
-**Total: 8 systems with 47+ backend API endpoints with frontend exposure** (6 completed: RAG, Mythology, Agent Channels, Income Builder, Agent Monitoring, Agent Tools)
+**Total: 9 systems with 52+ backend API endpoints with frontend exposure** (7 completed: RAG, Mythology, Agent Channels, Income Builder, Agent Monitoring, Agent Tools, Agent Templates)
 
 ---
 
@@ -382,7 +392,8 @@ export const agentMonitoringApi = {
 4. ~~**Income Builder** - DONE (Session 734) - "Income Builder" tab in IntelligencePage~~
 5. ~~**Agent Monitoring** - DONE (Session 734) - "Monitoring" tab in AgentsPage~~
 6. ~~**Agent Tools** - DONE (Session 734) - "Tools" tab in AgentsPage~~
-7. **Agent Templates/Orchestrations** - MEDIUM - Agent management CRUD
+7. ~~**Agent Templates** - DONE (Session 734) - "Templates" tab in AgentsPage~~
+8. **Agent Orchestrations** - MEDIUM - Orchestration management CRUD
 
 ---
 
