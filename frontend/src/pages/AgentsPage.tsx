@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -534,8 +534,8 @@ function ChannelsTab() {
 export default function AgentsPage() {
   const [realtimeUpdates, setRealtimeUpdates] = useState<AgentUpdate[]>([])
   const [learningEvents, setLearningEvents] = useState<LearningEvent[]>([])
-  // Session 734: Added 'monitoring' tab
-  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels' | 'monitoring' | 'tools'>('directory')
+  // Session 734: Added 'monitoring', 'tools', 'templates' tabs
+  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels' | 'monitoring' | 'tools' | 'templates'>('directory')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['creation', 'research', 'strategy']))
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
@@ -664,6 +664,81 @@ export default function AgentsPage() {
       return response.data?.results || response.data?.data?.results || response.data || []
     },
     enabled: activeTab === 'tools',
+  })
+
+  // Session 734: Agent Templates CRUD
+  const [templateSpecFilter, setTemplateSpecFilter] = useState<string>('')
+  const [templateSearch, setTemplateSearch] = useState<string>('')
+  const [templateModalOpen, setTemplateModalOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<{
+    id: string
+    name: string
+    display_name: string
+    description: string
+    specialization: string
+    capabilities: string
+    system_prompt: string
+    personality_traits: string
+    llm_provider: string
+    llm_model: string
+    routing_keywords: string
+    is_public: boolean
+    learning_enabled: boolean
+  } | null>(null)
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    display_name: '',
+    description: '',
+    specialization: '',
+    capabilities: '',
+    system_prompt: '',
+    personality_traits: '',
+    llm_provider: '',
+    llm_model: '',
+    routing_keywords: '',
+    is_public: false,
+    learning_enabled: true,
+  })
+
+  const { data: templatesData, isLoading: templatesLoading, refetch: refetchTemplates } = useQuery({
+    queryKey: ['agent-templates', templateSpecFilter, templateSearch],
+    queryFn: async () => {
+      const params: Record<string, string> = {}
+      if (templateSpecFilter) params.specialization = templateSpecFilter
+      if (templateSearch) params.search = templateSearch
+      const response = await agentTemplatesApi.list(params)
+      return response.data?.results || response.data?.data?.results || response.data || []
+    },
+    enabled: activeTab === 'templates',
+  })
+
+  const createTemplateMutation = useMutation({
+    mutationFn: (data: typeof templateForm) => agentTemplatesApi.create(data),
+    onSuccess: () => {
+      refetchTemplates()
+      setTemplateModalOpen(false)
+      setTemplateForm({
+        name: '', display_name: '', description: '', specialization: '',
+        capabilities: '', system_prompt: '', personality_traits: '',
+        llm_provider: '', llm_model: '', routing_keywords: '',
+        is_public: false, learning_enabled: true,
+      })
+    },
+  })
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      agentTemplatesApi.update(id, data),
+    onSuccess: () => {
+      refetchTemplates()
+      setTemplateModalOpen(false)
+      setEditingTemplate(null)
+    },
+  })
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (id: string) => agentTemplatesApi.delete(id),
+    onSuccess: () => refetchTemplates(),
   })
 
   // WebSocket connections
@@ -830,7 +905,7 @@ export default function AgentsPage() {
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-dark-border pb-4">
-        {(['directory', 'activity', 'learning', 'channels', 'monitoring', 'tools'] as const).map((tab) => (
+        {(['directory', 'activity', 'learning', 'channels', 'monitoring', 'tools', 'templates'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1994,6 +2069,464 @@ export default function AgentsPage() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Session 734: Templates Tab - Agent Templates CRUD */}
+      {activeTab === 'templates' && (
+        <div className="space-y-6">
+          {/* Templates Header */}
+          <div className="card bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-lg bg-accent-cyan/20 flex items-center justify-center">
+                  <FileText size={28} className="text-accent-cyan" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Agent Templates</h3>
+                  <p className="text-gray-400">
+                    Create and manage reusable agent configurations
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                    placeholder="Search templates..."
+                    className="pl-9 pr-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm w-48"
+                  />
+                </div>
+                {/* Specialization Filter */}
+                <select
+                  value={templateSpecFilter}
+                  onChange={(e) => setTemplateSpecFilter(e.target.value)}
+                  className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">All Specializations</option>
+                  <option value="creation">Creation</option>
+                  <option value="research">Research</option>
+                  <option value="strategy">Strategy</option>
+                  <option value="analysis">Analysis</option>
+                  <option value="development">Development</option>
+                  <option value="executive">Executive</option>
+                  <option value="content">Content</option>
+                  <option value="security">Security</option>
+                </select>
+                <button
+                  onClick={() => refetchTemplates()}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingTemplate(null)
+                    setTemplateForm({
+                      name: '', display_name: '', description: '', specialization: '',
+                      capabilities: '', system_prompt: '', personality_traits: '',
+                      llm_provider: '', llm_model: '', routing_keywords: '',
+                      is_public: false, learning_enabled: true,
+                    })
+                    setTemplateModalOpen(true)
+                  }}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Create Template
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {templatesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : Array.isArray(templatesData) && templatesData.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templatesData.map((template: {
+                id: string
+                name: string
+                display_name: string
+                description?: string
+                specialization: string
+                confidence_score: number
+                success_rate: number
+                usage_count: number
+                avg_user_rating: number
+                is_public: boolean
+                is_verified: boolean
+                llm_provider: string
+                llm_model: string
+                creator_name?: string
+                created_at: string
+                is_active: boolean
+                capabilities?: string
+                system_prompt?: string
+                personality_traits?: string
+                routing_keywords?: string
+                learning_enabled?: boolean
+              }) => (
+                <div
+                  key={template.id}
+                  className={cn(
+                    "card hover:border-primary-500/50 transition-colors",
+                    !template.is_active && "opacity-60"
+                  )}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-10 w-10 rounded-lg flex items-center justify-center",
+                        template.specialization === 'creation' ? 'bg-accent-pink/20' :
+                        template.specialization === 'research' ? 'bg-accent-cyan/20' :
+                        template.specialization === 'strategy' ? 'bg-accent-amber/20' :
+                        template.specialization === 'analysis' ? 'bg-accent-purple/20' :
+                        template.specialization === 'development' ? 'bg-accent-green/20' :
+                        template.specialization === 'executive' ? 'bg-accent-blue/20' :
+                        'bg-gray-500/20'
+                      )}>
+                        <Bot size={20} className={cn(
+                          template.specialization === 'creation' ? 'text-accent-pink' :
+                          template.specialization === 'research' ? 'text-accent-cyan' :
+                          template.specialization === 'strategy' ? 'text-accent-amber' :
+                          template.specialization === 'analysis' ? 'text-accent-purple' :
+                          template.specialization === 'development' ? 'text-accent-green' :
+                          template.specialization === 'executive' ? 'text-accent-blue' :
+                          'text-gray-400'
+                        )} />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white">{template.display_name || template.name}</h4>
+                        <span className="text-xs text-gray-500 capitalize">{template.specialization || 'General'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {template.is_verified && (
+                        <span className="text-accent-blue" title="Verified">
+                          <CheckCircle size={16} />
+                        </span>
+                      )}
+                      {template.is_public ? (
+                        <span title="Public"><Globe size={14} className="text-gray-400" /></span>
+                      ) : (
+                        <span title="Private"><Lock size={14} className="text-gray-400" /></span>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                    {template.description || 'No description provided'}
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2 text-center border-t border-dark-border pt-3">
+                    <div>
+                      <p className="text-lg font-semibold text-white">{template.usage_count.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">Uses</p>
+                    </div>
+                    <div>
+                      <p className={cn(
+                        "text-lg font-semibold",
+                        template.success_rate >= 0.9 ? 'text-accent-green' :
+                        template.success_rate >= 0.7 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(template.success_rate * 100).toFixed(0)}%
+                      </p>
+                      <p className="text-xs text-gray-500">Success</p>
+                    </div>
+                    <div className="flex items-center justify-center gap-1">
+                      <Star size={14} className="text-accent-amber" />
+                      <p className="text-lg font-semibold text-white">
+                        {template.avg_user_rating?.toFixed(1) || '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-dark-border flex items-center justify-between">
+                    <div className="text-xs text-gray-500">
+                      <span className="text-accent-cyan">{template.llm_provider}</span>
+                      {template.llm_model && <span> / {template.llm_model}</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingTemplate({
+                            id: template.id,
+                            name: template.name,
+                            display_name: template.display_name || '',
+                            description: template.description || '',
+                            specialization: template.specialization || '',
+                            capabilities: template.capabilities || '',
+                            system_prompt: template.system_prompt || '',
+                            personality_traits: template.personality_traits || '',
+                            llm_provider: template.llm_provider || '',
+                            llm_model: template.llm_model || '',
+                            routing_keywords: template.routing_keywords || '',
+                            is_public: template.is_public,
+                            learning_enabled: template.learning_enabled ?? true,
+                          })
+                          setTemplateForm({
+                            name: template.name,
+                            display_name: template.display_name || '',
+                            description: template.description || '',
+                            specialization: template.specialization || '',
+                            capabilities: template.capabilities || '',
+                            system_prompt: template.system_prompt || '',
+                            personality_traits: template.personality_traits || '',
+                            llm_provider: template.llm_provider || '',
+                            llm_model: template.llm_model || '',
+                            routing_keywords: template.routing_keywords || '',
+                            is_public: template.is_public,
+                            learning_enabled: template.learning_enabled ?? true,
+                          })
+                          setTemplateModalOpen(true)
+                        }}
+                        className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-cyan"
+                        title="Edit template"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete template "${template.display_name || template.name}"?`)) {
+                            deleteTemplateMutation.mutate(template.id)
+                          }
+                        }}
+                        className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-red"
+                        title="Delete template"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {template.creator_name && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Created by {template.creator_name}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card text-center py-12 text-gray-400">
+              <FileText className="mx-auto mb-3 opacity-50" size={48} />
+              <p className="text-lg font-medium">No Templates Found</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {templateSearch || templateSpecFilter
+                  ? 'Try adjusting your search or filter'
+                  : 'Create your first agent template to get started'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session 734: Template Create/Edit Modal */}
+      {templateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <h2 className="text-xl font-bold">
+                {editingTemplate ? 'Edit Template' : 'Create New Template'}
+              </h2>
+              <button
+                onClick={() => {
+                  setTemplateModalOpen(false)
+                  setEditingTemplate(null)
+                }}
+                className="p-2 rounded-lg hover:bg-dark-border transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-150px)] space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name (slug)</label>
+                  <input
+                    type="text"
+                    value={templateForm.name}
+                    onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                    placeholder="my-agent-template"
+                    className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Display Name</label>
+                  <input
+                    type="text"
+                    value={templateForm.display_name}
+                    onChange={(e) => setTemplateForm({ ...templateForm, display_name: e.target.value })}
+                    placeholder="My Agent Template"
+                    className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={templateForm.description}
+                  onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
+                  placeholder="Describe what this agent does..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Specialization</label>
+                  <select
+                    value={templateForm.specialization}
+                    onChange={(e) => setTemplateForm({ ...templateForm, specialization: e.target.value })}
+                    className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                  >
+                    <option value="">Select...</option>
+                    <option value="creation">Creation</option>
+                    <option value="research">Research</option>
+                    <option value="strategy">Strategy</option>
+                    <option value="analysis">Analysis</option>
+                    <option value="development">Development</option>
+                    <option value="executive">Executive</option>
+                    <option value="content">Content</option>
+                    <option value="security">Security</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">LLM Provider</label>
+                  <select
+                    value={templateForm.llm_provider}
+                    onChange={(e) => setTemplateForm({ ...templateForm, llm_provider: e.target.value })}
+                    className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                  >
+                    <option value="">Select...</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="together">Together AI</option>
+                    <option value="ollama">Ollama</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="gemini">Gemini</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">LLM Model</label>
+                <input
+                  type="text"
+                  value={templateForm.llm_model}
+                  onChange={(e) => setTemplateForm({ ...templateForm, llm_model: e.target.value })}
+                  placeholder="gpt-4, claude-3-opus, etc."
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Capabilities</label>
+                <textarea
+                  value={templateForm.capabilities}
+                  onChange={(e) => setTemplateForm({ ...templateForm, capabilities: e.target.value })}
+                  placeholder="List agent capabilities..."
+                  rows={2}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">System Prompt</label>
+                <textarea
+                  value={templateForm.system_prompt}
+                  onChange={(e) => setTemplateForm({ ...templateForm, system_prompt: e.target.value })}
+                  placeholder="Enter system prompt for the agent..."
+                  rows={4}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg resize-none font-mono text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Personality Traits</label>
+                <input
+                  type="text"
+                  value={templateForm.personality_traits}
+                  onChange={(e) => setTemplateForm({ ...templateForm, personality_traits: e.target.value })}
+                  placeholder="analytical, friendly, detail-oriented"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Routing Keywords</label>
+                <input
+                  type="text"
+                  value={templateForm.routing_keywords}
+                  onChange={(e) => setTemplateForm({ ...templateForm, routing_keywords: e.target.value })}
+                  placeholder="research, analyze, investigate"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg"
+                />
+              </div>
+
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={templateForm.is_public}
+                    onChange={(e) => setTemplateForm({ ...templateForm, is_public: e.target.checked })}
+                    className="rounded border-dark-border"
+                  />
+                  <span className="text-sm">Public Template</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={templateForm.learning_enabled}
+                    onChange={(e) => setTemplateForm({ ...templateForm, learning_enabled: e.target.checked })}
+                    className="rounded border-dark-border"
+                  />
+                  <span className="text-sm">Learning Enabled</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-dark-border">
+              <button
+                onClick={() => {
+                  setTemplateModalOpen(false)
+                  setEditingTemplate(null)
+                }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (editingTemplate) {
+                    updateTemplateMutation.mutate({
+                      id: editingTemplate.id,
+                      data: templateForm,
+                    })
+                  } else {
+                    createTemplateMutation.mutate(templateForm)
+                  }
+                }}
+                disabled={!templateForm.name || !templateForm.display_name || createTemplateMutation.isPending || updateTemplateMutation.isPending}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                {(createTemplateMutation.isPending || updateTemplateMutation.isPending) && (
+                  <Loader2 size={16} className="animate-spin" />
+                )}
+                {editingTemplate ? 'Save Changes' : 'Create Template'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

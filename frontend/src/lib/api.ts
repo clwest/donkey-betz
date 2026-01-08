@@ -115,6 +115,35 @@ export const agentToolsApi = {
   delete: (id: string) => api.delete(`/v1/agents/tools/${id}/`),
 }
 
+// Session 734: Agent Templates API - CRUD for agent templates
+export const agentTemplatesApi = {
+  list: (params?: {
+    specialization?: string
+    llm_provider?: string
+    is_active?: boolean
+    is_public?: boolean
+    search?: string
+  }) => api.get('/v1/agents/templates/', { params }),
+  detail: (id: string) => api.get(`/v1/agents/templates/${id}/`),
+  create: (data: {
+    name: string
+    display_name: string
+    description: string
+    specialization?: string
+    capabilities?: string
+    system_prompt?: string
+    personality_traits?: string
+    llm_provider?: string
+    llm_model?: string
+    routing_keywords?: string
+    is_public?: boolean
+    learning_enabled?: boolean
+  }) => api.post('/v1/agents/templates/', data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/v1/agents/templates/${id}/`, data),
+  delete: (id: string) => api.delete(`/v1/agents/templates/${id}/`),
+}
+
 export const activityApi = {
   recent: (limit = 20, hours = 72) => api.get(`/recent-activity/?limit=${limit}&hours=${hours}`),
   learning: (limit = 20) => api.get(`/agent-learning/activity/?limit=${limit}`),
