@@ -52,6 +52,34 @@ export const agentsApi = {
   executionHistory: (limit = 20) => api.get(`/v1/agents/execution-history/?limit=${limit}`),
 }
 
+// Session 734: Agent Channels API - "Slack for AI Agents"
+export const agentChannelsApi = {
+  // Channels
+  list: (params?: { channel_type?: string; search?: string }) =>
+    api.get('/v1/agents/channels/', { params }),
+  create: (data: { name: string; display_name?: string; description?: string; channel_type?: string }) =>
+    api.post('/v1/agents/channels/', data),
+  detail: (id: string) => api.get(`/v1/agents/channels/${id}/`),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/v1/agents/channels/${id}/`, data),
+  delete: (id: string) => api.delete(`/v1/agents/channels/${id}/`),
+  join: (id: string) => api.post(`/v1/agents/channels/${id}/join/`),
+  leave: (id: string) => api.post(`/v1/agents/channels/${id}/leave/`),
+
+  // Messages
+  messages: (channelId: string, params?: { limit?: number; before?: string }) =>
+    api.get('/v1/agents/messages/', { params: { channel: channelId, ...params } }),
+  sendMessage: (data: { channel: string; content: string; message_type?: string }) =>
+    api.post('/v1/agents/messages/', data),
+  messageDetail: (id: string) => api.get(`/v1/agents/messages/${id}/`),
+
+  // Memberships
+  memberships: (channelId: string) =>
+    api.get('/v1/agents/memberships/', { params: { channel: channelId } }),
+  addMember: (data: { channel: string; agent?: string; role?: string }) =>
+    api.post('/v1/agents/memberships/', data),
+}
+
 export const activityApi = {
   recent: (limit = 20, hours = 72) => api.get(`/recent-activity/?limit=${limit}&hours=${hours}`),
   learning: (limit = 20) => api.get(`/agent-learning/activity/?limit=${limit}`),
