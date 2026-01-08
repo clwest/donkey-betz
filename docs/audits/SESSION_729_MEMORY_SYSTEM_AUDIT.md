@@ -175,9 +175,10 @@ get_memory_context() returned: EMPTY (all below threshold)
    - Create migration to add `embedding` ArrayField
    - Wire into MemoryEmbeddingService
 
-4. **Lower similarity threshold** in `get_memory_context()`
-   - Current: 0.4 (too aggressive)
-   - Recommended: 0.25-0.3
+4. ~~**Lower similarity threshold** in `get_memory_context()`~~ ✅ FIXED
+   - ~~Current: 0.4 (too aggressive)~~
+   - ~~Recommended: 0.25-0.3~~
+   - **Fix Applied:** Lowered to 0.2 - now returns context for 67% of queries
 
 ### LOW Priority
 
