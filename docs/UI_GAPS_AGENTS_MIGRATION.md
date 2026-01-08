@@ -53,7 +53,7 @@ This document tracks ALL backend APIs that have NO corresponding frontend UI. Th
 
 **Implementation:**
 - `mythologyApi` added to `frontend/src/lib/api.ts` (11 endpoints)
-- `MythologyLabPage.tsx` created (~800 lines)
+- `MythologyLabPage.tsx` created (~900 lines)
 - Route `/mythology-lab` added to `App.tsx`
 - Navigation link added to `Sidebar.tsx`
 
@@ -63,6 +63,16 @@ This document tracks ALL backend APIs that have NO corresponding frontend UI. Th
 - **Secondary Stats:** Recent Events (24h), Unacknowledged Alerts, Avg Review Time, System Efficiency
 - **Events Tab:** Risk level badges, mutation types, prevention status, patterns detected, confidence scores, content preview
 - **Quarantine Tab:** Teacher→Student agent flow, violation types & counts, mythology warnings, violation patterns, spider sources, blocked content, approve/reject actions
+
+**Smart Content Formatting (Session 734 - Final Polish):**
+- `formatMythologyContent()` helper automatically cleans messy content:
+  - Extracts source headers → cyan badges (e.g., "Venturebeat", "Gumroad")
+  - Removes "Learned from X:" chains → blue agent badges
+  - Cleans "Aggregated X data points" noise
+- 15 pattern types with human-readable labels and icons (time_myth → "⏰ Time Claim")
+- Content Analysis section with source + agents + clean content
+- Collapsible "View Raw Original Content" for debugging
+- Technical regex patterns filtered from metadata display
 
 **Backend Endpoints Connected:**
 | Endpoint | Method | Purpose |
