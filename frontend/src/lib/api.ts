@@ -1267,7 +1267,7 @@ export const relationshipsApi = {
 
 // Session 732: RAG/Document Embedding System API
 export const ragApi = {
-  // Document upload
+  // Document upload (raw content)
   uploadDocument: (file: File, options?: { collection_id?: string; embedding_model?: string }) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -1277,6 +1277,22 @@ export const ragApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  // File upload (PDF, TXT, MD) - Session 402 ingestion system
+  ingestFile: (file: File, options?: { generate_embeddings?: boolean }) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (options?.generate_embeddings !== undefined) {
+      formData.append('generate_embeddings', String(options.generate_embeddings))
+    }
+    return api.post('/documents/ingest-file/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  // URL ingestion (YouTube videos or web pages) - Session 402
+  ingestUrl: (url: string, options?: { title?: string; generate_embeddings?: boolean }) =>
+    api.post('/documents/ingest-url/', { url, ...options }),
 
   // Semantic search
   semanticSearch: (query: string, options?: { limit?: number; similarity_threshold?: number }) =>
@@ -1302,11 +1318,11 @@ export const ragApi = {
     api.post('/v1/rag/collections/', data),
   deleteCollection: (id: string) => api.delete(`/v1/rag/collections/${id}/`),
 
-  // Documents management
+  // Documents management (Session 402 ingestion system)
   listDocuments: (params?: { collection_id?: string; limit?: number }) =>
-    api.get('/v1/rag/documents/', { params }),
-  documentDetail: (id: string) => api.get(`/v1/rag/documents/${id}/`),
-  deleteDocument: (id: string) => api.delete(`/v1/rag/documents/${id}/`),
+    api.get('/documents/', { params }),
+  documentDetail: (id: string) => api.get(`/documents/${id}/`),
+  deleteDocument: (id: string) => api.delete(`/documents/${id}/delete/`),
 }
 
 // Session 716: Neural Orchestra API - AI consciousness visualization

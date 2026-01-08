@@ -5,7 +5,9 @@
  * using pgvector for semantic search.
  *
  * Features:
- * - Document upload with drag-and-drop
+ * - Document upload with drag-and-drop (PDF, TXT, MD)
+ * - URL ingestion (web pages)
+ * - YouTube video transcription ingestion
  * - Semantic search interface
  * - Embedding statistics display
  * - Document management
@@ -20,7 +22,6 @@ import {
   Search,
   Database,
   Trash2,
-  BarChart3,
   Sparkles,
   CheckCircle2,
   XCircle,
@@ -32,6 +33,10 @@ import {
   Layers,
   Info,
   Zap,
+  Link,
+  Youtube,
+  Globe,
+  AlertTriangle,
 } from 'lucide-react'
 import { ragApi } from '@/lib/api'
 import Breadcrumb from '@/components/Breadcrumb'
@@ -53,14 +58,24 @@ interface RagStats {
 
 interface Document {
   id: string
-  filename: string
+  title: string
+  filename?: string
+  document_type: string
+  source_url?: string
   collection_id?: string
   collection_name?: string
-  chunk_count: number
-  total_tokens: number
+  embedding_count: number
+  word_count: number
   created_at: string
-  file_size: number
-  status: 'processing' | 'completed' | 'error'
+  status: string
+}
+
+interface DocumentStats {
+  total: number
+  youtube: number
+  urls: number
+  pdfs: number
+  processed: number
 }
 
 interface Collection {
@@ -73,12 +88,11 @@ interface Collection {
 }
 
 interface SearchResult {
-  id: string
+  chunk_id: string
   content: string
-  similarity: number
+  similarity_score: number
   document_id: string
-  document_name: string
-  chunk_index: number
+  document_title: string
   metadata?: Record<string, unknown>
 }
 
@@ -93,7 +107,7 @@ function StatCard({
   icon: React.ElementType
   label: string
   value: string | number
-  color?: 'primary' | 'green' | 'blue' | 'yellow' | 'purple'
+  color?: 'primary' | 'green' | 'blue' | 'yellow' | 'purple' | 'red'
   subValue?: string
 }) {
   const colorClasses = {
@@ -102,6 +116,7 @@ function StatCard({
     blue: 'text-blue-400',
     yellow: 'text-yellow-400',
     purple: 'text-purple-400',
+    red: 'text-red-400',
   }
 
   return (
@@ -118,18 +133,136 @@ function StatCard({
   )
 }
 
+// URL Ingestion Component
+function URLIngestZone({
+  onIngestUrl,
+  isIngesting,
+}: {
+  onIngestUrl: (url: string, title?: string) => void
+  isIngesting: boolean
+}) {
+  const [url, setUrl] = useState('')
+  const [title, setTitle] = useState('')
+
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+  const isValidUrl = url.trim().startsWith('http://') || url.trim().startsWith('https://')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (url.trim() && isValidUrl) {
+      onIngestUrl(url.trim(), title.trim() || undefined)
+      setUrl('')
+      setTitle('')
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-dark-border bg-dark-card p-6">
+      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <Link className="h-5 w-5 text-primary-400" />
+        Import from URL
+      </h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* URL Input */}
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">
+            URL (Web Page or YouTube Video)
+          </label>
+          <div className="relative">
+            {isYouTube ? (
+              <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-400" />
+            ) : (
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            )}
+            <input
+              type="url"
+              placeholder="https://example.com or https://youtube.com/watch?v=..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-dark-border bg-dark-bg text-white placeholder-gray-500"
+            />
+          </div>
+          {isYouTube && (
+            <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+              <Youtube className="h-3 w-3" />
+              YouTube video detected - will extract transcript
+            </p>
+          )}
+        </div>
+
+        {/* Optional Title */}
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">
+            Custom Title (optional)
+          </label>
+          <input
+            type="text"
+            placeholder="Leave empty to auto-detect"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-4 py-2 rounded-lg border border-dark-border bg-dark-bg text-white placeholder-gray-500"
+          />
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isIngesting || !url.trim() || !isValidUrl}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            isIngesting || !url.trim() || !isValidUrl
+              ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              : isYouTube
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-primary-600 text-white hover:bg-primary-700'
+          }`}
+        >
+          {isIngesting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Importing...
+            </>
+          ) : isYouTube ? (
+            <>
+              <Youtube className="h-4 w-4" />
+              Import YouTube Video
+            </>
+          ) : (
+            <>
+              <Globe className="h-4 w-4" />
+              Import Web Page
+            </>
+          )}
+        </button>
+      </form>
+
+      {/* Help Text */}
+      <div className="mt-4 p-3 rounded-lg bg-dark-bg/50 border border-dark-border">
+        <div className="flex items-start gap-2">
+          <Info className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
+          <div className="text-xs text-gray-500">
+            <p className="mb-1">
+              <strong className="text-gray-400">Web Pages:</strong> Extracts text content from any public URL
+            </p>
+            <p>
+              <strong className="text-gray-400">YouTube:</strong> Extracts video transcript for semantic search
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Upload Zone Component
 function UploadZone({
   onUpload,
   isUploading,
-  collections,
 }: {
-  onUpload: (file: File, collectionId?: string) => void
+  onUpload: (file: File) => void
   isUploading: boolean
-  collections: Collection[]
 }) {
   const [isDragging, setIsDragging] = useState(false)
-  const [selectedCollection, setSelectedCollection] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -159,49 +292,30 @@ function UploadZone({
 
       const files = e.dataTransfer?.files
       if (files?.length) {
-        onUpload(files[0], selectedCollection || undefined)
+        onUpload(files[0])
       }
     },
-    [onUpload, selectedCollection]
+    [onUpload]
   )
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files
       if (files?.length) {
-        onUpload(files[0], selectedCollection || undefined)
+        onUpload(files[0])
+        // Reset input so same file can be selected again
+        e.target.value = ''
       }
     },
-    [onUpload, selectedCollection]
+    [onUpload]
   )
 
   return (
     <div className="rounded-lg border border-dark-border bg-dark-card p-6">
       <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
         <Upload className="h-5 w-5 text-primary-400" />
-        Upload Document
+        Upload File
       </h2>
-
-      {/* Collection Selection */}
-      {collections.length > 0 && (
-        <div className="mb-4">
-          <label className="block text-sm text-gray-400 mb-2">
-            Add to Collection (optional)
-          </label>
-          <select
-            value={selectedCollection}
-            onChange={(e) => setSelectedCollection(e.target.value)}
-            className="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-white text-sm"
-          >
-            <option value="">No collection</option>
-            {collections.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.document_count} docs)
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {/* Drop Zone */}
       <div
@@ -219,7 +333,7 @@ function UploadZone({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.txt,.md,.doc,.docx,.html,.json,.csv"
+          accept=".pdf,.txt,.md"
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -227,7 +341,7 @@ function UploadZone({
         {isUploading ? (
           <div className="flex flex-col items-center">
             <Loader2 className="h-10 w-10 text-primary-400 animate-spin mb-3" />
-            <span className="text-gray-400">Processing document...</span>
+            <span className="text-gray-400">Processing file...</span>
           </div>
         ) : (
           <>
@@ -236,7 +350,7 @@ function UploadZone({
               {isDragging ? 'Drop file here' : 'Drag & drop a file or click to browse'}
             </p>
             <p className="text-xs text-gray-500">
-              Supports PDF, TXT, MD, DOC, DOCX, HTML, JSON, CSV
+              Supports PDF, TXT, MD files
             </p>
           </>
         )}
@@ -322,38 +436,35 @@ function SearchInterface({
           ) : (
             results.map((result) => (
               <div
-                key={result.id}
+                key={result.chunk_id}
                 className="rounded-lg border border-dark-border bg-dark-bg/50 overflow-hidden"
               >
                 <div
                   className="p-4 cursor-pointer hover:bg-dark-bg transition-colors"
                   onClick={() =>
-                    setExpandedResult(expandedResult === result.id ? null : result.id)
+                    setExpandedResult(expandedResult === result.chunk_id ? null : result.chunk_id)
                   }
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-primary-400" />
                       <span className="font-medium text-white text-sm">
-                        {result.document_name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        Chunk {result.chunk_index + 1}
+                        {result.document_title}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-xs px-2 py-0.5 rounded ${
-                          result.similarity >= 0.8
+                          result.similarity_score >= 0.8
                             ? 'bg-green-500/20 text-green-400'
-                            : result.similarity >= 0.6
+                            : result.similarity_score >= 0.6
                               ? 'bg-yellow-500/20 text-yellow-400'
                               : 'bg-gray-500/20 text-gray-400'
                         }`}
                       >
-                        {(result.similarity * 100).toFixed(1)}% match
+                        {(result.similarity_score * 100).toFixed(1)}% match
                       </span>
-                      {expandedResult === result.id ? (
+                      {expandedResult === result.chunk_id ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -363,7 +474,7 @@ function SearchInterface({
                   <p className="text-sm text-gray-400 line-clamp-2">{result.content}</p>
                 </div>
 
-                {expandedResult === result.id && (
+                {expandedResult === result.chunk_id && (
                   <div className="border-t border-dark-border p-4 bg-dark-bg/30">
                     <div className="text-sm text-gray-300 whitespace-pre-wrap">
                       {result.content}
@@ -379,37 +490,54 @@ function SearchInterface({
   )
 }
 
+// Document Type Badge
+function DocumentTypeBadge({ type }: { type: string }) {
+  const config: Record<string, { color: string; icon: React.ElementType; label: string }> = {
+    youtube: { color: 'bg-red-500/20 text-red-400', icon: Youtube, label: 'YouTube' },
+    url: { color: 'bg-blue-500/20 text-blue-400', icon: Globe, label: 'Web Page' },
+    pdf: { color: 'bg-orange-500/20 text-orange-400', icon: FileText, label: 'PDF' },
+    text: { color: 'bg-gray-500/20 text-gray-400', icon: FileText, label: 'Text' },
+    markdown: { color: 'bg-purple-500/20 text-purple-400', icon: FileText, label: 'Markdown' },
+  }
+
+  const { color, icon: Icon, label } = config[type.toLowerCase()] || config.text
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${color}`}>
+      <Icon className="h-3 w-3" />
+      {label}
+    </span>
+  )
+}
+
 // Document List Component
 function DocumentList({
   documents,
+  stats,
   isLoading,
   onDelete,
 }: {
   documents: Document[]
+  stats?: DocumentStats
   isLoading: boolean
   onDelete: (id: string) => void
 }) {
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
 
-  const getStatusBadge = (status: Document['status']) => {
-    const config = {
-      processing: { color: 'bg-yellow-500/20 text-yellow-400', icon: Loader2, animate: true },
-      completed: { color: 'bg-green-500/20 text-green-400', icon: CheckCircle2, animate: false },
-      error: { color: 'bg-red-500/20 text-red-400', icon: XCircle, animate: false },
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { color: string; icon: React.ElementType; animate: boolean }> = {
+      embedding: { color: 'bg-yellow-500/20 text-yellow-400', icon: Loader2, animate: true },
+      processed: { color: 'bg-green-500/20 text-green-400', icon: CheckCircle2, animate: false },
+      failed: { color: 'bg-red-500/20 text-red-400', icon: XCircle, animate: false },
+      pending: { color: 'bg-gray-500/20 text-gray-400', icon: Loader2, animate: true },
     }
-    const { color, icon: Icon, animate } = config[status]
+    const { color, icon: Icon, animate } = config[status] || config.pending
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${color}`}>
         <Icon className={`h-3 w-3 ${animate ? 'animate-spin' : ''}`} />
         {status}
       </span>
     )
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   if (isLoading) {
@@ -427,7 +555,7 @@ function DocumentList({
         <FileText className="h-12 w-12 text-gray-500 mx-auto mb-4" />
         <p className="text-gray-400">No documents uploaded yet</p>
         <p className="text-sm text-gray-500 mt-1">
-          Upload your first document to start using semantic search
+          Upload files or import URLs to start using semantic search
         </p>
       </div>
     )
@@ -440,8 +568,30 @@ function DocumentList({
           <FileText className="h-5 w-5 text-primary-400" />
           Documents ({documents.length})
         </h2>
+        {stats && (
+          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+            {stats.youtube > 0 && (
+              <span className="flex items-center gap-1">
+                <Youtube className="h-3 w-3 text-red-400" />
+                {stats.youtube} videos
+              </span>
+            )}
+            {stats.urls > 0 && (
+              <span className="flex items-center gap-1">
+                <Globe className="h-3 w-3 text-blue-400" />
+                {stats.urls} web pages
+              </span>
+            )}
+            {stats.pdfs > 0 && (
+              <span className="flex items-center gap-1">
+                <FileText className="h-3 w-3 text-orange-400" />
+                {stats.pdfs} PDFs
+              </span>
+            )}
+          </div>
+        )}
       </div>
-      <div className="divide-y divide-dark-border">
+      <div className="divide-y divide-dark-border max-h-[600px] overflow-y-auto">
         {documents.map((doc) => (
           <div key={doc.id}>
             <div
@@ -450,18 +600,24 @@ function DocumentList({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                  <FileText className="h-5 w-5 text-gray-400 shrink-0" />
+                  {doc.document_type === 'youtube' ? (
+                    <Youtube className="h-5 w-5 text-red-400 shrink-0" />
+                  ) : doc.document_type === 'url' ? (
+                    <Globe className="h-5 w-5 text-blue-400 shrink-0" />
+                  ) : (
+                    <FileText className="h-5 w-5 text-gray-400 shrink-0" />
+                  )}
                   <div className="min-w-0">
-                    <div className="font-medium text-white truncate">{doc.filename}</div>
-                    {doc.collection_name && (
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <Layers className="h-3 w-3" />
-                        {doc.collection_name}
+                    <div className="font-medium text-white truncate">{doc.title}</div>
+                    {doc.source_url && (
+                      <div className="text-xs text-gray-500 truncate max-w-[300px]">
+                        {doc.source_url}
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <DocumentTypeBadge type={doc.document_type} />
                   {getStatusBadge(doc.status)}
                   {expandedDoc === doc.id ? (
                     <ChevronUp className="h-4 w-4 text-gray-400" />
@@ -472,15 +628,26 @@ function DocumentList({
               </div>
 
               <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                <span>{doc.chunk_count} chunks</span>
-                <span>{doc.total_tokens.toLocaleString()} tokens</span>
-                <span>{formatFileSize(doc.file_size)}</span>
+                <span>{doc.embedding_count} embeddings</span>
+                <span>{doc.word_count.toLocaleString()} words</span>
                 <span>{new Date(doc.created_at).toLocaleDateString()}</span>
               </div>
             </div>
 
             {expandedDoc === doc.id && (
               <div className="border-t border-dark-border p-4 bg-dark-bg/30 flex items-center gap-3">
+                {doc.source_url && (
+                  <a
+                    href={doc.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-sm transition-colors"
+                  >
+                    <Link className="h-4 w-4" />
+                    Open Source
+                  </a>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -504,9 +671,14 @@ function DocumentList({
 export default function DocumentsPage() {
   const queryClient = useQueryClient()
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null)
+  const [ingestError, setIngestError] = useState<string | null>(null)
+  const [ingestWarning, setIngestWarning] = useState<string | null>(null)
 
   // Fetch stats
-  const { data: statsData, isLoading: statsLoading } = useQuery<{ stats: RagStats }>({
+  const { data: statsData, isLoading: statsLoading } = useQuery<{
+    embeddings_stats: RagStats
+    rag_performance: { total_knowledge_bases: number }
+  }>({
     queryKey: ['rag-stats'],
     queryFn: async () => {
       const response = await ragApi.stats()
@@ -516,7 +688,10 @@ export default function DocumentsPage() {
   })
 
   // Fetch documents
-  const { data: documentsData, isLoading: documentsLoading } = useQuery<{ documents: Document[] }>({
+  const { data: documentsData, isLoading: documentsLoading } = useQuery<{
+    documents: Document[]
+    stats: DocumentStats
+  }>({
     queryKey: ['rag-documents'],
     queryFn: async () => {
       const response = await ragApi.listDocuments({ limit: 100 })
@@ -535,16 +710,41 @@ export default function DocumentsPage() {
     staleTime: 30000,
   })
 
-  // Upload mutation
+  // File upload mutation
   const uploadMutation = useMutation({
-    mutationFn: async ({ file, collectionId }: { file: File; collectionId?: string }) => {
-      const response = await ragApi.uploadDocument(file, { collection_id: collectionId })
+    mutationFn: async (file: File) => {
+      const response = await ragApi.ingestFile(file, { generate_embeddings: true })
       return response.data
     },
     onSuccess: () => {
+      setIngestError(null)
+      setIngestWarning(null)
       queryClient.invalidateQueries({ queryKey: ['rag-documents'] })
       queryClient.invalidateQueries({ queryKey: ['rag-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['rag-collections'] })
+    },
+    onError: (error: Error) => {
+      setIngestError(error.message || 'Failed to upload file')
+    },
+  })
+
+  // URL ingestion mutation
+  const ingestUrlMutation = useMutation({
+    mutationFn: async ({ url, title }: { url: string; title?: string }) => {
+      const response = await ragApi.ingestUrl(url, { title, generate_embeddings: true })
+      return response.data
+    },
+    onSuccess: (data) => {
+      setIngestError(null)
+      if (data.warning) {
+        setIngestWarning(data.warning)
+      } else {
+        setIngestWarning(null)
+      }
+      queryClient.invalidateQueries({ queryKey: ['rag-documents'] })
+      queryClient.invalidateQueries({ queryKey: ['rag-stats'] })
+    },
+    onError: (error: Error) => {
+      setIngestError(error.message || 'Failed to import URL')
     },
   })
 
@@ -582,8 +782,12 @@ export default function DocumentsPage() {
     },
   })
 
-  const handleUpload = (file: File, collectionId?: string) => {
-    uploadMutation.mutate({ file, collectionId })
+  const handleUpload = (file: File) => {
+    uploadMutation.mutate(file)
+  }
+
+  const handleIngestUrl = (url: string, title?: string) => {
+    ingestUrlMutation.mutate({ url, title })
   }
 
   const handleSearch = (query: string) => {
@@ -596,8 +800,9 @@ export default function DocumentsPage() {
     }
   }
 
-  const stats = statsData?.stats
+  const stats = statsData?.embeddings_stats
   const documents = documentsData?.documents || []
+  const documentStats = documentsData?.stats
   const collections = collectionsData?.collections || []
 
   return (
@@ -633,9 +838,42 @@ export default function DocumentsPage() {
         </button>
       </div>
 
+      {/* Error/Warning Banners */}
+      {ingestError && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4 flex items-start gap-3">
+          <XCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-medium text-red-400">Import Error</div>
+            <div className="text-sm text-red-300/80">{ingestError}</div>
+          </div>
+          <button
+            onClick={() => setIngestError(null)}
+            className="ml-auto text-red-400 hover:text-red-300"
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {ingestWarning && (
+        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-medium text-yellow-400">Import Warning</div>
+            <div className="text-sm text-yellow-300/80">{ingestWarning}</div>
+          </div>
+          <button
+            onClick={() => setIngestWarning(null)}
+            className="ml-auto text-yellow-400 hover:text-yellow-300"
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Stats Grid */}
       {!statsLoading && stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <StatCard
             icon={Database}
             label="Total Embeddings"
@@ -649,31 +887,36 @@ export default function DocumentsPage() {
             color="blue"
           />
           <StatCard
+            icon={Youtube}
+            label="YouTube"
+            value={documentStats?.youtube || 0}
+            color="red"
+          />
+          <StatCard
+            icon={Globe}
+            label="Web Pages"
+            value={documentStats?.urls || 0}
+            color="blue"
+          />
+          <StatCard
             icon={Layers}
             label="Collections"
-            value={stats.total_collections}
+            value={collections.length}
             color="purple"
           />
           <StatCard
-            icon={BarChart3}
-            label="Avg Chunks/Doc"
-            value={stats.avg_chunks_per_doc.toFixed(1)}
-            color="yellow"
-          />
-          <StatCard
             icon={Database}
-            label="Storage"
-            value={`${stats.storage_mb.toFixed(1)} MB`}
+            label="Dimensions"
+            value={stats.embedding_dimensions || 1536}
             color="green"
-            subValue={`${stats.embedding_dimensions} dimensions`}
           />
         </div>
       )}
 
       {/* Loading State for Stats */}
       {statsLoading && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
             <div
               key={i}
               className="rounded-lg border border-dark-border bg-dark-card p-4 animate-pulse"
@@ -687,12 +930,15 @@ export default function DocumentsPage() {
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Left Column: Upload & Search */}
+        {/* Left Column: Upload, URL Import & Search */}
         <div className="space-y-6">
+          <URLIngestZone
+            onIngestUrl={handleIngestUrl}
+            isIngesting={ingestUrlMutation.isPending}
+          />
           <UploadZone
             onUpload={handleUpload}
             isUploading={uploadMutation.isPending}
-            collections={collections}
           />
           <SearchInterface
             onSearch={handleSearch}
@@ -705,6 +951,7 @@ export default function DocumentsPage() {
         <div>
           <DocumentList
             documents={documents}
+            stats={documentStats}
             isLoading={documentsLoading}
             onDelete={handleDelete}
           />
@@ -725,20 +972,16 @@ export default function DocumentsPage() {
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>
-              <strong className="text-gray-300">Embedding Model</strong> - OpenAI text-embedding-3-small
-              (1536 dimensions)
+              <strong className="text-gray-300">Files</strong> - Upload PDF, TXT, or Markdown files
             </li>
             <li>
-              <strong className="text-gray-300">Index Type</strong> - HNSW (Hierarchical Navigable
-              Small World) for O(log n) search
+              <strong className="text-gray-300">Web Pages</strong> - Import any public URL
             </li>
             <li>
-              <strong className="text-gray-300">Similarity</strong> - Cosine distance for semantic
-              matching
+              <strong className="text-gray-300">YouTube</strong> - Extract video transcripts for search
             </li>
             <li>
-              <strong className="text-gray-300">Supported Formats</strong> - PDF, TXT, MD, DOC, DOCX,
-              HTML, JSON, CSV
+              <strong className="text-gray-300">Index</strong> - HNSW for O(log n) similarity search
             </li>
           </ul>
         </div>
