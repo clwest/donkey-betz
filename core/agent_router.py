@@ -783,6 +783,7 @@ class AgentRouter:
         """
         Complete an execution record and update agent stats.
         Session 641: Added for Agent Performance Dashboard.
+        Session 729: Added AgentExecutionMemory creation for intelligent recommendations.
         """
         try:
             from core.models_unified_system import Agent
@@ -805,10 +806,70 @@ class AgentRouter:
                 last_active=timezone.now()
             )
 
+            # Session 729: Create AgentExecutionMemory for intelligent agent recommendations
+            # This enables the system to remember which agents work best for specific tasks
+            if self.user:
+                try:
+                    from core.models_agent_memory import AgentExecutionMemory
+
+                    # Get task from execution record
+                    task = ''
+                    if execution_record and execution_record.input_data:
+                        task = execution_record.input_data.get('task', '')
+
+                    # Calculate success score (1.0 for success, 0.0 for failure)
+                    success_score = 1.0 if success else 0.0
+
+                    # Determine task type from task text
+                    task_type = self._detect_task_type(task) if task else 'other'
+
+                    # Build outcome description
+                    if success:
+                        outcome_desc = output_data.get('result_preview', 'Agent execution completed')[:500] if output_data else 'Agent execution completed'
+                    else:
+                        outcome_desc = f"Execution failed: {error_message[:200]}" if error_message else 'Execution failed'
+
+                    AgentExecutionMemory.objects.create(
+                        user=self.user,
+                        agent_name=agent_name,
+                        task_type=task_type,
+                        task_description=task[:500] if task else 'No task description',
+                        original_prompt=task[:1000] if task else '',
+                        success_score=success_score,
+                        execution_time_seconds=execution_time_ms / 1000.0,
+                        outcome_description=outcome_desc,
+                        outcome_metrics=output_data or {}
+                    )
+                    logger.debug(f"Created AgentExecutionMemory for {agent_name}")
+                except Exception as mem_error:
+                    logger.debug(f"AgentExecutionMemory creation failed (non-critical): {mem_error}")
+
             logger.debug(f"Tracked execution for {agent_name}: success={success}, time={execution_time_ms}ms")
 
         except Exception as e:
             logger.warning(f"Failed to complete execution record: {e}")
+
+    def _detect_task_type(self, task: str) -> str:
+        """
+        Session 729: Detect task type from task text for AgentExecutionMemory categorization.
+        """
+        if not task:
+            return 'other'
+        task_lower = task.lower()
+        if any(w in task_lower for w in ['create', 'generate', 'make', 'design', 'build']):
+            return 'creation'
+        elif any(w in task_lower for w in ['edit', 'modify', 'change', 'update', 'fix']):
+            return 'editing'
+        elif any(w in task_lower for w in ['research', 'analyze', 'find', 'search', 'investigate']):
+            return 'research'
+        elif any(w in task_lower for w in ['write', 'draft', 'compose', 'blog', 'article']):
+            return 'writing'
+        elif any(w in task_lower for w in ['review', 'audit', 'check', 'evaluate']):
+            return 'review'
+        elif any(w in task_lower for w in ['what', 'how', 'why', 'when', 'who', '?']):
+            return 'question'
+        else:
+            return 'other'
 
     def get_available_agents(self) -> list:
         """
