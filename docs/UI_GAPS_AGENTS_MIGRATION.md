@@ -348,14 +348,14 @@ export const agentMonitoringApi = {
 | **RAG/Documents** | ✅ 6 endpoints | ✅ COMPLETE | ✅ 7,239 embeddings | **DONE** |
 | **Mythology Lab** | ✅ 11 endpoints | ✅ COMPLETE | ✅ 10 patterns, 56 events | **DONE** |
 | **Agent Channels** | ✅ 12 endpoints | ✅ COMPLETE | ✅ 1 channel, 5 members | **DONE** |
-| **Income Builder** | ✅ 8 endpoints | ⚠️ Partial | ✅ 41 action plans | **MEDIUM** |
+| **Income Builder** | ✅ 10 endpoints | ✅ COMPLETE | ✅ 150 revenue plans | **DONE** |
 | Agent Templates CRUD | ✅ 5 endpoints | ⚠️ Read-only | ✅ Has data | MEDIUM |
 | Agent Orchestrations | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | MEDIUM |
 | Agent Tools | ✅ 3 endpoints | ❌ Missing | ✅ Has data | MEDIUM |
 | Agent Monitoring | ✅ 6 endpoints | ⚠️ Basic | N/A | MEDIUM |
 | Agent Registry | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | LOW |
 
-**Total: 7 systems with 42+ backend API endpoints needing frontend exposure** (3 completed: RAG, Mythology, Agent Channels)
+**Total: 7 systems with 42+ backend API endpoints needing frontend exposure** (4 completed: RAG, Mythology, Agent Channels, Income Builder)
 
 ---
 
@@ -364,7 +364,7 @@ export const agentMonitoringApi = {
 1. ~~**RAG/Documents** - DONE (Session 732)~~
 2. ~~**Mythology Lab** - DONE (Sessions 733-734)~~
 3. ~~**Agent Channels** - DONE (Session 734) - "Slack for AI Agents" tab in AgentsPage~~
-4. **Income Builder** - MEDIUM - Revenue generation UI
+4. ~~**Income Builder** - DONE (Session 734) - "Income Builder" tab in IntelligencePage~~
 5. **Agent Monitoring** - MEDIUM - Performance dashboards
 6. **Agent Tools/Templates/Orchestrations** - MEDIUM - Agent management CRUD
 
