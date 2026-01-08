@@ -256,14 +256,39 @@ class EditProfileView(LoginRequiredMixin, View):
 
 
 class NotificationsView(LoginRequiredMixin, TemplateView):
-    """Notifications - View all notifications"""
+    """Notifications - View all notifications - Session 735: Now returns REAL data"""
     template_name = 'unified/notifications.html'
     login_url = '/login/'
 
     def get_context_data(self, **kwargs):
+        from core.models_unified_system import ProactiveNotification
+
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Notifications'
-        context['notifications'] = []  # Notifications not implemented
+
+        # Get REAL notifications from ProactiveNotification
+        notifications_qs = ProactiveNotification.objects.filter(
+            user=self.request.user
+        ).order_by('-sent_at', '-created_at')[:50]
+
+        notifications = []
+        for notif in notifications_qs:
+            notifications.append({
+                'id': str(notif.id),
+                'type': notif.notification_type,
+                'priority': notif.priority,
+                'title': notif.title,
+                'message': notif.message,
+                'icon': notif.icon,
+                'action_url': notif.action_url,
+                'action_label': notif.action_label,
+                'is_read': notif.is_read,
+                'is_dismissed': notif.is_dismissed,
+                'sent_at': notif.sent_at.isoformat() if notif.sent_at else notif.created_at.isoformat(),
+            })
+
+        context['notifications'] = notifications
+        context['unread_count'] = notifications_qs.filter(is_read=False).count()
         return context
 
 
@@ -509,17 +534,41 @@ class SpiderStatusAPIView(View):
 
 
 class NotificationsAPIView(LoginRequiredMixin, View):
-    """API endpoint for notifications"""
+    """API endpoint for notifications - Session 735: Now returns REAL data"""
 
     def get(self, request):
         try:
-            # Notifications not implemented
+            from core.models_unified_system import ProactiveNotification
+
+            # Get REAL notifications from ProactiveNotification
+            notifications_qs = ProactiveNotification.objects.filter(
+                user=request.user
+            ).order_by('-sent_at', '-created_at')[:50]
+
             notifications = []
+            for notif in notifications_qs:
+                notifications.append({
+                    'id': str(notif.id),
+                    'type': notif.notification_type,
+                    'priority': notif.priority,
+                    'title': notif.title,
+                    'message': notif.message,
+                    'icon': notif.icon,
+                    'action_url': notif.action_url,
+                    'action_label': notif.action_label,
+                    'quick_actions': notif.quick_actions,
+                    'is_read': notif.is_read,
+                    'is_dismissed': notif.is_dismissed,
+                    'sent_at': notif.sent_at.isoformat() if notif.sent_at else notif.created_at.isoformat(),
+                })
+
+            unread_count = notifications_qs.filter(is_read=False).count()
 
             return JsonResponse({
                 'success': True,
                 'notifications': notifications,
-                'unread_count': 0
+                'unread_count': unread_count,
+                'source': 'database'
             })
 
         except Exception as e:

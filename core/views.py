@@ -274,8 +274,32 @@ def blog_list(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def campaigns_list(request):
-    """Placeholder campaigns list endpoint"""
-    return Response([])
+    """Get campaigns list - Session 735: Now returns REAL data from Campaign model"""
+    from core.models_campaign import Campaign
+
+    user = request.user
+    campaigns_qs = Campaign.objects.filter(user=user).order_by('-created_at')[:50]
+
+    campaigns = []
+    for campaign in campaigns_qs:
+        campaigns.append({
+            'id': str(campaign.id),
+            'name': campaign.name,
+            'client_name': campaign.client_name,
+            'status': campaign.status,
+            'budget_tier': campaign.budget_tier,
+            'industry': campaign.industry,
+            'progress_percentage': campaign.progress_percentage,
+            'created_at': campaign.created_at.isoformat(),
+            'due_date': campaign.due_date.isoformat() if campaign.due_date else None,
+        })
+
+    return Response({
+        'success': True,
+        'campaigns': campaigns,
+        'total_count': campaigns_qs.count(),
+        'source': 'database'
+    })
 
 
 @api_view(['GET'])
@@ -603,71 +627,216 @@ def agent_executions_list(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def prompt_diagnostics_dashboard(request):
-    """Placeholder prompt diagnostics dashboard endpoint"""
+    """Prompt diagnostics dashboard - Session 735: Now returns REAL data"""
+    from core.models_agent_memory import IntelligentPromptMetric, IntelligentPromptStats
+    from django.db.models import Avg, Sum, Count
+
+    # Get global stats
+    try:
+        stats = IntelligentPromptStats.objects.get(stat_type='global')
+    except IntelligentPromptStats.DoesNotExist:
+        stats = None
+
+    # Calculate from metrics if stats not available
+    metrics_agg = IntelligentPromptMetric.objects.aggregate(
+        total=Count('id'),
+        avg_quality=Avg('response_quality_score'),
+        total_base_tokens=Sum('base_prompt_tokens'),
+        total_context_tokens=Sum('context_tokens_added'),
+        total_tokens=Sum('total_prompt_tokens'),
+    )
+
+    # Get recent analyses
+    recent = IntelligentPromptMetric.objects.order_by('-created_at')[:10]
+    recent_analyses = [{
+        'id': str(m.id),
+        'agent_name': m.agent_name,
+        'task_type': m.task_type,
+        'base_tokens': m.base_prompt_tokens,
+        'context_tokens': m.context_tokens_added,
+        'total_tokens': m.total_prompt_tokens,
+        'quality_score': m.response_quality_score,
+        'created_at': m.created_at.isoformat(),
+    } for m in recent]
+
+    # Get prompt types breakdown
+    prompt_types = list(IntelligentPromptMetric.objects.values('task_type').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10])
+
     return Response({
         'overview': {
-            'total_analyses': 0,
-            'success_rate': 0.0,
-            'total_token_savings': 0,
-            'avg_token_reduction': 0.0,
-            'templates_created': 0,
-            'avg_clarity_score': 0.0
+            'total_analyses': metrics_agg['total'] or 0,
+            'success_rate': (stats.satisfaction_rate * 100 if stats and stats.satisfaction_rate else 0),
+            'total_token_savings': metrics_agg['total_context_tokens'] or 0,
+            'avg_token_reduction': (stats.avg_context_tokens if stats else 0),
+            'templates_created': stats.total_agents_using if stats else 0,
+            'avg_clarity_score': metrics_agg['avg_quality'] or 0.0,
         },
         'performance_metrics': {
-            'cost_savings_estimate': '$0',
-            'efficiency_gain': '0%',
-            'quality_improvement': 'Medium'
+            'cost_savings_estimate': f"${((metrics_agg['total_tokens'] or 0) / 1000) * 0.01:.2f}",
+            'efficiency_gain': f"{(stats.mood_usage_rate + stats.spider_usage_rate) * 50 if stats else 0:.1f}%",
+            'quality_improvement': 'High' if (metrics_agg['avg_quality'] or 0) > 0.7 else 'Medium' if (metrics_agg['avg_quality'] or 0) > 0.4 else 'Low',
         },
-        'issues_breakdown': {},
-        'prompt_types': [],
-        'recent_analyses': []
+        'issues_breakdown': {
+            'mood_enabled': stats.mood_usage_rate * 100 if stats else 0,
+            'memory_enabled': stats.memory_usage_rate * 100 if stats else 0,
+            'spider_enabled': stats.spider_usage_rate * 100 if stats else 0,
+        },
+        'prompt_types': prompt_types,
+        'recent_analyses': recent_analyses,
+        'source': 'database'
     })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def prompt_diagnostics_analyses(request):
-    """Placeholder prompt diagnostics analyses endpoint"""
+    """Prompt diagnostics analyses - Session 735: Now returns REAL data"""
+    from core.models_agent_memory import IntelligentPromptMetric
+
+    page = int(request.GET.get('page', 1))
+    limit = int(request.GET.get('limit', 20))
+    offset = (page - 1) * limit
+
+    queryset = IntelligentPromptMetric.objects.order_by('-created_at')
+    total = queryset.count()
+    analyses_qs = queryset[offset:offset + limit]
+
+    analyses = [{
+        'id': str(m.id),
+        'agent_name': m.agent_name,
+        'agent_category': m.agent_category,
+        'task_type': m.task_type,
+        'task_preview': m.task_preview,
+        'base_tokens': m.base_prompt_tokens,
+        'context_tokens': m.context_tokens_added,
+        'total_tokens': m.total_prompt_tokens,
+        'included_components': {
+            'mood': m.included_mood,
+            'memory': m.included_memory_palace,
+            'spider': m.included_spider_intel,
+            'evolution': m.included_evolution,
+            'policy': m.included_policy,
+        },
+        'quality_score': m.response_quality_score,
+        'user_satisfied': m.user_satisfied,
+        'created_at': m.created_at.isoformat(),
+    } for m in analyses_qs]
+
     return Response({
-        'analyses': [],
-        'count': 0,
-        'next': None,
-        'previous': None
+        'analyses': analyses,
+        'count': total,
+        'page': page,
+        'limit': limit,
+        'next': f'?page={page + 1}' if offset + limit < total else None,
+        'previous': f'?page={page - 1}' if page > 1 else None,
+        'source': 'database'
     })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def prompt_diagnostics_templates(request):
-    """Placeholder prompt diagnostics templates endpoint"""
+    """Prompt diagnostics templates - Session 735: Returns ContentTemplate data"""
+    from content.models import ContentTemplate
+    from django.db.models import Q
+
+    user = request.user
+    limit = int(request.GET.get('limit', 50))
+    offset = int(request.GET.get('offset', 0))
+
+    # Get templates: public + user's own
+    queryset = ContentTemplate.objects.filter(
+        Q(is_public=True, is_active=True) | Q(creator=user)
+    ).order_by('-usage_count', '-created_at')
+
+    total = queryset.count()
+    templates_qs = queryset[offset:offset + limit]
+
+    templates = [{
+        'id': str(t.id),
+        'name': t.name,
+        'display_name': t.display_name,
+        'description': t.description,
+        'template_type': t.template_type,
+        'category': t.category,
+        'usage_count': t.usage_count,
+        'success_rate': t.success_rate,
+        'avg_user_rating': t.avg_user_rating,
+        'is_public': t.is_public,
+        'is_verified': t.is_verified,
+        'created_at': t.created_at.isoformat(),
+    } for t in templates_qs]
+
     return Response({
-        'templates': [],
+        'templates': templates,
         'pagination': {
-            'total': 0,
-            'limit': 50,
-            'offset': 0,
-            'has_next': False
-        }
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'has_next': offset + limit < total
+        },
+        'source': 'database'
     })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def feedback_analytics(request):
-    """Placeholder feedback analytics endpoint"""
+    """Feedback analytics - Session 735: Returns REAL data from feedback models"""
+    from core.models_pipeline_feedback import PipelineStageFeedback
+    from core.models_human_interface import HumanFeedbackRecord
+    from django.db.models import Avg, Count
+
+    # Get pipeline feedback stats
+    pipeline_stats = PipelineStageFeedback.objects.aggregate(
+        total=Count('id'),
+        avg_rating=Avg('rating'),
+    )
+
+    # Get human feedback stats
+    human_stats = HumanFeedbackRecord.objects.aggregate(
+        total=Count('id'),
+        avg_confidence=Avg('confidence'),
+    )
+
+    # Get breakdown by content type
+    by_type = list(PipelineStageFeedback.objects.values('stage').annotate(
+        count=Count('id'),
+        avg_rating=Avg('rating')
+    ).order_by('-count')[:10])
+
     return Response({
-        'total_feedback': 0,
-        'average_rating': 0.0,
-        'by_content_type': {},
-        'recent_trends': []
+        'total_feedback': (pipeline_stats['total'] or 0) + (human_stats['total'] or 0),
+        'average_rating': pipeline_stats['avg_rating'] or 0.0,
+        'by_content_type': {item['stage']: item['count'] for item in by_type},
+        'recent_trends': [],  # Could add time-series analysis
+        'source': 'database'
     })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def feedback_history(request):
-    """Placeholder feedback history endpoint"""
-    return Response([])
+    """Feedback history - Session 735: Returns REAL data from feedback models"""
+    from core.models_pipeline_feedback import PipelineStageFeedback
+
+    limit = int(request.GET.get('limit', 50))
+    feedback_qs = PipelineStageFeedback.objects.order_by('-created_at')[:limit]
+
+    feedback = [{
+        'id': str(f.id),
+        'stage': f.stage,
+        'rating': f.rating,
+        'created_at': f.created_at.isoformat(),
+    } for f in feedback_qs]
+
+    return Response({
+        'feedback': feedback,
+        'total_count': PipelineStageFeedback.objects.count(),
+        'source': 'database'
+    })
 
 
 @api_view(['GET'])
