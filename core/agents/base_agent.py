@@ -1141,7 +1141,130 @@ Consider these trends when crafting the response to maximize relevance and engag
 ## Task
 {task}""")
 
+        # Session 729: Track intelligent prompting metrics
+        self._track_intelligent_prompt_metrics(
+            task=task,
+            scifi_context=scifi_context,
+            spider_context=spider_context,
+            included_learned_knowledge=bool(relevant_knowledge),
+            prompt_parts=prompt_parts
+        )
+
         return "\n".join(prompt_parts)
+
+    def _track_intelligent_prompt_metrics(
+        self,
+        task: str,
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any],
+        included_learned_knowledge: bool,
+        prompt_parts: List[str]
+    ) -> None:
+        """
+        Session 729: Track intelligent prompting usage metrics.
+
+        Records which context components were included in the prompt,
+        token estimates, and task info. This enables analysis of:
+        - Which agents use which context types
+        - Token overhead from context injection
+        - Correlation between context usage and response quality
+
+        All tracking is wrapped in try/except to never break agent execution.
+        """
+        try:
+            from core.models_agent_memory import IntelligentPromptMetric
+
+            # Detect which context components were included
+            scifi = scifi_context or {}
+            spider = spider_context or {}
+
+            mood = scifi.get('mood', {})
+            evolution = scifi.get('evolution', {})
+            memory = scifi.get('memory', {})
+
+            included_mood = bool(mood)
+            included_evolution = bool(evolution)
+            included_memory = bool(memory.get('learned_patterns'))
+            included_spider = bool(spider.get('relevant_trends') or spider.get('trends'))
+
+            # Check if policy was included (look for policy marker in prompt)
+            full_prompt = "\n".join(prompt_parts)
+            included_policy = '## Active Policies' in full_prompt or 'POLICY' in full_prompt
+
+            # Estimate token counts (rough: ~4 chars per token)
+            base_tokens = len(self.system_prompt) // 4 if self.system_prompt else 0
+            total_tokens = len(full_prompt) // 4
+            context_tokens = total_tokens - base_tokens
+
+            # Extract task type
+            task_type = self._detect_query_type(task)
+            task_preview = task[:255] if task else ""
+
+            # Build context summaries (limited size)
+            mood_context = {
+                'mood_type': mood.get('mood_type', ''),
+                'confidence': mood.get('confidence_modifier', 1.0)
+            } if mood else {}
+
+            spider_summary = {}
+            if spider:
+                trends = spider.get('relevant_trends', []) or spider.get('trends', [])
+                if trends:
+                    trend_names = []
+                    for t in trends[:3]:
+                        if isinstance(t, str):
+                            trend_names.append(t)
+                        elif isinstance(t, dict):
+                            trend_names.append(t.get('topic', str(t))[:50])
+                    spider_summary = {'trends': trend_names}
+
+            memory_summary = {}
+            if memory:
+                patterns = memory.get('learned_patterns', [])
+                if patterns:
+                    memory_summary = {'pattern_count': len(patterns)}
+
+            # Get agent category from name
+            agent_category = ''
+            if 'Content' in self.name:
+                agent_category = 'content'
+            elif 'Stock' in self.name or 'Market' in self.name:
+                agent_category = 'financial'
+            elif 'Code' in self.name or 'Developer' in self.name:
+                agent_category = 'development'
+            elif 'Research' in self.name:
+                agent_category = 'research'
+            elif 'Image' in self.name or 'Video' in self.name or 'Audio' in self.name:
+                agent_category = 'creative'
+            elif 'Blockchain' in self.name:
+                agent_category = 'blockchain'
+
+            # Create metric record
+            IntelligentPromptMetric.objects.create(
+                agent_name=self.name,
+                agent_category=agent_category,
+                included_mood=included_mood,
+                included_memory_palace=included_memory,
+                included_spider_intel=included_spider,
+                included_evolution=included_evolution,
+                included_policy=included_policy,
+                included_learned_knowledge=included_learned_knowledge,
+                included_temporal=True,  # Always included
+                base_prompt_tokens=base_tokens,
+                context_tokens_added=context_tokens,
+                total_prompt_tokens=total_tokens,
+                mood_context=mood_context,
+                spider_summary=spider_summary,
+                memory_summary=memory_summary,
+                task_type=task_type,
+                task_preview=task_preview,
+            )
+
+            logger.debug(f"Tracked intelligent prompt for {self.name}: {total_tokens} tokens")
+
+        except Exception as e:
+            # Never let tracking break agent execution
+            logger.debug(f"Intelligent prompt tracking failed (non-critical): {e}")
 
     def _call_openai(
         self,

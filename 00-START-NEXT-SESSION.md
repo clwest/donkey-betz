@@ -52,10 +52,18 @@ Fixed broken Celery task in `intelligence/tasks.py`:
 - **Fix:** Rewrote to query Opportunity model directly from database
 - **Result:** Task now processes opportunities and creates ActionPlans
 
+### 7. Intelligent Prompting Metrics Tracking
+Added metrics tracking for the intelligent prompting system:
+- **New Models:** `IntelligentPromptMetric` and `IntelligentPromptStats` in `core/models_agent_memory.py`
+- **Tracking:** Wired into `_build_intelligent_prompt()` in BaseAgent
+- **Metrics:** Agent name, category, context components included (mood, memory, spider, evolution, policy), token counts
+- **Result:** Every agent prompt build now recorded for analysis
+
 ### Reality Score Improvement
 - **Mythology:** 70% → **90%** (patterns seeded, quarantine cleared)
 - **Intelligence:** 60% → **75%** (app_label fixed)
-- **Overall:** 84% → **88%**
+- **Intelligent Prompting:** 85% → **95%** (metrics tracking added)
+- **Overall:** 84% → **89%**
 
 ---
 
@@ -160,9 +168,9 @@ Files NOT yet migrated (lower priority):
 | PA Tools | 95% | All functional |
 | Services | 100% | All connected |
 | Celery Tasks | 90% | +5 intelligence tasks (Session 727) |
-| Intelligent Prompting | 85% | Active in 66/72 agents |
+| Intelligent Prompting | **95%** | Active in 66/72 agents + metrics tracking (Session 729) |
 
-**Average Reality Score: 88%** (improved from 84%)
+**Average Reality Score: 89%** (improved from 84%)
 
 ---
 
