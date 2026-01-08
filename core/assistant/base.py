@@ -265,7 +265,7 @@ class EnhancedPersonalAIAssistant(
         style = params.get('style', 'photorealistic')
 
         try:
-            from agents.creation_agent import CreationAgent
+            from core.agents.creation_agent import CreationAgent
 
             agent = CreationAgent(user=self.user, project_id=project_id)
             result = agent.execute(

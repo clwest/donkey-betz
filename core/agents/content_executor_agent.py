@@ -145,7 +145,7 @@ Your content is:
     def legacy_executor(self):
         """Lazy-load the legacy DonkeyBetzContentExecutor."""
         if self._legacy_executor is None:
-            from agents.content_executor import get_content_executor
+            from core.services.content_executor import get_content_executor
             self._legacy_executor = get_content_executor()
         return self._legacy_executor
 

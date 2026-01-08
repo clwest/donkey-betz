@@ -272,7 +272,7 @@ class IsolationForestWrapper(BaseModelWrapper):
     def _get_detector(self):
         if self._detector is None:
             try:
-                from agents.ml_algorithms import FraudDetector
+                from core.services.ml_algorithms import FraudDetector
                 self._detector = FraudDetector(project_path="")
                 self._is_loaded = True
             except Exception as e:
@@ -335,7 +335,7 @@ class KMeansWrapper(BaseModelWrapper):
     def _get_segmenter(self):
         if self._segmenter is None:
             try:
-                from agents.ml_algorithms import CustomerSegmentation
+                from core.services.ml_algorithms import CustomerSegmentation
                 self._segmenter = CustomerSegmentation(project_path="")
                 self._is_loaded = True
             except Exception as e:

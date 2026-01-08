@@ -1617,7 +1617,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 logger.warning(f"Failed to enrich prompt with project context: {e}")
 
         try:
-            from agents.creation_agent import CreationAgent
+            from core.agents.creation_agent import CreationAgent
 
             # Initialize agent
             agent = CreationAgent(user=self.user, project_id=project_id)
@@ -4547,7 +4547,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             if not task:
                 return {'success': False, 'error': 'Task description is required'}
 
-            from agents.content_executor import DonkeyBetzContentExecutor
+            from core.services.content_executor import DonkeyBetzContentExecutor
             from core.models.agents_registry import AgentExecution, UnifiedAgentTemplate
 
             # Create execution record
