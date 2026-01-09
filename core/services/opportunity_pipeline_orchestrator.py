@@ -313,27 +313,29 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
         self._memory_service = None
         self._agent_model = None
 
-        # Stage configuration
+        # Stage configuration - Session 737: Fixed to use actual agent names from AgentRouter
         self.stage_agents = {
             PipelineStage.DISCOVERY: [
-                'reddit-scout-agent',
-                'market-research-agent',
-                'competitive-intelligence-agent'
+                'ResearchAgent',
+                'CompetitorAnalysisAgent',
+                'TrendAnalysisAgent',
+                'CustomerResearchAgent'
             ],
             PipelineStage.ANALYSIS: [
-                'financial-analyst-agent',
-                'risk-assessment-agent',
-                'data-analyst'
+                'OpportunityScoringAgent',
+                'MarketIntelligenceAgent',
+                'StockAnalystAgent'
             ],
             PipelineStage.EXECUTION: [
-                'business-strategy-agent',
-                'content-creator',
-                'marketing-growth-agent'
+                'BrandStrategyAgent',
+                'MarketingStrategyAgent',
+                'ContentStrategyAgent',
+                'ContentWriterAgent'
             ],
             PipelineStage.OPTIMIZATION: [
-                'financial-agent',
-                'operations-agent',
-                'performance-optimizer'
+                'COOAgent',
+                'PerformanceAnalystAgent',
+                'SEOOptimizerAgent'
             ]
         }
 
@@ -520,17 +522,49 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
                 stage, context, current_value, previous_results
             )
 
-            # Execute agent with enhanced context
-            execution_id = self.agent_registry.execute_agent(
-                best_agent['name'],
-                task_data
-            )
+            # Session 737: Execute agent - use AgentRouter if agent came from there
+            if best_agent.get('_from_router'):
+                # Execute via AgentRouter
+                from core.agent_router import AgentRouter
+                agent_router = AgentRouter()
 
-            if not execution_id:
-                raise Exception(f"Failed to execute agent {best_agent['name']}")
+                # Prepare task string for router
+                task_str = task_data.get('task', f"Execute {stage.value} stage")
+                agent_name = best_agent.get('name', 'ResearchAgent')
 
-            # Monitor execution and get results
-            result = await self._monitor_agent_execution(execution_id)
+                try:
+                    router_result = agent_router.route(
+                        agent_name=agent_name,
+                        task=task_str,
+                        context=task_data.get('context', {})
+                    )
+
+                    # AgentResult is a dataclass, access attributes directly
+                    result = {
+                        'success': router_result.success,
+                        'output_data': router_result.data,
+                        'error': router_result.error,
+                        'execution_time': router_result.execution_time_ms / 1000.0  # Convert ms to seconds
+                    }
+                except Exception as router_error:
+                    result = {
+                        'success': False,
+                        'output_data': {},
+                        'error': str(router_error),
+                        'execution_time': 0
+                    }
+            else:
+                # Execute via agent_registry (original path)
+                execution_id = self.agent_registry.execute_agent(
+                    best_agent['name'],
+                    task_data
+                ) if self.agent_registry else None
+
+                if not execution_id:
+                    raise Exception(f"Failed to execute agent {best_agent['name']}")
+
+                # Monitor execution and get results
+                result = await self._monitor_agent_execution(execution_id)
 
             # Calculate execution metrics
             execution_time = (datetime.now() - start_time).total_seconds()
@@ -603,8 +637,25 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
         # Score each candidate agent with memory-enhanced scoring
         agent_scores = []
 
+        # Session 737: Import AgentRouter for fallback
+        from core.agent_router import AgentRouter
+        agent_router = AgentRouter()
+
         for agent_name in candidate_agents:
-            agent = self.agent_registry.get_agent(agent_name)
+            agent = self.agent_registry.get_agent(agent_name) if self.agent_registry else None
+
+            # Session 737: Fallback to AgentRouter if not in registry
+            if not agent and agent_name in agent_router.AGENT_MAP:
+                # Create minimal agent dict for scoring
+                agent = {
+                    'name': agent_name,
+                    'specialization': 'general',
+                    'capabilities': [],
+                    'performance_metrics': {'success_rate': 0.7},
+                    'is_verified': True,
+                    '_from_router': True  # Flag to use AgentRouter for execution
+                }
+
             if not agent:
                 continue
 
