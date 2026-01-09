@@ -8,8 +8,9 @@ Session 265 Phase 6: Added run_autonomy_cycle task for autonomous operation
 from celery import shared_task
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db import transaction
+from django.utils import timezone
 from typing import Dict, Any
 import os
 
@@ -7207,7 +7208,7 @@ def broadcast_conversation_status(self):
     try:
         # Get recent conversations
         recent_conversations = AgentConversation.objects.filter(
-            started_at__gte=timezone.now() - timezone.timedelta(hours=24)
+            started_at__gte=timezone.now() - timedelta(hours=24)
         ).order_by('-started_at')[:5]
 
         conversations_data = []
@@ -7243,7 +7244,7 @@ def broadcast_conversation_status(self):
             'type': 'conversation_status',
             'recent_conversations': conversations_data,
             'total_today': AgentConversation.objects.filter(
-                started_at__gte=timezone.now() - timezone.timedelta(hours=24)
+                started_at__gte=timezone.now() - timedelta(hours=24)
             ).count(),
             'timestamp': timezone.now().isoformat()
         }))
@@ -7662,7 +7663,7 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
     try:
         # Find idle agents (not recently active)
         # Idle means: no executions or conversations in the last 30 minutes
-        recent_cutoff = timezone.now() - timezone.timedelta(minutes=30)
+        recent_cutoff = timezone.now() - timedelta(minutes=30)
 
         # Get agents with recent activity
         recently_active_ids = set()
@@ -7993,7 +7994,7 @@ def broadcast_dream_journal(self):
     try:
         # Get recent unshown dreams from the last 24 hours
         recent_dreams = AgentDream.objects.filter(
-            dreamed_at__gte=timezone.now() - timezone.timedelta(hours=24),
+            dreamed_at__gte=timezone.now() - timedelta(hours=24),
             shown_to_user=False
         ).select_related('agent').order_by('-dreamed_at')[:10]
 
@@ -8014,7 +8015,7 @@ def broadcast_dream_journal(self):
 
         # Count total dreams today
         dreams_today = AgentDream.objects.filter(
-            dreamed_at__gte=timezone.now() - timezone.timedelta(hours=24)
+            dreamed_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
 
         # Broadcast to WebSocket
@@ -8076,7 +8077,7 @@ def score_and_promote_dreams(self, max_dreams: int = 50, promote_threshold: floa
         unscored_dreams = AgentDream.objects.filter(
             actionability_score=0.0,  # Not yet scored
             promoted_to_decision=False,
-            dreamed_at__gte=timezone.now() - timezone.timedelta(days=7)  # Last 7 days
+            dreamed_at__gte=timezone.now() - timedelta(days=7)  # Last 7 days
         ).select_related('agent').order_by('-creativity_score', '-dreamed_at')[:max_dreams]
 
         if not unscored_dreams.exists():
@@ -9878,7 +9879,8 @@ def auto_connect_memories(memory_id: str, threshold: float = 0.7):
 
         memory = AgentMemory.objects.get(id=memory_id)
 
-        if not memory.embedding:
+        # Session 736: Guard against empty embeddings - use 'is None' for numpy arrays
+        if memory.embedding is None or len(memory.embedding) == 0:
             logger.warning(f"🧠 [MEMORY] No embedding for memory {memory_id}")
             return {'status': 'skipped', 'reason': 'no_embedding'}
 
@@ -9896,12 +9898,23 @@ def auto_connect_memories(memory_id: str, threshold: float = 0.7):
         connections_created = 0
 
         for other in other_memories:
+            # Session 736: Skip memories with empty or mismatched embeddings
+            # Use 'is None' check because pgvector returns numpy arrays
+            if other.embedding is None or len(other.embedding) == 0:
+                continue
             other_embedding = np.array(other.embedding)
 
-            # Cosine similarity
-            similarity = np.dot(source_embedding, other_embedding) / (
-                np.linalg.norm(source_embedding) * np.linalg.norm(other_embedding)
-            )
+            # Guard against shape mismatch
+            if source_embedding.shape != other_embedding.shape:
+                continue
+
+            # Cosine similarity - guard against zero norms
+            source_norm = np.linalg.norm(source_embedding)
+            other_norm = np.linalg.norm(other_embedding)
+            if source_norm == 0 or other_norm == 0:
+                continue
+
+            similarity = np.dot(source_embedding, other_embedding) / (source_norm * other_norm)
 
             if similarity >= threshold:
                 # Create connection if similarity is high enough
@@ -10532,7 +10545,7 @@ def process_agent_activity_xp():
         )
 
         now = timezone.now()
-        fifteen_min_ago = now - timezone.timedelta(minutes=15)
+        fifteen_min_ago = now - timedelta(minutes=15)
 
         agents_awarded = 0
         total_xp_awarded = 0
@@ -13262,7 +13275,7 @@ Call the initiate_content_debate tool NOW with channel_id="{channel.id}" to coor
         # Parse debate results from coordinator
         # The coordinator should have created a ContentDebate record
         # Session 633: Check for debate created AFTER we started (not just any old debate)
-        task_start_time = timezone.now() - timezone.timedelta(minutes=5)  # Allow 5 min window
+        task_start_time = timezone.now() - timedelta(minutes=5)  # Allow 5 min window
         recent_debate = ContentDebate.objects.filter(
             channel=channel,
             created_at__gte=task_start_time  # Must be created during this task run
@@ -20054,8 +20067,8 @@ def maintain_dream_backlog():
 
     try:
         now = timezone.now()
-        seven_days_ago = now - timezone.timedelta(days=7)
-        fourteen_days_ago = now - timezone.timedelta(days=14)
+        seven_days_ago = now - timedelta(days=7)
+        fourteen_days_ago = now - timedelta(days=14)
 
         # Archive very low score dreams (< 0.3, > 7 days old)
         very_low_score = AgentDream.objects.filter(
@@ -20212,7 +20225,7 @@ def auto_triage_dreams(
 
         # ============ PHASE 2: ARCHIVE STALE LOW-SCORING DREAMS ============
         # Find old dreams with low scores that haven't been actioned
-        stale_cutoff = timezone.now() - timezone.timedelta(days=archive_age_days)
+        stale_cutoff = timezone.now() - timedelta(days=archive_age_days)
 
         stale_dreams = AgentDream.objects.filter(
             promoted_to_decision=False,

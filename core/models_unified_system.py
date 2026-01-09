@@ -10018,9 +10018,10 @@ class MemoryCluster(models.Model):
             return self.coherence_score
 
         # Get embeddings
+        # Session 736: Guard against empty embeddings - use 'is not None' for numpy arrays
         embeddings = []
         for membership in memberships:
-            if membership.memory.embedding:
+            if membership.memory.embedding is not None and len(membership.memory.embedding) > 0:
                 embeddings.append(membership.memory.embedding)
 
         if len(embeddings) < 2:
@@ -10047,9 +10048,10 @@ class MemoryCluster(models.Model):
         """Calculate the centroid embedding for this cluster."""
         import numpy as np
 
+        # Session 736: Guard against empty embeddings - use 'is not None' for numpy arrays
         embeddings = []
         for memory in self.memories.all():
-            if memory.embedding:
+            if memory.embedding is not None and len(memory.embedding) > 0:
                 embeddings.append(memory.embedding)
 
         if embeddings:
@@ -10079,6 +10081,9 @@ class MemoryCluster(models.Model):
             agent=agent,
             embedding__isnull=False
         ))
+
+        # Session 736: Filter out memories with empty embeddings - use 'is not None' for numpy arrays
+        memories = [m for m in memories if m.embedding is not None and len(m.embedding) > 0]
 
         if len(memories) < min_memories:
             return []
