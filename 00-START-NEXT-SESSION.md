@@ -35,25 +35,25 @@ Full report: `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md`
 1. ~~**P1:** Make sub-agents USE spider_context~~ ✅ DONE (Session 736)
 2. ~~**P2:** Fix memory creation~~ ✅ ALREADY WORKING (wrong table checked)
 3. ~~**P3:** Fix learning capture~~ ✅ ALREADY WORKING (wrong table checked)
-4. **P4:** Activate dormant agents (50 never executed) - REMAINING
+4. ~~**P4:** Activate dormant agents~~ ✅ DONE - Celery tasks added
 
-### Session 738 Priority: Increase Agent Usage
+### Session 737 Agent Activation - IMPLEMENTED
 
-50 out of 72 agents have never executed (only 94 total executions).
+Created 4 Celery tasks to exercise dormant agents:
 
-**Clarification:** These agents WORK - they just haven't been triggered yet!
+| Task | Schedule | Agents |
+|------|----------|--------|
+| `run_market_monitoring_agents` | Every 4 hours | 5 market agents |
+| `run_blockchain_monitoring_agents` | Every 6 hours | 4 blockchain agents |
+| `run_business_strategy_agents` | Daily 8 AM | 5 business agents |
+| `exercise_all_dormant_agents` | Weekly Sunday | All 50 dormant agents |
 
-Most active agents:
-- AutonomousContentStudioCoordinator: 19 executions
-- ResearchAgent: 9 executions
-- Podcast team: 17 executions
-- ContentStrategyAgent: 5 executions
+**Manual trigger:** `celery -A core call core.tasks.exercise_all_dormant_agents`
 
-Options to increase usage:
-1. **UI Enhancement:** Add agent quick-launch buttons to AI Studio
-2. **Agent Discovery:** Create an "Agent Catalog" page showing all 72 agents
-3. **Scheduled Tasks:** Add Celery tasks for market monitoring agents
-4. **Better Routing:** Improve PA routing to use specialized agents
+### Session 738 Priority: Remaining UI Enhancements (Optional)
+
+1. **Agent Catalog Page:** Create UI showing all 72 agents with launch buttons
+2. **Better PA Routing:** Improve Personal Assistant to use more specialized agents
 
 ---
 
