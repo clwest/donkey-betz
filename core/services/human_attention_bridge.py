@@ -16,7 +16,8 @@ Integration points:
 """
 
 import logging
-from typing import Optional
+from datetime import datetime, date
+from typing import Optional, Any
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
@@ -24,6 +25,20 @@ from django.contrib.auth import get_user_model
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+def _serialize_for_json(obj: Any) -> Any:
+    """
+    Session 736: Recursively serialize objects for JSON storage.
+    Handles datetime objects that cause 'Object of type datetime is not JSON serializable' errors.
+    """
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: _serialize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [_serialize_for_json(item) for item in obj]
+    return obj
 
 
 class HumanAttentionBridge:
@@ -185,6 +200,9 @@ class HumanAttentionBridge:
             else:
                 urgency = 'medium'
 
+            # Session 736: Serialize payload to handle datetime objects
+            serialized_payload = _serialize_for_json(opportunity)
+
             for target_user in users:
                 service = self.get_service(target_user)
 
@@ -196,7 +214,7 @@ class HumanAttentionBridge:
                     title=f"Arbitrage: {opportunity.get('title', 'Opportunity Found')}",
                     summary=f"{profit_pct:.1f}% guaranteed profit detected across {', '.join(opportunity.get('markets', []))}",
                     urgency=urgency,
-                    payload=opportunity,
+                    payload=serialized_payload,
                     expires_at=opportunity.get('expires_at'),
                 )
                 logger.info(f"Created arbitrage attention for user {target_user.username}")

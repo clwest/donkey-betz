@@ -155,6 +155,63 @@ class BaseAgent(ABC, TimeTravelMixin):
         self._mythology_enforcer = None  # Session 354: Mythology validation
         self._progress_service = None  # Session 489: Streaming progress
         self._llm_router = None  # Session 697: Multi-model routing
+        # Session 735: Cost tracking for orchestration
+        self._accumulated_cost = 0.0
+        self._accumulated_tokens = 0
+
+    # ==================== Cost Tracking Helpers (Session 735) ====================
+
+    def _reset_cost_tracking(self) -> None:
+        """
+        Session 735: Reset accumulated cost and tokens before a new execution.
+        Call this at the start of execute() to ensure clean tracking.
+        """
+        self._accumulated_cost = 0.0
+        self._accumulated_tokens = 0
+
+    def _make_result(
+        self,
+        success: bool,
+        message: str = "",
+        data: Dict[str, Any] = None,
+        error: Optional[str] = None,
+        execution_time_ms: int = 0,
+        decisions_made: int = 0,
+        tool_calls: List[Dict[str, Any]] = None,
+        knowledge_attribution: Optional[KnowledgeAttribution] = None,
+    ) -> AgentResult:
+        """
+        Session 735: Create an AgentResult with accumulated cost/tokens.
+
+        Use this helper instead of constructing AgentResult directly to ensure
+        cost and token tracking is included automatically.
+
+        Args:
+            success: Whether the execution succeeded
+            message: Human-readable result message
+            data: Optional result data dict
+            error: Optional error message
+            execution_time_ms: Execution time in milliseconds
+            decisions_made: Number of decisions made during execution
+            tool_calls: List of tool calls made
+            knowledge_attribution: Optional knowledge attribution info
+
+        Returns:
+            AgentResult with cost and tokens populated from accumulated values
+        """
+        return AgentResult(
+            success=success,
+            message=message,
+            data=data or {},
+            error=error,
+            agent_name=self.name,
+            execution_time_ms=execution_time_ms,
+            decisions_made=decisions_made,
+            tool_calls=tool_calls or [],
+            knowledge_attribution=knowledge_attribution,
+            tokens_used=self._accumulated_tokens,
+            cost=self._accumulated_cost,
+        )
 
     # ==================== Lazy-Loaded Services ====================
 
@@ -1317,6 +1374,18 @@ Consider these trends when crafting the response to maximize relevance and engag
 
             choice = response.choices[0]
 
+            # Session 735: Extract and accumulate cost/tokens
+            usage = getattr(response, 'usage', None)
+            input_tokens = getattr(usage, 'prompt_tokens', 0) if usage else 0
+            output_tokens = getattr(usage, 'completion_tokens', 0) if usage else 0
+            total_tokens = getattr(usage, 'total_tokens', 0) if usage else 0
+            # GPT-5-mini pricing: $0.003/1K input, $0.012/1K output
+            call_cost = (input_tokens * 0.003 / 1000) + (output_tokens * 0.012 / 1000)
+
+            # Accumulate for this execution
+            self._accumulated_tokens += total_tokens
+            self._accumulated_cost += call_cost
+
             return {
                 'content': choice.message.content,
                 'tool_calls': [
@@ -1328,6 +1397,9 @@ Consider these trends when crafting the response to maximize relevance and engag
                     for tc in (choice.message.tool_calls or [])
                 ],
                 'finish_reason': choice.finish_reason,
+                # Session 735: Return cost/tokens for tracking
+                'tokens_used': total_tokens,
+                'cost': call_cost,
             }
 
         except TimeoutError as e:
@@ -1483,14 +1555,20 @@ Consider these trends when crafting the response to maximize relevance and engag
                         'arguments': json.loads(tc.get('function', {}).get('arguments', '{}'))
                     })
 
+            # Session 735: Accumulate cost/tokens for this execution
+            call_tokens = response.tokens_total or 0
+            call_cost = response.cost or 0.0
+            self._accumulated_tokens += call_tokens
+            self._accumulated_cost += call_cost
+
             return {
                 'content': response.content,
                 'tool_calls': tool_calls,
                 'finish_reason': 'stop' if response.success else 'error',
                 'provider': response.provider,
                 'model': response.model,
-                'tokens_used': response.tokens_total,
-                'cost': response.cost,
+                'tokens_used': call_tokens,
+                'cost': call_cost,
                 'latency_ms': response.latency_ms,
             }
 
@@ -1849,6 +1927,11 @@ Use phrases like "potential", "may help", "typically", "can vary" instead of abs
             Outcome ID if recorded, None otherwise
         """
         if not self.learning_loop:
+            return None
+
+        # Session 736: Guard against None result
+        if result is None:
+            logger.debug("Cannot record learning outcome: result is None")
             return None
 
         # Use explicit success parameter if provided, otherwise use result.success
