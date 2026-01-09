@@ -23,10 +23,8 @@ from django.core.cache import cache
 from django.db import transaction
 
 # Import existing models
-from intelligence.models import (
-    AgentExecution,
-    UnifiedAgentTemplate
-)
+from intelligence.models import AgentExecution
+from core.models_unified_system import Agent as UnifiedAgentTemplate  # W002 fix: Agent model used as alias
 from advisors.registry import get_advisor_registry, AdvisorProfile
 
 # Import spider components
