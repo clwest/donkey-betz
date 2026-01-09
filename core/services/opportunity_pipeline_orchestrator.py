@@ -99,17 +99,36 @@ class PipelineLearningMixin:
         if self._agent_model is None:
             try:
                 from core.models_unified_system import Agent
-                self._agent_model, _ = Agent.objects.get_or_create(
-                    name='OpportunityPipelineOrchestrator',
-                    defaults={
-                        'agent_type': 'standalone',
-                        'specialization': 'workflow_orchestration',
-                        'description': 'Orchestrates multi-stage opportunity execution workflows.',
-                        'is_active': True,
-                    }
-                )
+                # Session 737: Use sync_to_async for Django ORM in async context
+                from asgiref.sync import sync_to_async
+                import asyncio
+
+                def _get_or_create_agent():
+                    return Agent.objects.get_or_create(
+                        name='OpportunityPipelineOrchestrator',
+                        defaults={
+                            'agent_type': 'standalone',
+                            'specialization': 'workflow_orchestration',
+                            'description': 'Orchestrates multi-stage opportunity execution workflows.',
+                            'is_active': True,
+                        }
+                    )
+
+                # Check if we're in an async context
+                try:
+                    loop = asyncio.get_running_loop()
+                    # We're in async context - skip ORM (learning will be disabled)
+                    logger.debug("Skipping Agent model in async context")
+                    return None
+                except RuntimeError:
+                    # Not in async context - safe to use ORM
+                    self._agent_model, _ = _get_or_create_agent()
+
             except ImportError:
                 logger.debug("Agent model not available")
+                return None
+            except Exception as e:
+                logger.debug(f"Agent model creation failed: {e}")
                 return None
         return self._agent_model
 
