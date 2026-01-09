@@ -159,6 +159,11 @@ You generate with trained models - you do NOT train models (use CharacterTrainin
         start_time = time.time()
         tool_calls_made = []
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         with self.time_travel_session("trained_creation", task, input_data=context):
             try:
                 if not self._validate_task(task):

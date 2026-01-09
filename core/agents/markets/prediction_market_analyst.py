@@ -116,6 +116,11 @@ Remember: Markets are forward-looking. Look for what others are missing."""
         context = context or {}
         spider_context = spider_context or {}
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         try:
             # Fetch market data from Kalshi spider
             markets = self._get_kalshi_markets(context)

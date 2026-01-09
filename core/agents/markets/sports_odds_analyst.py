@@ -128,6 +128,11 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
         context = context or {}
         spider_context = spider_context or {}
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         try:
             # Fetch odds data from The Odds API spider
             events = self._get_sports_odds(context)

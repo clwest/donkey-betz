@@ -1843,6 +1843,131 @@ Use phrases like "potential", "may help", "typically", "can vary" instead of abs
 
         return task
 
+    # ==================== Spider Context Integration (Session 736) ====================
+
+    def _extract_spider_intelligence(
+        self,
+        spider_context: Dict[str, Any],
+        max_items: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Session 736: Extract and format spider intelligence for agent use.
+
+        This helper makes it easy for any agent to utilize spider data.
+        Call this at the start of execute() to get formatted intelligence.
+
+        Args:
+            spider_context: Raw spider context from AgentRouter
+            max_items: Maximum items to include from each category
+
+        Returns:
+            Dict with:
+                - trends: List of trending topics
+                - market_data: Market/financial data if available
+                - discussions: Relevant discussions/articles
+                - summary: Formatted string ready for prompt injection
+                - has_data: Boolean indicating if any data was found
+        """
+        if not spider_context:
+            return {
+                'trends': [],
+                'market_data': None,
+                'discussions': [],
+                'summary': '',
+                'has_data': False
+            }
+
+        # Extract trends
+        trends = spider_context.get('relevant_trends', []) or spider_context.get('trends', [])
+        if trends:
+            trends = trends[:max_items]
+            if isinstance(trends[0], dict):
+                trends = [t.get('topic', t.get('title', str(t))) for t in trends]
+
+        # Extract market data
+        market_data = spider_context.get('market_data') or spider_context.get('market_analysis')
+
+        # Extract discussions/articles
+        discussions = spider_context.get('related_discussions', []) or spider_context.get('articles', [])
+        if discussions:
+            discussions = discussions[:max_items]
+
+        # Extract creative trends if present
+        creative = spider_context.get('creative_trends', {})
+
+        # Build formatted summary for prompt injection
+        summary_parts = []
+
+        if trends:
+            trend_text = ", ".join(str(t) for t in trends[:5])
+            summary_parts.append(f"Current Trends: {trend_text}")
+
+        if market_data:
+            if isinstance(market_data, dict):
+                summary_parts.append(f"Market Data: {json.dumps(market_data)[:500]}")
+            else:
+                summary_parts.append(f"Market Analysis Available: Yes")
+
+        if discussions:
+            disc_titles = []
+            for d in discussions[:3]:
+                if isinstance(d, dict):
+                    title = d.get('title', d.get('headline', ''))[:100]
+                    if title:
+                        disc_titles.append(title)
+                elif isinstance(d, str):
+                    disc_titles.append(d[:100])
+            if disc_titles:
+                summary_parts.append(f"Related Content: {'; '.join(disc_titles)}")
+
+        if creative:
+            if creative.get('colors'):
+                summary_parts.append(f"Trending Colors: {', '.join(creative['colors'][:5])}")
+            if creative.get('styles'):
+                summary_parts.append(f"Trending Styles: {', '.join(creative['styles'][:5])}")
+
+        summary = "\n".join(summary_parts) if summary_parts else ""
+
+        return {
+            'trends': trends,
+            'market_data': market_data,
+            'discussions': discussions,
+            'creative': creative,
+            'summary': summary,
+            'has_data': bool(summary_parts)
+        }
+
+    def _enhance_prompt_with_spider_data(
+        self,
+        prompt: str,
+        spider_context: Dict[str, Any]
+    ) -> str:
+        """
+        Session 736: Enhance any prompt with spider intelligence.
+
+        Simple helper that appends spider data to an existing prompt.
+
+        Args:
+            prompt: The original prompt
+            spider_context: Raw spider context from AgentRouter
+
+        Returns:
+            Enhanced prompt with spider intelligence section
+        """
+        intel = self._extract_spider_intelligence(spider_context)
+
+        if not intel['has_data']:
+            return prompt
+
+        spider_section = f"""
+
+## Real-Time Intelligence (Spider Network)
+{intel['summary']}
+
+Consider this current data when formulating your response."""
+
+        return prompt + spider_section
+
     def _build_prompt_with_project(
         self,
         task: str,
