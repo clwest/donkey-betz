@@ -258,8 +258,9 @@ For older sessions, see `docs/handoffs/` directory.
 | `docs/SPIDERS.md` | Spider network (77 spiders) |
 | `docs/SERVICES.md` | Services layer (93 services) |
 | `docs/SCIFI_FEATURES.md` | 14 Sci-Fi AI features |
+| `docs/DATABASE_MODEL_REFERENCE.md` | **IMPORTANT:** Which DB table for what (Session 737) |
 | `docs/audits/SESSION_736_COMPREHENSIVE_SYSTEM_AUDIT.md` | Session 736 component audit (100% pass) |
-| `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md` | **CRITICAL:** Integration gaps (30% score) |
+| `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md` | Integration report (corrected to 74% in Session 737) |
 
 ---
 
