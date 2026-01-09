@@ -640,6 +640,14 @@ class AgentRouter:
                 spider_context=spider_context
             )
 
+            # Session 735: Inject accumulated cost/tokens from agent into result
+            # This captures cost even if agent doesn't use _make_result() helper
+            if hasattr(agent, '_accumulated_cost') and hasattr(agent, '_accumulated_tokens'):
+                if result.cost == 0.0 and agent._accumulated_cost > 0:
+                    result.cost = agent._accumulated_cost
+                if result.tokens_used == 0 and agent._accumulated_tokens > 0:
+                    result.tokens_used = agent._accumulated_tokens
+
             # Track successful execution
             # Session 641: Use result.message (not result.output which doesn't exist on AgentResult)
             self._complete_execution(

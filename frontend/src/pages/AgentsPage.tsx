@@ -3082,8 +3082,87 @@ export default function AgentsPage() {
                         </div>
                       </div>
                       {output.full_output && (
-                        <div className="bg-dark-card rounded p-3 text-sm text-gray-300 whitespace-pre-wrap max-h-64 overflow-y-auto">
-                          {output.full_output}
+                        <div className="bg-dark-card rounded p-3 text-sm text-gray-300 max-h-96 overflow-y-auto">
+                          {/* Session 735: Parse and format output as individual findings */}
+                          {(() => {
+                            const content = output.full_output;
+                            // Split by common section delimiters (##, numbered lists, **bold headers**)
+                            const sections = content.split(/(?=^##\s|^\d+\.\s\*\*|^###\s|^\*\*[^*]+\*\*:)/m).filter(Boolean);
+
+                            if (sections.length <= 1) {
+                              // No clear sections, try splitting by double newlines
+                              const paragraphs = content.split(/\n\n+/).filter((p: string) => p.trim());
+                              if (paragraphs.length > 1) {
+                                return paragraphs.map((para: string, pIdx: number) => (
+                                  <div key={pIdx} className="mb-3 pb-3 border-b border-dark-border last:border-0 last:mb-0 last:pb-0">
+                                    {para.split('\n').map((line: string, lIdx: number) => {
+                                      // Format headers
+                                      if (line.startsWith('## ')) {
+                                        return <h4 key={lIdx} className="text-accent-cyan font-semibold mb-2">{line.replace('## ', '')}</h4>;
+                                      }
+                                      if (line.startsWith('### ')) {
+                                        return <h5 key={lIdx} className="text-accent-purple font-medium mb-1">{line.replace('### ', '')}</h5>;
+                                      }
+                                      // Format bullet points
+                                      if (line.match(/^[-•]\s/)) {
+                                        return <div key={lIdx} className="flex gap-2 ml-2"><span className="text-accent-green">•</span><span>{line.replace(/^[-•]\s/, '')}</span></div>;
+                                      }
+                                      // Format numbered items
+                                      if (line.match(/^\d+\.\s/)) {
+                                        const num = line.match(/^(\d+)\./)?.[1];
+                                        return <div key={lIdx} className="flex gap-2 ml-2"><span className="text-accent-amber font-mono">{num}.</span><span>{line.replace(/^\d+\.\s/, '')}</span></div>;
+                                      }
+                                      // Format bold text inline
+                                      const formattedLine = line.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white">$1</strong>');
+                                      return <p key={lIdx} className="mb-1" dangerouslySetInnerHTML={{ __html: formattedLine }} />;
+                                    })}
+                                  </div>
+                                ));
+                              }
+                              // Single block output
+                              return <div className="whitespace-pre-wrap">{content}</div>;
+                            }
+
+                            // Multiple sections found - render as cards
+                            return sections.map((section: string, sIdx: number) => {
+                              const trimmed = section.trim();
+                              let title = '';
+                              let body = trimmed;
+
+                              // Extract title from section header
+                              if (trimmed.startsWith('## ')) {
+                                const lines = trimmed.split('\n');
+                                title = lines[0].replace('## ', '');
+                                body = lines.slice(1).join('\n').trim();
+                              } else if (trimmed.match(/^\d+\.\s\*\*/)) {
+                                const match = trimmed.match(/^(\d+\.\s\*\*[^*]+\*\*)/);
+                                if (match) {
+                                  title = match[1].replace(/\*\*/g, '');
+                                  body = trimmed.replace(match[0], '').trim();
+                                }
+                              }
+
+                              return (
+                                <div key={sIdx} className="mb-4 p-3 bg-dark-lighter rounded-lg border-l-2 border-accent-cyan">
+                                  {title && <h4 className="text-accent-cyan font-semibold mb-2">{title}</h4>}
+                                  <div className="space-y-1">
+                                    {body.split('\n').map((line: string, lIdx: number) => {
+                                      if (!line.trim()) return null;
+                                      if (line.match(/^[-•]\s/)) {
+                                        return <div key={lIdx} className="flex gap-2 ml-2"><span className="text-accent-green">•</span><span>{line.replace(/^[-•]\s/, '')}</span></div>;
+                                      }
+                                      if (line.match(/^\d+\.\s/)) {
+                                        const num = line.match(/^(\d+)\./)?.[1];
+                                        return <div key={lIdx} className="flex gap-2 ml-2"><span className="text-accent-amber font-mono">{num}.</span><span>{line.replace(/^\d+\.\s/, '')}</span></div>;
+                                      }
+                                      const formattedLine = line.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white">$1</strong>');
+                                      return <p key={lIdx} dangerouslySetInnerHTML={{ __html: formattedLine }} />;
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
                         </div>
                       )}
                     </div>

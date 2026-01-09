@@ -254,10 +254,14 @@ CRITICAL: When creating scripts, maintain clear speaker labels for TTS generatio
         spider_context: Dict[str, Any]
     ) -> AgentResult:
         """Execute the podcast coordination task."""
-        import asyncio
+        import time
+        start_time = time.time()
 
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
+
+        # Session 735: Reset cost tracking for this execution
+        self._reset_cost_tracking()
 
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
@@ -274,17 +278,12 @@ Create a structured podcast debate with:
 3. Key discussion questions
 """
 
-        # Call the parent's GPT-based execution
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        # Session 735: Call synchronous execution (no async needed)
+        result = self._execute_with_gpt(enhanced_task)
 
-        async def _run():
-            return await self._execute_with_gpt(enhanced_task)
-
-        result = loop.run_until_complete(_run())
+        # Update execution time
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        result.execution_time_ms = execution_time_ms
 
         # Record learning outcome for collective intelligence
         try:
@@ -294,7 +293,7 @@ Create a structured podcast debate with:
                 success=result.success if hasattr(result, 'success') else True,
                 context={
                     'agent_type': self.__class__.__name__,
-                    'execution_time_ms': result.execution_time_ms if hasattr(result, 'execution_time_ms') else 0,
+                    'execution_time_ms': execution_time_ms,
                 }
             )
         except Exception as le:
@@ -302,52 +301,43 @@ Create a structured podcast debate with:
 
         return result
 
-    async def _execute_with_gpt(self, task: str) -> AgentResult:
+    def _execute_with_gpt(self, task: str) -> AgentResult:
         """Execute using GPT with tool calling."""
-        from openai import OpenAI
-        import os
-
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": task}
-        ]
+        # Build prompt combining system prompt and task
+        prompt = f"{self.system_prompt}\n\nTask: {task}"
 
         try:
-            response = client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=messages,
-                tools=self._get_available_tools(),
-                tool_choice="auto",
-                max_completion_tokens=4000
-            )
+            # Session 735: Use inherited _call_openai for cost tracking
+            # Temporarily set tools for this call
+            original_tools = self.tools
+            self.tools = self._get_available_tools()
 
-            message = response.choices[0].message
+            response = self._call_openai(prompt)
+
+            # Restore original tools
+            self.tools = original_tools
+
             tool_results = []
 
             # Process tool calls if any
-            if message.tool_calls:
-                for tool_call in message.tool_calls:
-                    tool_name = tool_call.function.name
-                    try:
-                        args = json.loads(tool_call.function.arguments)
-                    except json.JSONDecodeError:
-                        args = {}
-
+            if response.get('tool_calls'):
+                for tool_call in response['tool_calls']:
+                    tool_name = tool_call.get('name', '')
+                    args = tool_call.get('arguments', {})
                     result = self._handle_tool_call(tool_name, args)
                     tool_results.append(result)
 
-            return AgentResult(
+            # Session 735: Use _make_result for automatic cost tracking
+            return self._make_result(
                 success=True,
-                message=message.content or "Podcast coordination complete",
+                message=response.get('content') or "Podcast coordination complete",
                 data={"tool_results": tool_results},
                 tool_calls=tool_results
             )
 
         except Exception as e:
             logger.error(f"GPT execution failed: {e}")
-            return AgentResult(
+            return self._make_result(
                 success=False,
                 message=f"Error: {str(e)}",
                 error=str(e)

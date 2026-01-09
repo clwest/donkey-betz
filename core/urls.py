@@ -1229,8 +1229,7 @@ from core.views_llm_routing import (
 )
 from core.views_advanced_workflows import (
     create_advanced_workflow, execute_advanced_workflow, get_workflow_execution_status,
-    list_workflow_templates, create_workflow_from_template, workflow_analytics,
-    schedule_workflow, workflow_collaboration, get_workflow_output
+    list_workflow_templates, create_workflow_from_template, get_workflow_output
 )
 
 # Import new profile management and job application system views
@@ -3138,9 +3137,7 @@ urlpatterns = [
     path('api/v1/workflows/execution/<str:execution_id>/output/', get_workflow_output, name='workflow-execution-output'),  # Session 735: View full output
     path('api/v1/workflows/templates-advanced/', list_workflow_templates, name='workflow-templates-advanced'),  # RENAMED to avoid conflict
     path('api/v1/workflows/from-template/', create_workflow_from_template, name='workflow-from-template'),
-    path('api/v1/workflows/analytics/', workflow_analytics, name='workflow-analytics'),
-    path('api/v1/workflows/schedule/', schedule_workflow, name='schedule-workflow'),
-    path('api/v1/workflows/collaborate/', workflow_collaboration, name='workflow-collaboration'),
+    # Note: workflow_analytics, schedule_workflow, workflow_collaboration removed - functions not implemented
 
     # Revenue tracking endpoints (CRITICAL FIX - Session 37-A Priority 3)
     path('api/revenue/create/', lambda r: __import__('core.views_revenue', fromlist=['create_revenue']).create_revenue(r), name='create-revenue'),

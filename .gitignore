@@ -245,3 +245,4 @@ mobile/.env
 mobile/.env.local
 mobile/.env.production
 backups/database/
+income_builder_outputs/

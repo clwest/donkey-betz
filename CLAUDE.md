@@ -1,9 +1,9 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 7, 2026 - Session 723
-**Status:** 100% Reality Score | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI COMPLETE
+**Last Updated:** January 8, 2026 - Session 735
+**Status:** 100% Reality Score | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI COMPLETE | COST TRACKING
 
-## System Stats (Session 723)
+## System Stats (Session 735)
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Agents** | 72 | All synced to database + workspace integration |
@@ -176,6 +176,9 @@ pkill -f daphne; pkill -f redis; pkill -f celery
 rm -f .daphne.pid .celery.pid .celery-beat.pid
 make start && make celery
 
+# macOS: If Celery crashes with SIGSEGV (Session 735 fix)
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=solo
+
 # Health check
 curl http://localhost:8000/health/ping/
 
@@ -189,6 +192,8 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **735** | **Cost Tracking & Output Formatting** - Fixed Celery SIGSEGV crashes, implemented orchestration cost tracking, formatted output modal with markdown parsing | `SESSION_735_COST_TRACKING_OUTPUT_FORMATTING.md` |
+| **733** | **Embedding Fixes + Mythology Lab** - Fixed document embedding bugs (recursion, async), created Mythology Lab hallucination detection UI | See commits |
 | **723** | **SKIN System** - 9th body system for workspace output monitoring (file writes, project changes, rollback) + Celery health fix | `SESSION_723_SKIN_BODY_SYSTEM.md` |
 | **722** | **BRAIN System** - 8th body system for cognitive processing (LLM calls, conversations, reasoning) | `SESSION_722_BRAIN_SYSTEM.md` |
 | **721** | **Body Health Detail Views** - Complete data display for all 7 body systems | See commits |
