@@ -23691,3 +23691,259 @@ def coordinate_body():
             'success': False,
             'error': str(e),
         }
+
+
+# =============================================================================
+# Session 737: Agent Activation Tasks
+# =============================================================================
+# These tasks exercise dormant agents to ensure they stay active and functional
+
+
+@shared_task
+def run_market_monitoring_agents():
+    """
+    Session 737: Run market monitoring agents on schedule.
+
+    Exercises these dormant agents:
+    - MarketMovementMonitorAgent
+    - MarketAnomalyDetectorAgent
+    - SignalScannerAgent
+    - InstitutionalWatcherAgent
+    - ArbitrageDetector
+    - SportsOddsAnalyst
+    """
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import SpiderData
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info("📊 [MARKET MONITOR] Starting market monitoring agents...")
+
+    router = AgentRouter()
+    results = []
+
+    # Get recent market data from spiders
+    recent_data = SpiderData.objects.filter(
+        discovered_at__gte=timezone.now() - timedelta(hours=24)
+    ).order_by('-discovered_at')[:50]
+
+    market_context = {
+        'recent_data_count': recent_data.count(),
+        'sources': list(recent_data.values_list('source', flat=True).distinct()[:10]),
+    }
+
+    agents_to_run = [
+        ('MarketMovementMonitorAgent', 'Scan for significant market movements in the last 24 hours'),
+        ('MarketAnomalyDetectorAgent', 'Detect any market anomalies or unusual patterns'),
+        ('SignalScannerAgent', 'Scan for trading signals and market indicators'),
+        ('ArbitrageDetector', 'Check for arbitrage opportunities across markets'),
+        ('SportsOddsAnalyst', 'Analyze current sports betting odds for value'),
+    ]
+
+    for agent_name, task in agents_to_run:
+        try:
+            if agent_name in router.AGENT_MAP:
+                result = router.route_to_agent(
+                    agent_name=agent_name,
+                    task=task,
+                    context=market_context
+                )
+                results.append({
+                    'agent': agent_name,
+                    'success': result.success if result else False,
+                    'message': result.message[:200] if result and result.message else 'No response'
+                })
+                logger.info(f"📊 [MARKET MONITOR] {agent_name}: {'✅' if result and result.success else '❌'}")
+        except Exception as e:
+            logger.warning(f"📊 [MARKET MONITOR] {agent_name} failed: {e}")
+            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
+
+    logger.info(f"📊 [MARKET MONITOR] Complete: {len([r for r in results if r.get('success')])} / {len(results)} succeeded")
+    return results
+
+
+@shared_task
+def run_blockchain_monitoring_agents():
+    """
+    Session 737: Run blockchain monitoring agents on schedule.
+
+    Exercises these dormant agents:
+    - BlockchainAuditCoordinator
+    - WhaleWatcherAgent
+    - ExploitDetectorAgent
+    - TransactionMonitorAgent
+    """
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import SpiderData
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info("🔗 [BLOCKCHAIN MONITOR] Starting blockchain monitoring agents...")
+
+    router = AgentRouter()
+    results = []
+
+    # Get recent crypto data from spiders
+    crypto_keywords = ['bitcoin', 'ethereum', 'crypto', 'blockchain', 'defi', 'whale']
+    recent_crypto = SpiderData.objects.filter(
+        discovered_at__gte=timezone.now() - timedelta(hours=24)
+    ).filter(
+        title__iregex=r'|'.join(crypto_keywords)
+    ).order_by('-discovered_at')[:30]
+
+    crypto_context = {
+        'recent_crypto_data': recent_crypto.count(),
+        'focus_areas': crypto_keywords,
+    }
+
+    agents_to_run = [
+        ('WhaleWatcherAgent', 'Monitor for large crypto wallet movements and whale activity'),
+        ('ExploitDetectorAgent', 'Scan for potential smart contract exploits or vulnerabilities'),
+        ('TransactionMonitorAgent', 'Analyze recent blockchain transaction patterns'),
+        ('BlockchainAuditCoordinator', 'Coordinate a brief blockchain ecosystem health check'),
+    ]
+
+    for agent_name, task in agents_to_run:
+        try:
+            if agent_name in router.AGENT_MAP:
+                result = router.route_to_agent(
+                    agent_name=agent_name,
+                    task=task,
+                    context=crypto_context
+                )
+                results.append({
+                    'agent': agent_name,
+                    'success': result.success if result else False,
+                    'message': result.message[:200] if result and result.message else 'No response'
+                })
+                logger.info(f"🔗 [BLOCKCHAIN MONITOR] {agent_name}: {'✅' if result and result.success else '❌'}")
+        except Exception as e:
+            logger.warning(f"🔗 [BLOCKCHAIN MONITOR] {agent_name} failed: {e}")
+            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
+
+    logger.info(f"🔗 [BLOCKCHAIN MONITOR] Complete: {len([r for r in results if r.get('success')])} / {len(results)} succeeded")
+    return results
+
+
+@shared_task
+def run_business_strategy_agents():
+    """
+    Session 737: Run business/strategy agents on schedule.
+
+    Exercises these dormant agents:
+    - CompetitorAnalysisAgent
+    - CustomerResearchAgent
+    - TrendAnalysisAgent
+    - BrandStrategyAgent
+    - MarketingStrategyAgent
+    """
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import SpiderData, Opportunity
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info("💼 [BUSINESS STRATEGY] Starting business strategy agents...")
+
+    router = AgentRouter()
+    results = []
+
+    # Get context from recent opportunities and spider data
+    recent_opportunities = Opportunity.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=7)
+    ).count()
+
+    business_context = {
+        'recent_opportunities': recent_opportunities,
+        'analysis_period': '7 days',
+    }
+
+    agents_to_run = [
+        ('TrendAnalysisAgent', 'Analyze current market and content trends from spider data'),
+        ('CompetitorAnalysisAgent', 'Research competitor activity and market positioning'),
+        ('CustomerResearchAgent', 'Analyze customer behavior patterns and preferences'),
+        ('BrandStrategyAgent', 'Review brand positioning and suggest improvements'),
+        ('MarketingStrategyAgent', 'Develop marketing recommendations based on current data'),
+    ]
+
+    for agent_name, task in agents_to_run:
+        try:
+            if agent_name in router.AGENT_MAP:
+                result = router.route_to_agent(
+                    agent_name=agent_name,
+                    task=task,
+                    context=business_context
+                )
+                results.append({
+                    'agent': agent_name,
+                    'success': result.success if result else False,
+                    'message': result.message[:200] if result and result.message else 'No response'
+                })
+                logger.info(f"💼 [BUSINESS STRATEGY] {agent_name}: {'✅' if result and result.success else '❌'}")
+        except Exception as e:
+            logger.warning(f"💼 [BUSINESS STRATEGY] {agent_name} failed: {e}")
+            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
+
+    logger.info(f"💼 [BUSINESS STRATEGY] Complete: {len([r for r in results if r.get('success')])} / {len(results)} succeeded")
+    return results
+
+
+@shared_task
+def exercise_all_dormant_agents():
+    """
+    Session 737: Exercise ALL dormant agents to ensure they work.
+
+    This is a comprehensive test that runs all 50 dormant agents.
+    Should be run weekly or on-demand to verify agent health.
+    """
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import Agent, AgentExecution
+    from django.db.models import Count
+
+    logger.info("🔄 [AGENT EXERCISE] Starting comprehensive agent exercise...")
+
+    router = AgentRouter()
+
+    # Find all dormant agents
+    routable = set(router.AGENT_MAP.keys())
+    agents_with_counts = Agent.objects.annotate(exec_count=Count('executions'))
+    dormant = [a.name for a in agents_with_counts if a.exec_count == 0 and a.name in routable]
+
+    logger.info(f"🔄 [AGENT EXERCISE] Found {len(dormant)} dormant agents to exercise")
+
+    results = []
+    for agent_name in dormant:
+        try:
+            # Generate a simple task for each agent
+            task = f"Perform a brief self-diagnostic and report your capabilities"
+
+            result = router.route_to_agent(
+                agent_name=agent_name,
+                task=task,
+                context={'exercise_mode': True, 'session': 737}
+            )
+
+            success = result.success if result else False
+            results.append({
+                'agent': agent_name,
+                'success': success,
+            })
+
+            if success:
+                logger.info(f"🔄 [AGENT EXERCISE] ✅ {agent_name}")
+            else:
+                logger.warning(f"🔄 [AGENT EXERCISE] ❌ {agent_name}")
+
+        except Exception as e:
+            logger.error(f"🔄 [AGENT EXERCISE] ❌ {agent_name}: {e}")
+            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
+
+    succeeded = len([r for r in results if r.get('success')])
+    logger.info(f"🔄 [AGENT EXERCISE] Complete: {succeeded} / {len(results)} agents exercised successfully")
+
+    return {
+        'total_dormant': len(dormant),
+        'exercised': len(results),
+        'succeeded': succeeded,
+        'failed': len(results) - succeeded,
+        'results': results
+    }

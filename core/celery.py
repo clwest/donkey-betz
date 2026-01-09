@@ -1675,6 +1675,42 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # Status monitoring task
         }
     },
+    # ==========================================================================
+    # Session 737: Agent Activation Tasks
+    # ==========================================================================
+    # These tasks exercise dormant agents to keep them active and functional
+    'run-market-monitoring-agents': {
+        'task': 'core.tasks.run_market_monitoring_agents',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-blockchain-monitoring-agents': {
+        'task': 'core.tasks.run_blockchain_monitoring_agents',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-business-strategy-agents': {
+        'task': 'core.tasks.run_business_strategy_agents',
+        'schedule': crontab(hour=8, minute=0),  # Daily at 8 AM
+        'options': {
+            'expires': 7200,  # 2 hours
+            'queue': 'long_running',
+        }
+    },
+    'exercise-all-dormant-agents': {
+        'task': 'core.tasks.exercise_all_dormant_agents',
+        'schedule': crontab(day_of_week=0, hour=6, minute=0),  # Weekly on Sunday at 6 AM
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'long_running',
+        }
+    },
 }
 
 # Task routing configuration
