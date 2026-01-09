@@ -559,9 +559,10 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
                     )
 
                     # AgentResult is a dataclass, access attributes directly
+                    # Session 737: Ensure output_data is never None to prevent .get() failures
                     result = {
                         'success': router_result.success,
-                        'output_data': router_result.data,
+                        'output_data': router_result.data or {},  # Ensure dict, not None
                         'error': router_result.error,
                         'execution_time': router_result.execution_time_ms / 1000.0  # Convert ms to seconds
                     }
@@ -587,6 +588,11 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
 
             # Calculate execution metrics
             execution_time = (datetime.now() - start_time).total_seconds()
+
+            # Session 737: Debug logging for OPTIMIZATION stage
+            if stage == PipelineStage.OPTIMIZATION:
+                logger.debug(f"OPTIMIZATION result: success={result.get('success')}, output_data type={type(result.get('output_data'))}")
+
             quality_score = await self._calculate_stage_quality_score(
                 stage, result, context
             )
@@ -596,10 +602,13 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
                 stage, result, context, quality_score
             )
 
+            # Session 737: Use `or {}` to ensure output_data is never None
+            # Note: .get(key, default) only uses default if key is missing,
+            # but returns None if key exists with None value
             return StageResult(
                 stage=stage,
                 success=result.get('success', False),
-                output_data=result.get('output_data', {}),
+                output_data=result.get('output_data') or {},
                 agent_used=best_agent['name'],
                 execution_time=execution_time,
                 quality_score=quality_score,
@@ -630,7 +639,10 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
         # Use memory insights to enhance agent selection
         memory_recommended_agents = []
         if context.memory_insights and context.memory_insights.get('successful_agents'):
-            memory_recommended_agents = context.memory_insights['successful_agents'].get(stage.value, [])
+            # Session 737: Guard against None value in successful_agents dict
+            successful_agents_dict = context.memory_insights['successful_agents']
+            if successful_agents_dict is not None:
+                memory_recommended_agents = successful_agents_dict.get(stage.value) or []
 
         # Get potential agents for this stage
         candidate_agents = self.stage_agents.get(stage, [])
@@ -645,7 +657,9 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
                 similar_pipelines = await self._find_similar_successful_pipelines(context)
                 if similar_pipelines:
                     for pipeline in similar_pipelines[:3]:  # Top 3 similar
-                        stage_agents = pipeline.get('agents_used', {}).get(stage.value, [])
+                        # Session 737: Guard against None values
+                        agents_used = pipeline.get('agents_used') or {}
+                        stage_agents = agents_used.get(stage.value) or []
                         candidate_agents.extend(stage_agents)
 
             # Fallback to intelligent agent discovery
@@ -709,17 +723,20 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
         score = 0.0
 
         # Base specialization match
-        if stage == PipelineStage.DISCOVERY and 'research' in agent.get('specialization', ''):
+        # Session 737: Use `or ''` to handle None values
+        specialization = agent.get('specialization') or ''
+        if stage == PipelineStage.DISCOVERY and 'research' in specialization:
             score += 20.0
-        elif stage == PipelineStage.ANALYSIS and 'analysis' in agent.get('specialization', ''):
+        elif stage == PipelineStage.ANALYSIS and 'analysis' in specialization:
             score += 20.0
-        elif stage == PipelineStage.EXECUTION and 'business' in agent.get('specialization', ''):
+        elif stage == PipelineStage.EXECUTION and 'business' in specialization:
             score += 20.0
-        elif stage == PipelineStage.OPTIMIZATION and 'financial' in agent.get('specialization', ''):
+        elif stage == PipelineStage.OPTIMIZATION and 'financial' in specialization:
             score += 20.0
 
         # Performance metrics
-        metrics = agent.get('performance_metrics', {})
+        # Session 737: Guard against None performance_metrics
+        metrics = agent.get('performance_metrics') or {}
         score += metrics.get('success_rate', 0.5) * 15.0
 
         # Value handling capability (higher value = need more experienced agent)
@@ -734,8 +751,9 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
                 score += 15.0
 
         # Capability match
+        # Session 737: Guard against None capabilities
         required_caps = self._get_stage_required_capabilities(stage)
-        agent_caps = set(agent.get('capabilities', []))
+        agent_caps = set(agent.get('capabilities') or [])
         matching_caps = len(agent_caps.intersection(required_caps))
         score += matching_caps * 5.0
 
@@ -789,10 +807,11 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
                 'resource_allocation': self._calculate_resource_allocation(current_value)
             })
         elif stage == PipelineStage.OPTIMIZATION:
+            # Session 737: Ensure current_performance is never None
             base_data.update({
                 'task': 'Optimize opportunity performance and ROI',
                 'optimization_targets': ['conversion_rate', 'profit_margin', 'execution_speed'],
-                'current_performance': previous_results[-1].output_data if previous_results else {}
+                'current_performance': (previous_results[-1].output_data or {}) if previous_results else {}
             })
 
         return base_data
@@ -966,19 +985,23 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
         memory_bonus = 0.0
 
         # Check agent's historical performance on similar opportunities
+        # Session 737: Guard against None values at each level
         if context.memory_insights and context.memory_insights.get('agent_performance'):
-            agent_performance = context.memory_insights['agent_performance'].get(agent['name'], {})
-            success_rate = agent_performance.get('success_rate', 0.5)
-            avg_quality = agent_performance.get('avg_quality_score', 0.5)
+            perf_dict = context.memory_insights['agent_performance']
+            agent_performance = (perf_dict.get(agent['name']) or {}) if perf_dict else {}
+            success_rate = agent_performance.get('success_rate', 0.5) if agent_performance else 0.5
+            avg_quality = agent_performance.get('avg_quality_score', 0.5) if agent_performance else 0.5
 
             # Bonus for proven performance
             memory_bonus += (success_rate - 0.5) * 10.0  # Up to 5 points bonus
             memory_bonus += (avg_quality - 0.5) * 10.0   # Up to 5 points bonus
 
         # Similarity bonus: agents that worked well on similar opportunities
+        # Session 737: Guard against None at each level
         if context.similar_opportunities:
             for similar_opp in context.similar_opportunities[:3]:
-                if similar_opp.get('successful_agents', {}).get(stage.value) == agent['name']:
+                successful_agents = similar_opp.get('successful_agents') or {}
+                if successful_agents.get(stage.value) == agent['name']:
                     similarity_weight = similar_opp.get('similarity', 0.7)
                     memory_bonus += similarity_weight * 8.0  # Up to 8 points bonus
 

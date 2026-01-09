@@ -304,7 +304,9 @@ class AgentCollaborationOptimizer:
 
         Returns: Dict with optimization suggestions
         """
-        logger.info(f"🔧 Auto-optimizing collaborations for user {user.id}")
+        # Session 737: Guard against None user
+        user_id = user.id if user else 'anonymous'
+        logger.info(f"🔧 Auto-optimizing collaborations for user {user_id}")
 
         insights = self.get_collaboration_insights(user)
 
