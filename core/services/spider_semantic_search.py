@@ -116,16 +116,25 @@ class SpiderSemanticSearch:
 
         return embedding
 
-    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
+    def _cosine_similarity(self, a, b) -> float:
         """Calculate cosine similarity between two vectors."""
-        # Session 736: Guard against empty embeddings (marked as [] in backfill)
-        if not a or not b:
+        # Session 736: Guard against empty embeddings
+        # pgvector returns numpy arrays, so use 'is None' and len() checks
+        if a is None or b is None:
             return 0.0
-        a_arr = np.array(a)
-        b_arr = np.array(b)
-        # Check for shape mismatch (e.g., one is empty)
+
+        # Convert to numpy if needed
+        a_arr = np.array(a) if not isinstance(a, np.ndarray) else a
+        b_arr = np.array(b) if not isinstance(b, np.ndarray) else b
+
+        # Check for empty arrays
+        if a_arr.size == 0 or b_arr.size == 0:
+            return 0.0
+
+        # Check for shape mismatch
         if a_arr.shape != b_arr.shape:
             return 0.0
+
         norm_a = np.linalg.norm(a_arr)
         norm_b = np.linalg.norm(b_arr)
         if norm_a == 0 or norm_b == 0:
@@ -616,11 +625,12 @@ class SpiderSemanticSearch:
         pending = 0
 
         # Sample to count - for large datasets this is more efficient
+        # Session 736: pgvector returns numpy arrays, check size properly
         sample_size = min(total, 5000)
         for entry in SpiderData.objects.order_by('-created_at')[:sample_size]:
             if entry.embedding is None:
                 pending += 1
-            elif entry.embedding == [] or (isinstance(entry.embedding, list) and len(entry.embedding) == 0):
+            elif len(entry.embedding) == 0:
                 marked_empty += 1
             else:
                 with_embedding += 1
@@ -637,7 +647,9 @@ class SpiderSemanticSearch:
         recent_total = SpiderData.objects.filter(created_at__gte=since).count()
         recent_with = 0
         for entry in SpiderData.objects.filter(created_at__gte=since):
-            if entry.embedding and len(entry.embedding) > 0:
+            # Session 736: pgvector returns numpy arrays, not lists
+            # Must use 'is not None' instead of truth check on numpy arrays
+            if entry.embedding is not None and len(entry.embedding) > 0:
                 recent_with += 1
 
         searchable = with_embedding  # Only actual embeddings are searchable

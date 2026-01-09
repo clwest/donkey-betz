@@ -217,17 +217,32 @@ class MemorySystem:
         """
         try:
             similarities = []
+
+            # Session 736: Guard against empty embeddings
+            if not query_embedding or len(query_embedding) == 0:
+                return []
+
             query_vec = np.array(query_embedding)
+            query_norm = np.linalg.norm(query_vec)
+            if query_norm == 0:
+                return []
 
             for key in self.embedding_index:
                 embedding_data = await self.retrieve_embedding(key)
-                if embedding_data:
-                    stored_vec = np.array(embedding_data['vector'])
+                if embedding_data and embedding_data.get('vector'):
+                    vector = embedding_data['vector']
+                    # Session 736: Skip empty or mismatched embeddings
+                    if not vector or len(vector) == 0:
+                        continue
+                    stored_vec = np.array(vector)
+                    if stored_vec.shape != query_vec.shape:
+                        continue
 
                     # Cosine similarity
-                    similarity = np.dot(query_vec, stored_vec) / (
-                        np.linalg.norm(query_vec) * np.linalg.norm(stored_vec)
-                    )
+                    stored_norm = np.linalg.norm(stored_vec)
+                    if stored_norm == 0:
+                        continue
+                    similarity = np.dot(query_vec, stored_vec) / (query_norm * stored_norm)
 
                     similarities.append((key, float(similarity)))
 
