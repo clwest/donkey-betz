@@ -86,10 +86,15 @@ CoordinatorOutcome.objects.count()  # 3,963
 
 ### Agent Models (33 models, 109,198 records)
 
+**Note:** `AgentSolution` and `AgentLearning` are a **1:1 parent-child pair** (created together):
+- `AgentSolution`: Stores the actual spider-collected content/solution
+- `AgentLearning`: Tracks knowledge transfer (which agent learned from which solution)
+- Every `AgentLearning` has a `solution` FK pointing to an `AgentSolution`
+
 | Model | Records | Purpose |
 |-------|---------|---------|
-| `AgentSolution` | 45,414 | Spider intelligence (alias for AgentLearning) |
-| `AgentLearning` | 45,414 | Spider intelligence events |
+| `AgentSolution` | 45,414 | Spider-collected solutions/content (parent) |
+| `AgentLearning` | 45,414 | Knowledge transfer tracking (child of AgentSolution) |
 | `AgentDream` | 7,542 | Agent dream/imagination logs |
 | `AgentKnowledgeSource` | 3,915 | Knowledge sources for agents |
 | `AgentConversation` | 3,672 | Agent conversation logs |
