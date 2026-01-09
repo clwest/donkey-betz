@@ -191,7 +191,8 @@ class BaseBusinessResearchAgent(BaseAgent):
         self.project_id = project_id
         self._unified_search = None
         self._current_task = None
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        # W004 fix: Use _client backing variable since BaseAgent.client is a read-only property
+        self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
         # Validate child class configuration
         if not self.research_type:

@@ -24,9 +24,17 @@ from dataclasses import dataclass
 import redis
 from redis import asyncio as aioredis
 from flask import Flask, render_template, jsonify, request
-from flask_socketio import SocketIO, emit
 import threading
 import time
+
+# W003 fix: flask_socketio is optional - graceful fallback if not installed
+try:
+    from flask_socketio import SocketIO, emit
+    HAS_SOCKETIO = True
+except ImportError:
+    HAS_SOCKETIO = False
+    SocketIO = None
+    emit = None
 
 logger = logging.getLogger(__name__)
 
@@ -535,11 +543,18 @@ class MonitoringDashboard:
         # Create Flask app
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = 'spider_monitoring_secret'
-        self.socketio = SocketIO(self.app, cors_allowed_origins="*")
+
+        # W003 fix: SocketIO is optional
+        if HAS_SOCKETIO and SocketIO is not None:
+            self.socketio = SocketIO(self.app, cors_allowed_origins="*")
+        else:
+            self.socketio = None
+            logger.warning("flask_socketio not installed - real-time updates disabled")
 
         # Setup routes
         self._setup_routes()
-        self._setup_socketio_events()
+        if self.socketio:
+            self._setup_socketio_events()
 
     def _setup_routes(self):
         """Setup Flask routes"""
@@ -596,12 +611,15 @@ class MonitoringDashboard:
 
     def _setup_socketio_events(self):
         """Setup SocketIO events for real-time updates"""
+        if not self.socketio or not emit:
+            return
 
         @self.socketio.on('connect')
         def handle_connect():
             """Handle client connection"""
             logger.info("Dashboard client connected")
-            emit('connected', {'message': 'Connected to monitoring dashboard'})
+            if emit:
+                emit('connected', {'message': 'Connected to monitoring dashboard'})
 
         @self.socketio.on('disconnect')
         def handle_disconnect():
