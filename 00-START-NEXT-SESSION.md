@@ -1,55 +1,72 @@
-# Session 736 - System Ready
+# Session 737 - System Ready
 
-**Previous Session:** 735 (Cost Tracking & Output Formatting)
-**Date:** January 8, 2026
-**Status:** Infrastructure FIXED, Cost Tracking WORKING, Output Modal FORMATTED
+**Previous Session:** 736 (Bug Fixes - Numpy Arrays & Migrations)
+**Date:** January 9, 2026
+**Status:** All Overnight Bugs FIXED, Odds History RESTORED, System STABLE
 
 ---
 
-## Session 735 Accomplishments
+## Session 736 Accomplishments
 
-### Infrastructure Fixes
+### Bug Fixes (Overnight Errors)
 
-| Issue | Root Cause | Fix |
-|-------|------------|-----|
-| 500 errors on startup | `urls.py` importing non-existent functions | Removed broken imports |
-| Celery SIGSEGV crashes | Fork issues with PyTorch on macOS | Use `--pool=solo` |
-| Event loop closed error | Async/await in Celery workers | Made PodcastCoordinator synchronous |
+| Bug | Root Cause | Fix |
+|-----|------------|-----|
+| `timezone not defined` | Missing import in tasks.py | Added `from django.utils import timezone`, fixed `timezone.timedelta` → `timedelta` |
+| `NoneType has no attribute 'message'` | Result was None in learning outcome | Added early return guard in `base_agent._record_learning_outcome()` |
+| `operands shape mismatch (1536,) (0,)` | pgvector returns numpy arrays, `if embedding` fails | Changed all checks to `embedding is not None` |
+| `relation "core_oddssnapshot" does not exist` | Migration 0129 deleted table but code still used it | Created migrations 0161 & 0162 to recreate tables |
 
-### Cost Tracking Implementation
+### Key Insight: pgvector + numpy
 
-| Component | Change |
-|-----------|--------|
-| `base_agent.py` | Added `_accumulated_cost`, `_accumulated_tokens`, `_reset_cost_tracking()`, `_make_result()` |
-| `_call_openai()` | Now extracts and accumulates cost/tokens from responses |
-| `agent_router.py` | Injects accumulated cost into AgentResult after execution |
-| Result | Orchestrations now show real costs (e.g., $0.0097 for PodcastCoordinator) |
+pgvector Django fields return `numpy.ndarray` objects, NOT Python lists. The standard Python truth check `if array` throws:
+```
+ValueError: The truth value of an array with more than one element is ambiguous
+```
 
-### Output Modal Formatting
+**Solution:** Always use `embedding is not None` instead of `if embedding` when checking pgvector fields.
 
-| Feature | Implemented |
-|---------|-------------|
-| Section parsing | Splits by `##`, `###`, numbered items |
-| Markdown rendering | Headers, bullets, numbered lists, bold text |
-| Card layout | Each section as separate card with cyan border |
-| Better UX | Increased height, proper spacing |
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/tasks.py` | Added timezone import, fixed 11x timedelta, numpy array guards |
+| `core/services/spider_semantic_search.py` | Fixed cosine similarity for numpy arrays |
+| `core/models_unified_system.py` | Fixed memory clustering numpy checks |
+| `core/memory_system.py` | Fixed similarity search numpy guards |
+| `core/migrations/0161_*` | Recreate OddsSnapshot table |
+| `core/migrations/0162_*` | Fix GameLineHistory field names |
+
+### Commits
+
+1. `58fab402` - fix(Session 736): Fix numpy array truth checks for pgvector embeddings
+2. `68e636bb` - fix(Session 736): Recreate OddsSnapshot and GameLineHistory tables
 
 ---
 
 ## Current System Status
 
+### Verified Working
+
+| Task | Status | Details |
+|------|--------|---------|
+| `process_agent_activity_xp` | ✅ | XP processing working |
+| `scan_arbs_and_notify` | ✅ | Found 2 arbs |
+| `backfill_spider_embeddings` | ✅ | 87.3% coverage (9,874 searchable) |
+| `snapshot_odds_for_line_movement` | ✅ | 131 snapshots, 33 games |
+
 ### Reality Scores
 
 | Component | Score | Notes |
 |-----------|-------|-------|
-| **Cost Tracking** | **100%** | NEW - Working for all agents |
-| **Output Modal** | **100%** | NEW - Formatted findings |
+| **Embedding Backfill** | **100%** | Fixed numpy array issues |
+| **Odds History** | **100%** | Tables restored |
+| Cost Tracking | 100% | Working for all agents |
+| Output Modal | 100% | Formatted findings |
 | RAG/Documents | 100% | Embeddings working |
-| Mythology Lab | 100% | Hallucination detection UI |
 | Memory System | 95% | All connected |
-| agents/ | 90% | Migration complete |
 
-**Average Reality Score: 97%**
+**Average Reality Score: 98%**
 
 ### macOS Development Note
 
@@ -60,7 +77,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 ---
 
-## Session 736 Priorities
+## Session 737 Priorities
 
 ### Option A: Agent Channels UI (HIGH Priority)
 
@@ -83,6 +100,13 @@ Review 9 pending quarantine items in Mythology Lab:
 - Items pending since December 26, 2025
 - Use Mythology Lab UI to process
 
+### Option D: Clean Up Pyright Warnings
+
+Address type annotation warnings in:
+- `core/tasks.py` (many attribute access warnings)
+- `core/models_unified_system.py` (attribute warnings)
+- These are warnings, not errors - system works fine
+
 ---
 
 ## Quick Verification Commands
@@ -96,10 +120,8 @@ make start
 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=solo &
 celery -A core beat -l INFO &
 
-# Test cost tracking
-# 1. Go to http://localhost:8000/ai-studio/#/agents
-# 2. Start an orchestration (e.g., Podcast Production Pipeline)
-# 3. Click "View Output" - should show costs per agent
+# Check logs for errors
+tail -100 nohup.out | grep -E "ERROR|WARN"
 
 # Verify builds
 cd frontend && npm run build
@@ -111,10 +133,10 @@ cd frontend && npm run build
 
 | Document | Purpose |
 |----------|---------|
-| `docs/handoffs/SESSION_735_COST_TRACKING_OUTPUT_FORMATTING.md` | Session 735 details |
+| `docs/handoffs/SESSION_735_COST_TRACKING_OUTPUT_FORMATTING.md` | Cost tracking implementation |
 | `docs/handoffs/SESSION_733_EMBEDDING_FIXES_MYTHOLOGY_UI.md` | Embedding fixes |
 | `CLAUDE.md` | System overview |
 
 ---
 
-**Session 735 fixed critical infrastructure issues. The system is stable and ready for feature work!**
+**Session 736 fixed critical overnight bugs. The system is stable with 98% reality score!**
