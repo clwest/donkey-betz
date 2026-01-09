@@ -1,189 +1,373 @@
 # Database Model Reference
 
 **Created:** Session 737 (January 9, 2026)
-**Purpose:** Prevent confusion about which database table stores what data
+**Purpose:** Complete reference for all 291 database models
 
 ---
 
-## Quick Reference
+## Summary
 
-| Purpose | Correct Model | Import From | Table Name |
-|---------|---------------|-------------|------------|
-| Agent execution memories | `AgentMemory` | `core.models_unified_system` | `core_agentmemory` |
-| Agent execution outcomes | `CoordinatorOutcome` | `core.models_unified_system` | `core_coordinatoroutcome` |
-| Agent execution records | `AgentExecution` | `core.models_unified_system` | `core_agentexecution` |
-| Spider data ingest | `SpiderData` | `core.models` | `core_spiderdata` |
-| Spider learning events | `AgentLearning` | `core.models_unified_system` | `core_agentlearning` |
-| User chat history | `ConversationMemory` | `core.models` | `core_conversation_memory` |
+| Metric | Value |
+|--------|-------|
+| **Total Models** | 291 |
+| **Active Models** (have data) | 164 |
+| **Empty Models** (0 records) | 127 |
+| **Total Records** | 264,048 |
 
 ---
 
-## Model Details
+## Critical Models - Know These!
 
-### Memory Models
+These are the most important models and where confusion commonly occurs:
 
-#### AgentMemory (ACTIVE - Use This!)
-```python
-from core.models_unified_system import AgentMemory
-```
-- **Table:** `core_agentmemory`
-- **Purpose:** Stores memories created by agents during execution
-- **Has Embeddings:** Yes (pgvector)
-- **Created By:** `BaseAgent._create_execution_memory()`
-- **Activity:** 647 records in last 7 days
+### Agent Execution Tracking
 
-#### ConversationMemory (Low Activity)
-```python
-from core.models import ConversationMemory
-```
-- **Table:** `core_conversation_memory`
-- **Purpose:** Stores user chat history with Personal AI
-- **Has Embeddings:** Yes
-- **Created By:** `personal_ai_assistant_enhanced.py`, `personal_ai_orchestrator.py`
-- **Activity:** 0 records in last 7 days (PA not heavily used)
-- **NOTE:** This is NOT for agent execution memories!
+| Purpose | Model | Import | Records |
+|---------|-------|--------|---------|
+| Agent registry | `Agent` | `core.models_unified_system` | 80 |
+| Execution records | `AgentExecution` | `core.models_unified_system` | 94 |
+| Execution memories | `AgentMemory` | `core.models_unified_system` | 1,076 |
+| Learning outcomes | `CoordinatorOutcome` | `core.models_unified_system` | 3,963 |
 
-#### MemoryCluster
-```python
-from core.models_unified_system import MemoryCluster
-```
-- **Table:** `core_memorycluster`
-- **Purpose:** Groups related memories together
-- **Activity:** 2 records in last 7 days
+### Spider Data
 
----
+| Purpose | Model | Import | Records |
+|---------|-------|--------|---------|
+| Raw spider data | `SpiderData` | `core.models` | 11,314 |
+| Spider intelligence events | `AgentLearning` | `core.models_unified_system` | 45,414 |
+| Execution logs | `SpiderExecutionLog` | `core.models_unified_system` | 22,056 |
+| Deduplication hashes | `SpiderItemHash` | `core.models_unified_system` | 63,657 |
 
-### Learning Models
+### User Interactions
 
-#### CoordinatorOutcome (ACTIVE - Use This!)
-```python
-from core.models_unified_system import CoordinatorOutcome
-```
-- **Table:** `core_coordinatoroutcome`
-- **Purpose:** Records agent execution outcomes for the learning loop
-- **Created By:** `LearningLoopService.record_outcome()`
-- **Activity:** 2,523 records in last 7 days
-
-#### AgentLearning (Spider Intelligence)
-```python
-from core.models_unified_system import AgentLearning
-```
-- **Table:** `core_agentlearning`
-- **Purpose:** Records spider intelligence ingest events
-- **Created By:** Spider data processing tasks
-- **Activity:** 37,493 records in last 7 days
-- **NOTE:** This is for spider data events, NOT agent execution learning!
-
-#### UserAgentLearning
-```python
-from core.models_unified_system import UserAgentLearning
-```
-- **Table:** `core_useragentlearning`
-- **Purpose:** Per-user agent preference learning
-- **Activity:** 28 records in last 7 days
-
----
-
-### Agent Models
-
-#### Agent
-```python
-from core.models_unified_system import Agent
-```
-- **Table:** `core_agent`
-- **Purpose:** Agent registry (all 72+ agents)
-- **Total:** 80 records
-
-#### AgentExecution
-```python
-from core.models_unified_system import AgentExecution
-```
-- **Table:** `core_agentexecution`
-- **Purpose:** Individual agent execution records with timing and status
-- **Activity:** 94 records in last 7 days
-
----
-
-### Spider Models
-
-#### SpiderData
-```python
-from core.models import SpiderData
-```
-- **Table:** `core_spiderdata`
-- **Purpose:** Raw data collected by spiders
-- **Activity:** 2,822 records in last 7 days
-- **Total:** 11,314 records
+| Purpose | Model | Import | Records |
+|---------|-------|--------|---------|
+| PA chat history | `ConversationMemory` | `core.models` | 617 |
+| Chat messages | `ConversationMessage` | `core.models` | 19,177 |
+| User context | `UserMemoryContext` | `core.models_unified_system` | 682 |
 
 ---
 
 ## Common Mistakes to Avoid
 
-### Mistake 1: Checking ConversationMemory for agent activity
+### Mistake 1: Wrong memory table
 ```python
-# WRONG - This is for user chat history, not agents
+# WRONG - User chat history (may be empty if PA not used)
 from core.models import ConversationMemory
-ConversationMemory.objects.filter(created_at__gte=cutoff).count()  # May be 0!
+ConversationMemory.objects.count()  # 617, but 0 recent
 
-# CORRECT - Use AgentMemory for agent execution memories
+# CORRECT - Agent execution memories (actively updated)
 from core.models_unified_system import AgentMemory
-AgentMemory.objects.filter(created_at__gte=cutoff).count()  # Active!
+AgentMemory.objects.count()  # 1,076 and growing
 ```
 
-### Mistake 2: Checking AgentLearning for agent execution learning
+### Mistake 2: Wrong learning table
 ```python
-# WRONG - This is for spider intelligence events
+# WRONG - Spider intelligence events (not agent learning!)
 from core.models_unified_system import AgentLearning
-AgentLearning.objects.filter(learning_type='agent_execution').count()  # 0!
+AgentLearning.objects.filter(learning_type='agent_execution').count()  # 0
 
-# CORRECT - Use CoordinatorOutcome for agent execution outcomes
+# CORRECT - Agent execution outcomes
 from core.models_unified_system import CoordinatorOutcome
-CoordinatorOutcome.objects.filter(created_at__gte=cutoff).count()  # Active!
+CoordinatorOutcome.objects.count()  # 3,963
 ```
+
+### Mistake 3: Confusing similar model names
+```python
+# AgentSolution (45,414) - Same as AgentLearning, spider data
+# AgentMemory (1,076) - Agent execution memories
+# ConversationMemory (617) - User chat history
+# UserMemoryContext (682) - User context tracking
+```
+
+---
+
+## All Models by Category
+
+### Agent Models (33 models, 109,198 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `AgentSolution` | 45,414 | Spider intelligence (alias for AgentLearning) |
+| `AgentLearning` | 45,414 | Spider intelligence events |
+| `AgentDream` | 7,542 | Agent dream/imagination logs |
+| `AgentKnowledgeSource` | 3,915 | Knowledge sources for agents |
+| `AgentConversation` | 3,672 | Agent conversation logs |
+| `AgentMemory` | 1,076 | **Agent execution memories** |
+| `AgentDecisionSummary` | 604 | Decision summaries |
+| `AgentRelationship` | 552 | Inter-agent relationships |
+| `UserAgentLearning` | 285 | Per-user agent preferences |
+| `AgentLearningConnection` | 160 | Learning connections |
+| `AgentExecution` | 94 | **Execution records** |
+| `Agent` | 80 | **Agent registry** |
+| `AgentMood` | 80 | Agent mood states |
+| `AgentLLMConfig` | 75 | LLM configs per agent |
+| `AgentSpiderConnection` | 57 | Agent-spider mappings |
+| `AgentEvolution` | 56 | Evolution/XP tracking |
+| `AgentPrediction` | 50 | Agent predictions |
+| `AgentCategory` | 25 | Agent categories |
+| `AgentPersonality` | 20 | Personality configs |
+| `AgentRole` | 8 | Role definitions |
+| `AgentPerformanceMetric` | 8 | Performance metrics |
+| `AgentAccuracyMetrics` | 4 | Accuracy tracking |
+| `AgentSession` | 3 | Session tracking |
+| `AgentChannel` | 2 | Agent channels |
+| `AgentTeam` | 1 | Team definitions |
+| `AgentAbility` | 1 | Ability definitions |
+| `AgentLearningSession` | 0 | Learning sessions |
+| `AgentCollaboration` | 0 | Collaboration records |
+| `AgentAssignment` | 0 | Assignment records |
+| `InterAgentMessage` | 0 | Inter-agent messages |
+| `AgentTeamMembership` | 0 | Team memberships |
+| `AgentMessage` | 0 | Agent messages |
+| `AgentQueryPerformance` | 0 | Query performance |
+
+### Spider Models (7 models, 97,072 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `SpiderItemHash` | 63,657 | Deduplication hashes |
+| `SpiderExecutionLog` | 22,056 | Execution logs |
+| `SpiderData` | 11,314 | **Raw collected data** |
+| `TrackSpiderMapping` | 23 | Track-spider mappings |
+| `SpiderCategory` | 15 | Spider categories |
+| `ProjectSpiderPriority` | 7 | Priority settings |
+| `SpiderAnalytics` | 0 | Analytics (unused) |
+
+### Memory Models (8 models, 1,573 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `UserMemoryContext` | 682 | User context |
+| `ConversationMemory` | 617 | **PA chat history** |
+| `MemoryClusterMembership` | 219 | Cluster memberships |
+| `MemoryPalaceRoom` | 45 | Memory palace rooms |
+| `MemoryCluster` | 6 | Memory clusters |
+| `ClusterEvolution` | 2 | Cluster evolution |
+| `MemoryConnection` | 1 | Memory connections |
+| `LegalMemory` | 1 | Legal memories |
+
+### Learning Models (12 models, 8,249 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `PredictionOutcome` | 4,124 | Prediction outcomes |
+| `CoordinatorOutcome` | 3,963 | **Agent execution outcomes** |
+| `OpportunityOutcome` | 150 | Opportunity outcomes |
+| `ExperimentLearning` | 4 | Experiment learning |
+| `LearningCompanion` | 3 | Learning companions |
+| `DecisionTypeSuccessPattern` | 3 | Success patterns |
+| `LearningInsight` | 1 | Learning insights |
+| `LearningPattern` | 1 | Learning patterns |
+| `ErrorPattern` | 0 | Error patterns |
+| `SuccessPattern` | 0 | Success patterns |
+| `ErrorInstance` | 0 | Error instances |
+| `LearningProgress` | 0 | Learning progress |
+
+### Body System Models (30 models, 251 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `DigestivePulse` | 101 | Digestive system pulse |
+| `CirculationPulse` | 19 | Circulatory system pulse |
+| `RoutePattern` | 19 | Spine route patterns |
+| `ThreatPattern` | 14 | Immune threat patterns |
+| `MuscularPulse` | 12 | Muscular system pulse |
+| `MuscleGroup` | 10 | Muscle groups |
+| `MuscleStatus` | 10 | Muscle status |
+| `MythologyQuarantine` | 9 | Quarantined content |
+| `FlowRoute` | 9 | Flow routes |
+| `FlowStatus` | 9 | Flow status |
+| `IngestionRoute` | 8 | Ingestion routes |
+| `RespiratoryStatus` | 7 | Respiratory status |
+| `ComponentStatus` | 6 | Component status |
+| `Budget` | 6 | LUNGS budgets |
+| `BreathCycle` | 6 | Breath cycles |
+| `HeartBeat` | 3 | Heartbeat records |
+| `SpineStatus` | 2 | Spine status |
+| `ImmuneStatus` | 1 | Immune status |
+| `WorkspaceOperation` | 6 | SKIN operations |
+| `ProjectWorkspace` | 2 | Workspaces |
+| *+ 10 more empty* | 0 | Various body systems |
+
+### Content Models (22 models, 204 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `ChannelEpisode` | 88 | Channel episodes |
+| `SeriesEpisode` | 49 | Series episodes |
+| `ContentProvenance` | 23 | Content provenance |
+| `ContentDebate` | 22 | Content debates |
+| `DiscordServerChannel` | 7 | Discord channels |
+| `ChannelMembership` | 5 | Channel memberships |
+| `PodcastDebate` | 4 | Podcast debates |
+| `ContentChannel` | 3 | Content channels |
+| `PodcastEpisode` | 3 | Podcast episodes |
+| *+ 13 more empty* | 0 | Various content types |
+
+### User Models (16 models, 66 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `UserEmbedding` | 30 | User embeddings |
+| `UserProfile` | 10 | User profiles |
+| `UserStatistics` | 10 | User statistics |
+| `ExtendedUserProfile` | 10 | Extended profiles |
+| `EnhancedUserProfile` | 3 | Enhanced profiles |
+| `UserCertification` | 1 | Certifications |
+| `UserPreferenceProfile` | 1 | Preferences |
+| `VoiceProfile` | 1 | Voice profiles |
+| *+ 8 more empty* | 0 | Various user data |
+
+### Opportunity Models (9 models, 1,657 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `Opportunity` | 1,498 | **Opportunity records** |
+| `OpportunityTask` | 150 | Opportunity tasks |
+| `SavedOpportunity` | 5 | Saved opportunities |
+| `OpportunityScore` | 3 | Opportunity scores |
+| `OpportunityDigest` | 1 | Opportunity digests |
+| *+ 4 more empty* | 0 | Various opportunity data |
+
+### LLM Models (3 models, 32 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `LLMModel` | 16 | LLM model configs |
+| `LLMCallLog` | 10 | LLM call logs |
+| `LLMProvider` | 6 | LLM providers |
+
+### Pilot/Experiment Models (7 models, 370 records)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `ReadinessChecklistItem` | 181 | Readiness items |
+| `PilotReadinessGate` | 70 | Readiness gates |
+| `PilotExecution` | 58 | Pilot executions |
+| `Experiment` | 50 | Experiments |
+| `PilotImplementation` | 11 | Implementations |
+| *+ 2 more empty* | 0 | A/B experiments |
+
+### Other Major Models (selected from 122)
+
+| Model | Records | Purpose |
+|-------|---------|---------|
+| `ConversationMessage` | 19,177 | Chat messages |
+| `ProjectInsight` | 6,919 | Project insights |
+| `SideChat` | 6,776 | Side chat records |
+| `ExtractedArtifact` | 3,608 | Extracted artifacts |
+| `ReviewDocument` | 3,388 | Review documents |
+| `KnowledgeTransfer` | 1,589 | Knowledge transfers |
+| `MoodHistory` | 733 | Mood history |
+| `ChatConversation` | 617 | Chat conversations |
+| `SelfBlog` | 549 | Self blog posts |
+| `HiveMindSession` | 321 | Hive mind sessions |
+| `CostTracking` | 137 | Cost tracking |
+| `TrackedConcern` | 97 | Tracked concerns |
+| `ThoughtRecord` | 91 | Thought records |
+| `SharedKnowledge` | 50 | Shared knowledge |
+| `DataProvenance` | 31 | Data provenance |
+| `AuditLog` | 31 | Audit logs |
+| `Advisor` | 25 | Advisor records |
+| `CollaborationSession` | 23 | Collaboration sessions |
+| `TimeCapsule` | 7 | Time capsules |
 
 ---
 
 ## Import Cheat Sheet
 
 ```python
-# Agent execution metrics
+# === MOST COMMONLY NEEDED ===
+
+# Agent execution tracking
 from core.models_unified_system import (
-    Agent,              # Agent registry
-    AgentExecution,     # Execution records
-    AgentMemory,        # Execution memories
-    CoordinatorOutcome, # Learning outcomes
+    Agent,              # Agent registry (80)
+    AgentExecution,     # Execution records (94)
+    AgentMemory,        # Execution memories (1,076)
+    CoordinatorOutcome, # Learning outcomes (3,963)
 )
 
-# Spider data metrics
-from core.models import SpiderData
-from core.models_unified_system import AgentLearning  # Spider intelligence events
+# Spider data
+from core.models import SpiderData  # Raw data (11,314)
+from core.models_unified_system import (
+    AgentLearning,      # Spider intelligence (45,414)
+    SpiderExecutionLog, # Execution logs (22,056)
+)
 
-# User interaction metrics
-from core.models import ConversationMemory  # PA chat history
+# User data
+from core.models import ConversationMemory  # PA chat (617)
+from core.models_unified_system import (
+    ConversationMessage,  # Chat messages (19,177)
+    UserMemoryContext,    # User context (682)
+)
+
+# Opportunities & Predictions
+from core.models_unified_system import (
+    Opportunity,        # Opportunities (1,498)
+    PredictionOutcome,  # Prediction outcomes (4,124)
+)
+
+# Body systems
+from core.models_unified_system import (
+    ComponentStatus,    # Component health (6)
+    Budget,             # LUNGS budgets (6)
+    ThreatPattern,      # Immune threats (14)
+    MuscleGroup,        # Muscle groups (10)
+)
+
+# LLM tracking
+from core.models_unified_system import (
+    LLMProvider,        # Providers (6)
+    LLMModel,           # Models (16)
+    AgentLLMConfig,     # Agent configs (75)
+    LLMCallLog,         # Call logs (10)
+)
 ```
 
 ---
 
-## Verification Query
-
-Use this to verify system health:
+## Health Check Query
 
 ```python
 from django.utils import timezone
 from datetime import timedelta
-from core.models_unified_system import AgentMemory, CoordinatorOutcome, AgentExecution
-from core.models import SpiderData
+from core.models_unified_system import (
+    Agent, AgentExecution, AgentMemory, CoordinatorOutcome,
+    AgentLearning, SpiderExecutionLog
+)
+from core.models import SpiderData, ConversationMemory
 
 cutoff = timezone.now() - timedelta(days=7)
 
 print("=== System Health (Last 7 Days) ===")
-print(f"Agent Executions: {AgentExecution.objects.filter(created_at__gte=cutoff).count()}")
-print(f"Agent Memories: {AgentMemory.objects.filter(created_at__gte=cutoff).count()}")
-print(f"Learning Outcomes: {CoordinatorOutcome.objects.filter(created_at__gte=cutoff).count()}")
-print(f"Spider Data: {SpiderData.objects.filter(discovered_at__gte=cutoff).count()}")
+print(f"Agents registered: {Agent.objects.count()}")
+print(f"Agent executions: {AgentExecution.objects.filter(created_at__gte=cutoff).count()}")
+print(f"Agent memories: {AgentMemory.objects.filter(created_at__gte=cutoff).count()}")
+print(f"Learning outcomes: {CoordinatorOutcome.objects.filter(created_at__gte=cutoff).count()}")
+print(f"Spider data: {SpiderData.objects.filter(discovered_at__gte=cutoff).count()}")
+print(f"Spider intelligence: {AgentLearning.objects.filter(created_at__gte=cutoff).count()}")
+print(f"PA conversations: {ConversationMemory.objects.filter(created_at__gte=cutoff).count()}")
 ```
 
 ---
 
-*Document created to prevent future confusion about database tables.*
+## Empty Models (127 total)
+
+These models exist but have no data yet. They represent features that are:
+- Not yet implemented
+- Awaiting user interaction
+- Reserved for future functionality
+
+Major categories of empty models:
+- **A/B Testing** (ABExperiment, ABVariant, etc.)
+- **Legal Case Management** (LegalCase, LegalDocument, etc.)
+- **Workflow Automation** (CustomWorkflow, WorkflowExecution, etc.)
+- **Advanced Analytics** (AnalyticsDashboard, AnalyticsAlert)
+- **Betting Features** (Wager, BettingSession)
+- **Voice Features** (VoiceTransaction, VoiceReview)
+
+---
+
+*Document created to prevent confusion about database tables.*
 *See: docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md for the incident that prompted this.*
