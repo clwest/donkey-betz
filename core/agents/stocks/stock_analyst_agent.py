@@ -188,6 +188,11 @@ Alert on:
         logger.info(f"StockAnalystAgent executing: {task[:100]}...")
 
         try:
+            # Session 736: Extract spider intelligence for real-time market data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ StockAnalystAgent using spider intelligence: {len(spider_intel['trends'])} trends, market_data={bool(spider_intel['market_data'])}")
+
             # Session 529: Build intelligent prompt with full context
             intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
@@ -195,8 +200,15 @@ Alert on:
             filing_data = self._get_sec_filing_data(context.get('ticker'))
             fundamental_data = self._get_fundamental_data(context.get('ticker'))
 
-            # Build analysis prompt with intelligent context
-            prompt = self._build_analysis_prompt(task, filing_data, fundamental_data, context, intelligent_context)
+            # Session 736: Merge spider market data if available
+            if spider_intel['market_data']:
+                fundamental_data = {**(fundamental_data or {}), 'spider_market_data': spider_intel['market_data']}
+
+            # Build analysis prompt with intelligent context and spider data (Session 736)
+            prompt = self._build_analysis_prompt(
+                task, filing_data, fundamental_data, context,
+                intelligent_context, spider_intel['summary']
+            )
 
             # Get LLM analysis
             analysis = self._get_llm_analysis(prompt)
@@ -326,9 +338,18 @@ Alert on:
 
     def _build_analysis_prompt(self, task: str, filing_data: Dict,
                                 fundamental_data: Dict, context: Dict,
-                                intelligent_context: str = "") -> str:
+                                intelligent_context: str = "",
+                                spider_summary: str = "") -> str:
         """Build the analysis prompt with intelligent context."""
         # Session 529: Include intelligent context for memory, mood, and platform awareness
+        # Session 736: Include spider intelligence summary
+        spider_section = ""
+        if spider_summary:
+            spider_section = f"""
+REAL-TIME MARKET INTELLIGENCE (Spider Network):
+{spider_summary}
+"""
+
         prompt = f"""{intelligent_context}
 
 Analyze the following stock data:
@@ -336,7 +357,7 @@ Analyze the following stock data:
 TASK: {task}
 
 TICKER: {context.get('ticker', 'Not specified')}
-
+{spider_section}
 SEC FILINGS:
 {filing_data}
 

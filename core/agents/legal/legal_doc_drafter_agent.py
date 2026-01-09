@@ -1121,6 +1121,11 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 

@@ -120,6 +120,11 @@ Output Format:
         context = context or {}
         spider_context = spider_context or {}
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         try:
             # Get odds from multiple bookmakers
             events = self._get_multi_book_odds(context)

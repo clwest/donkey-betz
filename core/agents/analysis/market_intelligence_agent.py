@@ -272,6 +272,11 @@ You analyze and report - you do NOT give trading advice or recommendations."""
         """Execute market intelligence analysis."""
         start_time = time.time()
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         try:
             # Build prompt with context
             full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)

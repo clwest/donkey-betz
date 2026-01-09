@@ -172,6 +172,11 @@ You CANNOT execute changes - only analyze and recommend."""
         start_time = time.time()
         tool_calls_made = []
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         with self.time_travel_session("coo_analysis", task, input_data=context):
             try:
                 if not self._validate_task(task):

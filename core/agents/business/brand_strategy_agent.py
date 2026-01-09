@@ -408,6 +408,11 @@ After your brand strategy is complete, the user can use ImageAgent to generate v
         tool_calls_made = []
         all_brand_data = []
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         # Get project_id from context if not set
         if not self.project_id:
             self.project_id = context.get('project_id')

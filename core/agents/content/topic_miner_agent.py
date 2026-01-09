@@ -193,6 +193,11 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         start_time = time.time()
         tool_calls_made = []
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         try:
             # Build prompt with system prompt + task
             prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)

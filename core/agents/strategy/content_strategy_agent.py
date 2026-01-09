@@ -411,6 +411,11 @@ the user should use ImageAgent, VideoAgent, etc."""
         start_time = time.time()
         tool_calls_made = []
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence")
+
         with self.time_travel_session("content_strategy", task, input_data=context):
             try:
                 # Validate task

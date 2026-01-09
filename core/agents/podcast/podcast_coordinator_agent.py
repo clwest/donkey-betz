@@ -260,6 +260,11 @@ CRITICAL: When creating scripts, maintain clear speaker labels for TTS generatio
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 736: Extract spider intelligence for real-time data
+        spider_intel = self._extract_spider_intelligence(spider_context)
+        if spider_intel['has_data']:
+            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+
         # Session 735: Reset cost tracking for this execution
         self._reset_cost_tracking()
 
