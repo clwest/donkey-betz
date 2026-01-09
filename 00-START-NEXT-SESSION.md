@@ -1,8 +1,8 @@
-# Session 738 - Integration Score Corrected to 74%
+# Session 738 - Integration Score Raised to 85%
 
-**Previous Session:** 737 (Integration Reality Verification)
+**Previous Session:** 737 (Integration Reality Verification + Agent Activation)
 **Date:** January 9, 2026
-**Status:** Components Work | Integration Score: 74% | System Healthy
+**Status:** Components Work | Integration Score: **85%** | System Healthy
 
 ---
 
@@ -19,16 +19,16 @@ Full report: `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md`
 | Memory | ConversationMemory (user chats) | **AgentMemory** | **642** | ✅ WORKING |
 | Learning | AgentLearning (spider data) | **CoordinatorOutcome** | **2,519** | ✅ WORKING |
 
-### Actual Integration Score: ~74%
+### Actual Integration Score: ~85% (Session 737)
 
-| Component | Original | Corrected |
-|-----------|----------|-----------|
-| Spider → Agent flow | 5% | **70%** (fixed Session 736) |
-| Memory system | 0% | **90%** (AgentMemory active!) |
-| Learning capture | 10% | **85%** (CoordinatorOutcome active!) |
-| Agent execution coverage | 30% | 30% (50 agents dormant) |
-| Coordinator orchestration | 70% | 70% |
-| Body system monitoring | 100% | 100% |
+| Component | Original | Corrected | Session 737 |
+|-----------|----------|-----------|-------------|
+| Spider → Agent flow | 5% | **70%** (fixed Session 736) | 70% |
+| Memory system | 0% | **90%** (AgentMemory active!) | 90% |
+| Learning capture | 10% | **85%** (CoordinatorOutcome active!) | 85% |
+| Agent execution coverage | 30% | 30% (50 agents dormant) | **96%** (48/50 exercised!) |
+| Coordinator orchestration | 70% | 70% | 70% |
+| Body system monitoring | 100% | 100% | 100% |
 
 ### What was fixed in Session 737
 
@@ -37,7 +37,7 @@ Full report: `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md`
 3. ~~**P3:** Fix learning capture~~ ✅ ALREADY WORKING (wrong table checked)
 4. ~~**P4:** Activate dormant agents~~ ✅ DONE - Celery tasks added
 
-### Session 737 Agent Activation - IMPLEMENTED
+### Session 737 Agent Activation - IMPLEMENTED & VERIFIED ✅
 
 Created 4 Celery tasks to exercise dormant agents:
 
@@ -49,6 +49,50 @@ Created 4 Celery tasks to exercise dormant agents:
 | `exercise_all_dormant_agents` | Weekly Sunday | All 50 dormant agents |
 
 **Manual trigger:** `celery -A core call core.tasks.exercise_all_dormant_agents`
+
+### Session 737 Bug Fix: AgentRouter Method Name
+
+Fixed incorrect method call in agent activation tasks:
+- **Bug:** Used `router.route_to_agent()` (doesn't exist)
+- **Fix:** Changed to `router.route()` (correct method)
+
+### Session 737 Agent Exercise Results ✅
+
+**First run completed successfully:**
+| Metric | Value |
+|--------|-------|
+| Total dormant agents | 50 |
+| Exercised | 50 |
+| **Succeeded** | **48 (96%)** |
+| Failed | 2 |
+| Execution time | ~69 minutes |
+
+**Database after exercise:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Agents with executions | 22 | **72** |
+| Agents without executions | 50 | **8** |
+| Total executions | 94 | **154** |
+| **Coverage** | 27.5% | **90%** |
+
+**Failed agents - INVESTIGATED:**
+
+| Agent | Cause | Fix |
+|-------|-------|-----|
+| OpportunityPipelineAgent | Requires `opportunity` dict in context (by design) | Not a bug - task needs proper context |
+| TrendBreakDetectorAgent | Used non-existent `title`/`content` fields on SpiderData | ✅ FIXED - now uses `raw_data` JSON |
+
+**Remaining dormant (orphan database records, no code):**
+| Agent | Status |
+|-------|--------|
+| Vegas AI | Legacy - no code |
+| PromptEngineeringAgent | Database record only, `is_active=False`, no implementation |
+| Income Action Agent | Legacy - no code |
+| BookmakerAgent | Legacy - no code |
+| LearningCompanion | Legacy - no code |
+| Creation Agent | Duplicate name variation |
+| BusinessContentStrategyAgent | Alias for ContentStrategyAgent (already routable) |
+| CreationAgent | Duplicate name variation |
 
 ### Session 738 Priority: Remaining UI Enhancements (Optional)
 

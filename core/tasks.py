@@ -23743,7 +23743,7 @@ def run_market_monitoring_agents():
     for agent_name, task in agents_to_run:
         try:
             if agent_name in router.AGENT_MAP:
-                result = router.route_to_agent(
+                result = router.route(
                     agent_name=agent_name,
                     task=task,
                     context=market_context
@@ -23806,7 +23806,7 @@ def run_blockchain_monitoring_agents():
     for agent_name, task in agents_to_run:
         try:
             if agent_name in router.AGENT_MAP:
-                result = router.route_to_agent(
+                result = router.route(
                     agent_name=agent_name,
                     task=task,
                     context=crypto_context
@@ -23868,7 +23868,7 @@ def run_business_strategy_agents():
     for agent_name, task in agents_to_run:
         try:
             if agent_name in router.AGENT_MAP:
-                result = router.route_to_agent(
+                result = router.route(
                     agent_name=agent_name,
                     task=task,
                     context=business_context
@@ -23916,7 +23916,7 @@ def exercise_all_dormant_agents():
             # Generate a simple task for each agent
             task = f"Perform a brief self-diagnostic and report your capabilities"
 
-            result = router.route_to_agent(
+            result = router.route(
                 agent_name=agent_name,
                 task=task,
                 context={'exercise_mode': True, 'session': 737}

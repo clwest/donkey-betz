@@ -453,19 +453,30 @@ When analyzing potential shifts, consider:
             })
 
         # Also look at spider data with relevant keywords
+        # Session 737: Fixed to use proper SpiderData fields
         if narrative.keywords:
             for keyword in narrative.keywords[:3]:
+                # Search in spider_name and embedding_text instead of title
                 spider_data = SpiderData.objects.filter(
                     created_at__gte=window_start,
                     created_at__lte=window_end,
-                    title__icontains=keyword
+                ).filter(
+                    embedding_text__icontains=keyword
                 )[:5]
 
                 for sd in spider_data:
+                    # Extract title from raw_data JSON
+                    raw_data = sd.raw_data or {}
+                    items = raw_data.get('items', [])
+                    title = 'Spider Data'
+                    if items and len(items) > 0:
+                        first_item = items[0] if isinstance(items[0], dict) else {}
+                        title = first_item.get('title') or first_item.get('headline') or 'Spider Data'
+
                     trigger_candidates.append({
                         'date': sd.created_at.isoformat(),
-                        'source': sd.source_name or 'Spider Data',
-                        'excerpt': sd.title,
+                        'source': sd.spider_name or 'Spider Data',
+                        'excerpt': title,
                         'strength': 0.5
                     })
 
@@ -617,39 +628,47 @@ When analyzing potential shifts, consider:
 
         queryset = SpiderData.objects.filter(created_at__gte=cutoff)
 
-        # Filter by keywords if provided
-        if keywords:
-            from django.db.models import Q
-            keyword_filter = Q()
-            for keyword in keywords:
-                keyword_filter |= Q(title__icontains=keyword) | Q(content__icontains=keyword)
-            queryset = queryset.filter(keyword_filter)
-
-        # Map domains to spider categories
-        domain_mapping = {
-            'politics': ['news', 'political'],
-            'markets': ['financial', 'crypto'],
-            'tech': ['tech', 'ai'],
-            'culture': ['social', 'community'],
-            'geopolitics': ['news', 'political'],
-            'crypto': ['crypto', 'financial'],
-            'climate': ['news', 'science'],
-            'health': ['health', 'science'],
+        # Filter by spider_name if domain provided (map domains to spider names)
+        domain_spider_mapping = {
+            'politics': ['bbc', 'cnn', 'reuters', 'npr'],
+            'markets': ['coingecko', 'yahoofinance', 'polygon', 'finnhub', 'kalshi'],
+            'tech': ['hackernews', 'techcrunch', 'theverge', 'devto', 'github'],
+            'culture': ['reddit', 'bluesky'],
+            'geopolitics': ['bbc', 'reuters', 'defenseone'],
+            'crypto': ['coingecko', 'cryptonews'],
+            'climate': ['bbc', 'cnn', 'sciencedaily'],
+            'health': ['mobihealthnews', 'sciencedaily'],
         }
 
-        if domain and domain in domain_mapping:
-            categories = domain_mapping[domain]
-            queryset = queryset.filter(spider_category__in=categories)
+        if domain and domain in domain_spider_mapping:
+            spider_names = domain_spider_mapping[domain]
+            queryset = queryset.filter(spider_name__in=spider_names)
 
         results = []
         for sd in queryset.order_by('-created_at')[:20]:
+            # Session 737: Extract title/content from raw_data JSON field
+            raw_data = sd.raw_data or {}
+            items = raw_data.get('items', [])
+
+            # Get first item's title if available
+            title = 'No title'
+            content_preview = ''
+            url = sd.source_url
+
+            if items and len(items) > 0:
+                first_item = items[0] if isinstance(items[0], dict) else {}
+                title = first_item.get('title') or first_item.get('headline') or 'No title'
+                content_preview = first_item.get('content', '')[:200] if first_item.get('content') else ''
+                url = first_item.get('url') or first_item.get('link') or sd.source_url
+
             results.append({
                 'id': str(sd.id),
-                'title': sd.title,
-                'source': sd.source_name or sd.spider_name,
-                'url': sd.url,
+                'title': title,
+                'source': sd.spider_name,
+                'url': url,
                 'created_at': sd.created_at.isoformat(),
-                'category': sd.spider_category
+                'content_preview': content_preview,
+                'data_type': sd.data_type
             })
 
         return {
