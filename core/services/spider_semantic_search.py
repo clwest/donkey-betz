@@ -118,8 +118,14 @@ class SpiderSemanticSearch:
 
     def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
         """Calculate cosine similarity between two vectors."""
+        # Session 736: Guard against empty embeddings (marked as [] in backfill)
+        if not a or not b:
+            return 0.0
         a_arr = np.array(a)
         b_arr = np.array(b)
+        # Check for shape mismatch (e.g., one is empty)
+        if a_arr.shape != b_arr.shape:
+            return 0.0
         norm_a = np.linalg.norm(a_arr)
         norm_b = np.linalg.norm(b_arr)
         if norm_a == 0 or norm_b == 0:
@@ -490,10 +496,13 @@ class SpiderSemanticSearch:
             return []
 
         # Get spider data with embeddings
+        # Session 736: Exclude entries marked as empty (embedding_text='[NO_ITEMS]')
         since = timezone.now() - timedelta(hours=hours)
         queryset = SpiderData.objects.filter(
             created_at__gte=since,
             embedding__isnull=False
+        ).exclude(
+            embedding_text='[NO_ITEMS]'
         )
 
         if category:
