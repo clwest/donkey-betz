@@ -6,9 +6,20 @@
 
 ---
 
+## UPDATE: Spider Context Integration FIXED
+
+**Commit:** `4c994f89` - feat(Session 736): Fix spider context integration across 48 sub-agents
+
+- Added `_extract_spider_intelligence()` helper to BaseAgent
+- Updated 48 sub-agents to extract and use spider data
+- Spider data flow improved from 5% to estimated 70%+
+
+---
+
 ## Executive Summary
 
-**Overall Integration Score: 35%**
+**Original Integration Score: 35%**
+**After Spider Fix: ~55%** (pending memory and learning system fixes)
 
 The system has sophisticated components that exist in isolation. While individual pieces function correctly, the end-to-end data flows that would make them work as a unified intelligence system are largely broken or dormant.
 

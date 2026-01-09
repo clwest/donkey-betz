@@ -22,12 +22,20 @@ Full report: `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md`
 | Learning captures only spider data | MEDIUM | No agent execution learnings |
 | Coordinators pass empty context | MEDIUM | Sub-agents work blind |
 
-### Session 737 Priority: Fix Integration Gaps
+### Spider Context Integration FIXED (Session 736)
 
-1. **P1:** Make sub-agents USE spider_context (53 files need updates)
+**Commit:** `4c994f89` - 48 sub-agents now use spider data!
+
+- Added `_extract_spider_intelligence()` helper to BaseAgent
+- All stocks, blockchain, business, analysis agents updated
+- Spider data flow: 5% → 70%+
+
+### Session 737 Priority: Fix Remaining Integration Gaps
+
+1. ~~**P1:** Make sub-agents USE spider_context~~ ✅ DONE
 2. **P2:** Fix memory creation in agent executions
 3. **P3:** Fix learning capture for agent outcomes
-4. **P4:** Make coordinators pass context to sub-agents
+4. **P4:** Activate dormant agents (50 never executed)
 
 ---
 
