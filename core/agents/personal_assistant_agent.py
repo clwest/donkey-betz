@@ -3676,6 +3676,10 @@ Actions:
         spider_context = spider_context or {}
         intelligence_context = intelligence_context or {}
 
+        # Session 739: Store context for sub-agent calls
+        self._current_spider_context = spider_context
+        self._current_scifi_context = scifi_context
+
         # Session 565: Store intelligence context for use in question answering
         self._intelligence_context = intelligence_context
 
@@ -5915,11 +5919,12 @@ Actions:
             }
 
             # Execute workflow
+            # Session 739: Pass spider_context to sub-agents for real intelligence
             result = workflow_agent.execute(
                 task=workflow_description,
                 context=context,
-                scifi_context={},
-                spider_context={}
+                scifi_context=getattr(self, '_current_scifi_context', {}),
+                spider_context=getattr(self, '_current_spider_context', {})
             )
 
             # Build summary
@@ -5958,11 +5963,12 @@ Actions:
             detector = ArbitrageDetector()
 
             # Execute detection
+            # Session 739: Pass spider_context to sub-agents for real intelligence
             result = detector.execute(
                 task=f"Find arbitrage opportunities for {sport} with minimum {min_profit}% profit",
                 context={'sport': sport, 'min_profit': min_profit, 'limit': limit},
-                scifi_context={},
-                spider_context={}
+                scifi_context=getattr(self, '_current_scifi_context', {}),
+                spider_context=getattr(self, '_current_spider_context', {})
             )
 
             if hasattr(result, 'to_dict'):

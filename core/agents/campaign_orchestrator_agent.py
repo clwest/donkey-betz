@@ -259,6 +259,10 @@ Always provide status updates and be transparent about what's being created."""
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 739: Store context for sub-agent calls
+        self._current_spider_context = spider_context
+        self._current_scifi_context = scifi_context
+
         with self.time_travel_session("campaign_orchestration", task, input_data=context):
             try:
                 # Session 529: Use intelligent prompting
@@ -914,11 +918,12 @@ For each email provide:
 
 Label each email clearly (Email 1, Email 2, etc.)."""
 
+                    # Session 739: Pass spider_context to sub-agents for real intelligence
                     result = agent.execute(
                         task=task,
                         context={'campaign_id': str(campaign.id), 'phase': 'creation'},
-                        scifi_context={},
-                        spider_context={}
+                        scifi_context=getattr(self, '_current_scifi_context', {}),
+                        spider_context=getattr(self, '_current_spider_context', {})
                     )
 
                     if result.success and result.message:

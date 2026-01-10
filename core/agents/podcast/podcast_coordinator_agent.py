@@ -260,6 +260,10 @@ CRITICAL: When creating scripts, maintain clear speaker labels for TTS generatio
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 739: Store context for sub-agent calls
+        self._current_spider_context = spider_context
+        self._current_scifi_context = scifi_context
+
         # Session 736: Extract spider intelligence for real-time data
         spider_intel = self._extract_spider_intelligence(spider_context)
         if spider_intel['has_data']:
@@ -642,11 +646,12 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
 {"Summarize your key position for the conclusion." if round_num == rounds else ""}"""
 
                 try:
+                    # Session 739: Pass spider_context to sub-agents for real intelligence
                     result = agent.execute(
                         task=debate_task,
                         context={'debate_topic': topic, 'round': round_num},
-                        scifi_context={},
-                        spider_context={}
+                        scifi_context=getattr(self, '_current_scifi_context', {}),
+                        spider_context=getattr(self, '_current_spider_context', {})
                     )
 
                     turn_text = result.message if result.success else f"{agent_name} declined to comment."
