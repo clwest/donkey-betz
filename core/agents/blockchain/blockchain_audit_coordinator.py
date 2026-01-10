@@ -370,6 +370,10 @@ You have access to:
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 739: Store context for sub-agent calls
+        self._current_spider_context = spider_context
+        self._current_scifi_context = scifi_context
+
         # Session 736: Extract spider intelligence for real-time data
         spider_intel = self._extract_spider_intelligence(spider_context)
         if spider_intel['has_data']:
@@ -504,11 +508,12 @@ You have access to:
             if not agent_instance:
                 return {"error": f"Agent not found: {agent}"}
 
+            # Session 739: Pass spider_context to sub-agents for real intelligence
             result = agent_instance.execute(
                 task=task,
                 context=context or {},
-                scifi_context={},
-                spider_context={}
+                scifi_context=getattr(self, '_current_scifi_context', {}),
+                spider_context=getattr(self, '_current_spider_context', {})
             )
 
             return {
