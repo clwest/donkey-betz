@@ -1,260 +1,311 @@
-# Session 406: Case Intake Form + ChatGPT Patches
+# Session 406: Case Intake Form Feature
 
 **Date:** December 9, 2025
-**Status:** COMPLETE
-**Branch:** feature/session-52-ai-assistant
+**Status:** In Progress
+**Goal:** Create a Case Intake Form so the Legal Assistant has full case context before analyzing motions
+
+---
+
+## Problem Statement
+
+The Legal Assistant extracts party names, case numbers, and other metadata from uploaded documents. However:
+
+1. **Opposing counsel info** is often not in the motion being analyzed
+2. **Extraction errors** occur when document formatting varies
+3. **Conferral emails** need to be addressed to the correct recipient (counsel if represented, party if pro se)
+4. **Certificate of Service** needs accurate addresses
+
+**Solution:** A Case Intake Form that users fill out ONCE when setting up their case, providing complete context for all future motion analysis.
+
+---
+
+## Data Model
+
+### CaseProfile
+The main case record linking all parties and documents.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| user | ForeignKey | Owner of this case profile |
+| case_number | CharField | Court case number (e.g., "2025DR576") |
+| case_type | CharField | divorce, custody, modification, enforcement, other |
+| county | CharField | County name |
+| state | CharField | State (default: Colorado) |
+| district | CharField | Judicial district |
+| division | CharField | Court division |
+| court_address | TextField | Full court address |
+| filing_date | DateField | When case was filed |
+| status | CharField | active, closed, pending |
+| notes | TextField | Any additional case notes |
+| created_at | DateTime | Record creation timestamp |
+| updated_at | DateTime | Last modification timestamp |
+
+### Party
+Represents either Petitioner or Respondent.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| case_profile | ForeignKey | Link to CaseProfile |
+| party_type | CharField | petitioner, respondent |
+| full_name | CharField | Full legal name |
+| first_name | CharField | First name (for salutations) |
+| address | TextField | Mailing address |
+| city | CharField | City |
+| state | CharField | State |
+| zip_code | CharField | ZIP code |
+| phone | CharField | Phone number |
+| email | EmailField | Email address |
+| is_pro_se | BooleanField | True if self-represented |
+
+### Attorney
+Represents legal counsel for a party.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| party | ForeignKey | Link to Party they represent |
+| full_name | CharField | Attorney's full name |
+| first_name | CharField | First name (for salutations) |
+| firm_name | CharField | Law firm name |
+| address | TextField | Office address |
+| city | CharField | City |
+| state | CharField | State |
+| zip_code | CharField | ZIP code |
+| phone | CharField | Phone number |
+| email | EmailField | Email address |
+| bar_number | CharField | Attorney registration number |
+
+### Child
+For family law cases involving minor children.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| case_profile | ForeignKey | Link to CaseProfile |
+| full_name | CharField | Child's full name |
+| first_name | CharField | First name |
+| date_of_birth | DateField | DOB |
+| age | IntegerField | Computed age |
+
+### CaseDocument
+Links uploaded court orders to the case profile.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| case_profile | ForeignKey | Link to CaseProfile |
+| document_type | CharField | temporary_orders, permanent_orders, separation_agreement, other |
+| title | CharField | Document title |
+| file | FileField | Uploaded file |
+| entered_date | DateField | Date order was entered |
+| extracted_text | TextField | OCR/extracted text content |
+| notes | TextField | Any notes about this document |
+| uploaded_at | DateTime | Upload timestamp |
+
+---
+
+## UI Design
+
+### Case Setup Page (New)
+
+Located at: `/ai-studio/` → Legal Assistant Panel → "My Cases" tab
+
+**Flow:**
+1. User clicks "New Case" button
+2. Multi-step form wizard:
+   - Step 1: Case Information (case number, county, court, type)
+   - Step 2: Your Information (petitioner details, pro se or attorney)
+   - Step 3: Opposing Party (respondent details, their attorney if known)
+   - Step 4: Children (if applicable)
+   - Step 5: Court Orders (upload existing orders)
+3. Case saved and available for all future motion analysis
+
+**Form Sections:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  CASE SETUP                                          [1/5]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Case Number: [__2025DR576__________]                       │
+│                                                             │
+│  Case Type:   ( ) Divorce                                   │
+│               (●) Child Custody                             │
+│               ( ) Modification                              │
+│               ( ) Enforcement                               │
+│               ( ) Other                                     │
+│                                                             │
+│  County:      [__Larimer_____________] State: [_Colorado_]  │
+│                                                             │
+│  Court Address:                                             │
+│  [__201 LaPorte Avenue, Suite 100_________________________] │
+│  [__Fort Collins, CO 80521________________________________] │
+│                                                             │
+│  Division: [_2B_]  Courtroom: [____]                        │
+│                                                             │
+│                              [Cancel]  [Next →]             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  YOUR INFORMATION (PETITIONER)                       [2/5]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Full Name:   [__Christopher L. West____________________]   │
+│                                                             │
+│  Address:     [__123 Main Street________________________]   │
+│  City:        [__Fort Collins___] State: [_CO_] ZIP:[80521] │
+│                                                             │
+│  Phone:       [__(970) 555-1234_____]                       │
+│  Email:       [__chris@email.com____]                       │
+│                                                             │
+│  ☑ I am representing myself (Pro Se)                        │
+│                                                             │
+│  ┌─ YOUR ATTORNEY (if represented) ─────────────────────┐   │
+│  │  Name:     [______________________________]          │   │
+│  │  Firm:     [______________________________]          │   │
+│  │  Phone:    [______________]                          │   │
+│  │  Email:    [______________________________]          │   │
+│  │  Bar #:    [______________]                          │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│                         [← Back]  [Next →]                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  OPPOSING PARTY (RESPONDENT)                         [3/5]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Full Name:   [__Susannah M. West_______________________]   │
+│                                                             │
+│  Address:     [__456 Oak Avenue_________________________]   │
+│  City:        [__Fort Collins___] State: [_CO_] ZIP:[80525] │
+│                                                             │
+│  Phone:       [__(970) 555-5678_____]                       │
+│  Email:       [__susannah@email.com_]                       │
+│                                                             │
+│  ☐ Respondent is Pro Se (self-represented)                  │
+│                                                             │
+│  ┌─ RESPONDENT'S ATTORNEY ──────────────────────────────┐   │
+│  │  Name:     [__Jane Smith, Esq._______________]       │   │
+│  │  Firm:     [__Smith Family Law LLC___________]       │   │
+│  │  Phone:    [__(970) 555-9999_]                       │   │
+│  │  Email:    [__jane@smithlaw.com______________]       │   │
+│  │  Bar #:    [__12345__________]                       │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│                         [← Back]  [Next →]                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Integration with Motion Analysis
+
+When user runs "Analyze Denied Motion" or any legal tool:
+
+1. System checks if user has a CaseProfile
+2. If yes, auto-populates:
+   - Caption information (parties, case number, court)
+   - Conferral email recipient (opposing counsel if represented, else respondent)
+   - Certificate of Service addresses
+   - Relief phrasing (uses correct names)
+3. If no CaseProfile, falls back to document extraction (current behavior)
+
+### Code Changes Required
+
+**1. `_extract_case_metadata()` enhancement:**
+```python
+def _extract_case_metadata(self, motion_text: str, case_profile: Optional[CaseProfile] = None):
+    # If case profile provided, use it as authoritative source
+    if case_profile:
+        return {
+            'case_number': case_profile.case_number,
+            'county': case_profile.county,
+            'state': case_profile.state,
+            'petitioner_name': case_profile.petitioner.full_name,
+            'respondent_name': case_profile.respondent.full_name,
+            'respondent_counsel': case_profile.respondent.attorney.full_name if not case_profile.respondent.is_pro_se else '',
+            # ... etc
+        }
+    # Otherwise, extract from document (current behavior)
+    # ...
+```
+
+**2. `_generate_conferral_email()` enhancement:**
+```python
+# Already updated to accept respondent_counsel parameter
+# Will use counsel name for greeting if provided, else respondent name
+```
+
+**3. Pipeline integration:**
+```python
+# In _execute_denied_motion_pipeline():
+case_profile = self._get_user_case_profile(user_id)  # New method
+case_details = self._extract_case_metadata(motion_text, case_profile=case_profile)
+```
+
+---
+
+## API Endpoints (New)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/legal/cases/` | List user's case profiles |
+| POST | `/api/legal/cases/` | Create new case profile |
+| GET | `/api/legal/cases/{id}/` | Get case profile details |
+| PUT | `/api/legal/cases/{id}/` | Update case profile |
+| DELETE | `/api/legal/cases/{id}/` | Delete case profile |
+| POST | `/api/legal/cases/{id}/documents/` | Upload court order |
+| GET | `/api/legal/cases/{id}/documents/` | List case documents |
+
+---
+
+## File Locations
+
+| File | Purpose |
+|------|---------|
+| `core/models_legal.py` | New models (CaseProfile, Party, Attorney, Child, CaseDocument) |
+| `core/views_legal.py` | API endpoints for case management |
+| `core/serializers_legal.py` | DRF serializers |
+| `core/agents/legal/legal_doc_drafter_agent.py` | Integration with pipeline |
+| `ai_core/templates/ai_image_studio.html` | UI for case setup form |
+
+---
+
+## Migration Plan
+
+1. Create models in `core/models_legal.py`
+2. Run migrations
+3. Add API endpoints
+4. Add UI form in Legal Assistant panel
+5. Integrate with motion analysis pipeline
+6. Test end-to-end
+
+---
+
+## Future Enhancements
+
+- **Case Templates:** Pre-fill common case types
+- **Document OCR:** Auto-extract info from uploaded orders to pre-fill form
+- **Multi-case Support:** Handle users with multiple active cases
+- **Case Sharing:** Allow attorneys to share case profiles with clients
+- **Court Calendar Integration:** Track hearing dates
 
 ---
 
 ## Summary
 
-Created a complete Case Intake Form system so the Legal Assistant has full case context before analyzing motions. This solves the problem of inaccurate name extraction from PDFs and allows the system to work for ANY case regardless of document formatting.
+The Case Intake Form transforms the Legal Assistant from a document-by-document tool into a comprehensive case management system. By capturing case context upfront, every motion analysis automatically has:
 
----
+- Accurate party names and roles
+- Correct opposing counsel information
+- Proper addresses for service
+- Context from existing court orders
 
-## What Was Built
-
-### 1. Django Models (`core/models_legal.py`)
-- **CaseProfile** - Main case record (UUID pk, user FK, case_number, case_type, county, state, court info)
-- **Party** - Petitioner/Respondent with contact info and pro se status
-- **Attorney** - Legal counsel for a party (FK to Party)
-- **Child** - Minor children in the case (FK to CaseProfile)
-- **CaseDocument** - Court orders attached to case profile
-
-Key method: `CaseProfile.get_conferral_recipient()` - Returns counsel info if respondent is represented, else respondent info
-
-### 2. API Endpoints (`core/views_legal_cases.py`)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/legal/cases/` | GET | List all user's case profiles |
-| `/api/legal/cases/` | POST | Create new case with nested parties/attorneys/children |
-| `/api/legal/cases/<uuid>/` | GET | Full case details |
-| `/api/legal/cases/<uuid>/` | PUT | Update case |
-| `/api/legal/cases/<uuid>/` | DELETE | Delete case |
-| `/api/legal/cases/<uuid>/context/` | GET | Get case context for motion analysis |
-| `/api/legal/cases/<uuid>/children/` | POST | Add child |
-| `/api/legal/cases/<uuid>/children/<uuid>/` | DELETE | Remove child |
-| `/api/legal/cases/<uuid>/documents/` | POST | Upload document |
-| `/api/legal/cases/<uuid>/documents/<uuid>/` | DELETE | Remove document |
-| `/api/legal/active-case/` | GET/POST | Get/Set active case for session |
-
-### 3. Admin Interface (`core/admin.py` lines 160-320)
-- CaseProfileAdmin with PartyInline, ChildInline, CaseDocumentInline
-- PartyAdmin with AttorneyInline
-- Individual admins for Attorney, Child, CaseDocument
-
-### 4. UI Form (`ai_core/templates/components/panels/legal_assistant_panel.html`)
-- New "Case Setup" tab in Legal Assistant panel (lines 106-110)
-- Multi-step wizard form (lines 660-933):
-  - Step 1: Case Information (case number, type, county, court)
-  - Step 2: Your Information (petitioner details, pro se status)
-  - Step 3: Other Party (respondent details, their attorney)
-  - Step 4: Children (add/remove children)
-- JavaScript functions (lines 1646-1924):
-  - `loadCaseProfiles()` - Load existing cases
-  - `showCaseSetupForm()` / `hideCaseSetupForm()` - Form visibility
-  - `nextCaseStep()` / `prevCaseStep()` - Step navigation
-  - `addChildRow()` / `removeChildRow()` - Dynamic child management
-  - `saveCaseProfile()` - Save to API
-  - `setActiveCase()` - Mark a case as active
-
-### 5. Pipeline Integration (`core/agents/legal/legal_doc_drafter_agent.py`)
-- New method `_get_active_case_profile_data()` (lines 3828-3919)
-  - Checks context for active_case_id
-  - Loads CaseProfile from database
-  - Returns dict matching `_extract_case_metadata()` format
-  - Includes `conferral_recipient_name`, `conferral_recipient_first_name`, etc.
-- Updated Step 3.5 in pipeline (lines 2452-2477)
-  - First tries to get CaseProfile data
-  - Falls back to document extraction if no profile
-  - Logs conferral recipient for debugging
-
----
-
-## Files Changed
-
-| File | Changes |
-|------|---------|
-| `docs/SESSION_406_CASE_INTAKE_FORM.md` | Feature spec |
-| `core/models_legal.py` | NEW - 5 Django models |
-| `core/migrations/0077_legal_case_intake_form.py` | NEW - Migration |
-| `core/admin.py` | Added admin registrations (lines 160-320) |
-| `core/views_legal_cases.py` | NEW - API endpoints (~500 lines) |
-| `core/urls.py` | Added URL patterns (lines 2618-2644) |
-| `ai_core/templates/components/panels/legal_assistant_panel.html` | Added Case Setup tab + form + JS |
-| `core/agents/legal/legal_doc_drafter_agent.py` | Added `_get_active_case_profile_data()`, updated Step 3.5 |
-
----
-
-## How It Works
-
-### User Flow
-1. User goes to Legal Assistant → Case Setup tab
-2. Clicks "Set Up New Case"
-3. Fills out multi-step form:
-   - Case number, county, court info
-   - Their name and contact (petitioner)
-   - Opposing party and their attorney
-   - Any children involved
-4. Clicks "Save Case Profile"
-5. Case is auto-set as active
-
-### Motion Analysis Flow
-1. User uploads denied motion for analysis
-2. Pipeline Step 3.5 checks for active CaseProfile
-3. If found, uses CaseProfile data for:
-   - Caption (parties, case number, court)
-   - Conferral email recipient (counsel if represented!)
-   - Certificate of Service addresses
-4. If no profile, falls back to document extraction
-
-### Conferral Email Logic
-```python
-# In CaseProfile.get_conferral_recipient():
-if respondent and not respondent.is_pro_se:
-    attorney = respondent.attorneys.first()
-    if attorney:
-        return {'name': attorney.full_name, 'is_attorney': True, ...}
-if respondent:
-    return {'name': respondent.full_name, 'is_attorney': False, ...}
-```
-
----
-
-## Testing
-
-### Manual Testing
-1. Start server: `make start`
-2. Go to http://localhost:8000/ai-studio/
-3. Click Legal Assistant tab
-4. Click "Case Setup" sub-tab
-5. Click "Set Up New Case"
-6. Fill in case details with opposing counsel info
-7. Save and verify conferral emails use attorney name
-
-### API Testing
-```bash
-# List cases (requires auth)
-curl http://localhost:8000/api/legal/cases/
-
-# Create case (requires CSRF token + auth)
-curl -X POST http://localhost:8000/api/legal/cases/ \
-  -H "Content-Type: application/json" \
-  -d '{"case_number": "2025DR576", "county": "Larimer", ...}'
-```
-
----
-
-## Known Limitations
-
-1. **Edit functionality** - The "Edit" button shows a toast "coming soon" - needs implementation
-2. **Document upload** - The CaseDocument upload is basic, could add OCR extraction
-3. **Multi-case** - Users can have multiple cases but only one active at a time
-
----
-
-## Related Sessions
-
-- Session 405: Conferral Email feature (this provides the counsel data for it!)
-- Session 404: Motion rewrite pipeline (this integrates with Step 3.5)
-- Session 403: Legal Assistant panel setup
-
----
-
-## ChatGPT Patch Review (Session 406 Part 2)
-
-User received detailed feedback from ChatGPT reviewing the Legal Doc Drafter output. Six patches were implemented:
-
-### Patch 1: Resolve Core Placeholders from CaseMeta
-**Location:** `_rewrite_motion_gold_standard()` lines 5262-5265
-- Changed logic to always resolve `{state}` to extracted value or default to "COLORADO"
-- Removed problematic "both must be extracted" logic that was leaving blanks
-
-### Patch 2: Replace {relief_requested} in Proposed Order
-**Location:** `_rewrite_motion_gold_standard()` lines 5384-5403
-- Verification/Affidavit and Proposed Order sections now use f-strings properly
-- All placeholders resolved from local variables
-
-### Patch 3: Conferral Recipient Uses Counsel if Present
-**Location:** `_rewrite_motion_gold_standard()` lines 5384-5402
-- Certificate of Service now routes to counsel if respondent is represented:
-  ```python
-  is_represented = case_details.get('conferral_recipient_is_attorney', False)
-  if is_represented and respondent_counsel:
-      service_recipient = f"{respondent_counsel}\n{firm}\nAttorney for Respondent"
-  ```
-
-### Patch 4: Store conferral_status as Structured Data
-**Location:** `_generate_conferral_email()` lines 3413-3433
-- Added `conferral_status` field to return dict with values: `pending`, `no_response`, `refused`, `partial`, `agreed`
-- Added `conferral_status_options` list for UI dropdowns
-- Added `recipient_is_counsel` and `recipient_name` for display
-
-### Patch 5: Fix "Escalating Pattern of Escalating" Wording Glitch
-**Location:** `_generate_impact_paragraph()` lines 3594-3596
-- Added regex cleanup:
-  ```python
-  impact = re.sub(r'escalating pattern of\s+escalating[,\s]+', 'escalating pattern of ', impact)
-  impact = re.sub(r'pattern of\s+harmful[,\s]+and', 'pattern of conduct that', impact)
-  ```
-
-### Patch 6: Link Conduct to Temporary Orders Non-Disparagement
-**Location:** `_parse_order_provisions()` lines 3829-3832
-- When non-disparagement is detected, adds:
-  > "The statements described below appear inconsistent with the Court's non-disparagement provisions in the Temporary Orders (Exhibit A)."
-
----
-
-## Bug Fix: motion_text is not defined
-
-**Issue:** User got error when analyzing motion: `name 'motion_text' is not defined`
-**Location:** `_extract_case_metadata()` line 4069
-**Root Cause:** Method parameter is `content` but code referenced `motion_text`
-**Fix:** Changed `re.search(pattern, motion_text, ...)` to `re.search(pattern, content, ...)`
-
----
-
-## Critical Fix: CaseProfile Not Being Loaded
-
-**Issue:** Even with CaseProfile selected, conferral email still addressed respondent (Susannah) instead of counsel
-**Root Cause:** `analyze_legal_document()` didn't pass `request` to context, so `_get_active_case_profile_data()` couldn't access `request.session.get('active_case_id')`
-
-**Files Fixed:**
-- `core/views_legal.py`:
-  - Added `request=None` parameter to `analyze_legal_document()`
-  - Added `active_case_id` and `request` to context dict
-  - Updated both callers to pass `request=request`
-
-**Result:** CaseProfile data now flows through pipeline → conferral email addresses counsel!
-
----
-
-## Additional Session 406 Updates
-
-### Attorney Address Field
-- Added Attorney Address textarea to Step 3 of Case Setup wizard
-- Updated `_get_active_case_profile_data()` to include `respondent_counsel_address`
-- Certificate of Service now uses attorney address when available
-
-### Edit/Delete Functionality (IMPLEMENTED)
-- **Edit button** now loads case data into form with all fields populated
-- Fixed order bug: call `showCaseSetupForm()` BEFORE setting `editingCaseId` (since reset clears it)
-- Save function detects edit mode (`window.editingCaseId`) and uses PUT instead of POST
-- **Delete button** with confirmation dialog added to case cards
-- All API calls use `authenticatedFetch()` for proper authentication
-
-### Bug Fixes
-- Fixed `getCSRFToken` → `getCsrfToken` typo in delete function
-- Added `case_number` to PUT response for proper toast message
-- Fixed edit/create race condition with `editingCaseId` variable
-
----
-
-## Next Steps
-
-1. ~~**Implement edit functionality** for existing case profiles~~ ✅ DONE
-2. **Add case profile indicator** in UI showing which case is active
-3. **Auto-populate form** from uploaded court orders using OCR
-4. **Multiple children** - test with cases having 3+ children
-5. ~~**Address formatting** - verify Certificate of Service uses correct format~~ ✅ DONE
-6. **Test ChatGPT patches** - Run full motion analysis to verify patches work
+This makes the system work for ANY case, not just specific hard-coded scenarios.
