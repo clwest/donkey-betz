@@ -318,6 +318,298 @@ class BaseAgent(ABC, TimeTravelMixin):
                 logger.debug("AgentLLMRouter not available")
         return self._llm_router
 
+    # ==================== Agent Delegation (Session 744) ====================
+
+    # Tool definition for delegate_to_specialist - agents can add this to their tools list
+    DELEGATE_TO_SPECIALIST_TOOL = {
+        "type": "function",
+        "function": {
+            "name": "delegate_to_specialist",
+            "description": "Delegate a sub-task to another specialist agent. Use this when you need help from an agent with different expertise (e.g., ResearchAgent for research, ImageAgent for images, StockAnalystAgent for financial analysis).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "specialist_agent": {
+                        "type": "string",
+                        "description": "Name of the specialist agent to call (e.g., 'ResearchAgent', 'ImageAgent', 'ContentWriterAgent', 'StockAnalystAgent')"
+                    },
+                    "task": {
+                        "type": "string",
+                        "description": "The specific task you want the specialist to perform"
+                    },
+                    "context": {
+                        "type": "string",
+                        "description": "Optional context about why you need this help and how it fits into your current task"
+                    }
+                },
+                "required": ["specialist_agent", "task"]
+            }
+        }
+    }
+
+    # List of available specialist agents for delegation
+    AVAILABLE_SPECIALISTS = [
+        'ResearchAgent',
+        'ContentWriterAgent',
+        'ImageAgent',
+        'VideoAgent',
+        'AudioAgent',
+        'StockAnalystAgent',
+        'TrendAnalysisAgent',
+        'CompetitorAnalysisAgent',
+        'CustomerResearchAgent',
+        'SEOOptimizerAgent',
+        'SocialMediaAgent',
+        'CodeGeneratorAgent',
+        'LegalDocDrafterAgent',
+    ]
+
+    @property
+    def agent_router(self):
+        """
+        Session 744: Lazy-load AgentRouter for cross-agent delegation.
+
+        This enables any agent to call other specialist agents for help,
+        creating true multi-agent collaboration.
+        """
+        if not hasattr(self, '_agent_router') or self._agent_router is None:
+            try:
+                from core.agent_router import AgentRouter
+                self._agent_router = AgentRouter(user=self.user)
+            except ImportError:
+                logger.warning("AgentRouter not available for delegation")
+                self._agent_router = None
+        return self._agent_router
+
+    def _handle_delegate_to_specialist(
+        self,
+        specialist_agent: str,
+        task: str,
+        context: str = "",
+        delegation_context: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Session 744: Handle delegation to a specialist agent.
+
+        This enables cross-agent collaboration where any agent can call
+        another agent for help with specialized tasks.
+
+        Args:
+            specialist_agent: Name of the agent to delegate to
+            task: The task for the specialist
+            context: Optional context about the delegation
+            delegation_context: Full context dict (spider_context, scifi_context)
+
+        Returns:
+            Dict with the specialist's response
+        """
+        try:
+            # Check recursion depth to prevent infinite loops
+            if delegation_context is None:
+                delegation_context = {}
+
+            delegation_depth = delegation_context.get('_delegation_depth', 0)
+            max_depth = 3  # Maximum delegation chain length
+
+            if delegation_depth >= max_depth:
+                logger.warning(
+                    f"🚫 [Session 744] Delegation depth limit ({max_depth}) reached. "
+                    f"{self.name} cannot delegate to {specialist_agent}"
+                )
+                return {
+                    'success': False,
+                    'error': f'Maximum delegation depth ({max_depth}) reached',
+                    'specialist': specialist_agent,
+                    'delegating_agent': self.name
+                }
+
+            # Validate specialist exists
+            if specialist_agent not in self.AVAILABLE_SPECIALISTS:
+                # Try to route anyway - AgentRouter might know about it
+                logger.debug(f"Specialist {specialist_agent} not in AVAILABLE_SPECIALISTS, trying anyway")
+
+            # Get router
+            if not self.agent_router:
+                return {
+                    'success': False,
+                    'error': 'AgentRouter not available for delegation',
+                    'specialist': specialist_agent
+                }
+
+            logger.info(
+                f"🤝 [Session 744] {self.name} delegating to {specialist_agent}: "
+                f"{task[:100]}..."
+            )
+
+            # Build delegation context with depth tracking
+            delegation_ctx = {
+                '_delegation_depth': delegation_depth + 1,
+                '_delegation_chain': delegation_context.get('_delegation_chain', []) + [self.name],
+                '_original_task': delegation_context.get('_original_task', task),
+                'delegating_agent': self.name,
+                'delegation_context': context,
+                # Pass through spider/scifi context if available
+                '_inherited_spider_context': delegation_context.get('spider_context', {}),
+                '_inherited_scifi_context': delegation_context.get('scifi_context', {}),
+            }
+
+            # Route to the specialist
+            result = self.agent_router.route(
+                specialist_agent,
+                task,
+                context=delegation_ctx
+            )
+
+            # Record cross-agent collaboration for learning
+            self._record_delegation(specialist_agent, task, result)
+
+            # Format response
+            if hasattr(result, 'to_dict'):
+                result_data = result.to_dict()
+            elif isinstance(result, dict):
+                result_data = result
+            else:
+                result_data = {'result': str(result)}
+
+            return {
+                'success': result_data.get('success', True),
+                'specialist': specialist_agent,
+                'delegating_agent': self.name,
+                'specialist_response': result_data.get('message', ''),
+                'specialist_data': result_data.get('data', {}),
+                'delegation_depth': delegation_depth + 1
+            }
+
+        except Exception as e:
+            logger.error(f"Delegation to {specialist_agent} failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'specialist': specialist_agent,
+                'delegating_agent': self.name
+            }
+
+    def _record_delegation(
+        self,
+        specialist_agent: str,
+        task: str,
+        result: Any
+    ) -> None:
+        """
+        Session 744: Record cross-agent delegation for learning.
+
+        Creates an AgentLearning record to track which agents collaborate
+        and how effective the collaborations are.
+        """
+        try:
+            from core.models_unified_system import Agent, AgentLearning, AgentSolution
+
+            # Get both agent models
+            teacher_model = Agent.objects.filter(name=specialist_agent).first()
+            student_model = self.agent_model
+
+            if not teacher_model or not student_model:
+                logger.debug(f"Could not record delegation: missing agent models")
+                return
+
+            # Determine success from result
+            if hasattr(result, 'success'):
+                success = result.success
+            elif isinstance(result, dict):
+                success = result.get('success', True)
+            else:
+                success = True
+
+            # Get or create a solution for this delegation
+            # AgentSolution requires: agent (FK), title, description, solution_type
+            solution, _ = AgentSolution.objects.get_or_create(
+                agent=teacher_model,  # The specialist providing the solution
+                title=f"Delegation: {self.name} → {specialist_agent}",
+                solution_type='cross_agent_delegation',
+                defaults={
+                    'description': f"Cross-agent delegation from {self.name} to {specialist_agent}",
+                    'metrics': {
+                        'category': 'collaboration',
+                        'success': success,
+                        'session': 744
+                    },
+                    'tags': ['delegation', 'cross_agent', self.name, specialist_agent],
+                    'success_rate': 0.8 if success else 0.5,
+                }
+            )
+
+            # Create learning record
+            AgentLearning.objects.create(
+                teacher_agent=teacher_model,
+                student_agent=student_model,
+                solution=solution,
+                learning_type='cross_agent_delegation',
+                implementation_success=success,
+                effectiveness_before=0.7,  # Baseline
+                effectiveness_after=0.8 if success else 0.6,  # Slight improvement on success
+                metadata={
+                    'task': task[:500],
+                    'delegation_type': 'specialist_request',
+                    'session': 744
+                }
+            )
+
+            logger.info(
+                f"📚 [Session 744] Recorded delegation: "
+                f"{self.name} → {specialist_agent}"
+            )
+
+        except Exception as e:
+            logger.debug(f"Could not record delegation learning: {e}")
+
+    def get_tools_with_delegation(self) -> List[Dict[str, Any]]:
+        """
+        Session 744: Get this agent's tools plus the delegation tool.
+
+        Use this in subclasses to enable delegation capability:
+
+            def execute(self, task, context, scifi_context, spider_context):
+                tools = self.get_tools_with_delegation()
+                # Use tools in OpenAI call...
+
+        Returns:
+            List of tool definitions including delegate_to_specialist
+        """
+        # Start with agent's own tools
+        all_tools = list(self.tools) if self.tools else []
+
+        # Add delegation tool if not already present
+        has_delegation = any(
+            t.get('function', {}).get('name') == 'delegate_to_specialist'
+            for t in all_tools
+        )
+        if not has_delegation:
+            all_tools.append(self.DELEGATE_TO_SPECIALIST_TOOL)
+
+        return all_tools
+
+    def get_available_specialists_prompt(self) -> str:
+        """
+        Session 744: Get a prompt snippet listing available specialists.
+
+        Include this in your system prompt to inform the LLM about
+        available specialists for delegation.
+
+        Returns:
+            String to include in system prompt
+        """
+        specialists_list = "\n".join(f"- {s}" for s in self.AVAILABLE_SPECIALISTS)
+        return f"""
+## Available Specialist Agents
+You can delegate tasks to these specialists using the delegate_to_specialist tool:
+{specialists_list}
+
+Use delegation when you need expertise outside your specialty. For example:
+- Need research? Delegate to ResearchAgent
+- Need an image? Delegate to ImageAgent
+- Need market analysis? Delegate to StockAnalystAgent
+"""
+
     # ==================== Abstract Methods ====================
 
     @abstractmethod
