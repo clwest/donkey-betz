@@ -23,7 +23,6 @@ import {
   Calendar,
   Sparkles,
   Users,
-  TrendingUp,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -79,19 +78,7 @@ interface Stats {
   total_episodes: number
 }
 
-interface Debate {
-  id: string
-  proposed_topic: string
-  proposed_by: string
-  topic_miner_position?: string
-  contrarian_position?: string
-  analyst_position?: string
-  final_decision: string
-  chosen_angle?: string
-  consensus_reached: boolean
-  content_created: boolean
-  created_at: string
-}
+// Note: Debate interface available for future debates tab integration
 
 const platformIcons: Record<string, typeof Youtube> = {
   youtube: Youtube,

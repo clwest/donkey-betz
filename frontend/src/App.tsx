@@ -34,6 +34,7 @@ import DocumentsPage from '@/pages/DocumentsPage'
 import MythologyLabPage from '@/pages/MythologyLabPage'
 import ContentChannelsPage from '@/pages/ContentChannelsPage'
 import BlogViewerPage from '@/pages/BlogViewerPage'  // Session 742: Blog viewer for content review
+import DistributionPage from '@/pages/DistributionPage'  // Session 745: Distribution dashboard
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -90,6 +91,7 @@ function App() {
         <Route path="spiders" element={<SpiderIntegrationPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="mythology-lab" element={<MythologyLabPage />} />
+        <Route path="distribution" element={<DistributionPage />} />  {/* Session 745: Distribution dashboard */}
         <Route path="blog/:blogId" element={<BlogViewerPage />} />  {/* Session 742: Blog viewer for content review */}
       </Route>
     </Routes>

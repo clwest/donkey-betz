@@ -32,6 +32,7 @@ import {
   Bug,
   FileText,
   Beaker,
+  Share2,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -69,6 +70,7 @@ const navItems = [
   { path: '/podcast', label: 'Podcast', icon: Radio },
   { path: '/content-channels', label: 'Channels', icon: Radio },
   { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
+  { path: '/distribution', label: 'Distribution', icon: Share2 },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },
