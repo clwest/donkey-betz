@@ -72,7 +72,7 @@ class DynamicTeamBuilder:
         self._routing_config = None
         self._synergy_map = None
         self._embeddings_cache = {}
-        self._openai_client = None
+        self._embedding_service = None
         self._agent_router = None
 
     # ==================== Lazy-Loaded Dependencies ====================
@@ -94,12 +94,12 @@ class DynamicTeamBuilder:
         return self._synergy_map
 
     @property
-    def openai_client(self):
-        """Lazy-load OpenAI client for embeddings."""
-        if self._openai_client is None:
-            from openai import OpenAI
-            self._openai_client = OpenAI()
-        return self._openai_client
+    def embedding_service(self):
+        """Session 744: Lazy-load centralized EmbeddingService for tracked embedding calls."""
+        if self._embedding_service is None:
+            from core.services.embedding_service import get_embedding_service
+            self._embedding_service = get_embedding_service()
+        return self._embedding_service
 
     @property
     def agent_router(self):
@@ -112,18 +112,20 @@ class DynamicTeamBuilder:
     # ==================== Task Analysis ====================
 
     def _get_embedding(self, text: str) -> List[float]:
-        """Get embedding for text, with caching."""
+        """Get embedding for text, with caching. Session 744: Uses centralized EmbeddingService."""
         cache_key = text[:100]  # Use first 100 chars as key
 
         if cache_key in self._embeddings_cache:
             return self._embeddings_cache[cache_key]
 
         try:
-            response = self.openai_client.embeddings.create(
+            # Session 744: Use centralized service for tracking
+            result = self.embedding_service.create_embedding(
+                text=text,
                 model="text-embedding-3-small",
-                input=text
+                agent_name='DynamicTeamBuilder'
             )
-            embedding = response.data[0].embedding
+            embedding = result.embedding
             self._embeddings_cache[cache_key] = embedding
             return embedding
         except Exception as e:

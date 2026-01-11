@@ -40,13 +40,10 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-# Try to import OpenAI for embeddings
-try:
-    import openai
-    HAS_OPENAI = True
-except ImportError:
-    HAS_OPENAI = False
-    logger.warning("OpenAI not available for memory embeddings")
+# Session 744: Use centralized EmbeddingService for all embedding calls
+from core.services.embedding_service import get_embedding_service
+
+HAS_OPENAI = True  # EmbeddingService handles this internally
 
 
 @dataclass
@@ -72,29 +69,25 @@ class MemoryEmbeddingService:
     EMBEDDING_DIMENSION = 1536
 
     def __init__(self):
-        self._client = None
+        self._embedding_service = None
 
     @property
-    def client(self):
-        """Lazy-load OpenAI client."""
-        if self._client is None and HAS_OPENAI:
-            api_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY')
-            if api_key:
-                self._client = openai.OpenAI(api_key=api_key)
-        return self._client
+    def embedding_service(self):
+        """Session 744: Lazy-load centralized EmbeddingService for tracked embedding calls."""
+        if self._embedding_service is None:
+            self._embedding_service = get_embedding_service()
+        return self._embedding_service
 
     def _generate_embedding(self, text: str) -> Optional[List[float]]:
-        """Generate embedding for text using OpenAI."""
-        if not self.client:
-            logger.warning("OpenAI client not available for embedding generation")
-            return None
-
+        """Generate embedding for text using centralized EmbeddingService."""
         try:
-            response = self.client.embeddings.create(
-                input=text,
-                model=self.EMBEDDING_MODEL
+            # Session 744: Use centralized service for tracking
+            result = self.embedding_service.create_embedding(
+                text=text[:8000],  # Truncate to avoid token limits
+                model=self.EMBEDDING_MODEL,
+                agent_name='MemoryEmbeddingService'
             )
-            return response.data[0].embedding
+            return result.embedding
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return None

@@ -42,13 +42,10 @@ except ImportError:
     logger.warning("Could not import from routing_config, using fallback")
     AGENT_CAPABILITIES = {}  # Will be defined below as fallback
 
-# Try to import OpenAI for embeddings
-try:
-    import openai
-    HAS_OPENAI = True
-except ImportError:
-    HAS_OPENAI = False
-    logger.warning("OpenAI not available for semantic routing")
+# Session 744: Use centralized EmbeddingService for all embedding calls
+from core.services.embedding_service import get_embedding_service
+
+HAS_OPENAI = True  # EmbeddingService handles this internally
 
 
 @dataclass
@@ -99,18 +96,16 @@ class SemanticRoutingService:
     CACHE_TTL = 3600 * 24  # 24 hours for agent embeddings
 
     def __init__(self):
-        self._client = None
+        self._embedding_service = None
         self._agent_embeddings: Dict[str, np.ndarray] = {}
         self._initialized = False
 
     @property
-    def client(self):
-        """Lazy-load OpenAI client."""
-        if self._client is None and HAS_OPENAI:
-            api_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY')
-            if api_key:
-                self._client = openai.OpenAI(api_key=api_key)
-        return self._client
+    def embedding_service(self):
+        """Session 744: Lazy-load centralized EmbeddingService for tracked embedding calls."""
+        if self._embedding_service is None:
+            self._embedding_service = get_embedding_service()
+        return self._embedding_service
 
     def initialize(self) -> bool:
         """
@@ -122,8 +117,9 @@ class SemanticRoutingService:
         if self._initialized:
             return True
 
-        if not self.client:
-            logger.warning("OpenAI client not available, semantic routing disabled")
+        # Session 744: EmbeddingService handles client initialization internally
+        if not self.embedding_service:
+            logger.warning("EmbeddingService not available, semantic routing disabled")
             return False
 
         try:
@@ -189,16 +185,15 @@ class SemanticRoutingService:
         return None
 
     def _generate_embedding(self, text: str) -> Optional[np.ndarray]:
-        """Generate embedding for text using OpenAI."""
-        if not self.client:
-            return None
-
+        """Generate embedding for text using centralized EmbeddingService."""
         try:
-            response = self.client.embeddings.create(
-                input=text,
-                model=self.EMBEDDING_MODEL
+            # Session 744: Use centralized service for tracking
+            result = self.embedding_service.create_embedding(
+                text=text,
+                model=self.EMBEDDING_MODEL,
+                agent_name='SemanticRoutingService'
             )
-            return np.array(response.data[0].embedding)
+            return np.array(result.embedding)
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return None
