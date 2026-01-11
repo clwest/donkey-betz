@@ -138,6 +138,7 @@ class BaseAgent(ABC, TimeTravelMixin):
     name: str = "BaseAgent"
     system_prompt: str = ""
     tools: List[Dict[str, Any]] = []
+    can_delegate: bool = True  # Session 744: Enable autonomous delegation to specialists
 
     def __init__(self, user=None):
         """
@@ -1624,7 +1625,8 @@ Consider these trends when crafting the response to maximize relevance and engag
     def _call_openai(
         self,
         prompt: str,
-        conversation_history: List[Dict[str, str]] = None
+        conversation_history: List[Dict[str, str]] = None,
+        execution_context: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """
         Make a GPT API call with this agent's tools.
@@ -1632,10 +1634,17 @@ Consider these trends when crafting the response to maximize relevance and engag
         Args:
             prompt: The complete prompt (system + context + task)
             conversation_history: Optional previous messages
+            execution_context: Optional context (spider_context, scifi_context) for delegation
+                              Session 744: Store this so _execute_tool_call can access it
 
         Returns:
             OpenAI response dict with message and tool_calls
         """
+        # Session 744: Store execution context for delegation tool calls
+        if execution_context:
+            self._current_delegation_context = execution_context
+        elif not hasattr(self, '_current_delegation_context'):
+            self._current_delegation_context = {}
         messages = []
 
         # Add system message
@@ -1652,12 +1661,19 @@ Consider these trends when crafting the response to maximize relevance and engag
         # Session 293: gpt-5-mini uses tokens for internal reasoning first
         # Need high token limit to ensure room for reasoning + visible output
         start_time = time.time()  # Session 536: Track timing for analytics
+
+        # Session 744: Auto-include delegation tool if can_delegate is True
+        if self.can_delegate:
+            effective_tools = self.get_tools_with_delegation()
+        else:
+            effective_tools = self.tools if self.tools else None
+
         try:
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=messages,
-                tools=self.tools if self.tools else None,
-                tool_choice="auto" if self.tools else None,
+                tools=effective_tools if effective_tools else None,
+                tool_choice="auto" if effective_tools else None,
                 max_completion_tokens=6000,  # High enough for reasoning + output
             )
 
@@ -1782,6 +1798,7 @@ Consider these trends when crafting the response to maximize relevance and engag
         system_prompt: Optional[str] = None,
         conversation_history: List[Dict[str, str]] = None,
         task_type: Optional[str] = None,
+        execution_context: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """
         Session 697: Make an LLM call using the Enhanced Nervous System router.
@@ -1800,13 +1817,21 @@ Consider these trends when crafting the response to maximize relevance and engag
             system_prompt: Optional system prompt (defaults to self.system_prompt)
             conversation_history: Optional previous messages
             task_type: Optional task type for model override
+            execution_context: Optional context (spider_context, scifi_context) for delegation
+                              Session 744: Passed to _call_openai for delegation support
 
         Returns:
             Dict with 'content', 'tool_calls', 'finish_reason', 'provider', 'model'
         """
+        # Session 744: Store execution context for delegation tool calls
+        if execution_context:
+            self._current_delegation_context = execution_context
+        elif not hasattr(self, '_current_delegation_context'):
+            self._current_delegation_context = {}
+
         # Fall back to direct OpenAI if router not available
         if not self.llm_router:
-            return self._call_openai(prompt, conversation_history)
+            return self._call_openai(prompt, conversation_history, execution_context)
 
         try:
             from core.services.llm_provider_registry import LLMRequest
@@ -1876,6 +1901,11 @@ Consider these trends when crafting the response to maximize relevance and engag
         """
         Execute a tool call. Override in subclasses for tool-specific logic.
 
+        Session 744: Now handles delegate_to_specialist tool automatically.
+        Subclasses should call super()._execute_tool_call() first to handle
+        delegation, then implement their own tool handling if delegation
+        returns NotImplementedError.
+
         Args:
             tool_name: Name of the tool to execute
             arguments: Tool arguments
@@ -1883,6 +1913,16 @@ Consider these trends when crafting the response to maximize relevance and engag
         Returns:
             Tool execution result
         """
+        # Session 744: Handle delegate_to_specialist tool automatically
+        if tool_name == 'delegate_to_specialist':
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
+
+        # Subclasses should override and handle their own tools
         raise NotImplementedError(
             f"Tool execution for '{tool_name}' not implemented in {self.name}"
         )

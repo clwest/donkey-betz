@@ -775,10 +775,22 @@ Generate the {content_config['name']} now:"""
         tool_name: str,
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """This agent doesn't use sub-tools."""
+        """
+        Execute tool calls. Session 744: Now supports delegation to specialists.
+        """
+        # Session 744: Handle delegation to specialists first
+        if tool_name == 'delegate_to_specialist':
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
+
+        # This agent doesn't have other sub-tools
         return {
             'success': False,
-            'error': 'ContentWriterAgent generates content directly, no sub-tools.'
+            'error': f'ContentWriterAgent does not support tool: {tool_name}'
         }
 
     @classmethod
