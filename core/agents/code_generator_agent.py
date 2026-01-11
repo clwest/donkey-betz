@@ -73,7 +73,16 @@ You have access to tools for:
 - refactor_code: Improve existing code
 - generate_tests: Create tests for code
 
-Provide the code first, then a brief usage example if needed."""
+Provide the code first, then a brief usage example if needed.
+
+DELEGATION (Session 744):
+If you need something outside your expertise, use the delegate_to_specialist tool:
+- Need research on APIs/libraries? Delegate to ResearchAgent
+- Need documentation? Delegate to ContentWriterAgent
+- Need visual diagrams? Delegate to ImageAgent
+- Need code review? Delegate to CodeReviewAgent
+
+Always delegate tasks you cannot perform yourself rather than refusing."""
 
     tools = [
         {
@@ -361,6 +370,15 @@ Provide the code first, then a brief usage example if needed."""
 
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a specific tool call."""
+
+        # Session 744: Handle delegation to specialists first
+        if tool_name == "delegate_to_specialist":
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
 
         if tool_name == "generate_code":
             return self._generate_code(

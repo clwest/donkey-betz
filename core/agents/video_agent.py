@@ -94,8 +94,16 @@ Video settings:
 - Duration: 4, 6, or 8 seconds (Runway ML limits)
 - Motion prompts should describe movement and camera motion
 
-You CANNOT create images, audio, 3D models, or search the web. Just videos.
-If asked to do something outside video generation, politely explain you can only create videos."""
+You CANNOT create images, audio, 3D models, or search the web directly. Just videos.
+
+DELEGATION (Session 744):
+If you need something outside your expertise, use the delegate_to_specialist tool:
+- Need images for your video? Delegate to ImageAgent
+- Need audio/music? Delegate to AudioAgent
+- Need research/content? Delegate to ResearchAgent
+- Need written scripts? Delegate to ContentWriterAgent
+
+Always delegate tasks you cannot perform yourself rather than refusing."""
 
     tools = [
         {
@@ -367,6 +375,15 @@ If asked to do something outside video generation, politely explain you can only
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Execute a tool call for video generation."""
+
+        # Session 744: Handle delegation to specialists first
+        if tool_name == "delegate_to_specialist":
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
 
         if tool_name == "generate_video":
             from core.views_image import _execute_generate_video

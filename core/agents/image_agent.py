@@ -147,8 +147,17 @@ SPECIAL STYLES (use only when explicitly requested or matching brand):
 - fantasy: For gaming, entertainment, or magical themes
 - steampunk: For Victorian/mechanical aesthetics
 
-You CANNOT create videos, audio, 3D models, or search the web. Just images.
-If asked to do something outside image generation, politely explain you can only create images."""
+You CANNOT create videos, audio, 3D models, or search the web directly. Just images.
+
+DELEGATION (Session 744):
+If you need something outside your expertise, use the delegate_to_specialist tool:
+- Need research/inspiration? Delegate to ResearchAgent
+- Need written content? Delegate to ContentWriterAgent
+- Need video from your images? Delegate to VideoAgent
+- Need 3D models? Delegate to ThreeDAgent
+- Need trend analysis? Delegate to TrendAnalysisAgent
+
+Always delegate tasks you cannot perform yourself rather than refusing."""
 
     tools = [
         {
@@ -422,12 +431,21 @@ If asked to do something outside image generation, politely explain you can only
         Execute a tool call for image generation.
 
         Args:
-            tool_name: Should be "generate_image"
-            arguments: Image generation parameters
+            tool_name: Should be "generate_image" or "delegate_to_specialist"
+            arguments: Tool parameters
 
         Returns:
-            Dict with success status and generated images
+            Dict with success status and result
         """
+        # Session 744: Handle delegation to specialists first
+        if tool_name == "delegate_to_specialist":
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
+
         if tool_name != "generate_image":
             return {
                 'success': False,
