@@ -43,6 +43,7 @@ class HeartMonitorService:
     """
 
     # Component definitions (human body metaphor)
+    # Session 744: Added 'celery' component for task execution monitoring
     COMPONENTS = {
         'brain': {
             'name': 'Brain (ThinkingAgent)',
@@ -67,6 +68,10 @@ class HeartMonitorService:
         'memory': {
             'name': 'Memory (Database & Redis)',
             'description': 'Persistence and caching layer',
+        },
+        'celery': {
+            'name': 'Celery (Task Workers)',
+            'description': 'Background task execution - 150+ scheduled tasks',
         },
     }
 
@@ -119,6 +124,7 @@ class HeartMonitorService:
         components_checked = 0
 
         # Check each body component
+        # Session 744: Added celery to critical components
         check_methods = {
             'brain': self.check_brain,
             'nervous_system': self.check_nervous_system,
@@ -126,6 +132,7 @@ class HeartMonitorService:
             'sensory': self.check_sensory,
             'skin': self.check_skin,
             'memory': self.check_memory,
+            'celery': self.check_celery,
         }
 
         for component_id, check_method in check_methods.items():
@@ -443,6 +450,57 @@ class HeartMonitorService:
             result['error'] = '; '.join(errors)
 
         return result
+
+    def check_celery(self) -> Dict:
+        """
+        Session 744: Check Celery worker and beat scheduler health.
+
+        This is CRITICAL - without healthy Celery, 150+ scheduled tasks
+        cannot execute and the autonomous system is dormant.
+        """
+        start = time.time()
+        try:
+            from core.services.celery_health import get_celery_health_service
+
+            celery_service = get_celery_health_service()
+            status = celery_service.get_quick_status()
+
+            workers_online = status.get('workers_online', 0)
+            beat_running = status.get('beat_running', False)
+
+            # Determine health status
+            if workers_online >= 2 and beat_running:
+                status_level = 'healthy'
+                is_healthy = True
+            elif workers_online >= 1 or beat_running:
+                status_level = 'degraded'
+                is_healthy = True
+            else:
+                status_level = 'critical'
+                is_healthy = False
+
+            response_time_ms = int((time.time() - start) * 1000)
+
+            return {
+                'name': self.COMPONENTS['celery']['name'],
+                'status': status_level,
+                'is_healthy': is_healthy,
+                'response_time_ms': response_time_ms,
+                'details': {
+                    'workers_online': workers_online,
+                    'beat_running': beat_running,
+                    'scheduled_tasks': 150,  # Approximate count
+                },
+            }
+        except Exception as e:
+            return {
+                'name': self.COMPONENTS['celery']['name'],
+                'status': 'critical',
+                'is_healthy': False,
+                'response_time_ms': int((time.time() - start) * 1000),
+                'error': str(e),
+                'details': {},
+            }
 
     def _update_component_status(self, component_id: str, result: Dict):
         """Update component status in database."""
