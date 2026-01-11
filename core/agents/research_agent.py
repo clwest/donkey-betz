@@ -412,7 +412,13 @@ If asked to create content, explain you can only research and suggest using the 
 
                 # Session 401: Use prompt with attribution for transparency
                 full_prompt, knowledge_attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
-                gpt_response = self._call_openai(full_prompt)
+                # Session 744: Pass execution context for delegation support
+                execution_context = {
+                    'spider_context': spider_context,
+                    'scifi_context': scifi_context,
+                    'task': task,
+                }
+                gpt_response = self._call_openai(full_prompt, execution_context=execution_context)
 
                 if gpt_response.get('tool_calls'):
                     all_results = []
@@ -665,6 +671,15 @@ If asked to create content, explain you can only research and suggest using the 
                 limit=arguments.get('limit', 25),
                 sort=arguments.get('sort', 'relevance'),
                 time_filter=arguments.get('time_filter', 'month')
+            )
+
+        elif tool_name == "delegate_to_specialist":
+            # Session 744: Handle delegation to specialists
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
             )
 
         else:
