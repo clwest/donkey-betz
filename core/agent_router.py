@@ -727,12 +727,15 @@ class AgentRouter:
 
             # Track successful execution
             # Session 641: Use result.message (not result.output which doesn't exist on AgentResult)
+            # Session 744: Pass tokens_used and cost to execution record
             self._complete_execution(
                 execution_record,
                 agent_name,
                 success=result.success,
                 execution_time_ms=result.execution_time_ms,
-                output_data={'result_preview': str(result.message)[:500] if result.message else None}
+                output_data={'result_preview': str(result.message)[:500] if result.message else None},
+                tokens_used=result.tokens_used,
+                cost=result.cost
             )
 
             logger.info(
@@ -974,12 +977,15 @@ class AgentRouter:
         success: bool,
         execution_time_ms: int,
         output_data: dict = None,
-        error_message: str = None
+        error_message: str = None,
+        tokens_used: int = 0,
+        cost: float = 0.0
     ):
         """
         Complete an execution record and update agent stats.
         Session 641: Added for Agent Performance Dashboard.
         Session 729: Added AgentExecutionMemory creation for intelligent recommendations.
+        Session 744: Added tokens_used and cost tracking.
         """
         try:
             from core.models_unified_system import Agent
@@ -989,6 +995,9 @@ class AgentRouter:
                 execution_record.status = 'completed' if success else 'failed'
                 execution_record.execution_time_ms = execution_time_ms
                 execution_record.completed_at = timezone.now()
+                # Session 744: Track token usage and cost
+                execution_record.tokens_used = tokens_used
+                execution_record.cost = cost
                 if output_data:
                     execution_record.output_data = output_data
                 if error_message:
