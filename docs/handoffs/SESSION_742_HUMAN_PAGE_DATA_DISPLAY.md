@@ -146,9 +146,84 @@ frontend/src/pages/HumanPage.tsx           # +210 lines (PayloadDisplay, configs
 | No item type differentiation | Color-coded badges with labels |
 | Arbitrage profit hidden in payload | Profit % shown inline with title |
 
+## Part 2: Clickable Navigation Audit & Fixes
+
+After initial data display improvements, an audit of all 153 attention items revealed that many items lacked proper navigation links. The audit found 11 unique source_type/item_type combinations:
+
+| Source Type | Item Type | Count | Navigation Added |
+|-------------|-----------|-------|------------------|
+| `arbitrage_detection` | `arbitrage` | 143 | → `/betting` |
+| `betting_monitor` | `arbitrage` | 1 | → `/betting` |
+| `content:blog` | `review` | 1 | → `/blog/{id}` |
+| `content_pipeline` | `review` | 1 | → `/blog/{id}` (already worked) |
+| `experiment_tracker` | `milestone` | 1 | → `/intelligence` |
+| `pilot_system` | `approval` | 1 | → `/intelligence` |
+| `spider:hackernews` | `insight` | 1 | → `/spiders` |
+| `spider:yahoo_finance` | `insight` | 1 | → `/spiders` |
+| `spider_network` | `insight` | 1 | → `/spiders` |
+| `monitoring` | `alert` | 1 | → `/body-health` |
+| `system_alert:health_check` | `alert` | 1 | → `/body-health` |
+
+### Changes Made (Part 2)
+
+#### 1. Pilot/Milestone Items → `/intelligence`
+- Pilot ID is now clickable, linking to Intelligence Dashboard
+- Added "View in Intelligence Dashboard" quick action link
+
+#### 2. Spider/Insight Items → `/spiders`
+- Spider name is now clickable, linking to Spider Integration page
+- Added data preview for spider alerts
+- Added "View Spider Integration" quick action link
+
+#### 3. Arbitrage Items → `/betting`
+- Added "View Betting Dashboard" quick action link in payload display
+
+#### 4. Alert Items → `/body-health`
+- Enhanced to show agents/spiders/capacity fields for system health checks
+- Added "View Body Health Dashboard" quick action link
+
+#### 5. Review Items → `/content-channels`
+- Added "View Content Channels" quick action link
+- Handles both blog_ids arrays and single content_id
+
+#### 6. Fixed Orphaned Data
+- `content:blog` review item had placeholder `blog-001` ID
+- Updated to link to real SelfBlog entry: `b4b06092-c25c-4cf0-a028-6ac5628c632b`
+
+### New BlogViewerPage
+
+**File:** `frontend/src/pages/BlogViewerPage.tsx` (NEW - ~200 lines)
+
+Full blog content viewer accessible at `/blog/:blogId`:
+- Header with title, meta description, word count, tone
+- Tags display
+- Intro, sections, conclusion
+- Stats snapshot at time of writing
+- Action buttons: Approve for Publishing, Needs Revision
+
+### Files Changed (Part 2)
+
+```
+frontend/src/pages/HumanPage.tsx           # +80 lines (navigation links in PayloadDisplay)
+frontend/src/pages/BlogViewerPage.tsx      # NEW (~200 lines)
+frontend/src/App.tsx                       # +2 lines (blog route)
+```
+
+### Summary of All Navigation Links
+
+| Item Type | Primary Link | Quick Action |
+|-----------|--------------|--------------|
+| `arbitrage` | N/A | View Betting Dashboard |
+| `approval` | Pilot ID → /intelligence | View in Intelligence Dashboard |
+| `milestone` | Pilot ID → /intelligence | View in Intelligence Dashboard |
+| `alert` | N/A | View Body Health Dashboard |
+| `review` | Blog titles → /blog/{id} | View Content Channels |
+| `insight` | Spider name → /spiders | View Spider Integration |
+
 ## Next Steps
 
 - Consider adding filtering by item_type (not just urgency)
 - Add bulk actions for similar items (approve all low-risk)
 - Connect to real-time WebSocket updates for arbitrage expiration countdown
 - Add sound/visual notification for HOT arbitrage opportunities
+- Fix empty arbitrage_detection payload.id fields (143 items have empty id)

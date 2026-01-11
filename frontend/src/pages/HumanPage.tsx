@@ -209,18 +209,37 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             </ul>
           </div>
         )}
+        {/* Session 742: Quick action - link to Betting page */}
+        <div className="col-span-2 mt-2 pt-2 border-t border-dark-border">
+          <a
+            href="/betting"
+            className="text-sm text-accent-green hover:text-accent-green/80 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DollarSign size={14} />
+            View Betting Dashboard
+            <ExternalLink size={12} />
+          </a>
+        </div>
       </div>
     )
   }
 
-  // Pilot/experiment display
+  // Pilot/experiment display - Session 742: Added link to Intelligence page
   if (item_type === 'approval' || item_type === 'milestone') {
     return (
       <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
         {payload.pilot_id && (
-          <div>
+          <div className="col-span-2">
             <p className="text-xs text-gray-500">Pilot ID</p>
-            <p className="font-medium text-primary-400">{String(payload.pilot_id)}</p>
+            <a
+              href="/intelligence"
+              className="font-medium text-primary-400 hover:text-primary-300 hover:underline inline-flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {String(payload.pilot_id)}
+              <ExternalLink size={12} />
+            </a>
           </div>
         )}
         {payload.accuracy !== undefined && (
@@ -241,32 +260,82 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             <p className="font-medium">{Number(payload.target)}%</p>
           </div>
         )}
+        {/* Quick action: View in Intelligence */}
+        <div className="col-span-2 pt-2 border-t border-dark-border">
+          <a
+            href="/intelligence"
+            className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Target size={14} />
+            View in Intelligence Dashboard
+            <ExternalLink size={12} />
+          </a>
+        </div>
       </div>
     )
   }
 
-  // Alert/monitoring display
+  // Alert/monitoring display - Session 742: Enhanced with links to Body Health
   if (item_type === 'alert') {
+    const isSystemHealth = source_type.includes('system_alert') || source_type.includes('health')
     return (
-      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
-        {payload.spike_percentage !== undefined && (
-          <div>
-            <p className="text-xs text-gray-500">Spike</p>
-            <p className="font-bold text-accent-red">+{Number(payload.spike_percentage)}%</p>
-          </div>
-        )}
-        {payload.concurrent_executions !== undefined && (
-          <div>
-            <p className="text-xs text-gray-500">Concurrent</p>
-            <p className="font-medium">{Number(payload.concurrent_executions)}</p>
-          </div>
-        )}
+      <div className="space-y-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        <div className="grid grid-cols-2 gap-3">
+          {payload.spike_percentage !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Spike</p>
+              <p className="font-bold text-accent-red">+{Number(payload.spike_percentage)}%</p>
+            </div>
+          )}
+          {payload.concurrent_executions !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Concurrent Executions</p>
+              <p className="font-medium">{Number(payload.concurrent_executions)}</p>
+            </div>
+          )}
+          {/* System health check fields */}
+          {payload.agents !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Agents</p>
+              <p className="font-medium">{Number(payload.agents)}</p>
+            </div>
+          )}
+          {payload.spiders !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Spiders</p>
+              <p className="font-medium">{Number(payload.spiders)}</p>
+            </div>
+          )}
+          {payload.capacity !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Capacity</p>
+              <p className="font-medium">{String(payload.capacity)}</p>
+            </div>
+          )}
+        </div>
+        {/* Quick action: View Body Health */}
+        <div className="pt-2 border-t border-dark-border">
+          <a
+            href="/body-health"
+            className="text-sm text-accent-red hover:text-accent-red/80 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Heart size={14} />
+            View Body Health Dashboard
+            <ExternalLink size={12} />
+          </a>
+        </div>
       </div>
     )
   }
 
   // Content review display - Session 742: Show linked blog titles
   if (item_type === 'review') {
+    // Check if we have blog_ids array or just a single content_id
+    const hasBlogList = payload.blog_titles && Array.isArray(payload.blog_titles)
+    const singleContentId = payload.content_id && !hasBlogList
+
     return (
       <div className="space-y-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
         <div className="flex gap-4">
@@ -284,7 +353,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
           )}
         </div>
         {/* Session 742: Show linked blog titles */}
-        {payload.blog_titles && Array.isArray(payload.blog_titles) && (
+        {hasBlogList && (
           <div className="border-t border-dark-border pt-3">
             <p className="text-xs text-gray-500 mb-2">Blog Posts to Review</p>
             <ul className="space-y-2">
@@ -299,10 +368,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-primary-400 hover:text-primary-300 hover:underline"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // Open in new tab - could also be a modal
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {title}
                       </a>
@@ -315,26 +381,92 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             </ul>
           </div>
         )}
+        {/* Session 742: Handle single content_id case */}
+        {singleContentId && (
+          <div className="border-t border-dark-border pt-3">
+            <a
+              href={`/blog/${payload.content_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <FileText size={14} />
+              View Content
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        )}
+        {/* Quick action: View Content Channels */}
+        <div className="pt-2 border-t border-dark-border">
+          <a
+            href="/content-channels"
+            className="text-sm text-accent-purple hover:text-accent-purple/80 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FileText size={14} />
+            View Content Channels
+            <ExternalLink size={12} />
+          </a>
+        </div>
       </div>
     )
   }
 
-  // Spider/insight display
+  // Spider/insight display - Session 742: Added links to Spiders page
   if (item_type === 'insight') {
+    const spiderName = payload.spider_name || payload.spider
     return (
-      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
-        {payload.spider && (
-          <div>
-            <p className="text-xs text-gray-500">Spider</p>
-            <p className="font-medium text-primary-400">{String(payload.spider)}</p>
+      <div className="space-y-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        <div className="grid grid-cols-2 gap-3">
+          {spiderName && (
+            <div className="col-span-2">
+              <p className="text-xs text-gray-500">Spider</p>
+              <a
+                href="/spiders"
+                className="font-medium text-primary-400 hover:text-primary-300 hover:underline inline-flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {String(spiderName)}
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          )}
+          {payload.duplicate_rate !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Duplicate Rate</p>
+              <p className="font-medium text-accent-amber">{Number(payload.duplicate_rate)}%</p>
+            </div>
+          )}
+          {payload.alert_type && (
+            <div>
+              <p className="text-xs text-gray-500">Alert Type</p>
+              <p className="font-medium capitalize">{String(payload.alert_type).replace(/_/g, ' ')}</p>
+            </div>
+          )}
+        </div>
+        {/* Spider data preview if available */}
+        {payload.data && typeof payload.data === 'object' && (
+          <div className="border-t border-dark-border pt-2">
+            <p className="text-xs text-gray-500 mb-1">Data Preview</p>
+            <pre className="text-xs bg-dark-card p-2 rounded overflow-x-auto max-h-24">
+              {JSON.stringify(payload.data, null, 2).slice(0, 200)}
+              {JSON.stringify(payload.data).length > 200 && '...'}
+            </pre>
           </div>
         )}
-        {payload.duplicate_rate !== undefined && (
-          <div>
-            <p className="text-xs text-gray-500">Duplicate Rate</p>
-            <p className="font-medium text-accent-amber">{Number(payload.duplicate_rate)}%</p>
-          </div>
-        )}
+        {/* Quick action: View Spider Integration */}
+        <div className="pt-2 border-t border-dark-border">
+          <a
+            href="/spiders"
+            className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Activity size={14} />
+            View Spider Integration
+            <ExternalLink size={12} />
+          </a>
+        </div>
       </div>
     )
   }
