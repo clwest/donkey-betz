@@ -355,7 +355,7 @@ from core.views_agent_learning import (
     get_conversation_contract_detail,
 )
 
-# Session 628 + 631 + 632: Content Calendar
+# Session 628 + 631 + 632 + 741: Content Calendar & Channels
 from core.views_content_calendar import (
     content_calendar_main,
     content_calendar_upcoming,
@@ -363,6 +363,9 @@ from core.views_content_calendar import (
     content_calendar_reschedule,
     content_calendar_episode_detail,  # Session 631
     content_calendar_generate,  # Session 632
+    content_channels_list,  # Session 741
+    content_channel_detail,  # Session 741
+    content_episode_detail,  # Session 741
 )
 
 # Session 250: Hive Mind Mode
@@ -1477,6 +1480,11 @@ urlpatterns = [
     path('api/content-calendar/reschedule/', content_calendar_reschedule, name='content-calendar-reschedule'),
     path('api/content-calendar/episode/<uuid:episode_id>/', content_calendar_episode_detail, name='content-calendar-episode-detail'),  # Session 631
     path('api/content-calendar/generate/<uuid:channel_id>/', content_calendar_generate, name='content-calendar-generate'),  # Session 632
+
+    # Session 741: Content Channels API
+    path('api/content-channels/', content_channels_list, name='content-channels-list'),
+    path('api/content-channels/<uuid:channel_id>/', content_channel_detail, name='content-channel-detail'),
+    path('api/content-channels/episode/<uuid:episode_id>/', content_episode_detail, name='content-episode-detail'),
 
     # Agent Tracking APIs (Session 120)
     path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),

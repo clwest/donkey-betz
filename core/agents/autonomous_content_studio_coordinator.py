@@ -740,6 +740,31 @@ Make it conversational and engaging. Use natural speech patterns."""
             logger.warning(f"Session 636: Failed to generate script: {script_error}")
             # Keep the series_prompt as fallback
 
+        # Session 741: Generate unique episode title from script content
+        episode_title = f"{channel.name}: {topic}"  # Default fallback
+        try:
+            title_prompt = f"""Based on this podcast script, generate a short, catchy episode title (max 60 chars).
+The title should capture the SPECIFIC topic discussed, not be generic.
+
+Script excerpt:
+{script_content[:1500]}
+
+Reply with ONLY the title, nothing else. Do not include the show name prefix."""
+
+            title_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": title_prompt}],
+                max_tokens=50
+            )
+            generated_title = title_response.choices[0].message.content.strip().strip('"\'')
+            # Ensure it's not too long and add channel name prefix
+            if len(generated_title) > 60:
+                generated_title = generated_title[:57] + "..."
+            episode_title = f"{channel.name}: {generated_title}"
+            logger.info(f"Session 741: Generated unique title: {episode_title}")
+        except Exception as title_error:
+            logger.warning(f"Session 741: Failed to generate title, using default: {title_error}")
+
         series = AISeries.objects.create(
             name=f"{channel.name} - {topic}",
             description=angle,
@@ -754,7 +779,7 @@ Make it conversational and engaging. Use natural speech patterns."""
         episode = ChannelEpisode.objects.create(
             channel=channel,
             series=series,
-            title=f"{topic}",
+            title=episode_title,  # Session 741: Use unique generated title
             topic=topic,
             description=angle,
             script=script_content  # Session 636: Use generated script, not just prompt

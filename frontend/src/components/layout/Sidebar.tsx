@@ -67,6 +67,7 @@ const navItems = [
   { path: '/content', label: 'Content', icon: Palette },
   { path: '/legal', label: 'Legal', icon: Scale },
   { path: '/podcast', label: 'Podcast', icon: Radio },
+  { path: '/content-channels', label: 'Channels', icon: Radio },
   { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
