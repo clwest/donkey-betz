@@ -1,0 +1,198 @@
+/**
+ * Session 742: Blog Viewer Page
+ * Displays full blog content from SelfBlog model
+ */
+
+import { useParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle } from 'lucide-react'
+import { cn } from '@/lib/cn'
+
+interface Blog {
+  id: string
+  title: string
+  meta_description: string
+  intro: string
+  sections: Array<{ title: string; content: string }>
+  conclusion: string
+  tags: string[]
+  full_text: string
+  tone: string
+  word_count: number
+  stats_snapshot: Record<string, unknown>
+  created_at: string
+}
+
+export default function BlogViewerPage() {
+  const { blogId } = useParams<{ blogId: string }>()
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['blog', blogId],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/research/self-blog/${blogId}/`)
+      const json = await response.json()
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to load blog')
+      }
+      return json.blog as Blog
+    },
+    enabled: !!blogId,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-primary-500" size={32} />
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <div className="card text-center py-12">
+        <AlertCircle className="mx-auto mb-4 text-accent-red" size={48} />
+        <h3 className="text-lg font-semibold mb-2">Blog Not Found</h3>
+        <p className="text-gray-400 mb-4">
+          {error instanceof Error ? error.message : 'The requested blog could not be loaded.'}
+        </p>
+        <Link to="/human" className="btn btn-primary">
+          Back to Human Interface
+        </Link>
+      </div>
+    )
+  }
+
+  const blog = data
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Back button */}
+      <Link
+        to="/human"
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+      >
+        <ArrowLeft size={18} />
+        Back to Human Interface
+      </Link>
+
+      {/* Header */}
+      <div className="card">
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 rounded-lg bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+            <FileText className="text-primary-400" size={24} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold mb-2">{blog.title}</h1>
+            <p className="text-gray-400 mb-4">{blog.meta_description}</p>
+
+            {/* Meta info */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-1">
+                <Calendar size={14} />
+                <span>{new Date(blog.created_at).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <BarChart3 size={14} />
+                <span>{blog.word_count} words</span>
+              </div>
+              {blog.tone && (
+                <span className="px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple capitalize">
+                  {blog.tone}
+                </span>
+              )}
+            </div>
+
+            {/* Tags */}
+            {blog.tags && blog.tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <Tag size={14} className="text-gray-500" />
+                {blog.tags.map((tag, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 rounded bg-dark-bg text-gray-300 text-xs"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="card space-y-6">
+        {/* Intro */}
+        {blog.intro && (
+          <div className="prose prose-invert max-w-none">
+            <p className="text-lg text-gray-300 leading-relaxed">{blog.intro}</p>
+          </div>
+        )}
+
+        {/* Sections */}
+        {blog.sections && blog.sections.length > 0 && (
+          <div className="space-y-6">
+            {blog.sections.map((section, i) => (
+              <div key={i} className="border-l-2 border-primary-500/30 pl-4">
+                <h2 className="text-xl font-semibold mb-3">{section.title}</h2>
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-gray-300 whitespace-pre-wrap">{section.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Conclusion */}
+        {blog.conclusion && (
+          <div className="border-t border-dark-border pt-6">
+            <h2 className="text-lg font-semibold mb-3">Conclusion</h2>
+            <div className="prose prose-invert max-w-none">
+              <p className="text-gray-300">{blog.conclusion}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Full text fallback */}
+        {!blog.sections?.length && !blog.intro && blog.full_text && (
+          <div className="prose prose-invert max-w-none">
+            <p className="text-gray-300 whitespace-pre-wrap">{blog.full_text}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Stats snapshot */}
+      {blog.stats_snapshot && Object.keys(blog.stats_snapshot).length > 0 && (
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">System Stats at Time of Writing</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Object.entries(blog.stats_snapshot).slice(0, 8).map(([key, value]) => (
+              <div key={key} className="p-3 rounded-lg bg-dark-bg">
+                <p className="text-xs text-gray-500 capitalize">{key.replace(/_/g, ' ')}</p>
+                <p className="font-medium">
+                  {typeof value === 'number' ? value.toLocaleString() : String(value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex justify-between items-center">
+        <Link to="/human" className="btn btn-secondary">
+          <ArrowLeft size={16} className="mr-2" />
+          Back
+        </Link>
+        <div className="flex gap-2">
+          <button className="btn btn-primary">
+            Approve for Publishing
+          </button>
+          <button className="btn bg-accent-red/20 text-accent-red hover:bg-accent-red/30">
+            Needs Revision
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
