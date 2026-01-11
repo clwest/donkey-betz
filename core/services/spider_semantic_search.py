@@ -37,13 +37,10 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Try to import OpenAI for embeddings
-try:
-    import openai
-    HAS_OPENAI = True
-except ImportError:
-    HAS_OPENAI = False
-    logger.warning("OpenAI not available for spider semantic search")
+# Session 744: Use centralized EmbeddingService for all embedding calls
+from core.services.embedding_service import get_embedding_service
+
+HAS_OPENAI = True  # EmbeddingService handles this internally
 
 
 @dataclass
@@ -72,28 +69,25 @@ class SpiderSemanticSearch:
     CACHE_TTL = 3600 * 6  # 6 hours for spider data embeddings
 
     def __init__(self):
-        self._client = None
+        self._embedding_service = None
 
     @property
-    def client(self):
-        """Lazy-load OpenAI client."""
-        if self._client is None and HAS_OPENAI:
-            api_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY')
-            if api_key:
-                self._client = openai.OpenAI(api_key=api_key)
-        return self._client
+    def embedding_service(self):
+        """Lazy-load centralized EmbeddingService."""
+        if self._embedding_service is None:
+            self._embedding_service = get_embedding_service()
+        return self._embedding_service
 
     def _generate_embedding(self, text: str) -> Optional[List[float]]:
-        """Generate embedding for text using OpenAI."""
-        if not self.client:
-            return None
-
+        """Generate embedding for text using centralized EmbeddingService."""
         try:
-            response = self.client.embeddings.create(
-                input=text[:8000],  # Truncate to avoid token limits
-                model=self.EMBEDDING_MODEL
+            # Session 744: Use centralized service for tracking
+            result = self.embedding_service.create_embedding(
+                text=text[:8000],  # Truncate to avoid token limits
+                model=self.EMBEDDING_MODEL,
+                agent_name='SpiderSemanticSearch'
             )
-            return response.data[0].embedding
+            return result.embedding
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return None
