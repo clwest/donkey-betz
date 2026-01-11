@@ -205,12 +205,22 @@ export default function BettingPage() {
     enabled: activeTab === 'markets',
   })
 
+  // Session 745: Fetch line movement data
+  const { data: lineMovementData, isLoading: lineMovementLoading } = useQuery({
+    queryKey: ['betting-line-movement'],
+    queryFn: () => bettingApi.lineMovement(),
+    enabled: activeTab === 'odds',
+    refetchInterval: 60000, // Refresh every minute
+  })
+
   const stats = statsData?.data || {}
   const wagers = wagersData?.data?.wagers || []
   const arbitrageOpps = arbData?.data?.opportunities || []
   const liveOdds = oddsData?.data?.games || []
   const bankroll = bankrollData?.data || {}
   const markets = marketsData?.data?.markets || []
+  // Session 745: Line movement data
+  const lineMovement = lineMovementData?.data?.games || []
 
   return (
     <div className="space-y-6">
@@ -533,6 +543,73 @@ export default function BettingPage() {
               <p className="text-gray-400">No games with live odds available right now</p>
             </div>
           )}
+
+          {/* Session 745: Line Movement Section */}
+          <div className="card mt-6">
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <TrendingUp className="text-accent-cyan" size={20} />
+              Line Movement
+            </h3>
+            {lineMovementLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="animate-spin" size={20} />
+              </div>
+            ) : lineMovement.length > 0 ? (
+              <div className="space-y-3">
+                {lineMovement.slice(0, 8).map((game: { game_id: string; home_team: string; away_team: string; sport_key: string; open_spread: number | null; current_spread: number | null; spread_movement: number; open_total: number | null; current_total: number | null; total_movement: number; has_significant_movement: boolean }) => (
+                  <div
+                    key={game.game_id}
+                    className={cn(
+                      'p-3 rounded-lg border transition-colors',
+                      game.has_significant_movement ? 'border-accent-amber/50 bg-accent-amber/5' : 'border-dark-border'
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{game.away_team} @ {game.home_team}</span>
+                        {game.has_significant_movement && (
+                          <span className="px-1.5 py-0.5 text-xs rounded bg-accent-amber/20 text-accent-amber">
+                            Sharp Move
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500">{game.sport_key?.split('_')[1]?.toUpperCase()}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-400">Spread: </span>
+                        <span className="text-gray-300">
+                          {game.open_spread !== null ? game.open_spread : 'N/A'} → {game.current_spread !== null ? game.current_spread : 'N/A'}
+                        </span>
+                        {game.spread_movement !== 0 && (
+                          <span className={cn('ml-2', game.spread_movement > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                            ({game.spread_movement > 0 ? '+' : ''}{game.spread_movement.toFixed(1)})
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Total: </span>
+                        <span className="text-gray-300">
+                          {game.open_total !== null ? game.open_total : 'N/A'} → {game.current_total !== null ? game.current_total : 'N/A'}
+                        </span>
+                        {game.total_movement !== 0 && (
+                          <span className={cn('ml-2', game.total_movement > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                            ({game.total_movement > 0 ? '+' : ''}{game.total_movement.toFixed(1)})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-400">
+                <TrendingUp className="mx-auto mb-2 opacity-50" size={24} />
+                <p className="text-sm">No line movement data</p>
+                <p className="text-xs text-gray-500 mt-1">Line movement will appear when odds change</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
