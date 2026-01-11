@@ -427,6 +427,14 @@ class AgentRouter:
         return self._learning_pattern_engine
 
     @property
+    def advisor_context_builder(self):
+        """Session 744 Phase 4: Lazy-load Advisor context builder for legendary advisor wisdom."""
+        if not hasattr(self, '_advisor_context_builder') or self._advisor_context_builder is None:
+            from core.services.advisor_context_builder import get_advisor_context_builder
+            self._advisor_context_builder = get_advisor_context_builder()
+        return self._advisor_context_builder
+
+    @property
     def semantic_router(self):
         """Session 488: Lazy-load Semantic routing service."""
         if self._semantic_router is None:
@@ -577,6 +585,8 @@ class AgentRouter:
         spider_context = self._get_spider_context(task, agent_name=agent_name)
         # Session 744 Phase 3: Get learning patterns for this agent
         learning_context = self._get_learning_context(agent_name, task)
+        # Session 744 Phase 4: Get advisor wisdom for this agent
+        advisor_context = self._get_advisor_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -656,6 +666,18 @@ class AgentRouter:
             spider_context['learning_summary'] = learning_context.get('summary', '')
             logger.debug(
                 f"📚 [Session 744] Injected learning patterns into spider_context for {agent_name}"
+            )
+
+        # Session 744 Phase 4: Merge advisor context into spider context
+        # This allows agents to receive legendary advisor wisdom through the existing spider_context parameter
+        if advisor_context and advisor_context.get('has_advice'):
+            spider_context['advisor_insights'] = advisor_context
+            spider_context['advisor_principles'] = advisor_context.get('key_principles', [])
+            spider_context['advisor_frameworks'] = advisor_context.get('decision_frameworks', [])
+            spider_context['advisor_summary'] = advisor_context.get('summary', '')
+            spider_context['advisor_approach'] = advisor_context.get('recommended_approach', '')
+            logger.debug(
+                f"🧙 [Session 744] Injected advisor wisdom into spider_context for {agent_name}"
             )
 
         # Execute the agent with tracking
@@ -827,6 +849,36 @@ class AgentRouter:
             return patterns
         except Exception as e:
             logger.warning(f"Failed to get learning context: {e}")
+            return {}
+
+    def _get_advisor_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 744 Phase 4: Get advisor wisdom for an agent.
+
+        This consults legendary advisors (Warren Buffett, Elon Musk, etc.)
+        and injects their decision frameworks and principles into agent context.
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Dict with advisor insights and recommendations
+        """
+        try:
+            advisor_context = self.advisor_context_builder.build_context_for_agent(
+                agent_name=agent_name,
+                task=task,
+                max_advisors=3
+            )
+            if advisor_context.get('has_advice'):
+                logger.debug(
+                    f"🧙 [Session 744] Advisor context for {agent_name}: "
+                    f"summary='{advisor_context.get('summary', '')[:50]}...'"
+                )
+            return advisor_context
+        except Exception as e:
+            logger.warning(f"Failed to get advisor context: {e}")
             return {}
 
     def _create_execution_record(self, agent_name: str, task: str):
