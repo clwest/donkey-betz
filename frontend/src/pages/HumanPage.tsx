@@ -28,6 +28,14 @@ import {
   RefreshCw,
   Heart,
   ExternalLink,
+  DollarSign,
+  FileText,
+  Zap,
+  Target,
+  BarChart3,
+  Lightbulb,
+  Shield,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -35,6 +43,7 @@ import { cn } from '@/lib/cn'
 interface AttentionItem {
   id: string
   source_type: string
+  source_id: string
   source_agent: string
   item_type: string
   title: string
@@ -42,11 +51,13 @@ interface AttentionItem {
   payload: Record<string, unknown>
   urgency: 'critical' | 'high' | 'medium' | 'low'
   priority_score: number
+  impact_estimate: string | null
   ml_confidence: number | null
   ml_recommendation: string | null
   status: 'pending' | 'viewed' | 'acted' | 'deferred' | 'ignored' | 'expired'
   created_at: string
   expires_at: string | null
+  deferred_until: string | null
 }
 
 interface AttentionStats {
@@ -92,7 +103,227 @@ const URGENCY_CONFIG = {
   low: { color: 'bg-gray-500', textColor: 'text-gray-400', icon: CheckCircle },
 }
 
-// Decision Modal
+// Session 742: Item type config for visual differentiation
+const ITEM_TYPE_CONFIG: Record<string, { color: string; textColor: string; icon: typeof DollarSign; label: string }> = {
+  arbitrage: { color: 'bg-accent-green', textColor: 'text-accent-green', icon: DollarSign, label: 'Arbitrage' },
+  alert: { color: 'bg-accent-red', textColor: 'text-accent-red', icon: AlertTriangle, label: 'Alert' },
+  approval: { color: 'bg-accent-amber', textColor: 'text-accent-amber', icon: CheckCircle, label: 'Approval' },
+  review: { color: 'bg-accent-purple', textColor: 'text-accent-purple', icon: FileText, label: 'Review' },
+  insight: { color: 'bg-accent-cyan', textColor: 'text-accent-cyan', icon: Lightbulb, label: 'Insight' },
+  milestone: { color: 'bg-primary-500', textColor: 'text-primary-400', icon: Target, label: 'Milestone' },
+  decision: { color: 'bg-accent-orange', textColor: 'text-accent-orange', icon: Zap, label: 'Decision' },
+  opportunity: { color: 'bg-accent-green', textColor: 'text-accent-green', icon: Sparkles, label: 'Opportunity' },
+}
+
+// Session 742: Payload renderer for different item types
+function PayloadDisplay({ item }: { item: AttentionItem }) {
+  const { payload, item_type, source_type } = item
+  if (!payload || Object.keys(payload).length === 0) return null
+
+  // Arbitrage-specific display
+  if (item_type === 'arbitrage' && (source_type === 'arbitrage_detection' || source_type === 'betting_monitor')) {
+    return (
+      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        {payload.profit_pct !== undefined && (
+          <div className="flex items-center gap-2">
+            <DollarSign className="text-accent-green" size={16} />
+            <div>
+              <p className="text-xs text-gray-500">Profit</p>
+              <p className="font-bold text-accent-green">{Number(payload.profit_pct).toFixed(2)}%</p>
+            </div>
+          </div>
+        )}
+        {payload.profit_percentage !== undefined && (
+          <div className="flex items-center gap-2">
+            <DollarSign className="text-accent-green" size={16} />
+            <div>
+              <p className="text-xs text-gray-500">Profit</p>
+              <p className="font-bold text-accent-green">{Number(payload.profit_percentage).toFixed(2)}%</p>
+            </div>
+          </div>
+        )}
+        {payload.rating && (
+          <div className="flex items-center gap-2">
+            <Zap className={payload.rating === 'HOT' ? 'text-accent-red' : 'text-accent-amber'} size={16} />
+            <div>
+              <p className="text-xs text-gray-500">Rating</p>
+              <p className={cn('font-bold', payload.rating === 'HOT' ? 'text-accent-red' : 'text-accent-amber')}>
+                {String(payload.rating)}
+              </p>
+            </div>
+          </div>
+        )}
+        {payload.markets && Array.isArray(payload.markets) && (
+          <div className="col-span-2">
+            <p className="text-xs text-gray-500 mb-1">Markets</p>
+            <div className="flex gap-2 flex-wrap">
+              {payload.markets.map((market: string, i: number) => (
+                <span key={i} className="px-2 py-0.5 rounded bg-primary-500/20 text-primary-400 text-sm">
+                  {market}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {(payload.home_team || payload.away_team) && (
+          <div className="col-span-2">
+            <p className="text-xs text-gray-500 mb-1">Matchup</p>
+            <p className="text-sm">
+              <span className="font-medium">{String(payload.away_team || 'Away')}</span>
+              <span className="text-gray-500 mx-2">@</span>
+              <span className="font-medium">{String(payload.home_team || 'Home')}</span>
+            </p>
+          </div>
+        )}
+        {payload.game_time && (
+          <div className="flex items-center gap-2">
+            <Clock className="text-gray-400" size={16} />
+            <div>
+              <p className="text-xs text-gray-500">Game Time</p>
+              <p className="text-sm">{String(payload.game_time)}</p>
+            </div>
+          </div>
+        )}
+        {payload.stake_away !== undefined && payload.stake_home !== undefined && (
+          <div className="col-span-2 grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dark-border">
+            <div>
+              <p className="text-xs text-gray-500">Stake Away</p>
+              <p className="font-medium">${Number(payload.stake_away).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Stake Home</p>
+              <p className="font-medium">${Number(payload.stake_home).toFixed(2)}</p>
+            </div>
+          </div>
+        )}
+        {payload.suggested_actions && Array.isArray(payload.suggested_actions) && (
+          <div className="col-span-2 mt-2 pt-2 border-t border-dark-border">
+            <p className="text-xs text-gray-500 mb-1">Suggested Actions</p>
+            <ul className="text-sm space-y-1">
+              {payload.suggested_actions.map((action: string, i: number) => (
+                <li key={i} className="flex items-center gap-2">
+                  <ChevronRight size={12} className="text-primary-400" />
+                  {action}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Pilot/experiment display
+  if (item_type === 'approval' || item_type === 'milestone') {
+    return (
+      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        {payload.pilot_id && (
+          <div>
+            <p className="text-xs text-gray-500">Pilot ID</p>
+            <p className="font-medium text-primary-400">{String(payload.pilot_id)}</p>
+          </div>
+        )}
+        {payload.accuracy !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Accuracy</p>
+            <p className="font-bold text-accent-green">{Number(payload.accuracy).toFixed(1)}%</p>
+          </div>
+        )}
+        {payload.improvement !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Improvement</p>
+            <p className="font-bold text-accent-green">+{Number(payload.improvement)}%</p>
+          </div>
+        )}
+        {payload.target !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Target</p>
+            <p className="font-medium">{Number(payload.target)}%</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Alert/monitoring display
+  if (item_type === 'alert') {
+    return (
+      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        {payload.spike_percentage !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Spike</p>
+            <p className="font-bold text-accent-red">+{Number(payload.spike_percentage)}%</p>
+          </div>
+        )}
+        {payload.concurrent_executions !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Concurrent</p>
+            <p className="font-medium">{Number(payload.concurrent_executions)}</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Content review display
+  if (item_type === 'review') {
+    return (
+      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        {payload.post_count !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Posts</p>
+            <p className="font-medium">{Number(payload.post_count)}</p>
+          </div>
+        )}
+        {payload.quality_score !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Quality Score</p>
+            <p className="font-bold text-accent-green">{Number(payload.quality_score)}%</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Spider/insight display
+  if (item_type === 'insight') {
+    return (
+      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        {payload.spider && (
+          <div>
+            <p className="text-xs text-gray-500">Spider</p>
+            <p className="font-medium text-primary-400">{String(payload.spider)}</p>
+          </div>
+        )}
+        {payload.duplicate_rate !== undefined && (
+          <div>
+            <p className="text-xs text-gray-500">Duplicate Rate</p>
+            <p className="font-medium text-accent-amber">{Number(payload.duplicate_rate)}%</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Generic payload display for unknown types
+  return (
+    <div className="p-3 rounded-lg bg-dark-bg border border-dark-border">
+      <p className="text-xs text-gray-500 mb-2">Additional Data</p>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        {Object.entries(payload).slice(0, 6).map(([key, value]) => (
+          <div key={key}>
+            <p className="text-xs text-gray-500 capitalize">{key.replace(/_/g, ' ')}</p>
+            <p className="font-medium truncate">
+              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Decision Modal - Session 742: Enhanced with payload display and item type badges
 function DecisionModal({
   item,
   onClose,
@@ -109,6 +340,8 @@ function DecisionModal({
 
   const urgencyConfig = URGENCY_CONFIG[item.urgency]
   const UrgencyIcon = urgencyConfig.icon
+  const itemTypeConfig = ITEM_TYPE_CONFIG[item.item_type] || { color: 'bg-gray-500', textColor: 'text-gray-400', icon: Activity, label: item.item_type }
+  const ItemTypeIcon = itemTypeConfig.icon
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -121,10 +354,46 @@ function DecisionModal({
             </div>
             <div>
               <h3 className="font-semibold">{item.title}</h3>
-              <p className="text-sm text-gray-400">{item.source_agent || item.source_type}</p>
+              <div className="flex items-center gap-2 mt-1">
+                {/* Item Type Badge */}
+                <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium', `${itemTypeConfig.color}/20`, itemTypeConfig.textColor)}>
+                  <ItemTypeIcon size={12} />
+                  {itemTypeConfig.label}
+                </span>
+                <span className="text-sm text-gray-400">{item.source_agent || item.source_type}</span>
+              </div>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">&times;</button>
+        </div>
+
+        {/* Meta bar - Session 742: Show priority score and expiration */}
+        <div className="flex items-center gap-4 px-4 py-2 bg-dark-bg/50 border-b border-dark-border text-xs">
+          <div className="flex items-center gap-1">
+            <BarChart3 size={12} className="text-gray-500" />
+            <span className="text-gray-400">Priority:</span>
+            <span className="font-medium">{item.priority_score.toFixed(1)}</span>
+          </div>
+          {item.expires_at && (
+            <div className="flex items-center gap-1">
+              <Timer size={12} className="text-accent-amber" />
+              <span className="text-gray-400">Expires:</span>
+              <span className="font-medium text-accent-amber">
+                {new Date(item.expires_at).toLocaleString()}
+              </span>
+            </div>
+          )}
+          {item.impact_estimate && (
+            <div className="flex items-center gap-1">
+              <Target size={12} className="text-gray-500" />
+              <span className="text-gray-400">Impact:</span>
+              <span className="font-medium">{item.impact_estimate}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1 ml-auto">
+            <Clock size={12} className="text-gray-500" />
+            <span className="text-gray-400">{new Date(item.created_at).toLocaleString()}</span>
+          </div>
         </div>
 
         {/* Content */}
@@ -132,6 +401,9 @@ function DecisionModal({
           <div className="prose prose-invert max-w-none">
             <p className="text-gray-300">{item.summary}</p>
           </div>
+
+          {/* Session 742: Rich Payload Display */}
+          <PayloadDisplay item={item} />
 
           {/* ML Recommendation */}
           {item.ml_recommendation && (
@@ -624,33 +896,55 @@ export default function HumanPage() {
                         <span className="text-sm text-gray-400">({items.length})</span>
                       </div>
                       <div className="divide-y divide-dark-border">
-                        {items.map((item) => (
-                          <div
-                            key={item.id}
-                            onClick={() => setSelectedItem(item)}
-                            className="flex items-start gap-4 p-4 hover:bg-dark-hover cursor-pointer transition-colors"
-                          >
-                            <div className={cn('p-2 rounded-lg', `${config.color}/20`)}>
-                              <Activity className={config.textColor} size={16} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium">{item.title}</h4>
-                              <p className="text-sm text-gray-400 mt-1 line-clamp-2">
-                                {item.summary}
-                              </p>
-                              <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                                <span>{item.source_agent || item.source_type}</span>
-                                <span>{new Date(item.created_at).toLocaleString()}</span>
-                                {item.ml_confidence && (
-                                  <span className="px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
-                                    ML: {Math.round(item.ml_confidence * 100)}%
-                                  </span>
-                                )}
+                        {items.map((item) => {
+                          // Session 742: Add item type config for list view
+                          const listItemTypeConfig = ITEM_TYPE_CONFIG[item.item_type] || { color: 'bg-gray-500', textColor: 'text-gray-400', icon: Activity, label: item.item_type }
+                          const ListItemIcon = listItemTypeConfig.icon
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => setSelectedItem(item)}
+                              className="flex items-start gap-4 p-4 hover:bg-dark-hover cursor-pointer transition-colors"
+                            >
+                              <div className={cn('p-2 rounded-lg', `${listItemTypeConfig.color}/20`)}>
+                                <ListItemIcon className={listItemTypeConfig.textColor} size={16} />
                               </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{item.title}</h4>
+                                  {/* Session 742: Show profit % for arbitrage items */}
+                                  {item.item_type === 'arbitrage' && item.payload?.profit_pct && (
+                                    <span className="px-2 py-0.5 rounded bg-accent-green/20 text-accent-green text-xs font-bold">
+                                      +{Number(item.payload.profit_pct).toFixed(2)}%
+                                    </span>
+                                  )}
+                                  {item.item_type === 'arbitrage' && item.payload?.rating === 'HOT' && (
+                                    <span className="px-2 py-0.5 rounded bg-accent-red/20 text-accent-red text-xs font-bold animate-pulse">
+                                      HOT
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+                                  {item.summary}
+                                </p>
+                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                  {/* Session 742: Item type badge */}
+                                  <span className={cn('px-2 py-0.5 rounded', `${listItemTypeConfig.color}/20`, listItemTypeConfig.textColor)}>
+                                    {listItemTypeConfig.label}
+                                  </span>
+                                  <span>{item.source_agent || item.source_type}</span>
+                                  <span>{new Date(item.created_at).toLocaleString()}</span>
+                                  {item.ml_confidence && (
+                                    <span className="px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                                      ML: {Math.round(item.ml_confidence * 100)}%
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <ChevronRight className="text-gray-500" size={18} />
                             </div>
-                            <ChevronRight className="text-gray-500" size={18} />
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   )
