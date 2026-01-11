@@ -1,5 +1,7 @@
 import { useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Bell, Search } from 'lucide-react'
+import { reasoningApi } from '@/lib/api'
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -13,6 +15,15 @@ const pageTitles: Record<string, string> = {
 export default function Header() {
   const location = useLocation()
   const title = pageTitles[location.pathname] || 'Donkey Betz'
+
+  // Session 745: Fetch pending actions count for notification badge
+  const { data: pendingActionsData } = useQuery({
+    queryKey: ['pending-actions-count'],
+    queryFn: () => reasoningApi.pendingActions(),
+    refetchInterval: 60000, // Refresh every minute
+    staleTime: 30000, // Consider data fresh for 30 seconds
+  })
+  const pendingActionsCount = pendingActionsData?.data?.count ?? pendingActionsData?.data?.actions?.length ?? 0
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-dark-border bg-dark-card px-6">
@@ -32,12 +43,14 @@ export default function Header() {
           />
         </div>
 
-        {/* Notifications */}
+        {/* Notifications - Session 745: Real pending actions count */}
         <button className="relative text-gray-400 hover:text-white transition-colors">
           <Bell size={20} />
-          <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-accent-red text-xs flex items-center justify-center">
-            3
-          </span>
+          {pendingActionsCount > 0 && (
+            <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-accent-red text-xs flex items-center justify-center">
+              {pendingActionsCount > 99 ? '99+' : pendingActionsCount}
+            </span>
+          )}
         </button>
       </div>
     </header>

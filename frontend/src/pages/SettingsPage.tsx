@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
-import { settingsApi } from '@/lib/api'
+import { settingsApi, portfolioApi } from '@/lib/api'
 import {
   User, Bell, Shield, Palette, Database, Key, ChevronRight,
   CheckCircle, XCircle, Loader2, X, Save, Download, Trash2,
   Moon, Sun, Mail, MessageSquare, Zap, Eye, EyeOff, LogOut,
-  RefreshCw, Sparkles, Copy, Check
+  RefreshCw, Sparkles, Copy, Check, Globe, Link2
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -255,6 +255,13 @@ export default function SettingsPage() {
   const { data: notifPrefsData } = useQuery({
     queryKey: ['notification-preferences'],
     queryFn: () => settingsApi.getNotificationPreferences(),
+  })
+
+  // Session 745: Fetch connected platforms for API section
+  const { data: accountsData, isLoading: loadingAccounts } = useQuery({
+    queryKey: ['settings-connected-platforms'],
+    queryFn: () => portfolioApi.accounts(),
+    enabled: activeSection === 'api',
   })
 
   // Extract notification preferences from API response
@@ -643,40 +650,86 @@ export default function SettingsPage() {
       )}
 
       {activeSection === 'api' && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">API Keys</h3>
-          <div className="space-y-4">
-            <div className="p-3 rounded-lg bg-dark-bg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-medium">Personal API Token</p>
-                <p className="text-xs text-gray-500">Used for API authentication</p>
+        <div className="space-y-4">
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4">API Keys</h3>
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-dark-bg">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium">Personal API Token</p>
+                  <p className="text-xs text-gray-500">Used for API authentication</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-dark-border rounded px-3 py-2 text-sm text-gray-400 font-mono overflow-hidden text-ellipsis">
+                    {maskedToken}
+                  </code>
+                  <button
+                    className="btn btn-secondary text-sm flex items-center gap-1"
+                    onClick={handleCopyToken}
+                    disabled={!token}
+                  >
+                    {tokenCopied ? <Check size={14} className="text-accent-green" /> : <Copy size={14} />}
+                    {tokenCopied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  This is your authentication token. Keep it secure and never share it publicly.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-dark-border rounded px-3 py-2 text-sm text-gray-400 font-mono overflow-hidden text-ellipsis">
-                  {maskedToken}
-                </code>
-                <button
-                  className="btn btn-secondary text-sm flex items-center gap-1"
-                  onClick={handleCopyToken}
-                  disabled={!token}
-                >
-                  {tokenCopied ? <Check size={14} className="text-accent-green" /> : <Copy size={14} />}
-                  {tokenCopied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                This is your authentication token. Keep it secure and never share it publicly.
-              </p>
             </div>
-            <div className="p-3 rounded-lg border border-dashed border-dark-border text-center">
-              <p className="text-gray-400 mb-2">Connect external services</p>
-              <button
-                className="btn btn-secondary text-sm"
-                onClick={() => setActionResult({ type: 'success', message: 'Integration setup coming soon!' })}
-              >
-                Add Integration
-              </button>
+          </div>
+
+          {/* Session 745: Connected Platforms */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Link2 className="text-primary-400" size={20} />
+                Connected Platforms
+              </h3>
+              {loadingAccounts && <Loader2 className="animate-spin" size={16} />}
             </div>
+            {(() => {
+              const accounts = accountsData?.data?.accounts || accountsData?.data || []
+              return accounts.length > 0 ? (
+                <div className="space-y-3">
+                  {accounts.map((account: { id: string; platform_name?: string; platform?: string; status?: string; connected_at?: string }) => (
+                    <div
+                      key={account.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-dark-bg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary-600/20 flex items-center justify-center">
+                          <Globe size={20} className="text-primary-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{account.platform_name || account.platform || 'Platform'}</p>
+                          <p className="text-xs text-gray-500">
+                            Connected {account.connected_at ? new Date(account.connected_at).toLocaleDateString() : 'recently'}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={cn(
+                        'text-xs px-2 py-1 rounded',
+                        account.status === 'active' ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+                      )}>
+                        {account.status || 'Connected'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg border border-dashed border-dark-border text-center">
+                  <Globe className="mx-auto mb-2 text-gray-500" size={24} />
+                  <p className="text-gray-400 mb-2">No platforms connected</p>
+                  <button
+                    className="btn btn-secondary text-sm"
+                    onClick={() => setActionResult({ type: 'success', message: 'Visit Portfolio to connect platforms!' })}
+                  >
+                    Connect Platform
+                  </button>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
