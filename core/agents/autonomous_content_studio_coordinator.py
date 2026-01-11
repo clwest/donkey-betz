@@ -651,8 +651,8 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         from core.models_ai_series import AISeries
 
         channel_id = tool_input.get('channel_id')
-        topic = tool_input.get('topic')
-        angle = tool_input.get('angle')
+        topic = tool_input.get('topic') or tool_input.get('topic_override') or "Latest Market Developments"  # Session 743: Default topic
+        angle = tool_input.get('angle') or "Educational overview with practical insights"  # Session 743: Default angle to avoid NULL
         debate_id = tool_input.get('debate_id')
 
         try:

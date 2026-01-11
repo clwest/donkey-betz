@@ -1711,6 +1711,15 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
+    # Session 743: Content Diversity Orchestrator
+    'check-content-diversity': {
+        'task': 'core.tasks.check_content_diversity',
+        'schedule': crontab(hour='6,18', minute=0),  # Twice daily at 6 AM and 6 PM
+        'options': {
+            'expires': 7200,  # 2 hours
+            'queue': 'content',
+        }
+    },
 }
 
 # Task routing configuration
