@@ -411,6 +411,14 @@ class AgentRouter:
         return self._spider_service
 
     @property
+    def spider_context_builder(self):
+        """Session 744: Lazy-load Spider context builder for agent-specific context."""
+        if not hasattr(self, '_spider_context_builder') or self._spider_context_builder is None:
+            from core.services.spider_context_builder import get_spider_context_builder
+            self._spider_context_builder = get_spider_context_builder()
+        return self._spider_context_builder
+
+    @property
     def semantic_router(self):
         """Session 488: Lazy-load Semantic routing service."""
         if self._semantic_router is None:
@@ -557,7 +565,8 @@ class AgentRouter:
 
         # Gather context
         scifi_context = self._get_scifi_context(agent_name, task)
-        spider_context = self._get_spider_context(task)
+        # Session 744: Use SpiderContextBuilder for agent-specific spider context
+        spider_context = self._get_spider_context(task, agent_name=agent_name)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -716,23 +725,43 @@ class AgentRouter:
             logger.warning(f"Failed to get sci-fi context: {e}")
             return {}
 
-    def _get_spider_context(self, task: str) -> Dict[str, Any]:
+    def _get_spider_context(self, task: str, agent_name: str = None) -> Dict[str, Any]:
         """
-        Get spider intelligence context for a task.
+        Session 744: Get spider intelligence context for a task using SpiderContextBuilder.
+
+        This method now uses the SpiderContextBuilder to provide agent-specific
+        spider context. The builder maps agent types to relevant spider categories
+        and provides richer, more targeted data.
 
         This includes:
-        - Relevant trends
-        - Market data (if applicable)
+        - Relevant trends (agent-specific categories)
+        - Market data (for financial/prediction agents)
         - Related discussions
-        - Creative trends (styles, colors)
+        - Creative trends (for creative agents)
+        - Job market data (for job/career agents)
+        - Freshness indicators
 
         Args:
             task: Task to get context for
+            agent_name: Name of the agent to get context for (Session 744)
 
         Returns:
             Dict with spider context
         """
         try:
+            # Session 744: Use SpiderContextBuilder for agent-specific context
+            if agent_name:
+                context = self.spider_context_builder.build_context_for_agent(
+                    agent_name=agent_name,
+                    task=task,
+                    hours=48,
+                    max_trends=10,
+                    max_discussions=5
+                )
+                logger.debug(f"🕷️ [Session 744] Spider context built for {agent_name}: has_data={context.get('has_data')}")
+                return context
+
+            # Fallback to legacy method if no agent_name provided
             context = self.spider_service.get_insights_for_prompt(task)
 
             # Also get creative trends for image/design tasks
