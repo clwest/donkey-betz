@@ -450,6 +450,14 @@ class AgentRouter:
             self._semantic_router = get_semantic_router()
         return self._semantic_router
 
+    @property
+    def knowledge_first_router(self):
+        """Session 744: Lazy-load Knowledge-first router for intelligent knowledge lookup."""
+        if not hasattr(self, '_knowledge_first_router') or self._knowledge_first_router is None:
+            from core.services.knowledge_first_router import get_knowledge_first_router
+            self._knowledge_first_router = get_knowledge_first_router()
+        return self._knowledge_first_router
+
     def get_agent_class(self, agent_name: str) -> Optional[Type[BaseAgent]]:
         """
         Session 695: Get the agent class for direct instantiation.
@@ -597,6 +605,8 @@ class AgentRouter:
         advisor_context = self._get_advisor_context(agent_name, task)
         # Session 744 Phase 5: Get performance feedback for this agent
         feedback_context = self._get_feedback_context(agent_name, task)
+        # Session 744: Get knowledge-first routing context (checks existing knowledge BEFORE external queries)
+        knowledge_context = self._get_knowledge_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -700,6 +710,21 @@ class AgentRouter:
             spider_context['feedback_summary'] = feedback_context.get('summary', '')
             logger.debug(
                 f"📊 [Session 744] Injected performance feedback into spider_context for {agent_name}"
+            )
+
+        # Session 744: Merge knowledge-first routing context into spider context
+        # This gives agents awareness of what knowledge already exists before making new queries
+        if knowledge_context and knowledge_context.get('has_knowledge'):
+            spider_context['knowledge_state'] = knowledge_context
+            spider_context['knowledge_decision'] = knowledge_context.get('knowledge_decision', 'unknown')
+            spider_context['knowledge_coverage'] = knowledge_context.get('knowledge_coverage', 0)
+            spider_context['knowledge_freshness'] = knowledge_context.get('knowledge_freshness', 0)
+            spider_context['knowledge_summary'] = knowledge_context.get('knowledge_summary', '')
+            spider_context['relevant_knowledge'] = knowledge_context.get('relevant_knowledge', [])
+            spider_context['use_cached_knowledge'] = knowledge_context.get('use_cached_knowledge', False)
+            logger.debug(
+                f"🧠 [Session 744] Injected knowledge context into spider_context for {agent_name}: "
+                f"decision={knowledge_context.get('knowledge_decision')}"
             )
 
         # Execute the agent with tracking
@@ -934,6 +959,66 @@ class AgentRouter:
             return feedback_context
         except Exception as e:
             logger.warning(f"Failed to get feedback context: {e}")
+            return {}
+
+    def _get_knowledge_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 744: Get knowledge-first routing context for a task.
+
+        This checks existing knowledge sources (embeddings, learnings, spider data)
+        BEFORE making external queries. The result includes:
+        - Whether cached knowledge is sufficient
+        - Relevant knowledge snippets
+        - Routing recommendations
+        - Freshness scores
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Dict with knowledge state and routing recommendation
+        """
+        try:
+            knowledge_result = self.knowledge_first_router.route_with_knowledge(
+                task=task,
+                agent_name=agent_name
+            )
+
+            knowledge_context = {
+                'has_knowledge': len(knowledge_result.cached_knowledge) > 0,
+                'knowledge_decision': knowledge_result.decision.value,
+                'knowledge_confidence': knowledge_result.confidence,
+                'knowledge_reasoning': knowledge_result.reasoning,
+                'knowledge_coverage': knowledge_result.knowledge_coverage,
+                'knowledge_freshness': knowledge_result.freshness_avg,
+                'knowledge_summary': knowledge_result.knowledge_summary,
+                'use_cached_knowledge': knowledge_result.use_cached,
+                'needs_spider_refresh': knowledge_result.refresh_spiders,
+                'spider_categories_to_refresh': knowledge_result.spider_categories_to_refresh,
+            }
+
+            if knowledge_result.cached_knowledge:
+                # Include top knowledge snippets for agent context
+                knowledge_context['relevant_knowledge'] = [
+                    {
+                        'source': k.source,
+                        'content': k.content[:300],
+                        'relevance': round(k.relevance_score, 3),
+                        'freshness': round(k.freshness_score, 3)
+                    }
+                    for k in knowledge_result.cached_knowledge[:5]
+                ]
+
+            logger.debug(
+                f"🧠 [Session 744] Knowledge context for {agent_name}: "
+                f"decision={knowledge_result.decision.value}, "
+                f"coverage={knowledge_result.knowledge_coverage:.2f}"
+            )
+
+            return knowledge_context
+        except Exception as e:
+            logger.warning(f"Failed to get knowledge context: {e}")
             return {}
 
     def _create_execution_record(self, agent_name: str, task: str):
