@@ -23947,3 +23947,57 @@ def exercise_all_dormant_agents():
         'failed': len(results) - succeeded,
         'results': results
     }
+
+
+@shared_task
+def check_content_diversity():
+    """
+    Session 743: Check content diversity and auto-create content for underserved categories.
+
+    This task:
+    1. Analyzes spider data availability by category
+    2. Checks recent content creation by category
+    3. Identifies gaps (e.g., no legal content in 7 days)
+    4. Auto-creates content for high-priority gaps
+
+    Runs daily to ensure diverse content across all categories.
+    """
+    from core.agents.content_diversity_orchestrator import ContentDiversityOrchestrator
+    from django.contrib.auth import get_user_model
+
+    logger.info("🎯 [DIVERSITY] Starting content diversity check...")
+
+    try:
+        User = get_user_model()
+        user = User.objects.first()
+
+        orchestrator = ContentDiversityOrchestrator(user=user)
+        result = orchestrator.execute(
+            task="Check content diversity and create content for gaps",
+            context={'action': 'full_analysis'},
+            scifi_context={},
+            spider_context={}
+        )
+
+        if result.success:
+            data = result.data
+            gap_count = data.get('gap_analysis', {}).get('total_gaps', 0)
+            coverage = data.get('gap_analysis', {}).get('coverage_score', 0)
+            auto_created = data.get('auto_create_count', 0)
+
+            logger.info(f"🎯 [DIVERSITY] Complete: {gap_count} gaps found, coverage: {coverage}%, auto-created: {auto_created}")
+
+            return {
+                'success': True,
+                'gaps': gap_count,
+                'coverage_score': coverage,
+                'auto_created': auto_created,
+                'summary': result.message
+            }
+        else:
+            logger.error(f"🎯 [DIVERSITY] Failed: {result.error}")
+            return {'success': False, 'error': result.error}
+
+    except Exception as e:
+        logger.error(f"🎯 [DIVERSITY] Error: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}

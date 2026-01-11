@@ -191,6 +191,8 @@ from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
 # Session 466: Autonomous Content Studio
 from core.agents.autonomous_content_studio_coordinator import AutonomousContentStudioCoordinator
 from core.agents.content import TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent
+# Session 743: Content Diversity Orchestrator
+from core.agents.content_diversity_orchestrator import ContentDiversityOrchestrator
 
 # Session 478: DaVinci Resolve Integration
 from core.agents.resolve_agent import ResolveAgent
@@ -343,6 +345,8 @@ class AgentRouter:
         "TopicMinerAgent": TopicMinerAgent,
         "ContrarianAgent": ContrarianAgent,
         "PerformanceAnalystAgent": PerformanceAnalystAgent,
+        # Session 743: Content Diversity Orchestrator
+        "ContentDiversityOrchestrator": ContentDiversityOrchestrator,
 
         # Rendering Agents (Session 478)
         "ResolveAgent": ResolveAgent,
