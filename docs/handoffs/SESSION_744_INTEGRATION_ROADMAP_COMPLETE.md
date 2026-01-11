@@ -210,8 +210,41 @@ result = self._handle_delegate_to_specialist(
 | Capability | Before | After |
 |------------|--------|-------|
 | Agents that can delegate | 5 | **72** (all agents) |
+| Delegation mode | Manual (code-level) | **Autonomous** (LLM decides) |
 | Cross-agent learning records | 0 | Tracked automatically |
 | Learning type | N/A | `cross_agent_delegation` |
+
+### Autonomous Delegation (Session 744 Enhancement)
+
+**Problem Solved:** Initially, agents COULD delegate but didn't automatically DO so. The LLM wasn't seeing the delegation tool, so it never called it.
+
+**Solution:** Modified `_call_openai()` to auto-include the `delegate_to_specialist` tool for all agents with `can_delegate=True` (default).
+
+**Key Changes:**
+1. `BaseAgent.can_delegate = True` - Enables delegation by default
+2. `_call_openai()` uses `get_tools_with_delegation()` to include delegation tool
+3. `_execute_tool_call()` in BaseAgent handles `delegate_to_specialist`
+4. `execution_context` parameter passes spider/scifi context through delegations
+
+**How It Works:**
+```python
+# During agent execution, _call_openai automatically includes delegation tool
+effective_tools = self.get_tools_with_delegation()  # Adds delegate_to_specialist
+response = self.client.chat.completions.create(
+    model="gpt-5-mini",
+    messages=messages,
+    tools=effective_tools,  # LLM sees delegation option
+    ...
+)
+
+# If LLM calls delegate_to_specialist, _execute_tool_call handles it
+if tool_name == 'delegate_to_specialist':
+    return self._handle_delegate_to_specialist(...)
+```
+
+**Agents Updated for Delegation:**
+- `ContentWriterAgent` - Can delegate research to ResearchAgent
+- `ResearchAgent` - Can delegate image generation to ImageAgent
 
 ---
 
