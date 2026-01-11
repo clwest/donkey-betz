@@ -650,6 +650,13 @@ export const learningApi = {
   velocity: () => api.get('/learning/velocity/'),
 }
 
+// Session 745: Research API for network graph
+export const researchApi = {
+  networkGraph: () => api.get('/v1/research/network-graph/'),
+  liveFeed: () => api.get('/v1/research/live-feed/'),
+  systemInsights: () => api.get('/v1/research/system-insights/'),
+}
+
 export const contentApi = {
   // Gallery
   gallery: () => api.get('/v1/gallery/list/'),

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ecosystemApi, dashboardApi, spidersApi, activityApi, portfolioApi, learningApi } from '@/lib/api'
+import { ecosystemApi, dashboardApi, spidersApi, activityApi, portfolioApi, learningApi, researchApi } from '@/lib/api'
 import { useWebSocket, useSystemEvents, type WebSocketStatus } from '@/hooks/useWebSocket'
-import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket, DollarSign, ArrowUpRight } from 'lucide-react'
+import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket, DollarSign, ArrowUpRight, GitBranch } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import HeartWidget from '@/components/HeartWidget'
 
@@ -189,6 +189,13 @@ export default function DashboardPage() {
     queryFn: () => learningApi.velocity(),
   })
 
+  // Session 745: Network graph data
+  const { data: networkData, isLoading: networkLoading } = useQuery({
+    queryKey: ['dashboard-network-graph'],
+    queryFn: () => researchApi.networkGraph(),
+    staleTime: 60000, // Cache for 1 minute
+  })
+
   // Initialize recentActivity with fetched data
   useEffect(() => {
     if (initialActivity?.data?.activities) {
@@ -261,6 +268,15 @@ export default function DashboardPage() {
     trend: velocityDashboard.velocity_trend?.rate || 0,
     status: velocityDashboard.overall_health?.status || 'unknown',
   }
+  // Session 745: Network graph summary
+  const networkNodes = networkData?.data?.nodes || []
+  const networkEdges = networkData?.data?.edges || []
+  const activeNodes = networkNodes.filter((n: { is_recently_active?: boolean }) => n.is_recently_active).length
+  const topCategories = networkNodes.reduce((acc: Record<string, number>, n: { category?: string }) => {
+    const cat = n.category || 'Other'
+    acc[cat] = (acc[cat] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -458,6 +474,61 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Session 745: Agent Network Widget */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <GitBranch className="text-accent-purple" size={20} />
+            Agent Network
+          </h3>
+          <button
+            className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
+            onClick={() => navigate('/agents')}
+          >
+            View All <ArrowUpRight size={14} />
+          </button>
+        </div>
+        {networkLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="animate-spin" size={20} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-dark-bg rounded-lg">
+              <p className="text-2xl font-bold text-accent-purple">{networkNodes.length}</p>
+              <p className="text-xs text-gray-400">Total Agents</p>
+            </div>
+            <div className="text-center p-3 bg-dark-bg rounded-lg">
+              <p className="text-2xl font-bold text-accent-green">{activeNodes}</p>
+              <p className="text-xs text-gray-400">Active (24h)</p>
+            </div>
+            <div className="text-center p-3 bg-dark-bg rounded-lg">
+              <p className="text-2xl font-bold text-accent-cyan">{networkEdges.length}</p>
+              <p className="text-xs text-gray-400">Connections</p>
+            </div>
+            <div className="text-center p-3 bg-dark-bg rounded-lg">
+              <p className="text-2xl font-bold text-accent-amber">{Object.keys(topCategories).length}</p>
+              <p className="text-xs text-gray-400">Categories</p>
+            </div>
+          </div>
+        )}
+        {!networkLoading && Object.keys(topCategories).length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(Object.entries(topCategories) as [string, number][])
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 6)
+              .map(([category, count]) => (
+                <span
+                  key={category}
+                  className="px-2 py-1 text-xs rounded-full bg-dark-bg text-gray-300"
+                >
+                  {category}: {count}
+                </span>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
