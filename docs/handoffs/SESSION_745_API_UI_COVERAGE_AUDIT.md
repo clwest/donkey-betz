@@ -958,24 +958,59 @@ d831b021 feat(Session 745): Enhanced PortfolioPage with full distribution API co
 cdbdb951 feat(Session 745): Add Revenue and Learning Velocity widgets to Dashboard
 35e83623 feat(Session 745): Complete remaining quick wins for API-to-UI coverage
 808f324f fix(Session 745): Fix Learning Velocity widget data parsing
+ec1b66c3 docs(Session 745): Update handoff with completed quick wins
+a58de88b feat(Session 745): Complete final quick wins - Line Movement & Network Graph
 ```
 
 ---
 
-## Quick Wins Checklist (Updated)
+### Final Quick Wins Completed
 
-### Phase 1: Quick Wins ✅ COMPLETE
+**7. Betting - Line Movement Chart**
+- API: `bettingApi.lineMovement()`
+- Location: Betting → Odds tab
+- Shows games with spread/total movement (open → current)
+- Highlights "Sharp Move" for significant line changes
+- File: `frontend/src/pages/BettingPage.tsx`
+
+**8. Dashboard - Agent Network Widget**
+- API: `researchApi.networkGraph()`
+- Location: Dashboard (below Revenue/Velocity widgets)
+- Shows: Total agents, Active (24h), Connections, Categories
+- Displays top 6 categories with agent counts
+- File: `frontend/src/pages/DashboardPage.tsx`
+
+**New API Group:**
+```typescript
+// Session 745: Research API for network graph
+export const researchApi = {
+  networkGraph: () => api.get('/v1/research/network-graph/'),
+  liveFeed: () => api.get('/v1/research/live-feed/'),
+  systemInsights: () => api.get('/v1/research/system-insights/'),
+}
+```
+
+---
+
+## Quick Wins Checklist (Final)
+
+### Phase 1: Quick Wins ✅ ALL COMPLETE
 - [x] Add revenue widget to Dashboard
 - [x] Add learning velocity to Dashboard
 - [x] Add connected platforms to Settings
 - [x] Add experiment recommendations to Intelligence
 - [x] Add knowledge gaps to Agents
 - [x] Add pending actions badge to Header
-- [ ] Add line movement chart to Betting
-- [ ] Add network graph to Dashboard
+- [x] Add line movement chart to Betting
+- [x] Add network graph to Dashboard
 
 ---
 
 **Session 745 Goal: Achieve 100% API-to-UI Coverage**
 
-Current: ~70% (+3% from quick wins) | Target: 100%
+Current: ~72% (+5% from quick wins) | Target: 100%
+
+**Next Steps (Phase 2):**
+- Create Distribution Dashboard page (25 endpoints)
+- Create Revenue Analytics page (7 endpoints)
+- Create Billing/Subscription page (6 endpoints)
