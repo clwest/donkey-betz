@@ -242,9 +242,27 @@ if tool_name == 'delegate_to_specialist':
     return self._handle_delegate_to_specialist(...)
 ```
 
-**Agents Updated for Delegation:**
-- `ContentWriterAgent` - Can delegate research to ResearchAgent
-- `ResearchAgent` - Can delegate image generation to ImageAgent
+**Agents Updated with DELEGATION System Prompts (5 agents):**
+- `ResearchAgent` - Delegates to ImageAgent, ContentWriterAgent, VideoAgent, StockAnalystAgent, CodeGeneratorAgent
+- `ContentWriterAgent` - Delegates to ResearchAgent, ImageAgent, SEOOptimizerAgent
+- `ImageAgent` - Delegates to ResearchAgent, ContentWriterAgent, VideoAgent
+- `VideoAgent` - Delegates to ImageAgent, AudioAgent, ResearchAgent, ContentWriterAgent
+- `CodeGeneratorAgent` - Delegates to ResearchAgent, ContentWriterAgent, DevOpsAgent
+
+Each agent's system prompt now includes a DELEGATION section instructing the LLM to delegate tasks outside its expertise rather than refusing.
+
+**3-Agent Delegation Chain Verified:**
+| Level | Delegation | Result |
+|-------|------------|--------|
+| 1 | ResearchAgent → ImageAgent | ✓ Success |
+| 2 | ImageAgent → ResearchAgent | ✓ Success |
+| 3 | ResearchAgent → ContentWriterAgent | ✓ Success |
+| 4 | (any further) | BLOCKED (max depth=3) |
+
+This verifies:
+- Multi-level delegation chains work correctly
+- Context and depth tracking passes through each level
+- Recursion protection correctly blocks at max depth 3
 
 ---
 
@@ -392,6 +410,9 @@ print(f'Delegation success: {result.get(\"success\")}')"
 ## Commits (Session 744)
 
 ```
+29b84ce6 feat: Add delegation prompts to key agents
+6307bd2f docs: Document autonomous delegation enhancement
+0b653bef feat: Enable autonomous delegation in agent execution
 ebec4f06 feat(Session 744): Add cross-agent delegation capability to BaseAgent
 7423ce22 feat(Session 744): Enhance SpiderContextBuilder keyword matching
 ffadce47 docs(Session 744): Add comprehensive handoff document

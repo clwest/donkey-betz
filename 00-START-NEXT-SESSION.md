@@ -177,7 +177,18 @@
 - `_call_openai()` auto-includes delegation tool when `can_delegate=True`
 - LLM autonomously decides when to delegate based on task needs
 - `execution_context` parameter passes spider/scifi context through delegations
-- ContentWriterAgent and ResearchAgent `_execute_tool_call` updated for delegation
+- 5 agents updated with DELEGATION system prompts:
+  - ResearchAgent - delegates to ImageAgent, ContentWriterAgent, VideoAgent, etc.
+  - ContentWriterAgent - delegates to ResearchAgent, ImageAgent, etc.
+  - ImageAgent - delegates to ResearchAgent, ContentWriterAgent, etc.
+  - VideoAgent - delegates to ImageAgent, AudioAgent, ResearchAgent, etc.
+  - CodeGeneratorAgent - delegates to ResearchAgent, ContentWriterAgent, etc.
+
+**3-Agent Delegation Chain Verified:**
+- Level 1: ResearchAgent → ImageAgent ✓
+- Level 2: ImageAgent → ResearchAgent ✓
+- Level 3: ResearchAgent → ContentWriterAgent ✓
+- Level 4: BLOCKED (max depth=3) ✓
 
 **Available Specialists:**
 ```python
