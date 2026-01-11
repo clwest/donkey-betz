@@ -86,15 +86,22 @@ class HumanInterfaceService:
             item_dict = {
                 'id': str(item.id),
                 'source_type': item.source_type,
+                'source_id': item.source_id,  # Session 742: Added for source linking
                 'source_agent': item.source_agent,
                 'item_type': item.item_type,
                 'title': item.title,
                 'summary': item.summary,
                 'urgency': item.urgency,
                 'priority_score': item.priority_score,
+                'impact_estimate': item.impact_estimate,  # Session 742: Added
                 'status': item.status,
                 'created_at': item.created_at.isoformat(),
+                'expires_at': item.expires_at.isoformat() if item.expires_at else None,  # Session 742: Added
+                'deferred_until': item.deferred_until.isoformat() if item.deferred_until else None,  # Session 742
                 'payload': item.payload,
+                # Session 742: Add ML fields at top level for easier frontend access
+                'ml_confidence': item.ml_confidence,
+                'ml_recommendation': item.ml_recommendation,
             }
 
             if include_ml_context and item.ml_prediction:
