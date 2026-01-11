@@ -435,6 +435,14 @@ class AgentRouter:
         return self._advisor_context_builder
 
     @property
+    def feedback_loop_engine(self):
+        """Session 744 Phase 5: Lazy-load Feedback loop engine for performance-based tuning."""
+        if not hasattr(self, '_feedback_loop_engine') or self._feedback_loop_engine is None:
+            from core.services.feedback_loop_engine import get_feedback_loop_engine
+            self._feedback_loop_engine = get_feedback_loop_engine()
+        return self._feedback_loop_engine
+
+    @property
     def semantic_router(self):
         """Session 488: Lazy-load Semantic routing service."""
         if self._semantic_router is None:
@@ -587,6 +595,8 @@ class AgentRouter:
         learning_context = self._get_learning_context(agent_name, task)
         # Session 744 Phase 4: Get advisor wisdom for this agent
         advisor_context = self._get_advisor_context(agent_name, task)
+        # Session 744 Phase 5: Get performance feedback for this agent
+        feedback_context = self._get_feedback_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -678,6 +688,18 @@ class AgentRouter:
             spider_context['advisor_approach'] = advisor_context.get('recommended_approach', '')
             logger.debug(
                 f"🧙 [Session 744] Injected advisor wisdom into spider_context for {agent_name}"
+            )
+
+        # Session 744 Phase 5: Merge feedback context into spider context
+        # This gives agents awareness of their historical performance for self-improvement
+        if feedback_context and feedback_context.get('has_feedback'):
+            spider_context['performance_feedback'] = feedback_context
+            spider_context['reliability_score'] = feedback_context.get('reliability_score', 0)
+            spider_context['performance_rating'] = feedback_context.get('performance_rating', 'unknown')
+            spider_context['performance_recommendations'] = feedback_context.get('recommendations', [])
+            spider_context['feedback_summary'] = feedback_context.get('summary', '')
+            logger.debug(
+                f"📊 [Session 744] Injected performance feedback into spider_context for {agent_name}"
             )
 
         # Execute the agent with tracking
@@ -879,6 +901,36 @@ class AgentRouter:
             return advisor_context
         except Exception as e:
             logger.warning(f"Failed to get advisor context: {e}")
+            return {}
+
+    def _get_feedback_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 744 Phase 5: Get performance feedback for an agent.
+
+        This provides agents with awareness of their historical performance,
+        enabling self-improvement and better decision-making.
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Dict with performance metrics and recommendations
+        """
+        try:
+            feedback_context = self.feedback_loop_engine.get_feedback_for_agent(
+                agent_name=agent_name,
+                task=task,
+                days_back=30
+            )
+            if feedback_context.get('has_feedback'):
+                logger.debug(
+                    f"📊 [Session 744] Feedback for {agent_name}: "
+                    f"reliability={feedback_context.get('reliability_score', 0):.2f}"
+                )
+            return feedback_context
+        except Exception as e:
+            logger.warning(f"Failed to get feedback context: {e}")
             return {}
 
     def _create_execution_record(self, agent_name: str, task: str):
