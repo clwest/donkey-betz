@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi, collectiveApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -595,6 +595,14 @@ export default function AgentsPage() {
     queryFn: () => activityApi.learning(30),
     refetchInterval: 30000,
   })
+
+  // Session 745: Knowledge gaps for learning tab
+  const { data: knowledgeGapsResponse, isLoading: loadingKnowledgeGaps } = useQuery({
+    queryKey: ['knowledge-gaps'],
+    queryFn: () => collectiveApi.knowledgeGaps(),
+    enabled: activeTab === 'learning',
+  })
+  const knowledgeGaps = knowledgeGapsResponse?.data?.gaps || knowledgeGapsResponse?.data || []
 
   // Session 695: Dreams for Dream Gallery Modal
   const { data: dreamsResponse } = useQuery({
@@ -1706,6 +1714,56 @@ export default function AgentsPage() {
                 <p className="text-sm text-gray-500 mt-1">
                   Agent learning activity will appear here
                 </p>
+              </div>
+            )}
+          </div>
+
+          {/* Session 745: Knowledge Gaps */}
+          <div className="card">
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <AlertTriangle size={18} className="text-accent-amber" />
+              Knowledge Gaps
+            </h3>
+            {loadingKnowledgeGaps ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="animate-spin" size={20} />
+              </div>
+            ) : knowledgeGaps.length > 0 ? (
+              <div className="space-y-3">
+                {knowledgeGaps.slice(0, 5).map((gap: { id?: string; topic: string; description?: string; priority?: string; affected_agents?: string[] }, idx: number) => (
+                  <div key={gap.id || idx} className="p-3 rounded-lg border border-dark-border hover:border-accent-amber/50 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">{gap.topic}</p>
+                        {gap.description && (
+                          <p className="text-xs text-gray-400 mt-1 line-clamp-2">{gap.description}</p>
+                        )}
+                        {gap.affected_agents && gap.affected_agents.length > 0 && (
+                          <div className="flex items-center gap-1 mt-2">
+                            <Users size={12} className="text-gray-500" />
+                            <span className="text-xs text-gray-500">{gap.affected_agents.length} agents affected</span>
+                          </div>
+                        )}
+                      </div>
+                      {gap.priority && (
+                        <span className={cn(
+                          'px-2 py-0.5 text-xs rounded flex-shrink-0',
+                          gap.priority === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                          gap.priority === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                          'bg-accent-green/20 text-accent-green'
+                        )}>
+                          {gap.priority}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-400">
+                <CheckCircle className="mx-auto mb-2 opacity-50" size={24} />
+                <p className="text-sm">No knowledge gaps identified</p>
+                <p className="text-xs text-gray-500 mt-1">The system has comprehensive knowledge coverage</p>
               </div>
             )}
           </div>

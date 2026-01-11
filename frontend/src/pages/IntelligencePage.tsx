@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 // Session 693: Removed agentsApi - agents tab removed (redundant with main Agents page)
 // Session 694: Removed learningApi, activityApi - tabs removed (redundant with main Agents page)
-import { intelligenceApi, pilotsApi, experimentsApi, spidersApi, opportunitiesApi, incomeBuilderApi } from '@/lib/api'
+import { intelligenceApi, pilotsApi, experimentsApi, spidersApi, opportunitiesApi, incomeBuilderApi, experimentRecommendationsApi } from '@/lib/api'
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, ChevronRight, Loader2,
@@ -361,6 +361,14 @@ export default function IntelligencePage() {
     queryFn: () => experimentsApi.list(),
     enabled: activeTab === 'experiments',
   })
+
+  // Session 745: Experiment recommendations
+  const { data: recommendationsData, isLoading: loadingRecommendations } = useQuery({
+    queryKey: ['experiment-recommendations'],
+    queryFn: () => experimentRecommendationsApi.list(),
+    enabled: activeTab === 'experiments',
+  })
+  const recommendations = recommendationsData?.data?.recommendations || recommendationsData?.data || []
 
   // Session 694: Removed learning and activity queries - tabs moved to Agents page
 
@@ -1034,6 +1042,7 @@ export default function IntelligencePage() {
       )}
 
       {activeTab === 'experiments' && (
+        <>
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Active Experiments</h3>
@@ -1162,6 +1171,58 @@ export default function IntelligencePage() {
             </div>
           )}
         </div>
+
+        {/* Session 745: Experiment Recommendations */}
+        <div className="card mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Lightbulb className="text-accent-amber" size={20} />
+              Experiment Recommendations
+            </h3>
+          </div>
+          {loadingRecommendations ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="animate-spin" size={20} />
+            </div>
+          ) : recommendations.length > 0 ? (
+            <div className="space-y-3">
+              {recommendations.slice(0, 5).map((rec: { id: string; title: string; description?: string; priority?: string; source?: string }, idx: number) => (
+                <div key={rec.id || idx} className="p-3 rounded-lg border border-dark-border hover:border-primary-500/50 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{rec.title}</p>
+                      {rec.description && (
+                        <p className="text-xs text-gray-400 mt-1 line-clamp-2">{rec.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {rec.priority && (
+                        <span className={cn(
+                          'px-2 py-0.5 text-xs rounded',
+                          rec.priority === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                          rec.priority === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                          'bg-accent-green/20 text-accent-green'
+                        )}>
+                          {rec.priority}
+                        </span>
+                      )}
+                      {rec.source && (
+                        <span className="text-xs text-gray-500">{rec.source}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-400">
+              <Lightbulb className="mx-auto mb-2 opacity-50" size={24} />
+              <p className="text-sm">No recommendations available</p>
+              <p className="text-xs text-gray-500 mt-1">Recommendations will appear based on system analysis</p>
+            </div>
+          )}
+        </div>
+        </>
       )}
 
       {/* Session 694: Removed Learning and Activity tabs - available on Agents page */}

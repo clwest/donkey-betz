@@ -1574,3 +1574,24 @@ export const mythologyApi = {
   quarantineReject: (quarantineId: string, data?: { reason?: string }) =>
     api.post(`/v1/mythology/quarantine/${quarantineId}/reject/`, data || {}),
 }
+
+// Session 745: Collective Intelligence API
+export const collectiveApi = {
+  insights: () => api.get('/collective/insights/'),
+  report: () => api.get('/collective/report/'),
+  knowledgeGaps: () => api.get('/collective/knowledge-gaps/'),
+  network: () => api.get('/collective/network/'),
+  dashboard: () => api.get('/collective/dashboard/'),
+}
+
+// Session 745: Reasoning Engine API
+export const reasoningApi = {
+  dashboard: () => api.get('/v1/reasoning/dashboard/'),
+  concerns: () => api.get('/v1/reasoning/concerns/'),
+  pendingActions: () => api.get('/v1/reasoning/actions/pending/'),
+}
+
+// Session 745: Experiment Recommendations API
+export const experimentRecommendationsApi = {
+  list: () => api.get('/experiment-recommendations/'),
+}
