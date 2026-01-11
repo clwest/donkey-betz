@@ -6,7 +6,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle } from 'lucide-react'
-import { cn } from '@/lib/cn'
 
 interface Blog {
   id: string

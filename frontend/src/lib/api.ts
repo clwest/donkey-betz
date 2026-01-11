@@ -657,6 +657,55 @@ export const researchApi = {
   systemInsights: () => api.get('/v1/research/system-insights/'),
 }
 
+// Session 745: Distribution API for monetization
+export const distributionApi = {
+  // Platforms
+  platforms: () => api.get('/distribution/platforms/'),
+  platformDetail: (id: string) => api.get(`/distribution/platforms/${id}/`),
+  createPlatform: (data: Record<string, unknown>) => api.post('/distribution/platforms/create/', data),
+
+  // User Accounts (OAuth connections)
+  accounts: () => api.get('/distribution/accounts/'),
+  connectPlatform: (platform: string, data: Record<string, unknown>) => api.post('/distribution/accounts/connect/', { platform, ...data }),
+  disconnectPlatform: (platform: string) => api.post(`/distribution/oauth/${platform}/disconnect/`),
+
+  // Content Distribution
+  content: () => api.get('/distribution/content/'),
+  createDistribution: (data: Record<string, unknown>) => api.post('/distribution/content/create/', data),
+  submitDistribution: (id: string) => api.post(`/distribution/content/${id}/submit/`),
+  publishDistribution: (id: string) => api.post(`/distribution/content/${id}/publish/`),
+  recordSale: (id: string, data: Record<string, unknown>) => api.post(`/distribution/content/${id}/sale/`, data),
+
+  // Analytics & Stats
+  stats: () => api.get('/distribution/stats/'),
+  recommendations: () => api.get('/distribution/recommendations/'),
+  platformAnalytics: (id: string) => api.get(`/distribution/analytics/${id}/`),
+  integrations: () => api.get('/distribution/integrations/'),
+
+  // Revenue
+  revenueDashboard: () => api.get('/distribution/revenue/dashboard/'),
+  platformRevenue: (platform: string) => api.get(`/distribution/revenue/platform/${platform}/`),
+  comparePlatforms: () => api.get('/distribution/revenue/compare/'),
+  calculateRoi: () => api.get('/distribution/revenue/roi/'),
+
+  // Scheduling & Batch
+  scheduled: () => api.get('/distribution/scheduled/'),
+  batchDistribute: (data: Record<string, unknown>) => api.post('/distribution/batch/', data),
+  reschedule: (id: string, data: Record<string, unknown>) => api.post(`/distribution/${id}/reschedule/`, data),
+  cancelScheduled: (id: string) => api.post(`/distribution/${id}/cancel/`),
+
+  // Templates
+  templates: () => api.get('/distribution/templates/'),
+  applyTemplate: (data: Record<string, unknown>) => api.post('/distribution/templates/apply/', data),
+
+  // Auto Distribution
+  autoSettings: () => api.get('/distribution/auto/settings/'),
+  createAutoDistribution: (data: Record<string, unknown>) => api.post('/distribution/auto/create/', data),
+
+  // Platform-specific
+  syncRevenue: (platform: string) => api.post(`/distribution/${platform}/sync-revenue/`),
+}
+
 export const contentApi = {
   // Gallery
   gallery: () => api.get('/v1/gallery/list/'),

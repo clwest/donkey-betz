@@ -34,7 +34,6 @@ import {
   Target,
   BarChart3,
   Lightbulb,
-  Shield,
   Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -142,7 +141,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             </div>
           </div>
         )}
-        {payload.rating && (
+        {!!payload.rating && (
           <div className="flex items-center gap-2">
             <Zap className={payload.rating === 'HOT' ? 'text-accent-red' : 'text-accent-amber'} size={16} />
             <div>
@@ -153,7 +152,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             </div>
           </div>
         )}
-        {payload.markets && Array.isArray(payload.markets) && (
+        {!!payload.markets && Array.isArray(payload.markets) && (
           <div className="col-span-2">
             <p className="text-xs text-gray-500 mb-1">Markets</p>
             <div className="flex gap-2 flex-wrap">
@@ -165,7 +164,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             </div>
           </div>
         )}
-        {(payload.home_team || payload.away_team) && (
+        {!!(payload.home_team || payload.away_team) && (
           <div className="col-span-2">
             <p className="text-xs text-gray-500 mb-1">Matchup</p>
             <p className="text-sm">
@@ -175,7 +174,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             </p>
           </div>
         )}
-        {payload.game_time && (
+        {!!payload.game_time && (
           <div className="flex items-center gap-2">
             <Clock className="text-gray-400" size={16} />
             <div>
@@ -196,7 +195,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             </div>
           </div>
         )}
-        {payload.suggested_actions && Array.isArray(payload.suggested_actions) && (
+        {!!payload.suggested_actions && Array.isArray(payload.suggested_actions) && (
           <div className="col-span-2 mt-2 pt-2 border-t border-dark-border">
             <p className="text-xs text-gray-500 mb-1">Suggested Actions</p>
             <ul className="text-sm space-y-1">
@@ -229,7 +228,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
   if (item_type === 'approval' || item_type === 'milestone') {
     return (
       <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
-        {payload.pilot_id && (
+        {!!payload.pilot_id && (
           <div className="col-span-2">
             <p className="text-xs text-gray-500">Pilot ID</p>
             <a
@@ -278,7 +277,6 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
 
   // Alert/monitoring display - Session 742: Enhanced with links to Body Health
   if (item_type === 'alert') {
-    const isSystemHealth = source_type.includes('system_alert') || source_type.includes('health')
     return (
       <div className="space-y-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
         <div className="grid grid-cols-2 gap-3">
@@ -333,8 +331,8 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
   // Content review display - Session 742: Show linked blog titles
   if (item_type === 'review') {
     // Check if we have blog_ids array or just a single content_id
-    const hasBlogList = payload.blog_titles && Array.isArray(payload.blog_titles)
-    const singleContentId = payload.content_id && !hasBlogList
+    const hasBlogList = !!payload.blog_titles && Array.isArray(payload.blog_titles)
+    const singleContentId = !!payload.content_id && !hasBlogList
 
     return (
       <div className="space-y-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
@@ -419,7 +417,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
     return (
       <div className="space-y-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
         <div className="grid grid-cols-2 gap-3">
-          {spiderName && (
+          {!!spiderName && (
             <div className="col-span-2">
               <p className="text-xs text-gray-500">Spider</p>
               <a
@@ -438,7 +436,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
               <p className="font-medium text-accent-amber">{Number(payload.duplicate_rate)}%</p>
             </div>
           )}
-          {payload.alert_type && (
+          {!!payload.alert_type && (
             <div>
               <p className="text-xs text-gray-500">Alert Type</p>
               <p className="font-medium capitalize">{String(payload.alert_type).replace(/_/g, ' ')}</p>
@@ -446,7 +444,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
           )}
         </div>
         {/* Spider data preview if available */}
-        {payload.data && typeof payload.data === 'object' && (
+        {!!payload.data && typeof payload.data === 'object' && (
           <div className="border-t border-dark-border pt-2">
             <p className="text-xs text-gray-500 mb-1">Data Preview</p>
             <pre className="text-xs bg-dark-card p-2 rounded overflow-x-auto max-h-24">
@@ -1079,7 +1077,7 @@ export default function HumanPage() {
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-medium">{item.title}</h4>
                                   {/* Session 742: Show profit % for arbitrage items */}
-                                  {item.item_type === 'arbitrage' && item.payload?.profit_pct && (
+                                  {item.item_type === 'arbitrage' && !!item.payload?.profit_pct && (
                                     <span className="px-2 py-0.5 rounded bg-accent-green/20 text-accent-green text-xs font-bold">
                                       +{Number(item.payload.profit_pct).toFixed(2)}%
                                     </span>
