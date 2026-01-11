@@ -1,8 +1,8 @@
-# Session 744 - Integration Roadmap COMPLETE + DynamicTeamBuilder
+# Session 744 - Integration Roadmap COMPLETE + KnowledgeFirstRouter
 
 **Previous Session:** 743 (Content Diversity Orchestrator)
 **Date:** January 10, 2026
-**Status:** All 5 Phases COMPLETE | Cross-Agent Delegation COMPLETE | DynamicTeamBuilder COMPLETE
+**Status:** All 5 Phases COMPLETE | Cross-Agent Delegation COMPLETE | DynamicTeamBuilder COMPLETE | **KnowledgeFirstRouter COMPLETE**
 
 ---
 
@@ -249,6 +249,64 @@ results = builder.execute_with_team(task, team)
 
 ---
 
+### KnowledgeFirstRouter Service (NEW - Session 744)
+
+**Problem Solved:** The system was doing "parallel injection" - gathering all contexts (spider, learning, advisor, feedback) and injecting them into every agent call. There was NO decision logic for "check what I already know first, then decide what to do."
+
+**New File:**
+- `core/services/knowledge_first_router.py` - Intelligent knowledge-first routing (~550 lines)
+
+**How It Works:**
+```
+Query arrives → Check embeddings → Check learnings → Check spider cache
+    ↓
+Calculate freshness scores (exponential decay by source type)
+    ↓
+Make routing decision:
+    USE_CACHED_KNOWLEDGE  → Answer from existing knowledge
+    REFRESH_SPIDERS       → Knowledge stale, refresh then respond
+    ROUTE_TO_RESEARCH     → Need research agent to investigate
+    ROUTE_TO_AGENT        → Route to specialized agent
+```
+
+**Freshness Half-Lives:**
+| Source | Half-Life | Rationale |
+|--------|-----------|-----------|
+| Spider data | 24 hours | Real-time info decays fast |
+| Learning patterns | 168 hours (1 week) | Patterns stable longer |
+| Embeddings | 720 hours (30 days) | Static docs decay slowly |
+| Research results | 72 hours (3 days) | Moderate freshness |
+
+**Key Features:**
+| Feature | Description |
+|---------|-------------|
+| Freshness Scoring | Exponential decay based on source-specific half-lives |
+| Relevance Scoring | Semantic similarity via embeddings |
+| Coverage Detection | How much of the query is covered by cached knowledge |
+| Smart Routing | Decides between cache, refresh, research, or agent |
+
+**Service Methods:**
+```python
+from core.services.knowledge_first_router import get_knowledge_first_router
+router = get_knowledge_first_router()
+
+# Analyze what knowledge exists for a query
+result = router.analyze_knowledge_state('What are the latest AI trends?')
+# Returns: {has_knowledge, knowledge_decision, knowledge_coverage, sources_checked}
+
+# Full routing decision
+routing = router.route_with_knowledge('Analyze stock market trends')
+# Returns: KnowledgeRoutingResult(decision, confidence, cached_knowledge, reasoning)
+```
+
+**AgentRouter Integration:**
+- Added `knowledge_first_router` property (lazy-loaded)
+- Added `_get_knowledge_context()` method
+- Knowledge context merged into spider_context before agent execution
+- Agents now aware of existing knowledge via `spider_context['knowledge_state']`
+
+---
+
 ### Current Integration Status
 
 | Metric | Before Session 744 | After Session 744 |
@@ -328,6 +386,16 @@ builder = get_dynamic_team_builder()
 analysis = builder.analyze_task('Research blockchain trends and write SEO-optimized article')
 print(f'Team: {[m[\"agent\"] for m in analysis[\"recommended_team\"]]}')
 print(f'Synergy: {analysis[\"total_synergy\"]}')"
+
+# 9. Test KnowledgeFirstRouter
+python manage.py shell -c "
+from core.services.knowledge_first_router import get_knowledge_first_router
+router = get_knowledge_first_router()
+from datetime import datetime, timedelta
+fresh = router._calculate_freshness(datetime.now(), 'spider')
+stale = router._calculate_freshness(datetime.now() - timedelta(hours=24), 'spider')
+print(f'Freshness now: {fresh:.3f}')
+print(f'Freshness 24h ago: {stale:.3f}')"
 ```
 
 ---
@@ -341,9 +409,10 @@ print(f'Synergy: {analysis[\"total_synergy\"]}')"
 | `core/services/advisor_context_builder.py` | **NEW** - Advisor wisdom injection service |
 | `core/services/feedback_loop_engine.py` | **NEW** - Performance feedback mining service |
 | `core/services/dynamic_team_builder.py` | **NEW** - Dynamic team formation service |
+| `core/services/knowledge_first_router.py` | **NEW** - Intelligent knowledge-first routing (~550 lines) |
 | `core/services/celery_health.py` | **NEW** - Celery monitoring service |
 | `core/views_celery_api.py` | **NEW** - 8 Celery API endpoints |
-| `core/agent_router.py` | Updated for Phase 2, 3, 4 & 5 integration |
+| `core/agent_router.py` | Updated for Phase 2, 3, 4, 5 + KnowledgeFirstRouter integration |
 | `core/agents/base_agent.py` | **MODIFIED** - Cross-agent delegation (+292 lines) |
 | `core/services/heart.py` | Added celery as 7th body component |
 | `core/tasks.py` | Added `check_celery_health` task |
@@ -379,4 +448,4 @@ All 5 phases done. Future enhancements:
 
 ---
 
-**All 5 Phases Complete + Cross-Agent Delegation + DynamicTeamBuilder! Agents now receive spider data + learning patterns + advisor wisdom + performance feedback automatically. Any agent can delegate to specialists. DynamicTeamBuilder enables cross-domain teams with all 72 agents. Integration Reality Score: 95%**
+**All 5 Phases Complete + Cross-Agent Delegation + DynamicTeamBuilder + KnowledgeFirstRouter! Agents now receive spider data + learning patterns + advisor wisdom + performance feedback automatically. Any agent can delegate to specialists. DynamicTeamBuilder enables cross-domain teams with all 72 agents. KnowledgeFirstRouter checks existing knowledge BEFORE external queries. Integration Reality Score: 95%**
