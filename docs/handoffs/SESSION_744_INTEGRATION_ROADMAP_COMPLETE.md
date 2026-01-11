@@ -311,12 +311,19 @@ feedback_context = self._get_feedback_context(agent_name, task)
 | `core/services/advisor_context_builder.py` | NEW | Advisor wisdom injection |
 | `core/services/feedback_loop_engine.py` | NEW | Performance feedback |
 | `core/services/celery_health.py` | NEW | Celery monitoring |
+| `core/services/embedding_service.py` | NEW | Centralized embedding API tracking |
 | `core/views_celery_api.py` | NEW | 8 Celery API endpoints |
 | `core/agent_router.py` | MODIFIED | Phase 2-5 integration |
 | `core/agents/base_agent.py` | MODIFIED | Cross-agent delegation (+292 lines) |
 | `core/services/heart.py` | MODIFIED | Celery as body component |
 | `core/tasks.py` | MODIFIED | check_celery_health task |
 | `core/celery.py` | MODIFIED | Scheduled health check |
+| `core/services/spider_semantic_search.py` | MODIFIED | Use EmbeddingService |
+| `core/services/knowledge_first_router.py` | MODIFIED | Use EmbeddingService |
+| `core/services/dynamic_team_builder.py` | MODIFIED | Use EmbeddingService |
+| `core/services/knowledge_similarity.py` | MODIFIED | Use EmbeddingService |
+| `core/services/semantic_routing.py` | MODIFIED | Use EmbeddingService |
+| `core/services/memory_embedding_service.py` | MODIFIED | Use EmbeddingService |
 | `docs/roadmaps/INTEGRATION_ROADMAP_2026.md` | NEW | 5-phase plan |
 
 ---
@@ -388,6 +395,78 @@ print(f'Delegation success: {result.get(\"success\")}')"
 
 ---
 
+## Bonus: Centralized EmbeddingService
+
+**Problem Solved:** All 6 services making OpenAI embedding API calls were bypassing `LLMCallLog` entirely. Embedding usage was invisible - OpenAI credits were being consumed with no tracking.
+
+**New File:**
+- `core/services/embedding_service.py` - Centralized wrapper for all embedding API calls
+
+**EmbeddingService Features:**
+- Single point of entry for all OpenAI embedding calls
+- Automatic logging to `LLMCallLog` with `task_type='embedding'`
+- Token counting and cost calculation per embedding model
+- Latency tracking for performance monitoring
+- Success/failure recording
+
+**Cost Tracking:**
+```python
+EMBEDDING_COSTS = {
+    'text-embedding-3-small': Decimal('0.02'),   # $0.02 per 1M tokens
+    'text-embedding-3-large': Decimal('0.13'),   # $0.13 per 1M tokens
+    'text-embedding-ada-002': Decimal('0.10'),   # $0.10 per 1M tokens
+}
+```
+
+**Services Updated (6 total):**
+
+| Service | Purpose | Agent Name in Logs |
+|---------|---------|-------------------|
+| `spider_semantic_search.py` | Spider data semantic search | `SpiderSemanticSearch` |
+| `knowledge_first_router.py` | Knowledge-based routing | `KnowledgeFirstRouter` |
+| `dynamic_team_builder.py` | Dynamic team assembly | `DynamicTeamBuilder` |
+| `knowledge_similarity.py` | Knowledge delta detection | `KnowledgeSimilarityService` |
+| `semantic_routing.py` | Agent routing by embeddings | `SemanticRoutingService` |
+| `memory_embedding_service.py` | Agent memory embeddings | `MemoryEmbeddingService` |
+
+**Usage Example:**
+```python
+from core.services.embedding_service import get_embedding_service
+
+service = get_embedding_service()
+result = service.create_embedding(
+    text="Your text here",
+    model="text-embedding-3-small",
+    agent_name="YourServiceName"
+)
+# result.embedding - List[float] (1536 dimensions)
+# result.tokens_used - int
+# result.cost - Decimal
+# result.latency_ms - int
+```
+
+**Verification:**
+```bash
+# Check embedding log entries
+python manage.py shell -c "
+from core.models import LLMCallLog
+count = LLMCallLog.objects.filter(task_type='embedding').count()
+print(f'Total embedding entries: {count}')
+
+recent = LLMCallLog.objects.filter(task_type='embedding').order_by('-created_at')[:5]
+for log in recent:
+    print(f'{log.agent_name}: {log.prompt_tokens} tokens, \${log.cost}')"
+```
+
+**Impact:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Embedding calls tracked | 0 | **100%** |
+| Cost visibility | None | Per-call |
+| Usage by service | Unknown | Fully attributed |
+
+---
+
 ## Future Enhancements (Session 745+)
 
 ### Dream Utilization
@@ -410,6 +489,7 @@ print(f'Delegation success: {result.get(\"success\")}')"
 ## Commits (Session 744)
 
 ```
+e6fe547d feat(Session 744): Add centralized EmbeddingService for API usage tracking
 29b84ce6 feat: Add delegation prompts to key agents
 6307bd2f docs: Document autonomous delegation enhancement
 0b653bef feat: Enable autonomous delegation in agent execution
