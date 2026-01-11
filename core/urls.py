@@ -3786,6 +3786,26 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 744: Celery Health API
+# =========================================================================
+from core.views_celery_api import (
+    CeleryStatusView, CeleryQuickStatusView, CeleryWorkersView,
+    CeleryQueuesView, CeleryTasksView, CeleryScheduleView,
+    CeleryPingView, CeleryStaleTasks,
+)
+
+urlpatterns += [
+    path('api/celery/status/', CeleryStatusView.as_view(), name='celery-status'),
+    path('api/celery/quick/', CeleryQuickStatusView.as_view(), name='celery-quick'),
+    path('api/celery/workers/', CeleryWorkersView.as_view(), name='celery-workers'),
+    path('api/celery/queues/', CeleryQueuesView.as_view(), name='celery-queues'),
+    path('api/celery/tasks/', CeleryTasksView.as_view(), name='celery-tasks'),
+    path('api/celery/schedule/', CeleryScheduleView.as_view(), name='celery-schedule'),
+    path('api/celery/ping/', CeleryPingView.as_view(), name='celery-ping'),
+    path('api/celery/stale/', CeleryStaleTasks.as_view(), name='celery-stale'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

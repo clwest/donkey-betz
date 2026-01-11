@@ -1720,6 +1720,15 @@ app.conf.beat_schedule = {
             'queue': 'content',
         }
     },
+    # Session 744: Celery Health Monitoring (Phase 1 Foundation)
+    'check-celery-health': {
+        'task': 'core.tasks.check_celery_health',
+        'schedule': 120.0,  # Every 2 minutes
+        'options': {
+            'expires': 110,  # Expire before next run
+            'queue': 'celery',  # Use default queue
+        }
+    },
 }
 
 # Task routing configuration

@@ -24001,3 +24001,62 @@ def check_content_diversity():
     except Exception as e:
         logger.error(f"🎯 [DIVERSITY] Error: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
+
+
+@shared_task
+def check_celery_health():
+    """
+    Session 744: Check Celery infrastructure health and record status.
+
+    This task runs every 2 minutes to:
+    1. Verify workers are responsive
+    2. Check beat scheduler is running
+    3. Monitor queue depths
+    4. Track task success rates
+    5. Alert on critical issues
+
+    This is a FOUNDATION task - if this doesn't run, Celery is broken.
+    """
+    from core.services.celery_health import get_celery_health_service
+
+    logger.info("🔧 [CELERY] Running health check...")
+
+    try:
+        service = get_celery_health_service()
+        status = service.get_full_status()
+
+        # Log summary
+        overall = status.get('overall_status', 'unknown')
+        score = status.get('health_score', 0)
+        workers = status.get('workers', {}).get('count', 0)
+        tasks_1h = status.get('tasks', {}).get('total_1h', 0)
+        alerts = status.get('alerts_count', 0)
+
+        if overall == 'critical':
+            logger.error(
+                f"🚨 [CELERY] CRITICAL: {score}% health, {workers} workers, "
+                f"{tasks_1h} tasks/hour, {alerts} alerts"
+            )
+        elif overall == 'degraded':
+            logger.warning(
+                f"⚠️ [CELERY] DEGRADED: {score}% health, {workers} workers, "
+                f"{tasks_1h} tasks/hour"
+            )
+        else:
+            logger.info(
+                f"✅ [CELERY] HEALTHY: {score}% health, {workers} workers, "
+                f"{tasks_1h} tasks/hour"
+            )
+
+        return {
+            'success': True,
+            'overall_status': overall,
+            'health_score': score,
+            'workers_online': workers,
+            'tasks_last_hour': tasks_1h,
+            'alerts_count': alerts,
+        }
+
+    except Exception as e:
+        logger.error(f"🔧 [CELERY] Health check failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
