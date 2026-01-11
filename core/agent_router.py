@@ -419,6 +419,14 @@ class AgentRouter:
         return self._spider_context_builder
 
     @property
+    def learning_pattern_engine(self):
+        """Session 744 Phase 3: Lazy-load Learning pattern engine for memory reuse."""
+        if not hasattr(self, '_learning_pattern_engine') or self._learning_pattern_engine is None:
+            from core.services.learning_pattern_engine import get_learning_pattern_engine
+            self._learning_pattern_engine = get_learning_pattern_engine()
+        return self._learning_pattern_engine
+
+    @property
     def semantic_router(self):
         """Session 488: Lazy-load Semantic routing service."""
         if self._semantic_router is None:
@@ -567,6 +575,8 @@ class AgentRouter:
         scifi_context = self._get_scifi_context(agent_name, task)
         # Session 744: Use SpiderContextBuilder for agent-specific spider context
         spider_context = self._get_spider_context(task, agent_name=agent_name)
+        # Session 744 Phase 3: Get learning patterns for this agent
+        learning_context = self._get_learning_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -637,6 +647,16 @@ class AgentRouter:
 
             except Exception as e:
                 logger.warning(f"⚠️ Session 522: SmartTrendingService failed for ContentWriterAgent: {e}")
+
+        # Session 744 Phase 3: Merge learning context into spider context
+        # This allows agents to receive learning patterns through the existing spider_context parameter
+        if learning_context and learning_context.get('has_patterns'):
+            spider_context['learning_patterns'] = learning_context
+            spider_context['learned_best_practices'] = learning_context.get('best_practices', [])
+            spider_context['learning_summary'] = learning_context.get('summary', '')
+            logger.debug(
+                f"📚 [Session 744] Injected learning patterns into spider_context for {agent_name}"
+            )
 
         # Execute the agent with tracking
         start_time = timezone.now()
@@ -776,6 +796,37 @@ class AgentRouter:
             return context
         except Exception as e:
             logger.warning(f"Failed to get spider context: {e}")
+            return {}
+
+    def _get_learning_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 744 Phase 3: Get learning patterns for an agent.
+
+        This mines past successful executions and knowledge transfers
+        to provide agents with awareness of their proven strategies.
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Dict with learning patterns and recommendations
+        """
+        try:
+            patterns = self.learning_pattern_engine.get_patterns_for_agent(
+                agent_name=agent_name,
+                task=task,
+                days_back=30,
+                max_patterns=5
+            )
+            if patterns.get('has_patterns'):
+                logger.debug(
+                    f"📚 [Session 744] Learning patterns for {agent_name}: "
+                    f"summary='{patterns.get('summary', '')[:50]}...'"
+                )
+            return patterns
+        except Exception as e:
+            logger.warning(f"Failed to get learning context: {e}")
             return {}
 
     def _create_execution_record(self, agent_name: str, task: str):
