@@ -1,46 +1,54 @@
-# Session 743 - Ready for Next Work
+# Session 743 - Content Diversity Orchestrator
 
 **Previous Session:** 742 (Human Page Data Display + Clickable Navigation)
 **Date:** January 10, 2026
-**Status:** Components Work | Integration Score: **~95%** | Human Interface: **100%**
+**Status:** Analysis Complete | Implementation Ready
 
 ---
 
-## Session 742 Accomplishments
+## CRITICAL FINDING: System Integration Gap
 
-### Part 1: Human Page Data Display Enhancement
+### The Problem
+The system has **77 spiders** collecting diverse data and **72 agents** with varied capabilities, but **all content produced is about AI/ML**. Agents are working but not working TOGETHER.
 
-Deep dive into HumanPage revealed rich payload data that wasn't being displayed:
-- Added `PayloadDisplay` component (~250 lines) for type-specific rendering
-- Added `ITEM_TYPE_CONFIG` for visual differentiation (8 item types)
-- Enhanced API response with missing fields (source_id, expires_at, etc.)
+### Evidence
+```
+SPIDER DATA: 22,672 runs across news, finance, legal, sports, entertainment, science...
+CONTENT CREATED: 88 episodes + 553 blogs - ALL about AI ecosystems
+AGENT UTILIZATION: Only ~20 of 72 agents regularly execute
+```
 
-### Part 2: Clickable Navigation Audit & Fixes
+### Root Cause
+- 3 Content Channels ALL hardcoded to AI topics
+- No orchestration layer routing spider data to diverse agents
+- No diversity enforcement preventing repetitive content
 
-Audited all **153 attention items** and added proper navigation links:
+---
 
-| Item Type | Count | Navigation Added |
-|-----------|-------|------------------|
-| Arbitrage | 144 | → `/betting` |
-| Pilot/Milestone | 2 | → `/intelligence` |
-| Spider/Insight | 3 | → `/spiders` |
-| Alert | 2 | → `/body-health` |
-| Review | 2 | → `/blog/{id}` + `/content-channels` |
+## Session 743 Priority: Build Content Diversity Orchestrator
 
-### Part 3: Data Fixes
+**Full design document:** `docs/handoffs/SESSION_743_CONTENT_DIVERSITY_ORCHESTRATOR.md`
 
-- Fixed 143 arbitrage items with empty `payload.id` fields
-- Fixed orphaned content:blog review item with placeholder ID
-- Created `BlogViewerPage.tsx` for viewing full blog content
+### Quick Win: Create Diverse Channels
 
-### Human Page Status: 100% Complete
+```python
+# Create channels that use existing spider data diversity
+NEW_CHANNELS = [
+    ("Finance & Markets Daily", "yahoo_finance, coingecko, finnhub"),
+    ("Legal Developments Weekly", "courtlistener, findlaw, justia"),
+    ("Sports & Betting Insights", "theodds, kalshi"),
+    ("Entertainment & Culture", "youtube, spotify, variety"),
+    ("Science & Research Roundup", "science, kaggle, huggingface"),
+    ("Job Market & Career Trends", "adzuna, remoteok, weworkremotely"),
+]
+```
 
-| Feature | Status |
-|---------|--------|
-| Rich payload display | ✅ All 11 item types |
-| Clickable navigation | ✅ All items have links |
-| Item type badges | ✅ Color-coded with icons |
-| Data integrity | ✅ No orphaned items |
+### Implementation Plan
+
+1. **Phase 1:** Create diverse content channels (quick win)
+2. **Phase 2:** Build `ContentDiversityOrchestrator` agent
+3. **Phase 3:** Spider → Agent direct routing
+4. **Phase 4:** Utilization monitoring dashboard
 
 ---
 
@@ -48,62 +56,23 @@ Audited all **153 attention items** and added proper navigation links:
 
 | Component | Score | Notes |
 |-----------|-------|-------|
-| Spider → Agent flow | 95% | Direct + coordinator sub-agents |
-| Agent execution coverage | 90% | 72/80 agents executed |
-| Memory system usage | 100% | AgentMemory: 1,051+ memories |
-| Learning capture | 100% | CoordinatorOutcome: 2,519+ |
-| OpportunityPipeline | 100% | All 4 stages pass |
+| Spider data collection | 100% | 22,672 runs, 77 spiders working |
+| Agent execution | 30% | Only ~20 of 72 agents active |
+| Content diversity | 10% | All AI topics |
+| Human Interface Layer | 100% | Session 742 complete |
 | Body system monitoring | 100% | All 9 systems operational |
-| Human Interface Layer | 100% | All item types navigable |
 
-**Average Reality Score: ~95%**
-
----
-
-## Session 743 Priorities
-
-### Option A: Income Builder Enhancement
-
-Add Income Builder tab to IntelligencePage:
-- 41 ActionPlans in database
-- 8 endpoints need exposure
-- Revenue opportunities and metrics display
-
-### Option B: Quarantine Review
-
-Review 9 pending quarantine items in Mythology Lab:
-- Items pending since December 26, 2025
-- Use Mythology Lab UI to process
-
-### Option C: Content Channels Polish
-
-Enhance Content Channels page:
-- Add approval workflow for episodes
-- Connect to actual publishing (YouTube, Discord)
-- Add ability to edit/regenerate scripts
-
-### Option D: Human Page Enhancements
-
-Build on Session 742 foundation:
-- Add filtering by item_type (not just urgency)
-- Add bulk actions for similar items
-- Real-time WebSocket updates for arbitrage expiration
-- Sound/visual notification for HOT opportunities
+**Integration Reality Score: ~30%** (components work, but not together)
 
 ---
 
-## Recent Commits
+## Session 742 Accomplishments
 
-**Session 742:**
-- `dcaa493e` - feat(Session 742): Add clickable navigation links to all attention item types
-
-**Session 741:**
-- Content Channels page created
-- Episode title generation fix
-
-**Session 740:**
-- Agent Channels UI verification
-- Backend Reference documentation
+- PayloadDisplay component for rich data rendering
+- Clickable navigation for all 153 attention items
+- BlogViewerPage for content review
+- Fixed 143 arbitrage items + 2 orphaned items
+- Human Interface Layer at 100%
 
 ---
 
@@ -113,13 +82,16 @@ Build on Session 742 foundation:
 # Start services
 make start && make celery
 
-# Or for macOS (avoid crashes):
+# Or for macOS:
 make start
 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=solo &
 celery -A core beat -l INFO &
 
-# Health check
-curl http://localhost:8000/health/ping/
+# Check current content diversity
+python manage.py shell -c "
+from core.models_autonomous_studio import ContentChannel
+for c in ContentChannel.objects.all():
+    print(f'{c.name}: {c.topic_domain[:50]}')"
 ```
 
 ---
@@ -128,12 +100,41 @@ curl http://localhost:8000/health/ping/
 
 | Document | Purpose |
 |----------|---------|
-| `docs/handoffs/SESSION_742_HUMAN_PAGE_DATA_DISPLAY.md` | This session's work |
-| `docs/BACKEND_REFERENCE.md` | Comprehensive backend reference (1,614 lines) |
-| `docs/handoffs/SESSION_741_CONTENT_CHANNELS_PAGE.md` | Content Channels + Episode titles |
+| `docs/handoffs/SESSION_743_CONTENT_DIVERSITY_ORCHESTRATOR.md` | **THIS SESSION** - Full design |
+| `docs/handoffs/SESSION_742_HUMAN_PAGE_DATA_DISPLAY.md` | Human page improvements |
 | `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md` | Integration audit |
 | `CLAUDE.md` | System overview |
 
 ---
 
-**Session 742 completed: Human Interface Layer at 100% - all items navigable!**
+## Spider Categories Available (NOT being used)
+
+| Category | Spiders | Status |
+|----------|---------|--------|
+| Finance | yahoo_finance, coingecko, finnhub, sec_edgar | Data collected, NO content |
+| Legal | courtlistener, findlaw, justia | Data collected, NO content |
+| Sports | theodds, kalshi | Data collected, NO content |
+| Entertainment | youtube, spotify, variety | Data collected, NO content |
+| Science | science, kaggle, huggingface | Data collected, NO content |
+| Jobs | adzuna, remoteok, weworkremotely | Data collected, NO content |
+| Lifestyle | food, travel, parenting, health | Data collected, NO content |
+
+---
+
+## Agents Available (NOT being used)
+
+These agents exist but rarely/never execute:
+
+| Agent | Specialty | Last Used |
+|-------|-----------|-----------|
+| LegalDocDrafterAgent | Legal documents | Never |
+| ArbitrageDetector | Sports betting | Rarely |
+| SportsOddsAnalyst | Sports analytics | Never |
+| PredictionMarketAnalyst | Prediction markets | Never |
+| WhaleWatcherAgent | Crypto tracking | Never |
+| CustomerResearchAgent | Market research | Never |
+| CompetitorAnalysisAgent | Competitive intel | Never |
+
+---
+
+**Next Step: Implement Content Diversity Orchestrator to make agents work TOGETHER!**
