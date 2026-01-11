@@ -866,7 +866,7 @@ Added two new widgets to the Dashboard:
 
 **Learning Velocity Widget:**
 - API: `learningApi.velocity()`
-- Shows: Rate per hour, Today count, This Week count
+- Shows: Health score, Today count, This Week count
 - Trend indicator with progress bar
 - Click navigates to Agents page
 
@@ -875,6 +875,107 @@ Added two new widgets to the Dashboard:
 
 ---
 
+### Remaining Quick Wins Completed
+
+**1. Settings - Connected Platforms List**
+- API: `portfolioApi.accounts()`
+- Location: Settings → API section
+- Shows connected OAuth platforms with status indicators
+- File: `frontend/src/pages/SettingsPage.tsx`
+
+**2. Intelligence - Experiment Recommendations**
+- API: `experimentRecommendationsApi.list()`
+- Location: Intelligence → Experiments tab
+- Shows recommendations with priority badges and descriptions
+- File: `frontend/src/pages/IntelligencePage.tsx`
+
+**3. Agents - Knowledge Gaps Display**
+- API: `collectiveApi.knowledgeGaps()`
+- Location: Agents → Learning tab
+- Shows knowledge gaps with priority and affected agent count
+- File: `frontend/src/pages/AgentsPage.tsx`
+
+**4. Header - Pending Actions Badge**
+- API: `reasoningApi.pendingActions()`
+- Location: Header notification bell
+- Shows real-time pending actions count (replaces hardcoded "3")
+- Auto-refreshes every 60 seconds
+- File: `frontend/src/components/layout/Header.tsx`
+
+**New API Groups Added to `api.ts`:**
+```typescript
+// Session 745: Collective Intelligence API
+export const collectiveApi = {
+  insights: () => api.get('/collective/insights/'),
+  report: () => api.get('/collective/report/'),
+  knowledgeGaps: () => api.get('/collective/knowledge-gaps/'),
+  network: () => api.get('/collective/network/'),
+  dashboard: () => api.get('/collective/dashboard/'),
+}
+
+// Session 745: Reasoning Engine API
+export const reasoningApi = {
+  dashboard: () => api.get('/v1/reasoning/dashboard/'),
+  concerns: () => api.get('/v1/reasoning/concerns/'),
+  pendingActions: () => api.get('/v1/reasoning/actions/pending/'),
+}
+
+// Session 745: Experiment Recommendations API
+export const experimentRecommendationsApi = {
+  list: () => api.get('/experiment-recommendations/'),
+}
+```
+
+---
+
+### Bug Fix - Learning Velocity Data Parsing
+
+**Issue:** Learning Velocity widget showed 0 despite API returning real data (score: 77).
+
+**Cause:** API returns data under `dashboard.overall_health.score` but frontend expected `velocity.rate` directly.
+
+**Fix:** Added data transformation to map API response to expected format:
+```typescript
+const velocityDashboard = velocityData?.data?.dashboard || {}
+const velocity = {
+  rate: velocityDashboard.overall_health?.score || 0,
+  today: velocityDashboard.daily_velocity?.[0]?.total_weight || 0,
+  this_week: velocityDashboard.weekly_summary?.[0]?.total_weight || 0,
+  trend: velocityDashboard.velocity_trend?.rate || 0,
+  status: velocityDashboard.overall_health?.status || 'unknown',
+}
+```
+
+**File:** `frontend/src/pages/DashboardPage.tsx`
+
+---
+
+## Commits (Session 745)
+
+```
+814a51fb docs(Session 745): Comprehensive API-to-UI coverage audit
+d831b021 feat(Session 745): Enhanced PortfolioPage with full distribution API coverage
+cdbdb951 feat(Session 745): Add Revenue and Learning Velocity widgets to Dashboard
+35e83623 feat(Session 745): Complete remaining quick wins for API-to-UI coverage
+808f324f fix(Session 745): Fix Learning Velocity widget data parsing
+```
+
+---
+
+## Quick Wins Checklist (Updated)
+
+### Phase 1: Quick Wins ✅ COMPLETE
+- [x] Add revenue widget to Dashboard
+- [x] Add learning velocity to Dashboard
+- [x] Add connected platforms to Settings
+- [x] Add experiment recommendations to Intelligence
+- [x] Add knowledge gaps to Agents
+- [x] Add pending actions badge to Header
+- [ ] Add line movement chart to Betting
+- [ ] Add network graph to Dashboard
+
+---
+
 **Session 745 Goal: Achieve 100% API-to-UI Coverage**
 
-Current: ~67% | Target: 100%
+Current: ~70% (+3% from quick wins) | Target: 100%
