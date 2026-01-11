@@ -265,20 +265,54 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
     )
   }
 
-  // Content review display
+  // Content review display - Session 742: Show linked blog titles
   if (item_type === 'review') {
     return (
-      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
-        {payload.post_count !== undefined && (
-          <div>
-            <p className="text-xs text-gray-500">Posts</p>
-            <p className="font-medium">{Number(payload.post_count)}</p>
-          </div>
-        )}
-        {payload.quality_score !== undefined && (
-          <div>
-            <p className="text-xs text-gray-500">Quality Score</p>
-            <p className="font-bold text-accent-green">{Number(payload.quality_score)}%</p>
+      <div className="space-y-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+        <div className="flex gap-4">
+          {payload.post_count !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Posts</p>
+              <p className="font-medium">{Number(payload.post_count)}</p>
+            </div>
+          )}
+          {payload.quality_score !== undefined && (
+            <div>
+              <p className="text-xs text-gray-500">Quality Score</p>
+              <p className="font-bold text-accent-green">{Number(payload.quality_score)}%</p>
+            </div>
+          )}
+        </div>
+        {/* Session 742: Show linked blog titles */}
+        {payload.blog_titles && Array.isArray(payload.blog_titles) && (
+          <div className="border-t border-dark-border pt-3">
+            <p className="text-xs text-gray-500 mb-2">Blog Posts to Review</p>
+            <ul className="space-y-2">
+              {(payload.blog_titles as string[]).map((title: string, i: number) => {
+                const blogId = payload.blog_ids && Array.isArray(payload.blog_ids) ? (payload.blog_ids as string[])[i] : null
+                return (
+                  <li key={i} className="flex items-start gap-2">
+                    <FileText size={14} className="text-primary-400 mt-0.5 flex-shrink-0" />
+                    {blogId ? (
+                      <a
+                        href={`/blog/${blogId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary-400 hover:text-primary-300 hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Open in new tab - could also be a modal
+                        }}
+                      >
+                        {title}
+                      </a>
+                    ) : (
+                      <span className="text-sm">{title}</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
           </div>
         )}
       </div>
