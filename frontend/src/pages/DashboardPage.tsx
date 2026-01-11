@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ecosystemApi, dashboardApi, spidersApi, activityApi } from '@/lib/api'
+import { ecosystemApi, dashboardApi, spidersApi, activityApi, portfolioApi, learningApi } from '@/lib/api'
 import { useWebSocket, useSystemEvents, type WebSocketStatus } from '@/hooks/useWebSocket'
-import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket } from 'lucide-react'
+import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket, DollarSign, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import HeartWidget from '@/components/HeartWidget'
 
@@ -177,6 +177,18 @@ export default function DashboardPage() {
     queryFn: () => activityApi.recent(20, 24),
   })
 
+  // Session 745: Revenue dashboard widget
+  const { data: revenueData } = useQuery({
+    queryKey: ['dashboard-revenue'],
+    queryFn: () => portfolioApi.revenueDashboard(),
+  })
+
+  // Session 745: Learning velocity widget
+  const { data: velocityData } = useQuery({
+    queryKey: ['dashboard-velocity'],
+    queryFn: () => learningApi.velocity(),
+  })
+
   // Initialize recentActivity with fetched data
   useEffect(() => {
     if (initialActivity?.data?.activities) {
@@ -238,6 +250,9 @@ export default function DashboardPage() {
 
   const stats = ecosystemStats?.data || {}
   const health = healthData?.data || {}
+  // Session 745: Revenue and velocity data
+  const revenue = revenueData?.data || {}
+  const velocity = velocityData?.data || {}
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -336,6 +351,104 @@ export default function DashboardPage() {
               color="#8b5cf6"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Session 745: Revenue & Learning Velocity Widgets */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Revenue Widget */}
+        <div
+          className="card cursor-pointer hover:border-accent-green/50 transition-colors"
+          onClick={() => navigate('/portfolio')}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <DollarSign className="text-accent-green" size={20} />
+              Revenue
+            </h3>
+            <ArrowUpRight size={16} className="text-gray-400" />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-2xl font-bold text-accent-green">
+                ${((revenue.total || 0) / 1000).toFixed(1)}k
+              </p>
+              <p className="text-xs text-gray-400">Total</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold">
+                ${((revenue.this_month || 0) / 1000).toFixed(1)}k
+              </p>
+              <p className="text-xs text-gray-400">This Month</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-accent-amber">
+                ${((revenue.pending || 0) / 1000).toFixed(1)}k
+              </p>
+              <p className="text-xs text-gray-400">Pending</p>
+            </div>
+          </div>
+          {revenue.growth_percent !== undefined && (
+            <div className="mt-3 flex items-center gap-2">
+              <TrendingUp size={14} className={revenue.growth_percent >= 0 ? 'text-accent-green' : 'text-accent-red'} />
+              <span className={cn(
+                'text-sm',
+                revenue.growth_percent >= 0 ? 'text-accent-green' : 'text-accent-red'
+              )}>
+                {revenue.growth_percent >= 0 ? '+' : ''}{revenue.growth_percent}% vs last month
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Learning Velocity Widget */}
+        <div
+          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
+          onClick={() => navigate('/agents')}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <TrendingUp className="text-primary-400" size={20} />
+              Learning Velocity
+            </h3>
+            <ArrowUpRight size={16} className="text-gray-400" />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-2xl font-bold text-primary-400">
+                {velocity.rate?.toFixed(1) || '0.0'}
+              </p>
+              <p className="text-xs text-gray-400">Learn/Hour</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold">
+                {velocity.today || 0}
+              </p>
+              <p className="text-xs text-gray-400">Today</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold">
+                {velocity.this_week || 0}
+              </p>
+              <p className="text-xs text-gray-400">This Week</p>
+            </div>
+          </div>
+          {velocity.trend !== undefined && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                <span>Trend</span>
+                <span className={velocity.trend >= 0 ? 'text-accent-green' : 'text-accent-red'}>
+                  {velocity.trend >= 0 ? '+' : ''}{velocity.trend}%
+                </span>
+              </div>
+              <div className="h-1.5 bg-dark-bg rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary-500 to-accent-cyan rounded-full transition-all"
+                  style={{ width: `${Math.min(Math.max((velocity.rate || 0) * 10, 5), 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

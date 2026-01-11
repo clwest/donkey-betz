@@ -854,6 +854,27 @@ Instead of creating a new DistributionPage, we enhanced the existing PortfolioPa
 
 ---
 
+### DashboardPage Quick Wins
+
+Added two new widgets to the Dashboard:
+
+**Revenue Widget:**
+- API: `portfolioApi.revenueDashboard()`
+- Shows: Total revenue, This Month, Pending
+- Growth percentage indicator
+- Click navigates to Portfolio page
+
+**Learning Velocity Widget:**
+- API: `learningApi.velocity()`
+- Shows: Rate per hour, Today count, This Week count
+- Trend indicator with progress bar
+- Click navigates to Agents page
+
+**Files Modified:**
+- `frontend/src/pages/DashboardPage.tsx` - Added revenue and learning velocity widgets
+
+---
+
 **Session 745 Goal: Achieve 100% API-to-UI Coverage**
 
-Current: ~65% | Target: 100%
+Current: ~67% | Target: 100%
