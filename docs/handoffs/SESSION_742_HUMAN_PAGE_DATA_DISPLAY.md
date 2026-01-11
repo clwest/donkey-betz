@@ -220,10 +220,26 @@ frontend/src/App.tsx                       # +2 lines (blog route)
 | `review` | Blog titles → /blog/{id} | View Content Channels |
 | `insight` | Spider name → /spiders | View Spider Integration |
 
+#### 7. Fixed Empty Arbitrage IDs (143 items)
+
+All 143 `arbitrage_detection` items had empty `payload.id` fields. Fixed by setting:
+- `payload.id` = attention item's own UUID
+- `source_id` = attention item's own UUID
+
+This ensures all items have consistent, linkable identifiers.
+
+## Final Statistics
+
+| Metric | Value |
+|--------|-------|
+| Total attention items | 153 |
+| Item types with navigation | 11/11 (100%) |
+| Orphaned items fixed | 2 (content:blog, arbitrage IDs) |
+| New pages created | 1 (BlogViewerPage) |
+
 ## Next Steps
 
 - Consider adding filtering by item_type (not just urgency)
 - Add bulk actions for similar items (approve all low-risk)
 - Connect to real-time WebSocket updates for arbitrage expiration countdown
 - Add sound/visual notification for HOT arbitrage opportunities
-- Fix empty arbitrage_detection payload.id fields (143 items have empty id)
