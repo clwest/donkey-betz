@@ -100,12 +100,17 @@ class SpiderContextBuilder:
         'job': ['jobs', 'tech'],
         'career': ['jobs', 'tech', 'news'],
 
+        # Legal agents (Session 744 enhancement)
+        'legal': ['legal', 'news'],
+        'legal_doc': ['legal', 'news'],
+
         # Default for unmatched agents
         'default': ['tech', 'news'],
     }
 
     # Task keyword to category boost mappings
     # If task contains these keywords, add these categories
+    # Session 744 enhancement: Comprehensive domain coverage
     TASK_KEYWORD_BOOSTS = {
         # Tech keywords
         'ai': ['tech'],
@@ -118,6 +123,11 @@ class SpiderContextBuilder:
         'app': ['tech'],
         'website': ['tech'],
         'api': ['tech'],
+        'cloud': ['tech'],
+        'database': ['tech'],
+        'security': ['tech'],
+        'devops': ['tech'],
+        'startup': ['tech', 'news'],
 
         # Finance keywords
         'stock': ['financial'],
@@ -128,6 +138,11 @@ class SpiderContextBuilder:
         'ethereum': ['crypto'],
         'trading': ['financial'],
         'portfolio': ['financial'],
+        'earnings': ['financial', 'news'],
+        'ipo': ['financial', 'news'],
+        'sec': ['financial', 'legal'],
+        'hedge fund': ['financial'],
+        'wall street': ['financial', 'news'],
 
         # Creative keywords
         'logo': ['creative'],
@@ -138,6 +153,10 @@ class SpiderContextBuilder:
         'video': ['creative', 'video'],
         'style': ['creative'],
         'aesthetic': ['creative'],
+        'art': ['creative'],
+        'illustration': ['creative'],
+        'photography': ['creative'],
+        'animation': ['creative', 'video'],
 
         # Job keywords
         'job': ['jobs'],
@@ -146,6 +165,10 @@ class SpiderContextBuilder:
         'remote': ['jobs'],
         'salary': ['jobs'],
         'resume': ['jobs'],
+        'interview': ['jobs'],
+        'employment': ['jobs'],
+        'freelance': ['jobs'],
+        'gig': ['jobs'],
 
         # Social keywords
         'social': ['social', 'community'],
@@ -153,6 +176,107 @@ class SpiderContextBuilder:
         'viral': ['social'],
         'community': ['community', 'social'],
         'audience': ['social'],
+        'influencer': ['social'],
+        'engagement': ['social'],
+        'followers': ['social'],
+
+        # Legal keywords (Session 744 enhancement)
+        'legal': ['legal'],
+        'law': ['legal'],
+        'lawyer': ['legal'],
+        'attorney': ['legal'],
+        'court': ['legal'],
+        'lawsuit': ['legal', 'news'],
+        'litigation': ['legal'],
+        'custody': ['legal'],
+        'divorce': ['legal'],
+        'family law': ['legal'],
+        'parenting': ['legal', 'lifestyle'],
+        'visitation': ['legal'],
+        'child support': ['legal'],
+        'alimony': ['legal'],
+        'contract': ['legal'],
+        'regulation': ['legal', 'news'],
+        'compliance': ['legal', 'tech'],
+        'patent': ['legal', 'tech'],
+        'trademark': ['legal'],
+        'copyright': ['legal'],
+        'colorado': ['legal'],  # Colorado-specific legal spiders
+
+        # Health/Medical keywords (Session 744 enhancement)
+        'health': ['health'],
+        'medical': ['health'],
+        'healthcare': ['health', 'tech'],
+        'wellness': ['health', 'lifestyle'],
+        'fitness': ['health', 'lifestyle'],
+        'nutrition': ['health', 'lifestyle'],
+        'mental health': ['health'],
+        'therapy': ['health'],
+        'hospital': ['health', 'news'],
+        'doctor': ['health'],
+        'pharmaceutical': ['health', 'financial'],
+        'fda': ['health', 'news'],
+
+        # Real Estate keywords (Session 744 enhancement)
+        'real estate': ['real_estate'],
+        'property': ['real_estate'],
+        'housing': ['real_estate', 'news'],
+        'mortgage': ['real_estate', 'financial'],
+        'rent': ['real_estate'],
+        'apartment': ['real_estate'],
+        'home': ['real_estate'],
+        'realtor': ['real_estate'],
+        'mls': ['real_estate'],
+
+        # Entertainment keywords (Session 744 enhancement)
+        'movie': ['entertainment', 'news'],
+        'film': ['entertainment', 'creative'],
+        'music': ['entertainment', 'creative'],
+        'gaming': ['entertainment', 'tech'],
+        'game': ['entertainment', 'tech'],
+        'esports': ['entertainment', 'news'],
+        'streaming': ['entertainment', 'tech'],
+        'netflix': ['entertainment', 'news'],
+        'spotify': ['entertainment'],
+        'youtube': ['entertainment', 'social'],
+        'podcast': ['entertainment', 'social'],
+
+        # Science/Education keywords (Session 744 enhancement)
+        'science': ['science', 'tech'],
+        'research': ['science', 'tech'],
+        'study': ['science', 'education'],
+        'education': ['education'],
+        'university': ['education'],
+        'course': ['education'],
+        'learning': ['education'],
+        'training': ['education'],
+        'certification': ['education', 'jobs'],
+
+        # Food/Lifestyle keywords (Session 744 enhancement)
+        'food': ['food', 'lifestyle'],
+        'restaurant': ['food', 'lifestyle'],
+        'coffee': ['food', 'lifestyle'],
+        'recipe': ['food'],
+        'dining': ['food', 'lifestyle'],
+        'travel': ['travel', 'lifestyle'],
+        'vacation': ['travel'],
+        'hotel': ['travel'],
+        'flight': ['travel'],
+        'destination': ['travel'],
+
+        # News/Current Events keywords (Session 744 enhancement)
+        'news': ['news'],
+        'breaking': ['news'],
+        'politics': ['news', 'government'],
+        'election': ['news', 'government'],
+        'government': ['government', 'news'],
+        'policy': ['government', 'news'],
+        'congress': ['government', 'news'],
+        'senate': ['government', 'news'],
+        'white house': ['government', 'news'],
+        'war': ['news'],
+        'climate': ['news', 'science'],
+        'weather': ['weather', 'news'],
     }
 
     def __init__(self):
