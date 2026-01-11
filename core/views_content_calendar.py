@@ -603,3 +603,256 @@ def content_calendar_generate(request, channel_id):
             'success': False,
             'error': str(e),
         }, status=500)
+
+
+# =============================================================================
+# Session 741: Content Channels API - View all channels and episodes
+# =============================================================================
+
+@require_http_methods(["GET"])
+def content_channels_list(request):
+    """
+    GET /api/v1/content-channels/
+
+    Session 741: Returns all content channels with their episodes.
+    This endpoint is for viewing the autonomous content creation system.
+
+    Query params:
+    - limit: Max episodes per channel (default 10)
+    """
+    limit = min(int(request.GET.get('limit', 10)), 50)
+
+    channels = ContentChannel.objects.all().order_by('-created_at')
+
+    channels_data = []
+    for channel in channels:
+        # Get recent episodes for this channel
+        episodes = ChannelEpisode.objects.filter(
+            channel=channel
+        ).order_by('-created_at')[:limit]
+
+        episodes_data = []
+        for episode in episodes:
+            engagement = episode.likes + episode.comments + episode.shares
+            episodes_data.append({
+                'id': str(episode.id),
+                'title': episode.title,
+                'topic': episode.topic,
+                'description': episode.description[:200] if episode.description else '',
+                'script_preview': episode.script[:500] if episode.script else '',
+                'script_length': len(episode.script) if episode.script else 0,
+                'has_full_script': bool(episode.script),
+                'created_at': episode.created_at.isoformat(),
+                'publish_date': episode.publish_date.isoformat() if episode.publish_date else None,
+                'metrics': {
+                    'views': episode.views,
+                    'likes': episode.likes,
+                    'comments': episode.comments,
+                    'shares': episode.shares,
+                    'engagement': engagement,
+                    'retention_rate': float(episode.retention_rate),
+                    'performance_score': float(episode.performance_score),
+                },
+                'platform_url': episode.platform_url,
+            })
+
+        channels_data.append({
+            'id': str(channel.id),
+            'name': channel.name,
+            'topic_domain': channel.topic_domain,
+            'target_audience': channel.target_audience,
+            'content_frequency': channel.content_frequency,
+            'status': channel.status,
+            'visual_style': channel.visual_style,
+            'voice_name': channel.voice_name or 'Default',
+            'platform': channel.platform,
+            'publish_automatically': channel.publish_automatically,
+            'total_episodes': channel.total_episodes_created,
+            'total_views': channel.total_views,
+            'total_engagement': channel.total_engagement,
+            'avg_retention': float(channel.avg_retention_rate),
+            'next_content_due': channel.next_content_due.isoformat() if channel.next_content_due else None,
+            'last_content_created': channel.last_content_created.isoformat() if channel.last_content_created else None,
+            'created_at': channel.created_at.isoformat(),
+            'episodes': episodes_data,
+            'episode_count': ChannelEpisode.objects.filter(channel=channel).count(),
+        })
+
+    # Summary stats
+    total_channels = channels.count()
+    total_episodes = ChannelEpisode.objects.count()
+    active_channels = channels.filter(status=ChannelStatus.ACTIVE).count()
+
+    return JsonResponse({
+        'success': True,
+        'channels': channels_data,
+        'stats': {
+            'total_channels': total_channels,
+            'active_channels': active_channels,
+            'total_episodes': total_episodes,
+        },
+    })
+
+
+@require_http_methods(["GET"])
+def content_channel_detail(request, channel_id):
+    """
+    GET /api/v1/content-channels/<uuid>/
+
+    Session 741: Returns detailed info for a specific channel with all episodes.
+    """
+    try:
+        channel = ContentChannel.objects.get(id=channel_id)
+    except ContentChannel.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Channel not found',
+        }, status=404)
+
+    # Get all episodes for this channel
+    episodes = ChannelEpisode.objects.filter(
+        channel=channel
+    ).order_by('-created_at')
+
+    episodes_data = []
+    for episode in episodes:
+        engagement = episode.likes + episode.comments + episode.shares
+        episodes_data.append({
+            'id': str(episode.id),
+            'title': episode.title,
+            'topic': episode.topic,
+            'description': episode.description,
+            'script': episode.script,  # Full script
+            'created_at': episode.created_at.isoformat(),
+            'publish_date': episode.publish_date.isoformat() if episode.publish_date else None,
+            'metrics': {
+                'views': episode.views,
+                'likes': episode.likes,
+                'comments': episode.comments,
+                'shares': episode.shares,
+                'engagement': engagement,
+                'retention_rate': float(episode.retention_rate),
+                'performance_score': float(episode.performance_score),
+            },
+            'platform_url': episode.platform_url,
+        })
+
+    # Get debates for this channel
+    from core.models_autonomous_studio import ContentDebate
+    debates = ContentDebate.objects.filter(
+        channel=channel
+    ).order_by('-created_at')[:10]
+
+    debates_data = []
+    for debate in debates:
+        debates_data.append({
+            'id': str(debate.id),
+            'proposed_topic': debate.proposed_topic,
+            'proposed_by': debate.proposed_by,
+            'topic_miner_position': debate.topic_miner_position,
+            'contrarian_position': debate.contrarian_position,
+            'analyst_position': debate.analyst_position,
+            'final_decision': debate.final_decision,
+            'chosen_angle': debate.chosen_angle,
+            'consensus_reached': debate.consensus_reached,
+            'content_created': debate.content_created,
+            'created_at': debate.created_at.isoformat(),
+        })
+
+    return JsonResponse({
+        'success': True,
+        'channel': {
+            'id': str(channel.id),
+            'name': channel.name,
+            'topic_domain': channel.topic_domain,
+            'target_audience': channel.target_audience,
+            'content_frequency': channel.content_frequency,
+            'status': channel.status,
+            'visual_style': channel.visual_style,
+            'voice_name': channel.voice_name or 'Default',
+            'platform': channel.platform,
+            'publish_automatically': channel.publish_automatically,
+            'total_episodes': channel.total_episodes_created,
+            'total_views': channel.total_views,
+            'total_engagement': channel.total_engagement,
+            'avg_retention': float(channel.avg_retention_rate),
+            'next_content_due': channel.next_content_due.isoformat() if channel.next_content_due else None,
+            'last_content_created': channel.last_content_created.isoformat() if channel.last_content_created else None,
+            'created_at': channel.created_at.isoformat(),
+        },
+        'episodes': episodes_data,
+        'debates': debates_data,
+        'episode_count': len(episodes_data),
+    })
+
+
+@require_http_methods(["GET"])
+def content_episode_detail(request, episode_id):
+    """
+    GET /api/v1/content-channels/episode/<uuid>/
+
+    Session 741: Returns full episode details including complete script.
+    """
+    try:
+        episode = ChannelEpisode.objects.select_related('channel').get(id=episode_id)
+    except ChannelEpisode.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Episode not found',
+        }, status=404)
+
+    engagement = episode.likes + episode.comments + episode.shares
+
+    # Try to find associated debate
+    debate_info = None
+    try:
+        from core.models_autonomous_studio import ContentDebate
+        debate = ContentDebate.objects.filter(
+            channel=episode.channel,
+            created_at__gte=episode.created_at - timedelta(hours=2),
+            created_at__lte=episode.created_at + timedelta(hours=1),
+        ).order_by('-created_at').first()
+
+        if debate:
+            debate_info = {
+                'id': str(debate.id),
+                'proposed_topic': debate.proposed_topic,
+                'topic_miner_position': debate.topic_miner_position,
+                'contrarian_position': debate.contrarian_position,
+                'analyst_position': debate.analyst_position,
+                'final_decision': debate.final_decision,
+                'chosen_angle': debate.chosen_angle,
+                'consensus_reached': debate.consensus_reached,
+            }
+    except Exception as e:
+        logger.debug(f"Could not fetch debate: {e}")
+
+    return JsonResponse({
+        'success': True,
+        'episode': {
+            'id': str(episode.id),
+            'title': episode.title,
+            'topic': episode.topic,
+            'description': episode.description,
+            'script': episode.script,
+            'channel': {
+                'id': str(episode.channel.id),
+                'name': episode.channel.name,
+                'platform': episode.channel.platform,
+            },
+            'created_at': episode.created_at.isoformat(),
+            'publish_date': episode.publish_date.isoformat() if episode.publish_date else None,
+            'metrics': {
+                'views': episode.views,
+                'likes': episode.likes,
+                'comments': episode.comments,
+                'shares': episode.shares,
+                'engagement': engagement,
+                'retention_rate': float(episode.retention_rate),
+                'performance_score': float(episode.performance_score),
+                'watch_time_seconds': episode.watch_time_seconds,
+            },
+            'platform_url': episode.platform_url,
+        },
+        'debate': debate_info,
+    })

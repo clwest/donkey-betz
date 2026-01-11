@@ -170,6 +170,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 688: Content Page APIs (read-only for React frontend)
         '/api/v1/gallery/',  # Gallery endpoints
         '/api/content-calendar/',  # Content calendar
+        '/api/content-channels/',  # Session 741: Content channels (autonomous content studio)
         '/api/creative-projects/',  # Creative projects
         '/api/v1/content/templates/',  # Content templates
 

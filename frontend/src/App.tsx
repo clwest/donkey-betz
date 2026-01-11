@@ -32,6 +32,7 @@ import ConversationContractPage from '@/pages/ConversationContractPage'
 import SpiderIntegrationPage from '@/pages/SpiderIntegrationPage'
 import DocumentsPage from '@/pages/DocumentsPage'
 import MythologyLabPage from '@/pages/MythologyLabPage'
+import ContentChannelsPage from '@/pages/ContentChannelsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -67,6 +68,7 @@ function App() {
         <Route path="betting" element={<BettingPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="podcast" element={<PodcastPage />} />
+        <Route path="content-channels" element={<ContentChannelsPage />} />
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="llm-routing" element={<LLMRoutingPage />} />

@@ -683,6 +683,11 @@ export const contentApi = {
   calendar: () => api.get('/content-calendar/'),
   calendarUpcoming: () => api.get('/content-calendar/upcoming/'),
 
+  // Session 741: Content Channels API
+  channels: (limit?: number) => api.get('/content-channels/', { params: { limit } }),
+  channelDetail: (channelId: string) => api.get(`/content-channels/${channelId}/`),
+  episodeDetail: (episodeId: string) => api.get(`/content-channels/episode/${episodeId}/`),
+
   // Creative Projects
   projects: () => api.get('/creative-projects/'),
   createProject: (name: string, description: string) =>
