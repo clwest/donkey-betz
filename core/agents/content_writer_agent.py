@@ -182,7 +182,17 @@ Always deliver content that's:
 - Properly structured for the format
 - Written in the requested tone
 - Approximately the requested word count
-- Ready to publish with minimal editing"""
+- Ready to publish with minimal editing
+
+DELEGATION (Session 744):
+If you need something outside your expertise, use the delegate_to_specialist tool:
+- Need research/data? Delegate to ResearchAgent
+- Need images/graphics? Delegate to ImageAgent
+- Need trending topics? Delegate to TrendAnalysisAgent
+- Need SEO optimization? Delegate to SEOOptimizerAgent
+- Need competitor info? Delegate to CompetitorAnalysisAgent
+
+Always delegate tasks you cannot perform yourself rather than refusing or making up data."""
 
     tools = []  # Content generation is done via direct GPT call, not sub-tools
 
