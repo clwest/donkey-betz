@@ -167,10 +167,17 @@
 |-----------|---------|
 | `DELEGATE_TO_SPECIALIST_TOOL` | OpenAI function calling tool definition |
 | `AVAILABLE_SPECIALISTS` | 13 commonly needed specialist agents |
+| `can_delegate` class attribute | Enable/disable delegation (default True) |
 | `agent_router` property | Lazy-loaded router for delegations |
 | `_handle_delegate_to_specialist()` | Main delegation handler |
 | `_record_delegation()` | Creates AgentLearning records |
 | `get_tools_with_delegation()` | Helper for subclasses |
+
+**Autonomous Delegation (Enhanced):**
+- `_call_openai()` auto-includes delegation tool when `can_delegate=True`
+- LLM autonomously decides when to delegate based on task needs
+- `execution_context` parameter passes spider/scifi context through delegations
+- ContentWriterAgent and ResearchAgent `_execute_tool_call` updated for delegation
 
 **Available Specialists:**
 ```python
