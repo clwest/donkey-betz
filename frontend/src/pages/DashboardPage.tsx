@@ -251,8 +251,16 @@ export default function DashboardPage() {
   const stats = ecosystemStats?.data || {}
   const health = healthData?.data || {}
   // Session 745: Revenue and velocity data
-  const revenue = revenueData?.data || {}
-  const velocity = velocityData?.data || {}
+  const revenue = revenueData?.data?.dashboard || revenueData?.data || {}
+  // Session 745: Transform velocity API response to expected format
+  const velocityDashboard = velocityData?.data?.dashboard || {}
+  const velocity = {
+    rate: velocityDashboard.overall_health?.score || 0,
+    today: velocityDashboard.daily_velocity?.[0]?.total_weight || 0,
+    this_week: velocityDashboard.weekly_summary?.[0]?.total_weight || 0,
+    trend: velocityDashboard.velocity_trend?.rate || 0,
+    status: velocityDashboard.overall_health?.status || 'unknown',
+  }
 
   // Clear toast after 3 seconds
   if (actionResult) {
