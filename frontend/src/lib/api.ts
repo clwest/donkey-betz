@@ -1749,6 +1749,60 @@ export const autonomousApi = {
     api.get('/autonomous/analytics/timeline/', { params }),
 }
 
+// Session 745: Analytics Dashboard API
+export const analyticsApi = {
+  // Dashboard Overview
+  overview: () => api.get('/analytics/overview/'),
+  summary: (params?: { period?: string }) => api.get('/analytics/summary/', { params }),
+
+  // Chart Data
+  charts: {
+    agentActivity: (params?: { days?: number }) =>
+      api.get('/analytics/charts/agent-activity/', { params }),
+    contentProduction: (params?: { days?: number }) =>
+      api.get('/analytics/charts/content-production/', { params }),
+    revenue: (params?: { days?: number }) =>
+      api.get('/analytics/charts/revenue/', { params }),
+    userEngagement: (params?: { days?: number }) =>
+      api.get('/analytics/charts/user-engagement/', { params }),
+    spiderPerformance: (params?: { days?: number }) =>
+      api.get('/analytics/charts/spider-performance/', { params }),
+    learningProgress: (params?: { days?: number }) =>
+      api.get('/analytics/charts/learning-progress/', { params }),
+    collaborationMetrics: (params?: { days?: number }) =>
+      api.get('/analytics/charts/collaboration/', { params }),
+    systemHealth: (params?: { days?: number }) =>
+      api.get('/analytics/charts/system-health/', { params }),
+  },
+
+  // Analytics v2 (detailed)
+  v2: {
+    trends: (params?: { metric?: string; period?: string }) =>
+      api.get('/analytics/v2/trends/', { params }),
+    comparison: (params?: { metrics?: string[]; period?: string }) =>
+      api.get('/analytics/v2/comparison/', { params }),
+    breakdown: (params?: { dimension?: string }) =>
+      api.get('/analytics/v2/breakdown/', { params }),
+    topPerformers: (params?: { category?: string; limit?: number }) =>
+      api.get('/analytics/v2/top-performers/', { params }),
+    anomalies: () => api.get('/analytics/v2/anomalies/'),
+    forecast: (params?: { metric?: string; days?: number }) =>
+      api.get('/analytics/v2/forecast/', { params }),
+    export: (params?: { format?: string; metrics?: string[] }) =>
+      api.get('/analytics/v2/export/', { params }),
+  },
+
+  // Reports
+  reports: {
+    list: () => api.get('/analytics/reports/'),
+    generate: (data: { type: string; period?: string; format?: string }) =>
+      api.post('/analytics/reports/generate/', data),
+    schedule: (data: { type: string; frequency: string; recipients?: string[] }) =>
+      api.post('/analytics/reports/schedule/', data),
+    download: (id: string) => api.get(`/analytics/reports/${id}/download/`),
+  },
+}
+
 // Session 745: Learning Journey API
 export const journeyApi = {
   // Journey Management
