@@ -759,3 +759,76 @@ def clone_request_status(request, request_id):
     except Exception as e:
         logger.error(f"Error getting clone status: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ==================== CATEGORIES & STATS ====================
+# Session 745: Added missing endpoints for frontend
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def marketplace_categories(request):
+    """
+    Get all available voice categories/use cases.
+
+    GET /api/voice-marketplace/categories/
+    """
+    try:
+        # Get distinct categories from existing voices
+        categories = list(VoiceProfile.objects.filter(
+            is_public=True, is_active=True
+        ).values_list('primary_use_case', flat=True).distinct())
+
+        # Add standard categories if not present
+        standard_categories = [
+            'general', 'narration', 'podcast', 'gaming', 'character',
+            'audiobook', 'commercial', 'documentary', 'educational'
+        ]
+        for cat in standard_categories:
+            if cat not in categories:
+                categories.append(cat)
+
+        return JsonResponse({
+            'success': True,
+            'categories': sorted(categories),
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting categories: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def marketplace_stats(request):
+    """
+    Get overall marketplace statistics.
+
+    GET /api/voice-marketplace/stats/
+    """
+    try:
+        from django.db.models import Avg, Count
+
+        # Overall stats
+        total_voices = VoiceProfile.objects.filter(is_active=True).count()
+        published_voices = VoiceProfile.objects.filter(is_public=True, is_active=True).count()
+
+        # Aggregate stats
+        aggregates = VoiceProfile.objects.filter(is_public=True, is_active=True).aggregate(
+            total_downloads=Sum('total_uses'),
+            avg_rating=Avg('average_rating'),
+            total_reviews=Count('reviews'),
+        )
+
+        return JsonResponse({
+            'success': True,
+            'total_voices': total_voices,
+            'published_voices': published_voices,
+            'total_downloads': aggregates['total_downloads'] or 0,
+            'total_purchases': aggregates['total_downloads'] or 0,  # Same as downloads for now
+            'average_rating': round(aggregates['avg_rating'] or 0, 2),
+            'total_reviews': aggregates['total_reviews'] or 0,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting marketplace stats: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
