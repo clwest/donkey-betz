@@ -36,6 +36,7 @@ import {
   Workflow,
   Lightbulb,
   Mic,
+  CreditCard,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -77,6 +78,7 @@ const navItems = [
   { path: '/autonomous', label: 'Autonomous', icon: Workflow },
   { path: '/reasoning', label: 'Reasoning', icon: Lightbulb },
   { path: '/voice-marketplace', label: 'Voices', icon: Mic },
+  { path: '/billing', label: 'Billing', icon: CreditCard },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },

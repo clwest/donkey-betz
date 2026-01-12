@@ -1707,6 +1707,42 @@ export const autonomousApi = {
     api.get('/autonomous/analytics/timeline/', { params }),
 }
 
+// Session 745: Billing & Subscription API (Stripe)
+export const billingApi = {
+  // Subscription Management
+  subscriptionStatus: () => api.get('/stripe/subscription-status/'),
+  subscriptionPlans: () => api.get('/stripe/plans/'),
+  subscribe: (data: { plan_id: string; payment_method_id?: string }) =>
+    api.post('/stripe/subscribe/', data),
+  cancelSubscription: () => api.post('/stripe/cancel-subscription/'),
+  resumeSubscription: () => api.post('/stripe/resume-subscription/'),
+  updateSubscription: (data: { plan_id: string }) =>
+    api.post('/stripe/update-subscription/', data),
+
+  // Payment Methods
+  paymentMethods: () => api.get('/stripe/payment-methods/'),
+  addPaymentMethod: (data: { payment_method_id: string }) =>
+    api.post('/stripe/payment-methods/', data),
+  removePaymentMethod: (id: string) => api.delete(`/stripe/payment-methods/${id}/`),
+  setDefaultPaymentMethod: (id: string) =>
+    api.post(`/stripe/payment-methods/${id}/default/`),
+
+  // Billing & Invoices
+  invoices: (params?: { limit?: number }) => api.get('/stripe/invoices/', { params }),
+  invoiceDetail: (id: string) => api.get(`/stripe/invoices/${id}/`),
+  upcomingInvoice: () => api.get('/stripe/upcoming-invoice/'),
+
+  // Usage & Billing Portal
+  usage: () => api.get('/stripe/usage/'),
+  billingPortal: () => api.post('/stripe/billing-portal/'),
+
+  // Voice Checkout (special feature)
+  voiceCheckoutStart: (data: { items: Array<{ id: string; quantity?: number }> }) =>
+    api.post('/voice-checkout/start/', data),
+  voiceCheckoutStatus: (sessionId: string) =>
+    api.get(`/voice-checkout/status/${sessionId}/`),
+}
+
 // Session 745: Voice Marketplace API
 export const voiceMarketplaceApi = {
   // Browse & Discovery
