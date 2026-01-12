@@ -1707,6 +1707,38 @@ export const autonomousApi = {
     api.get('/autonomous/analytics/timeline/', { params }),
 }
 
+// Session 745: Learning Journey API
+export const journeyApi = {
+  // Journey Management
+  list: () => api.get('/journey/'),
+  active: () => api.get('/journey/active/'),
+  detail: (id: string) => api.get(`/journey/${id}/`),
+  start: (data: { template_id?: string; topic?: string; goals?: string[] }) =>
+    api.post('/journey/start/', data),
+  pause: (id: string) => api.post(`/journey/${id}/pause/`),
+  resume: (id: string) => api.post(`/journey/${id}/resume/`),
+  complete: (id: string) => api.post(`/journey/${id}/complete/`),
+  abandon: (id: string) => api.post(`/journey/${id}/abandon/`),
+
+  // Journey Steps
+  status: (id: string) => api.get(`/journey/${id}/status/`),
+  startStep: (journeyId: string, step: number) =>
+    api.post(`/journey/${journeyId}/step/${step}/start/`),
+  completeStep: (journeyId: string, step: number, data?: { notes?: string; outcome?: string }) =>
+    api.post(`/journey/${journeyId}/step/${step}/complete/`, data || {}),
+  skipStep: (journeyId: string, step: number) =>
+    api.post(`/journey/${journeyId}/step/${step}/skip/`),
+
+  // Templates
+  templates: () => api.get('/journey/templates/'),
+  templateDetail: (id: string) => api.get(`/journey/templates/${id}/`),
+
+  // Progress & Analytics
+  progress: (id: string) => api.get(`/journey/${id}/progress/`),
+  analytics: () => api.get('/journey/analytics/'),
+  achievements: () => api.get('/journey/achievements/'),
+}
+
 // Session 745: Billing & Subscription API (Stripe)
 export const billingApi = {
   // Subscription Management
