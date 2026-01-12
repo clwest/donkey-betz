@@ -34,6 +34,7 @@ import {
   Beaker,
   Share2,
   Workflow,
+  Lightbulb,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -73,6 +74,7 @@ const navItems = [
   { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
   { path: '/distribution', label: 'Distribution', icon: Share2 },
   { path: '/autonomous', label: 'Autonomous', icon: Workflow },
+  { path: '/reasoning', label: 'Reasoning', icon: Lightbulb },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },
