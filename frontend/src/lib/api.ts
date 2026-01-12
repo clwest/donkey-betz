@@ -1640,11 +1640,36 @@ export const collectiveApi = {
   dashboard: () => api.get('/collective/dashboard/'),
 }
 
-// Session 745: Reasoning Engine API
+// Session 745: Reasoning Engine API (expanded)
 export const reasoningApi = {
+  // Dashboard & Overview
   dashboard: () => api.get('/v1/reasoning/dashboard/'),
-  concerns: () => api.get('/v1/reasoning/concerns/'),
+  config: () => api.get('/v1/reasoning/config/'),
+
+  // Thoughts (reasoning chains)
+  thoughts: (params?: { limit?: number; status?: string }) =>
+    api.get('/v1/reasoning/thoughts/', { params }),
+  thoughtDetail: (id: string) => api.get(`/v1/reasoning/thoughts/${id}/`),
+
+  // Actions
+  actions: (params?: { limit?: number; status?: string }) =>
+    api.get('/v1/reasoning/actions/', { params }),
+  actionDetail: (id: string) => api.get(`/v1/reasoning/actions/${id}/`),
   pendingActions: () => api.get('/v1/reasoning/actions/pending/'),
+  approveAction: (id: string) => api.post(`/v1/reasoning/actions/${id}/approve/`),
+  rejectAction: (id: string) => api.post(`/v1/reasoning/actions/${id}/reject/`),
+
+  // Concerns (issues detected)
+  concerns: (params?: { limit?: number; severity?: string }) =>
+    api.get('/v1/reasoning/concerns/', { params }),
+  concernDetail: (id: string) => api.get(`/v1/reasoning/concerns/${id}/`),
+  resolveConcern: (id: string, data?: { resolution?: string }) =>
+    api.post(`/v1/reasoning/concerns/${id}/resolve/`, data || {}),
+
+  // Trigger & Tasks
+  trigger: (data: { prompt?: string; context?: string }) =>
+    api.post('/v1/reasoning/trigger/', data),
+  taskStatus: (taskId: string) => api.get(`/v1/reasoning/task/${taskId}/`),
 }
 
 // Session 745: Experiment Recommendations API
