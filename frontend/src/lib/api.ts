@@ -1806,33 +1806,33 @@ export const analyticsApi = {
 // Session 745: Learning Journey API
 export const journeyApi = {
   // Journey Management
-  list: () => api.get('/journey/'),
-  active: () => api.get('/journey/active/'),
-  detail: (id: string) => api.get(`/journey/${id}/`),
+  list: () => api.get('/learning/journeys/'),
+  active: () => api.get('/learning/journeys/active/'),
+  detail: (id: string) => api.get(`/learning/journeys/${id}/`),
   start: (data: { template_id?: string; topic?: string; goals?: string[] }) =>
-    api.post('/journey/start/', data),
-  pause: (id: string) => api.post(`/journey/${id}/pause/`),
-  resume: (id: string) => api.post(`/journey/${id}/resume/`),
-  complete: (id: string) => api.post(`/journey/${id}/complete/`),
-  abandon: (id: string) => api.post(`/journey/${id}/abandon/`),
+    api.post('/learning/journeys/start/', data),
+  pause: (id: string) => api.post(`/learning/journeys/${id}/pause/`),
+  resume: (id: string) => api.post(`/learning/journeys/${id}/resume/`),
+  complete: (id: string) => api.post(`/learning/journeys/${id}/complete/`),
+  abandon: (id: string) => api.post(`/learning/journeys/${id}/abandon/`),
 
   // Journey Steps
-  status: (id: string) => api.get(`/journey/${id}/status/`),
+  status: (id: string) => api.get(`/learning/journeys/${id}/status/`),
   startStep: (journeyId: string, step: number) =>
-    api.post(`/journey/${journeyId}/step/${step}/start/`),
+    api.post(`/learning/journeys/${journeyId}/step/${step}/start/`),
   completeStep: (journeyId: string, step: number, data?: { notes?: string; outcome?: string }) =>
-    api.post(`/journey/${journeyId}/step/${step}/complete/`, data || {}),
+    api.post(`/learning/journeys/${journeyId}/step/${step}/complete/`, data || {}),
   skipStep: (journeyId: string, step: number) =>
-    api.post(`/journey/${journeyId}/step/${step}/skip/`),
+    api.post(`/learning/journeys/${journeyId}/step/${step}/skip/`),
 
   // Templates
-  templates: () => api.get('/journey/templates/'),
-  templateDetail: (id: string) => api.get(`/journey/templates/${id}/`),
+  templates: () => api.get('/learning/templates/'),
+  templateDetail: (id: string) => api.get(`/learning/templates/${id}/`),
 
   // Progress & Analytics
-  progress: (id: string) => api.get(`/journey/${id}/progress/`),
-  analytics: () => api.get('/journey/analytics/'),
-  achievements: () => api.get('/journey/achievements/'),
+  progress: (id: string) => api.get(`/learning/journeys/${id}/progress/`),
+  analytics: () => api.get('/learning/journeys/analytics/'),
+  achievements: () => api.get('/learning/achievements/'),
 }
 
 // Session 745: Billing & Subscription API (Stripe)
