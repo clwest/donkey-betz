@@ -1651,3 +1651,33 @@ export const reasoningApi = {
 export const experimentRecommendationsApi = {
   list: () => api.get('/experiment-recommendations/'),
 }
+
+// Session 745: Autonomous Systems API
+export const autonomousApi = {
+  // System Control
+  status: () => api.get('/autonomous-system/status'),
+  start: () => api.post('/autonomous-system/start'),
+  pause: () => api.post('/autonomous-system/pause'),
+
+  // Situations (autonomous behaviors)
+  situations: () => api.get('/autonomous/situations/'),
+  situationDetail: (type: string) => api.get(`/autonomous/situations/${type}/`),
+  toggleSituation: (type: string) => api.post(`/autonomous/situations/${type}/toggle/`),
+  runSituationNow: (type: string) => api.post(`/autonomous/situations/${type}/run-now/`),
+
+  // Triggers
+  triggers: () => api.get('/autonomous/triggers/'),
+  triggerDetail: (id: string) => api.get(`/autonomous/triggers/${id}/`),
+  createTrigger: (data: Record<string, unknown>) => api.post('/autonomous/triggers/', data),
+  updateTrigger: (id: string, data: Record<string, unknown>) => api.patch(`/autonomous/triggers/${id}/`, data),
+  deleteTrigger: (id: string) => api.delete(`/autonomous/triggers/${id}/`),
+
+  // Trigger Events (history)
+  triggerEvents: (params?: { limit?: number; trigger_id?: string }) =>
+    api.get('/autonomous/trigger-events/', { params }),
+
+  // Analytics
+  analyticsSummary: () => api.get('/autonomous/analytics/summary/'),
+  analyticsTimeline: (params?: { days?: number }) =>
+    api.get('/autonomous/analytics/timeline/', { params }),
+}
