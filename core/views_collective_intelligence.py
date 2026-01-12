@@ -35,23 +35,56 @@ def aggregate_insights(request):
     """
     GET /api/collective/insights/
 
-    Aggregate insights from all agents on a topic.
+    Aggregate insights from all agents on a topic, or return recent insights.
 
     Query params:
-        topic (required): Topic to gather insights on
+        topic (optional): Topic to gather insights on. If not provided, returns recent insights.
         domains: Comma-separated list of domains to filter
+        limit: Number of insights to return (default 20)
     """
     topic = request.GET.get('topic')
-    if not topic:
-        return Response(
-            {'error': 'topic parameter is required'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     domains = request.GET.get('domains')
     domain_list = domains.split(',') if domains else None
+    limit = int(request.GET.get('limit', 20))
 
     service = get_collective_intelligence_service(request.user)
+
+    # Session 745: If no topic, return recent insights from dashboard
+    if not topic:
+        try:
+            # Return recent insights summary
+            from core.models import AgentCollaboration
+            from django.utils import timezone
+            from datetime import timedelta
+
+            recent_date = timezone.now() - timedelta(days=30)
+
+            # Get recent collaborations as "insights"
+            recent_collabs = AgentCollaboration.objects.filter(
+                started_at__gte=recent_date
+            ).order_by('-started_at')[:limit]
+
+            insights = []
+            for collab in recent_collabs:
+                insights.append({
+                    'id': str(collab.id),
+                    'title': f"Collaboration: {collab.task_description[:50]}..." if len(collab.task_description) > 50 else collab.task_description,
+                    'summary': collab.task_description,
+                    'agents': [collab.initiator_agent, collab.collaborator_agent] if collab.collaborator_agent else [collab.initiator_agent],
+                    'priority': 'high' if collab.success_rating and collab.success_rating >= 4 else 'medium',
+                    'timestamp': collab.started_at.isoformat(),
+                    'status': collab.status,
+                })
+
+            return Response({
+                'insights': insights,
+                'total': len(insights),
+                'period': '30 days',
+            })
+        except Exception as e:
+            logger.warning(f"Error getting recent insights: {e}")
+            return Response({'insights': [], 'total': 0})
+
     result = service.aggregate_insights(topic, domains=domain_list)
 
     return Response(result)

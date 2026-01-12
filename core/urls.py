@@ -941,7 +941,7 @@ from core.views_voice_marketplace import (
     marketplace_browse, voice_detail, my_voices, publish_voice, unpublish_voice,
     update_voice, generate_speech, preview_voice, add_review, earnings_summary,
     transaction_history, create_voice_from_elevenlabs, start_clone_request,
-    clone_request_status,
+    clone_request_status, marketplace_categories, marketplace_stats,  # Session 745
 )
 
 from core import views_portfolio
@@ -3186,6 +3186,8 @@ urlpatterns = [
     path('api/voice-marketplace/my-voices/', my_voices, name='voice-marketplace-my-voices'),
     path('api/voice-marketplace/earnings/', earnings_summary, name='voice-marketplace-earnings'),
     path('api/voice-marketplace/transactions/', transaction_history, name='voice-marketplace-transactions'),
+    path('api/voice-marketplace/categories/', marketplace_categories, name='voice-marketplace-categories'),  # Session 745
+    path('api/voice-marketplace/stats/', marketplace_stats, name='voice-marketplace-stats'),  # Session 745
     path('api/voice-marketplace/create/', create_voice_from_elevenlabs, name='voice-marketplace-create'),
     path('api/voice-marketplace/clone/start/', start_clone_request, name='voice-clone-start'),
     path('api/voice-marketplace/clone/<uuid:request_id>/status/', clone_request_status, name='voice-clone-status'),
