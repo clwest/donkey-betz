@@ -39,6 +39,7 @@ import AutonomousSystemsPage from '@/pages/AutonomousSystemsPage'  // Session 74
 import ReasoningEnginePage from '@/pages/ReasoningEnginePage'  // Session 745: Reasoning engine
 import VoiceMarketplacePage from '@/pages/VoiceMarketplacePage'  // Session 745: Voice marketplace
 import BillingPage from '@/pages/BillingPage'  // Session 745: Billing & subscriptions
+import LearningJourneyPage from '@/pages/LearningJourneyPage'  // Session 745: Learning journeys
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -100,6 +101,7 @@ function App() {
         <Route path="reasoning" element={<ReasoningEnginePage />} />  {/* Session 745: Reasoning engine */}
         <Route path="voice-marketplace" element={<VoiceMarketplacePage />} />  {/* Session 745: Voice marketplace */}
         <Route path="billing" element={<BillingPage />} />  {/* Session 745: Billing & subscriptions */}
+        <Route path="learning-journey" element={<LearningJourneyPage />} />  {/* Session 745: Learning journeys */}
         <Route path="blog/:blogId" element={<BlogViewerPage />} />  {/* Session 742: Blog viewer for content review */}
       </Route>
     </Routes>

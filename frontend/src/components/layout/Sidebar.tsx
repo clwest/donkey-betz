@@ -37,6 +37,7 @@ import {
   Lightbulb,
   Mic,
   CreditCard,
+  GraduationCap,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -79,6 +80,7 @@ const navItems = [
   { path: '/reasoning', label: 'Reasoning', icon: Lightbulb },
   { path: '/voice-marketplace', label: 'Voices', icon: Mic },
   { path: '/billing', label: 'Billing', icon: CreditCard },
+  { path: '/learning-journey', label: 'Learning', icon: GraduationCap },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },
