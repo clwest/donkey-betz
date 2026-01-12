@@ -137,12 +137,16 @@ export default function ReasoningEnginePage() {
     },
   })
 
-  // Data extraction
+  // Data extraction - ensure arrays are actually arrays
   const dashboard: DashboardStats = dashboardData?.data || {}
-  const thoughts: Thought[] = thoughtsData?.data?.thoughts || thoughtsData?.data || []
-  const actions: Action[] = actionsData?.data?.actions || actionsData?.data || []
-  const pendingActions: Action[] = pendingActionsData?.data?.actions || pendingActionsData?.data || []
-  const concerns: Concern[] = concernsData?.data?.concerns || concernsData?.data || []
+  const rawThoughts = thoughtsData?.data?.thoughts || thoughtsData?.data?.results || thoughtsData?.data
+  const thoughts: Thought[] = Array.isArray(rawThoughts) ? rawThoughts : []
+  const rawActions = actionsData?.data?.actions || actionsData?.data?.results || actionsData?.data
+  const actions: Action[] = Array.isArray(rawActions) ? rawActions : []
+  const rawPendingActions = pendingActionsData?.data?.actions || pendingActionsData?.data?.results || pendingActionsData?.data
+  const pendingActions: Action[] = Array.isArray(rawPendingActions) ? rawPendingActions : []
+  const rawConcerns = concernsData?.data?.concerns || concernsData?.data?.results || concernsData?.data
+  const concerns: Concern[] = Array.isArray(rawConcerns) ? rawConcerns : []
 
   const unresolvedConcerns = concerns.filter(c => c.status === 'open' || c.status === 'investigating')
 
