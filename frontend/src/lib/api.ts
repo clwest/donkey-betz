@@ -1706,3 +1706,55 @@ export const autonomousApi = {
   analyticsTimeline: (params?: { days?: number }) =>
     api.get('/autonomous/analytics/timeline/', { params }),
 }
+
+// Session 745: Voice Marketplace API
+export const voiceMarketplaceApi = {
+  // Browse & Discovery
+  browse: (params?: { category?: string; sort?: string; search?: string }) =>
+    api.get('/voice-marketplace/', { params }),
+  voiceDetail: (id: string) => api.get(`/voice-marketplace/${id}/`),
+  featured: () => api.get('/voice-marketplace/featured/'),
+  categories: () => api.get('/voice-marketplace/categories/'),
+
+  // My Voices (creator side)
+  myVoices: () => api.get('/voice-marketplace/my-voices/'),
+  createVoice: (data: FormData) => api.post('/voice-marketplace/create/', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updateVoice: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/voice-marketplace/${id}/`, data),
+  deleteVoice: (id: string) => api.delete(`/voice-marketplace/${id}/`),
+  publishVoice: (id: string) => api.post(`/voice-marketplace/${id}/publish/`),
+  unpublishVoice: (id: string) => api.post(`/voice-marketplace/${id}/unpublish/`),
+
+  // Voice Cloning
+  startClone: (data: FormData) => api.post('/voice-marketplace/clone/start/', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  cloneStatus: (taskId: string) => api.get(`/voice-marketplace/clone/status/${taskId}/`),
+
+  // Generation & Preview
+  generate: (id: string, data: { text: string; settings?: Record<string, unknown> }) =>
+    api.post(`/voice-marketplace/${id}/generate/`, data),
+  preview: (id: string) => api.get(`/voice-marketplace/${id}/preview/`),
+
+  // Reviews & Ratings
+  reviews: (id: string) => api.get(`/voice-marketplace/${id}/reviews/`),
+  addReview: (id: string, data: { rating: number; comment?: string }) =>
+    api.post(`/voice-marketplace/${id}/reviews/`, data),
+
+  // Purchases & Licensing
+  purchase: (id: string, data?: { license_type?: string }) =>
+    api.post(`/voice-marketplace/${id}/purchase/`, data || {}),
+  myPurchases: () => api.get('/voice-marketplace/purchases/'),
+
+  // Earnings & Transactions (creator analytics)
+  earnings: () => api.get('/voice-marketplace/earnings/'),
+  transactions: (params?: { limit?: number; type?: string }) =>
+    api.get('/voice-marketplace/transactions/', { params }),
+  withdraw: (data: { amount: number; method: string }) =>
+    api.post('/voice-marketplace/withdraw/', data),
+
+  // Stats
+  stats: () => api.get('/voice-marketplace/stats/'),
+}
