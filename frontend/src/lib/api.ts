@@ -1633,11 +1633,53 @@ export const mythologyApi = {
 
 // Session 745: Collective Intelligence API
 export const collectiveApi = {
+  // Dashboard & Overview
   insights: () => api.get('/collective/insights/'),
   report: () => api.get('/collective/report/'),
-  knowledgeGaps: () => api.get('/collective/knowledge-gaps/'),
-  network: () => api.get('/collective/network/'),
   dashboard: () => api.get('/collective/dashboard/'),
+  stats: () => api.get('/collective/stats/'),
+
+  // Knowledge Management
+  knowledgeGaps: () => api.get('/collective/knowledge-gaps/'),
+  knowledgeQuery: (query: string) => api.get('/collective/knowledge/query/', { params: { q: query } }),
+  knowledgeShare: (data: { topic: string; content: string; agents?: string[] }) =>
+    api.post('/collective/knowledge/share/', data),
+  knowledgeTopics: () => api.get('/collective/knowledge/topics/'),
+
+  // Network & Collaboration
+  network: () => api.get('/collective/network/'),
+  collaborationHistory: (params?: { limit?: number; agent?: string }) =>
+    api.get('/collaboration/history/', { params }),
+  collaborationStats: () => api.get('/collaboration/stats/'),
+  findCollaborator: (data: { task: string; skills?: string[] }) =>
+    api.post('/collaboration/find-collaborator/', data),
+
+  // Teams
+  teams: () => api.get('/teams/'),
+  teamDetail: (id: string) => api.get(`/teams/${id}/`),
+  createTeam: (data: { name: string; description?: string; agents?: string[] }) =>
+    api.post('/teams/', data),
+  updateTeam: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/teams/${id}/`, data),
+  deleteTeam: (id: string) => api.delete(`/teams/${id}/`),
+  teamMembers: (id: string) => api.get(`/teams/${id}/members/`),
+  addTeamMember: (teamId: string, agentId: string) =>
+    api.post(`/teams/${teamId}/members/`, { agent_id: agentId }),
+  removeTeamMember: (teamId: string, agentId: string) =>
+    api.delete(`/teams/${teamId}/members/${agentId}/`),
+
+  // Consensus & Voting
+  requestConsensus: (data: { topic: string; options: string[]; agents: string[] }) =>
+    api.post('/agent-collab/consensus/', data),
+  consensusStatus: (id: string) => api.get(`/agent-collab/consensus/${id}/`),
+  submitVote: (consensusId: string, data: { vote: string; reasoning?: string }) =>
+    api.post('/agent-collab/vote/', { consensus_id: consensusId, ...data }),
+
+  // Messaging
+  sendMessage: (data: { to_agent: string; content: string; priority?: string }) =>
+    api.post('/agent-collab/message/', data),
+  messages: (params?: { agent?: string; limit?: number }) =>
+    api.get('/agent-collab/messages/', { params }),
 }
 
 // Session 745: Reasoning Engine API (expanded)

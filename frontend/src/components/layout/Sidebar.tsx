@@ -81,6 +81,7 @@ const navItems = [
   { path: '/voice-marketplace', label: 'Voices', icon: Mic },
   { path: '/billing', label: 'Billing', icon: CreditCard },
   { path: '/learning-journey', label: 'Learning', icon: GraduationCap },
+  { path: '/collective', label: 'Collective', icon: Brain },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },
