@@ -41,6 +41,7 @@ import VoiceMarketplacePage from '@/pages/VoiceMarketplacePage'  // Session 745:
 import BillingPage from '@/pages/BillingPage'  // Session 745: Billing & subscriptions
 import LearningJourneyPage from '@/pages/LearningJourneyPage'  // Session 745: Learning journeys
 import CollectiveIntelligencePage from '@/pages/CollectiveIntelligencePage'  // Session 745: Collective intelligence
+import AnalyticsDashboardPage from '@/pages/AnalyticsDashboardPage'  // Session 745: Analytics dashboard
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -104,6 +105,7 @@ function App() {
         <Route path="billing" element={<BillingPage />} />  {/* Session 745: Billing & subscriptions */}
         <Route path="learning-journey" element={<LearningJourneyPage />} />  {/* Session 745: Learning journeys */}
         <Route path="collective" element={<CollectiveIntelligencePage />} />  {/* Session 745: Collective intelligence */}
+        <Route path="analytics" element={<AnalyticsDashboardPage />} />  {/* Session 745: Analytics dashboard */}
         <Route path="blog/:blogId" element={<BlogViewerPage />} />  {/* Session 742: Blog viewer for content review */}
       </Route>
     </Routes>

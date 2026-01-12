@@ -38,6 +38,7 @@ import {
   Mic,
   CreditCard,
   GraduationCap,
+  BarChart3,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -82,6 +83,7 @@ const navItems = [
   { path: '/billing', label: 'Billing', icon: CreditCard },
   { path: '/learning-journey', label: 'Learning', icon: GraduationCap },
   { path: '/collective', label: 'Collective', icon: Brain },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },
