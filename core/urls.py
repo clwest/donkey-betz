@@ -1020,6 +1020,30 @@ from core.views_ecosystem_activation import (
 )
 
 # Import migrated API views
+# Session 745: Frontend stub endpoints
+from core.views_frontend_stubs import (
+    # Billing/Stripe stubs
+    stripe_plans, stripe_payment_methods, stripe_add_payment_method,
+    stripe_remove_payment_method, stripe_set_default_payment_method,
+    stripe_invoices, stripe_invoice_detail, stripe_upcoming_invoice,
+    stripe_usage, stripe_subscribe, stripe_cancel_subscription,
+    stripe_resume_subscription, stripe_billing_portal,
+    # Learning journey stubs
+    learning_journeys_list, learning_journeys_active, learning_templates,
+    learning_achievements, learning_journey_start, learning_journey_pause,
+    learning_journey_resume, learning_journey_analytics,
+    # Autonomous stubs
+    autonomous_status, autonomous_situations, autonomous_triggers,
+    autonomous_start, autonomous_pause, autonomous_analytics_summary,
+    # Reasoning stubs
+    reasoning_dashboard, reasoning_thoughts, reasoning_actions,
+    reasoning_pending_actions, reasoning_concerns, reasoning_approve_action,
+    reasoning_reject_action, reasoning_resolve_concern, reasoning_trigger,
+    # Analytics stubs
+    analytics_overview, analytics_summary, analytics_reports_list,
+    analytics_reports_generate,
+)
+
 from core.views_analytics import (
     analytics_dashboard, track_usage, track_feature_usage, cost_breakdown,
     update_budget, model_performance_analytics,
@@ -3180,6 +3204,56 @@ urlpatterns = [
     # Session 439: Stripe Subscription Webhook
     path('api/stripe/webhook/', stripe_webhook, name='stripe-webhook'),
     path('api/stripe/subscription-status/', subscription_status, name='stripe-subscription-status'),
+
+    # Session 745: Stripe/Billing stub endpoints
+    path('api/stripe/plans/', stripe_plans, name='stripe-plans'),
+    path('api/stripe/payment-methods/', stripe_payment_methods, name='stripe-payment-methods'),
+    path('api/stripe/payment-methods/add/', stripe_add_payment_method, name='stripe-add-payment-method'),
+    path('api/stripe/payment-methods/<str:payment_method_id>/', stripe_remove_payment_method, name='stripe-remove-payment-method'),
+    path('api/stripe/payment-methods/<str:payment_method_id>/default/', stripe_set_default_payment_method, name='stripe-set-default-payment-method'),
+    path('api/stripe/invoices/', stripe_invoices, name='stripe-invoices'),
+    path('api/stripe/invoices/<str:invoice_id>/', stripe_invoice_detail, name='stripe-invoice-detail'),
+    path('api/stripe/upcoming-invoice/', stripe_upcoming_invoice, name='stripe-upcoming-invoice'),
+    path('api/stripe/usage/', stripe_usage, name='stripe-usage'),
+    path('api/stripe/subscribe/', stripe_subscribe, name='stripe-subscribe'),
+    path('api/stripe/cancel-subscription/', stripe_cancel_subscription, name='stripe-cancel-subscription'),
+    path('api/stripe/resume-subscription/', stripe_resume_subscription, name='stripe-resume-subscription'),
+    path('api/stripe/billing-portal/', stripe_billing_portal, name='stripe-billing-portal'),
+
+    # Session 745: Learning Journey stub endpoints
+    path('api/learning/journeys/', learning_journeys_list, name='learning-journeys-list'),
+    path('api/learning/journeys/active/', learning_journeys_active, name='learning-journeys-active'),
+    path('api/learning/templates/', learning_templates, name='learning-templates'),
+    path('api/learning/achievements/', learning_achievements, name='learning-achievements'),
+    path('api/learning/journeys/start/', learning_journey_start, name='learning-journey-start'),
+    path('api/learning/journeys/<str:journey_id>/pause/', learning_journey_pause, name='learning-journey-pause'),
+    path('api/learning/journeys/<str:journey_id>/resume/', learning_journey_resume, name='learning-journey-resume'),
+    path('api/learning/journeys/analytics/', learning_journey_analytics, name='learning-journey-analytics'),
+
+    # Session 745: Autonomous System stub endpoints
+    path('api/autonomous/status/', autonomous_status, name='autonomous-status-stub'),
+    path('api/autonomous/situations/', autonomous_situations, name='autonomous-situations-stub'),
+    path('api/autonomous/triggers/', autonomous_triggers, name='autonomous-triggers'),
+    path('api/autonomous/start/', autonomous_start, name='autonomous-start-stub'),
+    path('api/autonomous/pause/', autonomous_pause, name='autonomous-pause-stub'),
+    path('api/autonomous/analytics/summary/', autonomous_analytics_summary, name='autonomous-analytics-summary'),
+
+    # Session 745: Reasoning Engine stub endpoints
+    path('api/reasoning/dashboard/', reasoning_dashboard, name='reasoning-dashboard'),
+    path('api/reasoning/thoughts/', reasoning_thoughts, name='reasoning-thoughts'),
+    path('api/reasoning/actions/', reasoning_actions, name='reasoning-actions'),
+    path('api/reasoning/pending-actions/', reasoning_pending_actions, name='reasoning-pending-actions'),
+    path('api/reasoning/concerns/', reasoning_concerns, name='reasoning-concerns'),
+    path('api/reasoning/actions/<str:action_id>/approve/', reasoning_approve_action, name='reasoning-approve-action'),
+    path('api/reasoning/actions/<str:action_id>/reject/', reasoning_reject_action, name='reasoning-reject-action'),
+    path('api/reasoning/concerns/<str:concern_id>/resolve/', reasoning_resolve_concern, name='reasoning-resolve-concern'),
+    path('api/reasoning/trigger/', reasoning_trigger, name='reasoning-trigger'),
+
+    # Session 745: Analytics stub endpoints
+    path('api/analytics/overview/', analytics_overview, name='analytics-overview'),
+    path('api/analytics/summary/', analytics_summary, name='analytics-summary'),
+    path('api/analytics/reports/', analytics_reports_list, name='analytics-reports-list'),
+    path('api/analytics/reports/generate/', analytics_reports_generate, name='analytics-reports-generate'),
 
     # Session 440: Voice Marketplace API
     path('api/voice-marketplace/', marketplace_browse, name='voice-marketplace-browse'),
