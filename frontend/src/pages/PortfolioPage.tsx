@@ -37,13 +37,20 @@ interface Distribution {
 }
 
 // Session 745: New interfaces for additional API data
-interface Recommendation {
+interface RecommendationPlatform {
   id: string
-  platform: string
-  content_type: string
-  reason: string
-  potential_revenue?: number
-  priority?: string
+  name: string
+  type: string
+  commission: number
+}
+
+interface Recommendation {
+  platform?: RecommendationPlatform
+  recommendation_type?: string
+  confidence_score?: number
+  suggested_price?: number | null
+  reasoning?: string
+  estimated_revenue_potential?: number | null
 }
 
 interface Integration {
@@ -356,37 +363,41 @@ export default function PortfolioPage() {
                 </div>
                 {recommendations.length > 0 ? (
                   <div className="space-y-3">
-                    {recommendations.slice(0, 4).map((rec) => (
-                      <div
-                        key={rec.id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-accent-amber/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'h-8 w-8 rounded-full flex items-center justify-center',
-                            rec.priority === 'high' ? 'bg-accent-green/20' :
-                            rec.priority === 'medium' ? 'bg-accent-amber/20' : 'bg-gray-500/20'
-                          )}>
-                            <Zap size={14} className={cn(
-                              rec.priority === 'high' ? 'text-accent-green' :
-                              rec.priority === 'medium' ? 'text-accent-amber' : 'text-gray-400'
-                            )} />
+                    {recommendations.slice(0, 4).map((rec, idx) => {
+                      const score = rec.confidence_score || 0
+                      const priority = score >= 0.8 ? 'high' : score >= 0.5 ? 'medium' : 'low'
+                      return (
+                        <div
+                          key={rec.platform?.id || idx}
+                          className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-accent-amber/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              'h-8 w-8 rounded-full flex items-center justify-center',
+                              priority === 'high' ? 'bg-accent-green/20' :
+                              priority === 'medium' ? 'bg-accent-amber/20' : 'bg-gray-500/20'
+                            )}>
+                              <Zap size={14} className={cn(
+                                priority === 'high' ? 'text-accent-green' :
+                                priority === 'medium' ? 'text-accent-amber' : 'text-gray-400'
+                              )} />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{rec.platform?.name || 'Platform'}</p>
+                              <p className="text-xs text-gray-500 line-clamp-1">{rec.reasoning || `${rec.platform?.type || 'content'} recommendation`}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-sm">{rec.platform}</p>
-                            <p className="text-xs text-gray-500">{rec.reason}</p>
+                          <div className="text-right">
+                            {rec.confidence_score && (
+                              <p className="text-sm font-medium text-accent-green">
+                                {Math.round(rec.confidence_score * 100)}% match
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 capitalize">{rec.platform?.type || 'marketplace'}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          {rec.potential_revenue && (
-                            <p className="text-sm font-medium text-accent-green">
-                              +{formatCurrency(rec.potential_revenue)}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500">{rec.content_type}</p>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-6 text-gray-400">
