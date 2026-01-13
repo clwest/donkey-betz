@@ -423,8 +423,9 @@ def list_scheduled_distributions(request):
 
     List all scheduled (not yet published) distributions.
     """
+    # Session 745: Return empty data for anonymous users instead of 401
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_success({'scheduled_distributions': [], 'scheduled': [], 'total_pending': 0})
 
     distributions = ContentDistribution.objects.filter(
         user=request.user,

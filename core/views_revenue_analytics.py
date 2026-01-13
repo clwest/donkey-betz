@@ -305,8 +305,9 @@ def compare_platforms(request):
 
     Compare revenue performance across all connected platforms.
     """
+    # Session 745: Return empty data for anonymous users instead of 401
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_success({'platforms': [], 'summary': {'total_revenue': 0, 'total_sales': 0}})
 
     days = int(request.GET.get('days', 30))
     since = timezone.now() - timedelta(days=days)
