@@ -335,6 +335,14 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 718: Memory Clusters APIs (semantic memory grouping for Memory Palace)
         '/api/memory-clusters/',  # Overview, agent clusters, visualization, evolution, find-similar
+
+        # Session 745: New Frontend Pages APIs (stubs for frontend-first development)
+        '/api/collective/',  # Collective Intelligence dashboard
+        '/api/stripe/',  # Billing and subscription (stubs)
+        '/api/learning/',  # Learning journeys and templates
+        '/api/autonomous/',  # Autonomous system status
+        '/api/reasoning/',  # Reasoning engine dashboard (non-v1)
+        '/api/analytics/',  # Analytics overview and reports
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
