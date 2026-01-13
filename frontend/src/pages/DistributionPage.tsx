@@ -383,23 +383,39 @@ export default function DistributionPage() {
                 Recommendations
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {recommendations.slice(0, 6).map((rec: { id: string; title: string; description?: string; potential_revenue?: number; platform?: string }, idx: number) => (
+                {recommendations.slice(0, 6).map((rec: {
+                  platform?: { id: string; name: string; type: string; commission: number };
+                  recommendation_type?: string;
+                  confidence_score?: number;
+                  suggested_price?: number | null;
+                  reasoning?: string;
+                  estimated_revenue_potential?: number | null;
+                }, idx: number) => (
                   <div
-                    key={rec.id || idx}
+                    key={rec.platform?.id || idx}
                     className="p-4 rounded-lg border border-dark-border hover:border-accent-amber/50 transition-colors"
                   >
-                    <p className="font-medium text-sm mb-2">{rec.title}</p>
-                    {rec.description && (
-                      <p className="text-xs text-gray-400 mb-2 line-clamp-2">{rec.description}</p>
+                    <p className="font-medium text-sm mb-2">
+                      {rec.platform?.name || 'Platform Recommendation'}
+                    </p>
+                    {rec.reasoning && (
+                      <p className="text-xs text-gray-400 mb-2 line-clamp-2">{rec.reasoning}</p>
                     )}
                     <div className="flex items-center justify-between text-xs">
-                      {rec.platform && (
-                        <span className="text-gray-500">{rec.platform}</span>
+                      {rec.platform?.type && (
+                        <span className="text-gray-500 capitalize">{rec.platform.type}</span>
                       )}
-                      {rec.potential_revenue && (
-                        <span className="text-accent-green">+${rec.potential_revenue}</span>
+                      {rec.confidence_score && (
+                        <span className="text-accent-green">
+                          {Math.round(rec.confidence_score * 100)}% match
+                        </span>
                       )}
                     </div>
+                    {rec.platform?.commission !== undefined && rec.platform.commission > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {rec.platform.commission}% commission
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
