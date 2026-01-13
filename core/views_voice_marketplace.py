@@ -832,3 +832,53 @@ def marketplace_stats(request):
     except Exception as e:
         logger.error(f"Error getting marketplace stats: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def marketplace_purchases(request):
+    """
+    Get user's voice purchases.
+
+    GET /api/voice-marketplace/purchases/
+
+    Session 745: Added for frontend Purchases tab.
+    """
+    try:
+        # Return empty list for anonymous users
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': True,
+                'purchases': [],
+                'total': 0,
+            })
+
+        # Get user's voice transactions (purchases)
+        transactions = VoiceTransaction.objects.filter(
+            buyer=request.user,
+        ).select_related('voice').order_by('-created_at')
+
+        purchases = []
+        for txn in transactions:
+            voice = txn.voice
+            purchases.append({
+                'id': str(txn.id),
+                'voice_id': str(voice.id) if voice else None,
+                'voice_name': voice.name if voice else 'Unknown',
+                'voice_thumbnail': getattr(voice, 'preview_image_url', None) if voice else None,
+                'amount': float(getattr(txn, 'amount', 0) or 0),
+                'currency': getattr(txn, 'currency', 'USD'),
+                'purchased_at': txn.created_at.isoformat(),
+                'status': getattr(txn, 'status', 'completed'),
+                'generations_remaining': None,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'purchases': purchases,
+            'total': len(purchases),
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting purchases: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
