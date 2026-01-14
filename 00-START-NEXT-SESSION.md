@@ -1,8 +1,8 @@
 # Session 751 - Next Session
 
-**Previous Session:** 750 (Time Travel Page Audit)
+**Previous Session:** 750 (Time Travel Page Audit + Agent Integration)
 **Date:** January 14, 2026
-**Status:** Time Travel Page Audited and Fixed
+**Status:** Time Travel Page Audited + All Agents Integrated
 
 ---
 
@@ -13,6 +13,12 @@
 - Fixed 4 backend API signatures that expected URL params but received body params
 - Verified all 16 API endpoints working correctly
 - Database has 3 sessions, 15 decisions, 34 thought bubbles
+
+### Time Travel Integration to All Agents
+- Added Time Travel session recording to 28 remaining agents
+- Fixed indentation errors in 12 agent files
+- **71/73 agents now have Time Travel integration (96%)**
+- 2 standalone agents (BookmakerAgent, CreationAgent) use different pattern
 
 **Detailed Handoff:** `docs/handoffs/SESSION_750_TIME_TRAVEL_AUDIT.md`
 
@@ -55,6 +61,7 @@ open http://localhost:3000/time-capsules
 | Component | Count |
 |-----------|-------|
 | Agents | 72 |
+| Agents with Time Travel | 71 (96%) |
 | Agents with Evolution | 73 |
 | Agents with Mood History | 73 (100%) |
 | Time Capsules | 3 |
@@ -72,9 +79,8 @@ open http://localhost:3000/time-capsules
 
 ## Session 750 Commits
 
-1. `705c5531` - fix(Session 749): Mood Page data display + create/delete rules
-2. `3d66d77a` - fix(Session 749): Time Capsules GPT-5-mini token limit
-3. *(pending)* - fix(Session 750): Time Travel page audit fixes
+1. `2ef18317` - feat(Session 750): Add Time Travel integration to all 28 remaining agents
+2. *(earlier)* - fix(Session 750): Time Travel page audit fixes (frontend + backend)
 
 ---
 
@@ -84,7 +90,7 @@ open http://localhost:3000/time-capsules
 |------|--------|-------|
 | Mood Page | ✅ Audited | Full CRUD, data backfilled |
 | Time Capsules | ✅ Audited | GPT-5-mini token fix, detail fetch |
-| Time Travel | ✅ Audited | Decision types, API fixes |
+| Time Travel | ✅ Audited | Decision types, API fixes, agent integration |
 
 ---
 
@@ -95,6 +101,16 @@ open http://localhost:3000/time-capsules
 - Advisors Page
 - Relationships Page
 - Neural Orchestra Page
+
+---
+
+## Services Status
+
+All services running as of Session 750:
+- Redis: PID 46154
+- Daphne: PID 51710
+- Celery Worker: PID 52345
+- Celery Beat: PID 52424
 
 ---
 
