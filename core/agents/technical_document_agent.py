@@ -476,6 +476,16 @@ Your output should be ready for executive review and formal approval processes."
 
         start_time = datetime.now()
 
+        # Session 750: Time Travel integration
+        with self.time_travel_session("technical_document_generation", task, input_data=context):
+            self.record_decision(
+                decision_type="planning",
+                action="Starting technical document generation",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip generation", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
+
         try:
             doc_type = context.get('doc_type', 'research_brief')
             stage = context.get('stage', 1)

@@ -232,91 +232,101 @@ Always acknowledge bull arguments but emphasize potential risks."""
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("bear_case_analysis", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting bear case analysis",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip analysis", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-        # Session 529: Build intelligent prompt with full context
-        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
 
-        logger.info(f"BearCaseAgent executing: {task[:100]}...")
+            # Session 529: Build intelligent prompt with full context
+            self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
-        try:
-            # Get tickers to analyze (from context or spider data)
-            tickers = context.get('tickers', self._extract_tickers_from_spider_data(spider_context))
+            logger.info(f"BearCaseAgent executing: {task[:100]}...")
 
-            if not tickers:
-                return AgentResult(
+            try:
+                # Get tickers to analyze (from context or spider data)
+                tickers = context.get('tickers', self._extract_tickers_from_spider_data(spider_context))
+
+                if not tickers:
+                    return AgentResult(
+                        success=False,
+                        error="No tickers provided for bear case analysis",
+                        agent_name=self.name
+                    )
+
+                # Build bear cases for each ticker
+                bear_cases = []
+                for ticker in tickers[:10]:  # Limit to 10 tickers per cycle
+                    case = self._build_bear_case(ticker, context, spider_context)
+                    if case:
+                        bear_cases.append(case)
+
+                # Generate summary
+                summary = self._generate_summary(bear_cases)
+
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+
+                result = AgentResult(
+                    success=True,
+                    message=f"Bear case analysis complete for {len(bear_cases)} stocks",
+                    data={
+                        'bear_cases': bear_cases,
+                        'summary': summary,
+                        'conviction_distribution': self._get_conviction_distribution(bear_cases),
+                        'top_risks': self._get_top_risks(bear_cases),
+                    },
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
+                # Record learning outcome for collective intelligence
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=True,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'execution_time_ms': execution_time,
+                            'stocks_analyzed': len(bear_cases),
+                            'high_conviction_count': summary.get('high_conviction', 0),
+                        }
+                    )
+                except Exception as le:
+                    logger.warning(f"Failed to record learning outcome: {le}")
+
+                return result
+
+            except Exception as e:
+                logger.error(f"BearCaseAgent error: {e}")
+                result = AgentResult(
                     success=False,
-                    error="No tickers provided for bear case analysis",
+                    error=str(e),
                     agent_name=self.name
                 )
 
-            # Build bear cases for each ticker
-            bear_cases = []
-            for ticker in tickers[:10]:  # Limit to 10 tickers per cycle
-                case = self._build_bear_case(ticker, context, spider_context)
-                if case:
-                    bear_cases.append(case)
-
-            # Generate summary
-            summary = self._generate_summary(bear_cases)
-
-            execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
-
-            result = AgentResult(
-                success=True,
-                message=f"Bear case analysis complete for {len(bear_cases)} stocks",
-                data={
-                    'bear_cases': bear_cases,
-                    'summary': summary,
-                    'conviction_distribution': self._get_conviction_distribution(bear_cases),
-                    'top_risks': self._get_top_risks(bear_cases),
-                },
-                agent_name=self.name,
-                execution_time_ms=execution_time
-            )
-
-            # Record learning outcome for collective intelligence
-            try:
-                self._record_learning_outcome(
-                    task=task,
-                    result=result,
-                    success=True,
-                    context={
-                        'agent_type': self.__class__.__name__,
-                        'execution_time_ms': execution_time,
-                        'stocks_analyzed': len(bear_cases),
-                        'high_conviction_count': summary.get('high_conviction', 0),
-                    }
-                )
-            except Exception as le:
-                logger.warning(f"Failed to record learning outcome: {le}")
-
-            return result
-
-        except Exception as e:
-            logger.error(f"BearCaseAgent error: {e}")
-            result = AgentResult(
-                success=False,
-                error=str(e),
-                agent_name=self.name
-            )
-
-            # Record failed learning outcome
-            try:
-                self._record_learning_outcome(
-                    task=task,
-                    result=result,
-                    success=False,
-                    context={
-                        'agent_type': self.__class__.__name__,
-                        'error': str(e),
-                    }
-                )
-            except Exception as le:
-                logger.warning(f"Failed to record learning outcome: {le}")
+                # Record failed learning outcome
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=False,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'error': str(e),
+                        }
+                    )
+                except Exception as le:
+                    logger.warning(f"Failed to record learning outcome: {le}")
 
             return result
 

@@ -272,142 +272,144 @@ You analyze and report - you do NOT give trading advice or recommendations."""
         """Execute market intelligence analysis."""
         start_time = time.time()
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("market_intelligence_analysis", task, input_data=context):
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence")
 
-        try:
-            # Build prompt with context
-            full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
+            try:
+                # Build prompt with context
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
-            # Record decision (decision_type, action, ...)
-            self.record_decision(
-                "analysis",
-                f"Starting market intelligence analysis",
-                context={'task': task},
-                confidence=0.8
-            )
+                # Record decision (decision_type, action, ...)
+                self.record_decision(
+                    "analysis",
+                    f"Starting market intelligence analysis",
+                    context={'task': task},
+                    confidence=0.8
+                )
 
-            # Call GPT with our tools
-            messages = [
-                {"role": "system", "content": full_prompt},
-                {"role": "user", "content": task}
-            ]
+                # Call GPT with our tools
+                messages = [
+                    {"role": "system", "content": full_prompt},
+                    {"role": "user", "content": task}
+                ]
 
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=messages,
-                tools=self.tools,
-                tool_choice="auto",
-                max_completion_tokens=4000
-            )
-
-            # Process response
-            assistant_message = response.choices[0].message
-            tool_calls_made = []
-            collected_data = {}
-
-            # Handle tool calls
-            if assistant_message.tool_calls:
-                for tool_call in assistant_message.tool_calls:
-                    tool_name = tool_call.function.name
-                    tool_args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
-
-                    self.record_decision(
-                        "tool_call",
-                        f"Calling tool: {tool_name}",
-                        context={'args': tool_args},
-                        confidence=0.9
-                    )
-
-                    # Execute the tool
-                    tool_result = self._execute_tool(tool_name, tool_args)
-                    tool_calls_made.append({
-                        'tool': tool_name,
-                        'args': tool_args,
-                        'result_summary': f"Got {len(tool_result.get('items', []))} items" if isinstance(tool_result, dict) else str(tool_result)[:100]
-                    })
-                    collected_data[tool_name] = tool_result
-
-                    # Add tool result to conversation
-                    messages.append({
-                        "role": "assistant",
-                        "content": None,
-                        "tool_calls": [tool_call]
-                    })
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": str(tool_result)[:8000]  # Truncate for context limits
-                    })
-
-                # Get final analysis from GPT
-                final_response = self.client.chat.completions.create(
+                response = self.client.chat.completions.create(
                     model="gpt-5-mini",
                     messages=messages,
-                    max_completion_tokens=3000
+                    tools=self.tools,
+                    tool_choice="auto",
+                    max_completion_tokens=4000
                 )
-                analysis = final_response.choices[0].message.content
-            else:
-                analysis = assistant_message.content
 
-            # Session 683: Run ML analysis on collected market data
-            ml_insights = {}
-            if collected_data:
-                # Combine all collected data for ML analysis
-                market_data_for_ml = {
-                    'filings': collected_data.get('get_sec_filings', {}).get('filings', []),
-                    'stocks': collected_data.get('get_market_overview', {}).get('stocks', {}),
-                    'crypto': collected_data.get('get_market_overview', {}).get('crypto', {}),
-                }
-                ml_insights = self._analyze_with_ml(market_data_for_ml)
+                # Process response
+                assistant_message = response.choices[0].message
+                tool_calls_made = []
+                collected_data = {}
 
-                # Enhance analysis with ML insights
-                if ml_insights.get('ml_used'):
-                    ml_summary = f"\n\n**ML Analysis (GNN):**\n"
-                    ml_summary += f"- Models Used: {', '.join(ml_insights['models_used'])}\n"
-                    ml_summary += f"- Confidence: {ml_insights['confidence']}\n"
-                    ml_summary += f"- Entities Analyzed: {ml_insights['entity_count']} nodes, {ml_insights['relationship_count']} relationships\n"
-                    if ml_insights.get('ml_insights'):
-                        ml_summary += f"- Insights: {ml_insights['ml_insights']}\n"
-                    analysis += ml_summary
+                # Handle tool calls
+                if assistant_message.tool_calls:
+                    for tool_call in assistant_message.tool_calls:
+                        tool_name = tool_call.function.name
+                        tool_args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
 
-            # Build result
-            execution_time = int((time.time() - start_time) * 1000)
+                        self.record_decision(
+                            "tool_call",
+                            f"Calling tool: {tool_name}",
+                            context={'args': tool_args},
+                            confidence=0.9
+                        )
 
-            result = AgentResult(
-                success=True,
-                message=analysis,
-                data={
-                    'analysis': analysis,
-                    'collected_data': collected_data,
-                    'tool_calls': tool_calls_made,
-                    'ml_analysis': ml_insights,  # Session 683: Add ML analysis to data
-                },
-                agent_name=self.name,
-                execution_time_ms=execution_time,
-                decisions_made=len(tool_calls_made) + 1,
-                tool_calls=tool_calls_made
-            )
+                        # Execute the tool
+                        tool_result = self._execute_tool(tool_name, tool_args)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'args': tool_args,
+                            'result_summary': f"Got {len(tool_result.get('items', []))} items" if isinstance(tool_result, dict) else str(tool_result)[:100]
+                        })
+                        collected_data[tool_name] = tool_result
 
-            # Record learning outcome with proper AgentResult
-            try:
-                self._record_learning_outcome(result, task, context)
-            except Exception as le:
-                logger.warning(f"Failed to record learning outcome: {le}")
+                        # Add tool result to conversation
+                        messages.append({
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [tool_call]
+                        })
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": str(tool_result)[:8000]  # Truncate for context limits
+                        })
 
-            return result
+                    # Get final analysis from GPT
+                    final_response = self.client.chat.completions.create(
+                        model="gpt-5-mini",
+                        messages=messages,
+                        max_completion_tokens=3000
+                    )
+                    analysis = final_response.choices[0].message.content
+                else:
+                    analysis = assistant_message.content
 
-        except Exception as e:
-            logger.exception(f"MarketIntelligenceAgent error: {e}")
-            return AgentResult(
-                success=False,
-                message=f"Error analyzing markets: {str(e)}",
-                error=str(e),
-                agent_name=self.name,
-                execution_time_ms=int((time.time() - start_time) * 1000)
-            )
+                # Session 683: Run ML analysis on collected market data
+                ml_insights = {}
+                if collected_data:
+                    # Combine all collected data for ML analysis
+                    market_data_for_ml = {
+                        'filings': collected_data.get('get_sec_filings', {}).get('filings', []),
+                        'stocks': collected_data.get('get_market_overview', {}).get('stocks', {}),
+                        'crypto': collected_data.get('get_market_overview', {}).get('crypto', {}),
+                    }
+                    ml_insights = self._analyze_with_ml(market_data_for_ml)
+
+                    # Enhance analysis with ML insights
+                    if ml_insights.get('ml_used'):
+                        ml_summary = f"\n\n**ML Analysis (GNN):**\n"
+                        ml_summary += f"- Models Used: {', '.join(ml_insights['models_used'])}\n"
+                        ml_summary += f"- Confidence: {ml_insights['confidence']}\n"
+                        ml_summary += f"- Entities Analyzed: {ml_insights['entity_count']} nodes, {ml_insights['relationship_count']} relationships\n"
+                        if ml_insights.get('ml_insights'):
+                            ml_summary += f"- Insights: {ml_insights['ml_insights']}\n"
+                        analysis += ml_summary
+
+                # Build result
+                execution_time = int((time.time() - start_time) * 1000)
+
+                result = AgentResult(
+                    success=True,
+                    message=analysis,
+                    data={
+                        'analysis': analysis,
+                        'collected_data': collected_data,
+                        'tool_calls': tool_calls_made,
+                        'ml_analysis': ml_insights,  # Session 683: Add ML analysis to data
+                    },
+                    agent_name=self.name,
+                    execution_time_ms=execution_time,
+                    decisions_made=len(tool_calls_made) + 1,
+                    tool_calls=tool_calls_made
+                )
+
+                # Record learning outcome with proper AgentResult
+                try:
+                    self._record_learning_outcome(result, task, context)
+                except Exception as le:
+                    logger.warning(f"Failed to record learning outcome: {le}")
+
+                return result
+
+            except Exception as e:
+                logger.exception(f"MarketIntelligenceAgent error: {e}")
+                return AgentResult(
+                    success=False,
+                    message=f"Error analyzing markets: {str(e)}",
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
 
     def _execute_tool(self, tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a market intelligence tool."""

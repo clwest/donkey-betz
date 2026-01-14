@@ -313,76 +313,86 @@ Research Type: {self.research_type}""")
         spider_context = spider_context or {}
         self._current_task = task
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
-
-        # Session 529: Build intelligent prompt with full context
-        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
-
-        # Session 349: Extract project_id from context if not set in constructor
-        # This ensures research results are linked to the project
-        if not self.project_id and context.get('project_id'):
-            self.project_id = context.get('project_id')
-            logger.info(f"{self.name}: Set project_id from context: {self.project_id}")
-
-        try:
-            logger.info(f"{self.name}: Starting execution for task: {task[:100]}")
-
-            # Step 1: Auto spider refresh
-            self._auto_refresh_spiders(task)
-
-            # Step 2: Get prior research context
-            prior_context = self._get_prior_research_context(task)
-
-            # Step 3: Get project context if available
-            project_context = self._get_project_context()
-
-            # Step 4: Build enhanced prompt with intelligent context
-            enhanced_prompt = self._intelligent_context + "\n\n" + self._build_prompt(task, prior_context, project_context, context)
-
-            # Step 5: Execute GPT loop with tools
-            all_data, synthesis = self._execute_gpt_loop(enhanced_prompt, project_context)
-
-            # Step 6: Extract source articles for frontend
-            source_articles, sources_used = self._extract_source_articles(all_data)
-
-            # Step 7: Save to BusinessResearchResult
-            saved_result = self._save_research_result(task, synthesis, all_data, project_context)
-
-            # Step 8: Build and return AgentResult
-            execution_time = int((time.time() - start_time) * 1000)
-
-            logger.info(f"{self.name}: Completed in {execution_time}ms with {len(all_data)} data sources")
-
-            return AgentResult(
-                success=True,
-                message=f"{self.name} completed with {len(all_data)} data sources",
-                data={
-                    'analysis': synthesis.get('analysis', str(synthesis)),
-                    'recommendations': synthesis.get('recommendations', []),
-                    'key_insights': synthesis.get('key_insights', []),
-                    'raw_data': all_data,
-                    'sources_used': list(sources_used),
-                    'data_points_analyzed': len(source_articles),
-                    'project_name': project_context.get('project_name', ''),
-                    'query': task,
-                    'saved_id': str(saved_result.id) if saved_result else None,
-                    'research_type': self.research_type
-                },
-                agent_name=self.name,
-                execution_time_ms=execution_time
+        # Session 750: Time Travel integration
+        with self.time_travel_session("business_research", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action=f"Starting {self.research_type} research",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip research", "Defer to human", "Consult other agents"],
+                confidence=0.8
             )
 
-        except Exception as e:
-            logger.error(f"{self.name} error: {e}", exc_info=True)
-            return AgentResult(
-                success=False,
-                error=str(e),
-                agent_name=self.name,
-                execution_time_ms=int((time.time() - start_time) * 1000)
-            )
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+
+            # Session 529: Build intelligent prompt with full context
+            self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
+            # Session 349: Extract project_id from context if not set in constructor
+            # This ensures research results are linked to the project
+            if not self.project_id and context.get('project_id'):
+                self.project_id = context.get('project_id')
+                logger.info(f"{self.name}: Set project_id from context: {self.project_id}")
+
+            try:
+                logger.info(f"{self.name}: Starting execution for task: {task[:100]}")
+
+                # Step 1: Auto spider refresh
+                self._auto_refresh_spiders(task)
+
+                # Step 2: Get prior research context
+                prior_context = self._get_prior_research_context(task)
+
+                # Step 3: Get project context if available
+                project_context = self._get_project_context()
+
+                # Step 4: Build enhanced prompt with intelligent context
+                enhanced_prompt = self._intelligent_context + "\n\n" + self._build_prompt(task, prior_context, project_context, context)
+
+                # Step 5: Execute GPT loop with tools
+                all_data, synthesis = self._execute_gpt_loop(enhanced_prompt, project_context)
+
+                # Step 6: Extract source articles for frontend
+                source_articles, sources_used = self._extract_source_articles(all_data)
+
+                # Step 7: Save to BusinessResearchResult
+                saved_result = self._save_research_result(task, synthesis, all_data, project_context)
+
+                # Step 8: Build and return AgentResult
+                execution_time = int((time.time() - start_time) * 1000)
+
+                logger.info(f"{self.name}: Completed in {execution_time}ms with {len(all_data)} data sources")
+
+                return AgentResult(
+                    success=True,
+                    message=f"{self.name} completed with {len(all_data)} data sources",
+                    data={
+                        'analysis': synthesis.get('analysis', str(synthesis)),
+                        'recommendations': synthesis.get('recommendations', []),
+                        'key_insights': synthesis.get('key_insights', []),
+                        'raw_data': all_data,
+                        'sources_used': list(sources_used),
+                        'data_points_analyzed': len(source_articles),
+                        'project_name': project_context.get('project_name', ''),
+                        'query': task,
+                        'saved_id': str(saved_result.id) if saved_result else None,
+                        'research_type': self.research_type
+                    },
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
+            except Exception as e:
+                logger.error(f"{self.name} error: {e}", exc_info=True)
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
 
     def _auto_refresh_spiders(self, task: str):
         """Trigger spider refresh for fresh data."""

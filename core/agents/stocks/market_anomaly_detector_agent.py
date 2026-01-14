@@ -226,56 +226,66 @@ Focus on patterns that suggest informed trading or manipulation."""
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
-
-        # Session 529: Build intelligent prompt with full context
-        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
-
-        logger.info(f"MarketAnomalyDetectorAgent executing: {task[:100]}...")
-
-        try:
-            # Get market data
-            market_data = self._get_market_data(context.get('ticker'))
-            social_data = self._get_social_data(context.get('ticker'))
-
-            # Run detection algorithms
-            pump_dump_flags = self._detect_pump_dump(market_data)
-            manipulation_flags = self._detect_manipulation(market_data)
-            coordinated_flags = self._detect_coordinated(market_data, social_data)
-
-            # Compile all anomalies
-            anomalies = pump_dump_flags + manipulation_flags + coordinated_flags
-
-            # Determine overall risk
-            risk_level = self._calculate_risk_level(anomalies)
-
-            execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
-
-            return AgentResult(
-                success=True,
-                message=f"Anomaly scan complete. Risk level: {risk_level}",
-                data={
-                    'anomalies': anomalies,
-                    'risk_level': risk_level,
-                    'pump_dump_flags': pump_dump_flags,
-                    'manipulation_flags': manipulation_flags,
-                    'coordinated_flags': coordinated_flags,
-                    'total_flags': len(anomalies),
-                },
-                agent_name=self.name,
-                execution_time_ms=execution_time
+        # Session 750: Time Travel integration
+        with self.time_travel_session("market_anomaly_detection", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting market anomaly detection",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip detection", "Defer to human", "Consult other agents"],
+                confidence=0.8
             )
 
-        except Exception as e:
-            logger.error(f"MarketAnomalyDetectorAgent error: {e}")
-            return AgentResult(
-                success=False,
-                error=str(e),
-                agent_name=self.name
-            )
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+
+            # Session 529: Build intelligent prompt with full context
+            self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
+            logger.info(f"MarketAnomalyDetectorAgent executing: {task[:100]}...")
+
+            try:
+                # Get market data
+                market_data = self._get_market_data(context.get('ticker'))
+                social_data = self._get_social_data(context.get('ticker'))
+
+                # Run detection algorithms
+                pump_dump_flags = self._detect_pump_dump(market_data)
+                manipulation_flags = self._detect_manipulation(market_data)
+                coordinated_flags = self._detect_coordinated(market_data, social_data)
+
+                # Compile all anomalies
+                anomalies = pump_dump_flags + manipulation_flags + coordinated_flags
+
+                # Determine overall risk
+                risk_level = self._calculate_risk_level(anomalies)
+
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+
+                return AgentResult(
+                    success=True,
+                    message=f"Anomaly scan complete. Risk level: {risk_level}",
+                    data={
+                        'anomalies': anomalies,
+                        'risk_level': risk_level,
+                        'pump_dump_flags': pump_dump_flags,
+                        'manipulation_flags': manipulation_flags,
+                        'coordinated_flags': coordinated_flags,
+                        'total_flags': len(anomalies),
+                    },
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
+            except Exception as e:
+                logger.error(f"MarketAnomalyDetectorAgent error: {e}")
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name
+                )
 
     def _get_market_data(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Fetch market data for analysis."""

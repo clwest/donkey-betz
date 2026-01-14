@@ -263,85 +263,95 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         start_time = time.time()
         tool_calls_made = []
 
-        try:
-            # Session 633: Direct tool call for initiate_content_debate action
-            # This bypasses GPT to ensure reliable debate creation
-            if context.get('action') == 'initiate_content_debate' and context.get('channel_id'):
-                logger.info(f"🎥 [SESSION 633] Direct debate initiation for channel {context['channel_id']}")
-                tool_input = {'channel_id': context['channel_id']}
-                debate_result = self._initiate_content_debate(tool_input)
+        # Session 750: Time Travel integration
+        with self.time_travel_session("content_studio_coordination", task, input_data=context):
+            self.record_decision(
+                decision_type="planning",
+                action="Starting content studio coordination",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip coordination", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-                execution_time = int((time.time() - start_time) * 1000)
-                return AgentResult(
-                    success=True,
-                    message=f"Debate created: {debate_result.get('proposed_topic', 'Unknown topic')}",
-                    data={"debate_result": debate_result},
-                    agent_name=self.name,
-                    execution_time_ms=execution_time,
-                    tool_calls=[{"name": "initiate_content_debate", "input": tool_input}]
-                )
+            try:
+                # Session 633: Direct tool call for initiate_content_debate action
+                # This bypasses GPT to ensure reliable debate creation
+                if context.get('action') == 'initiate_content_debate' and context.get('channel_id'):
+                    logger.info(f"🎥 [SESSION 633] Direct debate initiation for channel {context['channel_id']}")
+                    tool_input = {'channel_id': context['channel_id']}
+                    debate_result = self._initiate_content_debate(tool_input)
 
-            # Build prompt with system prompt + task
-            prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
-
-            # Call OpenAI with tools
-            response = self._call_openai(prompt)
-
-            # Process tool calls if any
-            if response.get('tool_calls'):
-                tool_results = []
-                for tool_call in response['tool_calls']:
-                    tool_name = tool_call['name']
-                    tool_input = tool_call['arguments']
-
-                    tool_calls_made.append({"name": tool_name, "input": tool_input})
-                    result = self._execute_tool(tool_name, tool_input)
-                    tool_results.append(result)
-
-                # Return with tool results
-                execution_time = int((time.time() - start_time) * 1000)
-                result = AgentResult(
-                    success=True,
-                    message=response.get('content') or "Coordination complete",
-                    data={"tool_results": tool_results},
-                    agent_name=self.name,
-                    execution_time_ms=execution_time,
-                    tool_calls=tool_calls_made
-                )
-
-                # Record learning outcome for collective intelligence
-                try:
-                    self._record_learning_outcome(
-                        task=task,
-                        result=result,
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
                         success=True,
-                        context={
-                            'agent_type': self.__class__.__name__,
-                            'execution_time_ms': execution_time,
-                            'tools_used': [tc['name'] for tc in tool_calls_made],
-                        }
+                        message=f"Debate created: {debate_result.get('proposed_topic', 'Unknown topic')}",
+                        data={"debate_result": debate_result},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time,
+                        tool_calls=[{"name": "initiate_content_debate", "input": tool_input}]
                     )
-                except Exception as le:
-                    logger.warning(f"Failed to record learning outcome: {le}")
 
-                return result
-            else:
-                # No tools called, return message
+                # Build prompt with system prompt + task
+                prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
+                # Call OpenAI with tools
+                response = self._call_openai(prompt)
+
+                # Process tool calls if any
+                if response.get('tool_calls'):
+                    tool_results = []
+                    for tool_call in response['tool_calls']:
+                        tool_name = tool_call['name']
+                        tool_input = tool_call['arguments']
+
+                        tool_calls_made.append({"name": tool_name, "input": tool_input})
+                        result = self._execute_tool(tool_name, tool_input)
+                        tool_results.append(result)
+
+                    # Return with tool results
+                    execution_time = int((time.time() - start_time) * 1000)
+                    result = AgentResult(
+                        success=True,
+                        message=response.get('content') or "Coordination complete",
+                        data={"tool_results": tool_results},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time,
+                        tool_calls=tool_calls_made
+                    )
+
+                    # Record learning outcome for collective intelligence
+                    try:
+                        self._record_learning_outcome(
+                            task=task,
+                            result=result,
+                            success=True,
+                            context={
+                                'agent_type': self.__class__.__name__,
+                                'execution_time_ms': execution_time,
+                                'tools_used': [tc['name'] for tc in tool_calls_made],
+                            }
+                        )
+                    except Exception as le:
+                        logger.warning(f"Failed to record learning outcome: {le}")
+
+                    return result
+                else:
+                    # No tools called, return message
+                    return AgentResult(
+                        success=True,
+                        message=response.get('content') or 'No response',
+                        agent_name=self.name,
+                        execution_time_ms=int((time.time() - start_time) * 1000)
+                    )
+
+            except Exception as e:
+                logger.error(f"AutonomousContentStudioCoordinator execution error: {e}")
                 return AgentResult(
-                    success=True,
-                    message=response.get('content') or 'No response',
+                    success=False,
+                    error=str(e),
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)
                 )
-
-        except Exception as e:
-            logger.error(f"AutonomousContentStudioCoordinator execution error: {e}")
-            return AgentResult(
-                success=False,
-                error=str(e),
-                agent_name=self.name,
-                execution_time_ms=int((time.time() - start_time) * 1000)
-            )
 
     def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a tool and return results"""

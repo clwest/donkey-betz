@@ -1304,15 +1304,25 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("narrative_drift_coordination", task, input_data=context):
+            self.record_decision(
+                decision_type="planning",
+                action="Starting narrative drift coordination",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip coordination", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-        # Session 529: Build intelligent prompt with full context
-        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
 
-        logger.info(f"NarrativeDriftCoordinator executing: {task[:100]}...")
+            # Session 529: Build intelligent prompt with full context
+            self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
+            logger.info(f"NarrativeDriftCoordinator executing: {task[:100]}...")
 
         # Use class-level system_prompt with additional instruction
         full_prompt = self.system_prompt + "\n\nAnalyze the task and decide which tool(s) to call. If no tools are needed, just respond with your analysis."

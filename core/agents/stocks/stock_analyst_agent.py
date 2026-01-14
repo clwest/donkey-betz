@@ -185,7 +185,17 @@ Alert on:
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
-        logger.info(f"StockAnalystAgent executing: {task[:100]}...")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("stock_analysis", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting stock analysis",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip analysis", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
+
+            logger.info(f"StockAnalystAgent executing: {task[:100]}...")
 
         try:
             # Session 736: Extract spider intelligence for real-time market data

@@ -116,69 +116,79 @@ Remember: Markets are forward-looking. Look for what others are missing."""
         context = context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("prediction_market_analysis", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting prediction market analysis",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip analysis", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-        try:
-            # Fetch market data from Kalshi spider
-            markets = self._get_kalshi_markets(context)
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence")
 
-            if not markets:
+            try:
+                # Fetch market data from Kalshi spider
+                markets = self._get_kalshi_markets(context)
+
+                if not markets:
+                    return AgentResult(
+                        success=False,
+                        message="No prediction market data available",
+                        data={},
+                        error="Kalshi spider returned no data",
+                        agent_name=self.name,
+                        execution_time_ms=self._elapsed_ms(start_time)
+                    )
+
+                # Analyze markets
+                analysis = self._analyze_markets(markets, task, context)
+
+                # Generate trading signals
+                signals = self._generate_signals(markets, analysis)
+
+                # Build response using LLM
+                response = self._generate_analysis_report(task, markets, analysis, signals, context)
+
+                # Record learning outcome
+                try:
+                    self._record_learning_outcome(
+                        result=None,
+                        task=task,
+                        context=context,
+                        success=True
+                    )
+                except Exception as learn_err:
+                    logger.debug(f"Learning outcome recording skipped: {learn_err}")
+
                 return AgentResult(
-                    success=False,
-                    message="No prediction market data available",
-                    data={},
-                    error="Kalshi spider returned no data",
+                    success=True,
+                    message=response,
+                    data={
+                        'markets_analyzed': len(markets),
+                        'signals': signals,
+                        'analysis': analysis,
+                        'categories': self._count_categories(markets),
+                        'total_volume': sum(m.get('volume', 0) for m in markets),
+                    },
                     agent_name=self.name,
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
 
-            # Analyze markets
-            analysis = self._analyze_markets(markets, task, context)
-
-            # Generate trading signals
-            signals = self._generate_signals(markets, analysis)
-
-            # Build response using LLM
-            response = self._generate_analysis_report(task, markets, analysis, signals, context)
-
-            # Record learning outcome
-            try:
-                self._record_learning_outcome(
-                    result=None,
-                    task=task,
-                    context=context,
-                    success=True
+            except Exception as e:
+                logger.error(f"PredictionMarketAnalyst error: {e}", exc_info=True)
+                return AgentResult(
+                    success=False,
+                    message=f"Analysis failed: {str(e)}",
+                    data={},
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=self._elapsed_ms(start_time)
                 )
-            except Exception as learn_err:
-                logger.debug(f"Learning outcome recording skipped: {learn_err}")
-
-            return AgentResult(
-                success=True,
-                message=response,
-                data={
-                    'markets_analyzed': len(markets),
-                    'signals': signals,
-                    'analysis': analysis,
-                    'categories': self._count_categories(markets),
-                    'total_volume': sum(m.get('volume', 0) for m in markets),
-                },
-                agent_name=self.name,
-                execution_time_ms=self._elapsed_ms(start_time)
-            )
-
-        except Exception as e:
-            logger.error(f"PredictionMarketAnalyst error: {e}", exc_info=True)
-            return AgentResult(
-                success=False,
-                message=f"Analysis failed: {str(e)}",
-                data={},
-                error=str(e),
-                agent_name=self.name,
-                execution_time_ms=self._elapsed_ms(start_time)
-            )
 
     def _get_kalshi_markets(self, context: Dict) -> List[Dict]:
         """Fetch markets from Kalshi spider."""
