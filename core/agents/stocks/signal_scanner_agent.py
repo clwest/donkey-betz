@@ -269,12 +269,22 @@ Always provide:
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("signal_scanning", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting signal scanning",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip scanning", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-        logger.info(f"📡 [SESSION 465] SignalScannerAgent executing: {task[:100]}")
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+
+            logger.info(f"📡 [SESSION 465] SignalScannerAgent executing: {task[:100]}")
 
         try:
             # Session 529: Build intelligent prompt with full context

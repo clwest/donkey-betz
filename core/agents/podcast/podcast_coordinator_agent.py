@@ -260,14 +260,24 @@ CRITICAL: When creating scripts, maintain clear speaker labels for TTS generatio
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
-        # Session 739: Store context for sub-agent calls
-        self._current_spider_context = spider_context
-        self._current_scifi_context = scifi_context
+        # Session 750: Time Travel integration
+        with self.time_travel_session("podcast_coordination", task, input_data=context):
+            self.record_decision(
+                decision_type="planning",
+                action="Starting podcast coordination",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip coordination", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+            # Session 739: Store context for sub-agent calls
+            self._current_spider_context = spider_context
+            self._current_scifi_context = scifi_context
+
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
 
         # Session 735: Reset cost tracking for this execution
         self._reset_cost_tracking()

@@ -128,69 +128,79 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
         context = context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("sports_odds_analysis", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting sports odds analysis",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip analysis", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-        try:
-            # Fetch odds data from The Odds API spider
-            events = self._get_sports_odds(context)
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence")
 
-            if not events:
+            try:
+                # Fetch odds data from The Odds API spider
+                events = self._get_sports_odds(context)
+
+                if not events:
+                    return AgentResult(
+                        success=False,
+                        message="No sports odds data available",
+                        data={},
+                        error="The Odds API spider returned no data",
+                        agent_name=self.name,
+                        execution_time_ms=self._elapsed_ms(start_time)
+                    )
+
+                # Analyze odds
+                analysis = self._analyze_odds(events, task, context)
+
+                # Generate betting signals
+                signals = self._generate_signals(events, analysis)
+
+                # Build response using LLM
+                response = self._generate_analysis_report(task, events, analysis, signals, context)
+
+                # Record learning outcome
+                try:
+                    self._record_learning_outcome(
+                        result=None,
+                        task=task,
+                        context=context,
+                        success=True
+                    )
+                except Exception as learn_err:
+                    logger.debug(f"Learning outcome recording skipped: {learn_err}")
+
                 return AgentResult(
-                    success=False,
-                    message="No sports odds data available",
-                    data={},
-                    error="The Odds API spider returned no data",
+                    success=True,
+                    message=response,
+                    data={
+                        'events_analyzed': len(events),
+                        'signals': signals,
+                        'analysis': analysis,
+                        'sports': self._count_sports(events),
+                        'upcoming_24h': len([e for e in events if self._is_upcoming_24h(e)]),
+                    },
                     agent_name=self.name,
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
 
-            # Analyze odds
-            analysis = self._analyze_odds(events, task, context)
-
-            # Generate betting signals
-            signals = self._generate_signals(events, analysis)
-
-            # Build response using LLM
-            response = self._generate_analysis_report(task, events, analysis, signals, context)
-
-            # Record learning outcome
-            try:
-                self._record_learning_outcome(
-                    result=None,
-                    task=task,
-                    context=context,
-                    success=True
+            except Exception as e:
+                logger.error(f"SportsOddsAnalyst error: {e}", exc_info=True)
+                return AgentResult(
+                    success=False,
+                    message=f"Analysis failed: {str(e)}",
+                    data={},
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=self._elapsed_ms(start_time)
                 )
-            except Exception as learn_err:
-                logger.debug(f"Learning outcome recording skipped: {learn_err}")
-
-            return AgentResult(
-                success=True,
-                message=response,
-                data={
-                    'events_analyzed': len(events),
-                    'signals': signals,
-                    'analysis': analysis,
-                    'sports': self._count_sports(events),
-                    'upcoming_24h': len([e for e in events if self._is_upcoming_24h(e)]),
-                },
-                agent_name=self.name,
-                execution_time_ms=self._elapsed_ms(start_time)
-            )
-
-        except Exception as e:
-            logger.error(f"SportsOddsAnalyst error: {e}", exc_info=True)
-            return AgentResult(
-                success=False,
-                message=f"Analysis failed: {str(e)}",
-                data={},
-                error=str(e),
-                agent_name=self.name,
-                execution_time_ms=self._elapsed_ms(start_time)
-            )
 
     def _get_sports_odds(self, context: Dict) -> List[Dict]:
         """Fetch odds from The Odds API spider."""

@@ -166,82 +166,92 @@ Focus on transactions that diverge from normal patterns."""
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
-
-        # Session 529: Build intelligent prompt with full context
-        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
-
-        logger.info(f"InstitutionalWatcherAgent executing: {task[:100]}...")
-
-        try:
-            # Get SEC insider data
-            insider_data = self._get_insider_data(context.get('ticker'))
-
-            # Analyze patterns
-            patterns = self._analyze_patterns(insider_data)
-
-            # Generate alerts
-            alerts = self._generate_alerts(insider_data, patterns)
-
-            execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
-
-            result = AgentResult(
-                success=True,
-                message=f"Institutional watch complete. Found {len(alerts)} alerts.",
-                data={
-                    'insider_data': insider_data,
-                    'patterns': patterns,
-                    'alerts': alerts,
-                    'sentiment': self._calculate_sentiment(insider_data),
-                },
-                agent_name=self.name,
-                execution_time_ms=execution_time
+        # Session 750: Time Travel integration
+        with self.time_travel_session("institutional_watching", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting institutional watching",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip watching", "Defer to human", "Consult other agents"],
+                confidence=0.8
             )
 
-            # Record learning outcome for collective intelligence
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence: {len(spider_intel['trends'])} trends")
+
+            # Session 529: Build intelligent prompt with full context
+            self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
+            logger.info(f"InstitutionalWatcherAgent executing: {task[:100]}...")
+
             try:
-                self._record_learning_outcome(
-                    task=task,
-                    result=result,
+                # Get SEC insider data
+                insider_data = self._get_insider_data(context.get('ticker'))
+
+                # Analyze patterns
+                patterns = self._analyze_patterns(insider_data)
+
+                # Generate alerts
+                alerts = self._generate_alerts(insider_data, patterns)
+
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+
+                result = AgentResult(
                     success=True,
-                    context={
-                        'agent_type': self.__class__.__name__,
-                        'execution_time_ms': execution_time,
-                        'alerts_found': len(alerts),
-                        'transactions_analyzed': len(insider_data),
-                    }
+                    message=f"Institutional watch complete. Found {len(alerts)} alerts.",
+                    data={
+                        'insider_data': insider_data,
+                        'patterns': patterns,
+                        'alerts': alerts,
+                        'sentiment': self._calculate_sentiment(insider_data),
+                    },
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
                 )
-            except Exception as le:
-                logger.warning(f"Failed to record learning outcome: {le}")
 
-            return result
+                # Record learning outcome for collective intelligence
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=True,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'execution_time_ms': execution_time,
+                            'alerts_found': len(alerts),
+                            'transactions_analyzed': len(insider_data),
+                        }
+                    )
+                except Exception as le:
+                    logger.warning(f"Failed to record learning outcome: {le}")
 
-        except Exception as e:
-            logger.error(f"InstitutionalWatcherAgent error: {e}")
-            result = AgentResult(
-                success=False,
-                error=str(e),
-                agent_name=self.name
-            )
+                return result
 
-            # Record failed learning outcome
-            try:
-                self._record_learning_outcome(
-                    task=task,
-                    result=result,
+            except Exception as e:
+                logger.error(f"InstitutionalWatcherAgent error: {e}")
+                result = AgentResult(
                     success=False,
-                    context={
-                        'agent_type': self.__class__.__name__,
-                        'error': str(e),
-                    }
+                    error=str(e),
+                    agent_name=self.name
                 )
-            except Exception as le:
-                logger.warning(f"Failed to record learning outcome: {le}")
 
-            return result
+                # Record failed learning outcome
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=False,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'error': str(e),
+                        }
+                    )
+                except Exception as le:
+                    logger.warning(f"Failed to record learning outcome: {le}")
+
+                return result
 
     def _get_insider_data(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Fetch insider trading data from SEC filings."""

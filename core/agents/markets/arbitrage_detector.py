@@ -120,73 +120,83 @@ Output Format:
         context = context or {}
         spider_context = spider_context or {}
 
-        # Session 736: Extract spider intelligence for real-time data
-        spider_intel = self._extract_spider_intelligence(spider_context)
-        if spider_intel['has_data']:
-            logger.info(f"🕷️ {self.name} using spider intelligence")
+        # Session 750: Time Travel integration
+        with self.time_travel_session("arbitrage_detection", task, input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting arbitrage detection",
+                reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
+                alternatives=["Skip detection", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
 
-        try:
-            # Get odds from multiple bookmakers
-            events = self._get_multi_book_odds(context)
+            # Session 736: Extract spider intelligence for real-time data
+            spider_intel = self._extract_spider_intelligence(spider_context)
+            if spider_intel['has_data']:
+                logger.info(f"🕷️ {self.name} using spider intelligence")
 
-            if not events:
+            try:
+                # Get odds from multiple bookmakers
+                events = self._get_multi_book_odds(context)
+
+                if not events:
+                    return AgentResult(
+                        success=False,
+                        message="No multi-bookmaker odds data available",
+                        data={},
+                        error="Need odds from multiple bookmakers for arbitrage detection",
+                        agent_name=self.name,
+                        execution_time_ms=self._elapsed_ms(start_time)
+                    )
+
+                # Detect arbitrage opportunities
+                arb_opps = self._detect_arbitrage(events, context)
+
+                # Generate alerts for profitable arbs
+                alerts = self._generate_arb_alerts(arb_opps, context)
+
+                # Build response
+                response = self._build_arb_report(events, arb_opps, alerts, context)
+
+                # Session 687: Create Human Interface attention items for HOT arbs
+                self._create_attention_items(arb_opps)
+
+                # Record learning
+                try:
+                    self._record_learning_outcome(
+                        result=None,
+                        task=task,
+                        context={'arb_count': len(arb_opps)},
+                        success=True
+                    )
+                except Exception as learn_err:
+                    logger.debug(f"Learning outcome recording skipped: {learn_err}")
+
                 return AgentResult(
-                    success=False,
-                    message="No multi-bookmaker odds data available",
-                    data={},
-                    error="Need odds from multiple bookmakers for arbitrage detection",
+                    success=True,
+                    message=response,
+                    data={
+                        'events_scanned': len(events),
+                        'arbitrage_opportunities': arb_opps,
+                        'alerts': alerts,
+                        'total_arbs': len(arb_opps),
+                        'hot_arbs': len([a for a in arb_opps if a.get('profit_pct', 0) >= 1.5]),
+                        'good_arbs': len([a for a in arb_opps if 1.0 <= a.get('profit_pct', 0) < 1.5]),
+                    },
                     agent_name=self.name,
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
 
-            # Detect arbitrage opportunities
-            arb_opps = self._detect_arbitrage(events, context)
-
-            # Generate alerts for profitable arbs
-            alerts = self._generate_arb_alerts(arb_opps, context)
-
-            # Build response
-            response = self._build_arb_report(events, arb_opps, alerts, context)
-
-            # Session 687: Create Human Interface attention items for HOT arbs
-            self._create_attention_items(arb_opps)
-
-            # Record learning
-            try:
-                self._record_learning_outcome(
-                    result=None,
-                    task=task,
-                    context={'arb_count': len(arb_opps)},
-                    success=True
+            except Exception as e:
+                logger.error(f"ArbitrageDetector error: {e}", exc_info=True)
+                return AgentResult(
+                    success=False,
+                    message=f"Arbitrage detection failed: {str(e)}",
+                    data={},
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=self._elapsed_ms(start_time)
                 )
-            except Exception as learn_err:
-                logger.debug(f"Learning outcome recording skipped: {learn_err}")
-
-            return AgentResult(
-                success=True,
-                message=response,
-                data={
-                    'events_scanned': len(events),
-                    'arbitrage_opportunities': arb_opps,
-                    'alerts': alerts,
-                    'total_arbs': len(arb_opps),
-                    'hot_arbs': len([a for a in arb_opps if a.get('profit_pct', 0) >= 1.5]),
-                    'good_arbs': len([a for a in arb_opps if 1.0 <= a.get('profit_pct', 0) < 1.5]),
-                },
-                agent_name=self.name,
-                execution_time_ms=self._elapsed_ms(start_time)
-            )
-
-        except Exception as e:
-            logger.error(f"ArbitrageDetector error: {e}", exc_info=True)
-            return AgentResult(
-                success=False,
-                message=f"Arbitrage detection failed: {str(e)}",
-                data={},
-                error=str(e),
-                agent_name=self.name,
-                execution_time_ms=self._elapsed_ms(start_time)
-            )
 
     def _get_multi_book_odds(self, context: Dict) -> List[Dict]:
         """Fetch odds with per-bookmaker detail from The Odds API."""

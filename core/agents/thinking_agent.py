@@ -815,9 +815,19 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
 
         start_time = time.time()
 
-        # Gather context
-        lookback_hours = kwargs.get('lookback_hours', 24)
-        gathered_context = self.gather_context(lookback_hours)
+        # Session 750: Time Travel integration
+        with self.time_travel_session("autonomous_thinking", task or "thinking_cycle", input_data=context):
+            self.record_decision(
+                decision_type="analysis",
+                action="Starting autonomous thinking cycle",
+                reasoning=f"Processing task: {task[:100] if task else 'Autonomous reasoning cycle'}",
+                alternatives=["Skip thinking", "Defer to human", "Consult other agents"],
+                confidence=0.8
+            )
+
+            # Gather context
+            lookback_hours = kwargs.get('lookback_hours', 24)
+            gathered_context = self.gather_context(lookback_hours)
 
         # Run the async thinking process
         loop = asyncio.new_event_loop()
