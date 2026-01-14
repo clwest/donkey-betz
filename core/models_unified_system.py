@@ -11328,6 +11328,11 @@ class AgentEvolution(models.Model):
         """
         Award XP to the agent and check for level up.
 
+        Session 748: Fixed to use cumulative XP model.
+        - total_xp is CUMULATIVE (never resets)
+        - lifetime_xp = total_xp (kept in sync)
+        - xp_to_next_level = XP needed for the CURRENT level
+
         Args:
             amount: XP to award
             source: What earned the XP
@@ -11339,7 +11344,7 @@ class AgentEvolution(models.Model):
         from django.utils import timezone
 
         self.total_xp += amount
-        self.lifetime_xp += amount
+        self.lifetime_xp = self.total_xp  # Keep in sync
 
         result = {
             'xp_awarded': amount,
@@ -11349,10 +11354,12 @@ class AgentEvolution(models.Model):
             'abilities_unlocked': [],
         }
 
-        # Check for level up
-        while self.total_xp >= self.xp_to_next_level and self.current_level < 10:
-            self.total_xp -= self.xp_to_next_level
-            self.current_level += 1
+        # Calculate correct level from cumulative XP
+        old_level = self.current_level
+        new_level = self._calculate_level_from_cumulative_xp(self.total_xp)
+
+        if new_level > old_level:
+            self.current_level = new_level
             self.xp_to_next_level = self.calculate_xp_for_level(self.current_level)
             self.last_level_up = timezone.now()
 
@@ -11362,9 +11369,10 @@ class AgentEvolution(models.Model):
             # Apply level bonuses
             self._apply_level_bonuses()
 
-            # Check for ability unlocks
-            unlocked = self._check_ability_unlocks()
-            result['abilities_unlocked'].extend(unlocked)
+            # Check for ability unlocks for each level gained
+            for level in range(old_level + 1, new_level + 1):
+                unlocked = self._check_ability_unlocks_for_level(level)
+                result['abilities_unlocked'].extend(unlocked)
 
         # Log the XP gain
         XPHistory.objects.create(
@@ -11377,6 +11385,54 @@ class AgentEvolution(models.Model):
 
         self.save()
         return result
+
+    def _calculate_level_from_cumulative_xp(self, cumulative_xp):
+        """Calculate level from cumulative XP."""
+        level = 1
+        xp_remaining = cumulative_xp
+        while level < 20:  # Safety cap
+            xp_needed = self.calculate_xp_for_level(level)
+            if xp_remaining >= xp_needed:
+                xp_remaining -= xp_needed
+                level += 1
+            else:
+                break
+        return level
+
+    def _check_ability_unlocks_for_level(self, level):
+        """Check and unlock abilities for a specific level."""
+        unlocked = []
+
+        # Define abilities by level
+        level_abilities = {
+            2: ('enhanced_focus', 'Enhanced Focus', 'Improved task concentration'),
+            3: ('parallel_processing', 'Parallel Processing', 'Handle multiple subtasks'),
+            4: ('deep_analysis', 'Deep Analysis', 'More thorough research'),
+            5: ('creative_spark', 'Creative Spark', 'Generate novel ideas'),
+            6: ('mentor_mode', 'Mentor Mode', 'Teach other agents'),
+            7: ('time_warp', 'Time Warp', 'Faster execution speed'),
+            8: ('pattern_master', 'Pattern Master', 'Recognize complex patterns'),
+            9: ('intuition', 'Intuition', 'Make educated guesses'),
+        }
+
+        if level in level_abilities:
+            code, name, desc = level_abilities[level]
+
+            # Create ability if it doesn't exist
+            ability, created = AgentAbility.objects.get_or_create(
+                evolution=self,
+                ability_code=code,
+                defaults={
+                    'ability_name': name,
+                    'description': desc,
+                    'is_active': True,
+                }
+            )
+
+            if created:
+                unlocked.append({'code': code, 'name': name, 'description': desc})
+
+        return unlocked
 
     def _apply_level_bonuses(self):
         """Apply bonuses when leveling up."""
@@ -11425,10 +11481,23 @@ class AgentEvolution(models.Model):
         return unlocked
 
     def get_progress_percentage(self):
-        """Get progress to next level as percentage."""
+        """Get progress to next level as percentage.
+
+        Session 748: Updated to use cumulative XP model.
+        """
         if self.current_level >= 10:
             return 100.0
-        return min(100.0, (self.total_xp / self.xp_to_next_level) * 100)
+
+        # Calculate cumulative XP needed to reach current level
+        cumulative_for_current = sum(
+            self.calculate_xp_for_level(lvl) for lvl in range(1, self.current_level)
+        )
+
+        # XP earned within the current level
+        xp_in_current_level = max(0, self.total_xp - cumulative_for_current)
+
+        # Progress as percentage
+        return min(100.0, (xp_in_current_level / self.xp_to_next_level) * 100)
 
     def prestige(self):
         """Reset to level 1 with prestige bonus."""
