@@ -417,34 +417,36 @@ class LearningLoopService:
 
         for agent_name in agents:
             try:
-                # Update agent evolution
+                # Update agent evolution using proper award_xp() method
+                # Session 748: Fixed to use award_xp() so XPHistory is created
                 from core.models_unified_system import Agent, AgentEvolution
 
                 agent = Agent.objects.filter(name=agent_name).first()
                 if agent:
                     evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
-                    evolution.total_xp += base_xp
 
-                    # Check for level up
-                    old_level = evolution.current_level
-                    new_level = self._calculate_level(evolution.total_xp)
-                    if new_level > old_level:
-                        evolution.current_level = new_level
-                        logger.info(f"🎉 {agent_name} leveled up to {new_level}!")
+                    # Build details string for XP history
+                    details_parts = [f"Learning loop execution"]
+                    if outcome.spider_data_used:
+                        details_parts.append("+5 spider data bonus")
+                    if outcome.execution_time_ms < 1000:
+                        details_parts.append("+3 fast execution bonus")
 
-                    evolution.save()
+                    # Use proper award_xp() method to create XPHistory record
+                    result = evolution.award_xp(
+                        amount=base_xp,
+                        source='learning',
+                        details=', '.join(details_parts)
+                    )
+
+                    if result.get('leveled_up'):
+                        logger.info(f"🎉 {agent_name} leveled up to {result['new_level']}!")
+                        if result.get('abilities_unlocked'):
+                            logger.info(f"✨ {agent_name} unlocked: {result['abilities_unlocked']}")
 
             except Exception as e:
                 logger.debug(f"Could not award XP to {agent_name}: {e}")
 
-    def _calculate_level(self, xp: int) -> int:
-        """Calculate level from XP."""
-        # XP thresholds for each level
-        thresholds = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500]
-        for level, threshold in enumerate(thresholds):
-            if xp < threshold:
-                return max(1, level)
-        return len(thresholds)
 
     def record_feedback(
         self,

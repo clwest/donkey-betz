@@ -1,47 +1,57 @@
-# Session 747 - Evolution Page API Fix COMPLETE
+# Session 748 - Evolution XP Tracking Fix COMPLETE
 
-**Previous Session:** 746 (Data Display Enhancements + Memory Cluster Improvements)
+**Previous Session:** 747 (Evolution Page API Fix)
 **Date:** January 14, 2026
-**Status:** Evolution Page: Fixed | All Builds Passing
+**Status:** XP Tracking Fixed | All Agents Have Evolution Profiles
 
 ---
 
-## Session 747 Summary
+## Session 748 Summary
 
-Deep-dive into the Evolution page revealed API field mismatches between backend and frontend. Fixed leaderboard and XP gains endpoints to return the correct field names.
+Deep investigation into why the Evolution page showed only 1 XP record despite 44,818 XP across agents. Found that `learning_loop.py` was directly modifying XP without creating history records. Fixed the code to use proper `award_xp()` method and initialized missing agent Evolution profiles.
 
-**Detailed Handoff:** `docs/handoffs/SESSION_747_EVOLUTION_PAGE_FIX.md`
+**Detailed Handoff:** `docs/handoffs/SESSION_748_EVOLUTION_XP_TRACKING_FIX.md`
 
 ---
 
 ## Key Changes This Session
 
-### Evolution Page API Fixes
+### XP Tracking Fix (`core/super_platform/learning_loop.py`)
+- Fixed `_award_agent_xp()` to use `evolution.award_xp()` method
+- This creates proper XPHistory records
+- Removed redundant `_calculate_level()` method
+- Added detailed XP source tracking (spider bonus, fast execution bonus)
 
-**Leaderboard API (`/api/agent-evolution/leaderboard/`):**
-- Added missing fields: `id`, `xp`, `xp_to_next_level`, `abilities_unlocked`, `created_at`, `updated_at`
-- Renamed `prestige` → `prestige_level`
-- Calculated XP progress within current level using `calculate_xp_for_level()`
-
-**XP Gains API (`/api/agent-evolution/xp-gains/`):**
-- Added missing field: `id`
-- Renamed `amount` → `xp_amount`
-- Renamed `source` → `reason`
-- Renamed `created_at` → `recorded_at`
-
-### Evolution Page Features (Now Working)
-- Leaderboard with XP progress bars and level tiers
-- Abilities tab (9 unlockable abilities)
-- XP Log tab with timestamped gains
-- Agent detail panel with stats
-- Search/filter functionality
+### Missing Agent Profiles Initialized
+- 15 agents were missing Evolution profiles
+- All now created at Level 1
+- **Total agents with Evolution:** 73
 
 ---
 
-## Files Changed
+## Evolution System Architecture
 
-### Backend
-- `core/views_agent_evolution.py` - Fixed API field names to match frontend interfaces
+### XP Sources
+| Source | XP Amount | Trigger |
+|--------|-----------|---------|
+| Conversations | 5 XP | Celery task (15 min) |
+| Dreams | 3 XP | Celery task (15 min) |
+| Learning records | 8 XP | Celery task (15 min) |
+| Learning loop execution | 10 XP base | On execution |
+| Spider data bonus | +5 XP | Learning loop |
+| Fast execution bonus | +3 XP | Learning loop |
+
+### Level Distribution
+| Level | Count | Title |
+|-------|-------|-------|
+| 1 | 38+ | Novice |
+| 2 | 9 | Apprentice |
+| 3 | 3 | Journeyman |
+| 6 | 3 | Master |
+| 9 | 1 | Oracle |
+| 11 | 4 | Omniscient |
+
+**Top Agent:** StockAuditCoordinator (Level 11, 9,110 XP)
 
 ---
 
@@ -65,27 +75,16 @@ open http://localhost:3000/evolution
 
 - Frontend bundle: 1,395 KB
 - All TypeScript builds passing
-- No console errors
-
----
-
-## Current Evolution Data
-
-| Metric | Value |
-|--------|-------|
-| Top Agent | StockAuditCoordinator (Level 11, 9080 XP) |
-| XP Gains Logged | 1 |
-| Available Abilities | 9 |
-| Max Level Observed | 11 (Omniscient) |
+- No console errors on Evolution page
 
 ---
 
 ## Next Steps (Suggestions)
 
-1. **Add more XP events** - Only 1 XP gain currently logged
+1. **Backfill XPHistory** - Consider creating historical records based on activity logs
 2. **Test ability unlocking** - No agents have unlocked abilities yet
 3. **Test prestige system** - No agents have prestiged
-4. **Verify other Sci-Fi pages** - Mood, Time Travel, Social, etc.
+4. **Monitor XP Log** - Verify new learning executions create XPHistory records
 
 ---
 
@@ -94,6 +93,7 @@ open http://localhost:3000/evolution
 | Component | Count |
 |-----------|-------|
 | Agents | 72 |
+| Agents with Evolution | 73 |
 | Spiders | 77 |
 | PA Tools | 86 |
 | Database Models | 364+ |
