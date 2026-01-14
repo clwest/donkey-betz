@@ -1,4 +1,4 @@
-# Session 749 - Mood Page Data Display & CRUD Fixes
+# Session 749 - Mood Page & Time Capsules Audit
 
 **Date:** January 14, 2026
 **Branch:** `feature/session-52-ai-assistant`
@@ -8,13 +8,16 @@
 
 ## Summary
 
-Fixed the Mood Page to properly display agent mood data and added full CRUD functionality for mood trigger rules. Also backfilled mood history for all 73 agents.
+1. Fixed the Mood Page data display and added full CRUD for mood rules
+2. Backfilled mood history for all 73 agents
+3. Deep audit of Time Capsules page - found and fixed critical GPT-5-mini token bug
+4. Fixed Time Capsules frontend to fetch detail on selection
 
 ---
 
-## Changes Made
+## Part 1: Mood Page Fixes
 
-### 1. Backend API Field Mapping (`core/views_agent_mood.py`)
+### 1.1 Backend API Field Mapping (`core/views_agent_mood.py`)
 
 **Problem:** Frontend expected different field names than backend returned.
 
@@ -30,94 +33,88 @@ Fixed the Mood Page to properly display agent mood data and added full CRUD func
 | `h.trigger_source` | `reason` | Added to history |
 | `h.created_at` | `recorded_at` | Added to history |
 
-Original field names kept for backward compatibility.
-
-### 2. Frontend Mood Types (`frontend/src/pages/AgentMoodPage.tsx`)
+### 1.2 Frontend Mood Types (`frontend/src/pages/AgentMoodPage.tsx`)
 
 **Problem:** "All Moods" dropdown showed duplicates of "Neutral" because backend moods weren't in `MOOD_CONFIG`.
 
-**Fix:** Added all backend mood types to `MOOD_CONFIG`:
-- `calm` - Cyan, Meh icon
-- `energetic` - Orange, Zap icon
-- `confident` - Green, ThumbsUp icon
-- `playful` - Yellow, Smile icon
-- `contemplative` - Indigo, Brain icon
-- `curious` - Purple, Sparkles icon
-- `inspired` - Pink, Sparkles icon
-- `focused` - Blue, Brain icon
+**Fix:** Added all backend mood types: calm, energetic, confident, playful, contemplative, curious, inspired, focused
 
-### 3. API Signature Fix (`frontend/src/lib/api.ts`)
+### 1.3 Create/Delete Rule Functionality
 
-**Problem:** `moodApi.createRule()` had wrong field names that didn't match backend.
+- Fixed `moodApi.createRule` API signature to match backend
+- Added Create Rule modal with full form
+- Added Delete Rule button with hover effect
 
-**Old signature (wrong):**
-```typescript
-createRule: (data: {
-  trigger_type: string
-  trigger_value: string
-  mood_change: string
-  intensity_change: number
-  description?: string
-})
+### 1.4 Data Backfill
+
+- Updated all 73 agent mood timestamps to today
+- Created mood history for 28 agents that had none (763 total records)
+
+---
+
+## Part 2: Time Capsules Deep Audit
+
+### 2.1 API Endpoints Tested
+
+| Endpoint | Method | Status |
+|----------|--------|--------|
+| `/api/time-capsules/` | GET | ✅ Working |
+| `/api/time-capsules/<id>/` | GET | ✅ Working |
+| `/api/time-capsules/ready-to-reveal/` | GET | ✅ Working |
+| `/api/time-capsules/agent/<id>/` | GET | ✅ Working |
+| `/api/time-capsules/<id>/reveal/` | POST | ✅ Working |
+| `/api/time-capsules/<id>/react/` | POST | ✅ Working |
+| `/api/time-capsules/generate/` | POST | ✅ Fixed |
+| `/api/time-capsules/expire-old/` | POST | ✅ Working |
+
+### 2.2 Critical Bug Found: GPT-5-mini Empty Content
+
+**Problem:** 6 out of 8 capsules had empty message content.
+
+**Root Cause:** GPT-5-mini is a reasoning model that uses tokens for internal reasoning before producing output. The `max_completion_tokens` was set too low:
+- `generate_capsule_reflection()`: 200 tokens
+- `GenerateTimeCapsuleView`: 300 tokens
+
+With these limits, GPT-5-mini exhausted tokens during reasoning and returned empty content (`finish_reason: length`).
+
+**Fix:** Increased both to 2000 tokens in `core/views_time_capsules.py`
+
+```python
+# Before (broken)
+max_completion_tokens=200  # or 300
+
+# After (fixed)
+max_completion_tokens=2000  # Enough for reasoning + output
 ```
 
-**New signature (correct):**
-```typescript
-createRule: (data: {
-  name: string
-  description?: string
-  agent_id?: string | null
-  condition_type: string
-  condition_value?: Record<string, unknown>
-  target_mood: string
-  target_intensity?: number  // 0-1 decimal
-  duration_minutes?: number
-  priority?: number
-})
-```
+### 2.3 Frontend Fixes (`frontend/src/pages/TimeCapsulePage.tsx`)
 
-### 4. Create Rule Modal (`frontend/src/pages/AgentMoodPage.tsx`)
+**Problem:** Clicking on opened capsules showed nothing because overview data doesn't include message/reflection.
 
-Added full modal form for creating mood rules with:
-- Rule name (required)
-- Description
-- Trigger condition dropdown (7 condition types)
-- Target mood dropdown (10 moods)
-- Intensity slider (10-100%)
-- Duration input (5-480 minutes)
-- Priority slider (1-100)
+**Fix:**
+1. Added `handleSelectCapsule()` that fetches detail for opened/ready capsules
+2. Added `selectedCapsuleDetail` state for full capsule data
+3. Added loading state while fetching
+4. Shows "Message to Future Self", "Reflection Upon Opening", and "Then vs Now" comparison
 
-**Condition Types:**
-- `task_success` - When agent completes a task successfully
-- `task_failure` - When agent fails a task
-- `collaboration` - When agent collaborates with others
-- `learning` - When agent learns something new
-- `idle` - When agent has been idle
-- `high_workload` - When agent has many pending tasks
-- `streak` - After consecutive successes
+### 2.4 Backend Fix (`core/views_time_capsules.py`)
 
-### 5. Delete Rule Functionality
+**Problem:** `recent_revealed` response was missing `reveal_at` field (original scheduled date).
 
-Added delete button with hover effect on each rule card. Uses `moodApi.deleteRule(ruleId)`.
+**Fix:** Added `reveal_at` to the `recent_revealed` serialization.
 
-### 6. Mood Timestamp Update
+### 2.5 Data Cleanup
 
-Updated all 73 agent mood records to show `mood_started_at` as January 14, 2026.
+- Deleted 6 capsules with empty messages (created before fix)
+- Verified new capsule generation works correctly
 
-### 7. Mood History Backfill
+### 2.6 Final Capsule State
 
-Created initial mood history records for 28 agents that had no history:
-- ArbitrageDetector, BearCaseAgent, BullCaseAgent, ContentExecutorAgent
-- CulturalImpactAgent, ExploitDetectorAgent, FullStackDeveloperAgent
-- InstitutionalWatcherAgent, MarketAnomalyDetectorAgent, MarketMovementMonitorAgent
-- MeetingCoordinatorAgent, NarrativeDriftCoordinator, NarrativeHistorianAgent
-- OpportunityPipelineAgent, PodcastCoordinatorAgent, PredictionMarketAnalyst
-- SignalScannerAgent, SmartContractAuditorAgent, SportsOddsAnalyst
-- StockAnalystAgent, StockAuditCoordinator, SystemIntelligenceAgent
-- TechnicalDocumentAgent, ThinkingAgent, TransactionMonitorAgent
-- TrendBreakDetectorAgent, WhaleWatcherAgent, WorkflowOrchestrationAgent
-
-**Result:** All 73 agents now have mood history (763 total records).
+| Capsule | Agent | Status | Content |
+|---------|-------|--------|---------|
+| Midnight Jazz of Data and Images | ImageAgent | Sealed | ✅ 535 chars |
+| Workflow Reflection | WorkflowAgent | Revealed | ✅ 44 chars + 431 char reflection |
+| Test Capsule | ImageAgent | Revealed | ✅ 14 chars |
 
 ---
 
@@ -126,46 +123,10 @@ Created initial mood history records for 28 agents that had no history:
 | File | Changes |
 |------|---------|
 | `core/views_agent_mood.py` | API field mapping for frontend compatibility |
+| `core/views_time_capsules.py` | Added `reveal_at` to response, fixed GPT-5-mini token limits |
 | `frontend/src/lib/api.ts` | Fixed `createRule` signature |
 | `frontend/src/pages/AgentMoodPage.tsx` | Added mood types, create modal, delete button |
-
----
-
-## Database Changes
-
-| Table | Change |
-|-------|--------|
-| `core_agentmood` | Updated `mood_started_at` for all 73 records |
-| `core_moodhistory` | Added 28 backfill records (763 total) |
-
----
-
-## API Endpoints
-
-| Endpoint | Method | Status |
-|----------|--------|--------|
-| `/api/agent-mood/` | GET | Fixed field mapping |
-| `/api/agent-mood/agent/{id}/history/` | GET | Fixed field mapping |
-| `/api/agent-mood/rules/` | GET | Working |
-| `/api/agent-mood/rules/create/` | POST | Working |
-| `/api/agent-mood/rules/{id}/delete/` | DELETE | Working |
-
----
-
-## Testing
-
-```bash
-# Test rules API
-curl http://localhost:8000/api/agent-mood/rules/
-
-# Test create rule
-curl -X POST http://localhost:8000/api/agent-mood/rules/create/ \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Test Rule", "condition_type": "task_success", "target_mood": "confident", "target_intensity": 0.8}'
-
-# Test delete rule
-curl -X DELETE http://localhost:8000/api/agent-mood/rules/{rule_id}/delete/
-```
+| `frontend/src/pages/TimeCapsulePage.tsx` | Fetch detail on selection, show content panels |
 
 ---
 
@@ -173,13 +134,29 @@ curl -X DELETE http://localhost:8000/api/agent-mood/rules/{rule_id}/delete/
 
 1. `705c5531` - fix(Session 749): Mood Page data display + create/delete rules
 2. `f4d0c135` - docs(Session 749): Update session handoff file
+3. `444bb5c9` - docs(Session 749): Add comprehensive handoff documentation
+4. `29aa1141` - fix(Session 749): Time Capsules page - fetch detail on selection
+5. `3d66d77a` - fix(Session 749): Time Capsules GPT-5-mini token limit
+
+---
+
+## GPT-5-mini Token Guidance
+
+**Important:** When using GPT-5-mini (reasoning model), always use sufficient `max_completion_tokens`:
+
+| Use Case | Recommended Tokens |
+|----------|-------------------|
+| Simple response (1-2 sentences) | 1500-2000 |
+| Medium response (paragraph) | 2000-3000 |
+| Complex analysis | 4000-6000 |
+
+The model uses tokens for internal reasoning before producing visible output. Low token limits cause empty responses with `finish_reason: length`.
 
 ---
 
 ## Next Session
 
-Session 750 can continue with other frontend pages or features. The Mood Page is now fully functional with:
-- All 73 agents displaying correctly
-- All backend moods recognized in dropdown
-- Mood history for all agents
-- Create/delete rules working
+Session 750 can continue with:
+- Other frontend page audits
+- Additional sci-fi feature pages
+- System integration improvements
