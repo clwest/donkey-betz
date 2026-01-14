@@ -157,18 +157,22 @@ This session conducted a comprehensive audit of data display across the platform
 
 ### Backend
 - `core/services/human_interface_service.py` - Added missing fields and comprehensive stats
+- `core/models_unified_system.py` - Added `memory_outcome` to AgentMemory, `cluster_type` to MemoryCluster, `_detect_cluster_type()` method
+- `core/views_memory_clusters.py` - Updated API responses to include `memory_outcome` and `cluster_type`
 
 ### Frontend
 - `frontend/src/pages/HumanPage.tsx` - Enhanced stats, added decision history, ML override indicators
 - `frontend/src/pages/BettingPage.tsx` - Singles/parlays comparison, per-sport breakdown, wager leg expansion
 - `frontend/src/pages/DashboardPage.tsx` - Network graph visualization with active agents and connections
 - `frontend/src/pages/IntelligencePage.tsx` - Gate checklist details, execution history, latency metrics
-- `frontend/src/pages/AgentsPage.tsx` - Fixed modal scrolling for conversation conclusions
+- `frontend/src/pages/AgentsPage.tsx` - Fixed modal scrolling, conversation status indicators, Live Learning WebSocket fix
+- `frontend/src/pages/MemoryPalacePage.tsx` - Outcome filter toggle, memory/cluster badges, cluster type display
 
 ## Database Migrations
 
 - `core/migrations/0163_alter_human_feedback_ml_task_type_null.py` - Allow NULL ml_task_type
 - `core/migrations/0164_add_watch_verify_feature.py` - Add verification fields to HumanAttentionItem
+- `core/migrations/0165_add_memory_outcome_and_cluster_type.py` - Add memory_outcome and cluster_type fields
 
 ## Technical Notes
 
@@ -209,8 +213,40 @@ This session conducted a comprehensive audit of data display across the platform
    - Open an incomplete conversation and verify explanation shows
    - Open a self-talk conversation and verify warning badge appears
 
+### 8. Memory Cluster Enhancements (`frontend/src/pages/MemoryPalacePage.tsx`, `core/models_unified_system.py`, `core/views_memory_clusters.py`)
+
+**Investigation: 100% Similarity Issue**
+- Confirmed root cause: IDENTICAL embedding vectors from identical text content
+- Same input text ("No response message") produces identical embeddings from OpenAI's embedding model
+- This is expected behavior - not a bug
+
+**New Database Fields:**
+- `AgentMemory.memory_outcome` - Choices: `success`, `failure`, `partial`, `unknown` (default)
+- `MemoryCluster.cluster_type` - Choices: `general`, `success_pattern`, `failure_pattern`, `learning_pattern`, `error_recovery`
+- Both fields indexed for fast filtering
+
+**API Response Updates:**
+- `cluster_detail` endpoint now includes `memory_outcome` for each memory
+- `cluster_detail` endpoint now includes `cluster_type` for the cluster
+
+**UI Enhancements:**
+- Added 3-button filter toggle: All / Failures / Successes
+- Added memory outcome badges on memory cards (green for success, red for failure, yellow for partial)
+- Added cluster type badges on cluster info cards
+
+**Cluster Generation Updates:**
+- Added `_detect_cluster_type()` method to automatically classify clusters:
+  - `failure_pattern` when >50% of memories have failure outcome
+  - `success_pattern` when >50% of memories have success outcome
+  - `learning_pattern` when >50% of memories are learning type
+  - `general` otherwise
+
+**Migration:**
+- `core/migrations/0165_add_memory_outcome_and_cluster_type.py`
+
 ## Next Session Priorities
 
 1. Consider adding data visualization charts (time-series, pie charts) where appropriate
 2. Spider Page could benefit from individual spider performance metrics
 3. Body Health detail views could show more granular system data
+4. Backfill `memory_outcome` on existing failure records based on content analysis
