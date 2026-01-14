@@ -1,9 +1,9 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 10, 2026 - Session 744
-**Status:** Component Health: 100% | Integration Score: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI
+**Last Updated:** January 14, 2026 - Session 746
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 85% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI
 
-## System Stats (Session 744)
+## System Stats (Session 746)
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Agents** | 72 | All synced to database + workspace integration |
@@ -26,8 +26,9 @@
 | **Body API Endpoints** | 65 | +6 skin endpoints, unified via body_vitals.py |
 | **Frontend Pages** | 29 | +ContentChannelsPage (Session 741) |
 | **Content Channels** | 3 | 91 episodes with unique AI-generated titles |
-| **Frontend Bundle** | 1,004 KB | All sci-fi features + 9 body systems |
+| **Frontend Bundle** | 1,390 KB | All sci-fi features + 9 body systems + enhanced data displays |
 
+**Data Display Enhancements (Session 746):** Comprehensive audit revealed ~40% of API data wasn't displayed. Fixed: Human Page (stats, decision history, ML override indicators), Betting Page (singles vs parlays, per-sport breakdown, wager leg details), Dashboard (network graph visualization with active agents/connections), Intelligence Page (gate checklist details, execution history, latency metrics).
 **Integration Roadmap COMPLETE (Session 744):** All 5 phases done - Celery health, spider-to-agent data flow, learning patterns, advisor wisdom, feedback loops. All 72 agents now receive context automatically + can delegate to specialists. DynamicTeamBuilder enables cross-domain agent teams.
 **SKIN System (Session 723):** Workspace output monitoring - file writes, project changes, rollback availability, 6 API endpoints, 7 status levels (healthy/active/sweating/irritated/damaged/healing/dormant)
 **BRAIN System (Session 722):** Cognitive processing monitoring - LLM calls, conversations, reasoning chains, 5 API endpoints, 6 status levels (focused/thinking/overloaded/foggy/resting/offline)
@@ -199,6 +200,8 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **746** | **Data Display Enhancements** - Comprehensive audit + fixes for hidden API data. Human Page (stats, decision history), Betting Page (singles vs parlays, per-sport, wager legs), Dashboard (network visualization), Intelligence Page (gate details, execution history). Data display coverage: 60% → 85% | `SESSION_746_DATA_DISPLAY_ENHANCEMENTS.md` |
+| **745** | **Watch & Verify Feature** - Arbitrage paper trading on Human Page, Watching tab on Betting Page, deduplication for attention items | `SESSION_745_API_UI_COVERAGE_AUDIT.md` |
 | **744** | **Integration Roadmap COMPLETE** - All 5 phases done (Celery health, spider-to-agent, learning patterns, advisor wisdom, feedback loops). Cross-agent delegation enabled for all 72 agents with 3-level chain support. Integration score: 95% | `SESSION_744_INTEGRATION_ROADMAP_COMPLETE.md` |
 | **743** | **Content Diversity Orchestrator** - Ensures AI-generated content is diverse and non-repetitive | `SESSION_743_CONTENT_DIVERSITY_ORCHESTRATOR.md` |
 | **742** | **Human Page Data Display** - Enhanced Human dashboard with real data | `SESSION_742_HUMAN_PAGE_DATA_DISPLAY.md` |

@@ -3447,22 +3447,24 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Participants Strip */}
-            <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-500">Participants:</span>
-              {selectedConversation.participants.map((participant, idx) => (
-                <span
-                  key={idx}
-                  className="text-xs px-2 py-1 rounded-full bg-dark-card text-gray-300 flex items-center gap-1"
-                >
-                  <span>{participant.emoji || '🤖'}</span>
-                  {participant.name}
-                </span>
-              ))}
-            </div>
+            {/* Session 746: Scrollable content area for entire modal body */}
+            <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* Participants Strip */}
+              <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-500">Participants:</span>
+                {selectedConversation.participants.map((participant, idx) => (
+                  <span
+                    key={idx}
+                    className="text-xs px-2 py-1 rounded-full bg-dark-card text-gray-300 flex items-center gap-1"
+                  >
+                    <span>{participant.emoji || '🤖'}</span>
+                    {participant.name}
+                  </span>
+                ))}
+              </div>
 
-            {/* Message Thread */}
-            <div className="p-6 overflow-y-auto max-h-[50vh] space-y-4">
+              {/* Message Thread */}
+              <div className="p-6 space-y-4">
               {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
                 selectedConversation.messages.map((msg, idx) => (
                   <div
@@ -3516,40 +3518,42 @@ export default function AgentsPage() {
                   </p>
                 </div>
               )}
-            </div>
-
-            {/* Conclusion Section */}
-            {selectedConversation.conclusion && (
-              <div className="px-6 py-4 border-t border-dark-border bg-accent-green/5">
-                <h3 className="text-sm font-medium text-accent-green mb-2 flex items-center gap-2">
-                  <CheckCircle size={14} />
-                  Conclusion
-                </h3>
-                <p className="text-sm text-gray-200 leading-relaxed">
-                  {selectedConversation.conclusion}
-                </p>
               </div>
-            )}
 
-            {/* Insights Section */}
-            {selectedConversation.insights && selectedConversation.insights.length > 0 && (
-              <div className="px-6 py-4 border-t border-dark-border">
-                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                  <Lightbulb size={14} />
-                  Insights Generated
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedConversation.insights.map((insight, idx) => (
-                    <span
-                      key={idx}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-dark-hover text-gray-300 border border-dark-border"
-                    >
-                      {typeof insight === 'string' ? insight : 'Insight'}
-                    </span>
-                  ))}
+              {/* Conclusion Section */}
+              {selectedConversation.conclusion && (
+                <div className="px-6 py-4 border-t border-dark-border bg-accent-green/5">
+                  <h3 className="text-sm font-medium text-accent-green mb-2 flex items-center gap-2">
+                    <CheckCircle size={14} />
+                    Conclusion
+                  </h3>
+                  <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    {selectedConversation.conclusion}
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Insights Section */}
+              {selectedConversation.insights && selectedConversation.insights.length > 0 && (
+                <div className="px-6 py-4 border-t border-dark-border">
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Lightbulb size={14} />
+                    Insights Generated
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedConversation.insights.map((insight, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-dark-hover text-gray-300 border border-dark-border"
+                      >
+                        {typeof insight === 'string' ? insight : 'Insight'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* End scrollable content area */}
 
             {/* Modal Footer */}
             <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">

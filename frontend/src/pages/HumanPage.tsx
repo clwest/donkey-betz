@@ -22,7 +22,6 @@ import {
   ThumbsUp,
   ThumbsDown,
   Timer,
-  TrendingUp,
   Activity,
   Loader2,
   RefreshCw,
@@ -35,6 +34,13 @@ import {
   BarChart3,
   Lightbulb,
   Sparkles,
+  PieChart,
+  History,
+  Scale,
+  Database,
+  GitBranch,
+  Brain,
+  AlertOctagon,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -53,10 +59,27 @@ interface AttentionItem {
   impact_estimate: string | null
   ml_confidence: number | null
   ml_recommendation: string | null
-  status: 'pending' | 'viewed' | 'acted' | 'deferred' | 'ignored' | 'expired'
+  // Session 746: Added watching and verified statuses
+  status: 'pending' | 'viewed' | 'acted' | 'deferred' | 'ignored' | 'expired' | 'watching' | 'verified'
   created_at: string
   expires_at: string | null
   deferred_until: string | null
+  viewed_at: string | null
+  // Session 746: Decision fields
+  decision: string | null
+  decision_feedback: string | null
+  decision_confidence: number | null
+  decided_at: string | null
+  time_to_decision_ms: number | null
+  // Session 746: ML override fields
+  human_overrode_ml: boolean
+  override_reason: string | null
+  // Session 746: Verification fields for Watch & Verify feature
+  verification_outcome?: 'pending' | 'won' | 'lost' | 'push' | 'cancelled' | null
+  verified_at?: string | null
+  verification_profit?: number | null
+  verification_notes?: string
+  event_completed_at?: string | null
 }
 
 interface AttentionStats {
@@ -65,6 +88,26 @@ interface AttentionStats {
   avg_decision_time_ms: number | null
   ml_agreement_rate: number | null
   total_with_ml_context: number
+  // Session 746: New comprehensive stats
+  by_type: Record<string, number>
+  by_source: Record<string, number>
+  by_status: Record<string, number>
+  by_decision: Record<string, number>
+  watching_count: number
+  verified_count: number
+  verification_outcomes: Record<string, number>
+  paper_profit: number
+  override_count: number
+  feedback_count: number
+  fed_to_ml_count: number
+  recent_actions: Array<{
+    action_type: string
+    target_type: string
+    target_id: string
+    reason: string
+    created_at: string
+  }>
+  total_items: number
 }
 
 interface SystemState {
@@ -655,6 +698,21 @@ function DecisionModal({
             <AlertTriangle size={16} />
             Escalate
           </button>
+
+          {/* Session 746: Watch & Verify button - especially useful for arbitrage opportunities */}
+          <button
+            onClick={() => onDecide('watch', feedback, confidence / 100)}
+            disabled={isLoading}
+            className={cn(
+              "btn flex items-center gap-2",
+              item.item_type === 'arbitrage'
+                ? "bg-cyan-500/30 text-cyan-300 hover:bg-cyan-500/40 ring-1 ring-cyan-500/50"
+                : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"
+            )}
+          >
+            <Eye size={16} />
+            Watch & Verify
+          </button>
         </div>
       </div>
     </div>
@@ -665,6 +723,10 @@ export default function HumanPage() {
   const [activeTab, setActiveTab] = useState<'attention' | 'control' | 'preferences'>('attention')
   const [selectedItem, setSelectedItem] = useState<AttentionItem | null>(null)
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
+  // Session 746: Add status filter to view acted/pending/all items
+  const [statusFilter, setStatusFilter] = useState<string[]>(['pending', 'viewed'])
+  // Session 746: Toggle for decision history view
+  const [showDecisionHistory, setShowDecisionHistory] = useState(false)
   const [localPrefs, setLocalPrefs] = useState<Partial<Preferences>>({})
   const queryClient = useQueryClient()
 
@@ -693,9 +755,14 @@ export default function HumanPage() {
   })
 
   // REST API queries
+  // Session 746: Include status filter in API call
   const { data: attentionResponse, isLoading: loadingAttention, refetch: refetchAttention, error: attentionError } = useQuery({
-    queryKey: ['human-attention', urgencyFilter],
-    queryFn: () => humanApi.attention({ limit: 50, urgency: urgencyFilter.length > 0 ? urgencyFilter : undefined }),
+    queryKey: ['human-attention', urgencyFilter, statusFilter],
+    queryFn: () => humanApi.attention({
+      limit: 100,
+      urgency: urgencyFilter.length > 0 ? urgencyFilter : undefined,
+      status: statusFilter.length > 0 ? statusFilter : undefined,
+    }),
   })
 
   // Debug: Log API response
@@ -929,8 +996,8 @@ export default function HumanPage() {
         </a>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats Cards - Primary Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card">
           <div className="flex items-center gap-3">
             <Bell className="text-accent-amber" size={24} />
@@ -953,10 +1020,34 @@ export default function HumanPage() {
         </div>
         <div className="card">
           <div className="flex items-center gap-3">
-            <Timer className="text-accent-cyan" size={24} />
+            <Eye className="text-cyan-400" size={24} />
             <div>
-              <p className="text-sm text-gray-400">Avg Decision Time</p>
-              <p className="text-2xl font-bold">
+              <p className="text-sm text-gray-400">Watching</p>
+              <p className="text-2xl font-bold">{stats.watching_count || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <div className="flex items-center gap-3">
+            <DollarSign className={cn("size-6", (stats.paper_profit || 0) >= 0 ? "text-accent-green" : "text-accent-red")} />
+            <div>
+              <p className="text-sm text-gray-400">Paper P/L</p>
+              <p className={cn("text-2xl font-bold", (stats.paper_profit || 0) >= 0 ? "text-accent-green" : "text-accent-red")}>
+                {(stats.paper_profit || 0) >= 0 ? '+' : ''}${(stats.paper_profit || 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards - Secondary Row */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="card">
+          <div className="flex items-center gap-3">
+            <Timer className="text-accent-cyan" size={20} />
+            <div>
+              <p className="text-xs text-gray-400">Avg Decision</p>
+              <p className="text-lg font-bold">
                 {stats.avg_decision_time_ms ? `${Math.round(stats.avg_decision_time_ms / 1000)}s` : '--'}
               </p>
             </div>
@@ -964,16 +1055,144 @@ export default function HumanPage() {
         </div>
         <div className="card">
           <div className="flex items-center gap-3">
-            <TrendingUp className="text-accent-green" size={24} />
+            <Bot className="text-primary-400" size={20} />
             <div>
-              <p className="text-sm text-gray-400">ML Agreement</p>
-              <p className="text-2xl font-bold">
-                {stats.ml_agreement_rate ? `${Math.round(stats.ml_agreement_rate * 100)}%` : '--'}
+              <p className="text-xs text-gray-400">ML Agreement</p>
+              <p className="text-lg font-bold">
+                {stats.ml_agreement_rate ? `${Math.round(stats.ml_agreement_rate)}%` : '--'}
               </p>
             </div>
           </div>
         </div>
+        <div className="card">
+          <div className="flex items-center gap-3">
+            <Scale className="text-accent-amber" size={20} />
+            <div>
+              <p className="text-xs text-gray-400">ML Overrides</p>
+              <p className="text-lg font-bold">{stats.override_count || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <div className="flex items-center gap-3">
+            <Database className="text-accent-purple" size={20} />
+            <div>
+              <p className="text-xs text-gray-400">Feedback Records</p>
+              <p className="text-lg font-bold">{stats.feedback_count || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <div className="flex items-center gap-3">
+            <Brain className="text-primary-400" size={20} />
+            <div>
+              <p className="text-xs text-gray-400">Fed to ML</p>
+              <p className="text-lg font-bold">{stats.fed_to_ml_count || 0}</p>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Expandable Stats Breakdown */}
+      <details className="card">
+        <summary className="flex items-center gap-2 cursor-pointer font-medium">
+          <PieChart size={18} className="text-primary-400" />
+          Detailed Breakdown
+          <span className="text-sm text-gray-400 ml-2">({stats.total_items || 0} total items)</span>
+        </summary>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* By Item Type */}
+          <div className="p-3 rounded-lg bg-dark-bg">
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <Activity size={14} className="text-primary-400" />
+              By Type
+            </h4>
+            <div className="space-y-1">
+              {Object.entries(stats.by_type || {}).map(([type, count]) => (
+                <div key={type} className="flex justify-between text-sm">
+                  <span className="text-gray-400 capitalize">{type}</span>
+                  <span className="font-medium">{count}</span>
+                </div>
+              ))}
+              {Object.keys(stats.by_type || {}).length === 0 && (
+                <p className="text-xs text-gray-500">No data</p>
+              )}
+            </div>
+          </div>
+
+          {/* By Source Agent */}
+          <div className="p-3 rounded-lg bg-dark-bg">
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <Bot size={14} className="text-accent-cyan" />
+              By Agent
+            </h4>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {Object.entries(stats.by_source || {}).map(([agent, count]) => (
+                <div key={agent} className="flex justify-between text-sm">
+                  <span className="text-gray-400 truncate max-w-[150px]">{agent}</span>
+                  <span className="font-medium">{count}</span>
+                </div>
+              ))}
+              {Object.keys(stats.by_source || {}).length === 0 && (
+                <p className="text-xs text-gray-500">No data</p>
+              )}
+            </div>
+          </div>
+
+          {/* By Decision */}
+          <div className="p-3 rounded-lg bg-dark-bg">
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <GitBranch size={14} className="text-accent-green" />
+              By Decision
+            </h4>
+            <div className="space-y-1">
+              {Object.entries(stats.by_decision || {}).map(([decision, count]) => (
+                <div key={decision} className="flex justify-between text-sm">
+                  <span className="text-gray-400 capitalize">{decision}</span>
+                  <span className="font-medium">{count}</span>
+                </div>
+              ))}
+              {Object.keys(stats.by_decision || {}).length === 0 && (
+                <p className="text-xs text-gray-500">No decisions yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Verification Stats */}
+        {(stats.watching_count > 0 || stats.verified_count > 0) && (
+          <div className="mt-4 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2 text-cyan-400">
+              <Eye size={14} />
+              Watch & Verify Stats
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-cyan-400">{stats.watching_count || 0}</p>
+                <p className="text-xs text-gray-400">Watching</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.verified_count || 0}</p>
+                <p className="text-xs text-gray-400">Verified</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-accent-green">{stats.verification_outcomes?.won || 0}</p>
+                <p className="text-xs text-gray-400">Would Win</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-accent-red">{stats.verification_outcomes?.lost || 0}</p>
+                <p className="text-xs text-gray-400">Would Lose</p>
+              </div>
+              <div>
+                <p className={cn("text-2xl font-bold", (stats.paper_profit || 0) >= 0 ? "text-accent-green" : "text-accent-red")}>
+                  {(stats.paper_profit || 0) >= 0 ? '+' : ''}${(stats.paper_profit || 0).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-400">Paper P/L</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </details>
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-dark-border pb-4">
@@ -1002,48 +1221,233 @@ export default function HumanPage() {
       {activeTab === 'attention' && (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {(['critical', 'high', 'medium', 'low'] as const).map((urgency) => {
-                const config = URGENCY_CONFIG[urgency]
-                const isSelected = urgencyFilter.includes(urgency)
-                return (
-                  <button
-                    key={urgency}
-                    onClick={() => {
-                      setUrgencyFilter((prev) =>
-                        isSelected ? prev.filter((u) => u !== urgency) : [...prev, urgency]
-                      )
-                    }}
-                    className={cn(
-                      'px-3 py-1.5 rounded-lg text-sm capitalize transition-colors',
-                      isSelected
-                        ? `${config.color} text-white`
-                        : `${config.color}/20 ${config.textColor} hover:${config.color}/30`
-                    )}
-                  >
-                    {urgency}
-                  </button>
-                )
-              })}
+          <div className="flex flex-col gap-3">
+            {/* Urgency Filter */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400">Urgency:</span>
+                <div className="flex gap-2">
+                  {(['critical', 'high', 'medium', 'low'] as const).map((urgency) => {
+                    const config = URGENCY_CONFIG[urgency]
+                    const isSelected = urgencyFilter.includes(urgency)
+                    return (
+                      <button
+                        key={urgency}
+                        onClick={() => {
+                          setUrgencyFilter((prev) =>
+                            isSelected ? prev.filter((u) => u !== urgency) : [...prev, urgency]
+                          )
+                        }}
+                        className={cn(
+                          'px-3 py-1.5 rounded-lg text-sm capitalize transition-colors',
+                          isSelected
+                            ? `${config.color} text-white`
+                            : `${config.color}/20 ${config.textColor} hover:${config.color}/30`
+                        )}
+                      >
+                        {urgency}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <button
+                onClick={() => refetchAttention()}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
+              >
+                <RefreshCw size={14} />
+                Refresh
+              </button>
             </div>
-            <button
-              onClick={() => refetchAttention()}
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
-            >
-              <RefreshCw size={14} />
-              Refresh
-            </button>
+
+            {/* Session 746: Status Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">Status:</span>
+              <div className="flex gap-2">
+                {[
+                  { value: 'pending', label: 'Pending', color: 'bg-yellow-500' },
+                  { value: 'viewed', label: 'Viewed', color: 'bg-blue-500' },
+                  { value: 'acted', label: 'Acted', color: 'bg-green-500' },
+                  { value: 'deferred', label: 'Deferred', color: 'bg-purple-500' },
+                  // Session 746: Add watching and verified statuses for arbitrage verification
+                  { value: 'watching', label: 'Watching', color: 'bg-cyan-500' },
+                  { value: 'verified', label: 'Verified', color: 'bg-emerald-500' },
+                ].map((status) => {
+                  const isSelected = statusFilter.includes(status.value)
+                  return (
+                    <button
+                      key={status.value}
+                      onClick={() => {
+                        setStatusFilter((prev) =>
+                          isSelected ? prev.filter((s) => s !== status.value) : [...prev, status.value]
+                        )
+                      }}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-sm transition-colors',
+                        isSelected
+                          ? `${status.color} text-white`
+                          : `${status.color}/20 text-gray-300 hover:${status.color}/30`
+                      )}
+                    >
+                      {status.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                onClick={() => setStatusFilter(['pending', 'viewed'])}
+                className="ml-2 px-2 py-1 text-xs text-gray-500 hover:text-gray-300"
+              >
+                Reset
+              </button>
+            </div>
+
+            {/* Session 746: Decision History Toggle */}
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => setShowDecisionHistory(!showDecisionHistory)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors',
+                  showDecisionHistory
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-dark-card text-gray-400 hover:text-white'
+                )}
+              >
+                <History size={14} />
+                Decision History
+              </button>
+            </div>
           </div>
 
+          {/* Session 746: Decision History View */}
+          {showDecisionHistory && (
+            <div className="card">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <History size={20} className="text-primary-400" />
+                Decision History
+              </h3>
+              {attentionItems.filter(i => i.decision).length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <History size={32} className="mx-auto mb-2 opacity-50" />
+                  <p>No decisions recorded yet</p>
+                  <p className="text-xs mt-1">Make decisions on pending items to see them here</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-dark-border">
+                      <tr className="text-left text-gray-400">
+                        <th className="pb-2 font-medium">Item</th>
+                        <th className="pb-2 font-medium">Type</th>
+                        <th className="pb-2 font-medium">Decision</th>
+                        <th className="pb-2 font-medium">Confidence</th>
+                        <th className="pb-2 font-medium">ML Override</th>
+                        <th className="pb-2 font-medium">Time to Decide</th>
+                        <th className="pb-2 font-medium">Decided At</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-border">
+                      {attentionItems
+                        .filter(i => i.decision)
+                        .sort((a, b) => new Date(b.decided_at || 0).getTime() - new Date(a.decided_at || 0).getTime())
+                        .slice(0, 20)
+                        .map((item) => (
+                          <tr key={item.id} className="hover:bg-dark-hover">
+                            <td className="py-2">
+                              <span className="font-medium truncate max-w-[200px] block" title={item.title}>
+                                {item.title.slice(0, 40)}{item.title.length > 40 ? '...' : ''}
+                              </span>
+                            </td>
+                            <td className="py-2">
+                              <span className="capitalize text-gray-400">{item.item_type}</span>
+                            </td>
+                            <td className="py-2">
+                              <span className={cn(
+                                'px-2 py-0.5 rounded text-xs font-medium capitalize',
+                                item.decision === 'approve' ? 'bg-accent-green/20 text-accent-green' :
+                                item.decision === 'reject' ? 'bg-accent-red/20 text-accent-red' :
+                                item.decision === 'watch' ? 'bg-cyan-500/20 text-cyan-400' :
+                                item.decision === 'modify' ? 'bg-accent-amber/20 text-accent-amber' :
+                                item.decision === 'defer' ? 'bg-accent-purple/20 text-accent-purple' :
+                                'bg-gray-500/20 text-gray-400'
+                              )}>
+                                {item.decision}
+                              </span>
+                            </td>
+                            <td className="py-2">
+                              {item.decision_confidence ? (
+                                <span className={cn(
+                                  'text-xs',
+                                  item.decision_confidence >= 0.8 ? 'text-accent-green' :
+                                  item.decision_confidence >= 0.5 ? 'text-accent-amber' : 'text-accent-red'
+                                )}>
+                                  {Math.round(item.decision_confidence * 100)}%
+                                </span>
+                              ) : (
+                                <span className="text-gray-500">--</span>
+                              )}
+                            </td>
+                            <td className="py-2">
+                              {item.human_overrode_ml ? (
+                                <span className="flex items-center gap-1 text-accent-amber">
+                                  <AlertOctagon size={12} />
+                                  Yes
+                                </span>
+                              ) : item.ml_confidence ? (
+                                <span className="text-gray-500">No</span>
+                              ) : (
+                                <span className="text-gray-600">N/A</span>
+                              )}
+                            </td>
+                            <td className="py-2">
+                              {item.time_to_decision_ms ? (
+                                <span className="text-gray-300">
+                                  {item.time_to_decision_ms < 60000
+                                    ? `${Math.round(item.time_to_decision_ms / 1000)}s`
+                                    : `${Math.round(item.time_to_decision_ms / 60000)}m`}
+                                </span>
+                              ) : (
+                                <span className="text-gray-500">--</span>
+                              )}
+                            </td>
+                            <td className="py-2 text-gray-400 text-xs">
+                              {item.decided_at ? new Date(item.decided_at).toLocaleString() : '--'}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {/* Feedback notes */}
+              {attentionItems.filter(i => i.decision && i.decision_feedback).length > 0 && (
+                <details className="mt-4">
+                  <summary className="text-sm text-gray-400 cursor-pointer hover:text-white">
+                    View decision notes ({attentionItems.filter(i => i.decision_feedback).length})
+                  </summary>
+                  <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                    {attentionItems
+                      .filter(i => i.decision_feedback)
+                      .map(item => (
+                        <div key={item.id} className="p-2 rounded bg-dark-bg text-sm">
+                          <span className="font-medium">{item.title.slice(0, 30)}:</span>
+                          <span className="text-gray-400 ml-2 italic">"{item.decision_feedback}"</span>
+                        </div>
+                      ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
+
           {/* Attention Items by Urgency */}
-          {attentionItems.length === 0 ? (
+          {!showDecisionHistory && attentionItems.length === 0 ? (
             <div className="card text-center py-12">
               <CheckCircle className="mx-auto mb-4 text-accent-green" size={48} />
               <h3 className="text-lg font-semibold mb-2">All Clear!</h3>
               <p className="text-gray-400">No items requiring your attention right now.</p>
             </div>
-          ) : (
+          ) : !showDecisionHistory && (
             <div className="space-y-4">
               {Object.entries(groupedItems)
                 .filter(([, items]) => items.length > 0)
@@ -1059,7 +1463,8 @@ export default function HumanPage() {
                         </span>
                         <span className="text-sm text-gray-400">({items.length})</span>
                       </div>
-                      <div className="divide-y divide-dark-border">
+                      {/* Session 746: Add scroll area for each urgency section */}
+                      <div className="divide-y divide-dark-border max-h-80 overflow-y-auto">
                         {items.map((item) => {
                           // Session 742: Add item type config for list view
                           const listItemTypeConfig = ITEM_TYPE_CONFIG[item.item_type] || { color: 'bg-gray-500', textColor: 'text-gray-400', icon: Activity, label: item.item_type }
@@ -1101,6 +1506,25 @@ export default function HumanPage() {
                                   {item.ml_confidence && (
                                     <span className="px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
                                       ML: {Math.round(item.ml_confidence * 100)}%
+                                    </span>
+                                  )}
+                                  {/* Session 746: ML Override indicator */}
+                                  {item.human_overrode_ml && (
+                                    <span className="px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
+                                      <AlertOctagon size={10} />
+                                      Overrode ML
+                                    </span>
+                                  )}
+                                  {/* Session 746: Decision badge for acted items */}
+                                  {item.decision && (
+                                    <span className={cn(
+                                      'px-2 py-0.5 rounded capitalize',
+                                      item.decision === 'approve' ? 'bg-accent-green/20 text-accent-green' :
+                                      item.decision === 'reject' ? 'bg-accent-red/20 text-accent-red' :
+                                      item.decision === 'watch' ? 'bg-cyan-500/20 text-cyan-400' :
+                                      'bg-gray-500/20 text-gray-400'
+                                    )}>
+                                      {item.decision}
                                     </span>
                                   )}
                                 </div>
@@ -1239,6 +1663,54 @@ export default function HumanPage() {
                 )
               })}
             </div>
+          </div>
+
+          {/* Session 746: Control Action History / Audit Log */}
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <History size={20} className="text-primary-400" />
+              Control Action History
+            </h3>
+            {stats.recent_actions && stats.recent_actions.length > 0 ? (
+              <div className="space-y-2 max-h-[300px] overflow-auto">
+                {stats.recent_actions.map((action, index) => (
+                  <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-dark-bg">
+                    <div className={cn(
+                      'p-2 rounded-lg',
+                      action.action_type.includes('pause') ? 'bg-accent-red/20' :
+                      action.action_type.includes('resume') ? 'bg-accent-green/20' :
+                      action.action_type.includes('quiet') ? 'bg-accent-purple/20' :
+                      'bg-primary-500/20'
+                    )}>
+                      {action.action_type.includes('pause') ? <Pause size={14} className="text-accent-red" /> :
+                       action.action_type.includes('resume') ? <Play size={14} className="text-accent-green" /> :
+                       action.action_type.includes('quiet') ? <Moon size={14} className="text-accent-purple" /> :
+                       action.action_type.includes('review') ? <Eye size={14} className="text-accent-amber" /> :
+                       <Settings size={14} className="text-primary-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm capitalize">
+                        {action.action_type.replace(/_/g, ' ')}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {action.target_type}: {action.target_id}
+                      </p>
+                      {action.reason && (
+                        <p className="text-xs text-gray-500 mt-1 italic">"{action.reason}"</p>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 whitespace-nowrap">
+                      {new Date(action.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <History size={32} className="mx-auto mb-2 opacity-50" />
+                <p>No control actions recorded yet</p>
+              </div>
+            )}
           </div>
         </div>
       )}

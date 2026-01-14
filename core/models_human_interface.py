@@ -39,6 +39,9 @@ class HumanAttentionItem(models.Model):
     STATUS_DEFERRED = 'deferred'
     STATUS_IGNORED = 'ignored'
     STATUS_EXPIRED = 'expired'
+    # Session 746: Add watching status for arbitrage verification
+    STATUS_WATCHING = 'watching'
+    STATUS_VERIFIED = 'verified'
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
         (STATUS_VIEWED, 'Viewed'),
@@ -46,6 +49,8 @@ class HumanAttentionItem(models.Model):
         (STATUS_DEFERRED, 'Deferred'),
         (STATUS_IGNORED, 'Ignored'),
         (STATUS_EXPIRED, 'Expired'),
+        (STATUS_WATCHING, 'Watching'),
+        (STATUS_VERIFIED, 'Verified'),
     ]
 
     # Decision types
@@ -56,6 +61,8 @@ class HumanAttentionItem(models.Model):
     DECISION_DELEGATE = 'delegate'
     DECISION_IGNORE = 'ignore'
     DECISION_ESCALATE = 'escalate'
+    # Session 746: Add watch decision for paper trading / verification
+    DECISION_WATCH = 'watch'
     DECISION_CHOICES = [
         (DECISION_APPROVE, 'Approve'),
         (DECISION_REJECT, 'Reject'),
@@ -64,6 +71,21 @@ class HumanAttentionItem(models.Model):
         (DECISION_DELEGATE, 'Delegate'),
         (DECISION_IGNORE, 'Ignore'),
         (DECISION_ESCALATE, 'Escalate'),
+        (DECISION_WATCH, 'Watch & Verify'),
+    ]
+
+    # Verification outcomes (for watched items)
+    VERIFY_WON = 'won'
+    VERIFY_LOST = 'lost'
+    VERIFY_PUSH = 'push'
+    VERIFY_CANCELLED = 'cancelled'
+    VERIFY_PENDING = 'pending'
+    VERIFICATION_CHOICES = [
+        (VERIFY_PENDING, 'Pending Verification'),
+        (VERIFY_WON, 'Would Have Won'),
+        (VERIFY_LOST, 'Would Have Lost'),
+        (VERIFY_PUSH, 'Push (No Action)'),
+        (VERIFY_CANCELLED, 'Event Cancelled'),
     ]
 
     # Identity
@@ -128,6 +150,18 @@ class HumanAttentionItem(models.Model):
     viewed_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
 
+    # Session 746: Verification fields for Watch & Verify feature
+    # Used to track arbitrage/prediction outcomes without actually betting
+    verification_outcome = models.CharField(
+        max_length=20,
+        choices=VERIFICATION_CHOICES,
+        null=True, blank=True
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    verification_profit = models.FloatField(null=True, blank=True)  # Calculated profit/loss
+    verification_notes = models.TextField(blank=True)
+    event_completed_at = models.DateTimeField(null=True, blank=True)  # When the actual event finished
+
     class Meta:
         ordering = ['-priority_score', '-created_at']
         indexes = [
@@ -153,7 +187,13 @@ class HumanAttentionItem(models.Model):
         self.decision_feedback = feedback
         self.decision_confidence = confidence
         self.decided_at = timezone.now()
-        self.status = self.STATUS_ACTED
+
+        # Session 746: Handle 'watch' decision - set status to watching instead of acted
+        if decision == self.DECISION_WATCH:
+            self.status = self.STATUS_WATCHING
+            self.verification_outcome = self.VERIFY_PENDING
+        else:
+            self.status = self.STATUS_ACTED
 
         # Calculate time to decision
         if self.viewed_at:
@@ -166,6 +206,19 @@ class HumanAttentionItem(models.Model):
             human_approved = decision == self.DECISION_APPROVE
             self.human_overrode_ml = ml_would_approve != human_approved
 
+        self.save()
+
+    def record_verification(self, outcome: str, profit: float = None, notes: str = ''):
+        """
+        Session 746: Record the verification outcome for a watched item.
+        Call this after the event has completed to track whether it would have been profitable.
+        """
+        self.verification_outcome = outcome
+        self.verification_profit = profit
+        self.verification_notes = notes
+        self.verified_at = timezone.now()
+        self.event_completed_at = timezone.now()
+        self.status = self.STATUS_VERIFIED
         self.save()
 
 
@@ -185,7 +238,7 @@ class HumanFeedbackRecord(models.Model):
     confidence = models.FloatField(null=True, blank=True)
 
     # ML Context at Decision Time
-    ml_task_type = models.CharField(max_length=50, blank=True)
+    ml_task_type = models.CharField(max_length=50, blank=True, null=True)
     ml_models_used = models.JSONField(null=True, blank=True)
     ml_prediction = models.JSONField(null=True, blank=True)
     ml_confidence = models.FloatField(null=True, blank=True)
