@@ -11,6 +11,8 @@
 Audited the Time Travel page (Decision tracking, session replay, and outcome analysis). Found and fixed:
 1. Frontend decision type config mismatch
 2. Backend API signature mismatches (4 endpoints accepting wrong parameters)
+3. Frontend duration display showing "0m" instead of actual duration
+4. Simulation data was placeholder/dummy - now has realistic content
 
 ---
 
@@ -57,11 +59,11 @@ The Time Travel feature allows debugging agent decisions by:
 | ReplayBookmarks | 0 |
 | DebugAnnotations | 0 |
 
-### Sessions Detail
+### Sessions Detail (After Regeneration)
 
-- **OpportunityScoringAgent**: content_creation (completed) - 5 decisions
-- **SocialMediaAgent**: image_generation (completed) - 5 decisions
-- **ImageAgent**: workflow (completed) - 5 decisions
+- **ResearchAgent**: research (completed) - 5 decisions with realistic market research content
+- **ContentWriterAgent**: content_creation (completed) - 5 decisions with content generation workflow
+- **ImageAgent**: image_generation (completed) - 5 decisions with visual creation reasoning
 
 ---
 
@@ -119,14 +121,55 @@ def start_session(request):
     agent = Agent.objects.get(id=agent_id)
 ```
 
+### 3. Frontend Duration Display Bug
+
+**Problem:** Duration showed "0m" for sessions that were only seconds long (e.g., 26.4s).
+
+**Fix:** Updated frontend to use `duration_formatted` from API instead of calculating:
+```typescript
+// Before: Calculated in minutes (showed 0m for <60s sessions)
+{formatDuration(session.started_at, session.ended_at)}
+
+// After: Use API-provided formatted duration
+{sessionDetail?.duration_formatted || sessionDetail?.duration || ...}
+```
+
+### 4. Simulation Data Was Placeholder/Dummy
+
+**Problem:** The `simulate_session` function created generic placeholder data:
+- Alternatives: "Alternative 1", "Alternative 2", "Alternative 3"
+- Thoughts: "Thought 1: Considering the context and requirements..."
+- No outcome notes explaining why decisions failed
+
+**Fix:** Rewrote simulation with realistic task-specific content for 3 task types:
+
+| Task Type | Example Decisions |
+|-----------|-------------------|
+| **image_generation** | Visual requirements analysis, composition planning, DALL-E tool selection |
+| **research** | Research scope definition, methodology structuring, spider selection |
+| **content_creation** | Content requirements, structure outlining, GPT-5 tool selection |
+
+Sample realistic data:
+```python
+# Realistic alternatives
+alternatives: ['Use vibrant gradient background', 'Apply flat design with icons', 'Create 3D rendered scene']
+
+# Realistic thoughts
+content: 'Enterprise AI market showing 40% YoY growth'
+content: 'DALL-E 3 text rendering accuracy is ~95% vs ~60% for alternatives'
+
+# Failure reasons
+outcome_notes: 'API rate limit exceeded, retrying with exponential backoff'
+```
+
 ---
 
 ## Files Modified
 
 | File | Changes |
 |------|---------|
-| `core/views_time_travel.py` | Fixed `start_session`, `record_decision`, `create_bookmark`, `add_annotation` to accept IDs from body |
-| `frontend/src/pages/TimeTravelPage.tsx` | Added backend decision types to config |
+| `core/views_time_travel.py` | Fixed API signatures + realistic simulation data |
+| `frontend/src/pages/TimeTravelPage.tsx` | Decision types config + duration display fix |
 
 ---
 
