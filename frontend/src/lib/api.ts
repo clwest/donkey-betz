@@ -389,11 +389,15 @@ export const moodApi = {
   // Mood rules
   rules: () => api.get('/agent-mood/rules/'),
   createRule: (data: {
-    trigger_type: string
-    trigger_value: string
-    mood_change: string
-    intensity_change: number
+    name: string
     description?: string
+    agent_id?: string | null
+    condition_type: string
+    condition_value?: Record<string, unknown>
+    target_mood: string
+    target_intensity?: number  // 0-1 decimal
+    duration_minutes?: number
+    priority?: number
   }) => api.post('/agent-mood/rules/create/', data),
   deleteRule: (ruleId: string) => api.delete(`/agent-mood/rules/${ruleId}/delete/`),
 

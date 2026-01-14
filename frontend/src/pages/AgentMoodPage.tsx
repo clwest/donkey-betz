@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { moodApi } from '@/lib/api'
 import Breadcrumb from '@/components/Breadcrumb'
 import {
@@ -18,6 +18,9 @@ import {
   ChevronRight,
   Clock,
   ListFilter,
+  Plus,
+  Trash2,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -41,27 +44,41 @@ interface MoodHistoryItem {
   recorded_at: string
 }
 
+// Session 749: Updated to match backend field names
 interface MoodRule {
   id: string
-  trigger_type: string
-  trigger_value: string
-  mood_change: string
-  intensity_change: number
+  name: string
   description: string
+  agent?: { id: string; name: string } | null
   is_active: boolean
+  condition_type: string
+  condition_value: Record<string, unknown>
+  target_mood: string
+  target_intensity: number
+  duration_minutes: number
+  priority: number
 }
 
 // Mood configuration with icons and colors
+// Session 749: Added all backend moods (calm, energetic, confident, playful, contemplative, curious)
 const MOOD_CONFIG: Record<string, { icon: typeof Smile; color: string; bgColor: string; label: string }> = {
+  // Backend moods
+  calm: { icon: Meh, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', label: 'Calm' },
+  energetic: { icon: Zap, color: 'text-orange-400', bgColor: 'bg-orange-500/20', label: 'Energetic' },
+  confident: { icon: ThumbsUp, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Confident' },
+  playful: { icon: Smile, color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Playful' },
+  contemplative: { icon: Brain, color: 'text-indigo-400', bgColor: 'bg-indigo-500/20', label: 'Contemplative' },
+  curious: { icon: Sparkles, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Curious' },
+  inspired: { icon: Sparkles, color: 'text-pink-400', bgColor: 'bg-pink-500/20', label: 'Inspired' },
+  focused: { icon: Brain, color: 'text-blue-400', bgColor: 'bg-blue-500/20', label: 'Focused' },
+  // Additional moods
   happy: { icon: Smile, color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Happy' },
   excited: { icon: Zap, color: 'text-orange-400', bgColor: 'bg-orange-500/20', label: 'Excited' },
   content: { icon: ThumbsUp, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Content' },
   neutral: { icon: Meh, color: 'text-gray-400', bgColor: 'bg-gray-500/20', label: 'Neutral' },
-  focused: { icon: Brain, color: 'text-blue-400', bgColor: 'bg-blue-500/20', label: 'Focused' },
   tired: { icon: Coffee, color: 'text-amber-400', bgColor: 'bg-amber-500/20', label: 'Tired' },
   frustrated: { icon: AlertCircle, color: 'text-red-400', bgColor: 'bg-red-500/20', label: 'Frustrated' },
   sad: { icon: Frown, color: 'text-indigo-400', bgColor: 'bg-indigo-500/20', label: 'Sad' },
-  inspired: { icon: Sparkles, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Inspired' },
   loving: { icon: Heart, color: 'text-pink-400', bgColor: 'bg-pink-500/20', label: 'Loving' },
 }
 
@@ -77,11 +94,39 @@ const getIntensityLabel = (intensity: number) => {
   return 'Weak'
 }
 
+// Condition type options for rules
+const CONDITION_TYPES = [
+  { value: 'task_success', label: 'Task Success', description: 'When agent completes a task successfully' },
+  { value: 'task_failure', label: 'Task Failure', description: 'When agent fails a task' },
+  { value: 'collaboration', label: 'Collaboration', description: 'When agent collaborates with others' },
+  { value: 'learning', label: 'Learning', description: 'When agent learns something new' },
+  { value: 'idle', label: 'Idle Time', description: 'When agent has been idle' },
+  { value: 'high_workload', label: 'High Workload', description: 'When agent has many pending tasks' },
+  { value: 'streak', label: 'Success Streak', description: 'After consecutive successes' },
+]
+
+// Available target moods
+const TARGET_MOODS = ['calm', 'energetic', 'confident', 'playful', 'contemplative', 'curious', 'inspired', 'focused', 'tired', 'frustrated']
+
 export default function AgentMoodPage() {
   const [selectedAgent, setSelectedAgent] = useState<AgentMood | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<'agents' | 'rules'>('agents')
   const [moodFilter, setMoodFilter] = useState<string>('all')
+
+  // Session 749: Create rule modal state
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newRule, setNewRule] = useState({
+    name: '',
+    description: '',
+    condition_type: 'task_success',
+    target_mood: 'confident',
+    target_intensity: 0.7,
+    duration_minutes: 60,
+    priority: 50,
+  })
+
+  const queryClient = useQueryClient()
 
   // Fetch mood overview
   const { data: overviewData, isLoading: loadingOverview, refetch: refetchOverview } = useQuery({
@@ -114,6 +159,38 @@ export default function AgentMoodPage() {
     },
     enabled: !!selectedAgent?.agent_id,
     staleTime: 30000,
+  })
+
+  // Session 749: Create rule mutation
+  const createRuleMutation = useMutation({
+    mutationFn: async (ruleData: typeof newRule) => {
+      const response = await moodApi.createRule(ruleData)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mood-rules'] })
+      setShowCreateModal(false)
+      setNewRule({
+        name: '',
+        description: '',
+        condition_type: 'task_success',
+        target_mood: 'confident',
+        target_intensity: 0.7,
+        duration_minutes: 60,
+        priority: 50,
+      })
+    },
+  })
+
+  // Session 749: Delete rule mutation
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (ruleId: string) => {
+      const response = await moodApi.deleteRule(ruleId)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mood-rules'] })
+    },
   })
 
   // Parse data
@@ -354,29 +431,47 @@ export default function AgentMoodPage() {
 
           {activeTab === 'rules' && (
             <div className="bg-dark-card rounded-lg border border-dark-border">
-              <div className="p-4 border-b border-dark-border">
-                <h3 className="font-medium text-white">Mood Trigger Rules</h3>
-                <p className="text-xs text-gray-400 mt-1">Rules that automatically adjust agent moods based on events</p>
+              {/* Session 749: Updated header with Create button */}
+              <div className="p-4 border-b border-dark-border flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-white">Mood Trigger Rules</h3>
+                  <p className="text-xs text-gray-400 mt-1">Rules that automatically adjust agent moods based on events</p>
+                </div>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  <Plus size={16} />
+                  Create Rule
+                </button>
               </div>
               <div className="divide-y divide-dark-border max-h-[600px] overflow-y-auto">
                 {loadingRules ? (
                   <div className="p-8 text-center text-gray-400">Loading mood rules...</div>
                 ) : moodRules.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400">No mood rules defined yet</div>
+                  <div className="p-8 text-center text-gray-400">
+                    <ListFilter size={48} className="mx-auto text-gray-600 mb-4" />
+                    <p>No mood rules defined yet</p>
+                    <p className="text-sm mt-2">Create a rule to automatically adjust agent moods based on events</p>
+                  </div>
                 ) : (
                   moodRules.map((rule) => {
-                    const moodConfig = getMoodConfig(rule.mood_change)
+                    // Session 749: Use correct field name (target_mood instead of mood_change)
+                    const moodConfig = getMoodConfig(rule.target_mood)
 
                     return (
-                      <div key={rule.id} className="p-4 hover:bg-dark-bg">
+                      <div key={rule.id} className="p-4 hover:bg-dark-bg group">
                         <div className="flex items-start gap-3">
                           <div className={cn('p-2 rounded-lg', moodConfig.bgColor)}>
                             {React.createElement(moodConfig.icon, { className: cn('w-4 h-4', moodConfig.color) })}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-white capitalize">
-                                {rule.trigger_type}: {rule.trigger_value}
+                              <span className="font-medium text-white">
+                                {rule.name}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 capitalize">
+                                {rule.condition_type?.replace(/_/g, ' ')}
                               </span>
                               {!rule.is_active && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
@@ -390,10 +485,24 @@ export default function AgentMoodPage() {
                                 → {moodConfig.label}
                               </span>
                               <span>
-                                Intensity: {rule.intensity_change > 0 ? '+' : ''}{rule.intensity_change}%
+                                Intensity: {Math.round((rule.target_intensity || 0) * 100)}%
+                              </span>
+                              <span>
+                                Duration: {rule.duration_minutes}min
+                              </span>
+                              <span>
+                                Priority: {rule.priority}
                               </span>
                             </div>
                           </div>
+                          {/* Session 749: Delete button */}
+                          <button
+                            onClick={() => deleteRuleMutation.mutate(rule.id)}
+                            className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-all"
+                            title="Delete rule"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </div>
                     )
@@ -531,6 +640,147 @@ export default function AgentMoodPage() {
           )}
         </div>
       </div>
+
+      {/* Session 749: Create Rule Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-dark-card border border-dark-border rounded-lg w-full max-w-lg mx-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-dark-border">
+              <h3 className="text-lg font-medium text-white">Create Mood Rule</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-1 text-gray-400 hover:text-white rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4">
+              {/* Rule Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Rule Name</label>
+                <input
+                  type="text"
+                  value={newRule.name}
+                  onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
+                  placeholder="e.g., Success Confidence Boost"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={newRule.description}
+                  onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
+                  placeholder="What does this rule do?"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Condition Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Trigger Condition</label>
+                <select
+                  value={newRule.condition_type}
+                  onChange={(e) => setNewRule({ ...newRule, condition_type: e.target.value })}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {CONDITION_TYPES.map((ct) => (
+                    <option key={ct.value} value={ct.value}>
+                      {ct.label} - {ct.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Target Mood */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Target Mood</label>
+                <select
+                  value={newRule.target_mood}
+                  onChange={(e) => setNewRule({ ...newRule, target_mood: e.target.value })}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {TARGET_MOODS.map((mood) => {
+                    const config = getMoodConfig(mood)
+                    return (
+                      <option key={mood} value={mood}>
+                        {config.label}
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+
+              {/* Intensity & Duration */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Intensity ({Math.round(newRule.target_intensity * 100)}%)
+                  </label>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1"
+                    step="0.1"
+                    value={newRule.target_intensity}
+                    onChange={(e) => setNewRule({ ...newRule, target_intensity: parseFloat(e.target.value) })}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Duration (minutes)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="480"
+                    value={newRule.duration_minutes}
+                    onChange={(e) => setNewRule({ ...newRule, duration_minutes: parseInt(e.target.value) || 60 })}
+                    className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Priority ({newRule.priority}) - Higher = runs first
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={newRule.priority}
+                  onChange={(e) => setNewRule({ ...newRule, priority: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-dark-border">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => createRuleMutation.mutate(newRule)}
+                disabled={!newRule.name || createRuleMutation.isPending}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {createRuleMutation.isPending ? 'Creating...' : 'Create Rule'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

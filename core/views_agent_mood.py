@@ -56,21 +56,27 @@ def get_mood_overview(request):
                 except AgentPersonality.DoesNotExist:
                     pass
 
+                # Session 749: Field names to match frontend expectations
                 mood_data = {
-                    'id': str(agent.id),
-                    'name': agent.name,
+                    'id': str(mood.id) if hasattr(mood, 'id') else str(agent.id),
+                    'agent_id': str(agent.id),
+                    'agent_name': agent.name,
                     'current_mood': mood.current_mood,
                     'emoji': mood.get_mood_emoji(),
                     'color': mood.get_mood_color(),
-                    'intensity': mood.intensity,
+                    'intensity': int(mood.intensity * 100),  # Convert to percentage
                     'creativity_level': mood.creativity_level,
                     'precision_level': mood.precision_level,
                     'sociability_level': mood.sociability_level,
                     'risk_tolerance': mood.risk_tolerance,
                     'trigger_type': mood.trigger_type,
+                    'last_updated': mood.mood_started_at.isoformat() if mood.mood_started_at else None,
+                    'mood_streak': mood.total_mood_changes,
+                    'personality': personality_data,  # Session 310: Add personality
+                    # Keep original names for backward compatibility
+                    'name': agent.name,
                     'mood_started_at': mood.mood_started_at.isoformat() if mood.mood_started_at else None,
                     'total_mood_changes': mood.total_mood_changes,
-                    'personality': personality_data,  # Session 310: Add personality
                 }
                 agent_moods.append(mood_data)
 
@@ -94,21 +100,27 @@ def get_mood_overview(request):
                 except AgentPersonality.DoesNotExist:
                     pass
 
+                # Session 749: Field names to match frontend expectations
                 agent_moods.append({
-                    'id': str(agent.id),
-                    'name': agent.name,
+                    'id': str(mood.id),
+                    'agent_id': str(agent.id),
+                    'agent_name': agent.name,
                     'current_mood': 'calm',
                     'emoji': '😌',
                     'color': '#06b6d4',
-                    'intensity': 0.5,
+                    'intensity': 50,  # Percentage
                     'creativity_level': 0.5,
                     'precision_level': 0.5,
                     'sociability_level': 0.5,
                     'risk_tolerance': 0.5,
                     'trigger_type': 'idle',
+                    'last_updated': timezone.now().isoformat(),
+                    'mood_streak': 0,
+                    'personality': personality_data,  # Session 310: Add personality
+                    # Keep original names for backward compatibility
+                    'name': agent.name,
                     'mood_started_at': timezone.now().isoformat(),
                     'total_mood_changes': 0,
-                    'personality': personality_data,  # Session 310: Add personality
                 })
                 mood_distribution['calm'] = mood_distribution.get('calm', 0) + 1
 
@@ -330,11 +342,15 @@ def get_mood_history(request, agent_id):
                 'id': str(agent.id),
                 'name': agent.name,
             },
+            # Session 749: Field names to match frontend expectations
             'history': [
                 {
                     'id': str(h.id),
                     'mood': h.mood,
-                    'intensity': h.intensity,
+                    'intensity': int(h.intensity * 100) if h.intensity else 50,  # Percentage
+                    'reason': h.trigger_source or h.trigger_type or 'Unknown',  # Frontend expects 'reason'
+                    'recorded_at': h.created_at.isoformat(),  # Frontend expects 'recorded_at'
+                    # Keep original fields for backward compatibility
                     'trigger_type': h.trigger_type,
                     'trigger_source': h.trigger_source,
                     'creativity_level': h.creativity_level,
