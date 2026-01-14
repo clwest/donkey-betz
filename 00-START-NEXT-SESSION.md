@@ -50,6 +50,9 @@ Comprehensive audit of data display across the platform revealed ~40% of API dat
 - Added message count display in activity feed
 - Added **No Conclusion Explanation** section with contextual reasons
 - Database analysis: 77% concluded, 23% incomplete, 3% self-talk
+- Fixed **Live Learning WebSocket** - was connected but not displaying data
+- Converts backend `learning_activity` bulk messages to frontend format
+- Now shows 1,497 knowledge transfers in real-time feed
 
 ---
 
