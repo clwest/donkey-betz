@@ -33,12 +33,18 @@ import { cn } from '@/lib/cn'
 import Breadcrumb from '@/components/Breadcrumb'
 
 // Types for API responses
+// Session 751: Updated to match actual API response
 interface FeedItem {
   id: string
   timestamp: string
   type: string
   content: string
-  agents: string[]
+  agent?: string  // API returns single agent, not array
+  agents?: string[]  // Keep for backwards compatibility
+  agent_id?: string
+  contribution_type?: string
+  content_type?: string
+  project?: string
   confidence: number
   impact: number
 }
@@ -103,10 +109,18 @@ interface LearningFeedItem {
   source: string
 }
 
+// Session 751: Updated to match actual API response
 interface LearningFeed {
   feed: LearningFeedItem[]
-  learning_metrics: Record<string, number>
-  monetization_learning: {
+  learning_metrics: Record<string, unknown>
+  content_creation_learning?: {
+    images_created: number
+    videos_created: number
+    models_created: number
+    total_content: number
+    agents_learning: string
+  }
+  monetization_learning?: {  // Keep for backwards compatibility
     revenue_velocity: number
     opportunities_learned: number
   }
@@ -483,9 +497,15 @@ export default function NeuralOrchestraPage() {
 
                       <p className="text-gray-300 text-sm mb-3">{item.content}</p>
 
-                      {item.agents && item.agents.length > 0 && (
+                      {/* Session 751: Handle both single agent and agents array */}
+                      {(item.agent || (item.agents && item.agents.length > 0)) && (
                         <div className="flex flex-wrap gap-1">
-                          {item.agents.map((agent) => (
+                          {item.agent && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">
+                              {item.agent}
+                            </span>
+                          )}
+                          {item.agents?.map((agent) => (
                             <span
                               key={agent}
                               className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400"
@@ -493,6 +513,11 @@ export default function NeuralOrchestraPage() {
                               {agent}
                             </span>
                           ))}
+                          {item.project && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                              {item.project}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -513,24 +538,43 @@ export default function NeuralOrchestraPage() {
           {/* Learning Tab */}
           {activeTab === 'learning' && (
             <div className="space-y-6">
+              {/* Session 751: Updated to show content creation metrics from actual API */}
               {/* Learning Metrics */}
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-4">
                 <div className="bg-dark-card border border-dark-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp size={16} className="text-green-400" />
-                    <span className="text-sm text-gray-400">Revenue Velocity</span>
+                    <Sparkles size={16} className="text-purple-400" />
+                    <span className="text-sm text-gray-400">Images Created</span>
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    ${learningFeed?.monetization_learning?.revenue_velocity ?? 0}
+                    {learningFeed?.content_creation_learning?.images_created ?? 0}
+                  </div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity size={16} className="text-blue-400" />
+                    <span className="text-sm text-gray-400">Videos Created</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {learningFeed?.content_creation_learning?.videos_created ?? 0}
                   </div>
                 </div>
                 <div className="bg-dark-card border border-dark-border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Zap size={16} className="text-yellow-400" />
-                    <span className="text-sm text-gray-400">Opportunities Learned</span>
+                    <span className="text-sm text-gray-400">3D Models</span>
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    {learningFeed?.monetization_learning?.opportunities_learned ?? 0}
+                    {learningFeed?.content_creation_learning?.models_created ?? 0}
+                  </div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp size={16} className="text-green-400" />
+                    <span className="text-sm text-gray-400">Total Content</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {learningFeed?.content_creation_learning?.total_content ?? 0}
                   </div>
                 </div>
                 <div className="bg-dark-card border border-dark-border rounded-lg p-4">
