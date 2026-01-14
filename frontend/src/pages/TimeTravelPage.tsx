@@ -73,13 +73,21 @@ interface Annotation {
   created_at: string
 }
 
-// Decision type configuration
+// Decision type configuration - Session 750: Updated to match backend types
 const DECISION_TYPE_CONFIG: Record<string, { icon: typeof Target; color: string; bgColor: string; label: string }> = {
+  // Backend decision types
+  analysis: { icon: Search, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Analysis' },
+  planning: { icon: Target, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Planning' },
+  tool_selection: { icon: GitBranch, color: 'text-blue-400', bgColor: 'bg-blue-500/20', label: 'Tool Selection' },
+  parameter_choice: { icon: Lightbulb, color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Parameter Choice' },
+  quality_check: { icon: CheckCircle, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', label: 'Quality Check' },
+  // Additional possible types
   strategic: { icon: Target, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Strategic' },
   tactical: { icon: GitBranch, color: 'text-blue-400', bgColor: 'bg-blue-500/20', label: 'Tactical' },
   creative: { icon: Lightbulb, color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Creative' },
   analytical: { icon: Search, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Analytical' },
   operational: { icon: Play, color: 'text-orange-400', bgColor: 'bg-orange-500/20', label: 'Operational' },
+  other: { icon: Play, color: 'text-gray-400', bgColor: 'bg-gray-500/20', label: 'Other' },
 }
 
 const getDecisionConfig = (type: string) => {

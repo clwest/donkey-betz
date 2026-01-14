@@ -1,28 +1,20 @@
-# Session 750 - Next Session
+# Session 751 - Next Session
 
-**Previous Session:** 749 (Mood Page & Time Capsules Audit)
+**Previous Session:** 750 (Time Travel Page Audit)
 **Date:** January 14, 2026
-**Status:** Mood Page Complete | Time Capsules Fixed | GPT-5-mini Token Bug Resolved
+**Status:** Time Travel Page Audited and Fixed
 
 ---
 
-## Session 749 Summary
+## Session 750 Summary
 
-### Part 1: Mood Page
-- Fixed API field mapping (agent_id, last_updated, intensity as percentage)
-- Added all backend mood types to frontend config
-- Implemented Create/Delete Rule functionality
-- Backfilled mood history for all 73 agents (763 records)
+### Time Travel Page Audit
+- Fixed frontend decision type config to match backend types (analysis, planning, tool_selection, parameter_choice, quality_check)
+- Fixed 4 backend API signatures that expected URL params but received body params
+- Verified all 16 API endpoints working correctly
+- Database has 3 sessions, 15 decisions, 34 thought bubbles
 
-### Part 2: Time Capsules Deep Audit
-- **Critical Bug Found:** GPT-5-mini returning empty content due to low `max_completion_tokens`
-- **Root Cause:** Reasoning models need tokens for internal reasoning before output
-- **Fix:** Increased from 200-300 to 2000 tokens
-- Fixed frontend to fetch detail on capsule selection
-- Added "Then vs Now" comparison display
-- Cleaned up 6 empty capsules
-
-**Detailed Handoff:** `docs/handoffs/SESSION_749_MOOD_PAGE_FIXES.md`
+**Detailed Handoff:** `docs/handoffs/SESSION_750_TIME_TRAVEL_AUDIT.md`
 
 ---
 
@@ -40,16 +32,6 @@ Low token limits cause empty responses with `finish_reason: length`.
 
 ---
 
-## Current Time Capsules
-
-| Capsule | Agent | Status | Content |
-|---------|-------|--------|---------|
-| Midnight Jazz of Data and Images | ImageAgent | Sealed (Apr 2026) | ✅ 535 chars |
-| Workflow Reflection | WorkflowAgent | Revealed | ✅ Message + Reflection |
-| Test Capsule | ImageAgent | Revealed | ✅ 14 chars |
-
----
-
 ## Quick Start
 
 ```bash
@@ -61,6 +43,7 @@ make celery
 cd frontend && npm run dev
 
 # Access pages
+open http://localhost:3000/time-travel
 open http://localhost:3000/mood
 open http://localhost:3000/time-capsules
 ```
@@ -75,6 +58,8 @@ open http://localhost:3000/time-capsules
 | Agents with Evolution | 73 |
 | Agents with Mood History | 73 (100%) |
 | Time Capsules | 3 |
+| Time Travel Sessions | 3 |
+| Time Travel Decisions | 15 |
 | Spiders | 77 |
 | PA Tools | 86 |
 | Database Models | 364+ |
@@ -85,13 +70,31 @@ open http://localhost:3000/time-capsules
 
 ---
 
-## Session 749 Commits
+## Session 750 Commits
 
 1. `705c5531` - fix(Session 749): Mood Page data display + create/delete rules
-2. `f4d0c135` - docs(Session 749): Update session handoff file
-3. `444bb5c9` - docs(Session 749): Add comprehensive handoff documentation
-4. `29aa1141` - fix(Session 749): Time Capsules page - fetch detail on selection
-5. `3d66d77a` - fix(Session 749): Time Capsules GPT-5-mini token limit
+2. `3d66d77a` - fix(Session 749): Time Capsules GPT-5-mini token limit
+3. *(pending)* - fix(Session 750): Time Travel page audit fixes
+
+---
+
+## Pages Audited (Sessions 749-750)
+
+| Page | Status | Notes |
+|------|--------|-------|
+| Mood Page | ✅ Audited | Full CRUD, data backfilled |
+| Time Capsules | ✅ Audited | GPT-5-mini token fix, detail fetch |
+| Time Travel | ✅ Audited | Decision types, API fixes |
+
+---
+
+## Next Audit Candidates
+
+- Evolution Page
+- Agent Social Page
+- Advisors Page
+- Relationships Page
+- Neural Orchestra Page
 
 ---
 
