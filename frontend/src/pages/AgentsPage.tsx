@@ -860,9 +860,38 @@ export default function AgentsPage() {
     // Session 688: Filter out connection messages - only show real learning events
     // Cast to string for runtime check since WebSocket may send types not in the union
     const msgType = event.type as string
-    if (msgType === 'connection_established' || msgType === 'pong') {
+    if (msgType === 'connection_established' || msgType === 'connected' || msgType === 'pong') {
       return
     }
+
+    // Session 746: Handle 'learning_activity' bulk messages from backend
+    // Backend sends { type: 'learning_activity', feed_items: [...], stats: {...} }
+    if (msgType === 'learning_activity') {
+      const data = event as unknown as { feed_items?: Array<{
+        timestamp: string
+        type: string
+        description: string
+        teacher?: string
+        student?: string
+        knowledge?: string
+      }> }
+      if (data.feed_items && Array.isArray(data.feed_items)) {
+        // Convert feed_items to LearningEvent format
+        const convertedEvents = data.feed_items.map(item => ({
+          type: 'learning_event' as const,
+          agent_name: item.teacher || 'System',
+          event_type: item.type === 'knowledge_transfer' ? 'Knowledge Transfer' :
+                      item.type === 'self_learning' ? 'Self Learning' : item.type,
+          description: item.description || item.knowledge || 'Learning activity',
+          timestamp: item.timestamp,
+          data: { teacher: item.teacher, student: item.student }
+        }))
+        setLearningEvents((prev) => [...convertedEvents, ...prev].slice(0, 50))
+      }
+      return
+    }
+
+    // Handle individual learning_event messages
     setLearningEvents((prev) => [event, ...prev].slice(0, 50))
   })
 
