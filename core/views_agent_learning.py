@@ -667,7 +667,8 @@ def _get_agent_emoji(specialization: str) -> str:
 
 
 @require_http_methods(["POST"])
-@login_required
+# Session 751: Removed @login_required to match get_agent_conversations (Session 564)
+# This allows the UI to trigger conversations without authentication
 def trigger_agent_conversation(request):
     """
     Manually trigger an agent conversation on a specific topic.
