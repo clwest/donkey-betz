@@ -14,7 +14,7 @@ This service:
 import logging
 from typing import Dict, Any, List, Optional
 from django.utils import timezone
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Q, Sum
 from datetime import timedelta
 
 logger = logging.getLogger(__name__)
@@ -102,6 +102,22 @@ class HumanInterfaceService:
                 # Session 742: Add ML fields at top level for easier frontend access
                 'ml_confidence': item.ml_confidence,
                 'ml_recommendation': item.ml_recommendation,
+                # Session 746: Add decision fields
+                'decision': item.decision,
+                'decision_feedback': item.decision_feedback,
+                'decision_confidence': item.decision_confidence,
+                'decided_at': item.decided_at.isoformat() if item.decided_at else None,
+                'time_to_decision_ms': item.time_to_decision_ms,
+                'viewed_at': item.viewed_at.isoformat() if item.viewed_at else None,
+                # Session 746: Add ML override fields
+                'human_overrode_ml': item.human_overrode_ml,
+                'override_reason': item.override_reason,
+                # Session 746: Add verification fields for Watch & Verify
+                'verification_outcome': item.verification_outcome,
+                'verified_at': item.verified_at.isoformat() if item.verified_at else None,
+                'verification_profit': item.verification_profit,
+                'verification_notes': item.verification_notes,
+                'event_completed_at': item.event_completed_at.isoformat() if item.event_completed_at else None,
             }
 
             if include_ml_context and item.ml_prediction:
@@ -117,7 +133,7 @@ class HumanInterfaceService:
 
     def get_attention_stats(self) -> Dict[str, Any]:
         """Get statistics about attention items."""
-        from core.models_human_interface import HumanAttentionItem
+        from core.models_human_interface import HumanAttentionItem, HumanFeedbackRecord, HumanControlAction
 
         items = HumanAttentionItem.objects.filter(user=self.user)
 
@@ -143,12 +159,89 @@ class HumanInterfaceService:
         ).count()
         ml_agreement = (agreed_with_ml / total_with_ml * 100) if total_with_ml > 0 else None
 
+        # Session 746: Add comprehensive stats
+
+        # By item type
+        by_type = dict(
+            items.values('item_type')
+            .annotate(count=Count('id'))
+            .values_list('item_type', 'count')
+        )
+
+        # By source agent
+        by_source = dict(
+            items.exclude(source_agent='')
+            .values('source_agent')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+            .values_list('source_agent', 'count')
+        )
+
+        # By status
+        by_status = dict(
+            items.values('status')
+            .annotate(count=Count('id'))
+            .values_list('status', 'count')
+        )
+
+        # By decision (for acted items)
+        by_decision = dict(
+            items.exclude(decision__isnull=True)
+            .values('decision')
+            .annotate(count=Count('id'))
+            .values_list('decision', 'count')
+        )
+
+        # Verification stats (for Watch & Verify)
+        watching_count = items.filter(status='watching').count()
+        verified_count = items.filter(status='verified').count()
+        verification_outcomes = dict(
+            items.exclude(verification_outcome__isnull=True)
+            .values('verification_outcome')
+            .annotate(count=Count('id'))
+            .values_list('verification_outcome', 'count')
+        )
+        # Calculate paper P/L
+        paper_profit = items.filter(
+            verification_profit__isnull=False
+        ).aggregate(total=Sum('verification_profit'))['total'] or 0
+
+        # ML override stats
+        override_count = items.filter(human_overrode_ml=True).count()
+
+        # Feedback records
+        feedback_count = HumanFeedbackRecord.objects.filter(user=self.user).count()
+        fed_to_ml_count = HumanFeedbackRecord.objects.filter(user=self.user, fed_to_ml=True).count()
+
+        # Recent control actions
+        recent_actions = list(
+            HumanControlAction.objects.filter(user=self.user)
+            .order_by('-created_at')[:10]
+            .values('action_type', 'target_type', 'target_id', 'reason', 'created_at')
+        )
+        for action in recent_actions:
+            action['created_at'] = action['created_at'].isoformat()
+
         return {
             'pending_count': pending_count,
             'by_urgency': by_urgency,
             'avg_decision_time_ms': int(avg_time) if avg_time else None,
             'ml_agreement_rate': round(ml_agreement, 1) if ml_agreement else None,
             'total_with_ml_context': total_with_ml,
+            # Session 746: New stats
+            'by_type': by_type,
+            'by_source': by_source,
+            'by_status': by_status,
+            'by_decision': by_decision,
+            'watching_count': watching_count,
+            'verified_count': verified_count,
+            'verification_outcomes': verification_outcomes,
+            'paper_profit': round(paper_profit, 2) if paper_profit else 0,
+            'override_count': override_count,
+            'feedback_count': feedback_count,
+            'fed_to_ml_count': fed_to_ml_count,
+            'recent_actions': recent_actions,
+            'total_items': items.count(),
         }
 
     # =========================================================================
@@ -441,14 +534,57 @@ class HumanInterfaceService:
         source_id: str = '',
         source_agent: str = '',
         expires_at: timezone.datetime = None,
+        deduplicate: bool = True,
     ) -> Dict[str, Any]:
         """
         Create a new attention item.
 
         This is called by other services (ThinkingAgent, PilotGate, etc.)
         to surface items requiring human attention.
+
+        Args:
+            deduplicate: If True (default), skip creating if a similar item exists
+                        that hasn't been acted upon yet. This prevents duplicate
+                        arbitrage alerts and other repetitive items.
         """
         from core.models_human_interface import HumanAttentionItem
+
+        # Session 746: Deduplication logic to prevent duplicate items
+        if deduplicate:
+            # Build query to find existing similar items
+            # that are still pending/viewed (not acted, expired, watching, or verified)
+            query = HumanAttentionItem.objects.filter(
+                user=self.user,
+                source_type=source_type,
+                item_type=item_type,
+                status__in=[
+                    HumanAttentionItem.STATUS_PENDING,
+                    HumanAttentionItem.STATUS_VIEWED,
+                    HumanAttentionItem.STATUS_DEFERRED,
+                ],
+            )
+
+            # If source_id is available, use it for exact matching
+            # Otherwise, fall back to matching by title (handles empty source_id cases)
+            if source_id:
+                query = query.filter(source_id=source_id)
+            else:
+                query = query.filter(title=title)
+
+            existing_item = query.first()
+
+            if existing_item:
+                logger.debug(
+                    f"Skipping duplicate attention item: {title} "
+                    f"(existing item: {existing_item.id})"
+                )
+                return {
+                    'success': True,
+                    'item_id': str(existing_item.id),
+                    'priority_score': existing_item.priority_score,
+                    'deduplicated': True,
+                    'message': 'Similar item already exists',
+                }
 
         # Calculate priority score
         priority_score = self._calculate_priority_score(

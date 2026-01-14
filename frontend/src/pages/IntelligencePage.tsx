@@ -50,6 +50,7 @@ interface Gate {
 }
 
 // Session 697: Checklist item interface for Gate detail modal
+// Session 746: Enhanced with all backend fields
 interface GateChecklistItem {
   id: string
   item_type: string
@@ -59,6 +60,25 @@ interface GateChecklistItem {
   is_required: boolean
   generated_content: string | null
   has_content: boolean
+  // Session 746: Additional fields from backend
+  documentation_url?: string
+  documentation_notes?: string
+  assigned_to?: string
+  completed_by?: string
+  completed_at?: string
+  completion_notes?: string
+}
+
+// Session 746: Pilot execution history interface
+interface PilotExecution {
+  id: string
+  name: string
+  status: string
+  outcome?: string
+  outcome_summary?: string
+  kill_switch_triggered?: boolean
+  started_at?: string
+  completed_at?: string
 }
 
 interface Pilot {
@@ -1748,6 +1768,163 @@ export default function IntelligencePage() {
                       </div>
                     )}
 
+                    {/* Session 746: Success & Failure Criteria */}
+                    {(gate.success_criteria || gate.failure_criteria) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {gate.success_criteria && (
+                          <div className="bg-accent-green/5 border border-accent-green/20 rounded-lg p-3">
+                            <h4 className="font-semibold mb-2 flex items-center gap-2 text-accent-green text-sm">
+                              <CheckCircle size={16} />
+                              Success Criteria
+                            </h4>
+                            <p className="text-sm text-gray-300">{gate.success_criteria}</p>
+                          </div>
+                        )}
+                        {gate.failure_criteria && (
+                          <div className="bg-accent-red/5 border border-accent-red/20 rounded-lg p-3">
+                            <h4 className="font-semibold mb-2 flex items-center gap-2 text-accent-red text-sm">
+                              <XCircle size={16} />
+                              Failure Criteria
+                            </h4>
+                            <p className="text-sm text-gray-300">{gate.failure_criteria}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Session 746: Risk Factors */}
+                    {gate.risk_factors && gate.risk_factors.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <AlertTriangle size={18} className="text-accent-amber" />
+                          Risk Factors
+                        </h4>
+                        <div className="space-y-2">
+                          {gate.risk_factors.map((risk: string, idx: number) => (
+                            <div key={idx} className="flex items-start gap-2 bg-accent-amber/5 border border-accent-amber/20 rounded-lg p-3">
+                              <span className="text-accent-amber text-sm">⚠</span>
+                              <p className="text-sm text-gray-300">{risk}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Session 746: Approval Info */}
+                    {gate.approved_by && (
+                      <div className="bg-accent-green/5 border border-accent-green/20 rounded-lg p-4">
+                        <h4 className="font-semibold mb-2 flex items-center gap-2 text-accent-green">
+                          <CheckCircle size={18} />
+                          Approval Information
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Approved by:</span>
+                            <span className="ml-2 text-gray-300">{gate.approved_by}</span>
+                          </div>
+                          {gate.approval_notes && (
+                            <div className="col-span-2">
+                              <span className="text-gray-500">Notes:</span>
+                              <p className="text-gray-300 mt-1">{gate.approval_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Session 746: Pilot Execution History */}
+                    {gate.executions && gate.executions.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <Play size={18} className="text-accent-cyan" />
+                          Pilot Execution History ({gate.executions.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {gate.executions.map((exec: PilotExecution) => (
+                            <div
+                              key={exec.id}
+                              className={cn(
+                                'border rounded-lg p-3',
+                                exec.status === 'completed' ? 'border-accent-green/30 bg-accent-green/5' :
+                                exec.status === 'failed' ? 'border-accent-red/30 bg-accent-red/5' :
+                                exec.status === 'running' ? 'border-accent-cyan/30 bg-accent-cyan/5' :
+                                'border-dark-border bg-dark-bg'
+                              )}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium text-sm">{exec.name}</span>
+                                <span className={cn(
+                                  'text-xs px-2 py-0.5 rounded',
+                                  exec.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                                  exec.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                                  exec.status === 'running' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                                  'bg-gray-500/20 text-gray-400'
+                                )}>
+                                  {exec.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs text-gray-400">
+                                {exec.started_at && (
+                                  <span>Started: {new Date(exec.started_at).toLocaleString()}</span>
+                                )}
+                                {exec.completed_at && (
+                                  <span>Completed: {new Date(exec.completed_at).toLocaleString()}</span>
+                                )}
+                                {exec.kill_switch_triggered && (
+                                  <span className="text-accent-red flex items-center gap-1">
+                                    <AlertTriangle size={12} /> Kill switch triggered
+                                  </span>
+                                )}
+                              </div>
+                              {exec.outcome && (
+                                <div className="mt-2 text-sm">
+                                  <span className="text-gray-500">Outcome:</span>
+                                  <span className={cn(
+                                    'ml-2',
+                                    exec.outcome === 'success' ? 'text-accent-green' :
+                                    exec.outcome === 'failure' ? 'text-accent-red' : 'text-gray-300'
+                                  )}>
+                                    {exec.outcome}
+                                  </span>
+                                </div>
+                              )}
+                              {exec.outcome_summary && (
+                                <p className="mt-1 text-sm text-gray-400">{exec.outcome_summary}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Session 746: Latency Metrics */}
+                    {gate.latency && (gate.latency.total_hours || gate.latency.by_stage) && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <Clock size={18} className="text-gray-400" />
+                          Latency Metrics
+                        </h4>
+                        <div className="bg-dark-bg rounded-lg p-3">
+                          {gate.latency.total_hours !== undefined && (
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className="text-gray-400">Total time:</span>
+                              <span className="text-gray-300">{gate.latency.total_hours.toFixed(1)} hours</span>
+                            </div>
+                          )}
+                          {gate.latency.by_stage && Object.keys(gate.latency.by_stage).length > 0 && (
+                            <div className="space-y-1 text-xs">
+                              {Object.entries(gate.latency.by_stage).map(([stage, hours]) => (
+                                <div key={stage} className="flex items-center justify-between">
+                                  <span className="text-gray-500">{stage.replace('_', ' ')}:</span>
+                                  <span className="text-gray-400">{(hours as number).toFixed(1)}h</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Session 697: Enhanced Checklist with AI-Generated Content */}
                     {gate.checklist_items && gate.checklist_items.length > 0 && (
                       <div className="space-y-3">
@@ -1846,6 +2023,54 @@ export default function IntelligencePage() {
                                         {item.generated_content}
                                       </pre>
                                     </div>
+                                  </div>
+                                )}
+                                {/* Session 746: Show completion details if expanded and completed */}
+                                {isExpanded && item.status === 'completed' && (item.completed_by || item.completed_at || item.completion_notes) && (
+                                  <div className="border-t border-dark-border p-4 bg-accent-green/5">
+                                    <div className="flex items-center gap-2 mb-3 text-xs text-accent-green">
+                                      <CheckCircle size={12} />
+                                      <span>Completion Details</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      {item.completed_by && (
+                                        <div>
+                                          <span className="text-gray-500">Completed by:</span>
+                                          <span className="ml-2 text-gray-300">{item.completed_by}</span>
+                                        </div>
+                                      )}
+                                      {item.completed_at && (
+                                        <div>
+                                          <span className="text-gray-500">Completed at:</span>
+                                          <span className="ml-2 text-gray-300">
+                                            {new Date(item.completed_at).toLocaleString()}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {item.completion_notes && (
+                                      <div className="mt-2">
+                                        <span className="text-gray-500 text-sm">Notes:</span>
+                                        <p className="text-gray-300 text-sm mt-1">{item.completion_notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {/* Session 746: Show documentation link if available */}
+                                {isExpanded && item.documentation_url && (
+                                  <div className="border-t border-dark-border p-3 bg-dark-bg">
+                                    <a
+                                      href={item.documentation_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 text-sm text-primary-400 hover:text-primary-300"
+                                    >
+                                      <ExternalLink size={14} />
+                                      <span>View Documentation</span>
+                                    </a>
+                                    {item.documentation_notes && (
+                                      <p className="text-xs text-gray-500 mt-1">{item.documentation_notes}</p>
+                                    )}
                                   </div>
                                 )}
                               </div>

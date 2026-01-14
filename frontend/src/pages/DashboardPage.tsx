@@ -476,7 +476,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Session 745: Agent Network Widget */}
+      {/* Session 746: Enhanced Agent Network Widget with Mini Visualization */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -495,30 +495,118 @@ export default function DashboardPage() {
             <Loader2 className="animate-spin" size={20} />
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-dark-bg rounded-lg">
-              <p className="text-2xl font-bold text-accent-purple">{networkNodes.length}</p>
-              <p className="text-xs text-gray-400">Total Agents</p>
+          <>
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="text-center p-3 bg-dark-bg rounded-lg">
+                <p className="text-2xl font-bold text-accent-purple">{networkNodes.length}</p>
+                <p className="text-xs text-gray-400">Total Agents</p>
+              </div>
+              <div className="text-center p-3 bg-dark-bg rounded-lg">
+                <p className="text-2xl font-bold text-accent-green">{activeNodes}</p>
+                <p className="text-xs text-gray-400">Active (24h)</p>
+              </div>
+              <div className="text-center p-3 bg-dark-bg rounded-lg">
+                <p className="text-2xl font-bold text-accent-cyan">{networkEdges.length}</p>
+                <p className="text-xs text-gray-400">Connections</p>
+              </div>
+              <div className="text-center p-3 bg-dark-bg rounded-lg">
+                <p className="text-2xl font-bold text-accent-amber">{Object.keys(topCategories).length}</p>
+                <p className="text-xs text-gray-400">Categories</p>
+              </div>
             </div>
-            <div className="text-center p-3 bg-dark-bg rounded-lg">
-              <p className="text-2xl font-bold text-accent-green">{activeNodes}</p>
-              <p className="text-xs text-gray-400">Active (24h)</p>
+
+            {/* Mini Network Visualization */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Top Active Agents */}
+              <div className="bg-dark-bg rounded-lg p-3">
+                <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                  <Zap size={14} className="text-accent-amber" />
+                  Top Active Agents
+                </h4>
+                <div className="space-y-2">
+                  {networkNodes
+                    .filter((n: { is_recently_active?: boolean; total_executions?: number }) => n.is_recently_active)
+                    .sort((a: { total_executions?: number }, b: { total_executions?: number }) => (b.total_executions || 0) - (a.total_executions || 0))
+                    .slice(0, 5)
+                    .map((node: { id: string; name: string; category?: string; color?: string; total_executions?: number; effectiveness?: number }) => (
+                      <div key={node.id} className="flex items-center justify-between p-2 rounded bg-dark-card">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: node.color || '#6366f1' }}
+                          />
+                          <span className="text-sm truncate max-w-[140px]">{node.name.replace('Agent', '')}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-400">{node.total_executions || 0} runs</span>
+                          {(node.effectiveness || 0) > 0 && (
+                            <span className="text-accent-green">{((node.effectiveness || 0) * 100).toFixed(0)}%</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  {networkNodes.filter((n: { is_recently_active?: boolean }) => n.is_recently_active).length === 0 && (
+                    <p className="text-xs text-gray-500 text-center py-2">No recently active agents</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Connections */}
+              <div className="bg-dark-bg rounded-lg p-3">
+                <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                  <Link2 size={14} className="text-accent-cyan" />
+                  Active Connections
+                </h4>
+                <div className="space-y-2">
+                  {networkEdges
+                    .filter((e: { has_recent_transfer?: boolean; total_transfers?: number }) => e.has_recent_transfer || (e.total_transfers || 0) > 0)
+                    .sort((a: { total_transfers?: number }, b: { total_transfers?: number }) => (b.total_transfers || 0) - (a.total_transfers || 0))
+                    .slice(0, 5)
+                    .map((edge: { source: string; target: string; strength?: number; learning_type?: string; total_transfers?: number; has_recent_transfer?: boolean }, idx: number) => {
+                      const sourceNode = networkNodes.find((n: { id: string }) => n.id === edge.source)
+                      const targetNode = networkNodes.find((n: { id: string }) => n.id === edge.target)
+                      return (
+                        <div key={`${edge.source}-${edge.target}-${idx}`} className="flex items-center justify-between p-2 rounded bg-dark-card">
+                          <div className="flex items-center gap-1 flex-1 min-w-0">
+                            <span className="text-xs truncate max-w-[80px]" title={sourceNode?.name}>
+                              {sourceNode?.name?.replace('Agent', '') || 'Unknown'}
+                            </span>
+                            <span className="text-accent-cyan">→</span>
+                            <span className="text-xs truncate max-w-[80px]" title={targetNode?.name}>
+                              {targetNode?.name?.replace('Agent', '') || 'Unknown'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {edge.has_recent_transfer && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-accent-green animate-pulse" />
+                            )}
+                            <span className="text-xs text-gray-400">{edge.total_transfers || 0}x</span>
+                            {/* Connection strength bar */}
+                            <div className="w-12 h-1.5 bg-dark-border rounded overflow-hidden">
+                              <div
+                                className="h-full bg-accent-cyan"
+                                style={{ width: `${Math.min((edge.strength || 0.5) * 100, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  {networkEdges.filter((e: { total_transfers?: number }) => (e.total_transfers || 0) > 0).length === 0 && (
+                    <p className="text-xs text-gray-500 text-center py-2">No active knowledge transfers</p>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="text-center p-3 bg-dark-bg rounded-lg">
-              <p className="text-2xl font-bold text-accent-cyan">{networkEdges.length}</p>
-              <p className="text-xs text-gray-400">Connections</p>
-            </div>
-            <div className="text-center p-3 bg-dark-bg rounded-lg">
-              <p className="text-2xl font-bold text-accent-amber">{Object.keys(topCategories).length}</p>
-              <p className="text-xs text-gray-400">Categories</p>
-            </div>
-          </div>
+          </>
         )}
+        {/* Category Tags */}
         {!networkLoading && Object.keys(topCategories).length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {(Object.entries(topCategories) as [string, number][])
               .sort((a, b) => b[1] - a[1])
-              .slice(0, 6)
+              .slice(0, 8)
               .map(([category, count]) => (
                 <span
                   key={category}

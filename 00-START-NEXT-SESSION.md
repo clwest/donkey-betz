@@ -1,48 +1,67 @@
-# Session 745 - API-to-UI Coverage Audit COMPLETE
+# Session 746 - Data Display Enhancements COMPLETE
 
-**Previous Session:** 744 (Integration Roadmap + KnowledgeFirstRouter)
-**Date:** January 12, 2026
-**Status:** ✅ 100% API Coverage | 8 Commits | All Pages Working
-
----
-
-## Session 745 Summary
-
-Completed API-to-UI coverage audit. Fixed all 404/401/405 errors across frontend pages. Started at ~67% coverage, ended at **100%**.
-
-**Detailed Handoff:** `docs/handoffs/SESSION_745_API_UI_COVERAGE_COMPLETE.md`
+**Previous Session:** 745 (API-to-UI Coverage Audit + Watch & Verify Feature)
+**Date:** January 14, 2026
+**Status:** Data Display Coverage: 60% → 85% | All Builds Passing
 
 ---
 
-## 8 Commits This Session
+## Session 746 Summary
 
-| Commit | Description |
-|--------|-------------|
-| `cbb90ff8` | Voice marketplace purchases endpoint |
-| `95094ca5` | Revenue endpoints return empty for anon users |
-| `29061271` | Fix React rendering error (platform object) |
-| `4ad43d45` | Add new API paths to auth middleware |
-| `fcf130e8` | Add GET support to distribution recommendations |
-| `c7fd5b8b` | Fix journeyApi paths |
-| `4be999f4` | Add 40+ stub endpoints for frontend pages |
-| `9503225e` | Add missing backend endpoints |
+Comprehensive audit of data display across the platform revealed ~40% of API data wasn't being shown in the UI. Implemented fixes across Human Page, Betting Page, Dashboard, Intelligence Page, and Agents Page modals.
+
+**Detailed Handoff:** `docs/handoffs/SESSION_746_DATA_DISPLAY_ENHANCEMENTS.md`
 
 ---
 
-## Key Files Changed
+## Key Changes This Session
+
+### Human Page
+- Added 15+ missing fields to API response (verification, decision, override fields)
+- Added comprehensive stats (by_type, by_source, by_status, by_decision)
+- Added Decision History toggle with table view
+- Added ML override indicator to attention items
+- Added Control Action History/Audit Log
+
+### Betting Page
+- Added **Singles vs Parlays** comparison section
+- Added **Per-Sport Performance** breakdown with progress bars
+- Added streak stats row (current, best win, worst loss, pushes)
+- Enhanced wager table with expandable leg details
+- Added My Wagers tab stats (total, pending, settled, parlays)
+
+### Dashboard
+- Added **Top Active Agents** panel (agents active in 24h)
+- Added **Active Connections** panel (knowledge transfers with strength bars)
+- Expanded category tags display
+
+### Intelligence Page
+- Added **Success & Failure Criteria** display
+- Added **Risk Factors** section
+- Added **Approval Information** section
+- Added **Pilot Execution History** (all pilot runs with status)
+- Added **Latency Metrics** (time spent per stage)
+- Enhanced checklist items with completion details and documentation links
+
+### Agents Page
+- Fixed truncated Conclusion in Conversation modal
+- Made entire modal body scrollable
+
+---
+
+## Files Changed
 
 ### Backend
-- `core/views_frontend_stubs.py` - NEW: 40+ stub endpoints for all frontend pages
-- `core/views_voice_marketplace.py` - Added categories, stats, purchases
-- `core/views_distribution.py` - Added GET support to recommendations
-- `core/auth_middleware.py` - Added new paths to PUBLIC_PATHS
-- `core/views_revenue_analytics.py` - Return empty for anon users
-- `core/views_auto_distribution.py` - Return empty for anon users
+- `core/services/human_interface_service.py` - Enhanced stats and API response
+- `core/migrations/0163_alter_human_feedback_ml_task_type_null.py` - DB fix
+- `core/migrations/0164_add_watch_verify_feature.py` - Verification fields
 
 ### Frontend
-- `frontend/src/lib/api.ts` - Fixed journeyApi paths
-- `frontend/src/pages/DistributionPage.tsx` - Fixed recommendation rendering
-- `frontend/src/pages/PortfolioPage.tsx` - Fixed recommendation rendering
+- `frontend/src/pages/HumanPage.tsx` - Stats, decision history, ML indicators
+- `frontend/src/pages/BettingPage.tsx` - Singles/parlays, per-sport, wager legs
+- `frontend/src/pages/DashboardPage.tsx` - Network graph visualization
+- `frontend/src/pages/IntelligencePage.tsx` - Gate details, execution history
+- `frontend/src/pages/AgentsPage.tsx` - Modal scrolling fix
 
 ---
 
@@ -62,31 +81,23 @@ open http://localhost:3000
 
 ---
 
-## All Pages Now Working
+## Build Status
 
-- ✅ Distribution Dashboard (all 5 tabs)
-- ✅ Portfolio Page
-- ✅ Voice Marketplace (all tabs)
-- ✅ Collective Intelligence
-- ✅ Analytics Dashboard
-- ✅ Learning Journeys
-- ✅ Autonomous System
-- ✅ Reasoning Engine
-- ✅ Billing/Stripe (stubs)
+- Frontend bundle: 1,390 KB
+- All TypeScript builds passing
+- No console errors
 
 ---
 
 ## Next Steps (Suggestions)
 
-1. **Replace stub endpoints** - `views_frontend_stubs.py` has placeholder implementations. Replace with real logic as features are built.
-
-2. **Add real authentication** - Stubs currently use `AllowAny`. Production needs proper auth for billing, user data.
-
-3. **Test authenticated flows** - Purchases, earnings, user-specific data show more when logged in.
+1. **Add data visualizations** - Time-series charts, pie charts where appropriate
+2. **Spider Page metrics** - Individual spider performance metrics
+3. **Body Health deep dives** - More granular system data displays
 
 ---
 
-## System Stats (from Session 736)
+## System Stats
 
 | Component | Count |
 |-----------|-------|
@@ -95,8 +106,9 @@ open http://localhost:3000
 | PA Tools | 86 |
 | Database Models | 364+ |
 | Celery Tasks | 139 |
-| Frontend Pages | 28+ |
+| Frontend Pages | 29 |
 | Body Systems | 9 |
+| Data Display Coverage | 85% |
 
 ---
 

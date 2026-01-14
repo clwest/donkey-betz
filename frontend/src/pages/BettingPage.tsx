@@ -1,18 +1,20 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { bettingApi } from '@/lib/api'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { bettingApi, humanApi } from '@/lib/api'
 import {
   TrendingUp, TrendingDown, DollarSign, Target, Zap, AlertTriangle,
   RefreshCw, Loader2, Trophy, Activity, PieChart, BarChart3,
-  Clock, CheckCircle, Flame, Search
+  Clock, CheckCircle, Flame, Search, Eye, XCircle, CircleDot,
+  Award, Layers, ChevronDown, ChevronUp, History
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type BettingTab = 'overview' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers'
+type BettingTab = 'overview' | 'arbitrage' | 'markets' | 'odds' | 'bankroll' | 'wagers' | 'watching'
 
 const tabs = [
   { id: 'overview' as BettingTab, label: 'Overview', icon: PieChart },
   { id: 'arbitrage' as BettingTab, label: 'Arbitrage', icon: Flame },
+  { id: 'watching' as BettingTab, label: 'Watching', icon: Eye },
   { id: 'markets' as BettingTab, label: 'Markets', icon: BarChart3 },
   { id: 'odds' as BettingTab, label: 'Live Odds', icon: Activity },
   { id: 'bankroll' as BettingTab, label: 'Bankroll', icon: DollarSign },
@@ -49,56 +51,205 @@ function StatCard({ label, value, icon: Icon, color, trend }: StatCardProps) {
   )
 }
 
+// Session 746: Rich stats interfaces
+interface RecordBreakdown {
+  wins: number
+  losses: number
+  profit: number
+}
+
+interface SportStats {
+  wins: number
+  losses: number
+  pushes?: number
+  profit: number
+  wagers: number
+}
+
+interface BettingStatsData {
+  total_wagers: number
+  total_stake: number
+  total_profit_loss: number
+  wins: number
+  losses: number
+  pushes: number
+  pending: number
+  win_rate: number
+  roi: number
+  current_streak: number
+  longest_win_streak: number
+  longest_loss_streak: number
+  singles_record: RecordBreakdown
+  parlays_record: RecordBreakdown
+  stats_by_sport: Record<string, SportStats>
+  last_updated: string
+}
+
+interface WagerLeg {
+  event_id: string
+  sport: string
+  matchup: string
+  market_type: string
+  pick: string
+  odds: number
+  line: number | null
+  bookmaker: string
+  status: string
+  final_score: string
+}
+
 interface WagerRowProps {
   wager: {
     id: string
+    type: string
     bet_type: string
     pick: string
     odds: number
     stake: number
+    potential_payout: number
     status: string
     profit_loss?: number
+    result_amount?: number
     created_at: string
+    placed_at: string
+    settled_at?: string
+    legs?: WagerLeg[]
   }
+  onExpand?: (id: string) => void
+  isExpanded?: boolean
 }
 
-function WagerRow({ wager }: WagerRowProps) {
+function WagerRow({ wager, onExpand, isExpanded }: WagerRowProps) {
   const statusColors: Record<string, string> = {
     pending: 'text-accent-amber bg-accent-amber/20',
     won: 'text-accent-green bg-accent-green/20',
     lost: 'text-accent-red bg-accent-red/20',
+    push: 'text-accent-purple bg-accent-purple/20',
     cancelled: 'text-gray-400 bg-gray-400/20',
   }
 
+  const profitLoss = wager.result_amount ?? wager.profit_loss
+  const legs = wager.legs || []
+  const hasLegs = legs.length > 0
+
   return (
-    <tr className="border-b border-dark-border hover:bg-dark-bg/50">
-      <td className="py-3 px-4">
-        <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
-          {wager.bet_type}
-        </span>
-      </td>
-      <td className="py-3 px-4 font-medium">{wager.pick}</td>
-      <td className="py-3 px-4">
-        <span className={cn('font-mono', wager.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
-          {wager.odds > 0 ? '+' : ''}{wager.odds}
-        </span>
-      </td>
-      <td className="py-3 px-4 font-medium">${wager.stake.toFixed(2)}</td>
-      <td className="py-3 px-4">
-        <span className={cn('text-xs px-2 py-0.5 rounded', statusColors[wager.status] || statusColors.pending)}>
-          {wager.status}
-        </span>
-      </td>
-      <td className="py-3 px-4">
-        {wager.profit_loss !== undefined ? (
-          <span className={cn('font-medium', wager.profit_loss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-            {wager.profit_loss >= 0 ? '+' : ''}${wager.profit_loss.toFixed(2)}
-          </span>
-        ) : (
-          <span className="text-gray-500">-</span>
+    <>
+      <tr
+        className={cn(
+          "border-b border-dark-border hover:bg-dark-bg/50 transition-colors",
+          hasLegs && "cursor-pointer"
         )}
-      </td>
-    </tr>
+        onClick={() => hasLegs && onExpand?.(wager.id)}
+      >
+        <td className="py-3 px-4">
+          <div className="flex items-center gap-2">
+            {hasLegs && (
+              isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />
+            )}
+            <span className={cn(
+              "text-xs px-2 py-0.5 rounded",
+              wager.type === 'parlay' ? "bg-accent-purple/20 text-accent-purple" : "bg-primary-600/20 text-primary-400"
+            )}>
+              {wager.type === 'parlay' ? `${legs.length}-leg Parlay` : wager.bet_type || 'Single'}
+            </span>
+          </div>
+        </td>
+        <td className="py-3 px-4 font-medium">
+          {wager.type === 'parlay' && legs.length > 0 ? (
+            <span className="text-sm">{legs[0]?.matchup || 'Multiple Events'}</span>
+          ) : (
+            wager.pick || legs[0]?.pick || '-'
+          )}
+        </td>
+        <td className="py-3 px-4">
+          <span className={cn('font-mono', wager.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+            {wager.odds > 0 ? '+' : ''}{wager.odds}
+          </span>
+        </td>
+        <td className="py-3 px-4 font-medium">${wager.stake?.toFixed(2) || '0.00'}</td>
+        <td className="py-3 px-4">
+          <span className={cn('text-xs px-2 py-0.5 rounded', statusColors[wager.status] || statusColors.pending)}>
+            {wager.status}
+          </span>
+        </td>
+        <td className="py-3 px-4">
+          {profitLoss !== undefined && profitLoss !== null ? (
+            <span className={cn('font-medium', profitLoss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+              {profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}
+            </span>
+          ) : wager.potential_payout ? (
+            <span className="text-gray-400 text-sm">→ ${wager.potential_payout.toFixed(2)}</span>
+          ) : (
+            <span className="text-gray-500">-</span>
+          )}
+        </td>
+        <td className="py-3 px-4 text-xs text-gray-500">
+          {wager.settled_at ? (
+            <span className="flex items-center gap-1">
+              <CheckCircle size={12} className="text-accent-green" />
+              {new Date(wager.settled_at).toLocaleDateString()}
+            </span>
+          ) : wager.placed_at ? (
+            new Date(wager.placed_at).toLocaleDateString()
+          ) : wager.created_at ? (
+            new Date(wager.created_at).toLocaleDateString()
+          ) : '-'}
+        </td>
+      </tr>
+      {/* Expanded leg details */}
+      {isExpanded && hasLegs && (
+        <tr className="bg-dark-bg/30">
+          <td colSpan={7} className="px-6 py-3">
+            <div className="space-y-2">
+              <div className="text-xs text-gray-400 mb-2 flex items-center gap-2">
+                <Layers size={12} />
+                {legs.length} Leg{legs.length > 1 ? 's' : ''} in this wager
+              </div>
+              {legs.map((leg, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex items-center justify-between p-2 rounded border-l-2",
+                    leg.status === 'won' ? 'bg-accent-green/5 border-accent-green' :
+                    leg.status === 'lost' ? 'bg-accent-red/5 border-accent-red' :
+                    leg.status === 'push' ? 'bg-accent-purple/5 border-accent-purple' :
+                    'bg-dark-card border-dark-border'
+                  )}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-dark-border text-gray-400">
+                        {leg.sport?.split('_')[1]?.toUpperCase() || leg.sport}
+                      </span>
+                      <span className="font-medium text-sm">{leg.matchup}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                      <span>{leg.market_type}: <span className="text-primary-400">{leg.pick}</span></span>
+                      {leg.line && <span>Line: {leg.line}</span>}
+                      <span>@ {leg.bookmaker}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={cn('font-mono text-sm', leg.odds > 0 ? 'text-accent-green' : 'text-accent-red')}>
+                      {leg.odds > 0 ? '+' : ''}{leg.odds}
+                    </span>
+                    {leg.final_score && (
+                      <div className="text-xs text-gray-400 mt-1">Final: {leg.final_score}</div>
+                    )}
+                    <span className={cn(
+                      'text-xs px-1.5 py-0.5 rounded ml-2',
+                      statusColors[leg.status] || 'bg-gray-500/20 text-gray-400'
+                    )}>
+                      {leg.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
 
@@ -159,9 +310,275 @@ function ArbitrageCard({ arb }: ArbitrageCardProps) {
   )
 }
 
+// Session 746: Watched Item interface
+interface WatchedItem {
+  id: string
+  title: string
+  description: string
+  item_type: string
+  source_agent?: string
+  payload?: {
+    event?: string
+    sport?: string
+    profit_percent?: number
+    bookmakers?: { name: string; odds: number; pick: string }[]
+    game_time?: string
+    expires_at?: string
+  }
+  created_at: string
+  verification_outcome?: 'pending' | 'won' | 'lost' | 'push' | 'cancelled' | null
+  verification_profit?: number | null
+  verification_notes?: string
+  verified_at?: string | null
+}
+
+interface WatchedItemCardProps {
+  item: WatchedItem
+  onVerify: (itemId: string, outcome: string, profit?: number, notes?: string) => void
+  isVerifying: boolean
+}
+
+// Session 746: Watched Item Card with verification UI
+function WatchedItemCard({ item, onVerify, isVerifying }: WatchedItemCardProps) {
+  const [showVerifyPanel, setShowVerifyPanel] = useState(false)
+  const [verifyOutcome, setVerifyOutcome] = useState<string>('won')
+  const [verifyProfit, setVerifyProfit] = useState<string>('')
+  const [verifyNotes, setVerifyNotes] = useState<string>('')
+
+  const payload = item.payload || {}
+  const profitPercent = payload.profit_percent ?? 0
+  const bookmakers = payload.bookmakers ?? []
+  const isPending = item.verification_outcome === 'pending' || !item.verification_outcome
+
+  const handleVerify = () => {
+    const profit = verifyProfit ? parseFloat(verifyProfit) : undefined
+    onVerify(item.id, verifyOutcome, profit, verifyNotes)
+    setShowVerifyPanel(false)
+  }
+
+  const outcomeColors: Record<string, string> = {
+    pending: 'bg-cyan-500/20 text-cyan-400',
+    won: 'bg-accent-green/20 text-accent-green',
+    lost: 'bg-accent-red/20 text-accent-red',
+    push: 'bg-accent-amber/20 text-accent-amber',
+    cancelled: 'bg-gray-500/20 text-gray-400',
+  }
+
+  return (
+    <div className="card p-4 border-l-4 border-l-cyan-500">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Eye size={16} className="text-cyan-400" />
+            <h4 className="font-medium">{payload.event || item.title || 'Watched Opportunity'}</h4>
+            <span className={cn('text-xs px-2 py-0.5 rounded', outcomeColors[item.verification_outcome || 'pending'])}>
+              {item.verification_outcome || 'pending'}
+            </span>
+          </div>
+          <p className="text-sm text-gray-400">{payload.sport || item.source_agent || 'Arbitrage'}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            <Clock size={10} className="inline mr-1" />
+            Watching since {new Date(item.created_at).toLocaleDateString()}
+          </p>
+        </div>
+        <div className="text-right">
+          {profitPercent > 0 && (
+            <>
+              <p className="text-xl font-bold text-cyan-400">+{profitPercent.toFixed(2)}%</p>
+              <p className="text-xs text-gray-500">expected profit</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Bookmaker Details */}
+      {bookmakers.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {bookmakers.map((book, i) => (
+            <div key={i} className="flex items-center justify-between p-2 rounded bg-dark-bg">
+              <div>
+                <span className="text-sm font-medium">{book.name || 'Unknown'}</span>
+                <span className="text-gray-400 mx-2">→</span>
+                <span className="text-sm text-primary-400">{book.pick || '-'}</span>
+              </div>
+              <span className="font-mono text-accent-green">
+                {(book.odds ?? 0) > 0 ? '+' : ''}{book.odds ?? 0}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Description if no bookmakers */}
+      {bookmakers.length === 0 && item.description && (
+        <p className="text-sm text-gray-400 mb-3">{item.description}</p>
+      )}
+
+      {/* Verification Panel */}
+      {isPending && !showVerifyPanel && (
+        <button
+          onClick={() => setShowVerifyPanel(true)}
+          className="btn btn-sm bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 w-full"
+        >
+          <CheckCircle size={14} className="mr-2" />
+          Record Outcome
+        </button>
+      )}
+
+      {showVerifyPanel && (
+        <div className="mt-3 p-3 rounded-lg bg-dark-bg border border-dark-border">
+          <h5 className="text-sm font-medium mb-3">Record Verification</h5>
+
+          {/* Outcome Buttons */}
+          <div className="flex gap-2 mb-3">
+            {[
+              { value: 'won', label: 'Won', icon: CheckCircle, color: 'bg-accent-green/20 text-accent-green hover:bg-accent-green/30' },
+              { value: 'lost', label: 'Lost', icon: XCircle, color: 'bg-accent-red/20 text-accent-red hover:bg-accent-red/30' },
+              { value: 'push', label: 'Push', icon: CircleDot, color: 'bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30' },
+              { value: 'cancelled', label: 'Cancelled', icon: XCircle, color: 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30' },
+            ].map(({ value, label, icon: Icon, color }) => (
+              <button
+                key={value}
+                onClick={() => setVerifyOutcome(value)}
+                className={cn(
+                  'flex-1 py-2 px-3 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1',
+                  verifyOutcome === value ? color + ' ring-1 ring-current' : 'bg-dark-card hover:bg-dark-border'
+                )}
+              >
+                <Icon size={12} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Profit Input */}
+          <div className="mb-3">
+            <label className="text-xs text-gray-400 mb-1 block">Profit/Loss ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={verifyProfit}
+              onChange={(e) => setVerifyProfit(e.target.value)}
+              placeholder="e.g., 25.50 or -10.00"
+              className="w-full px-3 py-2 text-sm rounded bg-dark-card border border-dark-border focus:border-primary-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Notes Input */}
+          <div className="mb-3">
+            <label className="text-xs text-gray-400 mb-1 block">Notes (optional)</label>
+            <input
+              type="text"
+              value={verifyNotes}
+              onChange={(e) => setVerifyNotes(e.target.value)}
+              placeholder="e.g., Game went to overtime"
+              className="w-full px-3 py-2 text-sm rounded bg-dark-card border border-dark-border focus:border-primary-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowVerifyPanel(false)}
+              className="btn btn-sm flex-1"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleVerify}
+              disabled={isVerifying}
+              className="btn btn-sm btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={14} />
+                  Save
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Verified Result Display */}
+      {!isPending && (
+        <div className={cn(
+          'mt-3 p-3 rounded-lg flex items-center justify-between',
+          item.verification_outcome === 'won' ? 'bg-accent-green/10' :
+          item.verification_outcome === 'lost' ? 'bg-accent-red/10' : 'bg-gray-500/10'
+        )}>
+          <div>
+            <span className="text-sm font-medium">
+              {item.verification_outcome === 'won' ? 'Would Have Won!' :
+               item.verification_outcome === 'lost' ? 'Would Have Lost' :
+               item.verification_outcome === 'push' ? 'Push (Tie)' : 'Cancelled'}
+            </span>
+            {item.verification_notes && (
+              <p className="text-xs text-gray-400 mt-1">{item.verification_notes}</p>
+            )}
+          </div>
+          {item.verification_profit !== null && item.verification_profit !== undefined && (
+            <span className={cn(
+              'text-lg font-bold',
+              item.verification_profit >= 0 ? 'text-accent-green' : 'text-accent-red'
+            )}>
+              {item.verification_profit >= 0 ? '+' : ''}${item.verification_profit.toFixed(2)}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function BettingPage() {
   const [activeTab, setActiveTab] = useState<BettingTab>('overview')
   const [sportFilter, setSportFilter] = useState('all')
+  const [watchingFilter, setWatchingFilter] = useState<'all' | 'pending' | 'verified'>('all')
+  const [expandedWagers, setExpandedWagers] = useState<Set<string>>(new Set())
+  const [showDetailedStats, setShowDetailedStats] = useState(false)
+  const queryClient = useQueryClient()
+
+  const toggleWagerExpand = (wagerId: string) => {
+    setExpandedWagers(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(wagerId)) {
+        newSet.delete(wagerId)
+      } else {
+        newSet.add(wagerId)
+      }
+      return newSet
+    })
+  }
+
+  // Session 746: Fetch watched items
+  const { data: watchedData, isLoading: watchedLoading, refetch: refetchWatched } = useQuery({
+    queryKey: ['betting-watched', watchingFilter],
+    queryFn: () => humanApi.attention({
+      limit: 100,
+      status: watchingFilter === 'all' ? ['watching', 'verified'] :
+              watchingFilter === 'pending' ? ['watching'] : ['verified'],
+    }),
+    enabled: activeTab === 'watching',
+  })
+
+  // Session 746: Verification mutation
+  const verifyMutation = useMutation({
+    mutationFn: ({ itemId, outcome, profit, notes }: { itemId: string; outcome: string; profit?: number; notes?: string }) =>
+      humanApi.verify(itemId, outcome, profit, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['betting-watched'] })
+    },
+  })
+
+  const watchedItems: WatchedItem[] = (watchedData?.data?.items || []).filter(
+    (item: WatchedItem) => item.item_type === 'arbitrage'
+  )
 
   // Fetch betting stats
   const { data: statsData, refetch: refetchStats } = useQuery({
@@ -213,8 +630,11 @@ export default function BettingPage() {
     refetchInterval: 60000, // Refresh every minute
   })
 
-  const stats = statsData?.data || {}
+  const stats: Partial<BettingStatsData> = statsData?.data?.stats || statsData?.data || {}
   const wagers = wagersData?.data?.wagers || []
+  const singlesRecord = stats.singles_record || { wins: 0, losses: 0, profit: 0 }
+  const parlaysRecord = stats.parlays_record || { wins: 0, losses: 0, profit: 0 }
+  const statsBySport = stats.stats_by_sport || {}
   const arbitrageOpps = arbData?.data?.opportunities || []
   const liveOdds = oddsData?.data?.games || []
   const bankroll = bankrollData?.data || {}
@@ -265,7 +685,7 @@ export default function BettingPage() {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Stats Grid */}
+          {/* Stats Grid - Primary Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard
               label="Total P/L"
@@ -287,19 +707,174 @@ export default function BettingPage() {
               color="bg-accent-amber"
             />
             <StatCard
-              label="Active Bets"
-              value={stats.active_wagers || 0}
+              label="Pending"
+              value={stats.pending || 0}
               icon={Activity}
               color="bg-accent-purple"
             />
           </div>
+
+          {/* Stats Grid - Secondary Row (Streak Stats) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard
+              label="Current Streak"
+              value={`${stats.current_streak || 0}${(stats.current_streak || 0) >= 0 ? 'W' : 'L'}`}
+              icon={Flame}
+              color={(stats.current_streak || 0) >= 0 ? "bg-accent-green" : "bg-accent-red"}
+            />
+            <StatCard
+              label="Best Win Streak"
+              value={stats.longest_win_streak || 0}
+              icon={Award}
+              color="bg-accent-green"
+            />
+            <StatCard
+              label="Worst Loss Streak"
+              value={stats.longest_loss_streak || 0}
+              icon={TrendingDown}
+              color="bg-accent-red"
+            />
+            <StatCard
+              label="Pushes"
+              value={stats.pushes || 0}
+              icon={CircleDot}
+              color="bg-gray-600"
+            />
+          </div>
+
+          {/* Detailed Stats Toggle */}
+          <button
+            onClick={() => setShowDetailedStats(!showDetailedStats)}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            {showDetailedStats ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {showDetailedStats ? 'Hide' : 'Show'} Detailed Breakdown
+          </button>
+
+          {/* Detailed Stats Panel */}
+          {showDetailedStats && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Singles vs Parlays */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Layers size={18} className="text-primary-400" />
+                  Singles vs Parlays
+                </h3>
+                <div className="space-y-4">
+                  {/* Singles */}
+                  <div className="p-3 rounded-lg bg-primary-600/10 border border-primary-600/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-primary-400">Singles</span>
+                      <span className={cn(
+                        'font-bold',
+                        singlesRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
+                      )}>
+                        {singlesRecord.profit >= 0 ? '+' : ''}${singlesRecord.profit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-accent-green">{singlesRecord.wins}W</span>
+                      <span className="text-accent-red">{singlesRecord.losses}L</span>
+                      <span className="text-gray-400">
+                        {singlesRecord.wins + singlesRecord.losses > 0
+                          ? `${((singlesRecord.wins / (singlesRecord.wins + singlesRecord.losses)) * 100).toFixed(1)}%`
+                          : '0%'
+                        } win rate
+                      </span>
+                    </div>
+                  </div>
+                  {/* Parlays */}
+                  <div className="p-3 rounded-lg bg-accent-purple/10 border border-accent-purple/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-accent-purple">Parlays</span>
+                      <span className={cn(
+                        'font-bold',
+                        parlaysRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
+                      )}>
+                        {parlaysRecord.profit >= 0 ? '+' : ''}${parlaysRecord.profit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-accent-green">{parlaysRecord.wins}W</span>
+                      <span className="text-accent-red">{parlaysRecord.losses}L</span>
+                      <span className="text-gray-400">
+                        {parlaysRecord.wins + parlaysRecord.losses > 0
+                          ? `${((parlaysRecord.wins / (parlaysRecord.wins + parlaysRecord.losses)) * 100).toFixed(1)}%`
+                          : '0%'
+                        } win rate
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Per-Sport Breakdown */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <BarChart3 size={18} className="text-accent-amber" />
+                  Performance by Sport
+                </h3>
+                {Object.keys(statsBySport).length > 0 ? (
+                  <div className="space-y-3 max-h-[280px] overflow-y-auto">
+                    {Object.entries(statsBySport).map(([sport, sportStats]) => {
+                      const totalGames = sportStats.wins + sportStats.losses + (sportStats.pushes || 0)
+                      const winRate = totalGames > 0 ? (sportStats.wins / totalGames) * 100 : 0
+                      return (
+                        <div key={sport} className="p-3 rounded-lg bg-dark-bg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm">
+                              {sport.split('_').slice(1).join(' ').toUpperCase() || sport}
+                            </span>
+                            <span className={cn(
+                              'font-bold text-sm',
+                              sportStats.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
+                            )}>
+                              {sportStats.profit >= 0 ? '+' : ''}${sportStats.profit.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-accent-green">{sportStats.wins}W</span>
+                            <span className="text-accent-red">{sportStats.losses}L</span>
+                            {sportStats.pushes && sportStats.pushes > 0 && (
+                              <span className="text-gray-400">{sportStats.pushes}P</span>
+                            )}
+                            <span className="text-gray-500">|</span>
+                            <span className="text-gray-400">{winRate.toFixed(1)}% win rate</span>
+                            {sportStats.wagers && (
+                              <span className="text-gray-500">{sportStats.wagers} wagers</span>
+                            )}
+                          </div>
+                          {/* Mini progress bar */}
+                          <div className="mt-2 h-1 rounded bg-dark-border overflow-hidden">
+                            <div
+                              className="h-full bg-accent-green"
+                              style={{ width: `${winRate}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <BarChart3 size={32} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No sport-specific data yet</p>
+                    <p className="text-xs text-gray-500 mt-1">Place wagers to see per-sport performance</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Recent Wagers */}
             <div className="card">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Recent Wagers</h3>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <History size={18} className="text-primary-400" />
+                  Recent Wagers
+                </h3>
                 <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
                   {wagers.length} total
                 </span>
@@ -319,11 +894,17 @@ export default function BettingPage() {
                         <th className="pb-2 px-2">Stake</th>
                         <th className="pb-2 px-2">Status</th>
                         <th className="pb-2 px-2">P/L</th>
+                        <th className="pb-2 px-2">Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       {wagers.slice(0, 5).map((wager: WagerRowProps['wager']) => (
-                        <WagerRow key={wager.id} wager={wager} />
+                        <WagerRow
+                          key={wager.id}
+                          wager={wager}
+                          onExpand={toggleWagerExpand}
+                          isExpanded={expandedWagers.has(wager.id)}
+                        />
                       ))}
                     </tbody>
                   </table>
@@ -339,17 +920,21 @@ export default function BettingPage() {
             {/* Performance */}
             <div className="card">
               <h3 className="text-lg font-semibold mb-4">Performance</h3>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center p-3 rounded-lg bg-accent-green/10">
-                  <p className="text-2xl font-bold text-accent-green">{stats.wins || 0}</p>
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                <div className="text-center p-2 rounded-lg bg-accent-green/10">
+                  <p className="text-xl font-bold text-accent-green">{stats.wins || 0}</p>
                   <p className="text-xs text-gray-400">Wins</p>
                 </div>
-                <div className="text-center p-3 rounded-lg bg-accent-red/10">
-                  <p className="text-2xl font-bold text-accent-red">{stats.losses || 0}</p>
+                <div className="text-center p-2 rounded-lg bg-accent-red/10">
+                  <p className="text-xl font-bold text-accent-red">{stats.losses || 0}</p>
                   <p className="text-xs text-gray-400">Losses</p>
                 </div>
-                <div className="text-center p-3 rounded-lg bg-accent-amber/10">
-                  <p className="text-2xl font-bold text-accent-amber">{stats.pending || 0}</p>
+                <div className="text-center p-2 rounded-lg bg-accent-purple/10">
+                  <p className="text-xl font-bold text-accent-purple">{stats.pushes || 0}</p>
+                  <p className="text-xs text-gray-400">Pushes</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-accent-amber/10">
+                  <p className="text-xl font-bold text-accent-amber">{stats.pending || 0}</p>
                   <p className="text-xs text-gray-400">Pending</p>
                 </div>
               </div>
@@ -361,17 +946,23 @@ export default function BettingPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Average Stake</span>
-                  <span className="font-medium">${(stats.avg_stake || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Best Win</span>
-                  <span className="font-medium text-accent-green">+${(stats.best_win || 0).toFixed(2)}</span>
+                  <span className="text-gray-400">Total Staked</span>
+                  <span className="font-medium">${(stats.total_stake || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Current Streak</span>
-                  <span className={cn('font-medium', (stats.streak || 0) >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-                    {stats.streak || 0} {(stats.streak || 0) >= 0 ? 'W' : 'L'}
+                  <span className={cn('font-medium', (stats.current_streak || 0) >= 0 ? 'text-accent-green' : 'text-accent-red')}>
+                    {Math.abs(stats.current_streak || 0)} {(stats.current_streak || 0) >= 0 ? 'W' : 'L'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Best Streak</span>
+                  <span className="font-medium text-accent-green">{stats.longest_win_streak || 0}W</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Last Updated</span>
+                  <span className="text-xs text-gray-500">
+                    {stats.last_updated ? new Date(stats.last_updated).toLocaleString() : '-'}
                   </span>
                 </div>
               </div>
@@ -450,6 +1041,104 @@ export default function BettingPage() {
               <AlertTriangle size={48} className="mx-auto mb-4 text-gray-500" />
               <h3 className="text-lg font-medium mb-2">No Arbitrage Found</h3>
               <p className="text-gray-400">Click "Scan Now" to search for opportunities</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session 746: Watching Tab */}
+      {activeTab === 'watching' && (
+        <div className="space-y-6">
+          {/* Header with filters */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">Filter:</span>
+              {[
+                { value: 'all', label: 'All', color: 'bg-primary-600' },
+                { value: 'pending', label: 'Pending', color: 'bg-cyan-500' },
+                { value: 'verified', label: 'Verified', color: 'bg-accent-green' },
+              ].map(({ value, label, color }) => (
+                <button
+                  key={value}
+                  onClick={() => setWatchingFilter(value as typeof watchingFilter)}
+                  className={cn(
+                    'px-3 py-1.5 rounded text-xs font-medium transition-colors',
+                    watchingFilter === value
+                      ? `${color} text-white`
+                      : 'bg-dark-card text-gray-400 hover:text-white'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              className="btn btn-secondary text-sm flex items-center gap-2"
+              onClick={() => refetchWatched()}
+            >
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard
+              label="Watching"
+              value={watchedItems.filter(i => i.verification_outcome === 'pending' || !i.verification_outcome).length}
+              icon={Eye}
+              color="bg-cyan-500"
+            />
+            <StatCard
+              label="Would Have Won"
+              value={watchedItems.filter(i => i.verification_outcome === 'won').length}
+              icon={CheckCircle}
+              color="bg-accent-green"
+            />
+            <StatCard
+              label="Would Have Lost"
+              value={watchedItems.filter(i => i.verification_outcome === 'lost').length}
+              icon={XCircle}
+              color="bg-accent-red"
+            />
+            <StatCard
+              label="Paper P/L"
+              value={`$${watchedItems
+                .filter(i => i.verification_profit != null)
+                .reduce((acc, i) => acc + (i.verification_profit || 0), 0)
+                .toFixed(2)}`}
+              icon={DollarSign}
+              color="bg-accent-amber"
+            />
+          </div>
+
+          {/* Watched Items */}
+          {watchedLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={32} className="animate-spin text-primary-400" />
+            </div>
+          ) : watchedItems.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {watchedItems.map((item) => (
+                <WatchedItemCard
+                  key={item.id}
+                  item={item}
+                  onVerify={(itemId, outcome, profit, notes) =>
+                    verifyMutation.mutate({ itemId, outcome, profit, notes })
+                  }
+                  isVerifying={verifyMutation.isPending}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="card p-12 text-center">
+              <Eye size={48} className="mx-auto mb-4 text-gray-500" />
+              <h3 className="text-lg font-medium mb-2">No Watched Opportunities</h3>
+              <p className="text-gray-400">
+                Use "Watch & Verify" on the Human page to track arbitrage opportunities without betting.
+                <br />
+                After games complete, come back here to record outcomes and track paper trading performance.
+              </p>
             </div>
           )}
         </div>
@@ -658,6 +1347,60 @@ export default function BettingPage() {
       {/* My Wagers Tab */}
       {activeTab === 'wagers' && (
         <div className="space-y-6">
+          {/* Wager Stats Summary */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary-600/20 flex items-center justify-center">
+                  <Trophy size={20} className="text-primary-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{wagers.length}</p>
+                  <p className="text-xs text-gray-400">Total Wagers</p>
+                </div>
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-accent-amber/20 flex items-center justify-center">
+                  <Clock size={20} className="text-accent-amber" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{wagers.filter((w: WagerRowProps['wager']) => w.status === 'pending').length}</p>
+                  <p className="text-xs text-gray-400">Pending</p>
+                </div>
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-accent-green/20 flex items-center justify-center">
+                  <CheckCircle size={20} className="text-accent-green" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{wagers.filter((w: WagerRowProps['wager']) => w.settled_at).length}</p>
+                  <p className="text-xs text-gray-400">Settled</p>
+                </div>
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-accent-purple/20 flex items-center justify-center">
+                  <Layers size={20} className="text-accent-purple" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{wagers.filter((w: WagerRowProps['wager']) => w.type === 'parlay').length}</p>
+                  <p className="text-xs text-gray-400">Parlays</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Help text */}
+          <p className="text-xs text-gray-500">
+            <ChevronDown size={12} className="inline mr-1" />
+            Click on a wager row to expand and see leg details
+          </p>
+
           {wagersLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 size={32} className="animate-spin text-primary-400" />
@@ -669,16 +1412,22 @@ export default function BettingPage() {
                   <thead className="bg-dark-bg">
                     <tr className="text-left text-gray-400">
                       <th className="py-3 px-4">Type</th>
-                      <th className="py-3 px-4">Pick</th>
+                      <th className="py-3 px-4">Pick/Event</th>
                       <th className="py-3 px-4">Odds</th>
                       <th className="py-3 px-4">Stake</th>
                       <th className="py-3 px-4">Status</th>
                       <th className="py-3 px-4">P/L</th>
+                      <th className="py-3 px-4">Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {wagers.map((wager: WagerRowProps['wager']) => (
-                      <WagerRow key={wager.id} wager={wager} />
+                      <WagerRow
+                        key={wager.id}
+                        wager={wager}
+                        onExpand={toggleWagerExpand}
+                        isExpanded={expandedWagers.has(wager.id)}
+                      />
                     ))}
                   </tbody>
                 </table>

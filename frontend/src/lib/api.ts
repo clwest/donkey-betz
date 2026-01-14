@@ -979,6 +979,8 @@ export const humanApi = {
     api.post(`/human/attention/${itemId}/decide/`, { decision, feedback, confidence }),
   defer: (itemId: string, remindAt: string) =>
     api.post(`/human/attention/${itemId}/defer/`, { remind_at: remindAt }),
+  verify: (itemId: string, outcome: string, profit?: number, notes?: string) =>
+    api.post(`/human/attention/${itemId}/verify/`, { outcome, profit, notes }),
 
   // Control Panel
   control: () => api.get('/human/control/'),

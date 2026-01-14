@@ -135,6 +135,54 @@ class AttentionDeferView(View):
 
 
 @method_decorator([csrf_exempt, login_required], name='dispatch')
+class AttentionVerifyView(View):
+    """Record verification outcome for a watched attention item (Session 746)."""
+
+    def post(self, request, item_id):
+        """POST /api/human/attention/{id}/verify/"""
+        from core.models_human_interface import HumanAttentionItem
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        outcome = data.get('outcome')
+        if not outcome:
+            return JsonResponse({'success': False, 'error': 'Outcome required'}, status=400)
+
+        profit = data.get('profit')
+        notes = data.get('notes', '')
+
+        try:
+            item = HumanAttentionItem.objects.get(id=item_id)
+        except HumanAttentionItem.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)
+
+        # Only allow verifying items that are being watched
+        if item.status != HumanAttentionItem.STATUS_WATCHING:
+            return JsonResponse({
+                'success': False,
+                'error': f'Item is not in watching status (current: {item.status})'
+            }, status=400)
+
+        # Record the verification
+        item.record_verification(outcome=outcome, profit=profit, notes=notes)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Verification recorded',
+            'item': {
+                'id': str(item.id),
+                'status': item.status,
+                'verification_outcome': item.verification_outcome,
+                'verification_profit': item.verification_profit,
+                'verified_at': item.verified_at.isoformat() if item.verified_at else None,
+            }
+        })
+
+
+@method_decorator([csrf_exempt, login_required], name='dispatch')
 class SystemControlView(View):
     """Get and manage system control state."""
 
@@ -297,6 +345,7 @@ def get_human_interface_urls():
         path('api/human/attention/stats/', AttentionStatsView.as_view(), name='human-attention-stats'),
         path('api/human/attention/<uuid:item_id>/decide/', AttentionDecideView.as_view(), name='human-attention-decide'),
         path('api/human/attention/<uuid:item_id>/defer/', AttentionDeferView.as_view(), name='human-attention-defer'),
+        path('api/human/attention/<uuid:item_id>/verify/', AttentionVerifyView.as_view(), name='human-attention-verify'),
 
         # Control Panel
         path('api/human/control/', SystemControlView.as_view(), name='human-control'),
