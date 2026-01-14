@@ -62,7 +62,9 @@ interface Conversation {
   topic: string
   status: string
   messages_count?: number
-  created_at: string
+  message_count?: number  // API returns this field name
+  started_at: string  // Session 751: API returns started_at, not created_at
+  ended_at?: string | null
   participants?: Participant[]  // API returns {name, emoji} objects
   conclusion?: string
   insights?: string[]
@@ -545,15 +547,15 @@ export default function AgentSocialPage() {
                           </p>
                         )}
                         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                          {conversation.messages_count && (
+                          {(conversation.message_count || conversation.messages_count) && (
                             <span className="flex items-center gap-1">
                               <MessageCircle size={12} />
-                              {conversation.messages_count} messages
+                              {conversation.message_count || conversation.messages_count} messages
                             </span>
                           )}
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
-                            {new Date(conversation.created_at).toLocaleDateString()}
+                            {new Date(conversation.started_at).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
@@ -722,7 +724,7 @@ export default function AgentSocialPage() {
                   </div>
 
                   <p className="text-sm text-gray-400 mt-3">
-                    {new Date(selectedConversation.created_at).toLocaleString()}
+                    {new Date(selectedConversation.started_at).toLocaleString()}
                   </p>
                 </div>
 
