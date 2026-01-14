@@ -22,6 +22,17 @@ Deep investigation into why the Evolution page showed only 1 XP record despite 4
 - Removed redundant `_calculate_level()` method
 - Added detailed XP source tracking (spider bonus, fast execution bonus)
 
+### Celery Task Fix (`core/tasks.py`)
+- Fixed `process_agent_activity_xp` field name mismatches
+- AgentConversation: `created_at` → `started_at`, `initiator/responder` → `participants`
+- AgentDream: `created_at` → `dreamed_at`
+- AgentLearning: `agent` → `teacher_agent` + `student_agent`
+
+### Backfill Historical XP
+- Created `python manage.py backfill_evolution_xp` command
+- Awarded **30,284 XP** across **8,746 awards**
+- Agents now properly leveled based on historical activity
+
 ### Missing Agent Profiles Initialized
 - 15 agents were missing Evolution profiles
 - All now created at Level 1
@@ -41,15 +52,16 @@ Deep investigation into why the Evolution page showed only 1 XP record despite 4
 | Spider data bonus | +5 XP | Learning loop |
 | Fast execution bonus | +3 XP | Learning loop |
 
-### Level Distribution
+### Level Distribution (After Backfill)
 | Level | Count | Title |
 |-------|-------|-------|
-| 1 | 38+ | Novice |
-| 2 | 9 | Apprentice |
-| 3 | 3 | Journeyman |
-| 6 | 3 | Master |
-| 9 | 1 | Oracle |
-| 11 | 4 | Omniscient |
+| 1 | 12 | Novice |
+| 2 | 15 | Apprentice |
+| 3 | 13 | Journeyman |
+| 4 | 13 | Adept |
+| 5 | 7 | Expert |
+| 6 | 4 | Master |
+| 7+ | 9 | Grandmaster+ |
 
 **Top Agent:** StockAuditCoordinator (Level 11, 9,110 XP)
 

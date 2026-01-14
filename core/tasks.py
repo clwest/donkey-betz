@@ -10535,6 +10535,7 @@ def broadcast_relationship_status():
 def process_agent_activity_xp():
     """
     Session 254: Award XP to agents based on their recent activity.
+    Session 748: Fixed field name mismatches - was using wrong timestamp/relationship fields.
 
     Called by Celery Beat every 15 minutes.
     Looks at agent activity from the last 15 minutes and awards XP accordingly.
@@ -10551,59 +10552,68 @@ def process_agent_activity_xp():
         total_xp_awarded = 0
 
         # Award XP for conversations
+        # Session 748: Fixed - AgentConversation uses 'started_at' not 'created_at',
+        # and 'participants' (M2M) not 'initiator'/'responder'
         try:
             recent_conversations = AgentConversation.objects.filter(
-                created_at__gte=fifteen_min_ago
-            ).values('initiator', 'responder')
+                started_at__gte=fifteen_min_ago
+            ).prefetch_related('participants')
 
             for convo in recent_conversations:
-                for agent_id in [convo['initiator'], convo['responder']]:
-                    if agent_id:
-                        try:
-                            agent = Agent.objects.get(id=agent_id)
-                            evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
-                            evolution.award_xp(5, 'conversation', 'Participated in agent conversation')
-                            agents_awarded += 1
-                            total_xp_awarded += 5
-                        except Agent.DoesNotExist:
-                            pass
+                for agent in convo.participants.all():
+                    try:
+                        evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
+                        evolution.award_xp(5, 'conversation', f'Participated in conversation: {convo.topic[:50] if convo.topic else "Agent discussion"}')
+                        agents_awarded += 1
+                        total_xp_awarded += 5
+                    except Exception:
+                        pass
         except Exception as e:
             logger.debug(f"📈 [EVOLUTION] Conversation XP check skipped: {e}")
 
         # Award XP for dreams
+        # Session 748: Fixed - AgentDream uses 'dreamed_at' not 'created_at'
         try:
             recent_dreams = AgentDream.objects.filter(
-                created_at__gte=fifteen_min_ago
-            ).values('agent')
+                dreamed_at__gte=fifteen_min_ago
+            ).select_related('agent')
 
             for dream in recent_dreams:
-                if dream['agent']:
+                if dream.agent:
                     try:
-                        agent = Agent.objects.get(id=dream['agent'])
-                        evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
-                        evolution.award_xp(3, 'dream', 'Generated creative dream')
+                        evolution, _ = AgentEvolution.objects.get_or_create(agent=dream.agent)
+                        evolution.award_xp(3, 'dream', f'Generated dream: {dream.title[:50] if dream.title else "Creative dream"}')
                         agents_awarded += 1
                         total_xp_awarded += 3
-                    except Agent.DoesNotExist:
+                    except Exception:
                         pass
         except Exception as e:
             logger.debug(f"📈 [EVOLUTION] Dream XP check skipped: {e}")
 
         # Award XP for learning
+        # Session 748: Fixed - AgentLearning uses 'teacher_agent' and 'student_agent' not 'agent'
         try:
             recent_learning = AgentLearning.objects.filter(
                 created_at__gte=fifteen_min_ago
-            ).values('agent')
+            ).select_related('teacher_agent', 'student_agent')
 
             for learning in recent_learning:
-                if learning['agent']:
+                # Award XP to both teacher and student
+                if learning.teacher_agent:
                     try:
-                        agent = Agent.objects.get(id=learning['agent'])
-                        evolution, _ = AgentEvolution.objects.get_or_create(agent=agent)
-                        evolution.award_xp(8, 'learning', 'Acquired new knowledge')
+                        evolution, _ = AgentEvolution.objects.get_or_create(agent=learning.teacher_agent)
+                        evolution.award_xp(8, 'mentorship', f'Taught: {learning.learning_type}')
                         agents_awarded += 1
                         total_xp_awarded += 8
-                    except Agent.DoesNotExist:
+                    except Exception:
+                        pass
+                if learning.student_agent:
+                    try:
+                        evolution, _ = AgentEvolution.objects.get_or_create(agent=learning.student_agent)
+                        evolution.award_xp(8, 'learning', f'Learned: {learning.learning_type}')
+                        agents_awarded += 1
+                        total_xp_awarded += 8
+                    except Exception:
                         pass
         except Exception as e:
             logger.debug(f"📈 [EVOLUTION] Learning XP check skipped: {e}")

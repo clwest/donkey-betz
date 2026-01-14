@@ -1,11 +1,14 @@
-# Session 748: Evolution XP Tracking Fix
+# Session 748: Evolution XP Tracking Fix + Backfill
 
 **Date:** January 14, 2026
-**Focus:** Deep-dive into Evolution system - fixing XP history tracking and initializing missing agent profiles
+**Focus:** Deep-dive into Evolution system - fixing XP history tracking, Celery task field mismatches, and backfilling historical XP
 
 ## Summary
 
-Session 747 fixed the API field mismatches for the Evolution page. This session conducted a deep investigation into WHY only 1 XP record existed despite agents having accumulated 44,818 XP, and fixed the root cause.
+Session 747 fixed the API field mismatches for the Evolution page. This session conducted a deep investigation into WHY only 1 XP record existed despite agents having accumulated 44,818 XP, and fixed multiple root causes:
+1. Fixed `learning_loop.py` to use proper `award_xp()` method
+2. Fixed Celery task `process_agent_activity_xp` field name mismatches
+3. Created backfill command and awarded **30,284 XP** for historical activity
 
 ## Investigation Findings
 
@@ -175,29 +178,72 @@ Level formula: `XP_required = 100 * (1.5 ** (level - 1))`
 | 10 | Legendary | 2,561 | 7,483 |
 | 11 | Omniscient | 3,841 | 11,324 |
 
-### Current Level Distribution
+### Level Distribution After Backfill
 
-| Level | Count |
-|-------|-------|
-| Level 1 | 38+ agents (including 15 newly initialized) |
-| Level 2 | 9 agents |
-| Level 3 | 3 agents |
-| Level 6 | 3 agents |
-| Level 9 | 1 agent |
-| Level 11 | 4 agents |
+| Level | Title | Count |
+|-------|-------|-------|
+| 1 | Novice | 12 |
+| 2 | Apprentice | 15 |
+| 3 | Journeyman | 13 |
+| 4 | Adept | 13 |
+| 5 | Expert | 7 |
+| 6 | Master | 4 |
+| 7 | Grandmaster | 1 |
+| 8 | Sage | 2 |
+| 9 | Oracle | 1 |
+| 10 | Legendary | 1 |
+| 11 | Omniscient | 4 |
 
-**Top Agent:** StockAuditCoordinator (Level 11, 9,110 XP)
+**Top Agent:** StockAuditCoordinator (Level 11, 9,110+ XP)
+
+## Additional Fixes This Session
+
+### 4. Celery Task Field Mismatches (`core/tasks.py`)
+
+The `process_agent_activity_xp` Celery task was silently failing due to wrong field names:
+
+| Model | Wrong Field | Correct Field |
+|-------|-------------|---------------|
+| AgentConversation | `created_at` | `started_at` |
+| AgentConversation | `initiator`/`responder` | `participants` (M2M) |
+| AgentDream | `created_at` | `dreamed_at` |
+| AgentLearning | `agent` | `teacher_agent` + `student_agent` |
+
+### 5. Backfill Management Command
+
+Created `python manage.py backfill_evolution_xp` to award XP for all historical activity:
+
+```bash
+python manage.py backfill_evolution_xp          # Full backfill
+python manage.py backfill_evolution_xp --dry-run  # Preview
+python manage.py backfill_evolution_xp --days=30  # Last 30 days only
+```
+
+### Backfill Results
+
+| Activity Type | Records | Awards | XP |
+|---------------|---------|--------|-----|
+| Conversations | 3,818 | 1,958 | 9,790 |
+| Dreams | 7,543 | 6,762 | 20,286 |
+| Learning | 49,706 | 26 | 208 |
+| **TOTAL** | | **8,746** | **30,284** |
+
+## Files Modified
+
+- `core/super_platform/learning_loop.py` - Fixed `_award_agent_xp()` to use proper `award_xp()` method
+- `core/tasks.py` - Fixed `process_agent_activity_xp` field name mismatches
+- `core/management/commands/backfill_evolution_xp.py` - New backfill command
 
 ## Testing Verification
 
 1. **Evolution Page displays all agents** - Now shows 73 agents
-2. **XP Log will populate** - New learning loop executions create XPHistory
+2. **XP Log populated** - 8,746 new XP awards created
 3. **Level calculations consistent** - Using model's exponential curve
 4. **Missing agents initialized** - All 15 created at Level 1
+5. **Celery task fixed** - Will now award XP for new activity every 15 min
 
 ## Next Steps (Suggestions)
 
-1. **Backfill XPHistory** - Consider creating historical records based on conversation/dream/learning activity
-2. **Monitor XP Log** - Verify new executions create proper history records
-3. **Test ability unlocking** - No agents have unlocked abilities yet
-4. **Add more XP sources** - Task completion, collaboration, mentorship
+1. **Monitor XP Log** - Verify Celery awards XP for new activity
+2. **Test ability unlocking** - No agents have unlocked abilities yet
+3. **Add more XP sources** - Task completion, collaboration outcomes
