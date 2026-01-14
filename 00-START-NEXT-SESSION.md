@@ -46,6 +46,10 @@ Comprehensive audit of data display across the platform revealed ~40% of API dat
 ### Agents Page
 - Fixed truncated Conclusion in Conversation modal
 - Made entire modal body scrollable
+- Added **Conversation Status Indicators** (Concluded/Incomplete/Self-talk badges)
+- Added message count display in activity feed
+- Added **No Conclusion Explanation** section with contextual reasons
+- Database analysis: 77% concluded, 23% incomplete, 3% self-talk
 
 ---
 
@@ -61,7 +65,7 @@ Comprehensive audit of data display across the platform revealed ~40% of API dat
 - `frontend/src/pages/BettingPage.tsx` - Singles/parlays, per-sport, wager legs
 - `frontend/src/pages/DashboardPage.tsx` - Network graph visualization
 - `frontend/src/pages/IntelligencePage.tsx` - Gate details, execution history
-- `frontend/src/pages/AgentsPage.tsx` - Modal scrolling fix
+- `frontend/src/pages/AgentsPage.tsx` - Modal scrolling fix, conversation status indicators
 
 ---
 
@@ -83,7 +87,7 @@ open http://localhost:3000
 
 ## Build Status
 
-- Frontend bundle: 1,390 KB
+- Frontend bundle: 1,393 KB
 - All TypeScript builds passing
 - No console errors
 
