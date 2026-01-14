@@ -196,10 +196,16 @@ def get_session_detail(request, session_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def start_session(request, agent_id):
-    """Start a new debug session for an agent."""
+def start_session(request):
+    """Start a new debug session for an agent.
+    Session 750: Fixed to accept agent_id from request body instead of URL param.
+    """
     try:
         data = json.loads(request.body) if request.body else {}
+
+        agent_id = data.get('agent_id')
+        if not agent_id:
+            return JsonResponse({'success': False, 'error': 'agent_id is required'}, status=400)
 
         agent = Agent.objects.get(id=agent_id)
 
@@ -284,10 +290,16 @@ def toggle_bookmark_session(request, session_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def record_decision(request, session_id):
-    """Record a decision point during agent execution."""
+def record_decision(request):
+    """Record a decision point during agent execution.
+    Session 750: Fixed to accept session_id from request body instead of URL param.
+    """
     try:
         data = json.loads(request.body) if request.body else {}
+
+        session_id = data.get('session_id')
+        if not session_id:
+            return JsonResponse({'success': False, 'error': 'session_id is required'}, status=400)
 
         session = AgentSession.objects.get(id=session_id)
 
@@ -390,10 +402,16 @@ def flag_decision(request, decision_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def create_bookmark(request, session_id):
-    """Create a bookmark at a specific decision point."""
+def create_bookmark(request):
+    """Create a bookmark at a specific decision point.
+    Session 750: Fixed to accept session_id from request body instead of URL param.
+    """
     try:
         data = json.loads(request.body) if request.body else {}
+
+        session_id = data.get('session_id')
+        if not session_id:
+            return JsonResponse({'success': False, 'error': 'session_id is required'}, status=400)
 
         session = AgentSession.objects.get(id=session_id)
 
@@ -445,10 +463,16 @@ def delete_bookmark(request, bookmark_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def add_annotation(request, decision_id):
-    """Add an annotation to a decision point."""
+def add_annotation(request):
+    """Add an annotation to a decision point.
+    Session 750: Fixed to accept decision_id from request body instead of URL param.
+    """
     try:
         data = json.loads(request.body) if request.body else {}
+
+        decision_id = data.get('decision_id')
+        if not decision_id:
+            return JsonResponse({'success': False, 'error': 'decision_id is required'}, status=400)
 
         decision = DecisionPoint.objects.get(id=decision_id)
 
