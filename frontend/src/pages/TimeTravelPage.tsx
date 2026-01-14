@@ -32,7 +32,9 @@ interface TimeSession {
   ended_at?: string
   is_bookmarked: boolean
   total_decisions: number
-  duration?: string
+  duration?: string  // From overview API
+  duration_formatted?: string  // From session detail API
+  duration_ms?: number
   decisions?: Decision[]
 }
 
@@ -595,7 +597,7 @@ export default function TimeTravelPage() {
                   </div>
                   <div className="text-center p-3 bg-dark-bg rounded-lg">
                     <div className="text-lg font-bold text-white">
-                      {sessionDetail?.duration || formatDuration(sessionDetail?.started_at || '', sessionDetail?.ended_at)}
+                      {sessionDetail?.duration_formatted || sessionDetail?.duration || formatDuration(sessionDetail?.started_at || '', sessionDetail?.ended_at)}
                     </div>
                     <div className="text-xs text-gray-400">Duration</div>
                   </div>

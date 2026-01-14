@@ -658,64 +658,244 @@ def get_agent_sessions(request, agent_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def simulate_session(request, agent_id):
-    """Create a simulated debug session for testing the UI."""
+    """Create a simulated debug session for testing the UI.
+    Session 750: Enhanced with realistic data instead of placeholders.
+    """
     try:
         import random
 
         agent = Agent.objects.get(id=agent_id)
 
-        # Create session
-        task_types = ['image_generation', 'research', 'analysis', 'content_creation', 'workflow']
-        task_type = random.choice(task_types)
+        # Task configurations with realistic data
+        task_configs = {
+            'image_generation': {
+                'description': f'Generate professional marketing image for {agent.name} campaign',
+                'input': {'prompt': 'Create a modern tech startup banner', 'style': 'minimalist', 'dimensions': '1920x1080'},
+                'decisions': [
+                    {
+                        'type': 'analysis',
+                        'action': 'Analyzing visual requirements',
+                        'reasoning': 'Examined the prompt for key visual elements: modern aesthetic, tech industry focus, minimalist design. Identified need for clean lines, tech-forward color palette, and professional composition.',
+                        'alternatives': ['Use vibrant gradient background', 'Apply flat design with icons', 'Create 3D rendered scene'],
+                        'thoughts': [
+                            ('observation', 'The prompt emphasizes professionalism and modern tech aesthetics'),
+                            ('hypothesis', 'A minimalist approach with strategic color accents would best convey tech sophistication'),
+                            ('evaluation', 'Comparing reference images shows clean designs perform better for B2B'),
+                        ],
+                    },
+                    {
+                        'type': 'planning',
+                        'action': 'Planning composition layout',
+                        'reasoning': 'Determined optimal layout using rule of thirds. Central focal point with asymmetric balance will create visual interest while maintaining professional appearance.',
+                        'alternatives': ['Centered symmetric layout', 'Golden ratio spiral composition', 'Grid-based modular design'],
+                        'thoughts': [
+                            ('insight', 'Asymmetric layouts create more dynamic visual flow'),
+                            ('evaluation', 'Rule of thirds provides good balance between creativity and professionalism'),
+                        ],
+                    },
+                    {
+                        'type': 'tool_selection',
+                        'action': 'Selected DALL-E 3 for generation',
+                        'reasoning': 'DALL-E 3 chosen for superior text rendering and photorealistic output. Stable Diffusion considered but text accuracy is critical for marketing materials.',
+                        'alternatives': ['Stable Diffusion XL for artistic style', 'Midjourney for creative interpretation', 'Firefly for commercial licensing'],
+                        'thoughts': [
+                            ('observation', 'Marketing images often contain text elements requiring high fidelity'),
+                            ('evaluation', 'DALL-E 3 text rendering accuracy is ~95% vs ~60% for alternatives'),
+                        ],
+                    },
+                    {
+                        'type': 'parameter_choice',
+                        'action': 'Configured generation parameters',
+                        'reasoning': 'Set quality to HD, natural style selected over vivid to maintain professional tone. Added negative prompts to avoid common artifacts.',
+                        'alternatives': ['Vivid style for more impact', 'Standard quality for faster generation', 'Multiple variations for A/B testing'],
+                        'thoughts': [
+                            ('hypothesis', 'Natural style will better align with B2B expectations'),
+                            ('insight', 'HD quality reduces need for post-processing touch-ups'),
+                        ],
+                    },
+                    {
+                        'type': 'quality_check',
+                        'action': 'Validated output against requirements',
+                        'reasoning': 'Checked generated image for: composition alignment, color consistency, text legibility, brand appropriateness. All criteria met with minor adjustments recommended for contrast.',
+                        'alternatives': ['Request regeneration with modified prompt', 'Apply post-processing filters', 'Accept as-is without modifications'],
+                        'thoughts': [
+                            ('observation', 'Image meets 4/5 quality criteria, minor contrast adjustment needed'),
+                            ('evaluation', 'Post-processing is more efficient than regeneration for minor issues'),
+                            ('insight', 'Adding 10% contrast boost will improve text readability'),
+                        ],
+                    },
+                ],
+            },
+            'research': {
+                'description': f'Research market trends for {agent.name} strategic analysis',
+                'input': {'topic': 'AI industry trends 2026', 'depth': 'comprehensive', 'sources': ['news', 'reports', 'social']},
+                'decisions': [
+                    {
+                        'type': 'analysis',
+                        'action': 'Analyzing research scope',
+                        'reasoning': 'Defined research boundaries: focus on enterprise AI adoption, exclude consumer applications. Timeframe: last 6 months with forward projections.',
+                        'alternatives': ['Broader scope including consumer AI', 'Narrow focus on single vertical', 'Historical analysis over 5 years'],
+                        'thoughts': [
+                            ('observation', 'Enterprise AI market showing 40% YoY growth'),
+                            ('hypothesis', 'Focusing on enterprise will yield more actionable insights'),
+                        ],
+                    },
+                    {
+                        'type': 'planning',
+                        'action': 'Structured research methodology',
+                        'reasoning': 'Adopted mixed-methods approach: quantitative market data from reports, qualitative insights from expert interviews and social sentiment.',
+                        'alternatives': ['Pure quantitative analysis', 'Survey-based primary research', 'Competitive intelligence focus'],
+                        'thoughts': [
+                            ('insight', 'Mixed methods provide both breadth and depth'),
+                            ('evaluation', 'Social sentiment adds real-time market pulse data'),
+                        ],
+                    },
+                    {
+                        'type': 'tool_selection',
+                        'action': 'Selected data aggregation spiders',
+                        'reasoning': 'Deployed TechCrunch, Reuters, and HackerNews spiders for news. Added Crunchbase spider for funding data. Twitter/X excluded due to API limitations.',
+                        'alternatives': ['Include Twitter/X with rate limiting', 'Add LinkedIn for professional insights', 'Use only premium data sources'],
+                        'thoughts': [
+                            ('observation', 'News spiders provide 500+ relevant articles per week'),
+                            ('evaluation', 'Crunchbase funding data correlates with market confidence'),
+                        ],
+                    },
+                    {
+                        'type': 'parameter_choice',
+                        'action': 'Configured data filters',
+                        'reasoning': 'Set relevance threshold to 0.75, date range to 6 months, excluded duplicate sources. Entity extraction enabled for trend identification.',
+                        'alternatives': ['Lower threshold for broader coverage', 'Shorter timeframe for recency', 'Manual curation over automated filtering'],
+                        'thoughts': [
+                            ('hypothesis', '0.75 threshold balances signal-to-noise ratio'),
+                            ('insight', 'Entity extraction reveals hidden connections between trends'),
+                        ],
+                    },
+                    {
+                        'type': 'quality_check',
+                        'action': 'Validated research completeness',
+                        'reasoning': 'Cross-referenced findings against 3 analyst reports. 87% alignment achieved. Identified 2 emerging trends not in mainstream reports.',
+                        'alternatives': ['Seek additional validation sources', 'Focus only on consensus findings', 'Flag novel findings for review'],
+                        'thoughts': [
+                            ('observation', 'Novel trends may indicate early signals or noise'),
+                            ('evaluation', 'Historical accuracy of spider-detected trends is 73%'),
+                            ('insight', 'Flagging for human review adds appropriate caution'),
+                        ],
+                    },
+                ],
+            },
+            'content_creation': {
+                'description': f'Create engaging content piece via {agent.name}',
+                'input': {'type': 'blog_post', 'topic': 'Future of AI assistants', 'tone': 'authoritative', 'length': '1500 words'},
+                'decisions': [
+                    {
+                        'type': 'analysis',
+                        'action': 'Analyzing content requirements',
+                        'reasoning': 'Target audience: tech-savvy professionals. Key angles: productivity gains, integration challenges, ethical considerations. SEO keywords identified.',
+                        'alternatives': ['Consumer-focused angle', 'Technical deep-dive approach', 'Opinion/editorial style'],
+                        'thoughts': [
+                            ('observation', 'B2B content performs best with data-backed claims'),
+                            ('hypothesis', 'Balancing technical depth with accessibility will maximize engagement'),
+                        ],
+                    },
+                    {
+                        'type': 'planning',
+                        'action': 'Outlined content structure',
+                        'reasoning': 'Adopted inverted pyramid with hook, 3 main sections, and actionable conclusion. Each section targets specific reader intent stage.',
+                        'alternatives': ['Listicle format for scannability', 'Narrative storytelling approach', 'Q&A format for direct answers'],
+                        'thoughts': [
+                            ('insight', 'Inverted pyramid improves time-on-page for skimmers'),
+                            ('evaluation', 'Section headers enable both deep readers and scanners'),
+                        ],
+                    },
+                    {
+                        'type': 'tool_selection',
+                        'action': 'Selected GPT-5 for drafting',
+                        'reasoning': 'GPT-5 chosen for nuanced understanding and consistent voice. Claude considered for longer context but topic fits within GPT-5 capabilities.',
+                        'alternatives': ['Claude for nuanced reasoning', 'GPT-5-mini for speed', 'Human writer for authenticity'],
+                        'thoughts': [
+                            ('observation', 'GPT-5 maintains consistent authoritative tone'),
+                            ('evaluation', 'Token efficiency is 20% better than alternatives for this length'),
+                        ],
+                    },
+                    {
+                        'type': 'parameter_choice',
+                        'action': 'Configured generation settings',
+                        'reasoning': 'Temperature 0.7 for creativity while maintaining factual accuracy. Max tokens set for 1800 to allow editing buffer. System prompt includes brand voice guidelines.',
+                        'alternatives': ['Lower temperature for more conservative output', 'Higher temperature for unique angles', 'Zero-shot without brand guidelines'],
+                        'thoughts': [
+                            ('hypothesis', '0.7 temperature provides optimal creativity-accuracy balance'),
+                            ('insight', 'Brand voice system prompts improve consistency by 40%'),
+                        ],
+                    },
+                    {
+                        'type': 'quality_check',
+                        'action': 'Evaluated content quality',
+                        'reasoning': 'Checked readability (Grade 10 level achieved), factual accuracy (3 claims verified), originality (94% unique), and brand voice alignment (strong match).',
+                        'alternatives': ['Request revision for specific sections', 'Add more data citations', 'Simplify for broader audience'],
+                        'thoughts': [
+                            ('observation', 'Readability score optimal for target audience'),
+                            ('evaluation', 'Originality score exceeds 90% threshold'),
+                            ('insight', 'Minor citation additions would strengthen authority'),
+                        ],
+                    },
+                ],
+            },
+        }
+
+        # Select task type
+        task_type = random.choice(list(task_configs.keys()))
+        config = task_configs[task_type]
 
         session = AgentSession.objects.create(
             agent=agent,
             task_type=task_type,
-            task_description=f"Simulated {task_type} task for testing time travel debugging",
-            input_data={'prompt': 'Test prompt', 'style': 'professional'},
+            task_description=config['description'],
+            input_data=config['input'],
             status='completed',
             token_usage=random.randint(500, 2000),
             api_calls=random.randint(2, 8),
         )
 
-        # Create decisions
-        decision_types = [
-            ('analysis', 'Analyzing input requirements'),
-            ('planning', 'Planning execution approach'),
-            ('tool_selection', 'Selecting appropriate tool'),
-            ('parameter_choice', 'Choosing parameters'),
-            ('quality_check', 'Checking output quality'),
+        # Create decisions with realistic data
+        failure_reasons = [
+            'API rate limit exceeded, retrying with exponential backoff',
+            'Generated output did not meet quality threshold (scored 0.68, required 0.75)',
+            'Timeout occurred during external data fetch, using cached fallback',
+            'Validation failed: missing required field in structured output',
         ]
 
-        for seq, (dtype, action) in enumerate(decision_types, 1):
+        for seq, decision_config in enumerate(config['decisions'], 1):
+            was_successful = random.random() > 0.2
+            outcome_notes = None if was_successful else random.choice(failure_reasons)
+
             decision = DecisionPoint.objects.create(
                 session=session,
                 sequence_number=seq,
-                decision_type=dtype,
-                context={'step': seq, 'input': 'test'},
-                reasoning=f"At step {seq}, I considered multiple approaches and decided this was the best path forward based on the requirements.",
-                alternatives=[f'Alternative {i}' for i in range(1, 4)],
-                action_taken=action,
-                action_params={'confidence': 0.85},
+                decision_type=decision_config['type'],
+                context={'step': seq, 'task_type': task_type, 'agent': agent.name},
+                reasoning=decision_config['reasoning'],
+                alternatives=decision_config['alternatives'],
+                action_taken=decision_config['action'],
+                action_params={'confidence': round(random.uniform(0.75, 0.95), 2)},
                 confidence_score=random.uniform(0.7, 0.95),
-                was_successful=random.random() > 0.2,
+                was_successful=was_successful,
+                outcome_notes=outcome_notes,
                 duration_ms=random.randint(100, 1500),
             )
 
             # Add thoughts
-            thought_types = ['observation', 'hypothesis', 'evaluation', 'insight']
-            for t_seq in range(1, random.randint(2, 4)):
+            for t_seq, (thought_type, content) in enumerate(decision_config['thoughts'], 1):
                 ThoughtBubble.objects.create(
                     decision=decision,
                     sequence_number=t_seq,
-                    thought_type=random.choice(thought_types),
-                    content=f"Thought {t_seq}: Considering the context and requirements...",
-                    importance=random.uniform(0.3, 0.9),
+                    thought_type=thought_type,
+                    content=content,
+                    importance=random.uniform(0.5, 0.9),
                     influences_decision=random.random() > 0.3,
                 )
 
         # Finalize session
-        session.total_decisions = len(decision_types)
+        session.total_decisions = len(config['decisions'])
         session.ended_at = timezone.now()
         session.duration_ms = random.randint(5000, 30000)
         session.save()
