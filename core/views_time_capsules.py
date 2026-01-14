@@ -194,6 +194,7 @@ class TimeCapsuleOverviewView(View):
                         'trigger': c.trigger,
                         'agent_name': c.agent.name,
                         'agent_id': str(c.agent.id),
+                        'reveal_at': c.reveal_at.isoformat() if c.reveal_at else None,  # Session 749: Add original scheduled date
                         'revealed_at': c.revealed_at.isoformat() if c.revealed_at else None,
                         'created_at': c.created_at.isoformat(),
                         'seal_days': (c.revealed_at - c.created_at).days if c.revealed_at else 0,

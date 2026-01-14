@@ -71,8 +71,29 @@ const formatTimeRemaining = (openDate: string) => {
 export default function TimeCapsulePage() {
   const queryClient = useQueryClient()
   const [selectedCapsule, setSelectedCapsule] = useState<TimeCapsule | null>(null)
+  const [selectedCapsuleDetail, setSelectedCapsuleDetail] = useState<Record<string, unknown> | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'ready' | 'opened'>('all')
+
+  // Session 749: Fetch capsule detail when selected
+  const handleSelectCapsule = async (capsule: TimeCapsule) => {
+    setSelectedCapsule(capsule)
+    setSelectedCapsuleDetail(null)
+
+    // Fetch full detail for opened capsules to get message/prediction
+    if (capsule.status === 'opened' || capsule.status === 'ready') {
+      setLoadingDetail(true)
+      try {
+        const response = await timeCapsuleApi.detail(capsule.id)
+        setSelectedCapsuleDetail(response.data?.capsule || response.data)
+      } catch (error) {
+        console.error('Failed to fetch capsule detail:', error)
+      } finally {
+        setLoadingDetail(false)
+      }
+    }
+  }
 
   // Fetch overview
   const { data: overviewData, isLoading: loadingOverview, refetch: refetchOverview } = useQuery({
@@ -104,12 +125,13 @@ export default function TimeCapsulePage() {
   })
 
   // Parse data - API returns recent_revealed, coming_soon, and featured arrays
+  // Session 749: Fix field mapping - reveal_at is scheduled date, revealed_at is actual open date
   const recentRevealed: TimeCapsule[] = Array.isArray(overviewData?.recent_revealed)
     ? overviewData.recent_revealed.map((c: Record<string, unknown>) => ({
         ...c,
         status: 'opened' as const,
-        open_date: c.revealed_at || c.reveal_at,
-        opened_at: c.revealed_at,
+        open_date: c.reveal_at || c.revealed_at,  // Scheduled open date
+        opened_at: c.revealed_at,  // Actual open date
       }))
     : []
   const comingSoon: TimeCapsule[] = Array.isArray(overviewData?.coming_soon)
@@ -159,16 +181,22 @@ export default function TimeCapsulePage() {
   // Select first capsule on load
   useEffect(() => {
     if (allCapsules.length > 0 && !selectedCapsule) {
-      setSelectedCapsule(allCapsules[0])
+      handleSelectCapsule(allCapsules[0])
     }
-  }, [allCapsules, selectedCapsule])
+  }, [allCapsules.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReveal = async (capsuleId: string) => {
     try {
       await revealMutation.mutateAsync(capsuleId)
-      // Refetch and update selected capsule
+      // Refetch and update selected capsule with detail
       const updatedData = await timeCapsuleApi.detail(capsuleId)
-      setSelectedCapsule(updatedData.data)
+      const capsuleData = updatedData.data?.capsule || updatedData.data
+      setSelectedCapsule({
+        ...selectedCapsule,
+        status: 'opened',
+        opened_at: capsuleData.revealed_at,
+      } as TimeCapsule)
+      setSelectedCapsuleDetail(capsuleData)
     } catch (error) {
       console.error('Failed to reveal capsule:', error)
     }
@@ -341,7 +369,7 @@ export default function TimeCapsulePage() {
                   return (
                     <button
                       key={capsule.id}
-                      onClick={() => setSelectedCapsule(capsule)}
+                      onClick={() => handleSelectCapsule(capsule)}
                       className={cn(
                         'w-full p-4 flex items-center gap-4 hover:bg-dark-bg transition-colors text-left',
                         selectedCapsule?.id === capsule.id && 'bg-dark-bg'
@@ -481,26 +509,89 @@ export default function TimeCapsulePage() {
                 </div>
               </div>
 
-              {/* Message Content */}
-              {(selectedCapsule.status === 'opened' || selectedCapsule.status === 'ready') && selectedCapsule.message && (
-                <div className="bg-dark-card rounded-lg border border-dark-border p-4">
-                  <h4 className="font-medium text-white mb-3 flex items-center gap-2">
-                    <MessageSquare size={16} className="text-purple-400" />
-                    Message
-                  </h4>
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedCapsule.message}</p>
-                </div>
-              )}
+              {/* Session 749: Show detail content from fetched data */}
+              {(selectedCapsule.status === 'opened' || selectedCapsule.status === 'ready') && (
+                loadingDetail ? (
+                  <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+                    <div className="text-center py-4 text-gray-400">
+                      <RefreshCw size={20} className="animate-spin mx-auto mb-2" />
+                      Loading capsule contents...
+                    </div>
+                  </div>
+                ) : selectedCapsuleDetail ? (
+                  <>
+                    {/* Message */}
+                    {selectedCapsuleDetail.message && (
+                      <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+                        <h4 className="font-medium text-white mb-3 flex items-center gap-2">
+                          <MessageSquare size={16} className="text-purple-400" />
+                          Message to Future Self
+                        </h4>
+                        <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                          {selectedCapsuleDetail.message as string}
+                        </p>
+                      </div>
+                    )}
 
-              {/* Prediction */}
-              {(selectedCapsule.status === 'opened' || selectedCapsule.status === 'ready') && selectedCapsule.prediction && (
-                <div className="bg-dark-card rounded-lg border border-dark-border p-4">
-                  <h4 className="font-medium text-white mb-3 flex items-center gap-2">
-                    <Eye size={16} className="text-yellow-400" />
-                    Prediction
-                  </h4>
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedCapsule.prediction}</p>
-                </div>
+                    {/* Reflection (added when opened) */}
+                    {selectedCapsuleDetail.reflection && (
+                      <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+                        <h4 className="font-medium text-white mb-3 flex items-center gap-2">
+                          <Eye size={16} className="text-yellow-400" />
+                          Reflection Upon Opening
+                        </h4>
+                        <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                          {selectedCapsuleDetail.reflection as string}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Context Comparison - Then vs Now */}
+                    {selectedCapsuleDetail.comparison && (
+                      <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+                        <h4 className="font-medium text-white mb-3 flex items-center gap-2">
+                          <Sparkles size={16} className="text-cyan-400" />
+                          Then vs Now
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          {Object.entries((selectedCapsuleDetail.comparison as Record<string, unknown>)?.changes || {}).map(([key, value]) => {
+                            const change = value as { from: unknown; to: unknown; delta?: number }
+                            return (
+                              <div key={key} className="flex justify-between items-center py-1 border-b border-dark-border last:border-0">
+                                <span className="text-gray-400 capitalize">{key.replace(/_/g, ' ')}</span>
+                                <div className="text-right">
+                                  <span className="text-gray-500">{String(change.from)}</span>
+                                  <span className="text-gray-500 mx-2">→</span>
+                                  <span className="text-green-400">{String(change.to)}</span>
+                                  {change.delta !== undefined && (
+                                    <span className={cn('ml-2 text-xs', change.delta > 0 ? 'text-green-400' : 'text-red-400')}>
+                                      ({change.delta > 0 ? '+' : ''}{change.delta})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No content message */}
+                    {!selectedCapsuleDetail.message && !selectedCapsuleDetail.reflection && (
+                      <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+                        <p className="text-gray-400 text-sm text-center">
+                          This capsule has no message content.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+                    <p className="text-gray-400 text-sm text-center">
+                      Click to load capsule contents.
+                    </p>
+                  </div>
+                )
               )}
 
               {/* Sealed Message */}
