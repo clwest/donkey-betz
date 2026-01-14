@@ -109,6 +109,31 @@ This session conducted a comprehensive audit of data display across the platform
 - Content (participants, messages, conclusion, insights) scrolls together
 - Added `whitespace-pre-wrap` to conclusion for line break preservation
 
+### 6. Conversation Status Indicators (`frontend/src/pages/AgentsPage.tsx`)
+
+**Investigation Findings:**
+- Database analysis: 3,733 total conversations
+- 2,865 (77%) properly concluded with conclusion text
+- 867 (23%) incomplete - started but never finished (0-2 messages)
+- 115 (3%) single-participant "self-talk" conversations
+
+**Activity Feed Enhancements:**
+- Added status badges: "Concluded" (green) / "Incomplete" (amber)
+- Added "Self-talk" badge (pink) for single-participant conversations
+- Added message count display for each conversation
+
+**Modal Header Enhancements:**
+- Added "Self-talk (single agent)" warning badge
+- Added "No conclusion drawn" indicator for inconclusive conversations
+
+**No Conclusion Explanation Section:**
+- Replaced empty space with explanatory section when no conclusion exists
+- Contextual reasons based on conversation state:
+  - "Still in progress" for active conversations
+  - "Single-agent reflection" for self-talk
+  - "Not enough turns" for conversations with < 3 messages
+  - "Ended before conclusion" as fallback
+
 ## Files Modified
 
 ### Backend
@@ -135,7 +160,7 @@ This session conducted a comprehensive audit of data display across the platform
 
 ### Build Status
 - All TypeScript builds pass successfully
-- Bundle size: 1,390 KB (within acceptable range)
+- Bundle size: 1,393 KB (within acceptable range)
 
 ## Testing Recommendations
 
@@ -161,6 +186,9 @@ This session conducted a comprehensive audit of data display across the platform
 5. **Agents Page:**
    - Open a conversation with a long conclusion
    - Verify entire conclusion is readable via scrolling
+   - Check status badges appear in activity feed (Concluded/Incomplete/Self-talk)
+   - Open an incomplete conversation and verify explanation shows
+   - Open a self-talk conversation and verify warning badge appears
 
 ## Next Session Priorities
 
