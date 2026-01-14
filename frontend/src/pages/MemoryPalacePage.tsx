@@ -120,6 +120,11 @@ interface ClusterOverview {
     agents_with_clusters: number
   }
   clusters_by_agent: Record<string, Cluster[]>
+  // Session 746: Easy lookup for agent IDs by name
+  agents_with_clusters_list?: Array<{
+    id: string
+    name: string
+  }>
   agents_needing_clusters: Array<{
     id: string
     name: string
@@ -277,7 +282,7 @@ export default function MemoryPalacePage() {
     enabled: activeTab === 'clusters' && !!selectedClusterAgent,
   })
 
-  const { data: clusterDetailData } = useQuery<{ success: boolean; cluster: Cluster & { agent: { id: string; name: string } }; memories: Array<{ id: string; title: string; content: string; memory_type: string; valence: string; importance_score: number; similarity_to_centroid: number; is_core_member: boolean; position_x: number; position_y: number; created_at: string }> }>({
+  const { data: clusterDetailData, isLoading: loadingClusterDetail } = useQuery<{ success: boolean; cluster: Cluster & { agent: { id: string; name: string } }; memories: Array<{ id: string; title: string; content: string; memory_type: string; valence: string; importance_score: number; similarity_to_centroid: number; is_core_member: boolean; position_x: number; position_y: number; created_at: string }> }>({
     queryKey: ['memory-cluster-detail', selectedCluster],
     queryFn: async () => {
       if (!selectedCluster) return null
@@ -294,7 +299,10 @@ export default function MemoryPalacePage() {
       return res.data
     },
     onSuccess: () => {
+      // Session 746: Invalidate all cluster-related queries to refresh UI
       queryClient.invalidateQueries({ queryKey: ['memory-clusters'] })
+      queryClient.invalidateQueries({ queryKey: ['memory-clusters-overview'] })
+      queryClient.invalidateQueries({ queryKey: ['memory-clusters-agent'] })
     },
   })
 
@@ -726,6 +734,7 @@ export default function MemoryPalacePage() {
           agentClustersData={agentClustersData}
           loadingAgentClusters={loadingAgentClusters}
           clusterDetailData={clusterDetailData}
+          loadingClusterDetail={loadingClusterDetail}
           selectedClusterAgent={selectedClusterAgent}
           setSelectedClusterAgent={setSelectedClusterAgent}
           selectedCluster={selectedCluster}
@@ -745,6 +754,7 @@ function ClustersTabContent({
   agentClustersData,
   loadingAgentClusters,
   clusterDetailData,
+  loadingClusterDetail,
   selectedClusterAgent,
   setSelectedClusterAgent,
   selectedCluster,
@@ -756,7 +766,8 @@ function ClustersTabContent({
   loadingClustersOverview: boolean
   agentClustersData: { success: boolean; agent: { id: string; name: string }; clusters: Cluster[] } | undefined | null
   loadingAgentClusters: boolean
-  clusterDetailData: { success: boolean; cluster: Cluster & { agent: { id: string; name: string } }; memories: Array<{ id: string; title: string; content: string; memory_type: string; valence: string; importance_score: number; similarity_to_centroid: number; is_core_member: boolean; position_x: number; position_y: number; created_at: string }> } | undefined | null
+  clusterDetailData: { success: boolean; cluster: Cluster & { agent: { id: string; name: string }; cluster_type?: string }; memories: Array<{ id: string; title: string; content: string; memory_type: string; valence: string; importance_score: number; similarity_to_centroid: number; is_core_member: boolean; position_x: number; position_y: number; created_at: string; memory_outcome?: string }> } | undefined | null
+  loadingClusterDetail: boolean
   selectedClusterAgent: string | null
   setSelectedClusterAgent: (id: string | null) => void
   selectedCluster: string | null
@@ -764,11 +775,24 @@ function ClustersTabContent({
   generateClustersMutation: { mutate: (agentId: string) => void; isPending: boolean }
   getMemoryTypeConfig: (type: string) => { icon: typeof Brain; color: string; bgColor: string }
 }) {
+  // Session 746: Filter state for memory outcomes
+  const [outcomeFilter, setOutcomeFilter] = useState<'all' | 'failure' | 'success'>('all')
+
   if (loadingClustersOverview) {
     return (
       <div className="flex items-center justify-center py-12">
         <RefreshCw className="h-6 w-6 animate-spin text-purple-400" />
         <span className="ml-2 text-gray-400">Loading clusters...</span>
+      </div>
+    )
+  }
+
+  // Session 746: Loading state for cluster detail
+  if (selectedCluster && loadingClusterDetail) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-6 w-6 animate-spin text-purple-400" />
+        <span className="ml-2 text-gray-400">Loading cluster details...</span>
       </div>
     )
   }
@@ -790,7 +814,21 @@ function ClustersTabContent({
               <Network className="h-8 w-8" style={{ color: cluster.color }} />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-white">{cluster.name}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white">{cluster.name}</h2>
+                {/* Session 746: Cluster type badge */}
+                {cluster.cluster_type && cluster.cluster_type !== 'general' && (
+                  <span className={cn(
+                    'px-2 py-0.5 text-xs rounded font-medium',
+                    cluster.cluster_type === 'failure_pattern' && 'bg-red-500/20 text-red-300',
+                    cluster.cluster_type === 'success_pattern' && 'bg-green-500/20 text-green-300',
+                    cluster.cluster_type === 'learning_pattern' && 'bg-blue-500/20 text-blue-300',
+                    cluster.cluster_type === 'error_recovery' && 'bg-yellow-500/20 text-yellow-300',
+                  )}>
+                    {cluster.cluster_type.replace('_', ' ')}
+                  </span>
+                )}
+              </div>
               <p className="text-gray-400 mt-1">{cluster.description}</p>
               <div className="flex flex-wrap gap-2 mt-3">
                 {cluster.keywords?.map((kw, i) => (
@@ -838,15 +876,49 @@ function ClustersTabContent({
               <Brain className="h-5 w-5 text-purple-400" />
               Cluster Memories ({memories.length})
             </h3>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-400">Core members:</span>
-              <span className="text-purple-400 font-medium">
-                {memories.filter(m => m.is_core_member).length}
-              </span>
+            <div className="flex items-center gap-4 text-sm">
+              {/* Session 746: Outcome filter toggle */}
+              <div className="flex items-center gap-1 bg-dark-bg rounded-lg p-0.5">
+                <button
+                  onClick={() => setOutcomeFilter('all')}
+                  className={cn(
+                    'px-2 py-1 rounded text-xs transition-colors',
+                    outcomeFilter === 'all' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+                  )}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setOutcomeFilter('failure')}
+                  className={cn(
+                    'px-2 py-1 rounded text-xs transition-colors',
+                    outcomeFilter === 'failure' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'
+                  )}
+                >
+                  Failures
+                </button>
+                <button
+                  onClick={() => setOutcomeFilter('success')}
+                  className={cn(
+                    'px-2 py-1 rounded text-xs transition-colors',
+                    outcomeFilter === 'success' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+                  )}
+                >
+                  Successes
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">Core members:</span>
+                <span className="text-purple-400 font-medium">
+                  {memories.filter(m => m.is_core_member).length}
+                </span>
+              </div>
             </div>
           </div>
           <div className="divide-y divide-dark-border max-h-[500px] overflow-y-auto">
-            {memories.map((memory) => {
+            {memories
+              .filter(m => outcomeFilter === 'all' || m.memory_outcome === outcomeFilter)
+              .map((memory) => {
               const config = getMemoryTypeConfig(memory.memory_type)
               const Icon = config.icon
               return (
@@ -867,6 +939,17 @@ function ClustersTabContent({
                         {memory.is_core_member && (
                           <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded">
                             Core
+                          </span>
+                        )}
+                        {/* Session 746: Memory outcome badge */}
+                        {memory.memory_outcome && memory.memory_outcome !== 'unknown' && (
+                          <span className={cn(
+                            'px-1.5 py-0.5 text-xs rounded',
+                            memory.memory_outcome === 'failure' && 'bg-red-500/20 text-red-300',
+                            memory.memory_outcome === 'success' && 'bg-green-500/20 text-green-300',
+                            memory.memory_outcome === 'partial' && 'bg-yellow-500/20 text-yellow-300',
+                          )}>
+                            {memory.memory_outcome}
                           </span>
                         )}
                       </div>
@@ -1006,13 +1089,18 @@ function ClustersTabContent({
               <button
                 key={agentName}
                 onClick={() => {
-                  const firstCluster = clusters[0]
-                  if (firstCluster) {
-                    // Find the agent ID from overview data
-                    const agentId = clustersOverviewData.agents_needing_clusters?.find(
-                      a => a.name === agentName
-                    )?.id || firstCluster.id.split('-')[0] // fallback
-                    setSelectedClusterAgent(agentId)
+                  // Session 746: Look up agent ID from agents_with_clusters_list
+                  const agentInfo = clustersOverviewData.agents_with_clusters_list?.find(a => a.name === agentName)
+                  if (agentInfo?.id) {
+                    setSelectedClusterAgent(agentInfo.id)
+                  } else {
+                    // Fallback to agent_id in cluster data
+                    const firstCluster = clusters[0] as Cluster & { agent_id?: string }
+                    if (firstCluster?.agent_id) {
+                      setSelectedClusterAgent(firstCluster.agent_id)
+                    } else {
+                      console.warn('Could not find agent_id for:', agentName)
+                    }
                   }
                 }}
                 className="w-full p-4 text-left hover:bg-dark-bg transition-colors"

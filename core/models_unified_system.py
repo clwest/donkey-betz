@@ -9519,6 +9519,21 @@ class AgentMemory(models.Model):
         help_text="How important is this memory (0-1)"
     )
 
+    # Session 746: Explicit outcome tracking for filtering
+    OUTCOME_CHOICES = [
+        ('success', 'Success'),
+        ('failure', 'Failure'),
+        ('partial', 'Partial'),
+        ('unknown', 'Unknown'),
+    ]
+    memory_outcome = models.CharField(
+        max_length=20,
+        choices=OUTCOME_CHOICES,
+        default='unknown',
+        db_index=True,
+        help_text="Outcome of the task/action that created this memory"
+    )
+
     # Embedding for semantic search
     # Session 730: Migrated to pgvector VectorField
     embedding = VectorField(
@@ -9956,6 +9971,22 @@ class MemoryCluster(models.Model):
         default='semantic'
     )
 
+    # Session 746: Cluster type classification (failure patterns, success patterns, etc.)
+    CLUSTER_TYPE_CHOICES = [
+        ('general', 'General'),
+        ('success_pattern', 'Success Pattern'),
+        ('failure_pattern', 'Failure Pattern'),
+        ('learning_pattern', 'Learning Pattern'),
+        ('error_recovery', 'Error Recovery'),
+    ]
+    cluster_type = models.CharField(
+        max_length=30,
+        choices=CLUSTER_TYPE_CHOICES,
+        default='general',
+        db_index=True,
+        help_text="Classification of cluster based on memory outcomes"
+    )
+
     # For tracking cluster evolution
     version = models.PositiveIntegerField(default=1)
     last_clustered_at = models.DateTimeField(null=True, blank=True)
@@ -10117,6 +10148,9 @@ class MemoryCluster(models.Model):
                 cluster_memories
             )
 
+            # Session 746: Detect cluster type based on memory outcomes
+            cluster_type = cls._detect_cluster_type(cluster_memories)
+
             # Create or update cluster
             cluster = cls.objects.create(
                 agent=agent,
@@ -10124,6 +10158,7 @@ class MemoryCluster(models.Model):
                 description=cluster_desc,
                 keywords=keywords,
                 cluster_method=method,
+                cluster_type=cluster_type,  # Session 746: Include detected cluster type
                 last_clustered_at=timezone.now(),
                 memory_count_at_clustering=len(cluster_memories),
                 color=cls._generate_cluster_color(cluster_idx),
@@ -10280,6 +10315,46 @@ Respond in JSON format:
         ]
         return colors[idx % len(colors)]
 
+    @staticmethod
+    def _detect_cluster_type(memories):
+        """
+        Session 746: Detect cluster type based on memory outcomes.
+
+        Returns 'failure_pattern' if >50% failures, 'success_pattern' if >50% successes,
+        'learning_pattern' if dominated by learning memory types, else 'general'.
+        """
+        if not memories:
+            return 'general'
+
+        # Count outcomes
+        outcomes = {}
+        memory_types = {}
+        for m in memories:
+            outcome = getattr(m, 'memory_outcome', 'unknown')
+            outcomes[outcome] = outcomes.get(outcome, 0) + 1
+
+            mtype = getattr(m, 'memory_type', 'unknown')
+            memory_types[mtype] = memory_types.get(mtype, 0) + 1
+
+        total = len(memories)
+        failure_count = outcomes.get('failure', 0)
+        success_count = outcomes.get('success', 0)
+
+        # Check for failure-dominated clusters (>50% failures)
+        if failure_count / total > 0.5:
+            return 'failure_pattern'
+
+        # Check for success-dominated clusters (>50% successes)
+        if success_count / total > 0.5:
+            return 'success_pattern'
+
+        # Check for learning-dominated clusters (learning memory type)
+        learning_count = memory_types.get('learning', 0)
+        if learning_count / total > 0.5:
+            return 'learning_pattern'
+
+        return 'general'
+
     def update_member_similarities(self):
         """Update similarity scores for all cluster members."""
         import numpy as np
@@ -10291,7 +10366,8 @@ Respond in JSON format:
         centroid_norm = np.linalg.norm(centroid)
 
         for membership in self.memberships.select_related('memory').all():
-            if membership.memory.embedding:
+            # Session 746: Fix numpy array boolean check
+            if membership.memory.embedding is not None and len(membership.memory.embedding) > 0:
                 embedding = np.array(membership.memory.embedding)
                 embedding_norm = np.linalg.norm(embedding)
 

@@ -32,13 +32,23 @@ def clusters_overview(request):
         # Build stats
         total_clusters = clusters.count()
         clusters_by_agent = {}
+        # Session 746: Track agents with clusters for easy lookup
+        agents_with_clusters_map = {}
 
         for cluster in clusters:
             agent_name = cluster.agent.name if cluster.agent else "Cross-Agent"
+            agent_id = str(cluster.agent.id) if cluster.agent else None
             if agent_name not in clusters_by_agent:
                 clusters_by_agent[agent_name] = []
+                # Session 746: Add to agents map
+                if agent_id:
+                    agents_with_clusters_map[agent_name] = {
+                        'id': agent_id,
+                        'name': agent_name,
+                    }
             clusters_by_agent[agent_name].append({
                 'id': str(cluster.id),
+                'agent_id': agent_id,  # Session 746: Include agent_id for frontend navigation
                 'name': cluster.name,
                 'description': cluster.description,
                 'memory_count': cluster.memories.count(),
@@ -76,6 +86,7 @@ def clusters_overview(request):
                 'agents_with_clusters': len(clusters_by_agent),
             },
             'clusters_by_agent': clusters_by_agent,
+            'agents_with_clusters_list': list(agents_with_clusters_map.values()),  # Session 746: Easy agent lookup
             'agents_needing_clusters': agents_needing_clusters,
         })
 
@@ -228,6 +239,8 @@ def cluster_detail(request, cluster_id):
             'position_x': m.position_x,
             'position_y': m.position_y,
             'created_at': m.memory.created_at.isoformat(),
+            # Session 746: Include memory outcome for filtering
+            'memory_outcome': m.memory.memory_outcome,
         })
 
     # Get related clusters
@@ -265,6 +278,7 @@ def cluster_detail(request, cluster_id):
             'coherence_score': cluster.coherence_score,
             'stability_score': cluster.stability_score,
             'cluster_method': cluster.cluster_method,
+            'cluster_type': cluster.cluster_type,  # Session 746: Include cluster type
             'version': cluster.version,
             'last_clustered_at': cluster.last_clustered_at.isoformat() if cluster.last_clustered_at else None,
             'memory_count': len(memories),
