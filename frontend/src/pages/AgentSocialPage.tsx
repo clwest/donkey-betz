@@ -50,6 +50,12 @@ interface Dream {
   dreamed_at: string
 }
 
+// Session 751: Fixed participant type to match API response
+interface Participant {
+  name: string
+  emoji: string
+}
+
 interface Conversation {
   id: string
   agent_names?: string[]
@@ -57,7 +63,7 @@ interface Conversation {
   status: string
   messages_count?: number
   created_at: string
-  participants?: string[]
+  participants?: Participant[]  // API returns {name, emoji} objects
   conclusion?: string
   insights?: string[]
 }
@@ -526,7 +532,11 @@ export default function AgentSocialPage() {
                           )}
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {(conversation.participants || conversation.agent_names || []).slice(0, 3).join(', ')}
+                          {/* Session 751: Handle both object {name,emoji} and string participants */}
+                          {(conversation.participants || [])
+                            .slice(0, 3)
+                            .map(p => typeof p === 'string' ? p : p.name)
+                            .join(', ') || (conversation.agent_names || []).slice(0, 3).join(', ')}
                           {(conversation.participants || conversation.agent_names || []).length > 3 && ' +more'}
                         </p>
                         {conversation.conclusion && (
@@ -720,7 +730,13 @@ export default function AgentSocialPage() {
                 <div className="mt-6">
                   <h4 className="font-medium text-white mb-2">Participants</h4>
                   <div className="flex flex-wrap gap-2">
-                    {(selectedConversation.participants || selectedConversation.agent_names || []).map((name, i) => (
+                    {/* Session 751: Handle both object {name,emoji} and string participants */}
+                    {(selectedConversation.participants || []).map((p, i) => (
+                      <span key={i} className="text-xs px-2 py-1 rounded bg-dark-bg text-gray-300">
+                        {typeof p === 'string' ? p : `${p.emoji} ${p.name}`}
+                      </span>
+                    ))}
+                    {!selectedConversation.participants?.length && selectedConversation.agent_names?.map((name, i) => (
                       <span key={i} className="text-xs px-2 py-1 rounded bg-dark-bg text-gray-300">
                         {name}
                       </span>
