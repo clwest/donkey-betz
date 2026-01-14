@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi, collectiveApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -1388,10 +1388,32 @@ export default function AgentsPage() {
                           </span>
                         )}
                         {isConversationClickable && (
-                          <span className="text-xs text-accent-cyan/60 flex items-center gap-1">
-                            <Eye size={10} />
-                            Click to view thread
-                          </span>
+                          <>
+                            <span className="text-xs text-accent-cyan/60 flex items-center gap-1">
+                              <Eye size={10} />
+                              Click to view thread
+                            </span>
+                            {/* Session 746: Conversation status indicators */}
+                            {matchingConversation.status === 'concluded' ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green flex items-center gap-1">
+                                <CheckCircle size={10} />
+                                Concluded
+                              </span>
+                            ) : (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
+                                <AlertCircle size={10} />
+                                Incomplete
+                              </span>
+                            )}
+                            {matchingConversation.participants.length === 1 && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-pink/20 text-accent-pink flex items-center gap-1">
+                                Self-talk
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-500">
+                              {matchingConversation.message_count || 0} msgs
+                            </span>
+                          </>
                         )}
                         {isDecisionClickable && (
                           <span className="text-xs text-accent-amber/60 flex items-center gap-1">
@@ -3426,6 +3448,19 @@ export default function AgentsPage() {
                       {Math.round(selectedConversation.quality_score * 100)}% quality
                     </span>
                   )}
+                  {/* Session 746: Warning badges for incomplete/self-talk conversations */}
+                  {selectedConversation.participants.length === 1 && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent-pink/20 text-accent-pink flex items-center gap-1">
+                      <AlertTriangle size={10} />
+                      Self-talk (single agent)
+                    </span>
+                  )}
+                  {!selectedConversation.conclusion && selectedConversation.status !== 'active' && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 flex items-center gap-1">
+                      <AlertCircle size={10} />
+                      No conclusion drawn
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-xl font-bold text-white">{selectedConversation.topic}</h2>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
@@ -3521,7 +3556,7 @@ export default function AgentsPage() {
               </div>
 
               {/* Conclusion Section */}
-              {selectedConversation.conclusion && (
+              {selectedConversation.conclusion ? (
                 <div className="px-6 py-4 border-t border-dark-border bg-accent-green/5">
                   <h3 className="text-sm font-medium text-accent-green mb-2 flex items-center gap-2">
                     <CheckCircle size={14} />
@@ -3529,6 +3564,22 @@ export default function AgentsPage() {
                   </h3>
                   <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
                     {selectedConversation.conclusion}
+                  </p>
+                </div>
+              ) : (
+                <div className="px-6 py-4 border-t border-dark-border bg-gray-500/5">
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <AlertCircle size={14} />
+                    No Conclusion
+                  </h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    {selectedConversation.status === 'active'
+                      ? 'This conversation is still in progress. A conclusion will be drawn when it completes.'
+                      : selectedConversation.participants.length === 1
+                      ? 'This was a single-agent reflection rather than a multi-agent discussion, so no conclusion was drawn.'
+                      : selectedConversation.message_count < 3
+                      ? 'This conversation did not have enough turns to reach a conclusion (minimum 6 turns required).'
+                      : 'This conversation ended before a conclusion could be synthesized.'}
                   </p>
                 </div>
               )}
