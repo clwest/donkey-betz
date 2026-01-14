@@ -1,40 +1,36 @@
-# Session 751 - Next Session
+# Session 752 - Next Session
 
-**Previous Session:** 750 (Time Travel Page Audit + Agent Integration)
+**Previous Session:** 751 (Agent Social & Neural Orchestra Audit)
 **Date:** January 14, 2026
-**Status:** Time Travel Page Audited + All Agents Integrated
+**Status:** Pages Audited and Fixed
 
 ---
 
-## Session 750 Summary
+## Session 751 Summary
 
-### Time Travel Page Audit
-- Fixed frontend decision type config to match backend types (analysis, planning, tool_selection, parameter_choice, quality_check)
-- Fixed 4 backend API signatures that expected URL params but received body params
-- Verified all 16 API endpoints working correctly
-- Database has 3 sessions, 15 decisions, 34 thought bubbles
+### Agent Social Page Fixes
+- Removed `@login_required` from `trigger_agent_conversation` (was causing 302 redirect)
+- Fixed React rendering error for participant objects `{name, emoji}`
+- Fixed "Invalid Date" display (API returns `started_at` not `created_at`)
 
-### Time Travel Integration to All Agents
-- Added Time Travel session recording to 28 remaining agents
-- Fixed indentation errors in 12 agent files
-- **71/73 agents now have Time Travel integration (96%)**
-- 2 standalone agents (BookmakerAgent, CreationAgent) use different pattern
+### Neural Orchestra Page Fixes
+- Fixed feed item interface (`agent` vs `agents` array)
+- Fixed learning metrics to show content creation data (217 images, 7 videos, 5 3D models)
+- Confirmed 0 Active Agents is CORRECT - no recent agent activity (last: Dec 6, 2025)
 
-**Detailed Handoff:** `docs/handoffs/SESSION_750_TIME_TRAVEL_AUDIT.md`
+**Detailed Handoff:** `docs/handoffs/SESSION_751_SOCIAL_AND_ORCHESTRA_AUDIT.md`
 
 ---
 
-## GPT-5-mini Token Guidance
+## Pages Audited (Sessions 749-751)
 
-**Important for future sessions:** When using GPT-5-mini:
-
-| Use Case | Recommended Tokens |
-|----------|-------------------|
-| Simple (1-2 sentences) | 1500-2000 |
-| Medium (paragraph) | 2000-3000 |
-| Complex analysis | 4000-6000 |
-
-Low token limits cause empty responses with `finish_reason: length`.
+| Page | Session | Status |
+|------|---------|--------|
+| Mood Page | 749 | ✅ Complete |
+| Time Capsules | 749 | ✅ Complete |
+| Time Travel | 750 | ✅ Complete |
+| Agent Social | 751 | ✅ Complete |
+| Neural Orchestra | 751 | ✅ Complete |
 
 ---
 
@@ -49,9 +45,8 @@ make celery
 cd frontend && npm run dev
 
 # Access pages
-open http://localhost:3000/time-travel
-open http://localhost:3000/mood
-open http://localhost:3000/time-capsules
+open http://localhost:3000/social
+open http://localhost:3000/neural-orchestra
 ```
 
 ---
@@ -62,11 +57,6 @@ open http://localhost:3000/time-capsules
 |-----------|-------|
 | Agents | 72 |
 | Agents with Time Travel | 71 (96%) |
-| Agents with Evolution | 73 |
-| Agents with Mood History | 73 (100%) |
-| Time Capsules | 3 |
-| Time Travel Sessions | 3 |
-| Time Travel Decisions | 15 |
 | Spiders | 77 |
 | PA Tools | 86 |
 | Database Models | 364+ |
@@ -74,43 +64,40 @@ open http://localhost:3000/time-capsules
 | Frontend Pages | 29 |
 | Body Systems | 9 |
 | Sci-Fi Features | 14 |
+| Content Created | 229 total |
 
 ---
 
-## Session 750 Commits
+## Session 751 Commits
 
-1. `2ef18317` - feat(Session 750): Add Time Travel integration to all 28 remaining agents
-2. *(earlier)* - fix(Session 750): Time Travel page audit fixes (frontend + backend)
-
----
-
-## Pages Audited (Sessions 749-750)
-
-| Page | Status | Notes |
-|------|--------|-------|
-| Mood Page | ✅ Audited | Full CRUD, data backfilled |
-| Time Capsules | ✅ Audited | GPT-5-mini token fix, detail fetch |
-| Time Travel | ✅ Audited | Decision types, API fixes, agent integration |
+1. `0bf333a0` - fix(Session 751): Remove @login_required from trigger_agent_conversation
+2. `2bb42757` - fix(Session 751): Fix React rendering error for participant objects
+3. `8c17d1a6` - fix(Session 751): Fix Invalid Date display on conversation cards
+4. `f449aa21` - fix(Session 751): Fix Neural Orchestra page API response mismatches
 
 ---
 
-## Next Audit Candidates
+## GPT-5-mini Token Guidance
 
-- Evolution Page
-- Agent Social Page
-- Advisors Page
-- Relationships Page
-- Neural Orchestra Page
+When using GPT-5-mini:
+
+| Use Case | Recommended Tokens |
+|----------|-------------------|
+| Simple (1-2 sentences) | 1500-2000 |
+| Medium (paragraph) | 2000-3000 |
+| Complex analysis | 4000-6000 |
+
+Low token limits cause empty responses with `finish_reason: length`.
 
 ---
 
 ## Services Status
 
-All services running as of Session 750:
-- Redis: PID 46154
-- Daphne: PID 51710
-- Celery Worker: PID 52345
-- Celery Beat: PID 52424
+All services verified working in Session 751:
+- Redis: Running
+- Daphne: Running
+- Celery Worker: Running
+- Celery Beat: Running
 
 ---
 

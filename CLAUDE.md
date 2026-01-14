@@ -200,6 +200,9 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **751** | **Agent Social & Neural Orchestra Audit** - Fixed Conversations tab (auth, participant rendering, dates), Neural Orchestra (feed items, learning metrics). Confirmed 0 active agents is correct - no recent activity | `SESSION_751_SOCIAL_AND_ORCHESTRA_AUDIT.md` |
+| **750** | **Time Travel Page Audit + Agent Integration** - Fixed frontend decision types, backend API signatures, duration display, simulation data. Added Time Travel to 28 remaining agents (71/73 = 96%) | `SESSION_750_TIME_TRAVEL_AUDIT.md` |
+| **749** | **Mood Page & Time Capsules Audit** - Fixed Mood Page CRUD, Time Capsules GPT-5-mini token limits | `SESSION_749_MOOD_TIME_CAPSULES.md` |
 | **746** | **Data Display Enhancements** - Comprehensive audit + fixes for hidden API data. Human Page (stats, decision history), Betting Page (singles vs parlays, per-sport, wager legs), Dashboard (network visualization), Intelligence Page (gate details, execution history). Data display coverage: 60% → 85% | `SESSION_746_DATA_DISPLAY_ENHANCEMENTS.md` |
 | **745** | **Watch & Verify Feature** - Arbitrage paper trading on Human Page, Watching tab on Betting Page, deduplication for attention items | `SESSION_745_API_UI_COVERAGE_AUDIT.md` |
 | **744** | **Integration Roadmap COMPLETE** - All 5 phases done (Celery health, spider-to-agent, learning patterns, advisor wisdom, feedback loops). Cross-agent delegation enabled for all 72 agents with 3-level chain support. Integration score: 95% | `SESSION_744_INTEGRATION_ROADMAP_COMPLETE.md` |
