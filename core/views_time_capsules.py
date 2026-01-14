@@ -491,10 +491,11 @@ Now, write a brief, thoughtful reflection (2-3 sentences) on this message from y
 
 Write in first person as the agent reflecting on your past self's words."""
 
+        # Session 749: GPT-5-mini needs higher token limit for reasoning
         response = client.chat.completions.create(
             model="gpt-5-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_completion_tokens=200
+            max_completion_tokens=2000
         )
 
         return response.choices[0].message.content.strip()
@@ -661,10 +662,11 @@ TITLE: [your title]
 MESSAGE: [your message]"""
 
                 try:
+                    # Session 749: GPT-5-mini needs higher token limit for reasoning
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[{"role": "user", "content": prompt}],
-                        max_completion_tokens=300
+                        max_completion_tokens=2000
                     )
 
                     content = response.choices[0].message.content.strip()
