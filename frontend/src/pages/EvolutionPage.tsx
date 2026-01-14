@@ -89,7 +89,7 @@ export default function EvolutionPage() {
   const { data: leaderboardData, isLoading: loadingLeaderboard } = useQuery({
     queryKey: ['evolution-leaderboard'],
     queryFn: async () => {
-      const response = await evolutionApi.leaderboard(50)
+      const response = await evolutionApi.leaderboard(100)  // Session 748: Show all agents
       return response.data
     },
     staleTime: 30000,
