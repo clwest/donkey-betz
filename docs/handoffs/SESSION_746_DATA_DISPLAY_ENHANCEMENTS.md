@@ -134,6 +134,25 @@ This session conducted a comprehensive audit of data display across the platform
   - "Not enough turns" for conversations with < 3 messages
   - "Ended before conclusion" as fallback
 
+### 7. Live Learning WebSocket Fix (`frontend/src/pages/AgentsPage.tsx`)
+
+**Issue Identified:**
+- Live Learning section showed "Connected" but displayed no data
+- Backend sends `type: 'learning_activity'` with `feed_items` array
+- Frontend expected individual `LearningEvent` objects with different field names
+
+**Fix Applied:**
+- Filter out `'connected'` message type (backend sends 'connected' not 'connection_established')
+- Handle `'learning_activity'` bulk messages by extracting `feed_items` array
+- Convert backend format to frontend `LearningEvent` format:
+  - `teacher` → `agent_name`
+  - `type` → `event_type` (with human-readable labels)
+  - Preserve `description` and `timestamp`
+
+**Result:**
+- 1,497 KnowledgeTransfer records now display in Live Learning
+- 20 most recent transfers shown on WebSocket connect
+
 ## Files Modified
 
 ### Backend
