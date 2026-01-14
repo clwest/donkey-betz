@@ -376,26 +376,39 @@ def get_xp_leaderboard(request):
     try:
         limit = int(request.GET.get('limit', 20))
 
-        evolutions = AgentEvolution.objects.select_related('agent').order_by(
+        evolutions = AgentEvolution.objects.select_related('agent').prefetch_related('abilities').order_by(
             '-current_level', '-total_xp'
         )[:limit]
 
         leaderboard = []
         for rank, evo in enumerate(evolutions, 1):
+            # Session 747: Calculate XP progress within current level
+            xp_to_next = evo.calculate_xp_for_level(evo.current_level + 1) - evo.calculate_xp_for_level(evo.current_level)
+            xp_in_current_level = evo.total_xp - evo.calculate_xp_for_level(evo.current_level)
+
+            # Get unlocked abilities
+            abilities_unlocked = list(evo.abilities.filter(is_active=True).values_list('ability_name', flat=True))
+
             leaderboard.append({
+                'id': str(evo.id),  # Session 747: Add id field
                 'rank': rank,
                 'agent_id': str(evo.agent.id),
                 'agent_name': evo.agent.name,
                 'level': evo.current_level,
                 'level_title': evo.get_title(),
+                'xp': xp_in_current_level,  # Session 747: XP progress in current level
+                'xp_to_next_level': xp_to_next,  # Session 747: XP needed for next level
                 'total_xp': evo.total_xp,
                 'lifetime_xp': evo.lifetime_xp,
-                'prestige': evo.prestige_level,
+                'prestige_level': evo.prestige_level,  # Session 747: Renamed from 'prestige'
+                'abilities_unlocked': abilities_unlocked,  # Session 747: List of unlocked ability names
                 'tasks_completed': evo.tasks_completed,
                 'tasks_failed': evo.tasks_failed,
                 'success_rate': round(
                     (evo.tasks_completed - evo.tasks_failed) / max(evo.tasks_completed, 1) * 100, 1
-                ) if evo.tasks_completed > 0 else 100.0
+                ) if evo.tasks_completed > 0 else 100.0,
+                'created_at': evo.created_at.isoformat() if evo.created_at else None,
+                'updated_at': evo.updated_at.isoformat() if evo.updated_at else None,
             })
 
         return JsonResponse({
@@ -419,11 +432,12 @@ def get_recent_xp_gains(request):
         gains = []
         for xp in xp_gains:
             gains.append({
+                'id': str(xp.id),  # Session 747: Add id field
                 'agent_name': xp.agent.name,
-                'amount': xp.xp_amount,
-                'source': xp.source,
+                'xp_amount': xp.xp_amount,  # Session 747: Renamed from 'amount'
+                'reason': xp.source,  # Session 747: Renamed from 'source' to match frontend
                 'details': xp.details,
-                'created_at': xp.created_at.isoformat()
+                'recorded_at': xp.created_at.isoformat()  # Session 747: Renamed from 'created_at'
             })
 
         return JsonResponse({
