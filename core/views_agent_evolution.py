@@ -382,9 +382,18 @@ def get_xp_leaderboard(request):
 
         leaderboard = []
         for rank, evo in enumerate(evolutions, 1):
-            # Session 747: Calculate XP progress within current level
-            xp_to_next = evo.calculate_xp_for_level(evo.current_level + 1) - evo.calculate_xp_for_level(evo.current_level)
-            xp_in_current_level = evo.total_xp - evo.calculate_xp_for_level(evo.current_level)
+            # Session 748: Fixed XP progress calculation
+            # calculate_xp_for_level returns XP for a single level, not cumulative
+            # We need cumulative XP to reach current level, then subtract from total
+
+            # Calculate cumulative XP required to reach current level
+            cumulative_xp_for_current = sum(
+                int(100 * (1.5 ** (lvl - 1))) for lvl in range(1, evo.current_level)
+            )
+            # XP required for just the next level
+            xp_to_next = int(100 * (1.5 ** (evo.current_level - 1)))
+            # XP progress within current level
+            xp_in_current_level = max(0, evo.total_xp - cumulative_xp_for_current)
 
             # Get unlocked abilities
             abilities_unlocked = list(evo.abilities.filter(is_active=True).values_list('ability_name', flat=True))

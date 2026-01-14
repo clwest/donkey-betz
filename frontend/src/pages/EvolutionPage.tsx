@@ -328,15 +328,27 @@ export default function EvolutionPage() {
                         </div>
 
                         {/* XP Progress */}
-                        <div className="w-32 text-right">
-                          <div className="text-sm font-medium text-white">
-                            {(agent.total_xp || 0).toLocaleString()} XP
+                        <div className="w-36 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-gray-400">
+                              {Math.round(progressPercent)}%
+                            </span>
+                            <span className="text-sm font-medium text-white">
+                              {(agent.total_xp || 0).toLocaleString()} XP
+                            </span>
                           </div>
-                          <div className="w-full h-1.5 bg-dark-bg rounded-full mt-1">
+                          <div className="w-full h-2 bg-dark-bg rounded-full mt-1 relative">
                             <div
-                              className={cn('h-full rounded-full', tier.bgColor.replace('/20', '/60'))}
+                              className={cn('h-full rounded-full transition-all', tier.bgColor.replace('/20', '/60'))}
                               style={{ width: `${progressPercent}%` }}
                             />
+                            {/* Progress tracker dot */}
+                            {progressPercent > 0 && progressPercent < 100 && (
+                              <div
+                                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg border-2 border-gray-700"
+                                style={{ left: `calc(${progressPercent}% - 6px)` }}
+                              />
+                            )}
                           </div>
                         </div>
 
@@ -480,27 +492,49 @@ export default function EvolutionPage() {
                 {/* XP Progress */}
                 <div className="mt-6">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-400">XP Progress</span>
+                    <span className="text-gray-400">XP to Next Level</span>
                     <span className="text-white">
                       {(selectedAgent.xp || 0).toLocaleString()} / {(selectedAgent.xp_to_next_level || 100).toLocaleString()}
                     </span>
                   </div>
-                  <div className="w-full h-3 bg-dark-bg rounded-full">
+                  <div className="w-full h-4 bg-dark-bg rounded-full relative">
                     {(() => {
                       const tier = getTier(selectedAgent.level || 1)
                       const progress = selectedAgent.xp_to_next_level > 0
                         ? Math.min(100, ((selectedAgent.xp || 0) / selectedAgent.xp_to_next_level) * 100)
                         : 100
                       return (
-                        <div
-                          className={cn('h-full rounded-full transition-all', tier.bgColor.replace('/20', '/60'))}
-                          style={{ width: `${progress}%` }}
-                        />
+                        <>
+                          <div
+                            className={cn('h-full rounded-full transition-all', tier.bgColor.replace('/20', '/60'))}
+                            style={{ width: `${progress}%` }}
+                          />
+                          {/* Progress tracker with percentage */}
+                          {progress > 0 && progress < 100 && (
+                            <div
+                              className="absolute top-1/2 -translate-y-1/2 flex items-center"
+                              style={{ left: `calc(${progress}% - 12px)` }}
+                            >
+                              <div className="w-4 h-4 bg-white rounded-full shadow-lg border-2 border-gray-600 flex items-center justify-center">
+                                <div className={cn('w-2 h-2 rounded-full', tier.bgColor.replace('/20', ''))} />
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )
                     })()}
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    Total: {(selectedAgent.total_xp || 0).toLocaleString()} XP earned
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>Level {selectedAgent.level}</span>
+                    <span className="font-medium text-gray-400">
+                      {Math.round(selectedAgent.xp_to_next_level > 0
+                        ? ((selectedAgent.xp || 0) / selectedAgent.xp_to_next_level) * 100
+                        : 100)}% complete
+                    </span>
+                    <span>Level {(selectedAgent.level || 0) + 1}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 text-center">
+                    Lifetime: {(selectedAgent.total_xp || 0).toLocaleString()} XP earned
                   </p>
                 </div>
               </div>
