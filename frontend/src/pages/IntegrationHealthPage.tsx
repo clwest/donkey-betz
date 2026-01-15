@@ -30,7 +30,6 @@ import {
   TrendingUp,
   Users,
   XCircle,
-  Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Breadcrumb from '@/components/Breadcrumb'
@@ -187,7 +186,7 @@ export default function IntegrationHealthPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
-      <Breadcrumb items={[{ label: 'Integration Health', href: '/integration-health' }]} />
+      <Breadcrumb currentPage="Integration Health" />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
