@@ -217,7 +217,7 @@ class NeuralOrchestraRealityBridge:
                 'content_id': content_id,
                 'image_url': image_url,  # Session 752: Full image URL
                 'thumbnail_url': thumbnail_url or image_url,  # Session 752: Thumbnail or fallback to full
-                'project_name': contrib.project.name if contrib.project else 'Unknown',
+                'project_name': contrib.project.name if contrib.project else 'General',  # Session 758: Better fallback
                 'task_description': contrib.task_description,
                 'confidence': contrib.contribution_percentage / 100.0
             })
@@ -256,7 +256,7 @@ class NeuralOrchestraRealityBridge:
                 'agent_count': proj_data['agent_count'],
                 'contribution_count': proj_data['contribution_count'],
                 'collaboration_type': 'Multi-Agent Project',
-                'project_name': project.name if project else 'Unknown Project',
+                'project_name': project.name if project else 'Collaborative Work',  # Session 758: Better fallback
                 'outcome': f"{proj_data['agent_count']} agents collaborated on {proj_data['contribution_count']} contributions",
                 'confidence': min(0.95, 0.7 + (proj_data['agent_count'] * 0.05)),
                 'impact_score': min(0.95, 0.6 + (proj_data['contribution_count'] * 0.05))
