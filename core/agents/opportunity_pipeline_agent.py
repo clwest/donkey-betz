@@ -184,6 +184,18 @@ You produce comprehensive pipeline reports with value calculations and recommend
 
         with self.time_travel_session("opportunity_pipeline", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower() if task else ''
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, a specialist in multi-stage opportunity orchestration. One capability: I take opportunities through a 4-stage pipeline (Discovery → Analysis → Execution → Optimization), multiplying value at each stage through coordinated agent teams.",
+                        data={'type': 'self_description', 'pipeline_stages': PIPELINE_STAGES, 'capabilities': ['pipeline_orchestration', 'value_multiplication', 'agent_coordination']},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 # Extract opportunity from context
                 opportunity = context.get('opportunity')
 
