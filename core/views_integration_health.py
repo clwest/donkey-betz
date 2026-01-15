@@ -3,10 +3,12 @@ Integration Health & Observability Views
 Session 758: Comprehensive observability for the integration layer.
 
 Provides:
-1. Health Check API - Status of all 6 context sources
+1. Health Check API - Status of all 8 context sources
 2. Context Injection Metrics - Success rates and trends
 3. Alert Log - Silent failures tracked
 4. Execution Quality Scores - Context vs outcome correlation
+
+Session 758 Update: Added Dream System and Body Systems tracking
 """
 
 import logging
@@ -152,7 +154,94 @@ def integration_health(request):
         health_data['components']['scifi_context'] = {'status': 'error', 'error': str(e)}
         issues.append(f'Sci-Fi context error: {e}')
 
-    # 6. Context Injection Rate (from execution records)
+    # 6. Dream System Health (Session 758)
+    try:
+        from core.models_unified_system import AgentDream, DreamImplementation
+        dream_total = AgentDream.objects.count()
+        # AgentDream uses 'dreamed_at' not 'created_at'
+        dream_7d = AgentDream.objects.filter(dreamed_at__gte=last_7d).count()
+        # Count implemented dreams (realized)
+        dream_realized = DreamImplementation.objects.filter(status='completed').count()
+        last_dream = AgentDream.objects.order_by('-dreamed_at').first()
+
+        dream_status = 'healthy'
+        if dream_7d == 0:
+            dream_status = 'degraded'
+            issues.append('No dreams generated in last 7 days')
+        elif dream_7d < 10:
+            dream_status = 'warning'
+            issues.append(f'Low dream generation: only {dream_7d} dreams in 7 days')
+
+        realization_rate = (dream_realized / dream_total * 100) if dream_total > 0 else 0
+
+        health_data['components']['dream_system'] = {
+            'status': dream_status,
+            'total_dreams': dream_total,
+            'last_7d': dream_7d,
+            'realized': dream_realized,
+            'realization_rate': round(realization_rate, 1),
+            'last_dream': last_dream.dreamed_at.isoformat() if last_dream else None,
+        }
+    except Exception as e:
+        health_data['components']['dream_system'] = {'status': 'error', 'error': str(e)}
+        issues.append(f'Dream system error: {e}')
+
+    # 7. Body Systems Health (Session 758) - Consolidated health of all 9 systems
+    try:
+        from core.services.heart import get_heart_monitor
+
+        heart = get_heart_monitor()
+        body_health = heart.pulse()
+
+        # Get components from pulse response
+        components = body_health.get('components', {})
+        status_good = ['healthy', 'active', 'nominal', 'focused', 'ok', 'operational']
+        status_warn = ['degraded', 'overloaded', 'strained', 'warning']
+
+        # Map pulse results to system status
+        systems = {}
+        for component_name, component_data in components.items():
+            if isinstance(component_data, dict):
+                comp_status = component_data.get('status', 'unknown')
+                systems[component_name] = comp_status
+
+        total_systems = len(systems) if systems else 9  # Default to 9 body systems
+        healthy_systems = sum(1 for s in systems.values() if s.lower() in status_good)
+        degraded_systems = sum(1 for s in systems.values() if s.lower() in status_warn)
+        critical_systems = sum(1 for s in systems.values() if s.lower() not in status_good + status_warn)
+
+        # Use overall health score if available
+        health_score = body_health.get('health_score', 0)
+        pulse_status = body_health.get('overall_status', 'unknown')
+
+        # Determine overall body status
+        if pulse_status == 'critical' or critical_systems > 0:
+            body_status = 'error'
+            if critical_systems > 0:
+                issues.append(f'{critical_systems} body system(s) in critical state')
+        elif pulse_status == 'degraded' or degraded_systems > 2:
+            body_status = 'degraded'
+            if degraded_systems > 0:
+                issues.append(f'{degraded_systems} body system(s) degraded')
+        elif pulse_status == 'warning' or degraded_systems > 0:
+            body_status = 'warning'
+        else:
+            body_status = 'healthy'
+
+        health_data['components']['body_systems'] = {
+            'status': body_status,
+            'total_systems': total_systems,
+            'healthy': healthy_systems,
+            'degraded': degraded_systems,
+            'critical': critical_systems,
+            'health_score': round(health_score, 1),
+            'systems': systems,
+        }
+    except Exception as e:
+        health_data['components']['body_systems'] = {'status': 'error', 'error': str(e)}
+        issues.append(f'Body systems error: {e}')
+
+    # 8. Context Injection Rate (from execution records)
     # Session 758: Tracking was added on 2026-01-15, so only count tracked executions
     try:
         from core.models_unified_system import AgentExecution
