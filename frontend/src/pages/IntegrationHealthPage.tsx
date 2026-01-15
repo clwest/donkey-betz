@@ -1,12 +1,14 @@
 /**
  * Session 758: Integration Health & Observability Dashboard
  *
- * Shows the health status of all 6 integration context sources:
+ * Shows the health status of all 8 integration context sources:
  * - Spider Data (real-time web intelligence)
  * - Learning Patterns (agent learning system)
  * - Advisor System (legendary advisor wisdom)
  * - Feedback Loop (performance tracking)
  * - Sci-Fi Context (mood, evolution, relationships)
+ * - Dream System (autonomous dream generation/realization)
+ * - Body Systems (consolidated health of 9 body systems)
  * - Context Injection Rate (delivery success)
  */
 
@@ -18,6 +20,7 @@ import {
   Brain,
   CheckCircle,
   Clock,
+  Cloud,
   Database,
   Gauge,
   Heart,
@@ -48,6 +51,18 @@ interface ComponentHealth {
   success_rate?: number
   active_moods?: number
   evolution_records?: number
+  // Dream System fields (Session 758)
+  total_dreams?: number
+  realized?: number
+  realization_rate?: number
+  last_dream?: string
+  // Body Systems fields (Session 758)
+  total_systems?: number
+  healthy?: number
+  degraded?: number
+  critical?: number
+  health_score?: number
+  systems?: Record<string, string>
   error?: string
 }
 
@@ -123,6 +138,8 @@ const componentIcons: Record<string, typeof Brain> = {
   advisor_system: Users,
   feedback_loop: TrendingUp,
   scifi_context: Sparkles,
+  dream_system: Cloud,
+  body_systems: Heart,
 }
 
 const componentLabels: Record<string, string> = {
@@ -131,6 +148,8 @@ const componentLabels: Record<string, string> = {
   advisor_system: 'Advisor System',
   feedback_loop: 'Feedback Loop',
   scifi_context: 'Sci-Fi Context',
+  dream_system: 'Dream System',
+  body_systems: 'Body Systems',
 }
 
 export default function IntegrationHealthPage() {
@@ -179,7 +198,7 @@ export default function IntegrationHealthPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold">Integration Health</h1>
-              <p className="text-gray-400">Session 758: Observability for 6 context sources</p>
+              <p className="text-gray-400">Session 758: Observability for 8 context sources</p>
             </div>
           </div>
           <button
@@ -287,6 +306,53 @@ export default function IntegrationHealthPage() {
                     <>
                       <div>Active moods: {component.active_moods}</div>
                       <div>Evolution records: {component.evolution_records}</div>
+                    </>
+                  )}
+                  {name === 'dream_system' && (
+                    <>
+                      <div>Total dreams: {component.total_dreams?.toLocaleString()}</div>
+                      <div>Last 7d: {component.last_7d?.toLocaleString()}</div>
+                      <div>Realized: {component.realized} ({component.realization_rate}%)</div>
+                    </>
+                  )}
+                  {name === 'body_systems' && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400">{component.healthy}</span>
+                          <span className="text-gray-500">/</span>
+                          <span>{component.total_systems} healthy</span>
+                        </div>
+                        {component.health_score !== undefined && (
+                          <span className="text-cyan-400 font-medium">{component.health_score}%</span>
+                        )}
+                      </div>
+                      {(component.degraded ?? 0) > 0 && (
+                        <div className="text-yellow-400">{component.degraded} degraded</div>
+                      )}
+                      {(component.critical ?? 0) > 0 && (
+                        <div className="text-red-400">{component.critical} critical</div>
+                      )}
+                      {component.systems && (
+                        <div className="mt-2 text-xs grid grid-cols-3 gap-1">
+                          {Object.entries(component.systems).map(([sys, status]) => (
+                            <span
+                              key={sys}
+                              className={cn(
+                                'truncate',
+                                status === 'healthy' || status === 'active' || status === 'nominal' || status === 'focused'
+                                  ? 'text-green-400'
+                                  : status === 'degraded' || status === 'overloaded' || status === 'strained'
+                                  ? 'text-yellow-400'
+                                  : 'text-red-400'
+                              )}
+                              title={`${sys}: ${status}`}
+                            >
+                              {sys.toUpperCase().slice(0, 4)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
                   {component.error && (
