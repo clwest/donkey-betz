@@ -2577,9 +2577,12 @@ Consider this current data when formulating your response."""
         if result.execution_time_ms:
             key_fields.append(f"Execution: {result.execution_time_ms}ms")
 
-        # Tool calls
+        # Tool calls - Session 759: Check for both 'name' and 'tool' keys (different agents use different keys)
         if result.tool_calls:
-            tools_used = [tc.get('name', 'unknown') for tc in result.tool_calls]
+            tools_used = [
+                tc.get('name') or tc.get('tool') or tc.get('function', {}).get('name') or 'unknown'
+                for tc in result.tool_calls
+            ]
             key_fields.append(f"Tools: {', '.join(tools_used[:5])}")
 
         # Build title - prefer specific output title, fall back to task
