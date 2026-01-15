@@ -469,7 +469,8 @@ class HeartMonitorService:
             beat_running = status.get('beat_running', False)
 
             # Determine health status
-            if workers_online >= 2 and beat_running:
+            # Session 758: 1 worker + beat is healthy for solo pool setup
+            if workers_online >= 1 and beat_running:
                 status_level = 'healthy'
                 is_healthy = True
             elif workers_online >= 1 or beat_running:
