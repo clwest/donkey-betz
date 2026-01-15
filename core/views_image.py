@@ -417,7 +417,16 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             image_project = session.project
             logger.info(f"📁 Assigning image to project (from session): {session.project.name}")
 
+        # Session 752: Get the image generation agent for tracking
+        image_agent = None
+        try:
+            from core.models.agents_registry import UnifiedAgentTemplate
+            image_agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
+        except Exception as e:
+            logger.warning(f"Could not find image-generation-agent: {e}")
+
         # Create history record
+        # Session 752: Now includes agent field for proper contribution tracking
         history = ImageHistory.objects.create(
             user=user,
             filename=os.path.basename(file_path),
@@ -433,26 +442,28 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             parent_image=parent_image,
             seed=seed,  # Session 95: Save seed for reproducibility
             session=session,  # Session 96 Weekend Project: Link to AI conversation
-            project=image_project  # Session 119: BUGFIX - Assign project if session has one
+            project=image_project,  # Session 119: BUGFIX - Assign project if session has one
+            agent=image_agent  # Session 752: Set agent for contribution tracking
         )
 
-        # Session 142: Track agent contribution
-        try:
-            from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
-            agent = UnifiedAgentTemplate.objects.get(name='image-generation-agent')
-            AgentContribution.objects.create(
-                agent=agent,
-                image=history,
-                project=image_project,
-                contribution_type='generation',
-                task_description="Generated image using image-generation-agent",
-                execution_time_seconds=0.0
-            )
-            logger.info(f"✅ Agent contribution tracked for image {{ history.id }}")
-        except Exception as e:
-            logger.error(f"❌ Failed to create agent contribution: {e}")
-            logger.error(f"❌ Failed to create agent contribution: {e}")
-            # Don't fail image creation if contribution tracking fails
+        # Session 142/752: Track agent contribution
+        # Session 752: Project is now optional - track contributions even without project
+        if image_agent:
+            try:
+                from core.models.agents_registry import AgentContribution
+                AgentContribution.objects.create(
+                    agent=image_agent,
+                    image=history,
+                    project=image_project,  # Can be None now (Session 752)
+                    contribution_type='generation',
+                    task_description=f"Generated {image_type} image using {model_used}",
+                    execution_time_seconds=0.0
+                )
+                logger.info(f"✅ Agent contribution tracked for image {history.id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to create agent contribution: {e}")
+        else:
+            logger.debug("Skipping contribution tracking: no agent found")
 
         logger.info(f"✅ Saved to history: {image_type} - {history.filename} (ID: {history.id})")
 

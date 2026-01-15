@@ -28,6 +28,14 @@ import {
   Cpu,
   Database,
   GitBranch,
+  Image,
+  Video,
+  Box,
+  Pencil,
+  PlusCircle,
+  BarChart3,
+  Shield,
+  Calendar,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Breadcrumb from '@/components/Breadcrumb'
@@ -49,21 +57,33 @@ interface FeedItem {
   impact: number
 }
 
+// Session 752: Extended SystemStatus to include all API fields
 interface SystemStatus {
   consciousness_level: number
   active_agents: number
+  active_now?: number
   active_spiders: number
   system_health: number
+  total_agents?: number
+  total_contributions?: number
+  contributions_24h?: number
+  tracking_rate?: string
+  collaborations?: number
+}
+
+// Session 752: Extended metadata to include all API fields
+interface EcosystemMetadata {
+  generated_at: string
+  data_source: string
+  bridge_version?: string
+  reality_score?: string
+  error?: string
 }
 
 interface EcosystemFeed {
   feed: FeedItem[]
   system_status: SystemStatus
-  metadata: {
-    generated_at: string
-    data_source: string
-    error?: string
-  }
+  metadata: EcosystemMetadata
 }
 
 interface TopPerformer {
@@ -456,9 +476,68 @@ export default function NeuralOrchestraPage() {
             </div>
           )}
 
-          {/* Live Feed Tab */}
+          {/* Live Feed Tab - Session 752: Enhanced with full API data */}
           {activeTab === 'feed' && (
             <div className="space-y-4">
+              {/* Summary Stats Panel */}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="bg-dark-card border border-dark-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+                    <Database size={12} />
+                    Total Contributions
+                  </div>
+                  <div className="text-lg font-bold text-white">
+                    {ecosystemData?.system_status?.total_contributions ?? 0}
+                  </div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+                    <Clock size={12} />
+                    Last 24h
+                  </div>
+                  <div className="text-lg font-bold text-white">
+                    {ecosystemData?.system_status?.contributions_24h ?? 0}
+                  </div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+                    <BarChart3 size={12} />
+                    Tracking Rate
+                  </div>
+                  <div className="text-lg font-bold text-cyan-400">
+                    {ecosystemData?.system_status?.tracking_rate ?? '0%'}
+                  </div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+                    <Users size={12} />
+                    Collaborations
+                  </div>
+                  <div className="text-lg font-bold text-purple-400">
+                    {ecosystemData?.system_status?.collaborations ?? 0}
+                  </div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+                    <Shield size={12} />
+                    Reality Score
+                  </div>
+                  <div className="text-lg font-bold text-green-400">
+                    {ecosystemData?.metadata?.reality_score ?? 'N/A'}
+                  </div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+                    <GitBranch size={12} />
+                    Bridge Version
+                  </div>
+                  <div className="text-lg font-bold text-gray-300">
+                    {ecosystemData?.metadata?.bridge_version ?? 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Feed Header */}
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                   <Radio size={20} className="text-green-400 animate-pulse" />
@@ -471,57 +550,124 @@ export default function NeuralOrchestraPage() {
 
               {ecosystemData?.feed && ecosystemData.feed.length > 0 ? (
                 <div className="space-y-3">
-                  {ecosystemData.feed.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-dark-card border border-dark-border rounded-lg p-4 hover:border-primary-500/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
-                            {item.type}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(item.timestamp).toLocaleTimeString()}
-                          </span>
+                  {ecosystemData.feed.map((item) => {
+                    // Session 752: Helper function for content type icon
+                    const getContentTypeIcon = () => {
+                      switch (item.content_type?.toLowerCase()) {
+                        case 'image': return <Image size={14} className="text-blue-400" />
+                        case 'video': return <Video size={14} className="text-red-400" />
+                        case '3d model': return <Box size={14} className="text-purple-400" />
+                        default: return <Sparkles size={14} className="text-yellow-400" />
+                      }
+                    }
+
+                    // Session 752: Helper function for contribution type styling
+                    const getContributionStyle = () => {
+                      switch (item.contribution_type?.toLowerCase()) {
+                        case 'generation': return 'bg-green-500/20 text-green-400'
+                        case 'editing': return 'bg-orange-500/20 text-orange-400'
+                        case 'analysis': return 'bg-blue-500/20 text-blue-400'
+                        default: return 'bg-gray-500/20 text-gray-400'
+                      }
+                    }
+
+                    // Session 752: Format relative time
+                    const formatRelativeTime = (timestamp: string) => {
+                      const date = new Date(timestamp)
+                      const now = new Date()
+                      const diffMs = now.getTime() - date.getTime()
+                      const diffMins = Math.floor(diffMs / 60000)
+                      const diffHours = Math.floor(diffMs / 3600000)
+                      const diffDays = Math.floor(diffMs / 86400000)
+
+                      if (diffMins < 1) return 'Just now'
+                      if (diffMins < 60) return `${diffMins}m ago`
+                      if (diffHours < 24) return `${diffHours}h ago`
+                      if (diffDays < 7) return `${diffDays}d ago`
+                      return date.toLocaleDateString()
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-dark-card border border-dark-border rounded-lg p-4 hover:border-primary-500/50 transition-colors"
+                      >
+                        {/* Top Row: Type badges and timestamp */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Content type with icon */}
+                            {item.content_type && (
+                              <span className="text-xs px-2 py-1 rounded bg-dark-bg text-gray-300 flex items-center gap-1">
+                                {getContentTypeIcon()}
+                                {item.content_type}
+                              </span>
+                            )}
+                            {/* Contribution type */}
+                            {item.contribution_type && (
+                              <span className={cn("text-xs px-2 py-1 rounded flex items-center gap-1", getContributionStyle())}>
+                                {item.contribution_type === 'generation' && <PlusCircle size={12} />}
+                                {item.contribution_type === 'editing' && <Pencil size={12} />}
+                                {item.contribution_type}
+                              </span>
+                            )}
+                            {/* Activity type */}
+                            <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400">
+                              {item.type}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-500" title={new Date(item.timestamp).toLocaleString()}>
+                            <Calendar size={12} />
+                            {formatRelativeTime(item.timestamp)}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500">
-                            Confidence: {(item.confidence * 100).toFixed(0)}%
-                          </span>
-                          <span className="text-gray-500">
-                            Impact: {(item.impact * 100).toFixed(0)}%
-                          </span>
+
+                        {/* Content */}
+                        <p className="text-gray-300 text-sm mb-3">{item.content}</p>
+
+                        {/* Bottom Row: Agent, Project, and Metrics */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-wrap gap-2">
+                            {/* Agent badge */}
+                            {item.agent && (
+                              <span className="text-xs px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 flex items-center gap-1">
+                                <Brain size={12} />
+                                {item.agent}
+                              </span>
+                            )}
+                            {/* Legacy agents array support */}
+                            {item.agents?.map((agent) => (
+                              <span
+                                key={agent}
+                                className="text-xs px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 flex items-center gap-1"
+                              >
+                                <Brain size={12} />
+                                {agent}
+                              </span>
+                            ))}
+                            {/* Project badge */}
+                            {item.project && (
+                              <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                                <GitBranch size={12} />
+                                {item.project}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Metrics */}
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-gray-500 flex items-center gap-1" title="Confidence score">
+                              <CheckCircle size={12} className={item.confidence >= 0.8 ? 'text-green-400' : 'text-gray-500'} />
+                              {(item.confidence * 100).toFixed(0)}%
+                            </span>
+                            <span className="text-gray-500 flex items-center gap-1" title="Impact score">
+                              <Zap size={12} className={item.impact >= 0.8 ? 'text-yellow-400' : 'text-gray-500'} />
+                              {(item.impact * 100).toFixed(0)}%
+                            </span>
+                          </div>
                         </div>
                       </div>
-
-                      <p className="text-gray-300 text-sm mb-3">{item.content}</p>
-
-                      {/* Session 751: Handle both single agent and agents array */}
-                      {(item.agent || (item.agents && item.agents.length > 0)) && (
-                        <div className="flex flex-wrap gap-1">
-                          {item.agent && (
-                            <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">
-                              {item.agent}
-                            </span>
-                          )}
-                          {item.agents?.map((agent) => (
-                            <span
-                              key={agent}
-                              className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400"
-                            >
-                              {agent}
-                            </span>
-                          ))}
-                          {item.project && (
-                            <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400">
-                              {item.project}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="bg-dark-card border border-dark-border rounded-lg p-12 text-center">
@@ -530,6 +676,23 @@ export default function NeuralOrchestraPage() {
                   <p className="text-gray-500 text-sm mt-1">
                     Consciousness feed will populate as agents work
                   </p>
+                </div>
+              )}
+
+              {/* Metadata Footer */}
+              {ecosystemData?.metadata && (
+                <div className="bg-dark-card/50 border border-dark-border rounded-lg p-3 mt-4">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center gap-4">
+                      <span>Source: {ecosystemData.metadata.data_source}</span>
+                      {ecosystemData.metadata.bridge_version && (
+                        <span>Version: {ecosystemData.metadata.bridge_version}</span>
+                      )}
+                    </div>
+                    <span>
+                      Generated: {new Date(ecosystemData.metadata.generated_at).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
