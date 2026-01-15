@@ -265,6 +265,18 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
 
         # Session 750: Time Travel integration
         with self.time_travel_session("content_studio_coordination", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((time.time() - start_time) * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, the brain of the Autonomous Content Studio. One capability: I orchestrate autonomous content creation cycles by monitoring channel schedules, triggering agent debates (TopicMiner vs Contrarian vs Analyst), coordinating with AISeriesWorkflowAgent to create episodes, and self-scheduling the next content cycles.",
+                    data={'type': 'self_description', 'coordinated_agents': ['TopicMinerAgent', 'ContrarianAgent', 'PerformanceAnalystAgent', 'AISeriesWorkflowAgent']},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="planning",
                 action="Starting content studio coordination",
