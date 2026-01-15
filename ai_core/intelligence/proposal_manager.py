@@ -545,7 +545,7 @@ class ProposalManager:
 
     def _optimize_agent_performance(self) -> Dict[str, Any]:
         """Real agent performance optimization"""
-        from core.models.agents_registry import Agent
+        from core.models_unified_system import Agent  # Session 758: Fixed import path
         from django.db import connection
 
         try:

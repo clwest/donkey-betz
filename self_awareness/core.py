@@ -242,7 +242,7 @@ class SystemMonitor:
             db_queries = len(connection.queries)
             
             # Application metrics
-            from core.models.agents_registry import Agent
+            from core.models_unified_system import Agent  # Session 758: Fixed import path
             
             active_agents = Agent.objects.filter(status='running').count()
             pending_tasks = Agent.objects.filter(status='pending').count()
