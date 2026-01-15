@@ -187,6 +187,64 @@ interface Experiment {
   outcome_classification: 'pending' | 'success' | 'failure'
 }
 
+// Session 760: Agent Execution interface for Output Detail Modal
+// Session 760: Output data sub-types for type-safe rendering
+interface ImageOutput {
+  image_url?: string
+  image_id?: string
+  file_path?: string
+  batch_index?: number
+}
+
+interface ToolResultOutput {
+  tool?: string
+  result?: Record<string, unknown>
+}
+
+interface ResearchResultOutput {
+  source?: string
+  data?: Record<string, unknown>
+}
+
+interface OutputDataPayload {
+  images?: ImageOutput[]
+  tool_results?: ToolResultOutput[]
+  results?: ResearchResultOutput[]
+  [key: string]: unknown
+}
+
+interface AgentExecutionDetail {
+  id: string
+  agent_name: string
+  agent_display_name?: string
+  task: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  output_data: {
+    data?: OutputDataPayload
+    message?: string
+    result_preview?: string
+  } | null
+  input_data?: {
+    task?: string
+    context_injected?: Record<string, unknown>
+  } | null
+  error_message?: string
+  tokens_used?: number
+  cost?: number
+  execution_time_ms?: number
+  created_at: string
+  completed_at?: string
+}
+
+interface RelatedMemory {
+  id: string
+  title: string
+  content: string
+  valence: 'positive' | 'negative' | 'neutral'
+  memory_type: string
+  importance_score: number
+}
+
 interface Agent {
   name: string
   category: string
@@ -549,6 +607,10 @@ export default function AgentsPage() {
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
   // Session 697: Knowledge Transfer Modal state
   const [selectedTransfer, setSelectedTransfer] = useState<LearningFeedItem | null>(null)
+  // Session 760: Agent Execution Output Detail Modal state
+  const [selectedExecution, setSelectedExecution] = useState<AgentExecutionDetail | null>(null)
+  const [relatedMemory, setRelatedMemory] = useState<RelatedMemory | null>(null)
+  const [executionDetailLoading, setExecutionDetailLoading] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -639,6 +701,31 @@ export default function AgentsPage() {
     refetchInterval: 60000,
   })
   const experiments: Experiment[] = experimentsResponse?.data?.experiments || []
+
+  // Session 760: Unified executions for Output Detail Modal
+  const { data: executionsResponse, refetch: refetchExecutions, isRefetching: isRefetchingExecutions } = useQuery({
+    queryKey: ['unified-executions'],
+    queryFn: () => agentsApi.unifiedExecutions({ limit: 30 }),
+    refetchInterval: 30000,
+    enabled: activeTab === 'activity',
+  })
+  const unifiedExecutions: AgentExecutionDetail[] = executionsResponse?.data?.data?.executions || []
+
+  // Session 760: Function to load execution detail and open modal
+  const handleExecutionClick = async (executionId: string) => {
+    setExecutionDetailLoading(true)
+    try {
+      const response = await agentsApi.executionDetail(executionId)
+      if (response.data?.success) {
+        setSelectedExecution(response.data.data.execution)
+        setRelatedMemory(response.data.data.related_memory)
+      }
+    } catch (error) {
+      console.error('Failed to load execution detail:', error)
+    } finally {
+      setExecutionDetailLoading(false)
+    }
+  }
 
   // Session 734: Monitoring dashboard state and queries
   const [monitoringPeriod, setMonitoringPeriod] = useState<'1h' | '24h' | '7d' | '30d'>('24h')
@@ -1497,6 +1584,95 @@ export default function AgentsPage() {
                 <p>No recent activity</p>
                 <p className="text-sm text-gray-500 mt-1">
                   Agent dreams, conversations, and decisions will appear here
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Session 760: Agent Executions Section with Output Detail */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Cpu size={18} className="text-accent-cyan" />
+                Agent Executions
+              </h3>
+              <button
+                onClick={() => refetchExecutions()}
+                disabled={isRefetchingExecutions}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                <RefreshCw size={14} className={cn(isRefetchingExecutions && 'animate-spin')} />
+                Refresh
+              </button>
+            </div>
+            <p className="text-sm text-gray-400 mb-4">
+              Click on any execution to view full output details
+            </p>
+            {unifiedExecutions.length > 0 ? (
+              <div className="space-y-3 max-h-[400px] overflow-auto">
+                {unifiedExecutions.map((execution) => (
+                  <div
+                    key={execution.id}
+                    onClick={() => handleExecutionClick(execution.id)}
+                    className={cn(
+                      "p-4 rounded-lg border border-dark-border hover:border-accent-cyan/50 cursor-pointer transition-colors bg-dark-hover/30 hover:bg-accent-cyan/5",
+                      executionDetailLoading && "opacity-50 pointer-events-none"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Bot size={16} className="text-accent-cyan" />
+                        <span className="font-medium text-white">{execution.agent_name}</span>
+                        <span className={cn(
+                          'text-xs px-2 py-0.5 rounded',
+                          execution.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                          execution.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                          execution.status === 'running' ? 'bg-accent-amber/20 text-accent-amber' :
+                          'bg-gray-500/20 text-gray-400'
+                        )}>
+                          {execution.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        {execution.execution_time_ms && execution.execution_time_ms > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} />
+                            {(execution.execution_time_ms / 1000).toFixed(1)}s
+                          </span>
+                        )}
+                        {execution.tokens_used && execution.tokens_used > 0 && (
+                          <span>{execution.tokens_used.toLocaleString()} tokens</span>
+                        )}
+                        {execution.cost && execution.cost > 0 && (
+                          <span>${execution.cost.toFixed(4)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-300 truncate">
+                      {execution.task || 'No task description'}
+                    </p>
+                    {execution.output_data?.message && (
+                      <p className="text-sm text-gray-500 mt-1 truncate">
+                        {execution.output_data.message}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                      <Clock size={12} />
+                      {formatTimestamp(execution.created_at, 'full')}
+                      <span className="text-accent-cyan/60 flex items-center gap-1 ml-auto">
+                        <Eye size={10} />
+                        Click to view output
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Cpu className="mx-auto mb-2" size={32} />
+                <p>No recent executions</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Agent executions will appear here
                 </p>
               </div>
             )}
@@ -4190,6 +4366,273 @@ export default function AgentsPage() {
               </div>
               <button
                 onClick={() => setSelectedTransfer(null)}
+                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 760: Agent Execution Output Detail Modal */}
+      {selectedExecution && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-green/10">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bot size={24} className="text-accent-cyan" />
+                  <h2 className="text-xl font-bold text-white">{selectedExecution.agent_display_name || selectedExecution.agent_name}</h2>
+                  <span className={cn(
+                    'text-xs px-2 py-1 rounded',
+                    selectedExecution.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedExecution.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                    'bg-accent-amber/20 text-accent-amber'
+                  )}>
+                    {selectedExecution.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <Clock size={14} />
+                    {formatTimestamp(selectedExecution.created_at, 'full')}
+                  </span>
+                  {selectedExecution.execution_time_ms && selectedExecution.execution_time_ms > 0 && (
+                    <span>Duration: {(selectedExecution.execution_time_ms / 1000).toFixed(2)}s</span>
+                  )}
+                  {selectedExecution.tokens_used && selectedExecution.tokens_used > 0 && (
+                    <span>{selectedExecution.tokens_used.toLocaleString()} tokens</span>
+                  )}
+                  {selectedExecution.cost && selectedExecution.cost > 0 && (
+                    <span className="text-accent-amber">Cost: ${selectedExecution.cost.toFixed(4)}</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedExecution(null)
+                  setRelatedMemory(null)
+                }}
+                className="p-2 rounded-lg hover:bg-dark-border transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)] space-y-6">
+              {/* Task Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                  <FileText size={14} />
+                  Task
+                </h3>
+                <div className="bg-dark-lighter rounded-lg p-4 border border-dark-border">
+                  <p className="text-gray-200 whitespace-pre-wrap">{selectedExecution.task || 'No task description'}</p>
+                </div>
+              </div>
+
+              {/* Error Section (if failed) */}
+              {selectedExecution.status === 'failed' && selectedExecution.error_message && (
+                <div>
+                  <h3 className="text-sm font-semibold text-accent-red mb-2 flex items-center gap-2">
+                    <AlertTriangle size={14} />
+                    Error
+                  </h3>
+                  <div className="bg-accent-red/10 rounded-lg p-4 border border-accent-red/30">
+                    <p className="text-accent-red whitespace-pre-wrap font-mono text-sm">{selectedExecution.error_message}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Output Section */}
+              {selectedExecution.output_data && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                    <Database size={14} />
+                    Output Data
+                  </h3>
+
+                  {/* Message */}
+                  {selectedExecution.output_data.message && (
+                    <div className="bg-dark-lighter rounded-lg p-4 border border-dark-border mb-4">
+                      <h4 className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Message</h4>
+                      <div className="text-gray-200 whitespace-pre-wrap">
+                        {(() => {
+                          const msg = selectedExecution.output_data.message
+                          // Format code blocks
+                          if (msg.includes('```')) {
+                            return msg.split(/(```[\s\S]*?```)/g).map((part, idx) => {
+                              if (part.startsWith('```')) {
+                                const code = part.replace(/```\w*\n?/g, '').replace(/```$/g, '')
+                                return (
+                                  <pre key={idx} className="bg-dark-card p-3 rounded-lg font-mono text-sm text-accent-cyan overflow-x-auto my-2">
+                                    {code}
+                                  </pre>
+                                )
+                              }
+                              return <span key={idx}>{part}</span>
+                            })
+                          }
+                          return msg
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Data Object */}
+                  {selectedExecution.output_data.data && Object.keys(selectedExecution.output_data.data).length > 0 && (
+                    <div className="bg-dark-lighter rounded-lg p-4 border border-dark-border">
+                      <h4 className="text-xs text-gray-500 mb-3 uppercase tracking-wider">Structured Data</h4>
+
+                      {/* Special handling for images */}
+                      {selectedExecution.output_data.data.images && selectedExecution.output_data.data.images.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-purple mb-2">Generated Images ({selectedExecution.output_data.data.images.length})</h5>
+                          <div className="grid grid-cols-2 gap-3">
+                            {selectedExecution.output_data.data.images.map((img, idx) => (
+                              <div key={idx} className="bg-dark-card rounded-lg p-2 border border-dark-border">
+                                {img.image_url && (
+                                  <a href={img.image_url} target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline text-sm">
+                                    View Image {idx + 1}
+                                  </a>
+                                )}
+                                {img.image_id && (
+                                  <p className="text-xs text-gray-500 mt-1 font-mono truncate">ID: {img.image_id}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for tool_results */}
+                      {selectedExecution.output_data.data.tool_results && selectedExecution.output_data.data.tool_results.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-amber mb-2">Tool Results</h5>
+                          <div className="space-y-2">
+                            {selectedExecution.output_data.data.tool_results.map((tr, idx) => (
+                              <div key={idx} className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Wrench size={14} className="text-accent-amber" />
+                                  <span className="font-medium text-white">{tr.tool || `Tool ${idx + 1}`}</span>
+                                </div>
+                                {tr.result && (
+                                  <pre className="text-xs text-gray-400 overflow-x-auto max-h-32">
+                                    {JSON.stringify(tr.result, null, 2)}
+                                  </pre>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for research results */}
+                      {selectedExecution.output_data.data.results && selectedExecution.output_data.data.results.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-cyan mb-2">Research Results ({selectedExecution.output_data.data.results.length})</h5>
+                          <div className="space-y-2">
+                            {selectedExecution.output_data.data.results.slice(0, 5).map((result, idx) => (
+                              <div key={idx} className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                                {result.source && (
+                                  <span className="text-xs text-accent-green">{result.source}</span>
+                                )}
+                                {result.data && (
+                                  <pre className="text-xs text-gray-400 mt-1 overflow-x-auto max-h-24">
+                                    {JSON.stringify(result.data, null, 2)}
+                                  </pre>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Raw JSON for other data */}
+                      <details className="mt-4">
+                        <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300">View Raw JSON</summary>
+                        <pre className="mt-2 text-xs text-gray-400 overflow-x-auto max-h-64 bg-dark-card p-3 rounded-lg">
+                          {JSON.stringify(selectedExecution.output_data.data, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Context Injected Section */}
+              {selectedExecution.input_data?.context_injected && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                    <Zap size={14} />
+                    Context Injected
+                  </h3>
+                  <div className="bg-dark-lighter rounded-lg p-4 border border-dark-border">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {Object.entries(selectedExecution.input_data.context_injected).map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-400 capitalize">{key.replace(/_/g, ' ')}</span>
+                          {typeof value === 'boolean' ? (
+                            value ? (
+                              <CheckCircle size={16} className="text-accent-green" />
+                            ) : (
+                              <X size={16} className="text-gray-600" />
+                            )
+                          ) : (
+                            <span className="text-gray-200">{String(value)}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Related Memory Section */}
+              {relatedMemory && (
+                <div>
+                  <h3 className="text-sm font-semibold text-accent-purple mb-2 flex items-center gap-2">
+                    <Brain size={14} />
+                    Related Memory
+                  </h3>
+                  <div className="bg-accent-purple/10 rounded-lg p-4 border border-accent-purple/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium text-white">{relatedMemory.title}</span>
+                      <span className={cn(
+                        'text-xs px-2 py-0.5 rounded',
+                        relatedMemory.valence === 'positive' ? 'bg-accent-green/20 text-accent-green' :
+                        relatedMemory.valence === 'negative' ? 'bg-accent-red/20 text-accent-red' :
+                        'bg-gray-500/20 text-gray-400'
+                      )}>
+                        {relatedMemory.valence}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-300 whitespace-pre-wrap">{relatedMemory.content}</p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      <span>Type: {relatedMemory.memory_type}</span>
+                      <span>Importance: {(relatedMemory.importance_score * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>Execution ID: {selectedExecution.id.substring(0, 8)}...</span>
+                {selectedExecution.completed_at && (
+                  <span>Completed: {formatTimestamp(selectedExecution.completed_at, 'full')}</span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedExecution(null)
+                  setRelatedMemory(null)
+                }}
                 className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
               >
                 Close
