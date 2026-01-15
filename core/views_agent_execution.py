@@ -342,3 +342,129 @@ def execute_agent_batch(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# Session 760: Agent Execution Detail APIs for Output Modal
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def unified_execution_history(request):
+    """
+    Get agent execution history from the unified system with full output_data.
+
+    Query params:
+    - limit: Number of executions to return (default 20)
+    - agent_name: Filter by agent name (optional)
+    - status: Filter by status (optional)
+    """
+    try:
+        from core.models_unified_system import AgentExecution
+
+        limit = int(request.GET.get('limit', 20))
+        agent_name = request.GET.get('agent_name')
+        status = request.GET.get('status')
+
+        queryset = AgentExecution.objects.select_related('agent').order_by('-created_at')
+
+        if agent_name:
+            queryset = queryset.filter(agent__name__icontains=agent_name)
+        if status:
+            queryset = queryset.filter(status=status)
+
+        executions = queryset[:limit]
+
+        return Response({
+            'success': True,
+            'data': {
+                'executions': [
+                    {
+                        'id': str(ex.id),
+                        'agent_name': ex.agent.name if ex.agent else 'Unknown',
+                        'task': ex.task[:200] if ex.task else None,
+                        'status': ex.status,
+                        'output_data': ex.output_data,
+                        'error_message': ex.error_message,
+                        'tokens_used': ex.tokens_used,
+                        'cost': float(ex.cost) if ex.cost else 0,
+                        'execution_time_ms': ex.execution_time_ms,
+                        'created_at': ex.created_at.isoformat(),
+                        'completed_at': ex.completed_at.isoformat() if ex.completed_at else None,
+                    }
+                    for ex in executions
+                ],
+                'count': len(executions),
+                'limit': limit
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting unified execution history: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def execution_detail(request, execution_id):
+    """
+    Get detailed information about a specific execution including full output_data.
+
+    Session 760: Created for Agent Output Detail Modal
+    """
+    try:
+        from core.models_unified_system import AgentExecution, AgentMemory
+
+        try:
+            execution = AgentExecution.objects.select_related('agent').get(id=execution_id)
+        except AgentExecution.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': f'Execution {execution_id} not found'
+            }, status=404)
+
+        # Get related memory if exists
+        related_memory = None
+        if execution.agent:
+            memory = AgentMemory.objects.filter(
+                agent=execution.agent,
+                source_type='execution',
+                created_at__gte=execution.created_at
+            ).first()
+            if memory:
+                related_memory = {
+                    'id': str(memory.id),
+                    'title': memory.title,
+                    'content': memory.content,
+                    'valence': memory.valence,
+                    'memory_type': memory.memory_type,
+                    'importance_score': memory.importance_score,
+                }
+
+        return Response({
+            'success': True,
+            'data': {
+                'execution': {
+                    'id': str(execution.id),
+                    'agent_name': execution.agent.name if execution.agent else 'Unknown',
+                    'agent_display_name': execution.agent.display_name if execution.agent else None,
+                    'task': execution.task,
+                    'status': execution.status,
+                    'output_data': execution.output_data,
+                    'input_data': execution.input_data,
+                    'error_message': execution.error_message,
+                    'tokens_used': execution.tokens_used,
+                    'cost': float(execution.cost) if execution.cost else 0,
+                    'execution_time_ms': execution.execution_time_ms,
+                    'created_at': execution.created_at.isoformat(),
+                    'completed_at': execution.completed_at.isoformat() if execution.completed_at else None,
+                },
+                'related_memory': related_memory
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting execution detail: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)

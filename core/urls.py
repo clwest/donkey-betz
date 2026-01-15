@@ -2089,6 +2089,9 @@ urlpatterns = [
     path('api/v1/agents/execute-sync/', views_agent_execution.execute_agent_sync, name='agent-execute-sync'),
     path('api/v1/agents/list-executable/', views_agent_execution.list_executable_agents, name='agent-list-executable'),
     path('api/v1/agents/execution-history/', views_agent_execution.agent_execution_history, name='agent-execution-history'),
+    # Session 760: Unified execution history and detail for Output Modal
+    path('api/v1/agents/unified-executions/', views_agent_execution.unified_execution_history, name='unified-execution-history'),
+    path('api/v1/agents/execution/<str:execution_id>/', views_agent_execution.execution_detail, name='execution-detail'),
     path('api/v1/agents/test-execution/', views_agent_execution.test_agent_execution, name='agent-test-execution'),
     path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
 
