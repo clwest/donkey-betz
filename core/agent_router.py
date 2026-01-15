@@ -772,10 +772,11 @@ class AgentRouter:
                 if result.tokens_used == 0 and agent._accumulated_tokens > 0:
                     result.tokens_used = agent._accumulated_tokens
 
-            # Track successful execution
+            # Track execution result
             # Session 641: Use result.message (not result.output which doesn't exist on AgentResult)
             # Session 744: Pass tokens_used and cost to execution record
             # Session 757: Save FULL result data (not just preview) so blog content is accessible
+            # Session 759: Include result.error for failed executions
             self._complete_execution(
                 execution_record,
                 agent_name,
@@ -785,7 +786,9 @@ class AgentRouter:
                     'result_preview': str(result.message)[:500] if result.message else None,
                     'data': result.data,  # Full result data including generated content
                     'message': result.message,
+                    'error': result.error if not result.success else None,  # Session 759: Include error
                 },
+                error_message=result.error if not result.success else None,  # Session 759: Pass to record
                 tokens_used=result.tokens_used,
                 cost=result.cost
             )
