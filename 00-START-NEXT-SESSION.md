@@ -1,48 +1,65 @@
 # Session 753 - Next Session
 
-**Previous Session:** 752 (Neural Orchestra Activity Testing + Error Tracking)
-**Date:** January 14, 2026
-**Status:** Activity Metrics Verified, Error Tracking Established
+**Previous Session:** 752 (Error Tracking System & Live Feed Fix)
+**Date:** January 15, 2026
+**Status:** Ready for new work
 
 ---
 
-## Session 752 Summary
+## Session 752 Accomplishments
 
-### Neural Orchestra Activity Testing
-- Tested agent activity metrics by creating `AgentExecution` record
-- Verified metrics update correctly: 0 → 1 Active Agent
-- Confirmed system uses real data (96.6% reality score)
-- Consciousness level increased 28.9% → 31.6% after activity
-
-### Error Tracking System
+### 1. Error Tracking System Created
 - Created `docs/ERROR_TRACKING.md` for documenting errors as they occur
-- Documented first error: Learning Orchestrator NoneType user issue
-- Added to CLAUDE.md documentation section
+- Structured format: Active/Resolved sections, root cause analysis, reproduction steps
 
-### Key Finding
-Neural Orchestra "0 Active Agents" is **correct** - activity tracked via `AgentExecution` model. No agents had executed tasks recently (last: Dec 6, 2025).
+### 2. Live Feed Data Gap Fixed (HIGH SEVERITY)
+- **Problem:** Neural Orchestra Live Feed stale since December 6, 2025 (39 days)
+- **Root Cause:** `AgentContribution.project` was required FK, images created without agent set
+- **Fix:** Made project nullable, updated `views_image.py` to set agent and track contributions
+- **Result:** Live Feed now updating with new content
+
+### 3. Learning Orchestrator NoneType Error Fixed
+- **Problem:** `'NoneType' object has no attribute 'id'` on system-triggered executions
+- **Fix:** Added null check in `_send_to_personal_assistant()`
+- **Result:** Graceful handling of anonymous executions
+
+### 4. Live Feed UI Enhanced
+- Added summary stats panel (contributions, tracking rate, reality score)
+- Added content type icons and contribution badges
+- Added relative timestamps ("Just now", "2h ago")
+- **Added thumbnail images** - 80x80 previews with click to open full image
+
+### 5. End-to-End Verification
+- Tested complete data flow: Image creation → AgentContribution → API → Frontend
+- Verified 7 contributions now tracked (was 5 before fixes)
+- Confirmed thumbnails display correctly
 
 ---
 
 ## Known Open Errors
 
-| Error | Location | Severity | Status |
-|-------|----------|----------|--------|
-| Learning Orchestrator NoneType user | `learning_orchestrator.py:267` | Low | Open |
+**None!** All errors discovered in Session 752 have been resolved.
 
-**See:** `docs/ERROR_TRACKING.md` for full details and suggested fixes.
+See `docs/ERROR_TRACKING.md` for error tracking history.
 
 ---
 
-## Pages Audited (Sessions 749-752)
+## Session 752 Commits
 
-| Page | Session | Status |
-|------|---------|--------|
-| Mood Page | 749 | ✅ Complete |
-| Time Capsules | 749 | ✅ Complete |
-| Time Travel | 750 | ✅ Complete |
-| Agent Social | 751 | ✅ Complete |
-| Neural Orchestra | 751-752 | ✅ Complete |
+```
+dff81872 fix(Session 752): Fix Live Feed data gap and Learning Orchestrator errors
+1969e6d1 docs(Session 752): Add comprehensive handoff documentation
+bcb00023 feat(Session 752): Add thumbnail images to Live Feed cards
+```
+
+---
+
+## Suggested Next Tasks
+
+1. **Backfill historical contributions** - ~29 images from last month weren't tracked
+2. **Review video/3D model tracking** - May have similar gaps as images
+3. **Add video/3D thumbnails** - Currently only images have thumbnail support
+4. **Test real image generation via UI** - Verify complete user flow works
 
 ---
 
@@ -56,7 +73,7 @@ make celery
 # Start frontend (separate terminal)
 cd frontend && npm run dev
 
-# Access pages
+# Access Neural Orchestra Live Feed
 open http://localhost:3000/neural-orchestra
 ```
 
@@ -67,40 +84,40 @@ open http://localhost:3000/neural-orchestra
 | Component | Count |
 |-----------|-------|
 | Agents | 72 |
-| Agents with Time Travel | 71 (96%) |
 | Spiders | 77 |
 | PA Tools | 86 |
 | Database Models | 364+ |
 | Celery Tasks | 139 |
 | Frontend Pages | 29 |
 | Body Systems | 9 |
-| Sci-Fi Features | 14 |
-| Content Created | 229 total |
+| Sci-Fi Features | 14/14 (100%) |
+| AgentContributions | 7 |
+| Content Tracking Rate | ~3% |
 
 ---
 
-## GPT-5-mini Token Guidance
+## Key Files Modified in Session 752
 
-When using GPT-5-mini:
-
-| Use Case | Recommended Tokens |
-|----------|-------------------|
-| Simple (1-2 sentences) | 1500-2000 |
-| Medium (paragraph) | 2000-3000 |
-| Complex analysis | 4000-6000 |
-
-Low token limits cause empty responses with `finish_reason: length`.
+| File | Purpose |
+|------|---------|
+| `core/views_image.py` | Image agent tracking |
+| `core/self_development/learning_orchestrator.py` | Null user handling |
+| `ai_core/consciousness/neural_orchestra_reality_bridge.py` | Image URLs in API |
+| `frontend/src/pages/NeuralOrchestraPage.tsx` | Live Feed UI + thumbnails |
+| `docs/ERROR_TRACKING.md` | Error tracking system |
 
 ---
 
 ## Services Status
 
-All services verified working in Session 752:
+All services verified working:
 - Redis: Running
-- Daphne: Running
+- Daphne: Running (port 8000)
 - Celery Worker: Running
 - Celery Beat: Running
+- Frontend: Running (port 3000)
 
 ---
 
 **Branch:** `feature/session-52-ai-assistant`
+**Handoff:** `docs/handoffs/SESSION_752_ERROR_TRACKING_AND_LIVE_FEED_FIX.md`
