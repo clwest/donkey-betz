@@ -43,6 +43,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 // Types for API responses
 // Session 751: Updated to match actual API response
 // Session 752: Added image_url and thumbnail_url for thumbnails
+// Session 758: Added all fields for detail modal
 interface FeedItem {
   id: string
   timestamp: string
@@ -51,13 +52,22 @@ interface FeedItem {
   agent?: string  // API returns single agent, not array
   agents?: string[]  // Keep for backwards compatibility
   agent_id?: string
+  agent_name?: string
   contribution_type?: string
   content_type?: string
+  content_id?: string
   project?: string
+  project_name?: string
   confidence: number
   impact: number
   image_url?: string  // Session 752: Full image URL
   thumbnail_url?: string  // Session 752: Thumbnail URL (or full if no thumbnail)
+  // Session 758: Additional detail fields
+  contribution_role?: string
+  execution_time_seconds?: number
+  tokens_used?: number
+  task_description?: string
+  contribution_percentage?: number
 }
 
 // Session 752: Extended SystemStatus to include all API fields
@@ -163,6 +173,8 @@ export default function NeuralOrchestraPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'feed' | 'learning' | 'debug'>(
     'overview'
   )
+  // Session 758: State for feed item detail modal
+  const [selectedFeedItem, setSelectedFeedItem] = useState<FeedItem | null>(null)
 
   // Fetch ecosystem feed
   const { data: ecosystemData, isLoading: loadingEcosystem } = useQuery({
@@ -593,7 +605,11 @@ export default function NeuralOrchestraPage() {
                     return (
                       <div
                         key={item.id}
-                        className="bg-dark-card border border-dark-border rounded-lg p-4 hover:border-primary-500/50 transition-colors"
+                        className="bg-dark-card border border-dark-border rounded-lg p-4 hover:border-primary-500/50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedFeedItem(item)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === 'Enter' && setSelectedFeedItem(item)}
                       >
                         {/* Top Row: Type badges and timestamp */}
                         <div className="flex items-start justify-between mb-3">
@@ -934,6 +950,166 @@ export default function NeuralOrchestraPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Session 758: Feed Item Detail Modal */}
+      {selectedFeedItem && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedFeedItem(null)}
+        >
+          <div
+            className="bg-dark-card border border-dark-border rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-dark-border">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Activity size={20} className="text-primary-400" />
+                Contribution Details
+              </h2>
+              <button
+                onClick={() => setSelectedFeedItem(null)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 space-y-4">
+              {/* Image/Thumbnail if available */}
+              {selectedFeedItem.image_url && (
+                <div className="flex justify-center">
+                  <a
+                    href={`http://localhost:8000${selectedFeedItem.image_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={`http://localhost:8000${selectedFeedItem.thumbnail_url || selectedFeedItem.image_url}`}
+                      alt="Content"
+                      className="max-h-48 rounded-lg border border-dark-border hover:border-primary-500 transition-colors"
+                    />
+                  </a>
+                </div>
+              )}
+
+              {/* Task Description */}
+              <div className="bg-dark-bg rounded-lg p-3">
+                <h4 className="text-xs text-gray-500 uppercase mb-1">Task Description</h4>
+                <p className="text-gray-200">{selectedFeedItem.content || selectedFeedItem.task_description || 'No description'}</p>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Agent */}
+                <div className="bg-dark-bg rounded-lg p-3">
+                  <h4 className="text-xs text-gray-500 uppercase mb-1">Agent</h4>
+                  <p className="text-cyan-400 flex items-center gap-1">
+                    <Brain size={14} />
+                    {selectedFeedItem.agent || selectedFeedItem.agent_name || 'Unknown'}
+                  </p>
+                </div>
+
+                {/* Project */}
+                <div className="bg-dark-bg rounded-lg p-3">
+                  <h4 className="text-xs text-gray-500 uppercase mb-1">Project</h4>
+                  <p className="text-purple-400 flex items-center gap-1">
+                    <GitBranch size={14} />
+                    {selectedFeedItem.project || selectedFeedItem.project_name || 'General'}
+                  </p>
+                </div>
+
+                {/* Content Type */}
+                <div className="bg-dark-bg rounded-lg p-3">
+                  <h4 className="text-xs text-gray-500 uppercase mb-1">Content Type</h4>
+                  <p className="text-blue-400">{selectedFeedItem.content_type || 'Task'}</p>
+                </div>
+
+                {/* Contribution Type */}
+                <div className="bg-dark-bg rounded-lg p-3">
+                  <h4 className="text-xs text-gray-500 uppercase mb-1">Contribution Type</h4>
+                  <p className="text-green-400">{selectedFeedItem.contribution_type || 'Unknown'}</p>
+                </div>
+
+                {/* Timestamp */}
+                <div className="bg-dark-bg rounded-lg p-3">
+                  <h4 className="text-xs text-gray-500 uppercase mb-1">Timestamp</h4>
+                  <p className="text-gray-300 flex items-center gap-1">
+                    <Calendar size={14} />
+                    {new Date(selectedFeedItem.timestamp).toLocaleString()}
+                  </p>
+                </div>
+
+                {/* Contribution Role */}
+                {selectedFeedItem.contribution_role && (
+                  <div className="bg-dark-bg rounded-lg p-3">
+                    <h4 className="text-xs text-gray-500 uppercase mb-1">Role</h4>
+                    <p className="text-yellow-400">{selectedFeedItem.contribution_role}</p>
+                  </div>
+                )}
+
+                {/* Execution Time */}
+                {selectedFeedItem.execution_time_seconds && (
+                  <div className="bg-dark-bg rounded-lg p-3">
+                    <h4 className="text-xs text-gray-500 uppercase mb-1">Execution Time</h4>
+                    <p className="text-gray-300 flex items-center gap-1">
+                      <Clock size={14} />
+                      {selectedFeedItem.execution_time_seconds}s
+                    </p>
+                  </div>
+                )}
+
+                {/* Tokens Used */}
+                {selectedFeedItem.tokens_used && (
+                  <div className="bg-dark-bg rounded-lg p-3">
+                    <h4 className="text-xs text-gray-500 uppercase mb-1">Tokens Used</h4>
+                    <p className="text-gray-300 flex items-center gap-1">
+                      <Cpu size={14} />
+                      {selectedFeedItem.tokens_used.toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Metrics Row */}
+              <div className="flex items-center justify-between bg-dark-bg rounded-lg p-3">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <span className="text-xs text-gray-500 block">Confidence</span>
+                    <span className={cn(
+                      "text-lg font-semibold",
+                      selectedFeedItem.confidence >= 0.8 ? "text-green-400" : "text-yellow-400"
+                    )}>
+                      {(selectedFeedItem.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 block">Impact</span>
+                    <span className={cn(
+                      "text-lg font-semibold",
+                      selectedFeedItem.impact >= 0.8 ? "text-green-400" : "text-yellow-400"
+                    )}>
+                      {(selectedFeedItem.impact * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  {selectedFeedItem.contribution_percentage && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Contribution</span>
+                      <span className="text-lg font-semibold text-primary-400">
+                        {selectedFeedItem.contribution_percentage}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500">
+                  ID: {selectedFeedItem.id.slice(0, 8)}...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
