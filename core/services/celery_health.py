@@ -187,6 +187,18 @@ class CeleryHealthService:
 
             total_active = sum(w['active_tasks'] for w in workers)
 
+            # Session 758: Fallback for solo pool workers that can't respond when busy
+            # Check for running celery worker processes if no workers responded
+            if not workers:
+                process_workers = self._check_worker_processes()
+                if process_workers:
+                    return {
+                        'count': len(process_workers),
+                        'status': 'busy',  # Workers exist but are busy
+                        'total_active_tasks': len(process_workers),  # Assume 1 task per worker
+                        'workers': process_workers,
+                    }
+
             return {
                 'count': len(workers),
                 'status': 'online' if workers else 'offline',
@@ -196,12 +208,53 @@ class CeleryHealthService:
 
         except Exception as e:
             logger.warning(f"Error checking Celery workers: {e}")
+            # Session 758: Try process fallback on exception too
+            process_workers = self._check_worker_processes()
+            if process_workers:
+                return {
+                    'count': len(process_workers),
+                    'status': 'busy',
+                    'total_active_tasks': len(process_workers),
+                    'workers': process_workers,
+                }
             return {
                 'count': 0,
                 'status': 'error',
                 'workers': [],
                 'error': str(e)
             }
+
+    def _check_worker_processes(self) -> List[Dict[str, Any]]:
+        """
+        Session 758: Fallback to check for running celery worker processes.
+        This handles solo pool workers that can't respond to control commands when busy.
+        """
+        import subprocess
+        try:
+            # Look for celery worker processes
+            result = subprocess.run(
+                ['pgrep', '-f', 'celery.*worker'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                workers = []
+                for pid in pids:
+                    workers.append({
+                        'name': f'celery-worker-{pid}',
+                        'status': 'busy',
+                        'active_tasks': 1,
+                        'pool': 'solo',
+                        'concurrency': 1,
+                        'processed': 0,
+                        'pid': int(pid),
+                    })
+                return workers
+        except Exception as e:
+            logger.debug(f"Process check fallback failed: {e}")
+        return []
 
     def _check_beat(self) -> Dict[str, Any]:
         """Check Celery beat scheduler status."""
