@@ -114,22 +114,32 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
         """Execute an agent with the given parameters"""
         from core.tasks_agents import execute_agent
         from agents.tasks_enhanced import execute_agent_with_tools
-        
+        from core.services.context_tracking import build_context_tracking
+
         agent_template = self.get_object()
-        
+        task_description = request.data.get('task_description', '')
+
         # Generate unique execution ID
         import uuid
         execution_id = f"exec_{agent_template.name}_{uuid.uuid4().hex[:8]}"
-        
+
+        # Session 758: Build context tracking for Integration Health observability
+        context_tracking = build_context_tracking(agent_template.name, task_description)
+
+        # Merge user input_data with context tracking
+        input_data = request.data.get('input_data', {})
+        input_data['task'] = task_description
+        input_data['context_injected'] = context_tracking
+
         # Create execution instance
         execution = AgentExecution.objects.create(
             template=agent_template,
             user=request.user if request.user.is_authenticated else None,
             execution_id=execution_id,
-            task_description=request.data.get('task_description', ''),
+            task_description=task_description,
             task_type=request.data.get('task_type', ''),
             context=request.data.get('context', {}),
-            input_data=request.data.get('input_data', {}),
+            input_data=input_data,
             priority=request.data.get('priority', 'normal'),
             websocket_channel=request.data.get('websocket_channel', '')
         )
@@ -590,7 +600,16 @@ def execute_agent(request):
     
     # Generate unique execution ID
     execution_id = f"exec_{agent_template.name}_{uuid.uuid4().hex[:8]}"
-    
+
+    # Session 758: Build context tracking for Integration Health observability
+    from core.services.context_tracking import build_context_tracking
+    context_tracking = build_context_tracking(agent_template.name, task)
+
+    # Merge parameters with context tracking
+    input_data = parameters.copy() if parameters else {}
+    input_data['task'] = task
+    input_data['context_injected'] = context_tracking
+
     # Create execution instance
     execution = AgentExecution.objects.create(
         template=agent_template,
@@ -599,7 +618,7 @@ def execute_agent(request):
         task_description=task,
         task_type='betting_analysis' if 'betting' in agent_type.lower() else 'general',
         context={'parameters': parameters},
-        input_data=parameters,
+        input_data=input_data,
         priority='normal',
         websocket_channel=parameters.get('game_id', '') if parameters else ''
     )

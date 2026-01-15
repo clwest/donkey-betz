@@ -537,6 +537,10 @@ Previous agent ({orchestration.agent_sequence[i-1]}) produced:
 
 Your task as {agent_name}: Build on the above and contribute your expertise."""
 
+                # Session 758: Build context tracking for Integration Health observability
+                from core.services.context_tracking import build_context_tracking
+                context_tracking = build_context_tracking(agent_name, task)
+
                 # Create execution record
                 execution = AgentExecution.objects.create(
                     template=template,
@@ -549,6 +553,10 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                         'step': i + 1,
                         'total_steps': len(orchestration.agent_sequence),
                         'previous_result': previous_result[:1000] if previous_result else None,
+                    },
+                    input_data={
+                        'task': task[:500],
+                        'context_injected': context_tracking,
                     },
                     status=AgentStatus.RUNNING
                 )
@@ -636,6 +644,10 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                 agent_name = get_agent_name(agent_info)
                 template = get_or_create_template(agent_name)
 
+                # Session 758: Build context tracking for Integration Health observability
+                from core.services.context_tracking import build_context_tracking
+                context_tracking = build_context_tracking(agent_name, base_prompt)
+
                 execution = AgentExecution.objects.create(
                     template=template,
                     user=orchestration.user,
@@ -646,6 +658,10 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                         'orchestration_id': str(orchestration_id),
                         'parallel': True,
                         'agent_name': agent_name
+                    },
+                    input_data={
+                        'task': base_prompt[:500],
+                        'context_injected': context_tracking,
                     },
                     status=AgentStatus.RUNNING
                 )

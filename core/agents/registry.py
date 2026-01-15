@@ -283,6 +283,15 @@ class AgentRegistry:
         try:
             agent_template = UnifiedAgentTemplate.objects.get(name=agent_name, is_active=True)
 
+            # Session 758: Build context tracking for Integration Health observability
+            try:
+                from core.services.context_tracking import build_context_tracking
+                task = task_data.get('task', '') or str(task_data)[:200]
+                context_tracking = build_context_tracking(agent_name, task)
+                task_data['context_injected'] = context_tracking
+            except Exception as e:
+                self.logger.debug(f"Context tracking unavailable: {e}")
+
             # Create execution record
             execution = AgentExecution.objects.create(
                 template=agent_template,
