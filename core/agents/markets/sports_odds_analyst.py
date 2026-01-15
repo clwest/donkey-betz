@@ -314,7 +314,7 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                 'spread': event.get('home_spread'),
                 'total': event.get('total_line'),
                 'game_time': event.get('commence_time_formatted'),
-                'reasoning': f"Close matchup at {event.get('home_implied_prob'):.0f}%/{100-event.get('home_implied_prob', 50):.0f}% - research for edge",
+                'reasoning': f"Close matchup at {(event.get('home_implied_prob') or 50):.0f}%/{100-(event.get('home_implied_prob') or 50):.0f}% - research for edge",
                 'suggested_units': 1,
             })
 
@@ -332,7 +332,7 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                 'spread': spread,
                 'total': event.get('total_line'),
                 'game_time': event.get('commence_time_formatted'),
-                'reasoning': f"{item['favorite']} heavily favored at {item['probability']:.0f}% - check spread value on underdog",
+                'reasoning': f"{item.get('favorite', 'Team')} heavily favored at {(item.get('probability') or 50):.0f}% - check spread value on underdog",
                 'suggested_units': 1,
             })
 
