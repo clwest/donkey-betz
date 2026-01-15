@@ -77,7 +77,10 @@ stop: ## Stop Daphne and best-effort Redis; do not forcibly kill unrelated proce
 	fi
 	@echo "✓ Stop sequence finished."
 
-restart: stop start
+restart: stop celery-stop start celery ## Full restart of Daphne + Celery (use this!)
+	@echo "✓ Full restart complete (Daphne + Celery)."
+
+restart-daphne: stop start ## Restart only Daphne (keeps Celery running)
 
 status: ## Show process status and health endpoint
 	@echo "==> Service status summary"
@@ -390,21 +393,26 @@ mobile-logs: ## Tail the Flutter log (ctrl-c to exit)
 	@tail -f $(FLUTTER_LOG)
 
 # ---------- Combined lifecycle ----------
-start-all: ## Start Redis + Daphne + Flutter (complete stack)
-	@echo "==> Starting complete stack (Redis + Daphne + Flutter)..."
+start-all: ## Start Redis + Daphne + Celery + Flutter (complete stack)
+	@echo "==> Starting complete stack (Redis + Daphne + Celery + Flutter)..."
 	@$(MAKE) start
+	@echo
+	@$(MAKE) celery
 	@echo
 	@$(MAKE) mobile
 	@echo
 	@echo "✓ Complete stack started!"
 	@echo "  - Backend: http://$(HOST):$(PORT)"
+	@echo "  - Celery: 3 workers + beat"
 	@echo "  - Flutter: Running on iOS Simulator"
-	@echo "  - Logs: $(LOG) and $(FLUTTER_LOG)"
+	@echo "  - Logs: $(LOG), celery*.log, and $(FLUTTER_LOG)"
 	@echo "  - Device: $(FLUTTER_DEVICE)"
 
-stop-all: ## Stop all services (Daphne + Flutter + optional Redis)
+stop-all: ## Stop all services (Daphne + Celery + Flutter + optional Redis)
 	@echo "==> Stopping all services..."
 	@$(MAKE) mobile-stop
+	@echo
+	@$(MAKE) celery-stop
 	@echo
 	@$(MAKE) stop
 	@echo "✓ All services stopped."
