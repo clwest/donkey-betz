@@ -254,6 +254,11 @@ class LearningOrchestrator:
 
     async def _send_to_personal_assistant(self, user, optimizations: Dict):
         """Send optimization insights to Personal Assistant WebSocket"""
+        # Session 752: Add null check for user to handle system-triggered executions
+        if not user:
+            logger.debug("No user provided, skipping Personal Assistant notification")
+            return
+
         if not self.channel_layer:
             logger.warning("Channel layer not available")
             return

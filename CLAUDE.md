@@ -279,6 +279,7 @@ For older sessions, see `docs/handoffs/` directory.
 | `docs/roadmaps/INTEGRATION_ROADMAP_2026.md` | **NEW** 5-phase integration plan (Session 744) |
 | `docs/audits/SESSION_736_COMPREHENSIVE_SYSTEM_AUDIT.md` | Session 736 component audit (100% pass) |
 | `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md` | Integration report (now 95% after Session 744) |
+| `docs/ERROR_TRACKING.md` | **NEW** Track errors discovered during sessions (Session 752) |
 
 ---
 
