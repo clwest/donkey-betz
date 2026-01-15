@@ -146,10 +146,22 @@ class NeuralOrchestraRealityBridge:
             'tracking_rate': f"{(total_contributions / max(ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count(), 1) * 100):.1f}%"
         }
 
+    def _get_media_url(self, file_path: str) -> str:
+        """Session 752: Convert absolute file path to media URL"""
+        if not file_path:
+            return None
+        from django.conf import settings
+        media_root = str(settings.MEDIA_ROOT)
+        if file_path.startswith(media_root):
+            rel_path = file_path.replace(media_root, '').lstrip('/')
+            return f'/media/{rel_path}'
+        return None
+
     def get_real_agent_activity_feed(self, limit=20) -> List[Dict[str, Any]]:
         """
         Session 145: Get real-time agent activity feed from AgentContribution records.
         Shows actual recent agent work!
+        Session 752: Added image_url for thumbnails
         """
         recent_contributions = AgentContribution.objects.select_related(
             'agent', 'project', 'image', 'video', 'minifig_asset'
@@ -157,15 +169,25 @@ class NeuralOrchestraRealityBridge:
 
         activity_feed = []
         for contrib in recent_contributions:
-            # Determine content type
+            # Determine content type and get thumbnail URL
             content_type = 'Unknown'
             content_id = None
+            image_url = None
+            thumbnail_url = None
+
             if contrib.image:
                 content_type = 'Image'
                 content_id = contrib.image.id
+                # Session 752: Get image URL for thumbnail display
+                image_url = self._get_media_url(contrib.image.file_path)
+                if contrib.image.thumbnail:
+                    thumbnail_url = self._get_media_url(contrib.image.thumbnail)
             elif contrib.video:
                 content_type = 'Video'
                 content_id = contrib.video.id
+                # Videos may have thumbnail
+                if hasattr(contrib.video, 'thumbnail') and contrib.video.thumbnail:
+                    thumbnail_url = self._get_media_url(str(contrib.video.thumbnail))
             elif contrib.minifig_asset:
                 content_type = '3D Model'
                 content_id = contrib.minifig_asset.id
@@ -178,6 +200,8 @@ class NeuralOrchestraRealityBridge:
                 'contribution_type': contrib.contribution_type,
                 'content_type': content_type,
                 'content_id': content_id,
+                'image_url': image_url,  # Session 752: Full image URL
+                'thumbnail_url': thumbnail_url or image_url,  # Session 752: Thumbnail or fallback to full
                 'project_name': contrib.project.name if contrib.project else 'Unknown',
                 'task_description': contrib.task_description,
                 'confidence': contrib.contribution_percentage / 100.0
@@ -492,7 +516,10 @@ class NeuralOrchestraRealityBridge:
                 'content_type': activity['content_type'],
                 'project': activity['project_name'],
                 'confidence': activity['confidence'],
-                'impact': min(0.95, activity['confidence'] + 0.1)
+                'impact': min(0.95, activity['confidence'] + 0.1),
+                # Session 752: Add image URLs for thumbnail display
+                'image_url': activity.get('image_url'),
+                'thumbnail_url': activity.get('thumbnail_url'),
             })
 
         # System status from real data

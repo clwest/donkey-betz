@@ -42,6 +42,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 
 // Types for API responses
 // Session 751: Updated to match actual API response
+// Session 752: Added image_url and thumbnail_url for thumbnails
 interface FeedItem {
   id: string
   timestamp: string
@@ -55,6 +56,8 @@ interface FeedItem {
   project?: string
   confidence: number
   impact: number
+  image_url?: string  // Session 752: Full image URL
+  thumbnail_url?: string  // Session 752: Thumbnail URL (or full if no thumbnail)
 }
 
 // Session 752: Extended SystemStatus to include all API fields
@@ -621,8 +624,32 @@ export default function NeuralOrchestraPage() {
                           </div>
                         </div>
 
-                        {/* Content */}
-                        <p className="text-gray-300 text-sm mb-3">{item.content}</p>
+                        {/* Session 752: Content with optional thumbnail */}
+                        <div className={cn("mb-3", item.thumbnail_url && "flex gap-4")}>
+                          {/* Thumbnail image */}
+                          {item.thumbnail_url && (
+                            <div className="flex-shrink-0">
+                              <a
+                                href={`http://localhost:8000${item.image_url || item.thumbnail_url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                <img
+                                  src={`http://localhost:8000${item.thumbnail_url}`}
+                                  alt={`${item.content_type} thumbnail`}
+                                  className="w-20 h-20 object-cover rounded-lg border border-dark-border hover:border-primary-500 transition-colors"
+                                  onError={(e) => {
+                                    // Hide broken images
+                                    (e.target as HTMLImageElement).style.display = 'none'
+                                  }}
+                                />
+                              </a>
+                            </div>
+                          )}
+                          {/* Content text */}
+                          <p className="text-gray-300 text-sm flex-1">{item.content}</p>
+                        </div>
 
                         {/* Bottom Row: Agent, Project, and Metrics */}
                         <div className="flex items-center justify-between">
