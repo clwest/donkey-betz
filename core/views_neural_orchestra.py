@@ -286,40 +286,34 @@ def trigger_neural_orchestra_reality_check(request):
 
     Endpoint: /api/neural-orchestra/reality-check/
     """
+    from asgiref.sync import async_to_sync
+
     try:
         # Get bridge and force cache refresh
         bridge = get_neural_orchestra_bridge()
         bridge.data_cache.clear()  # Clear cache to force fresh data
 
-        # Get fresh real data
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Get fresh real data using async_to_sync (works properly under ASGI/Daphne)
+        neural_data = async_to_sync(bridge.get_real_neural_data)()
 
-        try:
-            neural_data = loop.run_until_complete(bridge.get_real_neural_data())
+        reality_check = {
+            'reality_check_timestamp': neural_data.timestamp.isoformat(),
+            'consciousness_level': neural_data.consciousness_level,
+            'active_agents': neural_data.active_agents,
+            'active_spiders': neural_data.active_spiders,
+            'system_health': neural_data.system_health,
+            'memory_crystals': neural_data.memory_crystals,
+            'live_feed_items': len(neural_data.live_feed),
+            'agent_collaborations': len(neural_data.agent_collaborations),
+            'orchestrations': len(neural_data.orchestrations),
+            'data_source': 'fresh_real_data',
+            'cache_cleared': True,
+            'mock_data': False
+        }
 
-            reality_check = {
-                'reality_check_timestamp': neural_data.timestamp.isoformat(),
-                'consciousness_level': neural_data.consciousness_level,
-                'active_agents': neural_data.active_agents,
-                'active_spiders': neural_data.active_spiders,
-                'system_health': neural_data.system_health,
-                'memory_crystals': neural_data.memory_crystals,
-                'live_feed_items': len(neural_data.live_feed),
-                'agent_collaborations': len(neural_data.agent_collaborations),
-                'orchestrations': len(neural_data.orchestrations),
-                'data_source': 'fresh_real_data',
-                'cache_cleared': True,
-                'mock_data': False
-            }
+        logger.info(f"✅ Neural Orchestra reality check completed - {neural_data.consciousness_level:.1f}% consciousness")
 
-            logger.info(f"✅ Neural Orchestra reality check completed - {neural_data.consciousness_level:.1f}% consciousness")
-
-            return JsonResponse(reality_check)
-
-        finally:
-            loop.close()
+        return JsonResponse(reality_check)
 
     except Exception as e:
         logger.error(f"❌ Neural Orchestra reality check failed: {str(e)}")
