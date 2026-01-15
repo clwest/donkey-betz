@@ -23,6 +23,13 @@ from core.views_redirect import (
 )
 from core.views_react import react_app
 
+# Session 758: Integration Health & Observability
+from core.views_integration_health import (
+    integration_health,
+    context_injection_metrics,
+    IntegrationAlertView,
+    execution_quality_analysis,
+)
 
 # Session 237: Redirect handler for legacy broken URLs
 def legacy_portfolio_image_redirect(request, path):
@@ -1397,6 +1404,12 @@ urlpatterns = [
     # Session 688: Authentication redirects to React
     path('accounts/login/', login_redirect, name='login'),
     path('accounts/logout/', lambda request: (logout(request), redirect('/login'))[1], name='logout'),
+
+    # Session 758: Integration Health & Observability Endpoints
+    path('api/integration/health/', integration_health, name='integration-health'),
+    path('api/integration/metrics/', context_injection_metrics, name='integration-metrics'),
+    path('api/integration/alerts/', IntegrationAlertView.as_view(), name='integration-alerts'),
+    path('api/integration/quality/', execution_quality_analysis, name='integration-quality'),
 
     # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
     path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),

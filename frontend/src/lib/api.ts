@@ -259,7 +259,9 @@ export const memoryPalaceApi = {
   overview: () => api.get('/memory-palace/'),
 
   // Agent-specific endpoints
-  agentMemories: (agentId: string, params?: { type?: string; valence?: string; limit?: number }) =>
+  // Session 753: Added outcome and sort_by parameters
+  // Session 754: Added tag filter parameter
+  agentMemories: (agentId: string, params?: { type?: string; valence?: string; outcome?: string; sort_by?: string; tag?: string; limit?: number }) =>
     api.get(`/memory-palace/agent/${agentId}/memories/`, { params }),
   agentRooms: (agentId: string) => api.get(`/memory-palace/agent/${agentId}/rooms/`),
   agentSummary: (agentId: string, limit = 10) =>
@@ -1927,4 +1929,19 @@ export const voiceMarketplaceApi = {
 
   // Stats
   stats: () => api.get('/voice-marketplace/stats/'),
+}
+
+// Session 758: Integration Health & Observability API
+export const integrationHealthApi = {
+  // Health check for all 6 context sources
+  health: () => api.get('/integration/health/'),
+
+  // Context injection metrics over time
+  metrics: () => api.get('/integration/metrics/'),
+
+  // Alerts for silent failures
+  alerts: () => api.get('/integration/alerts/'),
+
+  // Execution quality analysis (with vs without context)
+  quality: () => api.get('/integration/quality/'),
 }
