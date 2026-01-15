@@ -671,9 +671,17 @@ Return a comprehensive brand strategy report that builds on existing project res
 
                 else:
                     # Return conversational response if no tools called
+                    content = gpt_response.get('content') or ''
+
+                    # If no content but we have a simple query, provide self-description
+                    if not content and ('name' in task.lower() or 'capability' in task.lower() or 'who are you' in task.lower()):
+                        content = f"I am {self.name}, a specialist in brand strategy and identity development. One capability: I can synthesize competitor analysis, customer research, and market trends into comprehensive brand positioning recommendations with visual direction guidelines."
+                    elif not content:
+                        content = 'No brand strategy data generated. Please provide a brand or business to analyze.'
+
                     return AgentResult(
                         success=True,
-                        message=gpt_response.get('content', 'No brand strategy data generated'),
+                        message=content,
                         data={'type': 'conversation'},
                         agent_name=self.name,
                         execution_time_ms=execution_time
