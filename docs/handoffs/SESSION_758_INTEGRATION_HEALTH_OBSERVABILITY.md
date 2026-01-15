@@ -155,6 +155,52 @@ print(f"Context rate: {with_ctx}/{recent.count()} = {with_ctx/recent.count()*100
 5. `3bee8a1e` - fix(Session 758): Increase Celery health check timeout from 2s to 10s
 6. `4a002412` - fix(Session 758): Fix Celery health detection for busy/solo workers
 
+### 4. Neural Orchestra Learning System Card Fix
+
+**File:** `ai_core/consciousness/neural_orchestra_reality_bridge.py`
+
+**Issue:** Learning System Card on Neural Orchestra page showed 0s:
+- Feedback Processed: 0
+- Insights Generated: 0
+- Memory Crystals: 1
+
+**Root Cause:** Card was reading from empty in-memory `LearningLoop` buffers instead of actual database tables which contain real data:
+- 52,161 AgentLearning records
+- 662 AgentExecution records (completed)
+- 1,503 KnowledgeTransfer records
+- 14 MemoryCluster records
+
+**Fix:** Rewrote `get_learning_status_api_data()` to query database directly with synchronous ORM:
+```python
+def get_learning_status_api_data(self) -> Dict[str, Any]:
+    """Uses synchronous DB queries to avoid thread executor conflicts."""
+    from core.models_unified_system import AgentLearning, AgentExecution, KnowledgeTransfer, MemoryCluster
+
+    feedback_processed = AgentExecution.objects.filter(
+        created_at__gte=last_7d, status='completed'
+    ).count()
+
+    insights_generated = AgentLearning.objects.filter(
+        created_at__gte=last_7d
+    ).count()
+
+    memory_crystals = MemoryCluster.objects.count()
+    # ...
+```
+
+**Results After Fix:**
+```json
+{
+    "learning_active": true,
+    "models_active": 15,
+    "feedback_processed": 574,
+    "insights_generated": 7038,
+    "memory_crystals": 14
+}
+```
+
+**Technical Note:** Initial fix used `sync_to_async` but caused "You cannot submit onto CurrentThreadExecutor from its own thread" error with Daphne. Solution: Make the API method fully synchronous since it's called from synchronous Django views.
+
 ## Next Steps
 
 1. Monitor system to verify spiders are generating data
