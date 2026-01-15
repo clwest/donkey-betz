@@ -2441,7 +2441,13 @@ Consider this current data when formulating your response."""
         importance: float = 0.5
     ) -> Optional[Any]:
         """
-        Create a memory from a meaningful interaction.
+        Session 757: Enhanced to store RICH memories with actual content.
+
+        Create a memory from a meaningful interaction, including:
+        - Actual output/results from result.data
+        - Execution metadata (time, tools used)
+        - Structured tags for filtering
+        - Content summaries and key insights
 
         Should be called for:
         - Successful executions (to remember what worked)
@@ -2466,14 +2472,8 @@ Consider this current data when formulating your response."""
             if memory_type == "interaction":
                 memory_type = "success" if result.success else "failure"
 
-            # Build memory content
-            title = f"{self.name}: {task[:50]}..." if len(task) > 50 else f"{self.name}: {task}"
-            content = result.message or "No response message"
-
-            # Add tool call details if available
-            if result.tool_calls:
-                tools_used = [tc.get('name', 'unknown') for tc in result.tool_calls]
-                content += f"\n\nTools used: {', '.join(tools_used)}"
+            # Session 757: Build RICH memory content from result.data
+            title, content, tags = self._build_rich_memory_content(result, task, memory_type)
 
             memory = self.memory_service.create_memory(
                 agent=self.agent_model,
@@ -2485,15 +2485,158 @@ Consider this current data when formulating your response."""
                 importance_score=importance,
                 source_type="agent_execution",
                 source_id=result.agent_name,
-                tags=[self.name, memory_type]
+                tags=tags
             )
 
-            logger.debug(f"Created memory: {memory.title}")
+            logger.debug(f"Created rich memory: {memory.title}")
             return memory
 
         except Exception as e:
             logger.warning(f"Failed to create execution memory: {e}")
             return None
+
+    def _build_rich_memory_content(
+        self,
+        result: 'AgentResult',
+        task: str,
+        memory_type: str
+    ) -> tuple:
+        """
+        Session 757: Extract rich content from AgentResult for meaningful memories.
+
+        Returns: (title, content, tags)
+        """
+        data = result.data or {}
+        tags = [self.name, memory_type]
+
+        # Extract key information based on common result.data patterns
+        output_type = None
+        output_title = None
+        output_summary = None
+        key_fields = []
+
+        # Common patterns in result.data across agents
+        # Content creation agents (ContentWriter, Image, Video, Audio, etc.)
+        if 'content_type' in data:
+            output_type = data['content_type']
+            tags.append(output_type)
+
+        if 'content' in data:
+            content_data = data['content']
+            if isinstance(content_data, dict):
+                output_title = (
+                    content_data.get('title') or
+                    content_data.get('headline') or
+                    content_data.get('subject_line') or
+                    content_data.get('name')
+                )
+                # Get a preview of the content
+                full_text = content_data.get('full_text', '')
+                if full_text:
+                    output_summary = full_text[:400] + "..." if len(full_text) > 400 else full_text
+            elif isinstance(content_data, str) and len(content_data) > 20:
+                output_summary = content_data[:400] + "..." if len(content_data) > 400 else content_data
+
+        # Research/Analysis agents
+        if 'research' in data or 'analysis' in data or 'insights' in data:
+            analysis = data.get('research') or data.get('analysis') or data.get('insights')
+            if isinstance(analysis, dict):
+                key_fields.extend([f"{k}: {str(v)[:50]}" for k, v in list(analysis.items())[:5]])
+            elif isinstance(analysis, str):
+                output_summary = analysis[:400] + "..." if len(analysis) > 400 else analysis
+            tags.append('analysis')
+
+        # Scoring/Metrics
+        if 'score' in data or 'scores' in data:
+            scores = data.get('scores') or {'score': data.get('score')}
+            if isinstance(scores, dict):
+                key_fields.extend([f"{k}: {v}" for k, v in scores.items() if isinstance(v, (int, float))])
+            tags.append('scoring')
+
+        # Workflow/Pipeline agents
+        if 'steps' in data or 'stages' in data or 'pipeline' in data:
+            steps = data.get('steps') or data.get('stages') or data.get('pipeline', [])
+            if isinstance(steps, list):
+                key_fields.append(f"Steps completed: {len(steps)}")
+            tags.append('workflow')
+
+        # Metadata extraction
+        metadata = data.get('metadata', {})
+        if metadata:
+            if 'word_count' in metadata or 'actual_word_count' in metadata:
+                wc = metadata.get('actual_word_count') or metadata.get('word_count')
+                key_fields.append(f"Word count: {wc}")
+            if 'topic' in metadata:
+                key_fields.append(f"Topic: {metadata['topic'][:50]}")
+            if 'tone' in metadata:
+                tags.append(metadata['tone'])
+            if 'target_audience' in metadata:
+                key_fields.append(f"Audience: {metadata['target_audience']}")
+
+        # Execution time
+        if result.execution_time_ms:
+            key_fields.append(f"Execution: {result.execution_time_ms}ms")
+
+        # Tool calls
+        if result.tool_calls:
+            tools_used = [tc.get('name', 'unknown') for tc in result.tool_calls]
+            key_fields.append(f"Tools: {', '.join(tools_used[:5])}")
+
+        # Build title - prefer specific output title, fall back to task
+        if output_title:
+            title = f"{output_type or 'Output'}: {output_title[:50]}"
+            if len(output_title) > 50:
+                title += "..."
+        else:
+            title = f"{self.name}: {task[:50]}"
+            if len(task) > 50:
+                title += "..."
+
+        # Build rich content
+        content_parts = []
+
+        # Status line - Session 759: Use result.error for failures instead of result.message
+        status = "Successfully completed" if result.success else "Failed"
+        if result.success:
+            content_parts.append(f"{status}: {result.message or task[:100]}")
+        else:
+            error_msg = result.error or result.message or "Unknown error"
+            content_parts.append(f"{status}: {task[:100]}")
+            content_parts.append(f"\nError: {error_msg}")
+
+        # Output type and title
+        if output_type and output_title:
+            content_parts.append(f"\nCreated {output_type}: \"{output_title}\"")
+
+        # Key fields/metrics
+        if key_fields:
+            content_parts.append("\n" + "\n".join(key_fields))
+
+        # Output summary/preview
+        if output_summary:
+            content_parts.append(f"\nOutput preview:\n{output_summary}")
+
+        # Fallback to result.data summary if nothing else
+        if not output_summary and not key_fields and data:
+            # Show first few key-value pairs from data
+            data_preview = []
+            for k, v in list(data.items())[:5]:
+                if isinstance(v, (str, int, float, bool)):
+                    data_preview.append(f"{k}: {str(v)[:100]}")
+                elif isinstance(v, dict):
+                    data_preview.append(f"{k}: {{{len(v)} fields}}")
+                elif isinstance(v, list):
+                    data_preview.append(f"{k}: [{len(v)} items]")
+            if data_preview:
+                content_parts.append("\nResult data:\n" + "\n".join(data_preview))
+
+        content = "\n".join(content_parts)
+
+        # Ensure we have meaningful content, not just "Successfully created X"
+        if len(content) < 50 and result.message:
+            content = f"{result.message}\n\nTask: {task}"
+
+        return title, content, list(set(tags))  # Dedupe tags
 
     def _track_contribution(
         self,
@@ -2507,34 +2650,102 @@ Consider this current data when formulating your response."""
 
         Should be called when the agent creates or modifies content.
 
+        Session 754: Fixed to use correct model and fields.
+        - Uses AgentContribution from core.models.agents_registry
+        - Looks up UnifiedAgentTemplate by agent name
+        - Links to actual ImageHistory/VideoHistory objects
+        - Uses correct contribution_type choices
+
         Args:
             content_type: Type of content (image, video, audio, research)
             content_id: ID of the content record
             contribution_type: primary_creator, assistant, reviewer, optimizer
-            contribution_score: 0-1 contribution percentage
+            contribution_score: 0-1 contribution percentage (maps to contribution_percentage)
 
         Returns:
             Created AgentContribution instance or None
         """
-        if not self.agent_model:
-            return None
-
         try:
-            from core.models_unified_system import AgentContribution
+            from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate
+            from content.models import ImageHistory, VideoHistory
 
-            contribution = AgentContribution.objects.create(
-                agent=self.agent_model,
-                content_type=content_type,
-                content_id=content_id,
-                contribution_type=contribution_type,
-                contribution_score=contribution_score
+            # Get or create the UnifiedAgentTemplate for this agent
+            agent_template, _ = UnifiedAgentTemplate.objects.get_or_create(
+                name=self.name,
+                defaults={
+                    'display_name': self.name.replace('Agent', ' Agent'),
+                    'description': self.system_prompt[:500] if self.system_prompt else f'{self.name} agent',
+                    'specialization': 'content',
+                    'system_prompt': self.system_prompt or '',
+                }
             )
 
-            logger.debug(f"Tracked contribution: {self.name} -> {content_type}:{content_id}")
+            # Map contribution_type to valid choices
+            # Valid choices: generation, editing, orchestration, analysis, recommendation, iteration
+            type_mapping = {
+                'primary_creator': 'generation',
+                'creator': 'generation',
+                'generator': 'generation',
+                'editor': 'editing',
+                'assistant': 'editing',
+                'reviewer': 'analysis',
+                'optimizer': 'iteration',
+                'orchestrator': 'orchestration',
+            }
+            mapped_type = type_mapping.get(contribution_type, 'generation')
+
+            # Map contribution_type to role
+            role_mapping = {
+                'primary_creator': 'Primary Creator',
+                'creator': 'Creator',
+                'generator': 'Generator',
+                'editor': 'Editor',
+                'assistant': 'Assistant',
+                'reviewer': 'Reviewer',
+                'optimizer': 'Optimizer',
+                'orchestrator': 'Orchestrator',
+            }
+            contribution_role = role_mapping.get(contribution_type, 'Contributor')
+
+            # Convert score (0-1) to percentage (0-100)
+            contribution_percentage = int(contribution_score * 100)
+
+            # Build contribution kwargs
+            contribution_kwargs = {
+                'agent': agent_template,
+                'contribution_type': mapped_type,
+                'contribution_role': contribution_role,
+                'contribution_percentage': contribution_percentage,
+                'task_description': f'{self.name} {mapped_type} of {content_type}',
+            }
+
+            # Link to the actual content object
+            if content_type == 'image' and content_id:
+                try:
+                    image = ImageHistory.objects.get(id=content_id)
+                    contribution_kwargs['image'] = image
+                    if image.project:
+                        contribution_kwargs['project'] = image.project
+                except ImageHistory.DoesNotExist:
+                    logger.debug(f"ImageHistory {content_id} not found, creating contribution without image link")
+
+            elif content_type == 'video' and content_id:
+                try:
+                    video = VideoHistory.objects.get(id=content_id)
+                    contribution_kwargs['video'] = video
+                    if video.project:
+                        contribution_kwargs['project'] = video.project
+                except VideoHistory.DoesNotExist:
+                    logger.debug(f"VideoHistory {content_id} not found, creating contribution without video link")
+
+            # Create the contribution
+            contribution = AgentContribution.objects.create(**contribution_kwargs)
+
+            logger.info(f"✓ Tracked contribution: {self.name} -> {content_type}:{content_id} ({mapped_type})")
             return contribution
 
         except Exception as e:
-            logger.warning(f"Failed to track contribution: {e}")
+            logger.warning(f"Failed to track contribution: {e}", exc_info=True)
             return None
 
     def _share_knowledge(
