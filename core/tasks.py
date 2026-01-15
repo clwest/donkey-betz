@@ -18205,9 +18205,25 @@ This is a meta-demonstration: AI writing about the system it's part of.
                 word_count=blog_data.get('metadata', {}).get('actual_word_count', 0),
                 stats_snapshot=stats_snapshot,
             )
-            
+
             logger.info(f"🤖 [SELF-BLOG] Successfully generated: {blog.id}")
-            
+
+            # Session 759: Create attention item so blogs surface in Human Interface
+            try:
+                from core.services.human_attention_bridge import HumanAttentionBridge
+                bridge = HumanAttentionBridge()
+                bridge.create_content_review_attention(
+                    content_type='blog',
+                    title=blog.title,
+                    summary=f"New blog post generated: {blog.meta_description[:100] if blog.meta_description else 'AI-generated content ready for review'}",
+                    content_id=str(blog.id),
+                    agent_name='ContentWriterAgent',
+                    quality_score=80,  # Default score, can be enhanced with ML later
+                )
+                logger.info(f"🤖 [SELF-BLOG] Created attention item for blog {blog.id}")
+            except Exception as attention_error:
+                logger.warning(f"🤖 [SELF-BLOG] Failed to create attention item: {attention_error}")
+
             return {
                 'success': True,
                 'blog_id': str(blog.id),
