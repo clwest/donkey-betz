@@ -94,16 +94,26 @@ AgentDecisionSummary.objects.filter(
 
 **Issue Fixed:** BrandStrategyAgent empty response → Now returns 259 chars
 
-### 6. BrandStrategyAgent Fix - COMPLETE
+### 6. Agent Short Response Fixes - COMPLETE
 
-**Problem:** Agent returned 0 chars when given simple queries (like "State your name").
+**Problem:** 4 agents returned minimal responses (0-42 chars) when given simple diagnostic queries.
 
-**Root Cause:** When GPT returned empty `content` (empty string `''`), the fallback default didn't activate because `gpt_response.get('content', 'default')` only uses default when key is missing, not when value is empty string.
+**Root Cause:** Agents would execute their full workflow (series creation, bear case analysis, etc.) even for simple "State your name" queries, resulting in empty or minimal output.
 
-**Fix:** `core/agents/business/brand_strategy_agent.py:672-688`
-- Changed to `gpt_response.get('content') or ''` to handle empty strings
-- Added fallback self-description for simple queries containing "name" or "capability"
-- Now returns proper 259-char response
+**Fixes Applied:**
+
+| Agent | Before | After | Fix |
+|-------|--------|-------|-----|
+| BrandStrategyAgent | 0 chars | 259 chars | Handle empty GPT content |
+| AISeriesWorkflowAgent | 42 chars | 338 chars | Detect diagnostic queries |
+| AutonomousContentStudioCoordinator | 21 chars | 351 chars | Detect diagnostic queries |
+| BearCaseAgent | 40 chars | 309 chars | Detect diagnostic queries |
+
+**Files Modified:**
+- `core/agents/business/brand_strategy_agent.py:672-688`
+- `core/agents/ai_series_workflow_agent.py:489-499`
+- `core/agents/autonomous_content_studio_coordinator.py:268-278`
+- `core/agents/stocks/bear_case_agent.py:237-247`
 
 ---
 
