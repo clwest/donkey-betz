@@ -562,7 +562,8 @@ function EventRow({
           </div>
 
           {/* Raw Original Content (collapsible) */}
-          <details className="group">
+          {/* Session 757: Stop propagation to prevent card from collapsing when clicking details */}
+          <details className="group" onClick={(e) => e.stopPropagation()}>
             <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
               View Raw Original Content
             </summary>

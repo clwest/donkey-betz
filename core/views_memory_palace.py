@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 @require_http_methods(["GET"])
 def get_agent_memories(request, agent_id):
-    """Get all memories for an agent with optional filtering"""
+    """Get all memories for an agent with optional filtering
+
+    Session 753: Added memory_outcome, last_accessed_at, tags fields
+    Session 753: Added outcome filter and sort_by parameter
+    Session 754: Added tag filter parameter
+    """
     try:
         from core.models_unified_system import AgentMemory, Agent
 
@@ -28,7 +33,10 @@ def get_agent_memories(request, agent_id):
         # Parse query params
         memory_type = request.GET.get('type')
         valence = request.GET.get('valence')
+        outcome = request.GET.get('outcome')  # Session 753: Filter by outcome
+        tag = request.GET.get('tag')  # Session 754: Filter by tag
         limit = int(request.GET.get('limit', 50))
+        sort_by = request.GET.get('sort_by', 'importance')  # Session 753: Sort options
 
         # Build query
         memories = AgentMemory.objects.filter(agent=agent)
@@ -37,8 +45,24 @@ def get_agent_memories(request, agent_id):
             memories = memories.filter(memory_type=memory_type)
         if valence:
             memories = memories.filter(valence=valence)
+        # Session 753: Outcome filter
+        if outcome:
+            memories = memories.filter(memory_outcome=outcome)
+        # Session 754: Tag filter (JSONField contains)
+        if tag:
+            memories = memories.filter(tags__contains=[tag])
 
-        memories = memories.order_by('-importance_score', '-created_at')[:limit]
+        # Session 753: Sorting options
+        if sort_by == 'recent':
+            memories = memories.order_by('-created_at')
+        elif sort_by == 'accessed':
+            memories = memories.order_by('-last_accessed_at', '-created_at')
+        elif sort_by == 'access_count':
+            memories = memories.order_by('-access_count', '-created_at')
+        else:  # default: importance
+            memories = memories.order_by('-importance_score', '-created_at')
+
+        memories = memories[:limit]
 
         return JsonResponse({
             'success': True,
@@ -55,7 +79,11 @@ def get_agent_memories(request, agent_id):
                     'importance_score': m.importance_score,
                     'access_count': m.access_count,
                     'created_at': m.created_at.isoformat(),
-                    'source_type': m.source_type
+                    'source_type': m.source_type,
+                    # Session 753: Added fields
+                    'memory_outcome': m.memory_outcome,
+                    'last_accessed_at': m.last_accessed_at.isoformat() if m.last_accessed_at else None,
+                    'tags': m.tags or [],
                 }
                 for m in memories
             ]
@@ -70,7 +98,7 @@ def get_agent_memories(request, agent_id):
 def get_memory_detail(request, memory_id):
     """Get full details of a specific memory"""
     try:
-        from core.models_unified_system import AgentMemory
+        from core.models_unified_system import AgentMemory, AgentExecution
 
         try:
             memory = AgentMemory.objects.get(id=memory_id)
@@ -84,6 +112,23 @@ def get_memory_detail(request, memory_id):
 
         # Get connected memories
         connected = memory.connected_memories.all()[:10]
+
+        # Session 757: Include execution output_data if this memory is from an execution
+        execution_data = None
+        if memory.source_type in ('execution', 'task') and memory.source_id:
+            try:
+                execution = AgentExecution.objects.get(id=memory.source_id)
+                if execution.output_data:
+                    execution_data = {
+                        'output_data': execution.output_data,
+                        'status': execution.status,
+                        'execution_time_ms': execution.execution_time_ms,
+                        'tokens_used': execution.tokens_used,
+                        'cost': float(execution.cost) if execution.cost else None,
+                    }
+            except (AgentExecution.DoesNotExist, ValueError):
+                # source_id might not be a valid UUID or execution doesn't exist
+                pass
 
         return JsonResponse({
             'success': True,
@@ -109,7 +154,9 @@ def get_memory_detail(request, memory_id):
                         'memory_type': c.memory_type
                     }
                     for c in connected
-                ]
+                ],
+                # Session 757: Include execution data with full content
+                'execution_data': execution_data,
             }
         })
     except Exception as e:
@@ -258,7 +305,10 @@ def get_memory_palace_rooms(request, agent_id):
                     'description': r.description,
                     'color': r.color,
                     'icon': r.icon,
-                    'memory_count': r.memories.count()
+                    'memory_count': r.memories.count(),
+                    # Session 754: Phase 3 - Include position for visual map
+                    'position_x': r.position_x,
+                    'position_y': r.position_y,
                 }
                 for r in rooms
             ]
