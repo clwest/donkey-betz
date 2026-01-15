@@ -153,24 +153,42 @@ def integration_health(request):
         issues.append(f'Sci-Fi context error: {e}')
 
     # 6. Context Injection Rate (from execution records)
+    # Session 758: Tracking was added on 2026-01-15, so only count tracked executions
     try:
         from core.models_unified_system import AgentExecution
-        recent_execs = AgentExecution.objects.filter(created_at__gte=last_24h)
+        from datetime import datetime
+
+        # Tracking started when context_injected field was added
+        tracking_start = timezone.make_aware(datetime(2026, 1, 15, 0, 0, 0))
+
+        recent_execs = AgentExecution.objects.filter(created_at__gte=last_24h).order_by('-created_at')
         total_recent = recent_execs.count()
 
+        # Count executions WITH tracking (have context_injected key)
+        tracked_execs = 0
         with_context = 0
+
         for ex in recent_execs[:100]:  # Sample last 100
             input_data = ex.input_data or {}
-            context_injected = input_data.get('context_injected', {})
-            if context_injected.get('spider_data'):
-                with_context += 1
+            # Check if this execution has tracking data
+            if 'context_injected' in input_data:
+                tracked_execs += 1
+                context_injected = input_data.get('context_injected', {})
+                if context_injected.get('spider_data'):
+                    with_context += 1
 
-        sample_size = min(100, total_recent)
-        injection_rate = (with_context / sample_size * 100) if sample_size > 0 else 0
+        # Calculate rate based on TRACKED executions only
+        injection_rate = (with_context / tracked_execs * 100) if tracked_execs > 0 else 0
 
         health_data['metrics']['context_injection_rate'] = round(injection_rate, 1)
         health_data['metrics']['executions_24h'] = total_recent
-        health_data['metrics']['sample_with_context'] = with_context
+        health_data['metrics']['tracked_executions'] = tracked_execs
+        health_data['metrics']['with_context'] = with_context
+        health_data['metrics']['tracking_started'] = tracking_start.isoformat()
+        health_data['metrics']['tracking_note'] = (
+            'Context tracking was added Session 758. Rate shows tracked executions only.'
+            if tracked_execs < total_recent else None
+        )
 
     except Exception as e:
         health_data['metrics']['context_injection_rate'] = 0
@@ -279,26 +297,42 @@ class IntegrationAlertView(View):
         alerts = []
 
         # Check for executions without context
+        # Session 758: Only count executions that HAVE tracking (context_injected key exists)
         no_context_execs = []
+        untracked_count = 0
         recent_execs = AgentExecution.objects.filter(
             created_at__gte=last_24h
         ).order_by('-created_at')[:100]
 
         for ex in recent_execs:
-            ctx = (ex.input_data or {}).get('context_injected', {})
-            if not ctx.get('spider_data') and not ctx.get('learning_patterns'):
-                no_context_execs.append({
-                    'agent': ex.agent.name if ex.agent else 'Unknown',
-                    'time': ex.created_at.isoformat(),
-                    'task': ex.task[:100] if ex.task else '',
-                })
+            input_data = ex.input_data or {}
+            # Only alert on executions that have tracking but missing context
+            if 'context_injected' in input_data:
+                ctx = input_data.get('context_injected', {})
+                if not ctx.get('spider_data') and not ctx.get('learning_patterns'):
+                    no_context_execs.append({
+                        'agent': ex.agent.name if ex.agent else 'Unknown',
+                        'time': ex.created_at.isoformat(),
+                        'task': ex.task[:100] if ex.task else '',
+                    })
+            else:
+                # Execution from before tracking was added
+                untracked_count += 1
 
         if no_context_execs:
             alerts.append({
                 'type': 'missing_context',
                 'severity': 'warning',
-                'message': f'{len(no_context_execs)} executions without context in last 24h',
+                'message': f'{len(no_context_execs)} tracked executions without context in last 24h',
                 'details': no_context_execs[:10],  # Show first 10
+            })
+
+        # Info about untracked executions (not an alert, just info)
+        if untracked_count > 0:
+            alerts.append({
+                'type': 'untracked_executions',
+                'severity': 'info',
+                'message': f'{untracked_count} executions from before tracking was added (Session 758)',
             })
 
         # Check for failed executions

@@ -58,7 +58,10 @@ interface HealthData {
   metrics: {
     context_injection_rate: number
     executions_24h: number
-    sample_with_context?: number
+    tracked_executions?: number
+    with_context?: number
+    tracking_started?: string
+    tracking_note?: string | null
     error?: string
   }
   issues: string[]
@@ -69,7 +72,7 @@ interface AlertData {
   alert_count: number
   alerts: Array<{
     type: string
-    severity: 'warning' | 'error'
+    severity: 'warning' | 'error' | 'info'
     message: string
     details?: Array<{ agent: string; time: string; task: string }>
     last_capture?: string
@@ -209,6 +212,9 @@ export default function IntegrationHealthPage() {
                   <h2 className="text-2xl font-bold capitalize">{healthData.overall_status}</h2>
                   <p className="text-gray-400">
                     {healthData.metrics.executions_24h} executions in last 24h
+                    {healthData.metrics.tracked_executions !== undefined && (
+                      <span className="text-cyan-400"> ({healthData.metrics.tracked_executions} tracked)</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -216,7 +222,12 @@ export default function IntegrationHealthPage() {
                 <div className="text-3xl font-bold text-cyan-400">
                   {healthData.metrics.context_injection_rate}%
                 </div>
-                <p className="text-gray-400 text-sm">Context Injection Rate</p>
+                <p className="text-gray-400 text-sm">
+                  Context Injection Rate
+                  {healthData.metrics.with_context !== undefined && (
+                    <span className="block text-xs">({healthData.metrics.with_context}/{healthData.metrics.tracked_executions} tracked)</span>
+                  )}
+                </p>
               </div>
             </div>
           </div>
@@ -315,12 +326,16 @@ export default function IntegrationHealthPage() {
                     key={i}
                     className={cn(
                       'p-3 rounded-lg border',
-                      alert.severity === 'error' ? 'border-red-500/30 bg-red-500/5' : 'border-yellow-500/30 bg-yellow-500/5'
+                      alert.severity === 'error' ? 'border-red-500/30 bg-red-500/5' :
+                      alert.severity === 'info' ? 'border-blue-500/30 bg-blue-500/5' :
+                      'border-yellow-500/30 bg-yellow-500/5'
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       {alert.severity === 'error' ? (
                         <XCircle className="w-4 h-4 text-red-500" />
+                      ) : alert.severity === 'info' ? (
+                        <Clock className="w-4 h-4 text-blue-500" />
                       ) : (
                         <AlertTriangle className="w-4 h-4 text-yellow-500" />
                       )}
