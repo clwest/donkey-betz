@@ -731,9 +731,31 @@ class AgentRouter:
         start_time = timezone.now()
         execution_record = None
 
+        # Session 758: Log context injection summary for observability
+        context_summary = {
+            'spider_data': spider_context.get('has_data', False),
+            'spider_trends': len(spider_context.get('relevant_trends', [])),
+            'spider_discussions': len(spider_context.get('discussions', [])),
+            'learning_patterns': bool(spider_context.get('learning_patterns')),
+            'advisor_insights': bool(spider_context.get('advisor_insights')),
+            'performance_feedback': bool(spider_context.get('performance_feedback')),
+            'knowledge_state': bool(spider_context.get('knowledge_state')),
+            'scifi_context': bool(scifi_context),
+        }
+        logger.info(
+            f"🔌 [Session 758] Context injection for {agent_name}: "
+            f"spider={context_summary['spider_data']} ({context_summary['spider_trends']} trends), "
+            f"learning={context_summary['learning_patterns']}, "
+            f"advisor={context_summary['advisor_insights']}, "
+            f"feedback={context_summary['performance_feedback']}, "
+            f"scifi={context_summary['scifi_context']}"
+        )
+
         try:
-            # Create execution record
-            execution_record = self._create_execution_record(agent_name, task)
+            # Create execution record with context tracking
+            execution_record = self._create_execution_record(
+                agent_name, task, context_summary=context_summary
+            )
 
             result = agent.execute(
                 task=task,
@@ -753,12 +775,17 @@ class AgentRouter:
             # Track successful execution
             # Session 641: Use result.message (not result.output which doesn't exist on AgentResult)
             # Session 744: Pass tokens_used and cost to execution record
+            # Session 757: Save FULL result data (not just preview) so blog content is accessible
             self._complete_execution(
                 execution_record,
                 agent_name,
                 success=result.success,
                 execution_time_ms=result.execution_time_ms,
-                output_data={'result_preview': str(result.message)[:500] if result.message else None},
+                output_data={
+                    'result_preview': str(result.message)[:500] if result.message else None,
+                    'data': result.data,  # Full result data including generated content
+                    'message': result.message,
+                },
                 tokens_used=result.tokens_used,
                 cost=result.cost
             )
@@ -1021,10 +1048,11 @@ class AgentRouter:
             logger.warning(f"Failed to get knowledge context: {e}")
             return {}
 
-    def _create_execution_record(self, agent_name: str, task: str):
+    def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None):
         """
         Create an execution record for tracking.
         Session 641: Added for Agent Performance Dashboard.
+        Session 758: Added context_summary for integration observability.
         """
         try:
             from core.models_unified_system import Agent, AgentExecution
@@ -1040,6 +1068,12 @@ class AgentRouter:
                 }
             )
 
+            # Session 758: Build input_data with context tracking
+            input_data = {
+                'task': task,
+                'context_injected': context_summary or {},
+            }
+
             # Session 642: User field is now nullable - always create execution record
             # Create execution record (user can be None for Celery/API tasks)
             execution = AgentExecution.objects.create(
@@ -1047,7 +1081,7 @@ class AgentRouter:
                 user=self.user,  # Can be None now
                 task=task[:500],  # Truncate long tasks
                 status='in_progress',
-                input_data={'task': task}
+                input_data=input_data
             )
 
             return execution
