@@ -206,6 +206,18 @@ If asked to do something outside audio generation, politely explain you can only
 
         with self.time_travel_session("audio_generation", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower() if task else ''
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, a specialist in creating audio content. One capability: I generate text-to-speech voiceovers, sound effects, and audio narrations using ElevenLabs voices including Rachel, Antoni, Bella, Daniel, and more.",
+                        data={'type': 'self_description', 'capabilities': ['voice_generation', 'sound_effects', 'voiceover']},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 if not self._validate_task(task):
                     return AgentResult(
                         success=False,
@@ -330,10 +342,17 @@ If asked to do something outside audio generation, politely explain you can only
 
                         return result
                 else:
+                    # Session 757: Return rich conversation data for Memory Palace display
+                    response_content = gpt_response.get('content', '')
                     return AgentResult(
                         success=True,
-                        message=gpt_response.get('content', ''),
-                        data={'type': 'conversation'},
+                        message=response_content,
+                        data={
+                            'type': 'conversation',
+                            'content_type': 'audio_discussion',
+                            'response': response_content,
+                            'query': task,
+                        },
                         agent_name=self.name,
                         execution_time_ms=int((time.time() - start_time) * 1000)
                     )

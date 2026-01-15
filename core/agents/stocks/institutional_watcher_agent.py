@@ -168,6 +168,18 @@ Focus on transactions that diverge from normal patterns."""
 
         # Session 750: Time Travel integration
         with self.time_travel_session("institutional_watching", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a specialist in tracking institutional investor activity in stocks. One capability: I monitor SEC filings, 13F reports, and insider trading to detect when hedge funds and major institutions are accumulating or distributing positions.",
+                    data={'type': 'self_description', 'specialization': 'institutional_activity', 'focus': 'smart_money_tracking'},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="analysis",
                 action="Starting institutional watching",

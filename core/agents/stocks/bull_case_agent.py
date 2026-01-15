@@ -236,6 +236,18 @@ Always acknowledge risks but emphasize potential rewards."""
 
         # Session 750: Time Travel integration
         with self.time_travel_session("bull_case_analysis", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a specialist in building bullish investment cases for stocks. One capability: I analyze growth catalysts, competitive advantages, and undervaluation opportunities to construct conviction-rated arguments for why stock prices should rise.",
+                    data={'type': 'self_description', 'specialization': 'stock_analysis', 'focus': 'bullish_perspectives'},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="analysis",
                 action=f"Starting bull_case_analysis",

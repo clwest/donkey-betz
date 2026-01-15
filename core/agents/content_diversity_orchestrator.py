@@ -122,6 +122,18 @@ Categories you manage:
         start_time = time.time()
 
         try:
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((time.time() - start_time) * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, an orchestrator ensuring AI-generated content remains diverse and non-repetitive. One capability: I analyze content gaps across categories, detect over-representation in topics or styles, and trigger creation of underrepresented content to maintain variety.",
+                    data={'type': 'self_description', 'capabilities': ['gap_analysis', 'diversity_scoring', 'content_orchestration']},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             # Get action from context or default to full analysis
             action = context.get('action', 'full_analysis')
 

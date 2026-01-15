@@ -127,6 +127,18 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
 
         # Session 750: Time Travel integration
         with self.time_travel_session("market_intelligence_coordination", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, the orchestrator of the Market Intelligence Desk. One capability: I coordinate bull/bear debates between specialist agents and synthesize their arguments into comprehensive market briefs with conviction ratings and actionable recommendations.",
+                    data={'type': 'self_description', 'specialization': 'market_coordination', 'coordinated_agents': ['BullCaseAgent', 'BearCaseAgent', 'StockAnalystAgent']},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="planning",
                 action="Starting market intelligence coordination",

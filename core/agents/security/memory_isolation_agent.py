@@ -174,6 +174,18 @@ You are a READ-ONLY security agent - you audit and isolate, not modify content."
 
         with self.time_travel_session("memory_isolation", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower() if task else ''
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, a security specialist protecting memory isolation between users and contexts. One capability: I audit, verify, and enforce memory boundaries to prevent cross-user data leakage and ensure strict isolation of sensitive information.",
+                        data={'type': 'self_description', 'specialization': 'security', 'focus': 'memory_isolation'},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 if not self._validate_task(task):
                     return AgentResult(
                         success=False,

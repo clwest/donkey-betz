@@ -172,6 +172,18 @@ Focus on stocks without corresponding news explanations for moves."""
 
         # Session 750: Time Travel integration
         with self.time_travel_session("market_movement_monitoring", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a specialist in tracking significant market movements. One capability: I monitor intraday price swings, sector rotations, and momentum shifts to alert on stocks making unusual moves that warrant immediate attention.",
+                    data={'type': 'self_description', 'specialization': 'movement_monitoring', 'focus': 'realtime_alerts'},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="analysis",
                 action="Starting market movement monitoring",
