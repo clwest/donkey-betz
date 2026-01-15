@@ -938,7 +938,8 @@ from core.views_neural_orchestra import (
     learning_feed as neural_learning_feed,
     neural_orchestra_health,
     neural_orchestra_websocket_bridge,
-    neural_orchestra_debug_info
+    neural_orchestra_debug_info,
+    trigger_neural_orchestra_reality_check,
 )
 # Session 439: Stripe Webhook
 from core.views_stripe import stripe_webhook, subscription_status
@@ -1400,6 +1401,7 @@ urlpatterns = [
     path('api/neural-orchestra/health/', neural_orchestra_health, name='neural-orchestra-health'),
     path('api/neural-orchestra/websocket-config/', neural_orchestra_websocket_bridge, name='neural-websocket-config'),
     path('api/neural-orchestra/debug/', neural_orchestra_debug_info, name='neural-orchestra-debug'),
+    path('api/neural-orchestra/reality-check/', trigger_neural_orchestra_reality_check, name='neural-orchestra-reality-check'),
 
     # Session 688: Authentication redirects to React
     path('accounts/login/', login_redirect, name='login'),
