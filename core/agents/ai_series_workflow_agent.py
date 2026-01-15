@@ -486,6 +486,18 @@ Available agents to delegate to:
 
         with self.time_travel_session("ai_series_workflow", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower()
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, a master orchestrator for multi-episode AI content series. One capability: I coordinate ResearchAgent, ImageAgent, VideoAgent, and AudioAgent through a 6-stage pipeline to create complete educational, entertainment, or marketing series with consistent characters, coherent story arcs, and unified visual style.",
+                        data={'type': 'self_description', 'capabilities': ['research', 'planning', 'character_design', 'script_generation', 'voiceover', 'video_production']},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 # Validate task
                 if not self._validate_task(task):
                     return AgentResult(

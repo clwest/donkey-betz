@@ -234,6 +234,18 @@ Always acknowledge bull arguments but emphasize potential risks."""
 
         # Session 750: Time Travel integration
         with self.time_travel_session("bear_case_analysis", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a specialist in analyzing downside risks and building bear cases for stocks. One capability: I identify vulnerabilities in bullish narratives by examining competitive threats, valuation concerns, regulatory risks, and market sentiment shifts to generate conviction-rated bearish arguments.",
+                    data={'type': 'self_description', 'specialization': 'stock_analysis', 'focus': 'bearish_perspectives'},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="analysis",
                 action="Starting bear case analysis",
