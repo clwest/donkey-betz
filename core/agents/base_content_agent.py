@@ -263,28 +263,86 @@ class BaseContentAgent(ABC):
         """
         Track agent contribution for analytics.
 
+        Session 754: Fixed to use correct model and fields.
+        - Uses AgentContribution from core.models.agents_registry
+        - Looks up UnifiedAgentTemplate by agent name
+        - Links to actual content objects
+
         Args:
-            operation: Operation performed
+            operation: Operation performed (maps to contribution_type)
             asset_ids: List of affected asset IDs
-            asset_type: Type of assets
+            asset_type: Type of assets (image, video, etc.)
             success: Whether operation succeeded
             metadata: Additional metadata
         """
         try:
-            from core.models.agents_registry import AgentContribution
+            from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate
+            from content.models import ImageHistory, VideoHistory
 
-            AgentContribution.objects.create(
-                agent_name=self.agent_name,
-                operation=operation,
-                user_id=self.user.id if self.user else None,
-                project_id=self.project_id,
-                session_id=self.session_id,
-                asset_type=asset_type,
-                asset_ids=asset_ids,
-                success=success,
-                metadata=metadata or {},
+            # Get or create the UnifiedAgentTemplate for this agent
+            agent_template, _ = UnifiedAgentTemplate.objects.get_or_create(
+                name=self.agent_name,
+                defaults={
+                    'display_name': self.agent_name.replace('Agent', ' Agent'),
+                    'description': f'{self.agent_name} content agent',
+                    'specialization': 'content',
+                    'system_prompt': '',
+                }
             )
-            self.logger.debug(f"Tracked contribution: {operation} on {len(asset_ids)} {asset_type}s")
+
+            # Map operation to contribution_type choices
+            operation_mapping = {
+                'generate': 'generation',
+                'create': 'generation',
+                'edit': 'editing',
+                'enhance': 'editing',
+                'orchestrate': 'orchestration',
+                'analyze': 'analysis',
+                'recommend': 'recommendation',
+                'iterate': 'iteration',
+            }
+            contribution_type = operation_mapping.get(operation.lower(), 'generation')
+
+            # Get project if we have project_id
+            project = self._get_project() if self.project_id else None
+
+            # Create contributions for each asset
+            created_count = 0
+            for asset_id in asset_ids:
+                try:
+                    contribution_kwargs = {
+                        'agent': agent_template,
+                        'contribution_type': contribution_type,
+                        'contribution_role': 'Primary Creator' if success else 'Attempted',
+                        'contribution_percentage': 100 if success else 0,
+                        'task_description': f'{operation} {asset_type}',
+                    }
+
+                    if project:
+                        contribution_kwargs['project'] = project
+
+                    # Link to specific content type
+                    if asset_type == 'image':
+                        try:
+                            image = ImageHistory.objects.get(id=asset_id)
+                            contribution_kwargs['image'] = image
+                        except (ImageHistory.DoesNotExist, ValueError):
+                            pass
+                    elif asset_type == 'video':
+                        try:
+                            video = VideoHistory.objects.get(id=asset_id)
+                            contribution_kwargs['video'] = video
+                        except (VideoHistory.DoesNotExist, ValueError):
+                            pass
+
+                    AgentContribution.objects.create(**contribution_kwargs)
+                    created_count += 1
+
+                except Exception as asset_error:
+                    self.logger.debug(f"Could not track contribution for {asset_type} {asset_id}: {asset_error}")
+
+            if created_count > 0:
+                self.logger.info(f"✓ Tracked {created_count} contribution(s): {operation} on {asset_type}s")
 
         except ImportError:
             self.logger.debug("AgentContribution model not available, skipping tracking")

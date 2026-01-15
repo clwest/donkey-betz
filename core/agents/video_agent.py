@@ -352,10 +352,17 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                         return result
                 else:
+                    # Session 757: Return rich conversation data for Memory Palace display
+                    response_content = gpt_response.get('content', '')
                     return AgentResult(
                         success=True,
-                        message=gpt_response.get('content', ''),
-                        data={'type': 'conversation'},
+                        message=response_content,
+                        data={
+                            'type': 'conversation',
+                            'content_type': 'video_discussion',
+                            'response': response_content,
+                            'query': task,
+                        },
                         agent_name=self.name,
                         execution_time_ms=int((time.time() - start_time) * 1000)
                     )

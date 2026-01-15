@@ -495,10 +495,17 @@ If asked to do something outside your scope, politely explain you can only handl
                         return result
                 else:
                     # Conversational response (no tool call)
+                    # Session 757: Return rich conversation data for Memory Palace display
+                    response_content = gpt_response.get('content', '')
                     return AgentResult(
                         success=True,
-                        message=gpt_response.get('content', ''),
-                        data={'type': 'conversation'},
+                        message=response_content,
+                        data={
+                            'type': 'conversation',
+                            'content_type': 'rendering_discussion',
+                            'response': response_content,
+                            'query': task,
+                        },
                         agent_name=self.name,
                         execution_time_ms=int((time.time() - start_time) * 1000)
                     )
