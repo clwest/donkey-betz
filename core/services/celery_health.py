@@ -165,8 +165,8 @@ class CeleryHealthService:
                     'error': 'Celery app not initialized'
                 }
 
-            # Inspect workers with timeout
-            inspect = self._app.control.inspect(timeout=2.0)
+            # Inspect workers with timeout (Session 758: increased from 2s to 10s for busy workers)
+            inspect = self._app.control.inspect(timeout=10.0)
 
             # Get active workers
             active = inspect.active() or {}
@@ -542,7 +542,7 @@ class CeleryHealthService:
             if not self._app:
                 return {}
 
-            inspect = self._app.control.inspect(timeout=2.0)
+            inspect = self._app.control.inspect(timeout=10.0)
             ping_response = inspect.ping() or {}
 
             return {
