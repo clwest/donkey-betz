@@ -42,6 +42,7 @@ import BillingPage from '@/pages/BillingPage'  // Session 745: Billing & subscri
 import LearningJourneyPage from '@/pages/LearningJourneyPage'  // Session 745: Learning journeys
 import CollectiveIntelligencePage from '@/pages/CollectiveIntelligencePage'  // Session 745: Collective intelligence
 import AnalyticsDashboardPage from '@/pages/AnalyticsDashboardPage'  // Session 745: Analytics dashboard
+import IntegrationHealthPage from '@/pages/IntegrationHealthPage'  // Session 758: Integration observability
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -106,6 +107,7 @@ function App() {
         <Route path="learning-journey" element={<LearningJourneyPage />} />  {/* Session 745: Learning journeys */}
         <Route path="collective" element={<CollectiveIntelligencePage />} />  {/* Session 745: Collective intelligence */}
         <Route path="analytics" element={<AnalyticsDashboardPage />} />  {/* Session 745: Analytics dashboard */}
+        <Route path="integration-health" element={<IntegrationHealthPage />} />  {/* Session 758: Integration observability */}
         <Route path="blog/:blogId" element={<BlogViewerPage />} />  {/* Session 742: Blog viewer for content review */}
       </Route>
     </Routes>
