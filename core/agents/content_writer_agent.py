@@ -372,6 +372,18 @@ For this {content_type}, ensure:
 
         with self.time_travel_session("content_writing", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower() if task else ''
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, a specialist in transforming research into polished content. One capability: I write blog posts, articles, video scripts, podcast scripts, social threads, and newsletters with customizable tone, audience targeting, and SEO optimization.",
+                        data={'type': 'self_description', 'capabilities': ['blog_posts', 'articles', 'scripts', 'newsletters', 'seo_optimization']},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 # Extract parameters
                 content_type = context.get('content_type', 'blog_post')
                 research = context.get('research', '')
@@ -474,7 +486,19 @@ For this {content_type}, ensure:
                     spider_data_used=bool(spider_context),
                     scifi_context_used=bool(scifi_context)
                 )
-                self._create_execution_memory(result, task, "success", 0.85)
+
+                # Session 757: Store rich memory with actual content, not just "success"
+                self._create_content_memory(
+                    content_type=content_type,
+                    generated_content=generated_content,
+                    task=task,
+                    tone=tone,
+                    target_audience=target_audience,
+                    word_count=result.data['metadata']['actual_word_count'],
+                    topic=result.data['metadata']['topic'],
+                    execution_time_ms=execution_time
+                )
+
                 self._share_knowledge(
                     knowledge_type='technique',
                     title=f"Content created: {content_type}",
@@ -497,6 +521,106 @@ For this {content_type}, ensure:
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)
                 )
+
+    def _create_content_memory(
+        self,
+        content_type: str,
+        generated_content: Dict[str, Any],
+        task: str,
+        tone: str,
+        target_audience: str,
+        word_count: int,
+        topic: str,
+        execution_time_ms: int
+    ) -> None:
+        """
+        Session 757: Create a rich memory with actual content learnings.
+
+        Instead of just storing "Successfully created Blog Post", we store:
+        - The actual title/headline created
+        - A summary of the content
+        - Key sections/topics covered
+        - Writing patterns that worked
+        - Audience and tone insights
+        """
+        if not self.memory_service or not self.agent_model:
+            return
+
+        try:
+            # Extract meaningful content for the memory
+            content_title = "Untitled"
+            content_summary = ""
+            key_sections = []
+
+            if isinstance(generated_content, dict):
+                # Get title/headline
+                content_title = (
+                    generated_content.get('title') or
+                    generated_content.get('headline') or
+                    generated_content.get('subject_line') or
+                    topic or
+                    "Untitled"
+                )
+
+                # Get sections/structure for learning
+                if generated_content.get('sections'):
+                    for section in generated_content['sections'][:5]:
+                        if isinstance(section, dict):
+                            key_sections.append(section.get('header', section.get('title', 'Section')))
+                        elif isinstance(section, str):
+                            key_sections.append(section[:50])
+
+                # Build content summary from full_text
+                full_text = generated_content.get('full_text', '')
+                if full_text:
+                    # Take first 500 chars as summary
+                    content_summary = full_text[:500].strip()
+                    if len(full_text) > 500:
+                        content_summary += "..."
+
+            # Build rich memory content
+            memory_content = f"""Created {CONTENT_TYPES[content_type]['name']}: "{content_title}"
+
+Topic: {topic}
+Tone: {tone} | Audience: {target_audience}
+Word Count: {word_count} words | Time: {execution_time_ms}ms
+
+"""
+            if key_sections:
+                memory_content += f"Sections covered:\n"
+                for section in key_sections:
+                    memory_content += f"  - {section}\n"
+                memory_content += "\n"
+
+            if content_summary:
+                memory_content += f"Content preview:\n{content_summary}\n\n"
+
+            # Add learning insight
+            memory_content += f"""Learning: Successfully created {content_type} for {target_audience} audience using {tone} tone. Structure: {len(key_sections)} sections."""
+
+            # Build memory title
+            memory_title = f"Created {content_type}: {content_title[:40]}"
+            if len(content_title) > 40:
+                memory_title += "..."
+
+            # Create the memory with rich content
+            from core.models_unified_system import AgentMemory
+            AgentMemory.objects.create(
+                agent=self.agent_model,
+                title=memory_title,
+                content=memory_content,
+                context=f"Task: {task}",
+                memory_type="success",
+                memory_outcome="success",
+                importance_score=0.85,
+                source_type="agent_execution",
+                tags=[self.name, content_type, tone, "content_creation"],
+            )
+
+            logger.info(f"📝 Session 757: Created rich memory for {content_type}: {content_title[:30]}...")
+
+        except Exception as e:
+            logger.warning(f"Failed to create content memory: {e}")
 
     def _build_content_prompt(
         self,

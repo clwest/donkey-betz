@@ -271,6 +271,18 @@ Always provide:
 
         # Session 750: Time Travel integration
         with self.time_travel_session("signal_scanning", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((time.time() - start_time) * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a technical analysis specialist for stock markets. One capability: I scan multiple securities simultaneously for breakout patterns, trend reversals, and momentum signals using RSI, MACD, moving averages, and volume analysis.",
+                    data={'type': 'self_description', 'specialization': 'technical_analysis', 'indicators': ['RSI', 'MACD', 'SMA', 'EMA', 'volume']},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="analysis",
                 action="Starting signal scanning",

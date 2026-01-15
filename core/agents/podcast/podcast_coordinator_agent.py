@@ -262,6 +262,18 @@ CRITICAL: When creating scripts, maintain clear speaker labels for TTS generatio
 
         # Session 750: Time Travel integration
         with self.time_travel_session("podcast_coordination", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((time.time() - start_time) * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, the orchestrator of AI-powered podcast production. One capability: I coordinate debates between advocate and skeptic agents, manage moderator roles, and produce structured podcast episodes with balanced perspectives on complex topics.",
+                    data={'type': 'self_description', 'coordinated_agents': ['DebateAdvocateAgent', 'DebateSkepticAgent', 'ModeratorAgent']},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="planning",
                 action="Starting podcast coordination",

@@ -98,6 +98,18 @@ Always prioritize:
 
         # Session 750: Time Travel integration
         with self.time_travel_session("stock_audit_coordination", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, the master coordinator of comprehensive stock audits. One capability: I orchestrate parallel analysis from specialist agents (StockAnalyst, SignalScanner, InstitutionalWatcher, MarketAnomalyDetector, MarketMovementMonitor) and synthesize their findings into unified risk assessments.",
+                    data={'type': 'self_description', 'coordinated_agents': ['StockAnalystAgent', 'SignalScannerAgent', 'InstitutionalWatcherAgent', 'MarketAnomalyDetectorAgent', 'MarketMovementMonitorAgent']},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="planning",
                 action="Starting stock audit coordination",

@@ -211,6 +211,18 @@ You execute complete workflow packages, not individual steps."""
 
         with self.time_travel_session("workflow_orchestration", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower() if task else ''
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, a multi-step workflow orchestrator for creative projects. One capability: I execute complex workflows like 'research_and_create_logos', 'brand_identity_package', or 'youtube_thumbnail_package' by coordinating research, strategy, and content creation agents.",
+                        data={'type': 'self_description', 'workflows': ['research_and_create_logos', 'brand_identity_package', 'youtube_thumbnail_package', 'product_photography_kit']},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 # Extract workflow name from context or infer from task
                 workflow = context.get('workflow')
 

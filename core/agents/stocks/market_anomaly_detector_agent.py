@@ -228,6 +228,18 @@ Focus on patterns that suggest informed trading or manipulation."""
 
         # Session 750: Time Travel integration
         with self.time_travel_session("market_anomaly_detection", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a specialist in detecting unusual market patterns. One capability: I scan for statistical anomalies in price movements, volume spikes, volatility clusters, and correlation breakdowns that may signal market manipulation or emerging trends.",
+                    data={'type': 'self_description', 'specialization': 'anomaly_detection', 'focus': 'market_irregularities'},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="analysis",
                 action="Starting market anomaly detection",

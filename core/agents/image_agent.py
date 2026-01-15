@@ -232,6 +232,18 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         # Record time travel session for debugging
         with self.time_travel_session("image_generation", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower() if task else ''
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, a specialist in AI image generation. One capability: I create professional images including logos, banners, illustrations, and product photos using advanced AI models with 80+ style presets like Pixar, anime, cyberpunk, and watercolor.",
+                        data={'type': 'self_description', 'capabilities': ['image_generation', 'style_presets', 'product_photography']},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 # Validate task
                 if not self._validate_task(task):
                     return AgentResult(
@@ -405,10 +417,17 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                 else:
                     # GPT responded without tool calls - return conversational response
+                    # Session 757: Return rich conversation data for Memory Palace display
+                    response_content = gpt_response.get('content', '')
                     return AgentResult(
                         success=True,
-                        message=gpt_response.get('content', ''),
-                        data={'type': 'conversation'},
+                        message=response_content,
+                        data={
+                            'type': 'conversation',
+                            'content_type': 'image_discussion',
+                            'response': response_content,
+                            'query': task,
+                        },
                         agent_name=self.name,
                         execution_time_ms=int((time.time() - start_time) * 1000)
                     )

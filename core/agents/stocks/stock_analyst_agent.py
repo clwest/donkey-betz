@@ -187,6 +187,18 @@ Alert on:
 
         # Session 750: Time Travel integration
         with self.time_travel_session("stock_analysis", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a comprehensive stock analysis specialist. One capability: I analyze SEC filings, earnings reports, and financial statements to produce detailed fundamental analysis with valuation metrics and investment recommendations.",
+                    data={'type': 'self_description', 'specialization': 'fundamental_analysis', 'focus': 'valuation'},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="analysis",
                 action="Starting stock analysis",

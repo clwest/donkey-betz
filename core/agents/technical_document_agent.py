@@ -478,6 +478,18 @@ Your output should be ready for executive review and formal approval processes."
 
         # Session 750: Time Travel integration
         with self.time_travel_session("technical_document_generation", task, input_data=context):
+            # Handle simple diagnostic/identification queries
+            task_lower = task.lower() if task else ''
+            if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"I am {self.name}, a specialist in generating structured technical documentation. One capability: I create 5-stage technical documents from Research Briefs through Analysis Reports to Implementation Specs, following templates with proper classification and formatting.",
+                    data={'type': 'self_description', 'stages': ['Research Brief', 'Technical Assessment', 'Prototype Plan', 'Analysis Report', 'Implementation Spec']},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time
+                )
+
             self.record_decision(
                 decision_type="planning",
                 action="Starting technical document generation",
