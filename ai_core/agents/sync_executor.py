@@ -61,13 +61,25 @@ class SyncAgentExecutor:
                     }
                 )
 
+                # Session 758: Build context tracking for Integration Health observability
+                try:
+                    from core.services.context_tracking import build_context_tracking
+                    context_tracking = build_context_tracking(agent_name, task_description)
+                except Exception as ctx_e:
+                    logger.debug(f"Context tracking unavailable: {ctx_e}")
+                    context_tracking = {}
+
                 # Create execution record
                 execution_record = AgentExecution.objects.create(
                     agent=agent_record,
                     user=user,
                     task=task_description,
                     status='in_progress',
-                    input_data={'task': task_description, 'context': context or {}}
+                    input_data={
+                        'task': task_description,
+                        'context': context or {},
+                        'context_injected': context_tracking,
+                    }
                 )
                 logger.info(f"📝 Created AgentExecution record {execution_record.id} for {agent_name}")
 

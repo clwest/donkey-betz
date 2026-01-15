@@ -23,12 +23,23 @@ class AgentExecutionTracker:
         try:
             agent = Agent.objects.get(id=self.agent_id)
 
+            # Session 758: Build context tracking for Integration Health observability
+            try:
+                from core.services.context_tracking import build_context_tracking
+                context_tracking = build_context_tracking(agent.name, self.task_description)
+            except Exception as e:
+                logger.debug(f"Context tracking unavailable: {e}")
+                context_tracking = {}
+
             self.execution = AgentExecution.objects.create(
                 agent=agent,
                 user=self.user,
                 task=self.task_description,
                 status='in_progress',
-                input_data={},
+                input_data={
+                    'task': self.task_description,
+                    'context_injected': context_tracking,
+                },
                 output_data={}
             )
 
