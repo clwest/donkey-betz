@@ -302,8 +302,6 @@ celery-stop: ## Stop all Celery workers and beat
 		fi; \
 		rm -f $(CELERY_BROADCAST_PIDFILE); \
 	fi
-	@# Fallback: kill any remaining celery workers
-	@pkill -f "celery.*worker" 2>/dev/null || true
 	@# Stop beat
 	@if [ -f $(CELERY_BEAT_PIDFILE) ]; then \
 		PID=$$(cat $(CELERY_BEAT_PIDFILE)); \
@@ -312,8 +310,14 @@ celery-stop: ## Stop all Celery workers and beat
 			kill $$PID || true; \
 		fi; \
 		rm -f $(CELERY_BEAT_PIDFILE); \
-	else \
-		pkill -f "celery.*beat" 2>/dev/null || true; \
+	fi
+	@# Wait for graceful shutdown, then force kill any remaining
+	@sleep 2
+	@if pgrep -f "celery.*worker" >/dev/null 2>&1 || pgrep -f "celery.*beat" >/dev/null 2>&1; then \
+		echo "-> Force killing remaining Celery processes..."; \
+		pkill -9 -f "celery.*worker" 2>/dev/null || true; \
+		pkill -9 -f "celery.*beat" 2>/dev/null || true; \
+		sleep 1; \
 	fi
 	@echo "✓ Celery services stopped."
 
