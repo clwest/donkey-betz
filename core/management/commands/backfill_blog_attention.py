@@ -8,6 +8,8 @@ Usage:
     python manage.py backfill_blog_attention
     python manage.py backfill_blog_attention --limit 100
     python manage.py backfill_blog_attention --dry-run
+    python manage.py backfill_blog_attention --max-age-days 14
+    python manage.py backfill_blog_attention --all-time  # Include old blogs
 """
 
 from django.core.management.base import BaseCommand
@@ -35,8 +37,21 @@ class Command(BaseCommand):
             default=75,
             help='Default quality score for backfilled items (default: 75)',
         )
+        parser.add_argument(
+            '--max-age-days',
+            type=int,
+            default=7,
+            help='Only process blogs created within this many days (default: 7)',
+        )
+        parser.add_argument(
+            '--all-time',
+            action='store_true',
+            help='Include all blogs regardless of age (overrides --max-age-days)',
+        )
 
     def handle(self, *args, **options):
+        from django.utils import timezone
+        from datetime import timedelta
         from core.models_unified_system import SelfBlog
         from core.models_human_interface import HumanAttentionItem
         from core.services.human_attention_bridge import HumanAttentionBridge
@@ -44,6 +59,8 @@ class Command(BaseCommand):
         limit = options['limit']
         dry_run = options['dry_run']
         quality_score = options['quality_score']
+        max_age_days = options['max_age_days']
+        all_time = options['all_time']
 
         self.stdout.write(self.style.NOTICE('Scanning for blogs without attention items...'))
 
@@ -57,8 +74,13 @@ class Command(BaseCommand):
 
         self.stdout.write(f'Found {len(existing_content_ids)} blogs with existing attention items')
 
-        # Get blogs without attention items
+        # Get blogs without attention items, filtered by age
         blogs_query = SelfBlog.objects.all().order_by('-created_at')
+
+        if not all_time:
+            cutoff = timezone.now() - timedelta(days=max_age_days)
+            blogs_query = blogs_query.filter(created_at__gte=cutoff)
+            self.stdout.write(f'Filtering to blogs from last {max_age_days} days')
 
         # Filter out blogs that already have attention items
         blogs_to_process = []
