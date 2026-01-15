@@ -170,7 +170,7 @@ class NeuralOrchestraRealityBridge:
         activity_feed = []
         for contrib in recent_contributions:
             # Determine content type and get thumbnail URL
-            content_type = 'Unknown'
+            content_type = None
             content_id = None
             image_url = None
             thumbnail_url = None
@@ -191,6 +191,21 @@ class NeuralOrchestraRealityBridge:
             elif contrib.minifig_asset:
                 content_type = '3D Model'
                 content_id = contrib.minifig_asset.id
+            else:
+                # Session 758: Infer content type from agent name for non-visual contributions
+                agent_name = (contrib.agent.display_name or contrib.agent.name or '').lower()
+                if any(kw in agent_name for kw in ['research', 'analysis', 'analyst']):
+                    content_type = 'Research'
+                elif any(kw in agent_name for kw in ['strategy', 'brand', 'marketing']):
+                    content_type = 'Strategy'
+                elif any(kw in agent_name for kw in ['code', 'developer', 'devops']):
+                    content_type = 'Code'
+                elif any(kw in agent_name for kw in ['content', 'writer', 'writing']):
+                    content_type = 'Content'
+                elif any(kw in agent_name for kw in ['audio', 'voice', 'podcast']):
+                    content_type = 'Audio'
+                else:
+                    content_type = 'Task'  # Generic fallback
 
             activity_feed.append({
                 'id': str(contrib.id),
