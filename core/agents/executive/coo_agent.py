@@ -179,6 +179,18 @@ You CANNOT execute changes - only analyze and recommend."""
 
         with self.time_travel_session("coo_analysis", task, input_data=context):
             try:
+                # Handle simple diagnostic/identification queries
+                task_lower = task.lower() if task else ''
+                if any(keyword in task_lower for keyword in ['state your name', 'who are you', 'your capability', 'what can you do', 'introduce yourself']):
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return AgentResult(
+                        success=True,
+                        message=f"I am {self.name}, the Chief Operating Officer AI assistant. One capability: I plan development sprints with timeline, milestones, task breakdown, and capacity notes to help teams organize their work effectively.",
+                        data={'type': 'self_description', 'capabilities': ['roadmap_analysis', 'sprint_planning', 'risk_assessment']},
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
+
                 if not self._validate_task(task):
                     return AgentResult(
                         success=False,
