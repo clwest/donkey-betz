@@ -200,6 +200,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **752** | **Error Tracking System & Live Feed Fix** - Created error tracking doc, fixed AgentContribution tracking (Live Feed stale 39 days), fixed Learning Orchestrator NoneType error, added thumbnail images to Live Feed cards | `SESSION_752_ERROR_TRACKING_AND_LIVE_FEED_FIX.md` |
 | **751** | **Agent Social & Neural Orchestra Audit** - Fixed Conversations tab (auth, participant rendering, dates), Neural Orchestra (feed items, learning metrics). Confirmed 0 active agents is correct - no recent activity | `SESSION_751_SOCIAL_AND_ORCHESTRA_AUDIT.md` |
 | **750** | **Time Travel Page Audit + Agent Integration** - Fixed frontend decision types, backend API signatures, duration display, simulation data. Added Time Travel to 28 remaining agents (71/73 = 96%) | `SESSION_750_TIME_TRAVEL_AUDIT.md` |
 | **749** | **Mood Page & Time Capsules Audit** - Fixed Mood Page CRUD, Time Capsules GPT-5-mini token limits | `SESSION_749_MOOD_TIME_CAPSULES.md` |
