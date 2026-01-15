@@ -51,7 +51,8 @@ class TimeTravelMixin:
     def _get_agent_db_object(self):
         """Get the Agent database object for this agent."""
         try:
-            from core.models.agents_registry import Agent
+            # Session 758: Fixed import - Agent is in models_unified_system, not agents_registry
+            from core.models_unified_system import Agent
             # Try to find by name
             agent = Agent.objects.filter(name__iexact=self.agent_name).first()
             if not agent:

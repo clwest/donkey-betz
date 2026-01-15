@@ -1,11 +1,18 @@
 """
-Web Search Tool using DuckDuckGo
+Web Search Tool with Serper API + DuckDuckGo Fallback
 
-This tool provides web search capabilities without requiring API keys.
-It uses the DuckDuckGo search engine through the duckduckgo_search library.
+Session 758: Updated to use Serper API as primary (more reliable, has API key)
+with DuckDuckGo as fallback.
+
+Search priority:
+1. Serper API (Google search via API - reliable, fast)
+2. DuckDuckGo library (free, but rate-limited)
+3. DuckDuckGo HTML scraping (fallback)
+4. Synthetic results (development fallback)
 """
 
 import logging
+import os
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from django.core.cache import cache
@@ -16,17 +23,18 @@ logger = logging.getLogger(__name__)
 
 
 class WebSearchTool(BaseTool):
-    """Web search tool using DuckDuckGo."""
-    
+    """Web search tool using Serper API with DuckDuckGo fallback."""
+
     name = "web_search"
-    description = "Search the web using DuckDuckGo search engine"
+    description = "Search the web using Serper API (Google) with DuckDuckGo fallback"
     requires_auth = False
     tool_type = "research"
-    
+
     def __init__(self):
         """Initialize the web search tool."""
         self.ddgs = None
         self.cache_duration = 3600  # Cache for 1 hour
+        self.serper_api_key = os.getenv('SERPER_API_KEY')
         super().__init__()
     
     def _check_configuration(self) -> bool:
@@ -74,7 +82,11 @@ class WebSearchTool(BaseTool):
                 success=False,
                 error="Invalid input parameters"
             )
-        
+
+        # Session 758: Normalize 'search' to 'text' (ResearchAgent compatibility)
+        if search_type == 'search':
+            search_type = 'text'
+
         # Check cache first
         cache_key = f"web_search_{search_type}_{query}_{max_results}"
         cached = cache.get(cache_key)
@@ -142,7 +154,43 @@ class WebSearchTool(BaseTool):
         """Perform text search with enhanced error handling and fallback APIs."""
         results = []
 
-        # Primary method: DuckDuckGo search library
+        # Session 758: Primary method - Serper API (Google search, reliable)
+        if self.serper_api_key:
+            try:
+                import requests
+                url = "https://google.serper.dev/search"
+                headers = {
+                    "X-API-KEY": self.serper_api_key,
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "q": query,
+                    "num": max_results
+                }
+
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
+                response.raise_for_status()
+
+                data = response.json()
+                organic = data.get('organic', [])
+
+                for item in organic[:max_results]:
+                    results.append({
+                        'title': item.get('title', ''),
+                        'url': item.get('link', ''),
+                        'snippet': item.get('snippet', ''),
+                        'source': 'Google (Serper)',
+                        'method': 'serper_api'
+                    })
+
+                if results:
+                    logger.info(f"Serper API returned {len(results)} results")
+                    return results
+
+            except Exception as e:
+                logger.warning(f"Serper API failed: {e}, trying DuckDuckGo")
+
+        # Fallback 1: DuckDuckGo search library
         try:
             with self.DDGS() as ddgs:
                 for r in ddgs.text(
@@ -333,10 +381,12 @@ class WebSearchTool(BaseTool):
         """Validate input parameters."""
         if not query or not isinstance(query, str) or len(query.strip()) == 0:
             return False
-        
-        if search_type and search_type not in ['text', 'news', 'images', 'videos']:
+
+        # Session 758: Accept 'search' as alias for 'text' (ResearchAgent sends 'search')
+        valid_types = ['text', 'news', 'images', 'videos', 'search']
+        if search_type and search_type not in valid_types:
             return False
-        
+
         return True
     
     def instant_answer(self, query: str) -> Optional[Dict[str, Any]]:

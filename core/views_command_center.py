@@ -26,7 +26,7 @@ import redis
 from django.contrib.auth import get_user_model
 from persistence.models import RevenueTracker
 try:
-    from core.models.agents_registry import Agent
+    from core.models_unified_system import Agent  # Session 758: Fixed import path
 except ImportError:
     Agent = None
 try:

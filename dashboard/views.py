@@ -74,7 +74,7 @@ def dashboard_stats(request):
         import traceback
         traceback.print_exc()
         try:
-            from core.models.agents_registry import Agent
+            from core.models_unified_system import Agent  # Session 758: Fixed import path
             stats['total_agents'] = Agent.objects.count()
         except:
             pass
