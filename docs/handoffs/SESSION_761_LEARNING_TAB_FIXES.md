@@ -179,7 +179,43 @@ All 7 domains exceed their minimum execution thresholds:
 - `core/personal_ai_assistant_enhanced.py` - Add `_track_tool_usage()` method
 - `frontend/src/pages/AgentsPage.tsx` - Tool search, detail modal, header rename
 
-### 7. System Health Verification
+### 7. Dead Tool Agents Fixed (7 Agents)
+
+**Problem:** 9 agents had tools defined in their `tools` attribute but no `_execute_tool_call` handler, meaning the tools could never be executed.
+
+**Root Cause:** The agents defined GPT-compatible tools but didn't implement the BaseAgent tool execution pattern.
+
+**Solution:** Added `_execute_tool_call` methods to 7 agents (2 already had working handlers with different names):
+
+| Agent | Tools Added |
+|-------|-------------|
+| **StockAnalystAgent** | analyze_filing, check_valuation, compare_peers, assess_risk |
+| **BullCaseAgent** | identify_catalysts, analyze_growth, technical_bullish, sentiment_analysis |
+| **BearCaseAgent** | identify_risks, analyze_overvaluation, technical_bearish, negative_sentiment |
+| **MarketMovementMonitorAgent** | detect_volume_spike, track_momentum, alert_breakout, scan_after_hours |
+| **MarketAnomalyDetectorAgent** | detect_pump_dump, analyze_options_flow, flag_manipulation, detect_coordinated |
+| **InstitutionalWatcherAgent** | monitor_insiders, track_13f_filings, alert_large_position, analyze_sentiment |
+| **SystemIntelligenceAgent** | get_system_attention, get_item_details (renamed handler) |
+
+**Already Working (no changes needed):**
+- SignalScannerAgent (had `_handle_tool_call`)
+- MarketIntelligenceAgent (had `_execute_tool`)
+
+**Agent Tool Capability After Fix:**
+- 36 agents CAN call tools ✅
+- 0 agents with dead tools (was 9) ✅
+- 8 text-only agents (by design)
+
+**Files Modified:**
+- `core/agents/stocks/stock_analyst_agent.py`
+- `core/agents/stocks/bull_case_agent.py`
+- `core/agents/stocks/bear_case_agent.py`
+- `core/agents/stocks/market_movement_monitor_agent.py`
+- `core/agents/stocks/market_anomaly_detector_agent.py`
+- `core/agents/stocks/institutional_watcher_agent.py`
+- `core/agents/system_intelligence_agent.py`
+
+### 8. System Health Verification
 
 **All services confirmed running:**
 - Redis: ✅ Running
@@ -212,6 +248,7 @@ All 7 domains exceed their minimum execution thresholds:
 | `85a67564` | feat(Session 761): Enhance Tools tab with search and detail modal |
 | `415a6a8e` | fix(Session 761): Tools tab now shows only utility tools, not agents |
 | `f2cd53c8` | feat(Session 761): Add tool usage tracking for PA Utility Tools |
+| `ba9d7a51` | fix(Session 761): Add _execute_tool_call to 7 agents with dead tools |
 
 ---
 
@@ -258,6 +295,13 @@ core/migrations/0166_...                        +29 lines (inspiration_source mi
 core/management/commands/sync_agent_tools.py    ~40 lines (filter agent wrappers)
 core/personal_ai_assistant_enhanced.py          +55 lines (tool usage tracking)
 frontend/src/pages/AgentsPage.tsx               +400 lines (modals + tools tab overhaul)
+core/agents/stocks/stock_analyst_agent.py       +60 lines (_execute_tool_call)
+core/agents/stocks/bull_case_agent.py           +60 lines (_execute_tool_call)
+core/agents/stocks/bear_case_agent.py           +60 lines (_execute_tool_call)
+core/agents/stocks/market_movement_monitor_agent.py +75 lines (_execute_tool_call)
+core/agents/stocks/market_anomaly_detector_agent.py +70 lines (_execute_tool_call)
+core/agents/stocks/institutional_watcher_agent.py   +75 lines (_execute_tool_call)
+core/agents/system_intelligence_agent.py        ~15 lines (renamed handler)
 ```
 
 ---
