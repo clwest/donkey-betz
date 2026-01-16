@@ -1,60 +1,87 @@
-# Session 765 - Post-Orchestration Focus
+# Session 767 - Post-Dream Origin Tracking
 
-**Previous Session:** 764 (Orchestration Layer)
+**Previous Session:** 766 (Dream Origin Tracking)
 **Date:** January 15, 2026
 **Status:** All systems operational, build passing
 
 ---
 
-## Session 764 Accomplishments - COMPLETE
+## Session 766 Accomplishments - COMPLETE
 
-### Orchestration Layer - COMPLETE
+### Dream Origin Tracking - COMPLETE
 
-Built a comprehensive multi-agent workflow execution system:
+Added origin tracking to AgentDream to prevent jokes and probes from being treated the same as serious ideas. Now when users test or joke with the system, those dreams won't keep resurfacing.
 
-```
-OrchestrationEngine
-    ├── StepExecutor           # Execute steps via AgentRouter
-    ├── DependencyResolver     # Handle step dependencies
-    ├── CheckpointManager      # Save/resume workflow state
-    └── ApprovalGate           # Human-in-the-loop via Mission Control
-```
+**The Problem:** Dreams from testing/jokes were being resurfaced with the same priority as serious ideas.
 
-**Files Created:**
-| File | Purpose | Lines |
-|------|---------|-------|
-| `core/models_orchestration.py` | Execution, StepExecution, ApprovalGate models | ~450 |
-| `core/services/orchestration_engine.py` | Main orchestration coordinator | ~450 |
-| `core/services/orchestration_step_executor.py` | Step execution via AgentRouter | ~200 |
-| `core/services/orchestration_checkpoint.py` | State save/load for resume | ~60 |
-| `core/services/orchestration_dependencies.py` | Dependency resolution | ~150 |
-| `core/services/orchestration_approval.py` | Approval gates + Mission Control | ~370 |
-| `core/views_orchestration.py` | 6 REST API endpoints | ~350 |
+**The Solution:** Added `origin` field (serious/speculative/probe/joke) with weighted composite scores:
+- **Serious:** 100% weight (full score)
+- **Speculative:** 80% weight
+- **Probe:** 30% weight (heavily reduced)
+- **Joke:** 10% weight (almost never resurface)
+
+**New Fields on AgentDream:**
+| Field | Purpose |
+|-------|---------|
+| `origin` | Classification (serious/speculative/probe/joke) |
+| `confidence_floor` | Minimum threshold for resurfacing (0-1) |
+| `human_intent` | Raw description of user intent |
+
+**Methods Updated:**
+- `save()` - Applies origin weight to composite_score
+- `get_unshown_dreams()` - Excludes jokes by default
+- `get_top_actionable_dreams()` - Only serious/speculative for boardroom
+- `get_dreams_while_away()` - Excludes jokes by default
+- `promote_to_boardroom()` - Blocks jokes/probes unless forced
+
+**Migration:** `0170_agentdream_origin_tracking.py`
+
+**Backfill Command:** `python manage.py backfill_dream_origins`
+- Analyzes dream titles/content to classify as joke/probe/speculative/serious
+- Uses strict patterns to avoid false positives (agent dreams are almost always serious)
+- Recalculates composite scores with origin weight applied
+- Run with `--dry-run` to preview changes
+
+**Backfill Results:**
+| Origin | Count |
+|--------|-------|
+| Serious | 7,959 |
+| Speculative | 8 |
+| Probe | 0 |
+| Joke | 0 |
+
+---
+
+## Session 765 Accomplishments - COMPLETE
+
+### Orchestration Intelligence Link - COMPLETE
+
+Connected the orchestration layer to the core agent intelligence systems. Users can now click on workflow steps to see:
+
+- **Context Injected** - Spider data, learning patterns, advisor insights, etc.
+- **Tool Calls** - What tools the agent used
+- **Memories Created** - Success/failure memories from execution
+- **Execution Details** - Full task, tokens, cost, execution ID
+
+**The Problem:** Orchestration steps were disconnected from agent thinking. Users could see steps executed but not what happened inside.
+
+**The Solution:** Added `execution_id` field linking `OrchestrationStepExecution` → `AgentExecution`, created intelligence API endpoint, and built expandable step panels in the UI.
 
 **Files Modified:**
-- `core/models_unified_system.py` - Extended CustomWorkflow & CustomWorkflowStep
-- `core/tasks.py` - Added 3 Celery tasks
-- `core/celery.py` - Added 2 Beat schedule entries
-- `core/urls.py` - Added orchestration API routes
-- `frontend/src/lib/api.ts` - Added orchestrationApi
+| File | Purpose |
+|------|---------|
+| `core/models_orchestration.py` | Added `execution_id` field |
+| `core/agents/base_agent.py` | Added `execution_id` to AgentResult |
+| `core/agent_router.py` | Set `execution_id` on result |
+| `core/services/orchestration_step_executor.py` | Capture execution_id |
+| `core/views_orchestration.py` | Added intelligence API endpoint |
+| `frontend/src/lib/api.ts` | Added types and API function |
+| `frontend/src/pages/AgentsPage.tsx` | Clickable steps with intelligence panel |
 
-**API Endpoints:**
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/orchestration/workflows/` | GET | List workflows |
-| `/api/orchestration/workflows/{id}/execute/` | POST | Execute workflow |
-| `/api/orchestration/executions/` | GET | List executions |
-| `/api/orchestration/executions/{id}/` | GET | Get status |
-| `/api/orchestration/executions/{id}/resume/` | POST | Resume paused |
-| `/api/orchestration/executions/{id}/cancel/` | POST | Cancel |
-
-**Key Features:**
-- Checkpoint/Resume - Save state after each step
-- 3 Execution Modes - Sequential, parallel, dependency-based
-- Approval Gates - Human-in-the-loop via Mission Control
-- Cost Tracking - Per-step and total cost aggregation
-- Auto-Approval - Timeout-based auto-approval option
-- Retry Logic - Configurable retries per step
+**New API Endpoint:**
+```
+GET /api/orchestration/executions/{id}/steps/{step}/intelligence/
+```
 
 ---
 
@@ -62,12 +89,13 @@ OrchestrationEngine
 
 | Session | Focus | Document |
 |---------|-------|----------|
-| **764** | **Orchestration Layer** | `SESSION_764_ORCHESTRATION_LAYER.md` |
+| **766** | **Dream Origin Tracking** | *See 00-START-NEXT-SESSION.md* |
+| 765 | Orchestration Intelligence Link | `SESSION_765_ORCHESTRATION_INTELLIGENCE_LINK.md` |
+| 764 | Orchestration Layer | `SESSION_764_ORCHESTRATION_LAYER.md` |
 | 763 | Mission Control System | `SESSION_763_MISSION_CONTROL_SYSTEM.md` |
 | 761 | Learning Tab Fixes + Monitoring | `SESSION_761_LEARNING_TAB_FIXES.md` |
 | 760 | Agent Output Detail Modal | `SESSION_760_AGENT_OUTPUT_DETAIL_MODAL.md` |
 | 759 | Memory Blog Fixes | `SESSION_759_MEMORY_BLOG_FIXES.md` |
-| 758 | Integration Health Observability | `SESSION_758_INTEGRATION_HEALTH_OBSERVABILITY.md` |
 
 ---
 
@@ -78,39 +106,42 @@ OrchestrationEngine
 | **Agents** | 73 | All routable via AgentRouter |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **PA Tools** | 86 | All operational |
-| **Database Models** | 367+ | +3 orchestration models |
-| **Celery Tasks** | 142 | +3 orchestration tasks |
+| **Database Models** | 367+ | +execution_id field on step |
+| **Celery Tasks** | 142 | All operational |
 | **Body Systems** | 9/9 | 100% healthy |
 | **Sci-Fi Features** | 14/14 | 100% with UI |
 | **Integration Score** | 95% | Context injection working |
 | **Mission Control** | ACTIVE | 20 handlers registered |
-| **Orchestration** | READY | 0 executions (awaiting use) |
+| **Orchestration** | READY | Intelligence linked |
 
 ---
 
 ## Next Session Options
 
-### Option A: Orchestration UI
-Build a frontend page for creating/managing workflows and monitoring executions:
-- Workflow builder with step configuration
-- Execution monitoring dashboard
-- Approval gate action buttons
-- Cost/token usage visualization
+### Option A: Execute Real Workflows
+Test the intelligence link by executing workflows and verifying:
+- Context injection shows up
+- Memories are created and linked
+- Tool calls appear
+- Step details are correct
 
-### Option B: Create Sample Workflows
-Create practical multi-agent workflows using the new orchestration layer:
-- Content Pipeline (Research → Write → Review → Publish)
-- Stock Analysis (Scan → Analyze → Bull/Bear → Report)
-- Blockchain Audit (Scan → Analyze → Alert)
+### Option B: Memory Palace Link
+Add deep links from step intelligence to Memory Palace:
+- Click on memory → opens in Memory Palace
+- View related memories by execution
+- Navigate conversation history
 
-### Option C: Integration Testing
+### Option C: Conversation/Collaboration History
+When steps involve multi-agent collaboration (HiveMindSession), show:
+- Which agents contributed
+- Conversation turns
+- Final synthesis
+
+### Option D: Integration Testing
 Write comprehensive tests for the orchestration layer:
 - Unit tests for each service
 - Integration tests for full workflow execution
 - Mission Control approval flow testing
-
-### Option D: Workflow Templates
-Create pre-built workflow templates for common use cases that users can clone and customize.
 
 ---
 
@@ -124,12 +155,12 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Read Session 764 handoff for Orchestration details
-cat docs/handoffs/SESSION_764_ORCHESTRATION_LAYER.md
+# 3. Navigate to Agents → Orchestrations tab
+# 4. Execute a workflow
+# 5. Click on steps to see intelligence data
 
-# 4. Test orchestration API
-curl http://localhost:8000/api/orchestration/workflows/ \
-  -H "Authorization: Token YOUR_TOKEN"
+# 6. Read Session 765 handoff for details
+cat docs/handoffs/SESSION_765_ORCHESTRATION_INTELLIGENCE_LINK.md
 ```
 
 ---
@@ -152,8 +183,16 @@ From Session 764:
 
 ## Recent Commits
 
+Session 766:
+- Dream Origin Tracking - origin, confidence_floor, human_intent fields
+- Updated resurfacing methods to weight by origin
+- Jokes and probes now have reduced scores (10% and 30%)
+
+Session 765:
+- Orchestration Intelligence Link (see handoff for details)
+
 Session 764:
-- Orchestration Layer implementation (see handoff for details)
+- Orchestration Layer implementation
 
 Session 763:
 - Mission Control System - Agent outputs to Human Page actions
