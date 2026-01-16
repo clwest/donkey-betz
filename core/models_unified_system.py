@@ -8502,9 +8502,10 @@ class AgentDream(models.Model):
     ])
 
     # Dream metadata
-    inspiration_source = models.CharField(
-        max_length=200,
+    # Session 761: Changed from CharField(200) to TextField for longer inspirations
+    inspiration_source = models.TextField(
         blank=True,
+        default='',
         help_text="What inspired this dream (knowledge, trend, etc.)"
     )
     related_topics = models.JSONField(

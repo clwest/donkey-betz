@@ -3528,14 +3528,14 @@ export default function AgentsPage() {
                 </div>
               </div>
 
-              {/* Inspiration */}
+              {/* Inspiration - Session 761: Full text with proper wrapping */}
               {selectedDream.inspiration && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                    <Lightbulb size={14} />
+                    <Lightbulb size={14} className="text-accent-amber" />
                     Inspiration
                   </h3>
-                  <div className="bg-accent-amber/5 border border-accent-amber/20 rounded-lg p-4 text-gray-300 text-sm">
+                  <div className="bg-accent-amber/5 border border-accent-amber/20 rounded-lg p-4 text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
                     {selectedDream.inspiration}
                   </div>
                 </div>
@@ -3579,21 +3579,21 @@ export default function AgentsPage() {
                 </div>
               </div>
 
-              {/* Related Topics */}
+              {/* Related Topics - Session 761: Show full text, not truncated */}
               {selectedDream.related_topics && selectedDream.related_topics.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
                     <Layers size={14} />
                     Related Topics
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-2">
                     {selectedDream.related_topics.map((topic, idx) => (
-                      <span
+                      <div
                         key={idx}
-                        className="text-xs px-3 py-1.5 rounded-full bg-dark-hover text-gray-300 border border-dark-border"
+                        className="text-sm px-4 py-2 rounded-lg bg-dark-hover text-gray-300 border border-dark-border whitespace-pre-wrap"
                       >
-                        {typeof topic === 'string' ? topic.slice(0, 50) : 'Topic'}
-                      </span>
+                        {typeof topic === 'string' ? topic : 'Topic'}
+                      </div>
                     ))}
                   </div>
                 </div>
