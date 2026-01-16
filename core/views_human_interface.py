@@ -3,11 +3,14 @@ Human Interface Layer - API Views
 =================================
 
 Session 686: REST API endpoints for the Human Interface Layer.
+Session 763: Added Mission Control execute endpoint.
 
 Endpoints:
 - GET  /api/human/attention/         - Get attention stream
 - POST /api/human/attention/{id}/decide/  - Record decision
 - POST /api/human/attention/{id}/defer/   - Defer item
+- POST /api/human/attention/{id}/verify/  - Record verification outcome
+- POST /api/human/attention/{id}/execute/ - Execute Mission Control action (Session 763)
 - GET  /api/human/attention/stats/   - Get attention statistics
 - GET  /api/human/control/           - Get system control state
 - POST /api/human/control/pause/     - Pause an agent
@@ -183,6 +186,56 @@ class AttentionVerifyView(View):
 
 
 @method_decorator([csrf_exempt, login_required], name='dispatch')
+class AttentionExecuteActionView(View):
+    """
+    Session 763: Execute an action from Mission Control.
+
+    Instead of just recording a decision, this endpoint actually executes
+    the action (publish, set_alert, queue research, etc.).
+    """
+
+    def post(self, request, item_id):
+        """POST /api/human/attention/{id}/execute/"""
+        from core.models_human_interface import HumanAttentionItem
+        from core.services.mission_control_executor import mission_control_executor
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        action = data.get('action')
+        if not action:
+            return JsonResponse({'success': False, 'error': 'Action required'}, status=400)
+
+        feedback = data.get('feedback', '')
+        extra_data = data.get('extra_data', {})
+
+        try:
+            item = HumanAttentionItem.objects.get(id=item_id)
+        except HumanAttentionItem.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)
+
+        # Execute the action
+        result = mission_control_executor.execute(
+            action_id=action,
+            attention_item=item,
+            user=request.user,
+            feedback=feedback,
+            extra_data=extra_data
+        )
+
+        return JsonResponse({
+            'success': result.status.value == 'success',
+            'action': result.action_id,
+            'status': result.status.value,
+            'message': result.message,
+            'data': result.data or {},
+            'next_action': result.next_action,
+        })
+
+
+@method_decorator([csrf_exempt, login_required], name='dispatch')
 class SystemControlView(View):
     """Get and manage system control state."""
 
@@ -346,6 +399,7 @@ def get_human_interface_urls():
         path('api/human/attention/<uuid:item_id>/decide/', AttentionDecideView.as_view(), name='human-attention-decide'),
         path('api/human/attention/<uuid:item_id>/defer/', AttentionDeferView.as_view(), name='human-attention-defer'),
         path('api/human/attention/<uuid:item_id>/verify/', AttentionVerifyView.as_view(), name='human-attention-verify'),
+        path('api/human/attention/<uuid:item_id>/execute/', AttentionExecuteActionView.as_view(), name='human-attention-execute'),
 
         # Control Panel
         path('api/human/control/', SystemControlView.as_view(), name='human-control'),

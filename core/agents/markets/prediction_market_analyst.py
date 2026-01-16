@@ -16,7 +16,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 import json
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -97,6 +97,21 @@ Output Format:
 
 Remember: Markets are forward-looking. Look for what others are missing."""
 
+    # Session 763: Mission Control configuration
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='opportunity',
+        default_urgency='medium',
+        min_confidence=0.0,
+        actions=[
+            {'id': 'watch', 'label': 'Watch Market', 'style': 'primary', 'description': 'Track this market'},
+            {'id': 'research_more', 'label': 'Research More', 'style': 'success', 'description': 'Deep dive research'},
+            {'id': 'pass', 'label': 'Pass', 'style': 'secondary', 'description': 'Skip this opportunity'},
+        ],
+        payload_fields=['markets_analyzed', 'opportunities_found', 'confidence'],
+        max_items_per_hour=5
+    )
+
     def execute(self, task: str, context: Dict[str, Any] = None,
                 scifi_context: Dict[str, Any] = None,
                 spider_context: Dict[str, Any] = None) -> AgentResult:
@@ -165,7 +180,7 @@ Remember: Markets are forward-looking. Look for what others are missing."""
                 except Exception as learn_err:
                     logger.debug(f"Learning outcome recording skipped: {learn_err}")
 
-                return AgentResult(
+                result = AgentResult(
                     success=True,
                     message=response,
                     data={
@@ -178,6 +193,11 @@ Remember: Markets are forward-looking. Look for what others are missing."""
                     agent_name=self.name,
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
+
+                # Session 763: Create Mission Control attention item
+                self._maybe_create_attention_item(result, task, context)
+
+                return result
 
             except Exception as e:
                 logger.error(f"PredictionMarketAnalyst error: {e}", exc_info=True)

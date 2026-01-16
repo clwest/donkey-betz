@@ -24,7 +24,7 @@ import logging
 import time
 from typing import Dict, Any, List
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -226,6 +226,22 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             }
         }
     ]
+
+    # Session 763: Mission Control configuration
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='insight',
+        default_urgency='medium',
+        min_confidence=0.0,
+        actions=[
+            {'id': 'deep_dive', 'label': 'Deep Dive', 'style': 'primary', 'description': 'Queue deeper research'},
+            {'id': 'share', 'label': 'Share', 'style': 'success', 'description': 'Share with team'},
+            {'id': 'archive', 'label': 'Archive', 'style': 'secondary', 'description': 'Save for later'},
+            {'id': 'dismiss', 'label': 'Dismiss', 'style': 'danger', 'description': 'Not relevant'},
+        ],
+        payload_fields=['sources_count', 'topics', 'sentiment'],
+        max_items_per_hour=5
+    )
 
     def __init__(self, user=None):
         super().__init__(user)
@@ -534,6 +550,9 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             },
                             confidence=0.75
                         )
+
+                        # Session 763: Create Mission Control attention item
+                        self._maybe_create_attention_item(result, task, context)
 
                         return result
                     else:

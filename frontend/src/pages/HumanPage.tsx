@@ -45,6 +45,14 @@ import {
 import { cn } from '@/lib/cn'
 
 // Types
+// Session 763: Available action type for Mission Control
+interface AvailableAction {
+  id: string
+  label: string
+  style?: 'primary' | 'danger' | 'warning' | 'success' | 'secondary'
+  description?: string
+}
+
 interface AttentionItem {
   id: string
   source_type: string
@@ -53,7 +61,7 @@ interface AttentionItem {
   item_type: string
   title: string
   summary: string
-  payload: Record<string, unknown>
+  payload: Record<string, unknown> & { available_actions?: AvailableAction[] }
   urgency: 'critical' | 'high' | 'medium' | 'low'
   priority_score: number
   impact_estimate: string | null
@@ -530,17 +538,31 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
   )
 }
 
+// Session 763: Style mapping for Mission Control action buttons
+const ACTION_STYLE_MAP: Record<string, string> = {
+  primary: 'bg-primary-600 text-white hover:bg-primary-700',
+  success: 'bg-accent-green/20 text-accent-green hover:bg-accent-green/30',
+  danger: 'bg-accent-red/20 text-accent-red hover:bg-accent-red/30',
+  warning: 'bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30',
+  secondary: 'bg-dark-card text-gray-300 hover:bg-dark-hover',
+}
+
 // Decision Modal - Session 742: Enhanced with payload display and item type badges
+// Session 763: Added Mission Control execute action support
 function DecisionModal({
   item,
   onClose,
   onDecide,
+  onExecuteAction,
   isLoading,
+  isExecuting,
 }: {
   item: AttentionItem
   onClose: () => void
   onDecide: (decision: string, feedback: string, confidence: number) => void
+  onExecuteAction?: (action: string, feedback: string) => void
   isLoading: boolean
+  isExecuting?: boolean
 }) {
   const [feedback, setFeedback] = useState('')
   const [confidence, setConfidence] = useState(80)
@@ -660,9 +682,45 @@ function DecisionModal({
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 p-4 border-t border-dark-border">
+          {/* Session 763: Render dynamic Mission Control actions if available */}
+          {item.payload?.available_actions && item.payload.available_actions.length > 0 && onExecuteAction ? (
+            <>
+              {/* Mission Control Actions */}
+              <div className="w-full mb-2">
+                <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                  <Zap size={12} className="text-primary-400" />
+                  Mission Control Actions
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {item.payload.available_actions.map((action: AvailableAction) => (
+                    <button
+                      key={action.id}
+                      onClick={() => onExecuteAction(action.id, feedback)}
+                      disabled={isLoading || isExecuting}
+                      className={cn(
+                        'btn flex items-center gap-2',
+                        ACTION_STYLE_MAP[action.style || 'secondary']
+                      )}
+                      title={action.description}
+                    >
+                      {(isLoading || isExecuting) ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : null}
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="w-full border-t border-dark-border my-2 pt-2">
+                <p className="text-xs text-gray-500 mb-2">Standard Actions</p>
+              </div>
+            </>
+          ) : null}
+
+          {/* Standard decision actions */}
           <button
             onClick={() => onDecide('approve', feedback, confidence / 100)}
-            disabled={isLoading}
+            disabled={isLoading || isExecuting}
             className="btn btn-primary flex items-center gap-2"
           >
             {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ThumbsUp size={16} />}
@@ -670,7 +728,7 @@ function DecisionModal({
           </button>
           <button
             onClick={() => onDecide('reject', feedback, confidence / 100)}
-            disabled={isLoading}
+            disabled={isLoading || isExecuting}
             className="btn flex items-center gap-2 bg-accent-red/20 text-accent-red hover:bg-accent-red/30"
           >
             <ThumbsDown size={16} />
@@ -678,21 +736,21 @@ function DecisionModal({
           </button>
           <button
             onClick={() => onDecide('modify', feedback, confidence / 100)}
-            disabled={isLoading}
+            disabled={isLoading || isExecuting}
             className="btn btn-secondary"
           >
             Modify
           </button>
           <button
             onClick={() => onDecide('defer', feedback, confidence / 100)}
-            disabled={isLoading}
+            disabled={isLoading || isExecuting}
             className="btn btn-secondary"
           >
             Defer
           </button>
           <button
             onClick={() => onDecide('escalate', feedback, confidence / 100)}
-            disabled={isLoading}
+            disabled={isLoading || isExecuting}
             className="btn flex items-center gap-2 bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30"
           >
             <AlertTriangle size={16} />
@@ -702,7 +760,7 @@ function DecisionModal({
           {/* Session 746: Watch & Verify button - especially useful for arbitrage opportunities */}
           <button
             onClick={() => onDecide('watch', feedback, confidence / 100)}
-            disabled={isLoading}
+            disabled={isLoading || isExecuting}
             className={cn(
               "btn flex items-center gap-2",
               item.item_type === 'arbitrage'
@@ -807,6 +865,22 @@ export default function HumanPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['human-attention'] })
       queryClient.invalidateQueries({ queryKey: ['human-attention-stats'] })
+      setSelectedItem(null)
+    },
+  })
+
+  // Session 763: Mission Control execute action mutation
+  const executeActionMutation = useMutation({
+    mutationFn: ({ itemId, action, feedback, extraData }: { itemId: string; action: string; feedback?: string; extraData?: Record<string, unknown> }) =>
+      humanApi.executeAction(itemId, action, feedback, extraData),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['human-attention'] })
+      queryClient.invalidateQueries({ queryKey: ['human-attention-stats'] })
+      // Show success message from response
+      const data = response.data
+      if (data.message) {
+        console.log('Action executed:', data.message)
+      }
       setSelectedItem(null)
     },
   })
@@ -1835,7 +1909,16 @@ export default function HumanPage() {
               confidence,
             })
           }
+          // Session 763: Mission Control execute action
+          onExecuteAction={(action, feedback) =>
+            executeActionMutation.mutate({
+              itemId: selectedItem.id,
+              action,
+              feedback,
+            })
+          }
           isLoading={decideMutation.isPending}
+          isExecuting={executeActionMutation.isPending}
         />
       )}
     </div>

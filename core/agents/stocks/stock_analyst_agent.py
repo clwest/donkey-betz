@@ -20,7 +20,7 @@ import logging
 from typing import Dict, Any
 from datetime import datetime, timedelta
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -165,6 +165,22 @@ Alert on:
             }
         }
     ]
+
+    # Session 763: Mission Control configuration
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='insight',
+        default_urgency='medium',
+        min_confidence=0.0,
+        actions=[
+            {'id': 'review', 'label': 'Review Analysis', 'style': 'primary', 'description': 'Mark as reviewed'},
+            {'id': 'set_alert', 'label': 'Set Alert', 'style': 'warning', 'description': 'Create price/event alert'},
+            {'id': 'watchlist', 'label': 'Add to Watchlist', 'style': 'success', 'description': 'Track this stock'},
+            {'id': 'dismiss', 'label': 'Dismiss', 'style': 'secondary', 'description': 'Not relevant'},
+        ],
+        payload_fields=['ticker', 'severity', 'analysis'],
+        max_items_per_hour=5
+    )
 
     def execute(self, task: str, context: Dict[str, Any] = None,
                 scifi_context: Dict[str, Any] = None,
@@ -345,6 +361,9 @@ Alert on:
                 )
             except Exception as le:
                 logger.warning(f"Failed to record learning outcome: {le}")
+
+            # Session 763: Create Mission Control attention item
+            self._maybe_create_attention_item(result, task, context)
 
             return result
 
