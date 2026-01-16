@@ -4188,10 +4188,10 @@ export default function AgentsPage() {
       {/* Session 697: Knowledge Transfer Modal */}
       {selectedTransfer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
             {/* Modal Header */}
             <div className={cn(
-              "flex items-start justify-between p-6 border-b border-dark-border",
+              "flex items-start justify-between p-6 border-b border-dark-border flex-shrink-0",
               selectedTransfer.was_useful
                 ? "bg-gradient-to-r from-accent-green/10 to-accent-cyan/10"
                 : "bg-gradient-to-r from-accent-cyan/10 to-accent-purple/10"
@@ -4238,8 +4238,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+            {/* Modal Body - Session 761: Use flex-1 for proper scrolling */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-6">
               {/* Transfer Direction */}
               <div className="flex items-center justify-center gap-4 p-4 rounded-lg bg-dark-hover/50">
                 <div className="text-center">
@@ -4357,8 +4357,8 @@ export default function AgentsPage() {
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+            {/* Modal Footer - Session 761: flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <span className="capitalize">{selectedTransfer.type?.replace('_', ' ') || 'Transfer'}</span>
                 {selectedTransfer.source && (
