@@ -3981,11 +3981,322 @@ export default function AgentsPage() {
                                   <Bot size={14} /> Execution Details
                                 </h5>
                                 <div className="text-xs bg-dark-card p-3 rounded space-y-2">
-                                  <p><span className="text-gray-500">Task:</span> <span className="text-white">{stepIntelligenceData.agent_execution.task?.substring(0, 100)}...</span></p>
+                                  {/* Session 767: Expandable task description */}
+                                  <div>
+                                    <span className="text-gray-500">Task:</span>
+                                    {stepIntelligenceData.agent_execution.task && stepIntelligenceData.agent_execution.task.length > 150 ? (
+                                      <details className="inline">
+                                        <summary className="text-white cursor-pointer hover:text-accent-cyan ml-1">
+                                          {stepIntelligenceData.agent_execution.task.substring(0, 150)}...
+                                        </summary>
+                                        <div className="mt-2 p-2 bg-dark-bg rounded border border-dark-border text-white whitespace-pre-wrap">
+                                          {stepIntelligenceData.agent_execution.task}
+                                        </div>
+                                      </details>
+                                    ) : (
+                                      <span className="text-white ml-1">{stepIntelligenceData.agent_execution.task || 'No task description'}</span>
+                                    )}
+                                  </div>
                                   <p><span className="text-gray-500">Execution Time:</span> <span className="text-white">{stepIntelligenceData.agent_execution.execution_time_ms}ms</span></p>
                                   <p><span className="text-gray-500">Tokens:</span> <span className="text-white">{stepIntelligenceData.agent_execution.tokens_used}</span></p>
                                   <p><span className="text-gray-500">Cost:</span> <span className="text-white">${stepIntelligenceData.agent_execution.cost}</span></p>
                                   <p><span className="text-gray-500">Execution ID:</span> <code className="text-accent-cyan text-[10px]">{stepIntelligenceData.agent_execution.id}</code></p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Session 767: Step Output Data - fully formatted display */}
+                            {stepIntelligenceData.step_info?.output_data && Object.keys(stepIntelligenceData.step_info.output_data).length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-accent-cyan mb-2 flex items-center gap-2">
+                                  <FileText size={14} /> Step Output
+                                </h5>
+                                <div className="text-xs bg-dark-card p-3 rounded space-y-4">
+                                  {(() => {
+                                    const data = stepIntelligenceData.step_info.output_data as Record<string, unknown>
+                                    const innerData = data?.data as Record<string, unknown> | undefined
+
+                                    // ContentWriterAgent: Full formatted content
+                                    const content = innerData?.content as Record<string, unknown> | undefined
+                                    if (content) {
+                                      const intro = content.intro ? String(content.intro) : ''
+                                      const body = content.body ? String(content.body) : ''
+                                      const conclusion = content.conclusion ? String(content.conclusion) : ''
+                                      const summary = content.summary ? String(content.summary) : ''
+                                      const tags = content.tags && Array.isArray(content.tags) ? content.tags as string[] : []
+                                      const title = content.title ? String(content.title) : ''
+
+                                      return (
+                                        <div className="space-y-4">
+                                          {title && (
+                                            <h6 className="text-white font-semibold text-sm">{title}</h6>
+                                          )}
+                                          {tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                              {tags.map((tag, i) => (
+                                                <span key={i} className="px-2 py-0.5 bg-accent-purple/20 text-accent-purple rounded text-[10px]">
+                                                  {String(tag)}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                          {intro && (
+                                            <div>
+                                              <span className="text-accent-cyan font-medium">Introduction</span>
+                                              <p className="text-gray-300 mt-1 whitespace-pre-wrap">{intro}</p>
+                                            </div>
+                                          )}
+                                          {body && (
+                                            <div>
+                                              <span className="text-accent-cyan font-medium">Body</span>
+                                              <p className="text-gray-300 mt-1 whitespace-pre-wrap">{body}</p>
+                                            </div>
+                                          )}
+                                          {conclusion && (
+                                            <div>
+                                              <span className="text-accent-cyan font-medium">Conclusion</span>
+                                              <p className="text-gray-300 mt-1 whitespace-pre-wrap">{conclusion}</p>
+                                            </div>
+                                          )}
+                                          {summary && !intro && !body && (
+                                            <div>
+                                              <span className="text-accent-cyan font-medium">Summary</span>
+                                              <p className="text-gray-300 mt-1 whitespace-pre-wrap">{summary}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    }
+
+                                    // ResearchAgent: Formatted results
+                                    if (innerData?.results && Array.isArray(innerData.results)) {
+                                      const results = innerData.results as Array<Record<string, unknown>>
+                                      const queryText = innerData.query ? String(innerData.query) : ''
+                                      const mlAnalysis = innerData.ml_analysis as Record<string, unknown> | undefined
+                                      // Session 767: Extract ML analysis values to typed variables
+                                      const mlTopics = mlAnalysis?.topics_detected && Array.isArray(mlAnalysis.topics_detected)
+                                        ? (mlAnalysis.topics_detected as string[])
+                                        : null
+                                      const mlSentiment = mlAnalysis?.sentiment ? String(mlAnalysis.sentiment) : null
+
+                                      return (
+                                        <div className="space-y-4">
+                                          {queryText && (
+                                            <div>
+                                              <span className="text-accent-amber font-medium">Research Query</span>
+                                              {queryText.length > 300 ? (
+                                                <details className="mt-1">
+                                                  <summary className="text-gray-300 cursor-pointer hover:text-white">
+                                                    {queryText.substring(0, 300)}...
+                                                  </summary>
+                                                  <p className="text-gray-300 mt-2 p-2 bg-dark-bg rounded whitespace-pre-wrap">{queryText}</p>
+                                                </details>
+                                              ) : (
+                                                <p className="text-gray-300 mt-1 whitespace-pre-wrap">{queryText}</p>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {mlAnalysis && (
+                                            <div className="bg-accent-green/10 border border-accent-green/30 rounded p-2">
+                                              <span className="text-accent-green font-medium">✓ ML Analysis</span>
+                                              {mlTopics && mlTopics.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                  {mlTopics.map((topic, i) => (
+                                                    <span key={i} className="px-2 py-0.5 bg-accent-green/20 text-accent-green rounded text-[10px]">
+                                                      {String(topic)}
+                                                    </span>
+                                                  ))}
+                                                </div>
+                                              )}
+                                              {mlSentiment && (
+                                                <p className="text-gray-400 mt-1">Sentiment: <span className="text-white">{mlSentiment}</span></p>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          <details open>
+                                            <summary className="text-accent-cyan font-medium cursor-pointer">
+                                              Results ({results.length})
+                                            </summary>
+                                            <div className="space-y-2 mt-2 max-h-96 overflow-y-auto">
+                                              {results.map((result, i) => {
+                                                const source = result.source ? String(result.source) : 'Unknown'
+                                                const resultData = result.data as Array<Record<string, unknown>> | Record<string, unknown> | undefined
+                                                // Handle both array and object data structures
+                                                const dataItems = Array.isArray(resultData) ? resultData : (resultData ? [resultData] : [])
+
+                                                return (
+                                                  <div key={i} className="bg-dark-bg rounded p-2 border border-dark-border">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                      <span className="text-accent-amber text-[10px] font-mono">{source}</span>
+                                                    </div>
+                                                    {dataItems.slice(0, 3).map((item, j) => {
+                                                      const itemTitle = item?.title ? String(item.title) : null
+                                                      const itemContent = item?.content ? String(item.content) : (item?.description ? String(item.description) : null)
+                                                      const itemUrl = item?.url ? String(item.url) : null
+                                                      return (
+                                                        <div key={j} className="mt-1 text-gray-400 border-l-2 border-dark-border pl-2 mb-2">
+                                                          {itemTitle && <p className="text-white text-[11px]">{itemTitle}</p>}
+                                                          {itemContent && (
+                                                            itemContent.length > 200 ? (
+                                                              <details className="mt-0.5">
+                                                                <summary className="text-[10px] cursor-pointer hover:text-white">
+                                                                  {itemContent.substring(0, 200)}...
+                                                                </summary>
+                                                                <p className="text-[10px] mt-1 whitespace-pre-wrap">{itemContent}</p>
+                                                              </details>
+                                                            ) : (
+                                                              <p className="text-[10px] mt-0.5">{itemContent}</p>
+                                                            )
+                                                          )}
+                                                          {itemUrl && (
+                                                            <a href={itemUrl} target="_blank" rel="noopener noreferrer"
+                                                               className="text-accent-cyan hover:underline text-[10px] inline-block">
+                                                              View Source →
+                                                            </a>
+                                                          )}
+                                                        </div>
+                                                      )
+                                                    })}
+                                                    {dataItems.length > 3 && (
+                                                      <p className="text-gray-600 text-[10px]">+{dataItems.length - 3} more items from {source}</p>
+                                                    )}
+                                                  </div>
+                                                )
+                                              })}
+                                            </div>
+                                          </details>
+                                        </div>
+                                      )
+                                    }
+
+                                    // ContentStrategyAgent: Recommendations and tool results
+                                    if (innerData?.recommendations || innerData?.tool_results) {
+                                      const recommendations = innerData.recommendations as Array<Record<string, unknown>> | string | undefined
+                                      const toolResults = innerData.tool_results as Array<Record<string, unknown>> | undefined
+                                      const taskDesc = innerData.task ? String(innerData.task) : ''
+
+                                      return (
+                                        <div className="space-y-4">
+                                          {taskDesc && (
+                                            <div>
+                                              <span className="text-accent-amber font-medium">Task</span>
+                                              <p className="text-gray-300 mt-1 whitespace-pre-wrap">{taskDesc}</p>
+                                            </div>
+                                          )}
+
+                                          {toolResults && Array.isArray(toolResults) && toolResults.length > 0 && (
+                                            <details open>
+                                              <summary className="text-accent-cyan font-medium cursor-pointer">
+                                                Tool Results ({toolResults.length})
+                                              </summary>
+                                              <div className="space-y-2 mt-2">
+                                                {toolResults.map((tr, i) => {
+                                                  const toolName = tr.tool ? String(tr.tool) : `Tool ${i + 1}`
+                                                  const toolOutput = tr.output || tr.result
+                                                  const outputStr = typeof toolOutput === 'object'
+                                                    ? JSON.stringify(toolOutput, null, 2)
+                                                    : String(toolOutput || '')
+                                                  return (
+                                                    <div key={i} className="bg-dark-bg rounded p-2 border border-dark-border">
+                                                      <span className="text-accent-purple text-[11px] font-mono">{toolName}</span>
+                                                      {outputStr.length > 300 ? (
+                                                        <details className="mt-1">
+                                                          <summary className="text-gray-400 text-[10px] cursor-pointer">
+                                                            {outputStr.substring(0, 300)}...
+                                                          </summary>
+                                                          <pre className="text-gray-300 text-[10px] mt-1 whitespace-pre-wrap overflow-x-auto">{outputStr}</pre>
+                                                        </details>
+                                                      ) : (
+                                                        <pre className="text-gray-300 text-[10px] mt-1 whitespace-pre-wrap">{outputStr}</pre>
+                                                      )}
+                                                    </div>
+                                                  )
+                                                })}
+                                              </div>
+                                            </details>
+                                          )}
+
+                                          {recommendations && (
+                                            <div>
+                                              <span className="text-accent-green font-medium">Recommendations</span>
+                                              {typeof recommendations === 'string' ? (
+                                                <p className="text-gray-300 mt-1 whitespace-pre-wrap">{recommendations}</p>
+                                              ) : Array.isArray(recommendations) ? (
+                                                <ul className="mt-1 space-y-1">
+                                                  {recommendations.map((rec, i) => (
+                                                    <li key={i} className="text-gray-300 text-[11px] flex items-start gap-2">
+                                                      <span className="text-accent-green">•</span>
+                                                      <span>{typeof rec === 'object' ? JSON.stringify(rec) : String(rec)}</span>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              ) : null}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    }
+
+                                    // Generic message output
+                                    if (data?.message) {
+                                      const msgText = String(data.message)
+                                      return (
+                                        <div>
+                                          <span className="text-accent-cyan font-medium">Output</span>
+                                          {msgText.length > 500 ? (
+                                            <details className="mt-1" open>
+                                              <summary className="text-gray-300 cursor-pointer hover:text-white">
+                                                {msgText.substring(0, 500)}...
+                                              </summary>
+                                              <p className="text-gray-300 mt-2 p-2 bg-dark-bg rounded whitespace-pre-wrap">{msgText}</p>
+                                            </details>
+                                          ) : (
+                                            <p className="text-gray-300 mt-1 whitespace-pre-wrap">{msgText}</p>
+                                          )}
+                                        </div>
+                                      )
+                                    }
+
+                                    // Fallback: Format any object nicely with expandable sections
+                                    return (
+                                      <div className="space-y-3">
+                                        {Object.entries(data).map(([key, value]) => {
+                                          if (key === 'cost' || key === 'tokens') return null
+                                          const displayValue = typeof value === 'object'
+                                            ? JSON.stringify(value, null, 2)
+                                            : String(value)
+                                          const isLong = displayValue.length > 300
+                                          return (
+                                            <div key={key}>
+                                              <span className="text-accent-cyan font-medium capitalize">{key.replace(/_/g, ' ')}</span>
+                                              {isLong ? (
+                                                <details className="mt-1">
+                                                  <summary className="text-gray-300 text-[11px] cursor-pointer hover:text-white">
+                                                    {displayValue.substring(0, 300)}...
+                                                  </summary>
+                                                  <pre className="text-gray-300 text-[11px] mt-2 p-2 bg-dark-bg rounded whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto">{displayValue}</pre>
+                                                </details>
+                                              ) : (
+                                                <p className="text-gray-300 text-[11px] mt-0.5 whitespace-pre-wrap">{displayValue}</p>
+                                              )}
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    )
+                                  })()}
+
+                                  {/* Raw JSON for debugging - collapsed by default */}
+                                  <details className="mt-3 border-t border-dark-border pt-3">
+                                    <summary className="text-[10px] text-gray-600 cursor-pointer hover:text-gray-400">
+                                      🔧 Developer: View Raw JSON
+                                    </summary>
+                                    <pre className="mt-2 text-[10px] text-gray-500 overflow-x-auto max-h-48 bg-dark-bg p-2 rounded">
+                                      {JSON.stringify(stepIntelligenceData.step_info.output_data, null, 2)}
+                                    </pre>
+                                  </details>
                                 </div>
                               </div>
                             )}

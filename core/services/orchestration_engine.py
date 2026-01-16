@@ -108,13 +108,15 @@ class OrchestrationEngine:
         from core.models_orchestration import OrchestrationExecution
 
         # Create execution record
+        # Note: timeout_at is set when execution actually starts, not at creation time
+        # This prevents issues with queued async executions timing out before they start
         execution = OrchestrationExecution.objects.create(
             workflow=workflow,
             triggered_by=user,
             input_data=input_data or {},
             status='pending',
             total_steps=workflow.steps.count(),
-            timeout_at=timezone.now() + timedelta(seconds=workflow.timeout_seconds)
+            timeout_at=None  # Session 767: Set at start time, not creation time
         )
 
         logger.info(
@@ -251,7 +253,10 @@ class OrchestrationEngine:
         workflow = execution.workflow
         execution.status = 'running'
         execution.started_at = execution.started_at or timezone.now()
-        execution.save(update_fields=['status', 'started_at'])
+        # Session 767: Set timeout_at from actual start time, not creation time
+        if not execution.timeout_at:
+            execution.timeout_at = timezone.now() + timedelta(seconds=workflow.timeout_seconds)
+        execution.save(update_fields=['status', 'started_at', 'timeout_at'])
 
         try:
             # Get ordered steps

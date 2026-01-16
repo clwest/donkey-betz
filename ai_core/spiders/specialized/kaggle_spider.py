@@ -126,10 +126,19 @@ class KaggleSpider:
             if response.status_code == 200:
                 competitions = response.json()
                 for comp in competitions[:10]:
+                    # Session 767: Handle ref that might be full URL or just slug
+                    ref = comp.get('ref', '')
+                    if ref.startswith('http'):
+                        comp_url = ref
+                    elif '/' in ref:
+                        # ref like "competitions/name" - just use as path
+                        comp_url = f"https://www.kaggle.com/{ref}"
+                    else:
+                        comp_url = f"https://www.kaggle.com/c/{ref}"
                     items.append({
                         'title': comp.get('title', 'Kaggle Competition'),
-                        'url': f"https://www.kaggle.com/c/{comp.get('ref', '')}",
-                        'link': f"https://www.kaggle.com/c/{comp.get('ref', '')}",
+                        'url': comp_url,
+                        'link': comp_url,
                         'summary': comp.get('description', '')[:300] if comp.get('description') else '',
                         'description': comp.get('description', '')[:300] if comp.get('description') else '',
                         'reward': comp.get('reward', ''),
@@ -159,10 +168,21 @@ class KaggleSpider:
             if response.status_code == 200:
                 datasets = response.json()
                 for ds in datasets[:10]:
+                    # Session 767: Handle ref that might be full URL or just slug
+                    ref = ds.get('ref', '')
+                    if ref.startswith('http'):
+                        ds_url = ref
+                    elif '/' in ref and not ref.startswith('datasets/'):
+                        # ref like "owner/dataset-name"
+                        ds_url = f"https://www.kaggle.com/datasets/{ref}"
+                    elif ref.startswith('datasets/'):
+                        ds_url = f"https://www.kaggle.com/{ref}"
+                    else:
+                        ds_url = f"https://www.kaggle.com/datasets/{ref}"
                     items.append({
                         'title': ds.get('title', 'Kaggle Dataset'),
-                        'url': f"https://www.kaggle.com/datasets/{ds.get('ref', '')}",
-                        'link': f"https://www.kaggle.com/datasets/{ds.get('ref', '')}",
+                        'url': ds_url,
+                        'link': ds_url,
                         'summary': ds.get('subtitle', '')[:300] if ds.get('subtitle') else '',
                         'description': ds.get('subtitle', '')[:300] if ds.get('subtitle') else '',
                         'downloads': ds.get('downloadCount', 0),
