@@ -1245,6 +1245,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             Dictionary with execution results
         """
         try:
+            # Session 761: Track start time for response time metrics
+            import time
+            self._tool_start_time = time.time()
+
             function_name = tool_call['function']['name']
             arguments = json.loads(tool_call['function']['arguments'])
 
@@ -1419,6 +1423,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             self._last_tool_result = result
             logger.info(f"📦 Stored tool result: {result}")
 
+            # Session 761: Track tool usage in AgentTool model
+            self._track_tool_usage(function_name, result, start_time=getattr(self, '_tool_start_time', None))
+
             return result
 
         except Exception as e:
@@ -1427,6 +1434,54 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'success': False,
                 'error': f"Tool execution failed: {str(e)}"
             }
+
+    def _track_tool_usage(self, tool_name: str, result: Dict[str, Any], start_time: float = None):
+        """
+        Session 761: Track tool usage metrics in AgentTool model.
+
+        Updates usage_count, avg_response_time_ms, and success_rate.
+        """
+        try:
+            from core.models.agents_registry.models import AgentTool
+            import time
+
+            # Calculate response time
+            response_time_ms = 0.0
+            if start_time:
+                response_time_ms = (time.time() - start_time) * 1000
+
+            # Determine success
+            is_success = result.get('success', True) if isinstance(result, dict) else True
+
+            # Update the tool record
+            tool = AgentTool.objects.filter(name=tool_name).first()
+            if tool:
+                # Update usage count
+                tool.usage_count += 1
+
+                # Update rolling average response time
+                if tool.usage_count == 1:
+                    tool.avg_response_time_ms = response_time_ms
+                else:
+                    # Exponential moving average (gives more weight to recent calls)
+                    alpha = 0.2  # Weight for new value
+                    tool.avg_response_time_ms = (alpha * response_time_ms +
+                                                  (1 - alpha) * tool.avg_response_time_ms)
+
+                # Update success rate (rolling average)
+                success_value = 1.0 if is_success else 0.0
+                if tool.usage_count == 1:
+                    tool.success_rate = success_value
+                else:
+                    alpha = 0.1  # Weight for new success/failure
+                    tool.success_rate = (alpha * success_value +
+                                         (1 - alpha) * tool.success_rate)
+
+                tool.save(update_fields=['usage_count', 'avg_response_time_ms', 'success_rate'])
+                logger.debug(f"📊 Tracked tool usage: {tool_name} - {tool.usage_count} uses, {tool.avg_response_time_ms:.0f}ms avg")
+        except Exception as e:
+            # Don't let tracking errors break tool execution
+            logger.debug(f"Could not track tool usage for {tool_name}: {e}")
 
     # Session 131: Agent Handler Methods
     def _resolve_hybrid_image_id(self, image_id: str) -> str:
