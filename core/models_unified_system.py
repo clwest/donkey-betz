@@ -4762,6 +4762,23 @@ class CustomWorkflow(models.Model):
     last_run_at = models.DateTimeField(null=True, blank=True)
     next_run_at = models.DateTimeField(null=True, blank=True)
 
+    # Session 764: Orchestration Layer Configuration
+    EXECUTION_MODE_CHOICES = [
+        ('sequential', 'Sequential'),  # Steps run one after another
+        ('parallel', 'Parallel'),  # Independent steps run in parallel
+        ('dependency', 'Dependency-Based'),  # Steps run based on depends_on_steps
+    ]
+    execution_mode = models.CharField(
+        max_length=20, choices=EXECUTION_MODE_CHOICES, default='sequential'
+    )
+    max_retries = models.IntegerField(default=3)  # Max retries per step
+    timeout_seconds = models.IntegerField(default=3600)  # Workflow timeout (1 hour default)
+    require_approval_on_error = models.BooleanField(default=True)  # Pause for human on error
+    cost_budget = models.DecimalField(
+        max_digits=10, decimal_places=4, null=True, blank=True,
+        help_text="Maximum allowed cost for workflow execution"
+    )
+
     # Status
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -4811,18 +4828,100 @@ class CustomWorkflowStep(models.Model):
     name = models.CharField(max_length=100)  # Human-readable step name
     description = models.TextField(blank=True)
 
-    # Agent reference
+    # Agent reference - Session 764: Expanded to include all routable agents
     AGENT_CHOICES = [
-        ('web_search', 'Web Search'),
-        ('coleadership_agent', 'Executive Team Review'),
-        ('image_generation_agent', 'Image Generation'),
-        ('video_generation_agent', 'Video Generation'),
-        ('audio_generation_agent', 'Audio Generation'),
-        ('image_selection', 'Image Selection'),
-        ('image_variation_agent', 'Image Variations'),
-        ('create_project_from_research', 'Create Project'),
+        # Creation Agents
+        ('ImageAgent', 'Image Generation'),
+        ('VideoAgent', 'Video Generation'),
+        ('AudioAgent', 'Audio Generation'),
+        ('ThreeDAgent', '3D Model Generation'),
+        # Editing Agents
+        ('ImageEditingAgent', 'Image Editing'),
+        ('VideoEditingAgent', 'Video Editing'),
+        # Research Agents
+        ('ResearchAgent', 'Research'),
+        # Writing Agents
+        ('ContentWriterAgent', 'Content Writing'),
+        # Strategy Agents
+        ('ContentStrategyAgent', 'Content Strategy'),
+        ('BrandIdentityAgent', 'Brand Identity'),
+        ('SEOOptimizerAgent', 'SEO Optimization'),
+        ('SocialMediaAgent', 'Social Media'),
+        # Executive Agents
+        ('CTOAgent', 'CTO Review'),
+        ('COOAgent', 'COO Review'),
+        ('CreativeDirectorAgent', 'Creative Direction'),
+        ('MeetingCoordinatorAgent', 'Meeting Coordination'),
+        # Analysis Agents
+        ('TrendAnalysisAgent', 'Trend Analysis'),
+        ('OpportunityScoringAgent', 'Opportunity Scoring'),
+        # Training Agents
+        ('CharacterTrainingAgent', 'Character Training'),
+        ('TrainedCreationAgent', 'Trained Creation'),
+        # Security Agents
+        ('MemoryIsolationAgent', 'Memory Isolation'),
+        ('ContentAuditAgent', 'Content Audit'),
+        # Business Research Agents
+        ('CompetitorAnalysisAgent', 'Competitor Analysis'),
+        ('CustomerResearchAgent', 'Customer Research'),
+        ('BrandStrategyAgent', 'Brand Strategy'),
+        ('MarketingStrategyAgent', 'Marketing Strategy'),
+        ('MarketIntelligenceAgent', 'Market Intelligence'),
+        # Legal Agents
+        ('LegalDocDrafterAgent', 'Legal Document Drafting'),
+        # Development Agents
+        ('CodeGeneratorAgent', 'Code Generation'),
+        ('FullStackDeveloperAgent', 'Full Stack Development'),
+        ('CodeReviewAgent', 'Code Review'),
+        ('DevOpsAgent', 'DevOps'),
+        # Stock/Market Agents
+        ('StockAuditCoordinator', 'Stock Audit Coordination'),
+        ('StockAnalystAgent', 'Stock Analysis'),
+        ('MarketMovementMonitorAgent', 'Market Movement Monitor'),
+        ('BullCaseAgent', 'Bull Case Analysis'),
+        ('BearCaseAgent', 'Bear Case Analysis'),
+        ('SignalScannerAgent', 'Signal Scanning'),
+        # Blockchain Agents
+        ('BlockchainAuditCoordinator', 'Blockchain Audit'),
+        ('SmartContractAuditorAgent', 'Smart Contract Audit'),
+        ('TransactionMonitorAgent', 'Transaction Monitor'),
+        ('WhaleWatcherAgent', 'Whale Watcher'),
+        ('ExploitDetectorAgent', 'Exploit Detection'),
+        # Narrative Agents
+        ('NarrativeDriftCoordinator', 'Narrative Drift'),
+        ('NarrativeHistorianAgent', 'Narrative History'),
+        ('TrendBreakDetectorAgent', 'Trend Break Detection'),
+        ('CulturalImpactAgent', 'Cultural Impact'),
+        # Content Studio Agents
+        ('AutonomousContentStudioCoordinator', 'Autonomous Content Studio'),
+        ('TopicMinerAgent', 'Topic Mining'),
+        ('ContrarianAgent', 'Contrarian Analysis'),
+        ('PerformanceAnalystAgent', 'Performance Analysis'),
+        ('ContentDiversityOrchestrator', 'Content Diversity'),
+        # Rendering Agents
+        ('ResolveAgent', 'Resolve Rendering'),
+        # Podcast Studio Agents
+        ('PodcastCoordinatorAgent', 'Podcast Coordination'),
+        ('DebateAdvocateAgent', 'Debate Advocate'),
+        ('DebateSkepticAgent', 'Debate Skeptic'),
+        ('ModeratorAgent', 'Debate Moderation'),
+        # Orchestration Agents
+        ('WorkflowAgent', 'Workflow Orchestration'),
+        ('WorkflowOrchestrationAgent', 'Workflow Orchestration (Advanced)'),
+        ('CampaignOrchestratorAgent', 'Campaign Orchestration'),
+        ('OpportunityPipelineAgent', 'Opportunity Pipeline'),
+        ('ContentExecutorAgent', 'Content Execution'),
+        # Markets Agents
+        ('PredictionMarketAnalyst', 'Prediction Market Analysis'),
+        ('SportsOddsAnalyst', 'Sports Odds Analysis'),
+        ('ArbitrageDetector', 'Arbitrage Detection'),
+        # Special Agents
+        ('ThinkingAgent', 'AI Thinking'),
+        ('TechnicalDocumentAgent', 'Technical Documentation'),
+        ('SystemIntelligenceAgent', 'System Intelligence'),
+        ('PersonalAssistantAgent', 'Personal Assistant'),
     ]
-    agent = models.CharField(max_length=50, choices=AGENT_CHOICES)
+    agent = models.CharField(max_length=100, choices=AGENT_CHOICES)
 
     # Step configuration
     config = models.JSONField(default=dict, blank=True)  # Step-specific config
@@ -4835,6 +4934,34 @@ class CustomWorkflowStep(models.Model):
     # Error handling
     is_required = models.BooleanField(default=True)  # If false, workflow continues on failure
     retry_count = models.IntegerField(default=0)  # Number of retries on failure
+
+    # Session 764: Orchestration Layer - Step Configuration
+    timeout_seconds = models.IntegerField(
+        default=300, help_text="Step timeout in seconds (5 min default)"
+    )
+    requires_approval = models.BooleanField(
+        default=False, help_text="Pause for human approval before proceeding"
+    )
+    approval_config = models.JSONField(
+        default=dict, blank=True,
+        help_text="Approval configuration: timeout_hours, auto_approve, message"
+    )
+    # Example: {"timeout_hours": 24, "auto_approve_on_timeout": False, "approval_message": "Review output"}
+
+    depends_on_steps = models.JSONField(
+        default=list, blank=True,
+        help_text="List of step orders this step depends on (for parallel execution)"
+    )
+    # Example: [1, 2] means this step waits for steps 1 and 2 to complete
+
+    rollback_step = models.IntegerField(
+        null=True, blank=True,
+        help_text="Step order to execute if this step fails (for rollback)"
+    )
+    cost_limit = models.DecimalField(
+        max_digits=10, decimal_places=4, null=True, blank=True,
+        help_text="Maximum allowed cost for this step"
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

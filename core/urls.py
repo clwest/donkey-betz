@@ -3608,6 +3608,14 @@ urlpatterns += [
 from core.views_human_interface import get_human_interface_urls
 urlpatterns += get_human_interface_urls()
 
+# =========================================================================
+# Session 764: Orchestration Layer API (Multi-Agent Workflow Execution)
+# =========================================================================
+from core.views_orchestration import get_urlpatterns as get_orchestration_urls
+urlpatterns += [
+    path('api/orchestration/', include((get_orchestration_urls(), 'orchestration'))),
+]
+
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

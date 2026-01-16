@@ -1729,6 +1729,25 @@ app.conf.beat_schedule = {
             'queue': 'celery',  # Use default queue
         }
     },
+    # ==========================================================================
+    # Session 764: Orchestration Layer - Multi-Agent Workflow Execution
+    # ==========================================================================
+    # Check for timed-out orchestration executions
+    'check-orchestration-timeouts': {
+        'task': 'core.tasks.check_orchestration_timeouts',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {
+            'expires': 300,  # 5 minutes
+        }
+    },
+    # Check for auto-approvals on expired approval gates
+    'check-orchestration-auto-approvals': {
+        'task': 'core.tasks.check_orchestration_auto_approvals',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {
+            'expires': 300,  # 5 minutes
+        }
+    },
 }
 
 # Task routing configuration

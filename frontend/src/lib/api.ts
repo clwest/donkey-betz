@@ -1952,3 +1952,102 @@ export const integrationHealthApi = {
   // Execution quality analysis (with vs without context)
   quality: () => api.get('/integration/quality/'),
 }
+
+// Session 764: Orchestration Layer API (Multi-Agent Workflow Execution)
+export interface OrchestrationWorkflow {
+  id: string
+  name: string
+  description: string
+  execution_mode: 'sequential' | 'parallel' | 'dependency'
+  max_retries: number
+  timeout_seconds: number
+  cost_budget: string | null
+  step_count: number
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface OrchestrationExecution {
+  id: string
+  workflow_id: string
+  workflow_name: string
+  status: 'pending' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled' | 'paused'
+  current_step: number
+  total_steps: number
+  total_cost: string
+  total_tokens: number
+  started_at: string | null
+  completed_at: string | null
+  error_message: string | null
+  triggered_by: string | null
+}
+
+export interface OrchestrationStepExecution {
+  step_number: number
+  agent_name: string
+  status: string
+  started_at: string | null
+  completed_at: string | null
+  cost: string
+  tokens: number
+  retry_count: number
+  error_message: string | null
+  output_preview: string | null
+}
+
+export interface OrchestrationExecutionDetail {
+  execution: OrchestrationExecution & {
+    input_data: Record<string, unknown>
+    final_output: Record<string, unknown> | null
+  }
+  steps: OrchestrationStepExecution[]
+  approval_gates: {
+    id: string
+    step_number: number | null
+    status: string
+    created_at: string | null
+    expires_at: string | null
+  }[]
+}
+
+export const orchestrationApi = {
+  // List available workflows
+  listWorkflows: () =>
+    api.get<{ success: boolean; workflows: OrchestrationWorkflow[]; count: number }>(
+      '/orchestration/workflows/'
+    ),
+
+  // Execute a workflow
+  execute: (workflowId: string, input?: Record<string, unknown>, async = true) =>
+    api.post<{ success: boolean; execution_id: string; status: string; message: string }>(
+      `/orchestration/workflows/${workflowId}/execute/`,
+      { input, async }
+    ),
+
+  // List executions
+  listExecutions: (params?: { status?: string; workflow_id?: string; limit?: number; all?: boolean }) =>
+    api.get<{ success: boolean; executions: OrchestrationExecution[]; count: number }>(
+      '/orchestration/executions/',
+      { params }
+    ),
+
+  // Get execution details
+  getExecution: (executionId: string) =>
+    api.get<{ success: boolean } & OrchestrationExecutionDetail>(
+      `/orchestration/executions/${executionId}/`
+    ),
+
+  // Resume a paused/waiting execution
+  resume: (executionId: string, modifications?: Record<string, unknown>) =>
+    api.post<{ success: boolean; execution_id: string; status: string; message: string }>(
+      `/orchestration/executions/${executionId}/resume/`,
+      { modifications }
+    ),
+
+  // Cancel an execution
+  cancel: (executionId: string, reason?: string) =>
+    api.post<{ success: boolean; execution_id: string; status: string; message: string }>(
+      `/orchestration/executions/${executionId}/cancel/`,
+      { reason }
+    ),
+}
