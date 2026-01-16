@@ -232,6 +232,111 @@ stuck = AgentExecution.objects.filter(status='in_progress')
 print(f'Stuck AgentExecutions: {stuck.count()}')"
 ```
 
+## Modal Formatting Fixes
+
+### Problem
+User reported that execution detail modals were showing truncated data:
+1. **Task descriptions cut off** at 500 characters
+2. **Research Query content truncated** - showed "...all underpinned by inve" instead of full text
+3. **Doubled Kaggle URLs** - `https://www.kaggle.com/c/https://www.kaggle.com/competitions/...`
+
+### Root Causes
+
+1. **Task field truncated**: `agent_router.py:1092` truncates task to 500 chars when saving AgentExecution, but full task is stored in `input_data['task']`
+
+2. **Dream/HiveMind content truncated**: Pipeline files (`dream_execution_pipeline.py:272`, `hivemind_execution_pipeline.py:243`) truncate content to 500 chars in `description` field, but full content is stored in `config`
+
+3. **Kaggle spider URL construction**: `kaggle_spider.py` prepended `https://www.kaggle.com/c/` to refs that were already full URLs
+
+### Fixes Applied
+
+#### Fix 6: Return full task from API (views_orchestration.py)
+```python
+# Session 767: Get full task from input_data (task field is truncated to 500 chars)
+input_data = agent_exec.input_data or {}
+full_task = input_data.get('task') or agent_exec.task
+```
+
+#### Fix 7: Build task with full config content (orchestration_step_executor.py)
+```python
+def _build_task(self, step, context):
+    config = step.config or {}
+
+    # Check for dream context (from dream_execution_pipeline)
+    dream_ctx = config.get('dream_context', {})
+    if dream_ctx:
+        task_parts = [step.name.split(': ', 1)[-1] if ': ' in step.name else step.description.split('\n')[0]]
+        task_parts.append("")
+        task_parts.append("Context from dream:")
+        task_parts.append(f"- Title: {dream_ctx.get('title', 'N/A')}")
+        task_parts.append(f"- Content: {dream_ctx.get('content', 'N/A')}")  # Full content!
+        task_parts.append(f"- Type: {dream_ctx.get('type', 'N/A')}")
+        return '\n'.join(task_parts)
+
+    # Similar for hivemind_context...
+```
+
+#### Fix 8: Kaggle spider URL construction (kaggle_spider.py)
+```python
+# Session 767: Handle ref that might be full URL or just slug
+ref = comp.get('ref', '')
+if ref.startswith('http'):
+    comp_url = ref  # Already a full URL
+elif '/' in ref:
+    comp_url = f"https://www.kaggle.com/{ref}"  # Path like "competitions/name"
+else:
+    comp_url = f"https://www.kaggle.com/c/{ref}"  # Just a slug
+```
+
+### Data Fixes
+
+Fixed existing bad data in database:
+
+| Table | Records Fixed | Issue |
+|-------|---------------|-------|
+| AgentExecution | 31 | Doubled Kaggle URLs |
+| OrchestrationStepExecution | 7 | Doubled Kaggle URLs |
+
+Fix command used:
+```python
+import re
+# Pattern: https://www.kaggle.com/c/https://www.kaggle.com/competitions/...
+# Fixed to: https://www.kaggle.com/competitions/...
+fixed_str = re.sub(
+    r'https://www\.kaggle\.com/c/(https://www\.kaggle\.com/[^"]+)',
+    r'\1',
+    data_str
+)
+```
+
+## Files Modified (Complete List)
+
+1. **core/services/orchestration_engine.py**
+   - Line 119: Set `timeout_at=None` at creation
+   - Lines 256-259: Calculate `timeout_at` from actual start time
+
+2. **core/tasks.py**
+   - Lines 24397-24408: Added step cleanup when execution times out
+
+3. **core/services/orchestration_step_executor.py**
+   - Added `concurrent.futures` import
+   - Lines 114-127: Wrapped `router.route()` with timeout enforcement
+   - `_build_task()`: Use full content from `config.dream_context`/`config.hivemind_context`
+
+4. **core/agents/content_writer_agent.py**
+   - Lines 792-796: Added `timeout=120.0` to OpenAI client
+   - Line 817: Added `timeout=120.0` to completions request
+
+5. **core/views_orchestration.py**
+   - Return full task from `input_data['task']` instead of truncated field
+
+6. **ai_core/spiders/specialized/kaggle_spider.py**
+   - Check if `ref` is already full URL before prepending base
+
+7. **frontend/src/pages/AgentsPage.tsx**
+   - Added expandable sections for long content
+   - Formatted ResearchAgent, ContentStrategyAgent outputs
+
 ## Summary of Session 767 Fixes
 
 | Bug | Root Cause | Fix | Status |
@@ -241,4 +346,8 @@ print(f'Stuck AgentExecutions: {stuck.count()}')"
 | Step timeout not enforced | ThreadPoolExecutor context manager blocked | Use explicit executor without context manager | ✅ Fixed |
 | OpenAI calls hang | No timeout on client | Added 120s timeout to BaseAgent.client | ✅ Fixed (was already in BaseAgent) |
 | OpenAI in ContentWriter | Direct OpenAI client usage | Added 120s timeout | ✅ Fixed |
+| Task truncated in modal | API returned truncated field | Return full task from input_data | ✅ Fixed |
+| Research content truncated | _build_task used truncated description | Use full content from config | ✅ Fixed |
+| Doubled Kaggle URLs | Spider prepended base to full URLs | Check if ref is already full URL | ✅ Fixed |
+| Existing bad URLs | Historical data had doubled URLs | Database fix (38 records) | ✅ Fixed |
 | Step status not updated | Threading/transaction issue | Needs investigation | ⚠️ Known Issue |
