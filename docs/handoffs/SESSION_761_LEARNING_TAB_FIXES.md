@@ -131,7 +131,55 @@ All 7 domains exceed their minimum execution thresholds:
    - Added `whitespace-pre-wrap` for proper text formatting
    - Generic Activity Modal now uses full fields
 
-### 6. System Health Verification
+### 6. Tools Tab Overhaul
+
+**Problem:** Tools tab showed 34 items including 18 agent wrappers (like `image_generation_agent`) that duplicated the Directory tab content - confusing for users.
+
+**Root Cause:** The `sync_agent_tools` command synced ALL GPT function tools, including tools that just call agents.
+
+**Solution:**
+1. Updated `sync_agent_tools` to skip agent wrappers (tools ending with `_agent`)
+2. Command now cleans up existing agent wrappers from database
+3. Renamed tab header to "PA Utility Tools" for clarity
+4. Added Tool Detail Modal with full information
+5. Added search functionality
+6. Added tool usage tracking
+
+**Before:** 34 items (18 agent wrappers + 16 utilities)
+**After:** 16 actual utility tools
+
+**Utility Tools Now Shown:**
+| Tool | Type | Purpose |
+|------|------|---------|
+| web_search | data_processing | Web searching |
+| workspace_tool | integration | Workspace management |
+| ml_analysis | analysis | ML model analysis |
+| opportunity_manager_tool | data_processing | Manage opportunities |
+| task_manager_tool | data_processing | Task management |
+| revenue_tracker_tool | data_processing | Revenue tracking |
+| get_body_vitals | monitoring | System health |
+| check_resource_budget | monitoring | Budget checking |
+| get_system_alerts | monitoring | System alerts |
+| predictions_tool | api | Prediction management |
+| gates_tool | api | Gate management |
+| pilots_tool | api | Pilot management |
+| create_brand_video | content_generation | Video creation workflow |
+| create_project_from_research | data_processing | Project creation |
+| strategic_review | api | Strategic reviews |
+| pipeline_orchestrator_tool | integration | Pipeline orchestration |
+
+**New Features Added:**
+- Tool search (filter by name/description)
+- Tool Detail Modal with full info (description, stats, operations, permissions, timestamps)
+- Compatible agent count display
+- Usage tracking (usage_count, avg_response_time_ms, success_rate)
+
+**Files Modified:**
+- `core/management/commands/sync_agent_tools.py` - Filter agent wrappers, cleanup
+- `core/personal_ai_assistant_enhanced.py` - Add `_track_tool_usage()` method
+- `frontend/src/pages/AgentsPage.tsx` - Tool search, detail modal, header rename
+
+### 7. System Health Verification
 
 **All services confirmed running:**
 - Redis: ✅ Running
@@ -160,6 +208,10 @@ All 7 domains exceed their minimum execution thresholds:
 | `c87d2d83` | fix(Session 761): Dream modal full inspiration and related topics |
 | `da11c17b` | fix(Session 761): Fix migration for inspiration_source TextField change |
 | `f4f601a6` | fix(Session 761): Dream inspiration truncation - full fix |
+| `ffb80f16` | docs(Session 761): Update handoff with modal and dream inspiration fixes |
+| `85a67564` | feat(Session 761): Enhance Tools tab with search and detail modal |
+| `415a6a8e` | fix(Session 761): Tools tab now shows only utility tools, not agents |
+| `f2cd53c8` | feat(Session 761): Add tool usage tracking for PA Utility Tools |
 
 ---
 
@@ -197,13 +249,15 @@ If no match found:
 ## Files Changed
 
 ```
-core/views_agent_learning.py       ~3 lines (effectiveness_gain fix)
-core/learning_feed_consumer.py     ~3 lines (effectiveness_gain fix)
-core/tasks.py                      ~3 lines (effectiveness_gain fix)
-core/models_unified_system.py      ~3 lines (inspiration_source TextField)
-core/services/recent_activity.py   ~15 lines (full_title, full_subtitle, content)
-core/migrations/0166_...           +29 lines (inspiration_source migration)
-frontend/src/pages/AgentsPage.tsx  +200 lines (generic modal + 7 modal flexbox fixes)
+core/views_agent_learning.py                    ~3 lines (effectiveness_gain fix)
+core/learning_feed_consumer.py                  ~3 lines (effectiveness_gain fix)
+core/tasks.py                                   ~3 lines (effectiveness_gain fix)
+core/models_unified_system.py                   ~3 lines (inspiration_source TextField)
+core/services/recent_activity.py                ~15 lines (full_title, full_subtitle, content)
+core/migrations/0166_...                        +29 lines (inspiration_source migration)
+core/management/commands/sync_agent_tools.py    ~40 lines (filter agent wrappers)
+core/personal_ai_assistant_enhanced.py          +55 lines (tool usage tracking)
+frontend/src/pages/AgentsPage.tsx               +400 lines (modals + tools tab overhaul)
 ```
 
 ---
