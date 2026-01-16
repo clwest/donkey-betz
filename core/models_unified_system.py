@@ -8702,6 +8702,30 @@ class AgentDream(models.Model):
         help_text="Whether this was a directed dream (user requested)"
     )
 
+    # Session 765: Origin tracking for proper resurfacing weight
+    ORIGIN_CHOICES = [
+        ('serious', 'Serious'),           # Genuine serious ideation
+        ('speculative', 'Speculative'),   # Exploratory/speculative thinking
+        ('probe', 'Probe'),               # User testing/probing the system
+        ('joke', 'Joke'),                 # Humorous/not serious
+    ]
+    origin = models.CharField(
+        max_length=20,
+        choices=ORIGIN_CHOICES,
+        default='serious',
+        db_index=True,
+        help_text="Origin intent of this dream - affects resurfacing weight"
+    )
+    confidence_floor = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Minimum confidence threshold for resurfacing (0=always, 1=never resurface)"
+    )
+    human_intent = models.TextField(
+        blank=True,
+        help_text="Raw human intent description for context (e.g., 'just testing', 'serious idea')"
+    )
+
     # User interaction
     shown_to_user = models.BooleanField(default=False)
     shown_at = models.DateTimeField(null=True, blank=True)
@@ -8738,19 +8762,40 @@ class AgentDream(models.Model):
             models.Index(fields=['-composite_score', '-dreamed_at']),
             models.Index(fields=['promoted_to_decision', 'decision_outcome']),
             models.Index(fields=['is_directed', '-dreamed_at']),
+            # Session 765: Origin-aware queries
+            models.Index(fields=['origin', '-composite_score']),
+            models.Index(fields=['origin', 'shown_to_user', '-composite_score']),
         ]
 
     def __str__(self):
         return f"{self.agent.name}'s dream: {self.title}"
 
+    # Session 765: Origin weight multipliers for resurfacing
+    ORIGIN_WEIGHTS = {
+        'serious': 1.0,       # Full weight - genuine ideas
+        'speculative': 0.8,   # Slightly reduced - exploratory
+        'probe': 0.3,         # Heavily reduced - user testing
+        'joke': 0.1,          # Almost never resurface - humor
+    }
+
+    @property
+    def origin_weight(self):
+        """Get the weight multiplier for this dream's origin."""
+        return self.ORIGIN_WEIGHTS.get(self.origin, 1.0)
+
     def save(self, *args, **kwargs):
-        """Session 366: Calculate composite score on save."""
-        # Calculate composite score from component scores
-        self.composite_score = (
+        """Session 366/765: Calculate composite score on save with origin weighting."""
+        # Calculate base composite score from component scores
+        base_score = (
             self.creativity_score +
             self.actionability_score +
             self.relevance_score
         ) / 3.0
+
+        # Session 765: Apply origin weight to composite score
+        # Jokes and probes get lower scores, affecting resurfacing priority
+        self.composite_score = base_score * self.origin_weight
+
         super().save(*args, **kwargs)
 
     def mark_as_shown(self):
@@ -8766,23 +8811,59 @@ class AgentDream(models.Model):
         self.save(update_fields=['user_reaction', 'user_feedback'])
 
     @classmethod
-    def get_unshown_dreams(cls, limit=10):
-        """Get dreams that haven't been shown to the user yet."""
-        return cls.objects.filter(
-            shown_to_user=False
-        ).select_related('agent').order_by('-dreamed_at')[:limit]
+    def get_unshown_dreams(cls, limit=10, include_jokes=False, include_probes=True):
+        """Get dreams that haven't been shown to the user yet.
+
+        Session 765: Now respects origin and confidence_floor for resurfacing.
+        - Jokes are excluded by default (include_jokes=False)
+        - Probes are included but scored lower
+        - Orders by composite_score (which already has origin weight applied)
+        """
+        queryset = cls.objects.filter(shown_to_user=False)
+
+        # Session 765: Apply origin filtering
+        excluded_origins = []
+        if not include_jokes:
+            excluded_origins.append('joke')
+        if not include_probes:
+            excluded_origins.append('probe')
+
+        if excluded_origins:
+            queryset = queryset.exclude(origin__in=excluded_origins)
+
+        # Order by composite_score (already weighted by origin) then by date
+        return queryset.select_related('agent').order_by('-composite_score', '-dreamed_at')[:limit]
 
     @classmethod
-    def get_dreams_while_away(cls, since_datetime, limit=5):
-        """Get dreams that happened since a given time (while user was away)."""
-        return cls.objects.filter(
+    def get_dreams_while_away(cls, since_datetime, limit=5, include_jokes=False):
+        """Get dreams that happened since a given time (while user was away).
+
+        Session 765: Excludes jokes by default.
+        """
+        queryset = cls.objects.filter(
             dreamed_at__gte=since_datetime,
             shown_to_user=False
-        ).select_related('agent').order_by('-dreamed_at')[:limit]
+        )
+
+        # Session 765: Exclude jokes by default
+        if not include_jokes:
+            queryset = queryset.exclude(origin='joke')
+
+        return queryset.select_related('agent').order_by('-composite_score', '-dreamed_at')[:limit]
 
     # Session 366: Productization Pipeline Methods
-    def promote_to_boardroom(self):
-        """Promote this dream to the Boardroom for decision-making."""
+    def promote_to_boardroom(self, force=False):
+        """Promote this dream to the Boardroom for decision-making.
+
+        Session 765: Prevents promotion of jokes/probes unless forced.
+        """
+        # Session 765: Block promotion of jokes and probes by default
+        if not force and self.origin in ['joke', 'probe']:
+            raise ValueError(
+                f"Cannot promote {self.origin} dream to Boardroom. "
+                f"Use force=True to override or change origin to 'serious'."
+            )
+
         self.promoted_to_decision = True
         self.promoted_at = timezone.now()
         self.decision_outcome = 'pending'
@@ -8804,12 +8885,23 @@ class AgentDream(models.Model):
         return self
 
     @classmethod
-    def get_top_actionable_dreams(cls, limit=10, min_score=0.5):
-        """Get highest-scoring actionable dreams not yet promoted."""
-        return cls.objects.filter(
+    def get_top_actionable_dreams(cls, limit=10, min_score=0.5, serious_only=True):
+        """Get highest-scoring actionable dreams not yet promoted.
+
+        Session 765: Now filters by origin.
+        - serious_only=True (default): Only serious and speculative dreams
+        - Jokes and probes excluded from boardroom promotion candidates
+        """
+        queryset = cls.objects.filter(
             composite_score__gte=min_score,
             promoted_to_decision=False
-        ).select_related('agent').order_by('-composite_score', '-dreamed_at')[:limit]
+        )
+
+        # Session 765: Exclude jokes and probes from top actionable by default
+        if serious_only:
+            queryset = queryset.filter(origin__in=['serious', 'speculative'])
+
+        return queryset.select_related('agent').order_by('-composite_score', '-dreamed_at')[:limit]
 
     @classmethod
     def get_dreams_for_project(cls, project, limit=10):
