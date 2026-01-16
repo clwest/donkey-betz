@@ -355,17 +355,21 @@ and only important ones should be promoted. Don't treat this as a crisis."""
 
         return "\n".join(parts)
 
-    def handle_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Handle tool calls from the LLM.
+        Session 761: Execute tool calls for system intelligence.
 
-        Args:
-            tool_name: Name of the tool being called
-            arguments: Tool arguments
+        Renamed from handle_tool_call for BaseAgent compatibility.
 
-        Returns:
-            Tool result
+        Tools:
+        - get_system_attention: Get all current system attention items
+        - get_item_details: Get detailed information about a specific attention item
         """
+        # First check if parent can handle (for delegation support)
+        parent_result = super()._execute_tool_call(tool_name, arguments)
+        if parent_result.get('handled'):
+            return parent_result
+
         if tool_name == "get_system_attention":
             return self._tool_get_system_attention(arguments)
         elif tool_name == "get_item_details":

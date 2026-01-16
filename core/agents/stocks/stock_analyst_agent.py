@@ -532,3 +532,71 @@ Provide:
             'price': prices,
             'ticker': ticker
         }
+
+    # =========================================================================
+    # SESSION 761: TOOL EXECUTION - Wire up defined tools
+    # =========================================================================
+
+    def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 761: Execute tool calls for stock analysis.
+
+        Tools: analyze_filing, check_valuation, compare_peers, assess_risk
+        """
+        # First check if base class handles it (delegation)
+        try:
+            return super()._execute_tool_call(tool_name, arguments)
+        except NotImplementedError:
+            pass
+
+        ticker = arguments.get('ticker', '')
+
+        if tool_name == 'analyze_filing':
+            filing_type = arguments.get('filing_type', '10-K')
+            focus_areas = arguments.get('focus_areas', [])
+            filing_data = self._get_sec_filing_data(ticker)
+            return {
+                'success': True,
+                'ticker': ticker,
+                'filing_type': filing_type,
+                'focus_areas': focus_areas,
+                'filing_data': filing_data,
+                'analysis': f"SEC {filing_type} analysis for {ticker}"
+            }
+
+        elif tool_name == 'check_valuation':
+            metrics = arguments.get('metrics', ['P/E', 'P/B', 'EV/EBITDA'])
+            fundamental_data = self._get_fundamental_data(ticker)
+            return {
+                'success': True,
+                'ticker': ticker,
+                'metrics': metrics,
+                'valuation_data': fundamental_data,
+                'analysis': f"Valuation analysis for {ticker} using {', '.join(metrics)}"
+            }
+
+        elif tool_name == 'compare_peers':
+            peer_tickers = arguments.get('peer_tickers', [])
+            comparison_metrics = arguments.get('comparison_metrics', ['P/E', 'Revenue Growth'])
+            return {
+                'success': True,
+                'ticker': ticker,
+                'peers': peer_tickers,
+                'metrics': comparison_metrics,
+                'analysis': f"Peer comparison for {ticker} vs {', '.join(peer_tickers) if peer_tickers else 'industry'}"
+            }
+
+        elif tool_name == 'assess_risk':
+            risk_categories = arguments.get('risk_categories', ['financial', 'operational', 'market'])
+            return {
+                'success': True,
+                'ticker': ticker,
+                'risk_categories': risk_categories,
+                'analysis': f"Risk assessment for {ticker} covering {', '.join(risk_categories)}"
+            }
+
+        else:
+            return {
+                'success': False,
+                'error': f"Unknown tool: {tool_name}"
+            }

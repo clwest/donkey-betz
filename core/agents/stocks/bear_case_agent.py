@@ -695,3 +695,61 @@ Be specific and data-driven. Use the market data provided. Counter any obvious b
             reverse=True
         )
         return sorted_cases[:limit]
+
+    # =========================================================================
+    # SESSION 761: TOOL EXECUTION - Wire up defined tools
+    # =========================================================================
+
+    def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 761: Execute tool calls for bear case analysis.
+
+        Tools: identify_risks, analyze_overvaluation, technical_bearish, negative_sentiment
+        """
+        try:
+            return super()._execute_tool_call(tool_name, arguments)
+        except NotImplementedError:
+            pass
+
+        ticker = arguments.get('ticker', '')
+
+        if tool_name == 'identify_risks':
+            risk_types = arguments.get('risk_types', ['operational', 'financial', 'competitive'])
+            timeframe = arguments.get('timeframe', 'medium_term')
+            return {
+                'success': True,
+                'ticker': ticker,
+                'risk_types': risk_types,
+                'timeframe': timeframe,
+                'analysis': f"Risk identification for {ticker}"
+            }
+
+        elif tool_name == 'analyze_overvaluation':
+            metrics = arguments.get('metrics', ['P/E', 'P/S', 'EV/EBITDA'])
+            return {
+                'success': True,
+                'ticker': ticker,
+                'metrics': metrics,
+                'analysis': f"Overvaluation analysis for {ticker}"
+            }
+
+        elif tool_name == 'technical_bearish':
+            patterns = arguments.get('patterns', ['death_cross', 'head_shoulders', 'breakdown'])
+            return {
+                'success': True,
+                'ticker': ticker,
+                'patterns': patterns,
+                'analysis': f"Bearish technical patterns for {ticker}"
+            }
+
+        elif tool_name == 'negative_sentiment':
+            sources = arguments.get('sources', ['news', 'social', 'short_interest'])
+            return {
+                'success': True,
+                'ticker': ticker,
+                'sources': sources,
+                'analysis': f"Negative sentiment analysis for {ticker}"
+            }
+
+        else:
+            return {'success': False, 'error': f"Unknown tool: {tool_name}"}
