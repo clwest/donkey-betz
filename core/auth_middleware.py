@@ -134,6 +134,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/system-health/',  # System health check
         '/api/agents/test/',  # Test agent execution
 
+        # Session 761: Agent Monitoring Dashboard APIs
+        '/api/v1/agents/monitoring/',  # Monitoring dashboard, alerts, agent detail
+
         # Session 642: Celery Monitoring
         '/api/celery/',  # Celery status endpoint
 

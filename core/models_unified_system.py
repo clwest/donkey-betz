@@ -14100,10 +14100,23 @@ class BusinessResearchResult(models.Model):
     def _extract_market_topic(query: str) -> str:
         """Extract market/topic from research query for grouping."""
         import re
+        # Session 761: Fix for over-matching - exclude common words and require minimum topic length
+        # Common non-topic words that should never be extracted as topics
+        stopwords = {
+            'one', 'two', 'three', 'four', 'five',  # Numbers
+            'sentence', 'word', 'way', 'thing', 'time',  # Common nouns
+            'it', 'this', 'that', 'each', 'all', 'any', 'some',  # Pronouns/determiners
+            'ai', 'ml', 'api',  # Short tech acronyms (too generic)
+            'is', 'are', 'was', 'were', 'be', 'been',  # Verbs
+            'a', 'an', 'the',  # Articles
+        }
+
         # Common patterns: "in the X market", "for X", "about X industry"
+        # Session 761: Changed +? to + for greedy matching, added word boundary requirements
         patterns = [
-            r'(?:in the|in|for|about|regarding)\s+(?:the\s+)?([^,\.]+?)(?:\s+market|\s+industry|\s+space|\s+sector)?(?:\s|$|,|\.)',
-            r'(?:competitors|competition|market|customers|pain points)\s+(?:in|for|of)\s+([^,\.]+)',
+            r'(?:in the|for|about|regarding)\s+(?:the\s+)?([^,\.]{3,})(?:\s+market|\s+industry|\s+space|\s+sector)',
+            r'(?:competitors|competition|market|customers|pain points)\s+(?:in|for|of)\s+([^,\.]{3,})',
+            r'(?:research(?:ing)?|analyz(?:e|ing)|study(?:ing)?)\s+(?:the\s+)?([^,\.]{3,})(?:\s+market|\s+industry)',
         ]
         for pattern in patterns:
             match = re.search(pattern, query.lower())
@@ -14111,6 +14124,13 @@ class BusinessResearchResult(models.Model):
                 topic = match.group(1).strip()
                 # Clean up common words
                 topic = re.sub(r'^(the|a|an)\s+', '', topic)
+                # Session 761: Skip single-word stopwords and very short topics
+                if topic.lower() in stopwords or len(topic) < 3:
+                    continue
+                # Session 761: Require at least one real word (more than 3 chars)
+                words = [w for w in topic.split() if len(w) > 3 and w.lower() not in stopwords]
+                if not words:
+                    continue
                 return topic[:200]  # Limit length
         return ''
 

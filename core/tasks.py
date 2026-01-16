@@ -7800,8 +7800,22 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                     else:
                         knowledge = random.choice(knowledge_list)
                     # Session 435: Improved topic extraction with better fallbacks
+                    # Session 761: Added stopword validation to prevent bad topics like 'one', 'this', 'ai'
+                    stopwords = {'one', 'two', 'three', 'this', 'that', 'it', 'each', 'all', 'any', 'some',
+                                 'ai', 'ml', 'api', 'is', 'are', 'was', 'were', 'be', 'been', 'a', 'an', 'the'}
+
+                    def is_valid_topic(t):
+                        """Check if topic is meaningful (not a stopword, has real words)."""
+                        if not t or len(t) < 3:
+                            return False
+                        if t.lower() in stopwords:
+                            return False
+                        # Must have at least one word > 3 chars that isn't a stopword
+                        words = [w for w in t.split() if len(w) > 3 and w.lower() not in stopwords]
+                        return len(words) > 0
+
                     topic = knowledge.title
-                    if not topic or topic in ("general insights", "recent insights"):
+                    if not is_valid_topic(topic) or topic in ("general insights", "recent insights"):
                         if knowledge.summary:
                             try:
                                 import json
@@ -7809,8 +7823,11 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                                 topic = data.get('query') or data.get('topic') or data.get('insight', '')[:80]
                             except (json.JSONDecodeError, TypeError):
                                 topic = knowledge.summary[:80]
-                    if not topic:
+                    if not is_valid_topic(topic):
                         topic = knowledge.source_type or f"{knowledge.knowledge_type.replace('_', ' ').title()}"
+                    if not is_valid_topic(topic):
+                        # Ultimate fallback: use agent's specialty
+                        topic = agent.specialization or agent.description or f"{agent.name}'s expertise"
                 else:
                     # Session 417: No knowledge yet - use agent's specialty as dream topic
                     topic = agent.specialization or agent.description or f"{agent.name}'s expertise"
