@@ -15,6 +15,7 @@ Key capabilities:
 - ML-powered price trend forecasting (LSTM/Prophet) - Session 683
 """
 
+import json
 import logging
 from typing import Dict, Any
 from datetime import datetime, timedelta
@@ -169,7 +170,11 @@ Alert on:
                 scifi_context: Dict[str, Any] = None,
                 spider_context: Dict[str, Any] = None) -> AgentResult:
         """
-        Execute stock analysis.
+        Execute stock analysis using LLM with tools.
+
+        Session 761: Rewritten to actually use tools with LLM instead of
+        direct method calls. The LLM decides which tools to use based on
+        the task, executes them, and synthesizes the results.
 
         Args:
             task: Analysis task description
@@ -201,45 +206,101 @@ Alert on:
 
             self.record_decision(
                 decision_type="analysis",
-                action="Starting stock analysis",
+                action="Starting stock analysis with tools",
                 reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
                 alternatives=["Skip analysis", "Defer to human", "Consult other agents"],
                 confidence=0.8
             )
 
-            logger.info(f"StockAnalystAgent executing: {task[:100]}...")
+            logger.info(f"StockAnalystAgent executing with tools: {task[:100]}...")
 
         try:
             # Session 736: Extract spider intelligence for real-time market data
             spider_intel = self._extract_spider_intelligence(spider_context)
             if spider_intel['has_data']:
-                logger.info(f"🕷️ StockAnalystAgent using spider intelligence: {len(spider_intel['trends'])} trends, market_data={bool(spider_intel['market_data'])}")
+                logger.info(f"🕷️ StockAnalystAgent using spider intelligence")
 
-            # Session 529: Build intelligent prompt with full context
+            # Build intelligent prompt with full context
             intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
-            # Get relevant data from spiders
-            filing_data = self._get_sec_filing_data(context.get('ticker'))
-            fundamental_data = self._get_fundamental_data(context.get('ticker'))
+            # Session 761: Build messages for tool-enabled LLM call
+            ticker = context.get('ticker', '')
+            ticker_context = f"\n\nTarget ticker: {ticker}" if ticker else ""
+            spider_summary = f"\n\nSpider Intelligence: {spider_intel['summary']}" if spider_intel['summary'] else ""
 
-            # Session 736: Merge spider market data if available
-            if spider_intel['market_data']:
-                fundamental_data = {**(fundamental_data or {}), 'spider_market_data': spider_intel['market_data']}
+            messages = [
+                {"role": "system", "content": self.system_prompt + intelligent_context + ticker_context + spider_summary},
+                {"role": "user", "content": task}
+            ]
 
-            # Build analysis prompt with intelligent context and spider data (Session 736)
-            prompt = self._build_analysis_prompt(
-                task, filing_data, fundamental_data, context,
-                intelligent_context, spider_intel['summary']
+            # Session 761: Call LLM with tools enabled
+            from openai import OpenAI
+            client = OpenAI()
+
+            response = client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=messages,
+                tools=self.tools,
+                tool_choice="auto",
+                max_completion_tokens=4000
             )
 
-            # Get LLM analysis
-            analysis = self._get_llm_analysis(prompt)
+            # Process response
+            assistant_message = response.choices[0].message
+            tool_calls_made = []
+            collected_data = {}
+
+            # Session 761: Handle tool calls from LLM
+            if assistant_message.tool_calls:
+                for tool_call in assistant_message.tool_calls:
+                    tool_name = tool_call.function.name
+                    tool_args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
+
+                    self.record_decision(
+                        decision_type="tool_call",
+                        action=f"Calling tool: {tool_name}",
+                        reasoning=f"LLM requested tool with args: {tool_args}",
+                        confidence=0.9
+                    )
+
+                    logger.info(f"🔧 StockAnalystAgent calling tool: {tool_name}({tool_args})")
+
+                    # Execute the tool
+                    tool_result = self._execute_tool_call(tool_name, tool_args)
+                    tool_calls_made.append({
+                        'tool': tool_name,
+                        'args': tool_args,
+                        'result': tool_result
+                    })
+                    collected_data[tool_name] = tool_result
+
+                    # Add tool result to conversation for LLM synthesis
+                    messages.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [tool_call]
+                    })
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": json.dumps(tool_result)[:8000]  # Truncate for context limits
+                    })
+
+                # Get final synthesis from LLM
+                final_response = client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=messages,
+                    max_completion_tokens=3000
+                )
+                analysis = final_response.choices[0].message.content
+            else:
+                analysis = assistant_message.content or "No analysis generated."
 
             # Determine severity
             severity = self._assess_severity(analysis)
 
             # Session 683: Run ML analysis for price trend forecasting
-            ml_insights = self._analyze_price_trends_with_ml(context.get('ticker'), fundamental_data)
+            ml_insights = self._analyze_price_trends_with_ml(ticker, collected_data)
 
             # Enhance analysis with ML insights
             if ml_insights.get('ml_used'):
@@ -254,17 +315,18 @@ Alert on:
 
             result = AgentResult(
                 success=True,
-                message=f"Stock analysis complete for {context.get('ticker', 'unknown')}",
+                message=analysis,
                 data={
                     'analysis': analysis,
                     'severity': severity,
-                    'ticker': context.get('ticker'),
-                    'filing_data': filing_data,
-                    'fundamental_data': fundamental_data,
-                    'ml_analysis': ml_insights,  # Session 683: Add ML analysis
+                    'ticker': ticker,
+                    'tool_calls': tool_calls_made,  # Session 761: Include tool calls
+                    'collected_data': collected_data,
+                    'ml_analysis': ml_insights,
                 },
                 agent_name=self.name,
-                execution_time_ms=execution_time
+                execution_time_ms=execution_time,
+                tool_calls=tool_calls_made  # Session 761: Add to result
             )
 
             # Record learning outcome for collective intelligence
@@ -276,8 +338,9 @@ Alert on:
                     context={
                         'agent_type': self.__class__.__name__,
                         'execution_time_ms': execution_time,
-                        'ticker': context.get('ticker'),
+                        'ticker': ticker,
                         'severity': severity,
+                        'tools_used': [tc['tool'] for tc in tool_calls_made],
                     }
                 )
             except Exception as le:
@@ -286,11 +349,13 @@ Alert on:
             return result
 
         except Exception as e:
-            logger.error(f"StockAnalystAgent error: {e}")
+            logger.error(f"StockAnalystAgent error: {e}", exc_info=True)
             result = AgentResult(
                 success=False,
+                message=f"Error analyzing stock: {str(e)}",
                 error=str(e),
-                agent_name=self.name
+                agent_name=self.name,
+                execution_time_ms=int((datetime.now() - start_time).total_seconds() * 1000)
             )
 
             # Record failed learning outcome
