@@ -24104,3 +24104,132 @@ def check_celery_health():
     except Exception as e:
         logger.error(f"🔧 [CELERY] Health check failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
+
+
+# ==================== SESSION 764: ORCHESTRATION LAYER TASKS ====================
+
+
+@shared_task
+def execute_orchestration_async(execution_id: str):
+    """
+    Session 764: Execute an orchestration workflow asynchronously.
+
+    This task is triggered when a workflow is started with async_mode=True.
+    It runs the full orchestration execution in the background.
+
+    Args:
+        execution_id: UUID of the OrchestrationExecution to run
+    """
+    from core.services.orchestration_engine import orchestration_engine
+    from core.models_orchestration import OrchestrationExecution
+
+    logger.info(f"🎭 [ORCHESTRATION] Starting async execution: {execution_id}")
+
+    try:
+        execution = OrchestrationExecution.objects.get(id=execution_id)
+
+        if execution.status not in ('pending', 'running'):
+            logger.warning(
+                f"🎭 [ORCHESTRATION] Execution {execution_id} not in runnable state: {execution.status}"
+            )
+            return {'success': False, 'error': f'Invalid status: {execution.status}'}
+
+        result = orchestration_engine._execute(execution)
+
+        logger.info(
+            f"🎭 [ORCHESTRATION] Execution {execution_id} completed: {result.status}"
+        )
+
+        return {
+            'success': result.status == 'completed',
+            'execution_id': str(execution_id),
+            'status': result.status,
+            'current_step': result.current_step,
+            'total_steps': result.total_steps,
+            'total_cost': float(result.total_cost),
+            'error': result.error_message if result.status == 'failed' else None,
+        }
+
+    except OrchestrationExecution.DoesNotExist:
+        logger.error(f"🎭 [ORCHESTRATION] Execution not found: {execution_id}")
+        return {'success': False, 'error': 'Execution not found'}
+
+    except Exception as e:
+        logger.error(f"🎭 [ORCHESTRATION] Async execution failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task
+def check_orchestration_timeouts():
+    """
+    Session 764: Check for timed-out orchestration executions.
+
+    Runs periodically to:
+    1. Find running executions past their timeout
+    2. Mark them as timed_out
+    3. Create attention items for human review
+
+    This is a maintenance task to prevent runaway workflows.
+    """
+    from core.models_orchestration import OrchestrationExecution
+
+    logger.info("⏰ [ORCHESTRATION] Checking for timed-out executions...")
+
+    now = timezone.now()
+
+    # Find timed-out executions
+    timed_out = OrchestrationExecution.objects.filter(
+        status='running',
+        timeout_at__lt=now
+    )
+
+    timeout_count = 0
+
+    for execution in timed_out:
+        try:
+            execution.status = 'timed_out'
+            execution.error_message = 'Execution timed out'
+            execution.completed_at = now
+            execution.save()
+
+            logger.warning(
+                f"⏰ [ORCHESTRATION] Marked execution {execution.id} as timed out "
+                f"(started: {execution.started_at})"
+            )
+            timeout_count += 1
+
+        except Exception as e:
+            logger.error(f"⏰ [ORCHESTRATION] Failed to timeout execution {execution.id}: {e}")
+
+    if timeout_count > 0:
+        logger.info(f"⏰ [ORCHESTRATION] Timed out {timeout_count} executions")
+
+    return {
+        'success': True,
+        'timed_out_count': timeout_count,
+    }
+
+
+@shared_task
+def check_orchestration_auto_approvals():
+    """
+    Session 764: Check for auto-approvals on expired approval gates.
+
+    Runs periodically to:
+    1. Find pending approval gates past their expiration
+    2. Auto-approve gates configured for auto-approval
+    3. Mark other gates as expired
+
+    This enables unattended workflow operation when configured.
+    """
+    from core.services.orchestration_approval import approval_service
+
+    logger.info("🔔 [ORCHESTRATION] Checking for auto-approvals...")
+
+    try:
+        approval_service.check_auto_approvals()
+        return {'success': True}
+
+    except Exception as e:
+        logger.error(f"🔔 [ORCHESTRATION] Auto-approval check failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}

@@ -47,6 +47,9 @@ from .models_pilot_readiness import *
 # Import human interface layer models (Session 686 - Human-in-the-loop)
 from .models_human_interface import *
 
+# Import orchestration layer models (Session 764 - Multi-agent workflows)
+from .models_orchestration import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser

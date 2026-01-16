@@ -59,6 +59,12 @@ from ..models_implementation_pipeline import *
 # Import LLM routing models (Session 697)
 from ..models_llm_routing import *
 
+# Import human interface layer models (Session 686)
+from ..models_human_interface import *
+
+# Import orchestration layer models (Session 764)
+from ..models_orchestration import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -176,4 +182,9 @@ __all__ = [
     'LLMModel',
     'AgentLLMConfig',
     'LLMCallLog',
+
+    # Orchestration Layer (Session 764)
+    'OrchestrationExecution',
+    'OrchestrationStepExecution',
+    'OrchestrationApprovalGate',
 ]
