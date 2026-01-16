@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { humanApi, agentsApi, bodyApi } from '@/lib/api'
 // Session 714: Real-time system events
@@ -683,8 +683,9 @@ function DecisionModal({
         {/* Actions */}
         <div className="flex flex-wrap gap-2 p-4 border-t border-dark-border">
           {/* Session 763: Render dynamic Mission Control actions if available */}
+          {/* Session 766: Use React.Fragment with key to fix list warning */}
           {item.payload?.available_actions && item.payload.available_actions.length > 0 && onExecuteAction ? (
-            <>
+            <React.Fragment key="mission-control-section">
               {/* Mission Control Actions */}
               <div className="w-full mb-2">
                 <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
@@ -714,11 +715,12 @@ function DecisionModal({
               <div className="w-full border-t border-dark-border my-2 pt-2">
                 <p className="text-xs text-gray-500 mb-2">Standard Actions</p>
               </div>
-            </>
+            </React.Fragment>
           ) : null}
 
-          {/* Standard decision actions */}
+          {/* Standard decision actions - Session 766: Added keys to fix React warning */}
           <button
+            key="action-approve"
             onClick={() => onDecide('approve', feedback, confidence / 100)}
             disabled={isLoading || isExecuting}
             className="btn btn-primary flex items-center gap-2"
@@ -727,6 +729,7 @@ function DecisionModal({
             Approve
           </button>
           <button
+            key="action-reject"
             onClick={() => onDecide('reject', feedback, confidence / 100)}
             disabled={isLoading || isExecuting}
             className="btn flex items-center gap-2 bg-accent-red/20 text-accent-red hover:bg-accent-red/30"
@@ -735,6 +738,7 @@ function DecisionModal({
             Reject
           </button>
           <button
+            key="action-modify"
             onClick={() => onDecide('modify', feedback, confidence / 100)}
             disabled={isLoading || isExecuting}
             className="btn btn-secondary"
@@ -742,6 +746,7 @@ function DecisionModal({
             Modify
           </button>
           <button
+            key="action-defer"
             onClick={() => onDecide('defer', feedback, confidence / 100)}
             disabled={isLoading || isExecuting}
             className="btn btn-secondary"
@@ -749,6 +754,7 @@ function DecisionModal({
             Defer
           </button>
           <button
+            key="action-escalate"
             onClick={() => onDecide('escalate', feedback, confidence / 100)}
             disabled={isLoading || isExecuting}
             className="btn flex items-center gap-2 bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30"
@@ -759,6 +765,7 @@ function DecisionModal({
 
           {/* Session 746: Watch & Verify button - especially useful for arbitrage opportunities */}
           <button
+            key="action-watch"
             onClick={() => onDecide('watch', feedback, confidence / 100)}
             disabled={isLoading || isExecuting}
             className={cn(

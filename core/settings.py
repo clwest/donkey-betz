@@ -1221,10 +1221,11 @@ CELERY_BEAT_SCHEDULE = {
     },
     # =========================================================================
     # Session 563: Self-Blog Generation
+    # Session 766: Fixed crontab - was missing minute=0, causing 240 blogs/day
     # =========================================================================
     'generate-self-blog': {
         'task': 'core.tasks.generate_self_blog_task',
-        'schedule': crontab(hour='*/6'),  # Every 6 hours
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours at :00
     },
     # Session 563: Dream Backlog Maintenance
     'maintain-dream-backlog': {

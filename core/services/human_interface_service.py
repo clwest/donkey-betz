@@ -161,16 +161,17 @@ class HumanInterfaceService:
 
         # Session 746: Add comprehensive stats
 
-        # By item type
+        # By item type (pending items only - Session 766 fix)
+        pending_items = items.filter(status='pending')
         by_type = dict(
-            items.values('item_type')
+            pending_items.values('item_type')
             .annotate(count=Count('id'))
             .values_list('item_type', 'count')
         )
 
-        # By source agent
+        # By source agent (pending items only - Session 766 fix)
         by_source = dict(
-            items.exclude(source_agent='')
+            pending_items.exclude(source_agent='')
             .values('source_agent')
             .annotate(count=Count('id'))
             .order_by('-count')[:10]
