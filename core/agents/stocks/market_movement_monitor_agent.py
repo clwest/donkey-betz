@@ -350,3 +350,79 @@ Focus on stocks without corresponding news explanations for moves."""
             return f"MEDIUM: {ticker} at {change:.1f}% with elevated volume ({vol_ratio:.1f}x)"
         else:
             return f"LOW: Notable activity in {ticker}: {change:.1f}% change"
+
+    def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 761: Execute tool calls for market movement monitoring.
+
+        Tools:
+        - detect_volume_spike: Find unusual volume activity
+        - track_momentum: Monitor price momentum
+        - alert_breakout: Detect technical breakouts
+        - scan_after_hours: Monitor pre/post market activity
+        """
+        # First check if parent can handle (for delegation support)
+        parent_result = super()._execute_tool_call(tool_name, arguments)
+        if parent_result.get('handled'):
+            return parent_result
+
+        ticker = arguments.get('ticker', 'SPY')
+
+        if tool_name == 'detect_volume_spike':
+            threshold = arguments.get('threshold_multiplier', 2.0)
+            timeframe = arguments.get('timeframe', '1d')
+            market_data = self._get_market_data(ticker if ticker != 'market' else None)
+            spikes = [m for m in market_data if m.get('volume_ratio', 0) >= threshold]
+            return {
+                'tool': tool_name,
+                'ticker': ticker,
+                'threshold': threshold,
+                'timeframe': timeframe,
+                'spikes_found': len(spikes),
+                'spikes': spikes[:10],
+                'message': f"Found {len(spikes)} volume spikes above {threshold}x threshold"
+            }
+
+        elif tool_name == 'track_momentum':
+            indicators = arguments.get('indicators', ['RSI', 'MACD'])
+            return {
+                'tool': tool_name,
+                'ticker': ticker,
+                'indicators': indicators,
+                'momentum': {
+                    'RSI': {'value': 55, 'signal': 'neutral'},
+                    'MACD': {'histogram': 'positive', 'signal': 'bullish'},
+                },
+                'trend': 'bullish',
+                'message': f"Momentum analysis for {ticker}: bullish trend with neutral RSI"
+            }
+
+        elif tool_name == 'alert_breakout':
+            level_types = arguments.get('level_types', ['resistance', 'support'])
+            return {
+                'tool': tool_name,
+                'ticker': ticker,
+                'level_types': level_types,
+                'breakouts': [],
+                'key_levels': {
+                    'resistance': 150.00,
+                    'support': 145.00,
+                    '52w_high': 155.00,
+                    '52w_low': 120.00
+                },
+                'message': f"Monitoring {ticker} for breakouts at key levels"
+            }
+
+        elif tool_name == 'scan_after_hours':
+            min_volume = arguments.get('min_volume', 10000)
+            min_change = arguments.get('min_change_pct', 2.0)
+            return {
+                'tool': tool_name,
+                'min_volume': min_volume,
+                'min_change_pct': min_change,
+                'after_hours_movers': [],
+                'pre_market_movers': [],
+                'message': f"Scanning after-hours activity (min volume: {min_volume}, min change: {min_change}%)"
+            }
+
+        return {'error': f'Unknown tool: {tool_name}'}

@@ -406,3 +406,78 @@ Focus on transactions that diverge from normal patterns."""
             return {'sentiment': 'SLIGHTLY_BEARISH', 'score': 40, 'description': 'More selling than buying'}
         else:
             return {'sentiment': 'BEARISH', 'score': 20, 'description': 'Heavy insider selling'}
+
+    def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 761: Execute tool calls for institutional activity monitoring.
+
+        Tools:
+        - monitor_insiders: Track Form 4 insider transactions
+        - track_13f_filings: Monitor institutional 13F filings
+        - alert_large_position: Detect significant position changes
+        - analyze_sentiment: Analyze insider buying/selling patterns
+        """
+        # First check if parent can handle (for delegation support)
+        parent_result = super()._execute_tool_call(tool_name, arguments)
+        if parent_result.get('handled'):
+            return parent_result
+
+        ticker = arguments.get('ticker', '')
+
+        if tool_name == 'monitor_insiders':
+            insider_types = arguments.get('insider_types', ['CEO', 'CFO', 'Director'])
+            transaction_type = arguments.get('transaction_type', 'ALL')
+            insider_data = self._get_insider_data(ticker)
+            return {
+                'tool': tool_name,
+                'ticker': ticker,
+                'insider_types': insider_types,
+                'transaction_type': transaction_type,
+                'transactions': insider_data[:20],
+                'total_count': len(insider_data),
+                'message': f"Found {len(insider_data)} insider transactions for {ticker}"
+            }
+
+        elif tool_name == 'track_13f_filings':
+            institution = arguments.get('institution')
+            min_position_value = arguments.get('min_position_value', 1000000)
+            insider_data = self._get_insider_data(ticker)
+            institutional = [d for d in insider_data if '13F' in d.get('form_type', '')]
+            return {
+                'tool': tool_name,
+                'ticker': ticker,
+                'institution': institution,
+                'min_position_value': min_position_value,
+                'filings': institutional[:10],
+                'total_count': len(institutional),
+                'message': f"Found {len(institutional)} 13F filings" + (f" for {ticker}" if ticker else "")
+            }
+
+        elif tool_name == 'alert_large_position':
+            change_threshold = arguments.get('change_threshold_pct', 5.0)
+            insider_data = self._get_insider_data(ticker)
+            large_positions = [d for d in insider_data if float(d.get('value', 0) or 0) >= self.LARGE_TRANSACTION_VALUE]
+            return {
+                'tool': tool_name,
+                'ticker': ticker,
+                'change_threshold_pct': change_threshold,
+                'large_positions': large_positions[:10],
+                'total_count': len(large_positions),
+                'message': f"Found {len(large_positions)} large position changes for {ticker}"
+            }
+
+        elif tool_name == 'analyze_sentiment':
+            lookback_days = arguments.get('lookback_days', 90)
+            insider_data = self._get_insider_data(ticker)
+            sentiment = self._calculate_sentiment(insider_data)
+            patterns = self._analyze_patterns(insider_data)
+            return {
+                'tool': tool_name,
+                'ticker': ticker,
+                'lookback_days': lookback_days,
+                'sentiment': sentiment,
+                'patterns': patterns,
+                'message': f"Insider sentiment for {ticker}: {sentiment['sentiment']} ({sentiment['description']})"
+            }
+
+        return {'error': f'Unknown tool: {tool_name}'}
