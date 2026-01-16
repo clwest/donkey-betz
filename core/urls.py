@@ -2097,6 +2097,11 @@ urlpatterns = [
     path('api/v1/agents/test-execution/', views_agent_execution.test_agent_execution, name='agent-test-execution'),
     path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
 
+    # Session 761: Agent Monitoring API Endpoints
+    path('api/v1/agents/monitoring/dashboard/', views_agent_execution.monitoring_dashboard, name='agent-monitoring-dashboard'),
+    path('api/v1/agents/monitoring/alerts/', views_agent_execution.monitoring_alerts, name='agent-monitoring-alerts'),
+    path('api/v1/agents/monitoring/agent/<str:agent_name>/', views_agent_execution.monitoring_agent_detail, name='agent-monitoring-detail'),
+
     # Advisor API Endpoints (Session 25)
     path('api/v1/advisors/consult/', advisor_consult, name='advisor-consult'),
     path('api/v1/advisors/list/', advisor_list, name='advisor-list'),

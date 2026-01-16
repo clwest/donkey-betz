@@ -468,3 +468,412 @@ def execution_detail(request, execution_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 761: Agent Monitoring Dashboard APIs
+# Provides performance metrics, success rates, and execution statistics
+# =============================================================================
+
+def _format_uptime(boot_time):
+    """Format boot time as human-readable uptime string."""
+    import time
+    from datetime import timedelta
+    uptime_seconds = time.time() - boot_time
+    td = timedelta(seconds=int(uptime_seconds))
+    days = td.days
+    hours, remainder = divmod(td.seconds, 3600)
+    minutes, _ = divmod(remainder, 60)
+    if days > 0:
+        return f"{days}d {hours}h {minutes}m"
+    elif hours > 0:
+        return f"{hours}h {minutes}m"
+    else:
+        return f"{minutes}m"
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def monitoring_dashboard(request):
+    """
+    Get agent monitoring dashboard data with performance metrics.
+
+    Session 761: Created for Agents Page Monitoring tab
+
+    Query params:
+        period: '1h' | '24h' | '7d' | '30d' (default: '24h')
+    """
+    try:
+        from core.models_unified_system import AgentExecution, Agent
+        from django.db.models import Count, Avg, Sum, F, Q, FloatField, Case, When, DecimalField, Value
+        from django.db.models.functions import Cast, Coalesce
+        from django.utils import timezone
+        from datetime import timedelta
+        from decimal import Decimal
+
+        period = request.GET.get('period', '24h')
+        period_map = {
+            '1h': timedelta(hours=1),
+            '24h': timedelta(hours=24),
+            '7d': timedelta(days=7),
+            '30d': timedelta(days=30),
+        }
+        delta = period_map.get(period, timedelta(hours=24))
+        cutoff = timezone.now() - delta
+
+        # Get executions in the period
+        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+
+        # Overall metrics
+        total_executions = executions.count()
+        completed = executions.filter(status='completed').count()
+        failed = executions.filter(status='failed').count()
+        success_rate = (completed / total_executions * 100) if total_executions > 0 else 0
+
+        # Aggregate metrics
+        agg = executions.aggregate(
+            total_tokens=Coalesce(Sum('tokens_used'), Value(0)),
+            total_cost=Coalesce(Sum('cost'), Value(Decimal('0.00')), output_field=DecimalField()),
+            avg_execution_time=Coalesce(Avg('execution_time_ms'), Value(0.0), output_field=FloatField()),
+        )
+
+        # Per-agent performance
+        agent_stats = executions.values('agent__name').annotate(
+            total_executions=Count('id'),
+            successful=Count('id', filter=Q(status='completed')),
+            avg_execution_time=Coalesce(Avg('execution_time_ms'), Value(0.0), output_field=FloatField()),
+            total_tokens=Coalesce(Sum('tokens_used'), Value(0)),
+            total_cost=Coalesce(Sum('cost'), Value(Decimal('0.00')), output_field=DecimalField()),
+        ).order_by('-total_executions')
+
+        # Build agents dict for frontend
+        agents_data = {}
+        for stat in agent_stats:
+            name = stat['agent__name'] or 'Unknown'
+            total = stat['total_executions']
+            success = stat['successful']
+            agents_data[name] = {
+                'total_executions': total,
+                'success_rate': success / total if total > 0 else 0,
+                'avg_execution_time': (stat['avg_execution_time'] or 0) / 1000,  # Convert to seconds
+                'total_tokens': stat['total_tokens'],
+                'total_cost': float(stat['total_cost'] or 0),
+            }
+
+        # Execution timeline (hourly for 24h, daily for 7d/30d)
+        timeline = []
+        if period in ['1h', '24h']:
+            # Hourly breakdown
+            from django.db.models.functions import TruncHour
+            hourly = executions.annotate(
+                hour=TruncHour('created_at')
+            ).values('hour').annotate(
+                count=Count('id'),
+                successful=Count('id', filter=Q(status='completed'))
+            ).order_by('hour')
+            timeline = [
+                {
+                    'timestamp': h['hour'].isoformat() if h['hour'] else None,
+                    'executions': h['count'],
+                    'successful': h['successful'],
+                }
+                for h in hourly
+            ]
+        else:
+            # Daily breakdown
+            from django.db.models.functions import TruncDate
+            daily = executions.annotate(
+                day=TruncDate('created_at')
+            ).values('day').annotate(
+                count=Count('id'),
+                successful=Count('id', filter=Q(status='completed'))
+            ).order_by('day')
+            timeline = [
+                {
+                    'timestamp': d['day'].isoformat() if d['day'] else None,
+                    'executions': d['count'],
+                    'successful': d['successful'],
+                }
+                for d in daily
+            ]
+
+        # Recent executions for activity feed
+        recent = executions.select_related('agent').order_by('-created_at')[:10]
+        recent_executions = [
+            {
+                'id': str(ex.id),
+                'agent_name': ex.agent.name if ex.agent else 'Unknown',
+                'status': ex.status,
+                'execution_time_ms': ex.execution_time_ms,
+                'tokens_used': ex.tokens_used,
+                'created_at': ex.created_at.isoformat(),
+            }
+            for ex in recent
+        ]
+
+        # Session 761: Add system metrics (CPU, memory, uptime)
+        system_metrics = {}
+        try:
+            import psutil
+            import os
+            system_metrics = {
+                'cpu_percent': psutil.cpu_percent(interval=0.1),
+                'memory_percent': psutil.virtual_memory().percent,
+                'uptime': _format_uptime(psutil.boot_time()),
+            }
+        except ImportError:
+            # psutil not available - provide placeholder
+            system_metrics = {
+                'cpu_percent': 0,
+                'memory_percent': 0,
+                'uptime': 'N/A',
+            }
+
+        # Session 761: Add cache metrics (Redis stats)
+        cache_metrics = {}
+        try:
+            import redis
+            from django.conf import settings
+            redis_url = getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0')
+            r = redis.from_url(redis_url)
+            info = r.info('stats')
+            hits = info.get('keyspace_hits', 0)
+            misses = info.get('keyspace_misses', 0)
+            total = hits + misses
+            cache_metrics = {
+                'hits': hits,
+                'misses': misses,
+                'hit_rate': round((hits / total * 100) if total > 0 else 0, 1),
+            }
+        except Exception:
+            cache_metrics = {
+                'hits': 0,
+                'misses': 0,
+                'hit_rate': 0,
+            }
+
+        # Session 761: Calculate active agents (agents with at least one execution in period)
+        active_agents = len([a for a in agents_data.keys() if agents_data[a]['total_executions'] > 0])
+
+        return Response({
+            'success': True,
+            'data': {
+                'period': period,
+                'summary': {
+                    'total_executions': total_executions,
+                    'total_executions_24h': total_executions,  # Session 761: Frontend expects this field
+                    'completed': completed,
+                    'failed': failed,
+                    'success_rate': round(success_rate, 1),
+                    'total_tokens': agg['total_tokens'],
+                    'total_cost': float(agg['total_cost']),
+                    'avg_execution_time': round((agg['avg_execution_time'] or 0) / 1000, 2),  # seconds
+                    'average_execution_time': round((agg['avg_execution_time'] or 0) / 1000, 2),  # Session 761: Frontend expects this field
+                    'active_agents': active_agents,  # Session 761: Count of agents with executions
+                },
+                'agents': agents_data,
+                'timeline': timeline,
+                'recent_executions': recent_executions,
+                'system': system_metrics,
+                'cache': cache_metrics,
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting monitoring dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def monitoring_alerts(request):
+    """
+    Get active monitoring alerts for agents.
+
+    Session 761: Created for Agents Page Monitoring tab
+    """
+    try:
+        from core.models_unified_system import AgentExecution
+        from django.db.models import Count, Avg, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        import hashlib
+
+        alerts = []
+        now = timezone.now()
+        cutoff = now - timedelta(hours=24)
+
+        # Check for agents with high failure rates
+        agent_stats = AgentExecution.objects.filter(
+            created_at__gte=cutoff
+        ).values('agent__name').annotate(
+            total=Count('id'),
+            failed=Count('id', filter=Q(status='failed')),
+        )
+
+        for stat in agent_stats:
+            if stat['total'] >= 5:  # Need enough data
+                fail_rate = stat['failed'] / stat['total']
+                if fail_rate > 0.3:  # >30% failure rate
+                    agent_name = stat['agent__name'] or 'Unknown'
+                    alerts.append({
+                        'id': hashlib.md5(f"failure_{agent_name}".encode()).hexdigest()[:8],
+                        'type': 'high_failure_rate',
+                        'level': 'critical' if fail_rate > 0.5 else 'warning',
+                        'agent_name': agent_name,
+                        'message': f"{agent_name} has {int(fail_rate*100)}% failure rate",
+                        'value': round(fail_rate * 100, 1),
+                        'threshold': 30,
+                        'timestamp': now.isoformat(),
+                    })
+
+        # Check for slow agents (avg > 60 seconds)
+        # Session 761: Raised from 30s to 60s - many agents legitimately take longer
+        # (coordinators orchestrate sub-agents, research agents do deep queries,
+        # ThinkingAgent does multi-step reasoning ~37s)
+        slow_agents = AgentExecution.objects.filter(
+            created_at__gte=cutoff,
+            status='completed'
+        ).values('agent__name').annotate(
+            avg_time=Avg('execution_time_ms'),
+            count=Count('id')
+        ).filter(avg_time__gt=60000, count__gte=3)
+
+        for stat in slow_agents:
+            agent_name = stat['agent__name'] or 'Unknown'
+            alerts.append({
+                'id': hashlib.md5(f"slow_{agent_name}".encode()).hexdigest()[:8],
+                'type': 'slow_execution',
+                'level': 'warning',
+                'agent_name': agent_name,
+                'message': f"{agent_name} avg execution time is {int(stat['avg_time']/1000)}s",
+                'value': round(stat['avg_time'] / 1000, 1),
+                'threshold': 60,  # Session 761: Updated to match new 60s threshold
+                'timestamp': now.isoformat(),
+            })
+
+        return Response({
+            'success': True,
+            'data': {
+                'alerts': alerts,
+                'count': len(alerts),
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting monitoring alerts: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def monitoring_agent_detail(request, agent_name):
+    """
+    Get detailed monitoring data for a specific agent.
+
+    Session 761: Created for Agents Page Monitoring tab
+    """
+    try:
+        from core.models_unified_system import AgentExecution, Agent
+        from django.db.models import Count, Avg, Sum, Q, FloatField, DecimalField, Value
+        from django.db.models.functions import Coalesce, TruncDate
+        from django.utils import timezone
+        from datetime import timedelta
+        from decimal import Decimal
+
+        period = request.GET.get('period', '7d')
+        period_map = {
+            '1h': timedelta(hours=1),
+            '24h': timedelta(hours=24),
+            '7d': timedelta(days=7),
+            '30d': timedelta(days=30),
+        }
+        delta = period_map.get(period, timedelta(days=7))
+        cutoff = timezone.now() - delta
+
+        # Find agent
+        agent = Agent.objects.filter(name__iexact=agent_name).first()
+        if not agent:
+            return Response({
+                'success': False,
+                'error': f'Agent {agent_name} not found'
+            }, status=404)
+
+        executions = AgentExecution.objects.filter(
+            agent=agent,
+            created_at__gte=cutoff
+        )
+
+        total = executions.count()
+        completed = executions.filter(status='completed').count()
+        failed = executions.filter(status='failed').count()
+
+        agg = executions.aggregate(
+            total_tokens=Coalesce(Sum('tokens_used'), Value(0)),
+            total_cost=Coalesce(Sum('cost'), Value(Decimal('0.00')), output_field=DecimalField()),
+            avg_execution_time=Coalesce(Avg('execution_time_ms'), Value(0.0), output_field=FloatField()),
+        )
+
+        # Daily breakdown
+        daily = executions.annotate(
+            day=TruncDate('created_at')
+        ).values('day').annotate(
+            count=Count('id'),
+            successful=Count('id', filter=Q(status='completed'))
+        ).order_by('day')
+
+        # Recent executions
+        recent = executions.order_by('-created_at')[:20]
+
+        return Response({
+            'success': True,
+            'data': {
+                'agent': {
+                    'id': str(agent.id),
+                    'name': agent.name,
+                    'display_name': agent.display_name,
+                    'specialization': agent.specialization,
+                },
+                'period': period,
+                'summary': {
+                    'total_executions': total,
+                    'completed': completed,
+                    'failed': failed,
+                    'success_rate': round(completed / total * 100, 1) if total > 0 else 0,
+                    'total_tokens': agg['total_tokens'],
+                    'total_cost': float(agg['total_cost'] or 0),
+                    'avg_execution_time': round((agg['avg_execution_time'] or 0) / 1000, 2),
+                },
+                'timeline': [
+                    {
+                        'date': d['day'].isoformat() if d['day'] else None,
+                        'executions': d['count'],
+                        'successful': d['successful'],
+                    }
+                    for d in daily
+                ],
+                'recent_executions': [
+                    {
+                        'id': str(ex.id),
+                        'status': ex.status,
+                        'task': ex.task[:100] if ex.task else None,
+                        'execution_time_ms': ex.execution_time_ms,
+                        'tokens_used': ex.tokens_used,
+                        'created_at': ex.created_at.isoformat(),
+                    }
+                    for ex in recent
+                ]
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting agent monitoring detail: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
