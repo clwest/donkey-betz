@@ -74,7 +74,10 @@ interface RecentActivity {
   type: 'dream' | 'conversation' | 'decision' | 'pilot' | 'knowledge'
   icon: string
   title: string
+  full_title?: string  // Session 761: Full title for modal display
   subtitle: string
+  full_subtitle?: string  // Session 761: Full inspiration/description for modal
+  content?: string  // Session 761: Content preview for dreams
   timestamp: string
   timestamp_display?: string  // Session 694: Friendly format like "20m ago"
   agent_name?: string
@@ -4673,7 +4676,8 @@ export default function AgentsPage() {
                     {selectedActivity.type}
                   </span>
                 </div>
-                <h2 className="text-xl font-bold text-white">{selectedActivity.title}</h2>
+                {/* Session 761: Use full_title if available */}
+                <h2 className="text-xl font-bold text-white">{selectedActivity.full_title || selectedActivity.title}</h2>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
                   <Clock size={14} />
                   <span>{formatTimestamp(selectedActivity.timestamp, 'full')}</span>
@@ -4695,15 +4699,28 @@ export default function AgentsPage() {
 
             {/* Modal Content - flex-1 for proper scrolling */}
             <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-6">
-              {/* Subtitle/Description */}
-              {selectedActivity.subtitle && (
+              {/* Session 761: Full inspiration/subtitle - use full_subtitle if available */}
+              {(selectedActivity.full_subtitle || selectedActivity.subtitle) && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Lightbulb size={14} className="text-accent-amber" />
+                    {selectedActivity.type === 'dream' ? 'Inspiration' : 'Description'}
+                  </h3>
+                  <div className="bg-accent-amber/5 border border-accent-amber/20 rounded-lg p-4 text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    {selectedActivity.full_subtitle || selectedActivity.subtitle}
+                  </div>
+                </div>
+              )}
+
+              {/* Session 761: Dream content preview */}
+              {selectedActivity.type === 'dream' && selectedActivity.content && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
                     <MessageSquare size={14} />
-                    Description
+                    Dream Content
                   </h3>
                   <div className="bg-dark-hover rounded-lg p-4 text-gray-200 leading-relaxed whitespace-pre-wrap">
-                    {selectedActivity.subtitle}
+                    {selectedActivity.content}
                   </div>
                 </div>
               )}

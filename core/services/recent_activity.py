@@ -105,16 +105,23 @@ class RecentActivityService:
                 # Get agent name from related agent object
                 agent_name = dream.agent.name if dream.agent else 'Unknown Agent'
 
+                # Session 761: Include full inspiration for display in modals
+                inspiration = getattr(dream, 'inspiration_source', None) or ''
+
                 activities.append({
                     'id': str(dream.id),
                     'type': 'dream',
                     'icon': '💭',
                     'title': title[:60] + ('...' if len(title) > 60 else ''),
-                    'subtitle': f"by {agent_name}",
+                    'full_title': title,  # Session 761: Full title for modal
+                    'subtitle': f"Inspiration: {inspiration[:80]}..." if len(inspiration) > 80 else (f"Inspiration: {inspiration}" if inspiration else f"by {agent_name}"),
+                    'full_subtitle': inspiration if inspiration else None,  # Session 761: Full inspiration for modal
                     'timestamp': dream.dreamed_at.isoformat(),
                     'timestamp_display': self._format_time_ago(dream.dreamed_at),
                     'agent': agent_name,
+                    'agent_name': agent_name,  # Session 761: Consistent field name
                     'category': getattr(dream, 'dream_type', None),
+                    'content': dream.content[:500] if dream.content else None,  # Session 761: Preview of content
                 })
 
         except Exception as e:
