@@ -611,6 +611,8 @@ export default function AgentsPage() {
   const [selectedExecution, setSelectedExecution] = useState<AgentExecutionDetail | null>(null)
   const [relatedMemory, setRelatedMemory] = useState<RelatedMemory | null>(null)
   const [executionDetailLoading, setExecutionDetailLoading] = useState(false)
+  // Session 761: Generic Activity Detail Modal for items without matching entities
+  const [selectedActivity, setSelectedActivity] = useState<RecentActivity | null>(null)
 
   const queryClient = useQueryClient()
 
@@ -1462,19 +1464,21 @@ export default function AgentsPage() {
                       isConversationClickable ? () => setSelectedConversation(matchingConversation) :
                       isDecisionClickable ? () => setSelectedDecision(matchingDecision) :
                       isPilotClickable ? () => setSelectedExperiment(matchingExperiment) :
-                      undefined
+                      // Session 761: Show generic activity modal for items without matching entities
+                      () => setSelectedActivity(activity)
                     }
                     className={cn(
-                      "flex items-start gap-3 p-4 rounded-lg border border-dark-border transition-colors",
+                      "flex items-start gap-3 p-4 rounded-lg border border-dark-border transition-colors cursor-pointer",
                       isDreamClickable
-                        ? "hover:border-accent-purple/50 cursor-pointer hover:bg-accent-purple/5"
+                        ? "hover:border-accent-purple/50 hover:bg-accent-purple/5"
                         : isConversationClickable
-                        ? "hover:border-accent-cyan/50 cursor-pointer hover:bg-accent-cyan/5"
+                        ? "hover:border-accent-cyan/50 hover:bg-accent-cyan/5"
                         : isDecisionClickable
-                        ? "hover:border-accent-amber/50 cursor-pointer hover:bg-accent-amber/5"
+                        ? "hover:border-accent-amber/50 hover:bg-accent-amber/5"
                         : isPilotClickable
-                        ? "hover:border-accent-green/50 cursor-pointer hover:bg-accent-green/5"
-                        : "hover:border-primary-500/50"
+                        ? "hover:border-accent-green/50 hover:bg-accent-green/5"
+                        // Session 761: Make non-matched items also clickable
+                        : "hover:border-primary-500/50 hover:bg-primary-500/5"
                     )}
                   >
                     {/* Session 694: Show emoji icon if available, otherwise use icon component */}
@@ -4633,6 +4637,146 @@ export default function AgentsPage() {
                   setSelectedExecution(null)
                   setRelatedMemory(null)
                 }}
+                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 761: Generic Activity Detail Modal for items without matching entities */}
+      {selectedActivity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className={cn(
+              "flex items-start justify-between p-6 border-b border-dark-border",
+              selectedActivity.type === 'dream' ? "bg-gradient-to-r from-accent-purple/10 to-accent-pink/10" :
+              selectedActivity.type === 'conversation' ? "bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10" :
+              selectedActivity.type === 'decision' ? "bg-gradient-to-r from-accent-amber/10 to-accent-green/10" :
+              selectedActivity.type === 'pilot' ? "bg-gradient-to-r from-accent-green/10 to-accent-cyan/10" :
+              "bg-gradient-to-r from-primary-500/10 to-accent-pink/10"
+            )}>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">{selectedActivity.icon}</span>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded capitalize',
+                    selectedActivity.type === 'dream' ? 'bg-accent-purple/20 text-accent-purple' :
+                    selectedActivity.type === 'conversation' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                    selectedActivity.type === 'decision' ? 'bg-accent-amber/20 text-accent-amber' :
+                    selectedActivity.type === 'pilot' ? 'bg-accent-green/20 text-accent-green' :
+                    'bg-primary-500/20 text-primary-400'
+                  )}>
+                    {selectedActivity.type}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white">{selectedActivity.title}</h2>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                  <Clock size={14} />
+                  <span>{formatTimestamp(selectedActivity.timestamp, 'full')}</span>
+                  {selectedActivity.timestamp_display && (
+                    <>
+                      <span className="text-gray-600">•</span>
+                      <span>{selectedActivity.timestamp_display}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedActivity(null)}
+                className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+              {/* Subtitle/Description */}
+              {selectedActivity.subtitle && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <MessageSquare size={14} />
+                    Description
+                  </h3>
+                  <div className="bg-dark-hover rounded-lg p-4 text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    {selectedActivity.subtitle}
+                  </div>
+                </div>
+              )}
+
+              {/* Participating Agents */}
+              {selectedActivity.agents && selectedActivity.agents.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Users size={14} />
+                    Participating Agents
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedActivity.agents.map((agent, idx) => (
+                      <span
+                        key={idx}
+                        className="text-sm px-3 py-1.5 rounded-lg bg-dark-hover text-gray-300 border border-dark-border flex items-center gap-2"
+                      >
+                        <Bot size={14} className="text-accent-cyan" />
+                        {agent}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Single Agent */}
+              {selectedActivity.agent_name && !selectedActivity.agents?.length && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Bot size={14} />
+                    Agent
+                  </h3>
+                  <span className="text-sm px-3 py-1.5 rounded-lg bg-dark-hover text-gray-300 border border-dark-border inline-flex items-center gap-2">
+                    <Bot size={14} className="text-accent-cyan" />
+                    {selectedActivity.agent_name}
+                  </span>
+                </div>
+              )}
+
+              {/* Additional Data */}
+              {selectedActivity.data && Object.keys(selectedActivity.data).length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Zap size={14} />
+                    Additional Details
+                  </h3>
+                  <div className="bg-dark-hover rounded-lg p-4">
+                    <pre className="text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">
+                      {JSON.stringify(selectedActivity.data, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Info Note */}
+              <div className="p-4 rounded-lg bg-accent-amber/5 border border-accent-amber/20">
+                <p className="text-sm text-gray-400">
+                  <span className="text-accent-amber font-medium">Note:</span> This activity&apos;s full details were not loaded.
+                  The detailed data may have been archived or created before the current session.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                {selectedActivity.id && (
+                  <span>ID: {selectedActivity.id.slice(0, 8)}...</span>
+                )}
+                <span className="capitalize">{selectedActivity.type}</span>
+              </div>
+              <button
+                onClick={() => setSelectedActivity(null)}
                 className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
               >
                 Close
