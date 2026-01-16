@@ -20,6 +20,7 @@ Key Design Principles:
 4. Actionable: Provides specific recommendations for each issue
 """
 
+import json
 import logging
 from typing import Dict, Any, List
 
@@ -219,17 +220,69 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                     {"role": "user", "content": f"User question: {task}\n\nCurrent system attention items:\n{items_context}"}
                 ]
 
-                # Call GPT to interpret and respond
+                # Session 761: Call GPT with tools enabled for LLM-driven tool use
                 from openai import OpenAI
                 client = OpenAI()
 
+                tool_calls_made = []
                 response = client.chat.completions.create(
                     model="gpt-5-mini",
                     messages=messages,
+                    tools=self.tools,
+                    tool_choice="auto",
                     max_completion_tokens=2000
                 )
 
-                result_text = response.choices[0].message.content
+                assistant_message = response.choices[0].message
+
+                # Session 761: Handle tool calls if LLM requests them
+                if assistant_message.tool_calls:
+                    messages.append({
+                        "role": "assistant",
+                        "content": assistant_message.content,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {"name": tc.function.name, "arguments": tc.function.arguments}
+                            }
+                            for tc in assistant_message.tool_calls
+                        ]
+                    })
+
+                    for tool_call in assistant_message.tool_calls:
+                        tool_name = tool_call.function.name
+                        tool_args = json.loads(tool_call.function.arguments)
+
+                        self.record_decision(
+                            decision_type="tool_selection",
+                            action=f"LLM requested tool: {tool_name}",
+                            reasoning=f"Tool args: {json.dumps(tool_args)[:100]}",
+                            confidence=0.9
+                        )
+
+                        tool_result = self._execute_tool_call(tool_name, tool_args)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'arguments': tool_args,
+                            'result_summary': str(tool_result)[:200]
+                        })
+
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": json.dumps(tool_result)[:8000]
+                        })
+
+                    # Get final synthesis from LLM after tool execution
+                    final_response = client.chat.completions.create(
+                        model="gpt-5-mini",
+                        messages=messages,
+                        max_completion_tokens=2000
+                    )
+                    result_text = final_response.choices[0].message.content
+                else:
+                    result_text = assistant_message.content
                 execution_time_ms = int((time.time() - start_time) * 1000)
 
                 # Count by severity for metadata
@@ -254,7 +307,8 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time_ms,
-                    decisions_made=self._tt_decision_count
+                    decisions_made=self._tt_decision_count,
+                    tool_calls=tool_calls_made  # Session 761: Track tool usage
                 )
 
                 # === Session 663: Learning Infrastructure Integration ===
