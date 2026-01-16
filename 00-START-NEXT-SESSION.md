@@ -1,41 +1,55 @@
-# Session 761 - Ready for New Work
+# Session 762 - Ready for New Work
 
-**Previous Session:** 760 (Agent Output Detail Modal)
+**Previous Session:** 761 (Agent Monitoring Dashboard + Dream Bug Fixes)
 **Date:** January 15, 2026
 **Status:** All systems operational, build passing
 
 ---
 
-## Session 760 Accomplishments
+## Session 761 Accomplishments
 
-### 1. Agent Output Detail Modal - IMPLEMENTED
+### 1. Agent Monitoring Dashboard - IMPLEMENTED
 
-**Problem:** Agent execution outputs (`output_data.data`) contained rich information (images, tool results, research findings) that wasn't being displayed in the UI.
+**Problem:** The Agents Page Monitoring tab had incomplete data - only 1 execution showing, no success rates, no system metrics, no cache performance.
 
-**Solution:** Created comprehensive modal with:
-- Backend API endpoints for execution history and detail
-- Clickable execution cards in Activity tab
-- Special formatting for images, tool results, research results, code blocks
-- Related memory display and raw JSON viewer
+**Solution:** Created comprehensive monitoring API endpoints:
+- `monitoring_dashboard()` - Overall metrics, agent performance, system stats
+- `monitoring_alerts()` - Active alerts with proper timestamps
+- `monitoring_agent_detail()` - Per-agent detailed metrics
+
+**Data now displayed:**
+- Agent Performance: executions, success rates, avg times per agent
+- System Metrics: CPU usage, memory usage, uptime (via psutil)
+- Cache Performance: Redis hit rate, total hits/misses
+- Active Alerts: Failure rates, slow execution warnings
 
 **Files:**
-- `core/views_agent_execution.py` - 2 new endpoints
-- `frontend/src/pages/AgentsPage.tsx` - Modal + type-safe interfaces
+- `core/views_agent_execution.py` (+409 lines) - 3 new endpoints
+- `core/urls.py` - 3 new URL routes
+- `core/auth_middleware.py` - Added to PUBLIC_PATHS
 
-### 2. Agent Output to UI Mapping Documentation
+### 2. Dream "one"/"this" Bug Fix
 
-**Created:** `docs/AGENT_OUTPUT_TO_UI_MAPPING.md`
-- Maps all 73 agents' output structures
-- Documents data flow from AgentResult → DB → API → UI
-- Identifies remaining gaps for future work
+**Problem:** Dreams were showing "Inspiration: one" or "Inspiration: this" - nonsensical single words.
 
-### 3. Bug Fixes
+**Root Cause:** `_extract_market_topic()` regex in BusinessResearchResult was extracting stopwords like "one" from prompts like "State your name and one capability in one sentence."
 
-| Bug | Root Cause | Fix |
-|-----|-----------|-----|
-| TypeScript errors in IntegrationHealthPage | Unused import, wrong Breadcrumb props | Removed Zap, fixed currentPage prop |
-| Neural Orchestra reality-check 404 | View existed but URL not registered | Added URL route |
-| Async thread executor error | Using new_event_loop() under Daphne | Replaced with async_to_sync() |
+**Solution:**
+- Added stopwords filter to `_extract_market_topic()` in models_unified_system.py
+- Added `is_valid_topic()` validation in tasks.py dream generation
+- Cleaned up 210 knowledge records + 469 dreams with bad titles
+
+### 3. Slow Execution Threshold Adjustment
+
+**Problem:** 7 slow execution alerts were showing, including agents like ThinkingAgent (37s) that legitimately take longer.
+
+**Solution:** Raised threshold from 30s to 60s
+- Removed noise: ThinkingAgent (37s), BearCaseAgent (58.5s)
+- Still alerts for genuinely slow agents (>60s)
+
+### 4. OpportunityPipelineAgent Investigation
+
+**Finding:** 33% failure rate was from old executions before Session 758's self-description handler fix. Agent now works correctly.
 
 ---
 
@@ -43,10 +57,10 @@
 
 | Session | Handoff Document |
 |---------|------------------|
-| **760** | `SESSION_760_AGENT_OUTPUT_DETAIL_MODAL.md` |
+| **761** | See commit `c00093d5` |
+| 760 | `SESSION_760_AGENT_OUTPUT_DETAIL_MODAL.md` |
 | 759 | `SESSION_759_MEMORY_BLOG_FIXES.md` |
 | 758 | `SESSION_758_INTEGRATION_HEALTH_OBSERVABILITY.md` |
-| 753 | `SESSION_753_MEMORY_PALACE_DATA_GAP_AUDIT.md` |
 
 ---
 
@@ -62,7 +76,7 @@
 | **Body Systems** | 9/9 | 100% healthy |
 | **Sci-Fi Features** | 14/14 | 100% with UI |
 | **Integration Score** | 95% | Context injection working |
-| **TypeScript Build** | Passing | All errors fixed |
+| **Monitoring Alerts** | 5 | All slow execution (expected) |
 
 ---
 
@@ -76,8 +90,9 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test new Agent Output Modal
-# Navigate to Agents Page → Activity tab → Click an execution card
+# 3. Test Agent Monitoring
+# Navigate to Agents Page → Monitoring tab
+# View: Agent Performance, System Metrics, Cache Performance, Active Alerts
 ```
 
 ---
@@ -88,18 +103,14 @@ open http://localhost:8000/ai-studio/
 |------|----------|-------|
 | Tool call visualization timeline | Medium | Data exists in output_data |
 | Cost dashboard | Medium | Token/cost data exists, UI missing |
+| Optimize slow agents | Low | CustomerResearch 186s, AISeriesWorkflow 170s |
 | Review video/3D model tracking | Low | Identified in Session 756 |
-| Add real-time WebSocket to more pages | Low | Identified in audit |
 
 ---
 
-## Recent Commits (Session 760)
+## Recent Commits (Session 761)
 
-1. `67f66745` - fix: Fix async thread executor error in neural-orchestra reality-check
-2. `a1099de4` - fix: Add missing neural-orchestra reality-check URL route
-3. `719ee5df` - fix: Fix TypeScript errors in IntegrationHealthPage
-4. `b49c4c5e` - feat(Session 760): Add Agent Output Detail Modal
-5. `61f64e12` - docs(Session 760): Create Agent Output to UI Mapping documentation
+1. `c00093d5` - feat(Session 761): Agent Monitoring Dashboard + Dream Bug Fixes
 
 ---
 
