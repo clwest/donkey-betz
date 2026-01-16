@@ -365,10 +365,14 @@ and only important ones should be promoted. Don't treat this as a crisis."""
         - get_system_attention: Get all current system attention items
         - get_item_details: Get detailed information about a specific attention item
         """
-        # First check if parent can handle (for delegation support)
-        parent_result = super()._execute_tool_call(tool_name, arguments)
-        if parent_result.get('handled'):
-            return parent_result
+        # Session 744: Handle delegation tool
+        if tool_name == 'delegate_to_specialist':
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
 
         if tool_name == "get_system_attention":
             return self._tool_get_system_attention(arguments)
