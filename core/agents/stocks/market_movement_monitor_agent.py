@@ -361,10 +361,14 @@ Focus on stocks without corresponding news explanations for moves."""
         - alert_breakout: Detect technical breakouts
         - scan_after_hours: Monitor pre/post market activity
         """
-        # First check if parent can handle (for delegation support)
-        parent_result = super()._execute_tool_call(tool_name, arguments)
-        if parent_result.get('handled'):
-            return parent_result
+        # Session 744: Handle delegation tool
+        if tool_name == 'delegate_to_specialist':
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
 
         ticker = arguments.get('ticker', 'SPY')
 
