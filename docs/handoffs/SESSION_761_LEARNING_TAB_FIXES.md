@@ -8,7 +8,13 @@
 
 ## Overview
 
-This session addressed two data display issues: Knowledge Transfer modals showing 0% Effectiveness Gain, and Activity cards not being fully clickable when matching entities weren't found in pre-loaded data. Both issues were fixed and verified.
+This session addressed multiple data display and UX issues:
+1. Knowledge Transfer modals showing 0% Effectiveness Gain
+2. Activity cards not being fully clickable when matching entities weren't found
+3. Modal footers getting cut off when content was long (7 modals fixed)
+4. Dream inspirations being truncated without way to read full text
+
+All issues were fixed and verified.
 
 ---
 
@@ -86,7 +92,46 @@ All 7 domains exceed their minimum execution thresholds:
 - 3D: 4 executions (threshold: 3) ✅
 - Character: 3 executions (threshold: 3) ✅
 
-### 4. System Health Verification
+### 4. Modal Cutoff Fixes (All 7 Modals)
+
+**Problem:** Modal footers and close buttons were getting cut off when content was long, especially in Knowledge Transfer and Conversation modals.
+
+**Root Cause:** Modal body had fixed `max-h-[60vh]` which could exceed the container's `max-h-[90vh]` when combined with header/footer heights.
+
+**Solution:** Switched all modals to flexbox layout pattern:
+- Container: `flex flex-col` instead of `overflow-hidden`
+- Header: `flex-shrink-0` (never shrink)
+- Body: `flex-1 min-h-0` (fill available space, allow shrinking)
+- Footer: `flex-shrink-0` (never shrink)
+
+**Modals Fixed:**
+1. Knowledge Transfer Modal
+2. Conversation Thread Modal
+3. Dream Gallery Modal
+4. Decision Insights Modal
+5. Experiment Modal
+6. Agent Execution Output Modal
+7. Generic Activity Detail Modal
+
+### 5. Dream Inspiration Truncation Fix
+
+**Problem:** Dream inspirations in the Activity feed were truncated with "..." showing things like "Note: the provided dataset contains few domain-specific hits for an 'AI podcast platform for AI..." without any way to read the full text.
+
+**Root Causes:**
+1. Database: `inspiration_source` was `CharField(max_length=200)` - limited to 200 characters
+2. Frontend: Related Topics used `.slice(0, 50)` - truncated to 50 characters
+3. API: Only returned truncated preview text, not full inspiration
+
+**Solution:**
+1. **Database:** Changed `AgentDream.inspiration_source` from `CharField(max_length=200)` to `TextField`
+2. **Migration:** Created migration 0166 (fixed to remove invalid DeleteModel operations)
+3. **API:** Updated `recent_activity.py` to return `full_title`, `full_subtitle`, and `content` fields
+4. **Frontend:**
+   - Removed `.slice(0, 50)` truncation from Related Topics
+   - Added `whitespace-pre-wrap` for proper text formatting
+   - Generic Activity Modal now uses full fields
+
+### 6. System Health Verification
 
 **All services confirmed running:**
 - Redis: ✅ Running
@@ -110,6 +155,11 @@ All 7 domains exceed their minimum execution thresholds:
 | `cb0c3bc1` | feat(Session 761): Add Generic Activity Detail Modal for all activity items |
 | `6e22660b` | docs(Session 761): Update documentation |
 | `c00093d5` | feat(Session 761): Add Monitoring Dashboard |
+| `6bb61468` | fix(Session 761): Knowledge Transfer modal flexbox layout |
+| `eb1dc7ab` | fix(Session 761): All 7 modals flexbox layout for proper footer display |
+| `c87d2d83` | fix(Session 761): Dream modal full inspiration and related topics |
+| `da11c17b` | fix(Session 761): Fix migration for inspiration_source TextField change |
+| `f4f601a6` | fix(Session 761): Dream inspiration truncation - full fix |
 
 ---
 
@@ -150,7 +200,10 @@ If no match found:
 core/views_agent_learning.py       ~3 lines (effectiveness_gain fix)
 core/learning_feed_consumer.py     ~3 lines (effectiveness_gain fix)
 core/tasks.py                      ~3 lines (effectiveness_gain fix)
-frontend/src/pages/AgentsPage.tsx  +140 lines (generic modal)
+core/models_unified_system.py      ~3 lines (inspiration_source TextField)
+core/services/recent_activity.py   ~15 lines (full_title, full_subtitle, content)
+core/migrations/0166_...           +29 lines (inspiration_source migration)
+frontend/src/pages/AgentsPage.tsx  +200 lines (generic modal + 7 modal flexbox fixes)
 ```
 
 ---
