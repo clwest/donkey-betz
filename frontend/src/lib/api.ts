@@ -2010,6 +2010,61 @@ export interface OrchestrationExecutionDetail {
   }[]
 }
 
+// Session 765: Step intelligence data linking to core agent systems
+export interface StepIntelligenceMemory {
+  id: string
+  title: string
+  content: string
+  memory_type: string
+  valence: string
+  importance_score: number
+  created_at: string | null
+}
+
+export interface StepIntelligenceData {
+  step_info: {
+    step_number: number
+    agent_name: string
+    status: string
+    cost: string
+    tokens: number
+    duration_seconds: number | null
+    started_at: string | null
+    completed_at: string | null
+    input_data: Record<string, unknown>
+    output_data: Record<string, unknown>
+    error_message: string | null
+    retry_count: number
+  }
+  agent_execution: {
+    id: string
+    task: string
+    status: string
+    execution_time_ms: number
+    tokens_used: number
+    cost: string
+    output_data: Record<string, unknown>
+    error_message: string | null
+    created_at: string | null
+  } | null
+  memories_created: StepIntelligenceMemory[]
+  context_injected: {
+    spider_data?: boolean
+    spider_trends?: number
+    spider_discussions?: number
+    learning_patterns?: boolean
+    advisor_insights?: boolean
+    performance_feedback?: boolean
+    knowledge_state?: boolean
+    scifi_context?: boolean
+  }
+  tool_calls: Array<{
+    name?: string
+    function?: string
+    arguments?: Record<string, unknown>
+  }>
+}
+
 export const orchestrationApi = {
   // List available workflows
   listWorkflows: () =>
@@ -2049,5 +2104,11 @@ export const orchestrationApi = {
     api.post<{ success: boolean; execution_id: string; status: string; message: string }>(
       `/orchestration/executions/${executionId}/cancel/`,
       { reason }
+    ),
+
+  // Session 765: Get step intelligence data (agent execution, memories, context, tools)
+  getStepIntelligence: (executionId: string, stepNumber: number) =>
+    api.get<{ success: boolean; intelligence: StepIntelligenceData }>(
+      `/orchestration/executions/${executionId}/steps/${stepNumber}/intelligence/`
     ),
 }

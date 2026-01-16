@@ -793,9 +793,13 @@ class AgentRouter:
                 cost=result.cost
             )
 
+            # Session 765: Set execution_id on result for orchestration linking
+            if execution_record and hasattr(execution_record, 'id'):
+                result.execution_id = str(execution_record.id)
+
             logger.info(
                 f"{agent_name} completed: success={result.success}, "
-                f"time={result.execution_time_ms}ms"
+                f"time={result.execution_time_ms}ms, execution_id={result.execution_id}"
             )
 
             return result

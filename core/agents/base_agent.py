@@ -92,6 +92,8 @@ class AgentResult:
     # Session 735: Cost and token tracking for orchestration
     tokens_used: int = 0
     cost: float = 0.0
+    # Session 765: Link to AgentExecution record for intelligence data
+    execution_id: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -107,6 +109,8 @@ class AgentResult:
             # Session 735: Include cost tracking
             'tokens_used': self.tokens_used,
             'cost': self.cost,
+            # Session 765: Include execution ID for intelligence lookup
+            'execution_id': self.execution_id,
         }
         # Session 400: Include knowledge attribution if present
         if self.knowledge_attribution:
