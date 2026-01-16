@@ -2329,9 +2329,9 @@ export default function AgentsPage() {
                   <Wrench size={28} className="text-accent-amber" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">Agent Tools</h3>
+                  <h3 className="text-xl font-bold">PA Utility Tools</h3>
                   <p className="text-gray-400">
-                    Tools and integrations available to agents
+                    Utility functions available to the Personal Assistant
                   </p>
                 </div>
               </div>
@@ -2502,9 +2502,9 @@ export default function AgentsPage() {
           ) : (
             <div className="card text-center py-12 text-gray-400">
               <Wrench className="mx-auto mb-3 opacity-50" size={48} />
-              <p className="text-lg font-medium">No Tools Registered</p>
+              <p className="text-lg font-medium">No Utility Tools Registered</p>
               <p className="text-sm text-gray-500 mt-1">
-                Agent tools will appear here once configured
+                Run `python manage.py sync_agent_tools` to populate
               </p>
             </div>
           )}
