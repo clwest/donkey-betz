@@ -3479,9 +3479,9 @@ export default function AgentsPage() {
       {/* Session 695: Dream Gallery Modal */}
       {selectedDream && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-purple/10 to-accent-pink/10">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Modal Header - Session 761: flex-shrink-0 */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-purple/10 to-accent-pink/10 flex-shrink-0">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">💭</span>
@@ -3512,8 +3512,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+            {/* Modal Content - Session 761: flex-1 for proper scrolling */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-6">
               {/* Dream Content */}
               <div>
                 <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
@@ -3597,8 +3597,8 @@ export default function AgentsPage() {
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+            {/* Modal Footer - Session 761: flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <span>Dream ID: {selectedDream.id.slice(0, 8)}...</span>
                 {selectedDream.shown_to_user && (
@@ -3634,9 +3634,9 @@ export default function AgentsPage() {
       {/* Session 695: Conversation Thread Viewer Modal */}
       {selectedConversation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Modal Header - Session 761: flex-shrink-0 */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10 flex-shrink-0">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">🗣️</span>
@@ -3691,8 +3691,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Session 746: Scrollable content area for entire modal body */}
-            <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
+            {/* Session 746: Scrollable content area - Session 761: flex-1 for proper scrolling */}
+            <div className="overflow-y-auto flex-1 min-h-0">
               {/* Participants Strip */}
               <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-gray-500">Participants:</span>
@@ -3815,8 +3815,8 @@ export default function AgentsPage() {
             </div>
             {/* End scrollable content area */}
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+            {/* Modal Footer - Session 761: flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <span>ID: {selectedConversation.id.slice(0, 8)}...</span>
                 <span className="text-gray-600">•</span>
@@ -3842,9 +3842,9 @@ export default function AgentsPage() {
       {/* Session 696: Decision Insights Panel Modal */}
       {selectedDecision && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-amber/10 to-accent-green/10">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Modal Header - Session 761: flex-shrink-0 */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-amber/10 to-accent-green/10 flex-shrink-0">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="text-2xl">🏛️</span>
@@ -3887,8 +3887,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Participants Strip */}
-            <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap">
+            {/* Participants Strip - Session 761: flex-shrink-0 */}
+            <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap flex-shrink-0">
               <span className="text-xs text-gray-500">Participants:</span>
               {selectedDecision.participants.map((participant, idx) => (
                 <span
@@ -3901,8 +3901,8 @@ export default function AgentsPage() {
               ))}
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[55vh] space-y-6">
+            {/* Modal Content - Session 761: flex-1 for proper scrolling */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-6">
               {/* Key Insights */}
               {selectedDecision.key_insights && selectedDecision.key_insights.length > 0 && (
                 <div>
@@ -3974,8 +3974,8 @@ export default function AgentsPage() {
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+            {/* Modal Footer - Session 761: flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <span>ID: {selectedDecision.id.slice(0, 8)}...</span>
                 {selectedDecision.is_canonical && selectedDecision.promoted_at && (
@@ -4001,9 +4001,9 @@ export default function AgentsPage() {
       {/* Session 696: Experiment Modal (for "pilot" activities) */}
       {selectedExperiment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-green/10 to-accent-cyan/10">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Modal Header - Session 761: flex-shrink-0 */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 flex-shrink-0">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="text-2xl">🧪</span>
@@ -4055,8 +4055,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* KPI Progress */}
-            <div className="px-6 py-4 border-b border-dark-border bg-dark-hover/30">
+            {/* KPI Progress - Session 761: flex-shrink-0 */}
+            <div className="px-6 py-4 border-b border-dark-border bg-dark-hover/30 flex-shrink-0">
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-xs text-gray-500 mb-1">Primary KPI</div>
@@ -4073,8 +4073,8 @@ export default function AgentsPage() {
               </div>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[50vh] space-y-6">
+            {/* Modal Content - Session 761: flex-1 for proper scrolling */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-6">
               {/* Hypothesis */}
               {selectedExperiment.hypothesis && (
                 <div>
@@ -4163,8 +4163,8 @@ export default function AgentsPage() {
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+            {/* Modal Footer - Session 761: flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <span>Experiment ID: {selectedExperiment.id.slice(0, 8)}...</span>
                 {selectedExperiment.ended_at && (
@@ -4382,9 +4382,9 @@ export default function AgentsPage() {
       {/* Session 760: Agent Execution Output Detail Modal */}
       {selectedExecution && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-green/10">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Modal Header - Session 761: flex-shrink-0 */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-green/10 flex-shrink-0">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <Bot size={24} className="text-accent-cyan" />
@@ -4425,8 +4425,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)] space-y-6">
+            {/* Modal Content - Session 761: flex-1 for proper scrolling */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-6">
               {/* Task Section */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
@@ -4624,8 +4624,8 @@ export default function AgentsPage() {
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+            {/* Modal Footer - Session 761: flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <span>Execution ID: {selectedExecution.id.substring(0, 8)}...</span>
                 {selectedExecution.completed_at && (
@@ -4649,10 +4649,10 @@ export default function AgentsPage() {
       {/* Session 761: Generic Activity Detail Modal for items without matching entities */}
       {selectedActivity && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Modal Header - flex-shrink-0 */}
             <div className={cn(
-              "flex items-start justify-between p-6 border-b border-dark-border",
+              "flex items-start justify-between p-6 border-b border-dark-border flex-shrink-0",
               selectedActivity.type === 'dream' ? "bg-gradient-to-r from-accent-purple/10 to-accent-pink/10" :
               selectedActivity.type === 'conversation' ? "bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10" :
               selectedActivity.type === 'decision' ? "bg-gradient-to-r from-accent-amber/10 to-accent-green/10" :
@@ -4693,8 +4693,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+            {/* Modal Content - flex-1 for proper scrolling */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-6">
               {/* Subtitle/Description */}
               {selectedActivity.subtitle && (
                 <div>
@@ -4767,8 +4767,8 @@ export default function AgentsPage() {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+            {/* Modal Footer - flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 {selectedActivity.id && (
                   <span>ID: {selectedActivity.id.slice(0, 8)}...</span>
