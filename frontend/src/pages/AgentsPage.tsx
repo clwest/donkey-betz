@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi, collectiveApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot, Shield, Calendar } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -756,6 +756,25 @@ export default function AgentsPage() {
 
   // Session 734: Agent Tools query
   const [toolTypeFilter, setToolTypeFilter] = useState<string>('')
+  const [toolSearch, setToolSearch] = useState<string>('')  // Session 761: Tool search
+  const [selectedTool, setSelectedTool] = useState<{
+    id: string
+    name: string
+    display_name: string
+    description: string
+    tool_type: string
+    is_active: boolean
+    usage_count: number
+    success_rate: number
+    avg_response_time_ms: number
+    tool_version: string
+    endpoint_url?: string
+    supported_operations?: string[]
+    required_permissions?: string[]
+    compatible_agent_count?: number
+    created_at?: string
+    updated_at?: string
+  } | null>(null)  // Session 761: Tool detail modal
   const { data: toolsData, isLoading: toolsLoading, refetch: refetchTools } = useQuery({
     queryKey: ['agent-tools', toolTypeFilter],
     queryFn: async () => {
@@ -2317,6 +2336,17 @@ export default function AgentsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {/* Session 761: Tool Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    value={toolSearch}
+                    onChange={(e) => setToolSearch(e.target.value)}
+                    placeholder="Search tools..."
+                    className="pl-9 pr-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm w-48"
+                  />
+                </div>
                 {/* Tool Type Filter */}
                 <select
                   value={toolTypeFilter}
@@ -2350,7 +2380,14 @@ export default function AgentsPage() {
             </div>
           ) : Array.isArray(toolsData) && toolsData.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {toolsData.map((tool: {
+              {toolsData
+                .filter((tool: { display_name: string; name: string; description: string }) =>
+                  !toolSearch ||
+                  tool.display_name.toLowerCase().includes(toolSearch.toLowerCase()) ||
+                  tool.name.toLowerCase().includes(toolSearch.toLowerCase()) ||
+                  tool.description.toLowerCase().includes(toolSearch.toLowerCase())
+                )
+                .map((tool: {
                 id: string
                 name: string
                 display_name: string
@@ -2363,11 +2400,16 @@ export default function AgentsPage() {
                 tool_version: string
                 endpoint_url?: string
                 supported_operations?: string[]
+                required_permissions?: string[]
+                compatible_agent_count?: number
+                created_at?: string
+                updated_at?: string
               }) => (
                 <div
                   key={tool.id}
+                  onClick={() => setSelectedTool(tool)}
                   className={cn(
-                    "card hover:border-primary-500/50 transition-colors",
+                    "card hover:border-primary-500/50 transition-colors cursor-pointer",
                     !tool.is_active && "opacity-60"
                   )}
                 >
@@ -2441,9 +2483,18 @@ export default function AgentsPage() {
 
                   <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
                     <span>v{tool.tool_version}</span>
-                    {tool.supported_operations && tool.supported_operations.length > 0 && (
-                      <span>{tool.supported_operations.length} operations</span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {/* Session 761: Show compatible agent count */}
+                      {tool.compatible_agent_count !== undefined && tool.compatible_agent_count > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Users size={12} />
+                          {tool.compatible_agent_count} agents
+                        </span>
+                      )}
+                      {tool.supported_operations && tool.supported_operations.length > 0 && (
+                        <span>{tool.supported_operations.length} operations</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -4794,6 +4845,187 @@ export default function AgentsPage() {
               </div>
               <button
                 onClick={() => setSelectedActivity(null)}
+                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 761: Tool Detail Modal */}
+      {selectedTool && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedTool(null)}
+        >
+          <div
+            className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - flex-shrink-0 to always show */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "h-14 w-14 rounded-xl flex items-center justify-center",
+                  selectedTool.tool_type === 'api' ? 'bg-accent-cyan/20' :
+                  selectedTool.tool_type === 'computation' ? 'bg-accent-purple/20' :
+                  selectedTool.tool_type === 'data_processing' ? 'bg-accent-blue/20' :
+                  selectedTool.tool_type === 'communication' ? 'bg-accent-green/20' :
+                  selectedTool.tool_type === 'content_generation' ? 'bg-accent-pink/20' :
+                  selectedTool.tool_type === 'analysis' ? 'bg-accent-amber/20' :
+                  'bg-gray-500/20'
+                )}>
+                  {selectedTool.tool_type === 'api' ? <ExternalLink size={28} className="text-accent-cyan" /> :
+                   selectedTool.tool_type === 'computation' ? <Cpu size={28} className="text-accent-purple" /> :
+                   selectedTool.tool_type === 'data_processing' ? <Database size={28} className="text-accent-blue" /> :
+                   selectedTool.tool_type === 'communication' ? <MessageSquare size={28} className="text-accent-green" /> :
+                   selectedTool.tool_type === 'content_generation' ? <Sparkles size={28} className="text-accent-pink" /> :
+                   selectedTool.tool_type === 'analysis' ? <BarChart3 size={28} className="text-accent-amber" /> :
+                   <Wrench size={28} className="text-gray-400" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-white">{selectedTool.display_name}</h2>
+                    <div className={cn(
+                      "flex items-center gap-1 text-xs px-2 py-1 rounded",
+                      selectedTool.is_active ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+                    )}>
+                      <Power size={12} />
+                      {selectedTool.is_active ? 'Active' : 'Inactive'}
+                    </div>
+                  </div>
+                  <p className="text-gray-400 capitalize">{selectedTool.tool_type.replace('_', ' ')} · v{selectedTool.tool_version}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedTool(null)}
+                className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-dark-hover transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body - flex-1 min-h-0 for proper scrolling */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
+              {/* Description */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-400 mb-2">Description</h3>
+                <p className="text-gray-300 whitespace-pre-wrap">{selectedTool.description}</p>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-dark-hover rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-white">{selectedTool.usage_count.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Total Uses</p>
+                </div>
+                <div className="bg-dark-hover rounded-lg p-4 text-center">
+                  <p className={cn(
+                    "text-2xl font-bold",
+                    selectedTool.success_rate >= 0.9 ? 'text-accent-green' :
+                    selectedTool.success_rate >= 0.7 ? 'text-accent-amber' : 'text-accent-red'
+                  )}>
+                    {(selectedTool.success_rate * 100).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-gray-500">Success Rate</p>
+                </div>
+                <div className="bg-dark-hover rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-white">{selectedTool.avg_response_time_ms.toFixed(0)}ms</p>
+                  <p className="text-xs text-gray-500">Avg Response Time</p>
+                </div>
+              </div>
+
+              {/* Endpoint URL */}
+              {selectedTool.endpoint_url && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <ExternalLink size={14} />
+                    Endpoint URL
+                  </h3>
+                  <div className="bg-dark-hover rounded-lg p-3">
+                    <code className="text-sm text-accent-cyan break-all">{selectedTool.endpoint_url}</code>
+                  </div>
+                </div>
+              )}
+
+              {/* Supported Operations */}
+              {selectedTool.supported_operations && selectedTool.supported_operations.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Zap size={14} />
+                    Supported Operations ({selectedTool.supported_operations.length})
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTool.supported_operations.map((op, idx) => (
+                      <span key={idx} className="px-3 py-1.5 rounded-lg bg-dark-hover text-gray-300 text-sm border border-dark-border">
+                        {op}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Required Permissions */}
+              {selectedTool.required_permissions && selectedTool.required_permissions.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Shield size={14} />
+                    Required Permissions ({selectedTool.required_permissions.length})
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTool.required_permissions.map((perm, idx) => (
+                      <span key={idx} className="px-3 py-1.5 rounded-lg bg-accent-amber/10 text-accent-amber text-sm border border-accent-amber/20">
+                        {perm}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Compatible Agents */}
+              {selectedTool.compatible_agent_count !== undefined && selectedTool.compatible_agent_count > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Users size={14} />
+                    Compatible Agents
+                  </h3>
+                  <p className="text-gray-300">{selectedTool.compatible_agent_count} agents can use this tool</p>
+                </div>
+              )}
+
+              {/* Timestamps */}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedTool.created_at && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
+                      <Calendar size={14} />
+                      Created
+                    </h3>
+                    <p className="text-gray-300 text-sm">{new Date(selectedTool.created_at).toLocaleDateString()}</p>
+                  </div>
+                )}
+                {selectedTool.updated_at && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
+                      <RefreshCw size={14} />
+                      Last Updated
+                    </h3>
+                    <p className="text-gray-300 text-sm">{new Date(selectedTool.updated_at).toLocaleDateString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer - flex-shrink-0 to always show */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>ID: {selectedTool.id.slice(0, 8)}...</span>
+                <span>Name: {selectedTool.name}</span>
+              </div>
+              <button
+                onClick={() => setSelectedTool(null)}
                 className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
               >
                 Close
