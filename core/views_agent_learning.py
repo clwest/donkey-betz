@@ -805,7 +805,9 @@ def get_knowledge_transfer_feed(request):
                 'student': student.name,
                 'was_useful': transfer.was_useful,
                 'usefulness_score': transfer.usefulness_score,  # Session 532: Include score
-                'effectiveness_gain': 0.0  # Could calculate if stored
+                # Session 761: Use usefulness_score as effectiveness_gain proxy
+                # usefulness_score measures how effective the knowledge was (0-1 scale)
+                'effectiveness_gain': transfer.usefulness_score if transfer.usefulness_score else 0.0
             })
 
         return JsonResponse({

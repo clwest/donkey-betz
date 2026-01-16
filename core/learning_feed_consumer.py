@@ -140,7 +140,8 @@ class LearningFeedConsumer(AsyncWebsocketConsumer):
                 'teacher': teacher.name,
                 'student': student.name,
                 'was_useful': transfer.was_useful,
-                'effectiveness_gain': 0.0
+                # Session 761: Use usefulness_score as effectiveness_gain proxy
+                'effectiveness_gain': transfer.usefulness_score if transfer.usefulness_score else 0.0
             })
 
         return {
