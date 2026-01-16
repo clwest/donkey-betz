@@ -991,6 +991,9 @@ export const humanApi = {
     api.post(`/human/attention/${itemId}/defer/`, { remind_at: remindAt }),
   verify: (itemId: string, outcome: string, profit?: number, notes?: string) =>
     api.post(`/human/attention/${itemId}/verify/`, { outcome, profit, notes }),
+  // Session 763: Mission Control execute action
+  executeAction: (itemId: string, action: string, feedback?: string, extraData?: Record<string, unknown>) =>
+    api.post(`/human/attention/${itemId}/execute/`, { action, feedback, extra_data: extraData }),
 
   // Control Panel
   control: () => api.get('/human/control/'),

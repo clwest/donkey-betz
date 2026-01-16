@@ -333,6 +333,70 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create content review attention: {e}")
 
     # =========================================================================
+    # AGENT OUTPUT - MISSION CONTROL
+    # =========================================================================
+
+    def create_agent_output_attention(
+        self,
+        agent_name: str,
+        item_type: str,
+        title: str,
+        summary: str,
+        urgency: str = 'medium',
+        payload: dict = None,
+        result_data: dict = None,
+        user=None
+    ):
+        """
+        Session 763: Create attention item from agent output for Mission Control.
+
+        This is the generic factory for agent outputs. Called by BaseAgent's
+        _maybe_create_attention_item() when an agent has actionable_config enabled.
+
+        Args:
+            agent_name: Name of the agent that produced the output
+            item_type: Type of item (review, alert, opportunity, insight, approval)
+            title: Human-readable title
+            summary: Brief description of what needs attention
+            urgency: critical, high, medium, low
+            payload: Dict including available_actions for Mission Control buttons
+            result_data: The agent's result.data for additional context
+            user: Target user (or all admins if None)
+
+        The payload should include:
+            - available_actions: List of action dicts with {id, label, style, description}
+            - Any agent-specific data for display
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            # Merge result_data into payload for full context
+            full_payload = payload or {}
+            if result_data:
+                full_payload['result_data'] = _serialize_for_json(result_data)
+
+            # Ensure available_actions exists (even if empty)
+            if 'available_actions' not in full_payload:
+                full_payload['available_actions'] = []
+
+            for target_user in users:
+                service = self.get_service(target_user)
+
+                service.create_attention_item(
+                    source_type=f'agent_output:{agent_name.lower()}',
+                    source_agent=agent_name,
+                    item_type=item_type,
+                    title=title,
+                    summary=summary,
+                    urgency=urgency,
+                    payload=_serialize_for_json(full_payload),
+                )
+                logger.info(f"Created agent output attention from {agent_name} for user {target_user.username}")
+
+        except Exception as e:
+            logger.error(f"Failed to create agent output attention from {agent_name}: {e}")
+
+    # =========================================================================
     # SPIDER DATA ALERTS
     # =========================================================================
 

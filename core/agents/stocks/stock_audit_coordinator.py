@@ -16,7 +16,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -75,6 +75,22 @@ Always prioritize:
 - Time-sensitive alerts (active manipulation, breaking news)
 - High-severity findings
 - Correlated signals (multiple agents flagging same stock)"""
+
+    # Session 763: Mission Control configuration
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='alert',
+        default_urgency='high',
+        min_confidence=0.0,
+        actions=[
+            {'id': 'review', 'label': 'Review Audit', 'style': 'primary', 'description': 'Review complete audit findings'},
+            {'id': 'set_alert', 'label': 'Set Alerts', 'style': 'warning', 'description': 'Set price alerts on flagged stocks'},
+            {'id': 'watchlist', 'label': 'Add to Watchlist', 'style': 'success', 'description': 'Track these stocks'},
+            {'id': 'dismiss', 'label': 'Dismiss', 'style': 'secondary', 'description': 'No action needed'},
+        ],
+        payload_fields=['stocks_analyzed', 'alerts_count', 'severity', 'correlated_signals'],
+        max_items_per_hour=3
+    )
 
     def execute(self, task: str, context: Dict[str, Any] = None,
                 scifi_context: Dict[str, Any] = None,
@@ -189,6 +205,9 @@ Always prioritize:
                 )
             except Exception as le:
                 logger.warning(f"Failed to record learning outcome: {le}")
+
+            # Session 763: Create Mission Control attention item
+            self._maybe_create_attention_item(result, task, context)
 
             return result
 

@@ -114,6 +114,38 @@ class AgentResult:
         return result
 
 
+@dataclass
+class ActionableOutputConfig:
+    """
+    Session 763: Configuration for when an agent output creates a Mission Control attention item.
+
+    When enabled, successful agent executions will create HumanAttentionItems
+    that appear on the Human Page with action buttons.
+
+    Example:
+        actionable_config = ActionableOutputConfig(
+            enabled=True,
+            item_type='insight',
+            default_urgency='medium',
+            actions=[
+                {'id': 'review', 'label': 'Review Analysis', 'primary': True},
+                {'id': 'set_alert', 'label': 'Set Alert'},
+                {'id': 'ignore', 'label': 'Ignore'},
+            ],
+            payload_fields=['ticker', 'analysis_type', 'findings', 'recommendations']
+        )
+    """
+    enabled: bool = False
+    item_type: str = 'review'  # review, alert, opportunity, insight, approval
+    urgency_from_field: str = None  # Field in result.data that determines urgency
+    default_urgency: str = 'medium'  # critical, high, medium, low
+    required_fields: List[str] = field(default_factory=list)  # Fields that must be in result.data
+    min_confidence: float = 0.0  # Minimum confidence to create item
+    actions: List[Dict[str, Any]] = field(default_factory=list)  # Available action buttons
+    payload_fields: List[str] = field(default_factory=list)  # Fields to include in attention item payload
+    max_items_per_hour: int = 5  # Rate limiting
+
+
 class BaseAgent(ABC, TimeTravelMixin):
     """
     Abstract base class for all clean architecture agents.
@@ -1789,6 +1821,104 @@ Consider these trends when crafting the response to maximize relevance and engag
         except Exception as tracking_error:
             # Never let tracking failures break agent execution
             logger.debug(f"Analytics tracking failed (non-critical): {tracking_error}")
+
+    # ==================== Mission Control (Session 763) ====================
+
+    def _maybe_create_attention_item(
+        self,
+        result: AgentResult,
+        task: str,
+        context: Dict[str, Any] = None
+    ) -> None:
+        """
+        Session 763: Create Mission Control attention item if result is actionable.
+
+        Called at the end of execute() to surface actionable outputs to humans.
+        Override `actionable_config` in subclasses to enable.
+
+        The attention item appears on the Human Page with action buttons that
+        actually execute (publish, set alert, deep dive, etc.) rather than
+        just recording the decision.
+
+        Args:
+            result: The AgentResult from execute()
+            task: The original task string
+            context: Optional execution context
+        """
+        from django.core.cache import cache
+
+        config = getattr(self, 'actionable_config', None)
+        if not config or not config.enabled:
+            return
+
+        if not result.success:
+            return  # Don't create items for failed executions
+
+        # Check required fields are present
+        for field_name in config.required_fields:
+            if field_name not in (result.data or {}):
+                logger.debug(f"Skipping attention item: missing required field {field_name}")
+                return
+
+        # Check confidence threshold
+        if hasattr(result, 'knowledge_attribution') and result.knowledge_attribution:
+            if result.knowledge_attribution.confidence_score < config.min_confidence:
+                logger.debug(f"Skipping attention item: confidence {result.knowledge_attribution.confidence_score} < {config.min_confidence}")
+                return
+
+        # Rate limiting: max items per agent per hour
+        cache_key = f"mission_control_rate:{self.name}"
+        current_count = cache.get(cache_key, 0)
+        max_items = getattr(config, 'max_items_per_hour', 5)
+
+        if current_count >= max_items:
+            logger.debug(f"Rate limited: {self.name} has created {current_count} items this hour")
+            return
+
+        # Determine urgency
+        urgency = config.default_urgency
+        if config.urgency_from_field and config.urgency_from_field in (result.data or {}):
+            urgency_value = result.data[config.urgency_from_field]
+            if urgency_value in ['critical', 'high', 'medium', 'low']:
+                urgency = urgency_value
+
+        # Build payload from configured fields
+        payload = {}
+        for field_name in config.payload_fields:
+            if field_name in (result.data or {}):
+                payload[field_name] = result.data[field_name]
+
+        payload['task'] = task[:200]
+        payload['available_actions'] = config.actions
+        payload['agent_name'] = self.name
+
+        # Create attention item via bridge
+        try:
+            from core.services.human_attention_bridge import attention_bridge
+
+            # Build title from task
+            title = f"{self.name}: {task[:50]}{'...' if len(task) > 50 else ''}"
+
+            # Build summary from result message
+            summary = result.message[:500] if result.message else "Agent completed with actionable output"
+
+            attention_bridge.create_agent_output_attention(
+                agent_name=self.name,
+                item_type=config.item_type,
+                title=title,
+                summary=summary,
+                urgency=urgency,
+                payload=payload,
+                result_data=result.data,
+            )
+
+            # Increment rate limit counter (1 hour TTL)
+            cache.set(cache_key, current_count + 1, timeout=3600)
+
+            logger.info(f"🎯 Mission Control: Created attention item for {self.name}")
+
+        except Exception as e:
+            logger.warning(f"Failed to create attention item for {self.name}: {e}")
 
     # ==================== Multi-Model Routing (Session 697) ====================
 

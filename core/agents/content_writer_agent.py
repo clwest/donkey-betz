@@ -47,7 +47,7 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 # Session 523: Import Intelligent Prompting System
@@ -195,6 +195,22 @@ If you need something outside your expertise, use the delegate_to_specialist too
 Always delegate tasks you cannot perform yourself rather than refusing or making up data."""
 
     tools = []  # Content generation is done via direct GPT call, not sub-tools
+
+    # Session 763: Mission Control configuration
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='review',
+        default_urgency='medium',
+        min_confidence=0.0,
+        actions=[
+            {'id': 'publish', 'label': 'Publish', 'style': 'success', 'description': 'Publish content immediately'},
+            {'id': 'schedule', 'label': 'Schedule', 'style': 'primary', 'description': 'Schedule for later'},
+            {'id': 'edit', 'label': 'Request Edit', 'style': 'warning', 'description': 'Flag for editing'},
+            {'id': 'reject', 'label': 'Reject', 'style': 'danger', 'description': 'Do not publish'},
+        ],
+        payload_fields=['content_type', 'word_count', 'quality_score'],
+        max_items_per_hour=5
+    )
 
     def __init__(self, user=None, project_id: str = None):
         """Initialize the content writer agent."""
@@ -510,6 +526,9 @@ For this {content_type}, ensure:
                     },
                     confidence=0.85
                 )
+
+                # Session 763: Create Mission Control attention item
+                self._maybe_create_attention_item(result, task, context)
 
                 return result
 

@@ -16,7 +16,7 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import json
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -109,6 +109,22 @@ All times are in MST (Mountain Time).
 
 Remember: Sharp money moves lines. Look for where the line went AGAINST public betting."""
 
+    # Session 763: Mission Control configuration
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='opportunity',
+        default_urgency='medium',
+        min_confidence=0.0,
+        actions=[
+            {'id': 'watch', 'label': 'Watch Game', 'style': 'primary', 'description': 'Track this matchup'},
+            {'id': 'paper_trade', 'label': 'Paper Trade', 'style': 'success', 'description': 'Record a paper bet'},
+            {'id': 'research_more', 'label': 'Research', 'style': 'warning', 'description': 'Need more analysis'},
+            {'id': 'pass', 'label': 'Pass', 'style': 'secondary', 'description': 'No bet'},
+        ],
+        payload_fields=['games_analyzed', 'value_bets', 'arbitrage_found'],
+        max_items_per_hour=5
+    )
+
     def execute(self, task: str, context: Dict[str, Any] = None,
                 scifi_context: Dict[str, Any] = None,
                 spider_context: Dict[str, Any] = None) -> AgentResult:
@@ -177,7 +193,7 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                 except Exception as learn_err:
                     logger.debug(f"Learning outcome recording skipped: {learn_err}")
 
-                return AgentResult(
+                result = AgentResult(
                     success=True,
                     message=response,
                     data={
@@ -190,6 +206,11 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                     agent_name=self.name,
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
+
+                # Session 763: Create Mission Control attention item
+                self._maybe_create_attention_item(result, task, context)
+
+                return result
 
             except Exception as e:
                 logger.error(f"SportsOddsAnalyst error: {e}", exc_info=True)
