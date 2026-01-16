@@ -35,12 +35,12 @@ class OrchestrationWorkflowsView(View):
 
         try:
             workflows = CustomWorkflow.objects.filter(
-                is_active=True
-            ).select_related('user').order_by('-updated_at')
+                status='active'
+            ).select_related('created_by').order_by('-updated_at')
 
             # Filter by user's workflows or public workflows
             if not request.user.is_staff:
-                workflows = workflows.filter(user=request.user)
+                workflows = workflows.filter(created_by=request.user)
 
             data = []
             for wf in workflows[:50]:  # Limit to 50 workflows
@@ -92,10 +92,10 @@ class OrchestrationExecuteView(View):
             async_mode = body.get('async', True)
 
             # Get workflow
-            workflow = CustomWorkflow.objects.get(id=workflow_id, is_active=True)
+            workflow = CustomWorkflow.objects.get(id=workflow_id, status='active')
 
             # Check permissions
-            if not request.user.is_staff and workflow.user != request.user:
+            if not request.user.is_staff and workflow.created_by != request.user:
                 return JsonResponse({
                     'success': False,
                     'error': 'Permission denied',
@@ -407,6 +407,139 @@ class OrchestrationCancelView(View):
             }, status=500)
 
 
+class OrchestrationStepIntelligenceView(View):
+    """
+    Session 765: Fetch intelligence data for an orchestration step.
+
+    Returns the underlying AgentExecution data, memories created,
+    learning patterns applied, tool calls, and injected context.
+    """
+
+    @method_decorator(login_required)
+    def get(self, request, execution_id, step_number):
+        """Get intelligence data for a specific step."""
+        from core.models_orchestration import OrchestrationExecution, OrchestrationStepExecution
+        from core.models_unified_system import AgentExecution, AgentMemory, Agent
+
+        try:
+            # Get the orchestration execution
+            execution = OrchestrationExecution.objects.get(id=execution_id)
+
+            # Check permissions
+            if not request.user.is_staff and execution.triggered_by != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Permission denied',
+                }, status=403)
+
+            # Get the step execution
+            step_exec = OrchestrationStepExecution.objects.get(
+                orchestration=execution,
+                step_number=step_number
+            )
+
+            # Build intelligence response
+            intelligence = {
+                'step_info': {
+                    'step_number': step_exec.step_number,
+                    'agent_name': step_exec.agent_name,
+                    'status': step_exec.status,
+                    'cost': str(step_exec.cost) if step_exec.cost else '0.0000',
+                    'tokens': step_exec.tokens_used,
+                    'duration_seconds': step_exec.duration_seconds,
+                    'started_at': step_exec.started_at.isoformat() if step_exec.started_at else None,
+                    'completed_at': step_exec.completed_at.isoformat() if step_exec.completed_at else None,
+                    'input_data': step_exec.input_data,
+                    'output_data': step_exec.output_data,
+                    'error_message': step_exec.error_message,
+                    'retry_count': step_exec.retry_count,
+                },
+                'agent_execution': None,
+                'memories_created': [],
+                'context_injected': {},
+                'tool_calls': [],
+            }
+
+            # If we have an execution_id, fetch the underlying execution data
+            if step_exec.execution_id:
+                try:
+                    agent_exec = AgentExecution.objects.get(id=step_exec.execution_id)
+                    intelligence['agent_execution'] = {
+                        'id': str(agent_exec.id),
+                        'task': agent_exec.task,
+                        'status': agent_exec.status,
+                        'execution_time_ms': agent_exec.execution_time_ms,
+                        'tokens_used': agent_exec.tokens_used,
+                        'cost': str(agent_exec.cost) if agent_exec.cost else '0.0000',
+                        'output_data': agent_exec.output_data,
+                        'error_message': agent_exec.error_message,
+                        'created_at': agent_exec.created_at.isoformat() if agent_exec.created_at else None,
+                    }
+
+                    # Extract context that was injected
+                    input_data = agent_exec.input_data or {}
+                    context_injected = input_data.get('context_injected', {})
+                    intelligence['context_injected'] = context_injected
+
+                    # Extract tool calls from output_data
+                    output_data = agent_exec.output_data or {}
+                    if 'data' in output_data and isinstance(output_data['data'], dict):
+                        tool_calls = output_data['data'].get('tool_calls', [])
+                        if tool_calls:
+                            intelligence['tool_calls'] = tool_calls
+
+                    # Find memories created by this execution
+                    # Look for memories with source_type='execution' and source_id matching
+                    try:
+                        agent_record = Agent.objects.filter(name=step_exec.agent_name).first()
+                        if agent_record:
+                            memories = AgentMemory.objects.filter(
+                                agent=agent_record,
+                                source_type__in=['execution', 'task'],
+                                source_id=str(step_exec.execution_id)
+                            ).order_by('-created_at')[:10]
+
+                            for mem in memories:
+                                intelligence['memories_created'].append({
+                                    'id': str(mem.id),
+                                    'title': mem.title,
+                                    'content': mem.content[:500] if mem.content else '',
+                                    'memory_type': mem.memory_type,
+                                    'valence': mem.valence,
+                                    'importance_score': mem.importance_score,
+                                    'created_at': mem.created_at.isoformat() if mem.created_at else None,
+                                })
+                    except Exception as mem_err:
+                        logger.warning(f"Error fetching memories: {mem_err}")
+
+                except AgentExecution.DoesNotExist:
+                    logger.warning(f"AgentExecution {step_exec.execution_id} not found")
+
+            return JsonResponse({
+                'success': True,
+                'intelligence': intelligence,
+            })
+
+        except OrchestrationExecution.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Execution not found',
+            }, status=404)
+
+        except OrchestrationStepExecution.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Step {step_number} not found',
+            }, status=404)
+
+        except Exception as e:
+            logger.error(f"Error fetching step intelligence: {e}", exc_info=True)
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+            }, status=500)
+
+
 # URL patterns for this module
 def get_urlpatterns():
     """Return URL patterns for orchestration API."""
@@ -419,4 +552,7 @@ def get_urlpatterns():
         path('executions/<uuid:execution_id>/', OrchestrationExecutionDetailView.as_view(), name='orchestration-execution-detail'),
         path('executions/<uuid:execution_id>/resume/', OrchestrationResumeView.as_view(), name='orchestration-resume'),
         path('executions/<uuid:execution_id>/cancel/', OrchestrationCancelView.as_view(), name='orchestration-cancel'),
+        # Session 765: Step intelligence endpoint
+        path('executions/<uuid:execution_id>/steps/<int:step_number>/intelligence/',
+             OrchestrationStepIntelligenceView.as_view(), name='orchestration-step-intelligence'),
     ]

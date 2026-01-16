@@ -124,6 +124,18 @@ class OrchestrationStepExecutor:
                 cost = Decimal(str(result.get('cost', 0)))
                 tokens = result.get('tokens', 0)
 
+            # Session 765: Capture execution_id for intelligence linking
+            execution_id = None
+            if hasattr(result, 'execution_id') and result.execution_id:
+                execution_id = result.execution_id
+                step_exec.execution_id = execution_id
+                step_exec.save(update_fields=['execution_id'])
+                logger.info(f"Step {step.order} linked to execution {execution_id}")
+            elif isinstance(result, dict) and result.get('execution_id'):
+                execution_id = result.get('execution_id')
+                step_exec.execution_id = execution_id
+                step_exec.save(update_fields=['execution_id'])
+
             # Mark step as completed
             step_exec.mark_completed(output, cost, tokens)
 

@@ -220,6 +220,13 @@ class OrchestrationStepExecution(models.Model):
     # Agent information
     agent_name = models.CharField(max_length=100)
 
+    # Session 765: Link to underlying AgentExecution for intelligence data
+    execution_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="ID of the AgentExecution record for accessing memories, learning, and full execution data"
+    )
+
     # Status
     STATUS_CHOICES = [
         ('pending', 'Pending'),

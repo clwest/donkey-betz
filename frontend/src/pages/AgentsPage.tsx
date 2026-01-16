@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi, collectiveApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi, collectiveApi, orchestrationApi, type OrchestrationWorkflow, type OrchestrationExecution, type OrchestrationStepExecution } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot, Shield, Calendar } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot, Shield, Calendar, Workflow } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -954,6 +954,92 @@ export default function AgentsPage() {
       setSelectedOrchestrationOutput(data)
       setOutputModalOpen(true)
     },
+  })
+
+  // Session 764: Enhanced Orchestration Layer - Sub-tabs and new API
+  type OrchestrationSubTab = 'agent-orchestrations' | 'workflows' | 'executions'
+  const [orchestrationSubTab, setOrchestrationSubTab] = useState<OrchestrationSubTab>('workflows')
+  const [executionDetailId, setExecutionDetailId] = useState<string | null>(null)
+  const [executeWorkflowModalOpen, setExecuteWorkflowModalOpen] = useState(false)
+  const [selectedWorkflowForExecution, setSelectedWorkflowForExecution] = useState<OrchestrationWorkflow | null>(null)
+  const [workflowInputData, setWorkflowInputData] = useState<string>('{}')
+
+  // Session 764: Fetch orchestration workflows (CustomWorkflow with orchestration fields)
+  const { data: workflowsData, isLoading: workflowsLoading, refetch: refetchWorkflows } = useQuery({
+    queryKey: ['orchestration-workflows'],
+    queryFn: async () => {
+      const response = await orchestrationApi.listWorkflows()
+      return response.data
+    },
+    enabled: activeTab === 'orchestrations' && orchestrationSubTab === 'workflows',
+  })
+
+  // Session 764: Fetch orchestration executions (renamed to avoid conflict with line 711)
+  const { data: orchExecutionsData, isLoading: orchExecutionsLoading, refetch: refetchOrchExecutions } = useQuery({
+    queryKey: ['orchestration-executions'],
+    queryFn: async () => {
+      const response = await orchestrationApi.listExecutions({ limit: 50 })
+      return response.data
+    },
+    enabled: activeTab === 'orchestrations' && orchestrationSubTab === 'executions',
+    refetchInterval: 10000, // Refetch every 10s to track running executions
+  })
+
+  // Session 764: Fetch execution detail with steps (renamed to avoid conflict with line 616)
+  const { data: orchExecutionDetailData } = useQuery({
+    queryKey: ['orchestration-execution-detail', executionDetailId],
+    queryFn: async () => {
+      if (!executionDetailId) return null
+      const response = await orchestrationApi.getExecution(executionDetailId)
+      return response.data
+    },
+    enabled: !!executionDetailId,
+    refetchInterval: executionDetailId ? 5000 : false, // Refetch running executions
+  })
+
+  // Session 765: State and query for step intelligence
+  const [selectedStepNumber, setSelectedStepNumber] = useState<number | null>(null)
+  const { data: stepIntelligenceData, isLoading: stepIntelligenceLoading } = useQuery({
+    queryKey: ['step-intelligence', executionDetailId, selectedStepNumber],
+    queryFn: async () => {
+      if (!executionDetailId || selectedStepNumber === null) return null
+      const response = await orchestrationApi.getStepIntelligence(executionDetailId, selectedStepNumber)
+      return response.data?.intelligence
+    },
+    enabled: !!executionDetailId && selectedStepNumber !== null,
+  })
+
+  // Session 764: Execute workflow mutation
+  const executeWorkflowMutation = useMutation({
+    mutationFn: async ({ workflowId, input }: { workflowId: string; input?: Record<string, unknown> }) => {
+      const response = await orchestrationApi.execute(workflowId, input, true)
+      return response.data
+    },
+    onSuccess: () => {
+      refetchOrchExecutions()
+      setExecuteWorkflowModalOpen(false)
+      setSelectedWorkflowForExecution(null)
+      setWorkflowInputData('{}')
+      setOrchestrationSubTab('executions')
+    },
+  })
+
+  // Session 764: Resume execution mutation
+  const resumeExecutionMutation = useMutation({
+    mutationFn: async (executionId: string) => {
+      const response = await orchestrationApi.resume(executionId)
+      return response.data
+    },
+    onSuccess: () => refetchOrchExecutions(),
+  })
+
+  // Session 764: Cancel execution mutation
+  const cancelExecutionMutation = useMutation({
+    mutationFn: async (executionId: string) => {
+      const response = await orchestrationApi.cancel(executionId, 'Cancelled by user')
+      return response.data
+    },
+    onSuccess: () => refetchOrchExecutions(),
   })
 
   // WebSocket connections
@@ -3024,7 +3110,295 @@ export default function AgentsPage() {
             </div>
           </div>
 
-          {orchestrationsLoading ? (
+          {/* Session 764: Orchestration Sub-tabs */}
+          <div className="flex items-center gap-2 border-b border-dark-border pb-4">
+            <button
+              onClick={() => setOrchestrationSubTab('workflows')}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium transition-colors",
+                orchestrationSubTab === 'workflows'
+                  ? "bg-accent-purple text-white"
+                  : "bg-dark-card hover:bg-dark-border text-gray-400"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Workflow size={16} />
+                Workflows
+              </div>
+            </button>
+            <button
+              onClick={() => setOrchestrationSubTab('executions')}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium transition-colors",
+                orchestrationSubTab === 'executions'
+                  ? "bg-accent-purple text-white"
+                  : "bg-dark-card hover:bg-dark-border text-gray-400"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Activity size={16} />
+                Executions
+                {(orchExecutionsData?.executions?.filter((e: OrchestrationExecution) => e.status === 'running' || e.status === 'waiting_approval').length ?? 0) > 0 && (
+                  <span className="bg-accent-green text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {orchExecutionsData?.executions?.filter((e: OrchestrationExecution) => e.status === 'running' || e.status === 'waiting_approval').length}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setOrchestrationSubTab('agent-orchestrations')}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium transition-colors",
+                orchestrationSubTab === 'agent-orchestrations'
+                  ? "bg-accent-purple text-white"
+                  : "bg-dark-card hover:bg-dark-border text-gray-400"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <GitMerge size={16} />
+                Agent Orchestrations
+              </div>
+            </button>
+          </div>
+
+          {/* Session 764: Workflows Sub-tab */}
+          {orchestrationSubTab === 'workflows' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-semibold">Custom Workflows</h4>
+                <button
+                  onClick={() => refetchWorkflows()}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+              </div>
+
+              {workflowsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin" size={32} />
+                </div>
+              ) : (workflowsData?.workflows?.length ?? 0) > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {workflowsData?.workflows?.map((workflow: OrchestrationWorkflow) => (
+                    <div
+                      key={workflow.id}
+                      className="card hover:border-accent-purple/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-accent-purple/20 flex items-center justify-center">
+                            <Workflow size={20} className="text-accent-purple" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-white">{workflow.name}</h4>
+                            <span className="text-xs text-gray-500 capitalize">
+                              {workflow.execution_mode} • {workflow.step_count} steps
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                        {workflow.description || 'No description provided'}
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-2 text-center border-t border-dark-border pt-3">
+                        <div>
+                          <p className="text-lg font-semibold text-white">{workflow.step_count}</p>
+                          <p className="text-xs text-gray-500">Steps</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-white">{workflow.max_retries}</p>
+                          <p className="text-xs text-gray-500">Retries</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-white">
+                            {workflow.cost_budget ? `$${Number(workflow.cost_budget).toFixed(2)}` : '∞'}
+                          </p>
+                          <p className="text-xs text-gray-500">Budget</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-dark-border flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          Timeout: {Math.round(workflow.timeout_seconds / 60)}m
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedWorkflowForExecution(workflow)
+                            setWorkflowInputData('{}')
+                            setExecuteWorkflowModalOpen(true)
+                          }}
+                          className="btn btn-primary btn-sm flex items-center gap-1"
+                        >
+                          <Play size={14} />
+                          Execute
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="card text-center py-12 text-gray-400">
+                  <Workflow className="mx-auto mb-3 opacity-50" size={48} />
+                  <p className="text-lg font-medium">No Workflows Found</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Create workflows in Django Admin to execute multi-agent pipelines
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Session 764: Executions Sub-tab */}
+          {orchestrationSubTab === 'executions' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-semibold">Workflow Executions</h4>
+                <button
+                  onClick={() => refetchOrchExecutions()}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+              </div>
+
+              {orchExecutionsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin" size={32} />
+                </div>
+              ) : (orchExecutionsData?.executions?.length ?? 0) > 0 ? (
+                <div className="space-y-4">
+                  {orchExecutionsData?.executions?.map((execution: OrchestrationExecution) => (
+                    <div
+                      key={execution.id}
+                      className="card hover:border-primary-500/50 transition-colors cursor-pointer"
+                      onClick={() => setExecutionDetailId(execution.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "h-12 w-12 rounded-lg flex items-center justify-center",
+                            execution.status === 'running' ? 'bg-accent-green/20' :
+                            execution.status === 'waiting_approval' ? 'bg-accent-amber/20' :
+                            execution.status === 'completed' ? 'bg-accent-cyan/20' :
+                            execution.status === 'failed' ? 'bg-accent-red/20' :
+                            execution.status === 'cancelled' ? 'bg-gray-500/20' :
+                            'bg-accent-purple/20'
+                          )}>
+                            {execution.status === 'running' ? (
+                              <Loader2 size={24} className="text-accent-green animate-spin" />
+                            ) : execution.status === 'waiting_approval' ? (
+                              <Clock size={24} className="text-accent-amber" />
+                            ) : execution.status === 'completed' ? (
+                              <CheckCircle size={24} className="text-accent-cyan" />
+                            ) : execution.status === 'failed' ? (
+                              <AlertTriangle size={24} className="text-accent-red" />
+                            ) : execution.status === 'cancelled' ? (
+                              <Pause size={24} className="text-gray-400" />
+                            ) : (
+                              <CircleDot size={24} className="text-accent-purple" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-white">{execution.workflow_name}</h4>
+                            <div className="flex items-center gap-2 text-sm text-gray-400">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded text-xs capitalize",
+                                execution.status === 'running' ? 'bg-accent-green/20 text-accent-green' :
+                                execution.status === 'waiting_approval' ? 'bg-accent-amber/20 text-accent-amber' :
+                                execution.status === 'completed' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                                execution.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                                'bg-gray-500/20 text-gray-400'
+                              )}>
+                                {execution.status.replace('_', ' ')}
+                              </span>
+                              <span>Step {execution.current_step} of {execution.total_steps}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6">
+                          {/* Progress indicator */}
+                          <div className="w-32">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="text-gray-500">Progress</span>
+                              <span className="text-white">{Math.round((execution.current_step / execution.total_steps) * 100)}%</span>
+                            </div>
+                            <div className="h-2 bg-dark-bg rounded-full overflow-hidden">
+                              <div
+                                className={cn(
+                                  "h-full transition-all",
+                                  execution.status === 'completed' ? 'bg-accent-cyan' :
+                                  execution.status === 'failed' ? 'bg-accent-red' :
+                                  execution.status === 'waiting_approval' ? 'bg-accent-amber' :
+                                  'bg-accent-green'
+                                )}
+                                style={{ width: `${(execution.current_step / execution.total_steps) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-white font-medium">${Number(execution.total_cost).toFixed(4)}</p>
+                            <p className="text-xs text-gray-500">{execution.total_tokens.toLocaleString()} tokens</p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {execution.status === 'waiting_approval' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  resumeExecutionMutation.mutate(execution.id)
+                                }}
+                                disabled={resumeExecutionMutation.isPending}
+                                className="btn btn-primary btn-sm flex items-center gap-1"
+                              >
+                                <Play size={14} />
+                                Resume
+                              </button>
+                            )}
+                            {(execution.status === 'running' || execution.status === 'waiting_approval' || execution.status === 'paused') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (confirm('Cancel this execution?')) {
+                                    cancelExecutionMutation.mutate(execution.id)
+                                  }
+                                }}
+                                disabled={cancelExecutionMutation.isPending}
+                                className="btn btn-secondary btn-sm flex items-center gap-1 hover:bg-accent-red/20 hover:text-accent-red"
+                              >
+                                <X size={14} />
+                                Cancel
+                              </button>
+                            )}
+                            <ChevronRight size={20} className="text-gray-500" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="card text-center py-12 text-gray-400">
+                  <Activity className="mx-auto mb-3 opacity-50" size={48} />
+                  <p className="text-lg font-medium">No Executions Yet</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Execute a workflow from the Workflows tab to see it here
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Session 734: Agent Orchestrations Sub-tab (Legacy) */}
+          {orchestrationSubTab === 'agent-orchestrations' && (
+            <>
+              {orchestrationsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="animate-spin" size={32} />
             </div>
@@ -3241,6 +3615,482 @@ export default function AgentsPage() {
               </p>
             </div>
           )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Session 764: Execute Workflow Modal */}
+      {executeWorkflowModalOpen && selectedWorkflowForExecution && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <h2 className="text-xl font-bold">Execute Workflow</h2>
+              <button
+                onClick={() => {
+                  setExecuteWorkflowModalOpen(false)
+                  setSelectedWorkflowForExecution(null)
+                }}
+                className="p-2 rounded-lg hover:bg-dark-border transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-dark-bg rounded-lg">
+                <div className="h-12 w-12 rounded-lg bg-accent-purple/20 flex items-center justify-center">
+                  <Workflow size={24} className="text-accent-purple" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">{selectedWorkflowForExecution.name}</h3>
+                  <p className="text-sm text-gray-400">
+                    {selectedWorkflowForExecution.step_count} steps • {selectedWorkflowForExecution.execution_mode}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Input Data (JSON)</label>
+                <textarea
+                  value={workflowInputData}
+                  onChange={(e) => setWorkflowInputData(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={6}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg font-mono text-sm resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Provide input variables for the workflow steps
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-accent-amber/10 rounded-lg border border-accent-amber/20">
+                <AlertTriangle size={16} className="text-accent-amber flex-shrink-0" />
+                <p className="text-xs text-gray-300">
+                  This will execute all {selectedWorkflowForExecution.step_count} steps in {selectedWorkflowForExecution.execution_mode} mode.
+                  {selectedWorkflowForExecution.cost_budget && (
+                    <span> Budget limit: ${Number(selectedWorkflowForExecution.cost_budget).toFixed(2)}</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-dark-border">
+              <button
+                onClick={() => {
+                  setExecuteWorkflowModalOpen(false)
+                  setSelectedWorkflowForExecution(null)
+                }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    const inputData = JSON.parse(workflowInputData)
+                    executeWorkflowMutation.mutate({
+                      workflowId: selectedWorkflowForExecution.id,
+                      input: inputData,
+                    })
+                  } catch {
+                    alert('Invalid JSON input')
+                  }
+                }}
+                disabled={executeWorkflowMutation.isPending}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                {executeWorkflowMutation.isPending && (
+                  <Loader2 size={16} className="animate-spin" />
+                )}
+                <Play size={16} />
+                Execute Workflow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 764: Execution Detail Modal */}
+      {executionDetailId && orchExecutionDetailData?.execution && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "h-10 w-10 rounded-lg flex items-center justify-center",
+                  orchExecutionDetailData.execution.status === 'running' ? 'bg-accent-green/20' :
+                  orchExecutionDetailData.execution.status === 'waiting_approval' ? 'bg-accent-amber/20' :
+                  orchExecutionDetailData.execution.status === 'completed' ? 'bg-accent-cyan/20' :
+                  orchExecutionDetailData.execution.status === 'failed' ? 'bg-accent-red/20' :
+                  'bg-gray-500/20'
+                )}>
+                  {orchExecutionDetailData.execution.status === 'running' ? (
+                    <Loader2 size={20} className="text-accent-green animate-spin" />
+                  ) : orchExecutionDetailData.execution.status === 'waiting_approval' ? (
+                    <Clock size={20} className="text-accent-amber" />
+                  ) : orchExecutionDetailData.execution.status === 'completed' ? (
+                    <CheckCircle size={20} className="text-accent-cyan" />
+                  ) : orchExecutionDetailData.execution.status === 'failed' ? (
+                    <AlertTriangle size={20} className="text-accent-red" />
+                  ) : (
+                    <Pause size={20} className="text-gray-400" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">{orchExecutionDetailData.execution.workflow_name}</h2>
+                  <span className={cn(
+                    "text-xs px-2 py-0.5 rounded capitalize",
+                    orchExecutionDetailData.execution.status === 'running' ? 'bg-accent-green/20 text-accent-green' :
+                    orchExecutionDetailData.execution.status === 'waiting_approval' ? 'bg-accent-amber/20 text-accent-amber' :
+                    orchExecutionDetailData.execution.status === 'completed' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                    orchExecutionDetailData.execution.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                    'bg-gray-500/20 text-gray-400'
+                  )}>
+                    {orchExecutionDetailData.execution.status.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setExecutionDetailId(null)
+                  setSelectedStepNumber(null)
+                }}
+                className="p-2 rounded-lg hover:bg-dark-border transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* Execution Stats */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="card bg-dark-bg">
+                  <p className="text-xs text-gray-500 mb-1">Progress</p>
+                  <p className="text-2xl font-bold text-white">
+                    {orchExecutionDetailData.execution.current_step}/{orchExecutionDetailData.execution.total_steps}
+                  </p>
+                </div>
+                <div className="card bg-dark-bg">
+                  <p className="text-xs text-gray-500 mb-1">Total Cost</p>
+                  <p className="text-2xl font-bold text-white">
+                    ${Number(orchExecutionDetailData.execution.total_cost).toFixed(4)}
+                  </p>
+                </div>
+                <div className="card bg-dark-bg">
+                  <p className="text-xs text-gray-500 mb-1">Total Tokens</p>
+                  <p className="text-2xl font-bold text-white">
+                    {orchExecutionDetailData.execution.total_tokens.toLocaleString()}
+                  </p>
+                </div>
+                <div className="card bg-dark-bg">
+                  <p className="text-xs text-gray-500 mb-1">Started</p>
+                  <p className="text-lg font-bold text-white">
+                    {orchExecutionDetailData.execution.started_at
+                      ? new Date(orchExecutionDetailData.execution.started_at).toLocaleTimeString()
+                      : '—'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step Timeline - Session 765: Enhanced with clickable intelligence view */}
+              <h3 className="text-lg font-semibold mb-4">Step Timeline <span className="text-sm font-normal text-gray-500">(click step for intelligence)</span></h3>
+              <div className="space-y-3">
+                {orchExecutionDetailData.steps?.map((step: OrchestrationStepExecution) => (
+                  <div key={step.step_number}>
+                    <div
+                      onClick={() => setSelectedStepNumber(selectedStepNumber === step.step_number ? null : step.step_number)}
+                      className={cn(
+                        "card flex items-center gap-4 cursor-pointer transition-all hover:bg-dark-bg/50",
+                        step.status === 'running' ? 'border-accent-green/50' :
+                        step.status === 'completed' ? 'border-accent-cyan/50' :
+                        step.status === 'failed' ? 'border-accent-red/50' :
+                        'border-dark-border',
+                        selectedStepNumber === step.step_number && 'ring-2 ring-accent-cyan'
+                      )}
+                    >
+                      {/* Step Number */}
+                      <div className={cn(
+                        "h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold",
+                        step.status === 'running' ? 'bg-accent-green/20 text-accent-green' :
+                        step.status === 'completed' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                        step.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                        step.status === 'skipped' ? 'bg-gray-500/20 text-gray-400' :
+                        'bg-dark-bg text-gray-400'
+                      )}>
+                        {step.status === 'running' ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : step.status === 'completed' ? (
+                          <CheckCircle size={16} />
+                        ) : step.status === 'failed' ? (
+                          <AlertTriangle size={16} />
+                        ) : (
+                          step.step_number
+                        )}
+                      </div>
+
+                      {/* Step Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-white">Step {step.step_number}</h4>
+                          <span className="text-xs text-gray-500">{step.agent_name}</span>
+                          {selectedStepNumber === step.step_number && (
+                            <span className="text-xs px-2 py-0.5 bg-accent-cyan/20 text-accent-cyan rounded">viewing</span>
+                          )}
+                        </div>
+                        {step.error_message && (
+                          <p className="text-sm text-accent-red mt-1">{step.error_message}</p>
+                        )}
+                        {step.output_preview && (
+                          <p className="text-xs text-gray-400 mt-1 line-clamp-1">{step.output_preview}</p>
+                        )}
+                      </div>
+
+                      {/* Step Stats */}
+                      <div className="flex items-center gap-4 text-sm">
+                        {step.cost && (
+                          <span className="text-gray-400">
+                            ${Number(step.cost).toFixed(4)}
+                          </span>
+                        )}
+                        {step.tokens > 0 && (
+                          <span className="text-gray-400">
+                            {step.tokens.toLocaleString()} tokens
+                          </span>
+                        )}
+                        {step.retry_count > 0 && (
+                          <span className="text-accent-amber text-xs">
+                            {step.retry_count} retries
+                          </span>
+                        )}
+                        <ChevronRight size={16} className={cn(
+                          "text-gray-500 transition-transform",
+                          selectedStepNumber === step.step_number && "rotate-90"
+                        )} />
+                      </div>
+                    </div>
+
+                    {/* Session 765: Step Intelligence Panel */}
+                    {selectedStepNumber === step.step_number && (
+                      <div className="ml-14 mt-2 p-4 bg-dark-bg rounded-lg border border-dark-border">
+                        {stepIntelligenceLoading ? (
+                          <div className="flex items-center gap-2 text-gray-400">
+                            <Loader2 size={16} className="animate-spin" />
+                            <span>Loading intelligence data...</span>
+                          </div>
+                        ) : stepIntelligenceData ? (
+                          <div className="space-y-4">
+                            {/* Context Injected */}
+                            {Object.keys(stepIntelligenceData.context_injected || {}).length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-accent-cyan mb-2 flex items-center gap-2">
+                                  <Zap size={14} /> Context Injected
+                                </h5>
+                                <div className="flex flex-wrap gap-2">
+                                  {stepIntelligenceData.context_injected?.spider_data && (
+                                    <span className="text-xs px-2 py-1 bg-accent-green/20 text-accent-green rounded">
+                                      🕷️ Spider Data ({stepIntelligenceData.context_injected.spider_trends} trends)
+                                    </span>
+                                  )}
+                                  {stepIntelligenceData.context_injected?.learning_patterns && (
+                                    <span className="text-xs px-2 py-1 bg-accent-purple/20 text-accent-purple rounded">
+                                      📚 Learning Patterns
+                                    </span>
+                                  )}
+                                  {stepIntelligenceData.context_injected?.advisor_insights && (
+                                    <span className="text-xs px-2 py-1 bg-accent-amber/20 text-accent-amber rounded">
+                                      🧙 Advisor Insights
+                                    </span>
+                                  )}
+                                  {stepIntelligenceData.context_injected?.performance_feedback && (
+                                    <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
+                                      📊 Performance Feedback
+                                    </span>
+                                  )}
+                                  {stepIntelligenceData.context_injected?.scifi_context && (
+                                    <span className="text-xs px-2 py-1 bg-pink-500/20 text-pink-400 rounded">
+                                      ✨ Sci-Fi Context
+                                    </span>
+                                  )}
+                                  {stepIntelligenceData.context_injected?.knowledge_state && (
+                                    <span className="text-xs px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded">
+                                      🧠 Knowledge State
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Tool Calls */}
+                            {stepIntelligenceData.tool_calls?.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-accent-amber mb-2 flex items-center gap-2">
+                                  <Wrench size={14} /> Tool Calls ({stepIntelligenceData.tool_calls.length})
+                                </h5>
+                                <div className="space-y-1">
+                                  {stepIntelligenceData.tool_calls.slice(0, 5).map((tool, idx) => (
+                                    <div key={idx} className="text-xs bg-dark-card p-2 rounded">
+                                      <span className="text-accent-amber font-mono">{tool.name || tool.function || 'Unknown tool'}</span>
+                                    </div>
+                                  ))}
+                                  {stepIntelligenceData.tool_calls.length > 5 && (
+                                    <p className="text-xs text-gray-500">
+                                      +{stepIntelligenceData.tool_calls.length - 5} more tools
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Memories Created */}
+                            {stepIntelligenceData.memories_created?.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-accent-green mb-2 flex items-center gap-2">
+                                  <Brain size={14} /> Memories Created ({stepIntelligenceData.memories_created.length})
+                                </h5>
+                                <div className="space-y-2">
+                                  {stepIntelligenceData.memories_created.slice(0, 3).map((mem) => (
+                                    <div key={mem.id} className="text-xs bg-dark-card p-2 rounded">
+                                      <div className="flex items-center gap-2">
+                                        <span className={cn(
+                                          "px-1.5 py-0.5 rounded text-[10px]",
+                                          mem.valence === 'positive' ? 'bg-green-500/20 text-green-400' :
+                                          mem.valence === 'negative' ? 'bg-red-500/20 text-red-400' :
+                                          'bg-gray-500/20 text-gray-400'
+                                        )}>
+                                          {mem.memory_type}
+                                        </span>
+                                        <span className="font-medium text-white">{mem.title}</span>
+                                      </div>
+                                      <p className="text-gray-400 mt-1 line-clamp-2">{mem.content}</p>
+                                    </div>
+                                  ))}
+                                  {stepIntelligenceData.memories_created.length > 3 && (
+                                    <p className="text-xs text-gray-500">
+                                      +{stepIntelligenceData.memories_created.length - 3} more memories
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Agent Execution Details */}
+                            {stepIntelligenceData.agent_execution && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                                  <Bot size={14} /> Execution Details
+                                </h5>
+                                <div className="text-xs bg-dark-card p-3 rounded space-y-2">
+                                  <p><span className="text-gray-500">Task:</span> <span className="text-white">{stepIntelligenceData.agent_execution.task?.substring(0, 100)}...</span></p>
+                                  <p><span className="text-gray-500">Execution Time:</span> <span className="text-white">{stepIntelligenceData.agent_execution.execution_time_ms}ms</span></p>
+                                  <p><span className="text-gray-500">Tokens:</span> <span className="text-white">{stepIntelligenceData.agent_execution.tokens_used}</span></p>
+                                  <p><span className="text-gray-500">Cost:</span> <span className="text-white">${stepIntelligenceData.agent_execution.cost}</span></p>
+                                  <p><span className="text-gray-500">Execution ID:</span> <code className="text-accent-cyan text-[10px]">{stepIntelligenceData.agent_execution.id}</code></p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* No data case */}
+                            {!stepIntelligenceData.agent_execution && !stepIntelligenceData.tool_calls?.length && !stepIntelligenceData.memories_created?.length && Object.keys(stepIntelligenceData.context_injected || {}).length === 0 && (
+                              <div className="text-sm text-gray-500 text-center py-4">
+                                <p>No intelligence data linked to this step yet.</p>
+                                <p className="text-xs mt-1">Execute a workflow to see agent thinking, learning, and tool usage.</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">
+                            No intelligence data available
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Approval Gates */}
+              {orchExecutionDetailData.approval_gates?.length > 0 && (
+                <>
+                  <h3 className="text-lg font-semibold mt-6 mb-4">Approval Gates</h3>
+                  <div className="space-y-2">
+                    {orchExecutionDetailData.approval_gates.map((gate) => (
+                      <div
+                        key={gate.id}
+                        className={cn(
+                          "card flex items-center gap-3",
+                          gate.status === 'pending' ? 'border-accent-amber/50' :
+                          gate.status === 'approved' ? 'border-accent-green/50' :
+                          gate.status === 'rejected' ? 'border-accent-red/50' :
+                          'border-dark-border'
+                        )}
+                      >
+                        <Clock size={16} className={cn(
+                          gate.status === 'pending' ? 'text-accent-amber' :
+                          gate.status === 'approved' ? 'text-accent-green' :
+                          'text-accent-red'
+                        )} />
+                        <div className="flex-1">
+                          <span className="font-medium">Step {gate.step_number || '?'}</span>
+                          {gate.expires_at && (
+                            <p className="text-xs text-gray-500">
+                              Expires: {new Date(gate.expires_at).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded capitalize",
+                          gate.status === 'pending' ? 'bg-accent-amber/20 text-accent-amber' :
+                          gate.status === 'approved' ? 'bg-accent-green/20 text-accent-green' :
+                          'bg-accent-red/20 text-accent-red'
+                        )}>
+                          {gate.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-between p-6 border-t border-dark-border">
+              <div className="text-sm text-gray-400">
+                ID: <code className="text-xs bg-dark-bg px-2 py-1 rounded">{orchExecutionDetailData.execution.id}</code>
+              </div>
+              <div className="flex items-center gap-2">
+                {orchExecutionDetailData.execution.status === 'waiting_approval' && (
+                  <button
+                    onClick={() => resumeExecutionMutation.mutate(orchExecutionDetailData.execution.id)}
+                    disabled={resumeExecutionMutation.isPending}
+                    className="btn btn-primary flex items-center gap-2"
+                  >
+                    <Play size={16} />
+                    Resume
+                  </button>
+                )}
+                {(orchExecutionDetailData.execution.status === 'running' || orchExecutionDetailData.execution.status === 'waiting_approval') && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Cancel this execution?')) {
+                        cancelExecutionMutation.mutate(orchExecutionDetailData.execution.id)
+                      }
+                    }}
+                    disabled={cancelExecutionMutation.isPending}
+                    className="btn btn-secondary hover:bg-accent-red/20 hover:text-accent-red"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  onClick={() => setExecutionDetailId(null)}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
