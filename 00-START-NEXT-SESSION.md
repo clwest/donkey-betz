@@ -1,6 +1,6 @@
 # Session 762 - Ready for New Work
 
-**Previous Session:** 761 (Agent Monitoring Dashboard + Dream Bug Fixes)
+**Previous Session:** 761 (Learning Tab Fixes + Activity Modal + Monitoring Dashboard)
 **Date:** January 15, 2026
 **Status:** All systems operational, build passing
 
@@ -8,48 +8,58 @@
 
 ## Session 761 Accomplishments
 
-### 1. Agent Monitoring Dashboard - IMPLEMENTED
+### 1. Knowledge Transfer Effectiveness Gain Fix
 
-**Problem:** The Agents Page Monitoring tab had incomplete data - only 1 execution showing, no success rates, no system metrics, no cache performance.
+**Problem:** Knowledge Transfer modals showing 0% for Effectiveness Gain despite meaningful data.
 
-**Solution:** Created comprehensive monitoring API endpoints:
-- `monitoring_dashboard()` - Overall metrics, agent performance, system stats
-- `monitoring_alerts()` - Active alerts with proper timestamps
-- `monitoring_agent_detail()` - Per-agent detailed metrics
+**Root Cause:** `effectiveness_gain` hardcoded to `0.0` in 3 files.
 
-**Data now displayed:**
-- Agent Performance: executions, success rates, avg times per agent
-- System Metrics: CPU usage, memory usage, uptime (via psutil)
-- Cache Performance: Redis hit rate, total hits/misses
-- Active Alerts: Failure rates, slow execution warnings
+**Solution:** Use existing `usefulness_score` field as `effectiveness_gain` proxy.
 
-**Files:**
-- `core/views_agent_execution.py` (+409 lines) - 3 new endpoints
-- `core/urls.py` - 3 new URL routes
-- `core/auth_middleware.py` - Added to PUBLIC_PATHS
+**Files Modified:**
+- `core/views_agent_learning.py` (line 808)
+- `core/learning_feed_consumer.py` (line 143)
+- `core/tasks.py` (line 4813)
 
-### 2. Dream "one"/"this" Bug Fix
+### 2. Generic Activity Detail Modal - IMPLEMENTED
 
-**Problem:** Dreams were showing "Inspiration: one" or "Inspiration: this" - nonsensical single words.
+**Problem:** Activity cards without matching pre-loaded entities (older items) weren't clickable.
 
-**Root Cause:** `_extract_market_topic()` regex in BusinessResearchResult was extracting stopwords like "one" from prompts like "State your name and one capability in one sentence."
+**Solution:** Added fallback Generic Activity Detail Modal - ALL activity cards now clickable.
 
-**Solution:**
-- Added stopwords filter to `_extract_market_topic()` in models_unified_system.py
-- Added `is_valid_topic()` validation in tasks.py dream generation
-- Cleaned up 210 knowledge records + 469 dreams with bad titles
+**Files:** `frontend/src/pages/AgentsPage.tsx` (+140 lines)
 
-### 3. Slow Execution Threshold Adjustment
+### 3. Learning Tab Data Audit - VERIFIED
 
-**Problem:** 7 slow execution alerts were showing, including agents like ThinkingAgent (37s) that legitimately take longer.
+All components working correctly:
+- Learning Stats: ✅ 36 AI lessons, 8 transfers
+- Top Learners: ✅ Ranked agents displayed
+- Knowledge Transfers: ✅ Fixed with real effectiveness gains
+- Knowledge Gaps: ✅ Empty (correct - all domains exceed thresholds)
+- Live Learning WebSocket: ✅ Real-time updates flowing
 
-**Solution:** Raised threshold from 30s to 60s
-- Removed noise: ThinkingAgent (37s), BearCaseAgent (58.5s)
-- Still alerts for genuinely slow agents (>60s)
+### 4. Agent Monitoring Dashboard - IMPLEMENTED
 
-### 4. OpportunityPipelineAgent Investigation
+**Problem:** Monitoring tab had incomplete data.
 
-**Finding:** 33% failure rate was from old executions before Session 758's self-description handler fix. Agent now works correctly.
+**Solution:** Created 3 new API endpoints:
+- `monitoring_dashboard()` - Overall metrics, agent performance
+- `monitoring_alerts()` - Active alerts with timestamps
+- `monitoring_agent_detail()` - Per-agent metrics
+
+**Files:** `core/views_agent_execution.py` (+409 lines)
+
+### 5. Dream "one"/"this" Bug Fix
+
+**Problem:** Dreams showing nonsensical single-word inspirations.
+
+**Solution:** Added stopwords filter to `_extract_market_topic()` and `is_valid_topic()` validation.
+
+### 6. System Health Verified
+
+All services confirmed running:
+- Redis: ✅ | Daphne: ✅ (PID 87837) | Celery Worker: ✅ | Celery Beat: ✅
+- 470 executions in last 24h, 97.7% success rate
 
 ---
 
@@ -57,7 +67,7 @@
 
 | Session | Handoff Document |
 |---------|------------------|
-| **761** | See commit `c00093d5` |
+| **761** | `SESSION_761_LEARNING_TAB_FIXES.md` |
 | 760 | `SESSION_760_AGENT_OUTPUT_DETAIL_MODAL.md` |
 | 759 | `SESSION_759_MEMORY_BLOG_FIXES.md` |
 | 758 | `SESSION_758_INTEGRATION_HEALTH_OBSERVABILITY.md` |
@@ -110,7 +120,10 @@ open http://localhost:8000/ai-studio/
 
 ## Recent Commits (Session 761)
 
-1. `c00093d5` - feat(Session 761): Agent Monitoring Dashboard + Dream Bug Fixes
+1. `68ada8b1` - fix(Session 761): Use usefulness_score for knowledge transfer effectiveness_gain
+2. `cb0c3bc1` - feat(Session 761): Add Generic Activity Detail Modal for all activity items
+3. `6e22660b` - docs(Session 761): Update documentation
+4. `c00093d5` - feat(Session 761): Agent Monitoring Dashboard + Dream Bug Fixes
 
 ---
 
