@@ -5,10 +5,13 @@ Orchestration Step Executor - Agent Execution Service
 Session 764: Executes individual workflow steps by routing to agents
 and capturing outputs, costs, and timing.
 
+Session 767: Added timeout enforcement using concurrent.futures.
+
 Uses the existing AgentRouter for agent execution.
 """
 
 import logging
+import concurrent.futures
 from decimal import Decimal
 from typing import Dict, Any, Optional
 from django.utils import timezone
@@ -82,7 +85,7 @@ class OrchestrationStepExecutor:
             # Build the task description from step config
             task = self._build_task(step, context)
 
-            # Set up timeout
+            # Set up timeout (Session 767: Now actually enforced)
             timeout = step.timeout_seconds or 300
 
             # Get user for router
@@ -92,19 +95,46 @@ class OrchestrationStepExecutor:
             logger.info(
                 f"Executing step {step.order} ({step.agent}): {task[:100]}..."
             )
+            logger.info(f"Step timeout: {timeout} seconds")
 
-            result = self.router.route(
-                agent_name=step.agent,
-                task=task,
-                context={
-                    'orchestration_id': str(execution.id),
-                    'step_number': step.order,
-                    'workflow_name': execution.workflow.name,
-                    **context.get('input', {}),
-                },
-                user=user,
-                timeout=timeout
-            )
+            # Build context for the agent (user and timeout go in context, not as separate params)
+            agent_context = {
+                'orchestration_id': str(execution.id),
+                'step_number': step.order,
+                'workflow_name': execution.workflow.name,
+                'timeout_seconds': timeout,
+                **context.get('input', {}),
+            }
+
+            # Add user info to context if available
+            if user:
+                agent_context['user_id'] = user.id if hasattr(user, 'id') else None
+                agent_context['username'] = user.username if hasattr(user, 'username') else str(user)
+
+            # Session 767: Execute with timeout enforcement
+            # Use ThreadPoolExecutor to enforce timeout on agent execution
+            # Session 767 fix: Don't use context manager - it waits for task completion on exit
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            try:
+                future = executor.submit(
+                    self.router.route,
+                    agent_name=step.agent,
+                    task=task,
+                    context=agent_context,
+                )
+                try:
+                    result = future.result(timeout=timeout)
+                except concurrent.futures.TimeoutError:
+                    # Timeout occurred - shutdown immediately without waiting
+                    logger.warning(f"Step {step.order} timeout - shutting down executor without waiting")
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise TimeoutError(f"Agent {step.agent} timed out after {timeout} seconds")
+            finally:
+                # Normal completion - wait for clean shutdown
+                if not future.done():
+                    executor.shutdown(wait=False, cancel_futures=True)
+                else:
+                    executor.shutdown(wait=False)
 
             # Extract output and cost from result
             if hasattr(result, 'to_dict'):
@@ -196,8 +226,33 @@ class OrchestrationStepExecutor:
 
     def _build_task(self, step, context: Dict[str, Any]) -> str:
         """Build the task description for the agent."""
-        # Get template from step config
-        template = step.config.get('prompt_template', step.description)
+        # Session 767: Build task with full context from config (description is truncated)
+        config = step.config or {}
+
+        # Check for dream context (from dream_execution_pipeline)
+        dream_ctx = config.get('dream_context', {})
+        if dream_ctx:
+            task_parts = [step.name.split(': ', 1)[-1] if ': ' in step.name else step.description.split('\n')[0]]
+            task_parts.append("")
+            task_parts.append("Context from dream:")
+            task_parts.append(f"- Title: {dream_ctx.get('title', 'N/A')}")
+            task_parts.append(f"- Content: {dream_ctx.get('content', 'N/A')}")
+            task_parts.append(f"- Type: {dream_ctx.get('type', 'N/A')}")
+            return '\n'.join(task_parts)
+
+        # Check for hivemind context (from hivemind_execution_pipeline)
+        hivemind_ctx = config.get('hivemind_context', {})
+        if hivemind_ctx:
+            task_parts = [step.name.split(': ', 1)[-1] if ': ' in step.name else step.description.split('\n')[0]]
+            task_parts.append("")
+            task_parts.append("Context from HiveMind Session:")
+            task_parts.append(f"- Question: {hivemind_ctx.get('question', 'N/A')}")
+            task_parts.append(f"- Synthesis: {hivemind_ctx.get('synthesis', 'N/A')}")
+            task_parts.append(f"- Mode: {hivemind_ctx.get('mode', 'N/A')}")
+            return '\n'.join(task_parts)
+
+        # Get template from step config or fall back to description
+        template = config.get('prompt_template', step.description)
 
         if not template:
             # Default task based on step name

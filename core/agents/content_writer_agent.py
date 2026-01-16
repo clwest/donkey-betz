@@ -789,7 +789,11 @@ Generate the {content_config['name']} now:"""
             from openai import OpenAI
             import os
 
-            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            # Session 767: Add timeout to OpenAI client to prevent hanging
+            client = OpenAI(
+                api_key=os.getenv('OPENAI_API_KEY'),
+                timeout=120.0  # 2 minute timeout for API calls
+            )
 
             # Session 523: Build intelligent system prompt with all context
             intelligent_system_prompt = self._build_intelligent_system_prompt(
@@ -809,7 +813,8 @@ Generate the {content_config['name']} now:"""
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=4000,
-                temperature=0.7
+                temperature=0.7,
+                timeout=120.0  # Session 767: Explicit request timeout
             )
 
             content_text = response.choices[0].message.content

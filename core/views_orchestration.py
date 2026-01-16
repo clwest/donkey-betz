@@ -225,7 +225,7 @@ class OrchestrationExecutionDetailView(View):
                     'tokens': step_exec.tokens_used,
                     'retry_count': step_exec.retry_count,
                     'error_message': step_exec.error_message,
-                    'output_preview': str(step_exec.output_data)[:200] if step_exec.output_data else None,
+                    'output_preview': self._extract_output_preview(step_exec.output_data),
                 })
 
             # Get pending approval gates
@@ -273,6 +273,70 @@ class OrchestrationExecutionDetailView(View):
                 'success': False,
                 'error': str(e),
             }, status=500)
+
+    def _extract_output_preview(self, output_data: dict) -> str | None:
+        """
+        Session 767: Extract meaningful preview text from step output data.
+
+        Looks for common keys that contain human-readable content rather than
+        returning raw JSON string representation.
+        """
+        if not output_data:
+            return None
+
+        # Priority order for extracting preview text
+        preview_keys = [
+            # ContentWriterAgent outputs
+            ('data', 'content', 'intro'),
+            ('data', 'content', 'summary'),
+            ('data', 'content', 'conclusion'),
+            # Research outputs
+            ('data', 'query'),
+            ('data', 'synthesis'),
+            ('data', 'summary'),
+            # Generic outputs
+            ('message',),
+            ('result',),
+            ('summary',),
+            ('content',),
+        ]
+
+        for key_path in preview_keys:
+            value = output_data
+            try:
+                for key in key_path:
+                    if isinstance(value, dict) and key in value:
+                        value = value[key]
+                    else:
+                        value = None
+                        break
+                if value and isinstance(value, str):
+                    # Return first 200 chars with ellipsis if truncated
+                    if len(value) > 200:
+                        return value[:197] + "..."
+                    return value
+            except (KeyError, TypeError):
+                continue
+
+        # Fallback: Try to get any string value from data dict
+        if isinstance(output_data.get('data'), dict):
+            data = output_data['data']
+            # Check for tags, topics, or other list-based content
+            if data.get('tags'):
+                tags = data['tags'][:5] if isinstance(data['tags'], list) else []
+                return f"Tags: {', '.join(str(t) for t in tags)}"
+            if data.get('topics_detected'):
+                topics = data['topics_detected'][:5] if isinstance(data['topics_detected'], list) else []
+                return f"Topics: {', '.join(str(t) for t in topics)}"
+
+        # Last resort: Return message if exists
+        if output_data.get('message'):
+            msg = output_data['message']
+            if len(msg) > 200:
+                return msg[:197] + "..."
+            return msg
+
+        return "Output generated (see details for full data)"
 
 
 class OrchestrationResumeView(View):
@@ -464,9 +528,14 @@ class OrchestrationStepIntelligenceView(View):
             if step_exec.execution_id:
                 try:
                     agent_exec = AgentExecution.objects.get(id=step_exec.execution_id)
+
+                    # Session 767: Get full task from input_data (task field is truncated to 500 chars)
+                    input_data = agent_exec.input_data or {}
+                    full_task = input_data.get('task') or agent_exec.task
+
                     intelligence['agent_execution'] = {
                         'id': str(agent_exec.id),
-                        'task': agent_exec.task,
+                        'task': full_task,
                         'status': agent_exec.status,
                         'execution_time_ms': agent_exec.execution_time_ms,
                         'tokens_used': agent_exec.tokens_used,
@@ -477,7 +546,6 @@ class OrchestrationStepIntelligenceView(View):
                     }
 
                     # Extract context that was injected
-                    input_data = agent_exec.input_data or {}
                     context_injected = input_data.get('context_injected', {})
                     intelligence['context_injected'] = context_injected
 

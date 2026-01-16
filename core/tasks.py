@@ -22614,6 +22614,205 @@ def generate_human_attention_items():
 
 
 # =============================================================================
+# Session 766: Human Attention Lifecycle Management
+# =============================================================================
+
+@shared_task(name='core.tasks.process_human_attention_lifecycle')
+def process_human_attention_lifecycle():
+    """
+    Session 766: Process Human Attention Item lifecycle events.
+
+    This task runs periodically to:
+    1. Expire items past their expires_at deadline
+    2. Auto-dismiss stale items that have been pending too long
+    3. Auto-escalate aging items (bump urgency for old pending items)
+    4. Auto-approve low-risk items based on user preferences
+    5. Trigger orchestration workflows for approved items
+
+    Solves Dead End #6: 992 items with only 1.3% acted upon.
+
+    Schedule: Every 10 minutes (via Celery Beat)
+    """
+    from core.services.human_attention_lifecycle import attention_lifecycle
+
+    logger.info("🧑 [LIFECYCLE] Starting Human Attention lifecycle processing")
+
+    try:
+        stats = attention_lifecycle.process_lifecycle()
+
+        total = sum(stats.values()) - stats.get('errors', 0)
+        logger.info(f"🧑 [LIFECYCLE] Complete: {total} items processed - {stats}")
+
+        return {
+            'status': 'completed',
+            **stats
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [LIFECYCLE] Processing failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+# =============================================================================
+# Session 766: HiveMind Execution Pipeline
+# =============================================================================
+
+@shared_task(name='core.tasks.process_hivemind_sessions')
+def process_hivemind_sessions(limit: int = 3):
+    """
+    Session 766: Process completed HiveMind sessions via Orchestration.
+
+    This task runs periodically to:
+    1. Find completed HiveMind sessions with synthesis
+    2. Create projects and workflows from sessions
+    3. Execute via Orchestration Engine
+
+    Solves Dead End #4: 321 sessions with 182 syntheses, 0 acted upon.
+
+    Schedule: Every 30 minutes (via Celery Beat)
+    """
+    from core.services.hivemind_execution_pipeline import hivemind_execution_pipeline
+
+    logger.info("🧠 [HIVEMIND] Starting HiveMind execution pipeline")
+
+    try:
+        results = hivemind_execution_pipeline.process_completed_sessions(limit=limit)
+
+        success_count = sum(1 for r in results if r.get('success'))
+        fail_count = len(results) - success_count
+
+        logger.info(
+            f"🧠 [HIVEMIND] Complete: {success_count} executed, {fail_count} failed"
+        )
+
+        return {
+            'status': 'completed',
+            'processed': len(results),
+            'success': success_count,
+            'failed': fail_count,
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [HIVEMIND] Processing failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+# =============================================================================
+# Session 766: Opportunity Execution Pipeline
+# =============================================================================
+
+@shared_task(name='core.tasks.process_high_scoring_opportunities')
+def process_high_scoring_opportunities(limit: int = 3, min_score: int = 70):
+    """
+    Session 766: Process high-scoring opportunities via Orchestration.
+
+    This task runs periodically to:
+    1. Find high-scoring opportunities (>= min_score) without projects
+    2. Create projects and workflows from opportunities
+    3. Execute via Orchestration Engine
+
+    Solves Dead End #7: 6,709 opportunities discovered, 0% actioned.
+
+    Schedule: Every 20 minutes (via Celery Beat)
+    """
+    from core.services.opportunity_execution_pipeline import opportunity_execution_pipeline
+
+    logger.info("💰 [OPPORTUNITY] Starting opportunity execution pipeline")
+
+    try:
+        results = opportunity_execution_pipeline.process_high_scoring_opportunities(
+            limit=limit,
+            min_score=min_score
+        )
+
+        success_count = sum(1 for r in results if r.get('success'))
+        fail_count = len(results) - success_count
+
+        logger.info(
+            f"💰 [OPPORTUNITY] Complete: {success_count} executed, {fail_count} failed"
+        )
+
+        return {
+            'status': 'completed',
+            'processed': len(results),
+            'success': success_count,
+            'failed': fail_count,
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [OPPORTUNITY] Processing failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+# =============================================================================
+# Session 766: Spider Action Pipeline
+# =============================================================================
+
+@shared_task(name='core.tasks.process_spider_actions')
+def process_spider_actions(
+    categories: list = None,
+    limit_per_category: int = 3,
+    auto_execute: bool = False
+):
+    """
+    Session 766: Process actionable spider data via Orchestration.
+
+    This task runs periodically to:
+    1. Scan recent spider data for actionable insights
+    2. Identify high-value opportunities (jobs, trends, market signals)
+    3. Create HumanAttentionItems for review OR execute directly
+
+    Solves Dead End #5: Spider data collected but never acted upon.
+
+    Schedule: Every 30 minutes (via Celery Beat)
+    """
+    from core.services.spider_action_pipeline import spider_action_pipeline
+
+    if categories is None:
+        categories = ['jobs', 'tech', 'financial', 'news']
+
+    logger.info(f"🕷️ [SPIDER ACTION] Starting spider action pipeline for {categories}")
+
+    try:
+        results = spider_action_pipeline.process_actionable_data(
+            categories=categories,
+            limit_per_category=limit_per_category,
+            auto_execute=auto_execute
+        )
+
+        logger.info(
+            f"🕷️ [SPIDER ACTION] Complete: "
+            f"{results['total_actions']} actions, "
+            f"{results['total_executed']} executed, "
+            f"{results['total_attention_items']} attention items"
+        )
+
+        return {
+            'status': 'completed',
+            'total_actions': results['total_actions'],
+            'total_executed': results['total_executed'],
+            'total_attention_items': results['total_attention_items'],
+            'categories': list(results['categories'].keys()),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [SPIDER ACTION] Processing failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+# =============================================================================
 # Session 701: HEART Service - System Health Monitoring
 # =============================================================================
 
@@ -24163,15 +24362,17 @@ def execute_orchestration_async(execution_id: str):
 def check_orchestration_timeouts():
     """
     Session 764: Check for timed-out orchestration executions.
+    Session 767: Also clean up orphaned step executions.
 
     Runs periodically to:
     1. Find running executions past their timeout
     2. Mark them as timed_out
-    3. Create attention items for human review
+    3. Mark any running step executions as failed
+    4. Create attention items for human review
 
     This is a maintenance task to prevent runaway workflows.
     """
-    from core.models_orchestration import OrchestrationExecution
+    from core.models_orchestration import OrchestrationExecution, OrchestrationStepExecution
 
     logger.info("⏰ [ORCHESTRATION] Checking for timed-out executions...")
 
@@ -24184,13 +24385,27 @@ def check_orchestration_timeouts():
     )
 
     timeout_count = 0
+    steps_cleaned = 0
 
     for execution in timed_out:
         try:
             execution.status = 'timed_out'
-            execution.error_message = 'Execution timed out'
+            execution.error_message = 'Workflow timeout exceeded'
             execution.completed_at = now
             execution.save()
+
+            # Session 767: Also mark any running step executions as failed
+            running_steps = execution.step_executions.filter(status='running')
+            for step in running_steps:
+                step.status = 'failed'
+                step.error_message = 'Timed out with parent orchestration'
+                step.completed_at = now
+                step.save()
+                steps_cleaned += 1
+                logger.info(
+                    f"⏰ [ORCHESTRATION] Marked step {step.step_number} ({step.agent_name}) "
+                    f"as failed due to orchestration timeout"
+                )
 
             logger.warning(
                 f"⏰ [ORCHESTRATION] Marked execution {execution.id} as timed out "
@@ -24202,11 +24417,12 @@ def check_orchestration_timeouts():
             logger.error(f"⏰ [ORCHESTRATION] Failed to timeout execution {execution.id}: {e}")
 
     if timeout_count > 0:
-        logger.info(f"⏰ [ORCHESTRATION] Timed out {timeout_count} executions")
+        logger.info(f"⏰ [ORCHESTRATION] Timed out {timeout_count} executions, cleaned {steps_cleaned} steps")
 
     return {
         'success': True,
         'timed_out_count': timeout_count,
+        'steps_cleaned': steps_cleaned,
     }
 
 
@@ -24232,4 +24448,280 @@ def check_orchestration_auto_approvals():
 
     except Exception as e:
         logger.error(f"🔔 [ORCHESTRATION] Auto-approval check failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+# ==================== SESSION 766: DREAM EXECUTION PIPELINE TASKS ====================
+
+
+@shared_task
+def execute_approved_dreams_via_orchestration(limit: int = 10):
+    """
+    Session 766: Execute approved dreams through the Orchestration Layer.
+
+    This task finds approved dreams that haven't been executed yet and
+    triggers the DreamExecutionPipeline to:
+    1. Create a PartnershipProject from each dream
+    2. Generate a CustomWorkflow for execution
+    3. Trigger orchestration execution
+
+    This is the NEW pipeline that actually executes dreams through the
+    Orchestration Layer (Session 764). The old process_approved_dreams
+    task creates DreamImplementation records but doesn't execute.
+
+    Args:
+        limit: Maximum number of dreams to process per run
+    """
+    from core.services.dream_execution_pipeline import dream_execution_pipeline
+
+    logger.info(f"💭 [DREAM ORCHESTRATION] Processing up to {limit} approved dreams...")
+
+    try:
+        results = dream_execution_pipeline.process_approved_dreams(limit=limit)
+
+        success_count = sum(1 for r in results if r.get('success'))
+        failed_count = len(results) - success_count
+
+        logger.info(
+            f"💭 [DREAM ORCHESTRATION] Processed {len(results)} dreams: "
+            f"{success_count} success, {failed_count} failed"
+        )
+
+        return {
+            'success': True,
+            'total_processed': len(results),
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'results': results,
+        }
+
+    except Exception as e:
+        logger.error(f"💭 [DREAM ORCHESTRATION] Failed to process dreams: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task
+def execute_single_dream(dream_id: str):
+    """
+    Session 766: Execute a single approved dream.
+
+    This task is triggered when a dream is approved to immediately
+    start the execution pipeline.
+
+    Args:
+        dream_id: UUID of the AgentDream to execute
+    """
+    from core.services.dream_execution_pipeline import dream_execution_pipeline
+    from core.models_unified_system import AgentDream
+
+    logger.info(f"💭 [DREAM PIPELINE] Executing dream: {dream_id}")
+
+    try:
+        dream = AgentDream.objects.get(id=dream_id)
+
+        if dream.decision_outcome != 'approved':
+            logger.warning(
+                f"💭 [DREAM PIPELINE] Dream {dream_id} is not approved: {dream.decision_outcome}"
+            )
+            return {
+                'success': False,
+                'error': f"Dream not approved: {dream.decision_outcome}",
+            }
+
+        result = dream_execution_pipeline.execute_dream(dream, async_mode=True)
+
+        if result['success']:
+            logger.info(f"💭 [DREAM PIPELINE] Dream executed: {dream.title}")
+        else:
+            logger.warning(f"💭 [DREAM PIPELINE] Dream failed: {result.get('error')}")
+
+        return result
+
+    except AgentDream.DoesNotExist:
+        logger.error(f"💭 [DREAM PIPELINE] Dream not found: {dream_id}")
+        return {'success': False, 'error': 'Dream not found'}
+
+    except Exception as e:
+        logger.error(f"💭 [DREAM PIPELINE] Failed to execute dream: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task
+def get_dream_pipeline_stats():
+    """
+    Session 766: Get statistics about the dream execution pipeline.
+
+    Returns execution rates and pending dream counts for monitoring.
+    """
+    from core.services.dream_execution_pipeline import dream_execution_pipeline
+
+    try:
+        stats = dream_execution_pipeline.get_execution_stats()
+        logger.info(f"💭 [DREAM PIPELINE] Stats: {stats}")
+        return stats
+
+    except Exception as e:
+        logger.error(f"💭 [DREAM PIPELINE] Failed to get stats: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# Session 766: Gate Progression Pipeline Tasks
+# =============================================================================
+
+@shared_task(name='core.tasks.process_gate_progression')
+def process_gate_progression(
+    dry_run: bool = False,
+    limit: int = 50,
+    auto_waive_low_risk: bool = True,
+    auto_approve_ready: bool = True,
+    start_pilots: bool = True,
+):
+    """
+    Session 766: Process gate progression via Celery.
+
+    Automatically progresses gates through their lifecycle:
+    - Auto-waives low-risk gates
+    - Auto-completes simple checklist items
+    - Marks ready gates for approval
+    - Creates attention items for human review
+    - Starts pilots for approved gates
+
+    Args:
+        dry_run: If True, don't make changes (preview only)
+        limit: Max gates to process per status
+        auto_waive_low_risk: Auto-waive low-risk gates
+        auto_approve_ready: Auto-approve ready gates (per risk config)
+        start_pilots: Start pilots for approved gates
+
+    Returns:
+        Processing statistics
+    """
+    from core.services.gate_progression_pipeline import gate_progression_pipeline
+
+    logger.info("🚦 [GATE PIPELINE] Starting gate progression...")
+
+    try:
+        stats = gate_progression_pipeline.process_all_gates(
+            dry_run=dry_run,
+            limit=limit,
+            auto_waive_low_risk=auto_waive_low_risk,
+            auto_approve_ready=auto_approve_ready,
+            start_pilots=start_pilots,
+        )
+
+        logger.info(
+            f"🚦 [GATE PIPELINE] Complete: "
+            f"{stats.get('gates_processed', 0)} processed, "
+            f"{stats.get('gates_waived', 0)} waived, "
+            f"{stats.get('gates_approved', 0)} approved, "
+            f"{stats.get('pilots_started', 0)} pilots started"
+        )
+
+        return {
+            'success': True,
+            'stats': stats,
+        }
+
+    except Exception as e:
+        logger.error(f"🚦 [GATE PIPELINE] Failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.get_gate_statistics')
+def get_gate_statistics():
+    """
+    Session 766: Get current gate and pilot statistics.
+
+    Returns counts by status and risk level for monitoring dashboards.
+    """
+    from core.services.gate_progression_pipeline import gate_progression_pipeline
+
+    try:
+        stats = gate_progression_pipeline.get_gate_statistics()
+        logger.info(f"🚦 [GATE PIPELINE] Stats: {stats}")
+        return stats
+
+    except Exception as e:
+        logger.error(f"🚦 [GATE PIPELINE] Failed to get stats: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# Session 766: Content Idea Pipeline Tasks
+# =============================================================================
+
+@shared_task(name='core.tasks.process_content_ideas')
+def process_content_ideas(
+    dry_run: bool = False,
+    limit: int = 50,
+    include_dreams: bool = True,
+    include_conversations: bool = True,
+    days_lookback: int = 30,
+):
+    """
+    Session 766: Process content ideas from Dreams and Conversations.
+
+    Mines content-related ideas and feeds them into content production channels:
+    - Scans Dreams for video/podcast/blog ideas
+    - Scans Conversations for content suggestions
+    - Matches ideas to appropriate content channels
+    - Creates ChannelEpisode entries for production
+
+    Args:
+        dry_run: If True, don't make changes (preview only)
+        limit: Max ideas to process
+        include_dreams: Include dreams as source
+        include_conversations: Include conversations as source
+        days_lookback: How far back to look for ideas
+
+    Returns:
+        Processing statistics
+    """
+    from core.services.content_idea_pipeline import content_idea_pipeline
+
+    logger.info("🎬 [CONTENT PIPELINE] Starting content idea processing...")
+
+    try:
+        stats = content_idea_pipeline.process_content_ideas(
+            dry_run=dry_run,
+            limit=limit,
+            include_dreams=include_dreams,
+            include_conversations=include_conversations,
+            days_lookback=days_lookback,
+        )
+
+        logger.info(
+            f"🎬 [CONTENT PIPELINE] Complete: "
+            f"{stats.get('ideas_found', 0)} ideas found, "
+            f"{stats.get('ideas_matched', 0)} matched, "
+            f"{stats.get('episodes_created', 0)} episodes created"
+        )
+
+        return {
+            'success': True,
+            'stats': stats,
+        }
+
+    except Exception as e:
+        logger.error(f"🎬 [CONTENT PIPELINE] Failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.get_content_pipeline_stats')
+def get_content_pipeline_stats():
+    """
+    Session 766: Get current content pipeline statistics.
+
+    Returns counts of content ideas, channels, and episodes for monitoring.
+    """
+    from core.services.content_idea_pipeline import content_idea_pipeline
+
+    try:
+        stats = content_idea_pipeline.get_statistics()
+        logger.info(f"🎬 [CONTENT PIPELINE] Stats: {stats}")
+        return stats
+
+    except Exception as e:
+        logger.error(f"🎬 [CONTENT PIPELINE] Failed to get stats: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
