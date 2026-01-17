@@ -329,6 +329,7 @@ fixed_str = re.sub(
 
 5. **core/views_orchestration.py**
    - Return full task from `input_data['task']` instead of truncated field
+   - Added `full_context` to step intelligence API response (dream_context, hivemind_context from workflow step config)
 
 6. **ai_core/spiders/specialized/kaggle_spider.py**
    - Check if `ref` is already full URL before prepending base
@@ -336,6 +337,69 @@ fixed_str = re.sub(
 7. **frontend/src/pages/AgentsPage.tsx**
    - Added expandable sections for long content
    - Formatted ResearchAgent, ContentStrategyAgent outputs
+   - Formatted Tool Results section (success badges, topic tags, ML analysis, opportunities)
+   - Formatted Recommendations section (content_type, priority badges, keywords)
+   - Use `full_context` from API for dream/hivemind content (not truncated stored data)
+
+8. **frontend/src/lib/api.ts**
+   - Added `full_context` type to `StepIntelligenceData` interface
+
+## Missing Celery Worker Fix
+
+### Problem
+User reported system had low activity after running for 20 hours. Investigation revealed:
+- **0 agent executions** in the last 3+ hours
+- **Celery beat was scheduling tasks** but they weren't being processed
+- Dreams (274) and conversations (346) had been created in the last 24 hours, but the latest dream was from 16+ hours ago
+
+### Root Cause
+The `long_running` Celery worker was NOT running after the system restart. Only `default`, `broadcast`, and `beat` workers had started.
+
+Tasks routed to the `long_running` queue include:
+- `generate_agent_dreams` (every 2 hours)
+- `run_agent_conversation` (every 30 minutes)
+- `execute_dream_implementations` (every 20 minutes)
+- `collect_spider_data` (every 30 minutes)
+- `run_unified_intelligence_pipeline` (hourly)
+- `run_autonomous_content_studio` (4x daily)
+- Various market/blockchain monitoring tasks
+
+### Why It Happened
+The Makefile has a check for existing workers:
+```bash
+@if pgrep -f "hostname=long_running" >/dev/null 2>&1; then \
+    echo "-> Celery long_running worker already running"; \
+```
+
+However, the stale PID file (`.celery-long-running.pid`) contained PID 83588 which no longer existed. The process check passed but the worker wasn't actually running.
+
+### Fix Applied
+Started the missing worker manually:
+```bash
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES nohup .venv/bin/celery -A core worker \
+  --loglevel=info \
+  --pool=threads \
+  --concurrency=2 \
+  --queues=long_running \
+  --hostname=long_running@%h > celery-long-running.log 2>&1 &
+```
+
+### Current Workers Running (Post-Fix)
+| Worker | PID | Queues |
+|--------|-----|--------|
+| default | 88894 | default, agents, sports, content, ml |
+| broadcast | 88924 | broadcast |
+| **long_running** | **49640** | **long_running** |
+| beat | 88943 | (scheduler) |
+
+### Immediate Results
+After starting the worker:
+- Tasks immediately started processing
+- 2 new conversations created within 10 minutes
+- Agent conversation cycle running (CompetitorAnalysisAgent, CodeReviewAgent, CodeGeneratorAgent, BrandStrategyAgent participating)
+
+### Recommendation
+Consider adding process health monitoring to detect when workers die without updating PID files. The Makefile's existing check relies on `pgrep` which may not work correctly with stale PIDs.
 
 ## Summary of Session 767 Fixes
 
@@ -351,3 +415,4 @@ fixed_str = re.sub(
 | Doubled Kaggle URLs | Spider prepended base to full URLs | Check if ref is already full URL | ✅ Fixed |
 | Existing bad URLs | Historical data had doubled URLs | Database fix (38 records) | ✅ Fixed |
 | Step status not updated | Threading/transaction issue | Needs investigation | ⚠️ Known Issue |
+| No activity for 16+ hours | long_running worker not started | Started missing worker | ✅ Fixed |
