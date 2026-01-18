@@ -1079,6 +1079,9 @@ from core.views_analytics import (
     get_chart_agent_activity, get_chart_content_production, get_chart_revenue,
     get_chart_user_engagement, get_chart_spider_performance,
     get_chart_learning_progress, get_chart_collaboration,
+    # Session 775: Missing v2 endpoints for Insights tab
+    top_performers_v2, anomalies_v2, forecast_v2,
+    trends_v2, comparison_v2, breakdown_v2, export_v2,
 )
 # Session 217B: Agent Training
 from core.views_agent_training import (
@@ -2267,6 +2270,14 @@ urlpatterns = [
     path('api/analytics/v2/alerts/', analytics_alerts_v2, name='analytics-alerts-v2'),
     path('api/analytics/v2/realtime/', realtime_stats_v2, name='realtime-stats-v2'),
     path('api/analytics/v2/track/', track_event_v2, name='track-event-v2'),
+    # Session 775: Missing v2 endpoints for Insights tab
+    path('api/analytics/v2/top-performers/', top_performers_v2, name='top-performers-v2'),
+    path('api/analytics/v2/anomalies/', anomalies_v2, name='anomalies-v2'),
+    path('api/analytics/v2/forecast/', forecast_v2, name='forecast-v2'),
+    path('api/analytics/v2/trends/', trends_v2, name='trends-v2'),
+    path('api/analytics/v2/comparison/', comparison_v2, name='comparison-v2'),
+    path('api/analytics/v2/breakdown/', breakdown_v2, name='breakdown-v2'),
+    path('api/analytics/v2/export/', export_v2, name='export-v2'),
 
     # Session 217B: Agent Training API
     path('api/training/agents/', training_list_agents, name='training-list-agents'),

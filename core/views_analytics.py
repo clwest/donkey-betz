@@ -2273,3 +2273,421 @@ def track_event_v2(request):
         'tracked': metric is not None,
         'metric_id': str(metric.id) if metric else None,
     })
+
+
+# =============================================================================
+# SESSION 775: MISSING V2 ANALYTICS ENDPOINTS FOR INSIGHTS TAB
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def top_performers_v2(request):
+    """
+    GET /api/analytics/v2/top-performers/
+
+    Get top performing agents based on execution metrics.
+
+    Query params:
+        category: Optional category filter
+        limit: Number of results (default 10)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import Agent, AgentExecution
+
+    limit = int(request.GET.get('limit', 10))
+    days = 30
+    cutoff = timezone.now() - timedelta(days=days)
+
+    performers = []
+    try:
+        # Get agents with execution stats
+        agents = Agent.objects.all()[:50]  # Limit for performance
+        for agent in agents:
+            executions = AgentExecution.objects.filter(
+                agent_name=agent.name,
+                created_at__gte=cutoff
+            )
+            total = executions.count()
+            if total == 0:
+                continue
+
+            successful = executions.filter(status='completed').count()
+            success_rate = round((successful / total) * 100, 1) if total > 0 else 0
+            total_cost = sum(float(e.cost or 0) for e in executions)
+
+            performers.append({
+                'agent_name': agent.name,
+                'display_name': agent.display_name or agent.name,
+                'category': agent.category or 'general',
+                'total_executions': total,
+                'successful_executions': successful,
+                'success_rate': success_rate,
+                'total_cost': round(total_cost, 4),
+            })
+
+        # Sort by success rate * executions (balanced metric)
+        performers.sort(key=lambda x: x['success_rate'] * x['total_executions'], reverse=True)
+        performers = performers[:limit]
+    except Exception as e:
+        logger.error(f"Error getting top performers: {e}")
+
+    return Response({
+        'success': True,
+        'data': {
+            'performers': performers,
+            'period_days': days,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def anomalies_v2(request):
+    """
+    GET /api/analytics/v2/anomalies/
+
+    Get detected anomalies in system behavior.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    days = 7
+    cutoff = timezone.now() - timedelta(days=days)
+
+    anomalies = []
+    try:
+        # Check for high failure rates
+        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+        total = executions.count()
+        failed = executions.filter(status='failed').count()
+
+        if total > 10 and (failed / total) > 0.3:
+            anomalies.append({
+                'type': 'high_failure_rate',
+                'severity': 'warning',
+                'message': f'High failure rate detected: {round((failed/total)*100, 1)}% of {total} executions failed',
+                'metric': round((failed / total) * 100, 1),
+                'threshold': 30,
+                'detected_at': timezone.now().isoformat(),
+            })
+
+        # Check for unusual cost spikes
+        daily_costs = []
+        for i in range(days):
+            day = timezone.now() - timedelta(days=i)
+            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            day_execs = executions.filter(created_at__gte=day_start, created_at__lt=day_end)
+            day_cost = sum(float(e.cost or 0) for e in day_execs)
+            daily_costs.append(day_cost)
+
+        if daily_costs and len(daily_costs) >= 2:
+            avg_cost = sum(daily_costs[1:]) / len(daily_costs[1:]) if len(daily_costs) > 1 else 0
+            if avg_cost > 0 and daily_costs[0] > avg_cost * 2:
+                anomalies.append({
+                    'type': 'cost_spike',
+                    'severity': 'info',
+                    'message': f'Cost spike detected: Today\'s cost (${round(daily_costs[0], 2)}) is {round(daily_costs[0]/avg_cost, 1)}x the average',
+                    'metric': round(daily_costs[0], 2),
+                    'threshold': round(avg_cost * 2, 2),
+                    'detected_at': timezone.now().isoformat(),
+                })
+
+    except Exception as e:
+        logger.error(f"Error detecting anomalies: {e}")
+
+    return Response({
+        'success': True,
+        'data': {
+            'anomalies': anomalies,
+            'checked_at': timezone.now().isoformat(),
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def forecast_v2(request):
+    """
+    GET /api/analytics/v2/forecast/
+
+    Get forecasted metrics based on historical trends.
+
+    Query params:
+        metric: Metric to forecast (default: executions)
+        days: Days to forecast (default 30)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    forecast_days = int(request.GET.get('days', 30))
+    metric = request.GET.get('metric', 'executions')
+    history_days = 14
+
+    cutoff = timezone.now() - timedelta(days=history_days)
+
+    forecast_data = {
+        'metric': metric,
+        'forecast_days': forecast_days,
+        'historical': [],
+        'predicted': [],
+    }
+
+    try:
+        # Get historical data
+        daily_values = []
+        for i in range(history_days, 0, -1):
+            day = timezone.now() - timedelta(days=i)
+            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+
+            if metric == 'executions':
+                value = AgentExecution.objects.filter(
+                    created_at__gte=day_start,
+                    created_at__lt=day_end
+                ).count()
+            elif metric == 'cost':
+                execs = AgentExecution.objects.filter(
+                    created_at__gte=day_start,
+                    created_at__lt=day_end
+                )
+                value = sum(float(e.cost or 0) for e in execs)
+            else:
+                value = 0
+
+            daily_values.append(value)
+            forecast_data['historical'].append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'value': round(value, 2) if metric == 'cost' else value,
+            })
+
+        # Simple linear forecast (average trend)
+        if len(daily_values) >= 2:
+            avg_value = sum(daily_values) / len(daily_values)
+            # Calculate trend (simple moving average comparison)
+            first_half = sum(daily_values[:len(daily_values)//2]) / max(len(daily_values)//2, 1)
+            second_half = sum(daily_values[len(daily_values)//2:]) / max(len(daily_values) - len(daily_values)//2, 1)
+            trend = (second_half - first_half) / max(first_half, 1) if first_half > 0 else 0
+
+            for i in range(forecast_days):
+                day = timezone.now() + timedelta(days=i + 1)
+                predicted = max(0, avg_value * (1 + trend * (i / forecast_days)))
+                forecast_data['predicted'].append({
+                    'date': day.strftime('%Y-%m-%d'),
+                    'value': round(predicted, 2) if metric == 'cost' else int(predicted),
+                    'confidence': max(0.5, 0.9 - (i * 0.01)),  # Confidence decreases over time
+                })
+
+    except Exception as e:
+        logger.error(f"Error generating forecast: {e}")
+
+    return Response({
+        'success': True,
+        'data': forecast_data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def trends_v2(request):
+    """
+    GET /api/analytics/v2/trends/
+
+    Get trend data for specified metric.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    metric = request.GET.get('metric', 'executions')
+    period = request.GET.get('period', '7d')
+    days = int(period.replace('d', '')) if period.endswith('d') else 7
+
+    cutoff = timezone.now() - timedelta(days=days)
+    trend_data = []
+
+    try:
+        for i in range(days, 0, -1):
+            day = timezone.now() - timedelta(days=i)
+            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+
+            execs = AgentExecution.objects.filter(
+                created_at__gte=day_start,
+                created_at__lt=day_end
+            )
+
+            if metric == 'executions':
+                value = execs.count()
+            elif metric == 'cost':
+                value = sum(float(e.cost or 0) for e in execs)
+            elif metric == 'success_rate':
+                total = execs.count()
+                successful = execs.filter(status='completed').count()
+                value = round((successful / total) * 100, 1) if total > 0 else 0
+            else:
+                value = execs.count()
+
+            trend_data.append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'value': round(value, 2) if metric == 'cost' else value,
+            })
+    except Exception as e:
+        logger.error(f"Error getting trends: {e}")
+
+    return Response({
+        'success': True,
+        'data': {
+            'metric': metric,
+            'period': period,
+            'trends': trend_data,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def comparison_v2(request):
+    """
+    GET /api/analytics/v2/comparison/
+
+    Compare metrics across different dimensions.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    period = request.GET.get('period', '7d')
+    days = int(period.replace('d', '')) if period.endswith('d') else 7
+    cutoff = timezone.now() - timedelta(days=days)
+
+    comparison = {
+        'by_status': {},
+        'by_agent': {},
+    }
+
+    try:
+        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+
+        # By status
+        for exec in executions:
+            status = exec.status or 'unknown'
+            if status not in comparison['by_status']:
+                comparison['by_status'][status] = 0
+            comparison['by_status'][status] += 1
+
+        # By agent (top 10)
+        agent_counts = {}
+        for exec in executions:
+            agent = exec.agent_name or 'unknown'
+            if agent not in agent_counts:
+                agent_counts[agent] = 0
+            agent_counts[agent] += 1
+
+        # Sort and take top 10
+        sorted_agents = sorted(agent_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+        comparison['by_agent'] = dict(sorted_agents)
+
+    except Exception as e:
+        logger.error(f"Error getting comparison: {e}")
+
+    return Response({
+        'success': True,
+        'data': comparison
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def breakdown_v2(request):
+    """
+    GET /api/analytics/v2/breakdown/
+
+    Get breakdown of metrics by dimension.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    dimension = request.GET.get('dimension', 'agent')
+    days = 7
+    cutoff = timezone.now() - timedelta(days=days)
+
+    breakdown = {}
+
+    try:
+        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+
+        for exec in executions:
+            if dimension == 'agent':
+                key = exec.agent_name or 'unknown'
+            elif dimension == 'status':
+                key = exec.status or 'unknown'
+            else:
+                key = 'all'
+
+            if key not in breakdown:
+                breakdown[key] = {'count': 0, 'cost': 0}
+            breakdown[key]['count'] += 1
+            breakdown[key]['cost'] += float(exec.cost or 0)
+
+        # Round costs
+        for key in breakdown:
+            breakdown[key]['cost'] = round(breakdown[key]['cost'], 4)
+
+    except Exception as e:
+        logger.error(f"Error getting breakdown: {e}")
+
+    return Response({
+        'success': True,
+        'data': {
+            'dimension': dimension,
+            'breakdown': breakdown,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_v2(request):
+    """
+    GET /api/analytics/v2/export/
+
+    Export analytics data.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    format_type = request.GET.get('format', 'json')
+    days = 7
+    cutoff = timezone.now() - timedelta(days=days)
+
+    export_data = {
+        'generated_at': timezone.now().isoformat(),
+        'period_days': days,
+        'executions': [],
+    }
+
+    try:
+        executions = AgentExecution.objects.filter(created_at__gte=cutoff).order_by('-created_at')[:100]
+
+        for exec in executions:
+            export_data['executions'].append({
+                'id': str(exec.id),
+                'agent_name': exec.agent_name,
+                'status': exec.status,
+                'cost': float(exec.cost or 0),
+                'tokens_used': exec.tokens_used or 0,
+                'created_at': exec.created_at.isoformat() if exec.created_at else None,
+            })
+    except Exception as e:
+        logger.error(f"Error exporting data: {e}")
+
+    return Response({
+        'success': True,
+        'data': export_data
+    })

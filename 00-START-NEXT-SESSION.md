@@ -147,7 +147,7 @@ cat docs/UI_COMPREHENSIVE_AUDIT.md
 ✅ **Import Cleanup:** Removed unused icons and API imports
 ✅ **File Size:** AgentsPage reduced from 6,729 to 4,910 lines (27% reduction)
 
-### Part 2: Analytics Page Fix
+### Part 2: Analytics Charts Fix
 ✅ **Missing Endpoints:** Created 7 new chart API endpoints for AnalyticsDashboardPage
 ✅ **Endpoints Added:**
   - `/api/analytics/charts/agent-activity/` - Agent activity trends + heatmap
@@ -157,4 +157,15 @@ cat docs/UI_COMPREHENSIVE_AUDIT.md
   - `/api/analytics/charts/spider-performance/` - Spider network stats
   - `/api/analytics/charts/learning-progress/` - Memory/knowledge transfer stats
   - `/api/analytics/charts/collaboration/` - Agent conversation metrics
+
+### Part 3: Analytics Insights Tab Fix
+✅ **Missing v2 Endpoints:** Created 7 new v2 API endpoints for Insights tab
+✅ **Endpoints Added:**
+  - `/api/analytics/v2/top-performers/` - Top performing agents
+  - `/api/analytics/v2/anomalies/` - Detected system anomalies
+  - `/api/analytics/v2/forecast/` - Metric forecasting
+  - `/api/analytics/v2/trends/` - Trend data
+  - `/api/analytics/v2/comparison/` - Metric comparison
+  - `/api/analytics/v2/breakdown/` - Metric breakdown by dimension
+  - `/api/analytics/v2/export/` - Data export
 ✅ **Build Passes:** Frontend builds successfully with no errors
