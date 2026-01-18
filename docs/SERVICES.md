@@ -406,7 +406,20 @@ attribution = tracker.attribute_conversion(user_id, source)
 
 ### MemoryEmbeddingService
 **File:** `memory_embedding_service.py`
-**Purpose:** Generates and searches memory embeddings
+**Purpose:** Generates and searches memory embeddings for semantic retrieval
+
+**Session 768 Enhancement:** Memory Safety Classification
+- `create_memory()` - Now accepts `safety_class` parameter and auto-detects poison risk
+- `update_memory_embedding()` - Skips `test_only` and high-risk memories
+- `backfill_embeddings()` - Excludes `test_only` and `poison_risk_score >= 0.5`
+
+**Safety Classes:**
+- `test_only` - Never embedded (health checks, connectivity tests)
+- `exploratory` - Review before using
+- `candidate` - Default, auto-promoted to approved if low risk (<0.3)
+- `approved` - Always embedded
+
+See: `docs/MEMORY_SAFETY_CLASSIFICATION.md` for full documentation.
 
 ### PipelineLearningService
 **File:** `pipeline_learning.py`
