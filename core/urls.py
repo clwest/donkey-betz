@@ -87,6 +87,16 @@ from core.views_ecosystem import ecosystem_stats, ecosystem_live_feed, get_proje
 # Import visualization views
 from core.views_visualization import ai_agents_visualization
 
+# Session 773: Learning Journey API views (replaces stubs)
+from core.views_learning_journey_api import (
+    learning_journeys_list, learning_journeys_active, learning_journey_detail,
+    learning_journey_start, learning_journey_pause, learning_journey_resume,
+    learning_journey_complete, learning_journey_abandon,
+    learning_step_start, learning_step_complete, learning_step_skip,
+    learning_templates, learning_template_detail,
+    learning_journey_analytics, learning_achievements,
+)
+
 # Import project builder views
 from core.views_projects import (
     switch_project, build_project_module, execute_latest_code,
@@ -1036,10 +1046,7 @@ from core.views_frontend_stubs import (
     stripe_invoices, stripe_invoice_detail, stripe_upcoming_invoice,
     stripe_usage, stripe_subscribe, stripe_cancel_subscription,
     stripe_resume_subscription, stripe_billing_portal,
-    # Learning journey stubs
-    learning_journeys_list, learning_journeys_active, learning_templates,
-    learning_achievements, learning_journey_start, learning_journey_pause,
-    learning_journey_resume, learning_journey_analytics,
+    # Learning journey stubs (now replaced by real views in views_learning_journey_api.py)
     # Autonomous stubs
     autonomous_status, autonomous_situations, autonomous_triggers,
     autonomous_start, autonomous_pause, autonomous_analytics_summary,
@@ -3243,15 +3250,22 @@ urlpatterns = [
     path('api/stripe/resume-subscription/', stripe_resume_subscription, name='stripe-resume-subscription'),
     path('api/stripe/billing-portal/', stripe_billing_portal, name='stripe-billing-portal'),
 
-    # Session 745: Learning Journey stub endpoints
+    # Session 773: Learning Journey API (real implementation replacing stubs)
     path('api/learning/journeys/', learning_journeys_list, name='learning-journeys-list'),
     path('api/learning/journeys/active/', learning_journeys_active, name='learning-journeys-active'),
-    path('api/learning/templates/', learning_templates, name='learning-templates'),
-    path('api/learning/achievements/', learning_achievements, name='learning-achievements'),
     path('api/learning/journeys/start/', learning_journey_start, name='learning-journey-start'),
+    path('api/learning/journeys/analytics/', learning_journey_analytics, name='learning-journey-analytics'),
+    path('api/learning/journeys/<str:journey_id>/', learning_journey_detail, name='learning-journey-detail'),
     path('api/learning/journeys/<str:journey_id>/pause/', learning_journey_pause, name='learning-journey-pause'),
     path('api/learning/journeys/<str:journey_id>/resume/', learning_journey_resume, name='learning-journey-resume'),
-    path('api/learning/journeys/analytics/', learning_journey_analytics, name='learning-journey-analytics'),
+    path('api/learning/journeys/<str:journey_id>/complete/', learning_journey_complete, name='learning-journey-complete'),
+    path('api/learning/journeys/<str:journey_id>/abandon/', learning_journey_abandon, name='learning-journey-abandon'),
+    path('api/learning/journeys/<str:journey_id>/step/<int:step_number>/start/', learning_step_start, name='learning-step-start'),
+    path('api/learning/journeys/<str:journey_id>/step/<int:step_number>/complete/', learning_step_complete, name='learning-step-complete'),
+    path('api/learning/journeys/<str:journey_id>/step/<int:step_number>/skip/', learning_step_skip, name='learning-step-skip'),
+    path('api/learning/templates/', learning_templates, name='learning-templates'),
+    path('api/learning/templates/<str:template_id>/', learning_template_detail, name='learning-template-detail'),
+    path('api/learning/achievements/', learning_achievements, name='learning-achievements'),
 
     # Session 745: Autonomous System stub endpoints
     path('api/autonomous/status/', autonomous_status, name='autonomous-status-stub'),

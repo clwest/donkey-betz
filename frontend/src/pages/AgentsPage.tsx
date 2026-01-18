@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, agentOrchestrationsApi, collectiveApi, orchestrationApi, type OrchestrationWorkflow, type OrchestrationExecution, type OrchestrationStepExecution } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot, Shield, Calendar, Workflow } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, GitMerge, Play, Pause, CircleDot, Shield, Calendar, Workflow, DollarSign, XCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -2257,7 +2257,7 @@ export default function AgentsPage() {
                     <div>
                       <p className="text-sm text-gray-400">Success Rate</p>
                       <p className="text-2xl font-bold">
-                        {((1 - (monitoringData.summary?.error_rate || 0)) * 100).toFixed(1)}%
+                        {(monitoringData.summary?.success_rate || 0).toFixed(1)}%
                       </p>
                     </div>
                   </div>
@@ -2297,6 +2297,62 @@ export default function AgentsPage() {
                       <p className="text-sm text-gray-400">Active Agents</p>
                       <p className="text-2xl font-bold">
                         {monitoringData.summary?.active_agents || '0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Session 773: AI Usage & Execution Breakdown - Previously Hidden Data */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent-purple/20 flex items-center justify-center">
+                      <Zap size={20} className="text-accent-purple" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Tokens Used</p>
+                      <p className="text-2xl font-bold">
+                        {(monitoringData.summary?.total_tokens || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent-green/20 flex items-center justify-center">
+                      <DollarSign size={20} className="text-accent-green" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">AI Cost</p>
+                      <p className="text-2xl font-bold">
+                        ${(monitoringData.summary?.total_cost || 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent-cyan/20 flex items-center justify-center">
+                      <CheckCircle size={20} className="text-accent-cyan" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Completed</p>
+                      <p className="text-2xl font-bold text-accent-green">
+                        {(monitoringData.summary?.completed || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent-red/20 flex items-center justify-center">
+                      <XCircle size={20} className="text-accent-red" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Failed</p>
+                      <p className="text-2xl font-bold text-accent-red">
+                        {(monitoringData.summary?.failed || 0).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -2444,11 +2500,13 @@ export default function AgentsPage() {
                           <th className="pb-3 text-sm font-medium text-gray-400">Executions</th>
                           <th className="pb-3 text-sm font-medium text-gray-400">Success Rate</th>
                           <th className="pb-3 text-sm font-medium text-gray-400">Avg Time</th>
+                          <th className="pb-3 text-sm font-medium text-gray-400">Tokens</th>
+                          <th className="pb-3 text-sm font-medium text-gray-400">Cost</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-dark-border">
                         {Object.entries(monitoringData.agents).slice(0, 10).map(([name, stats]: [string, unknown]) => {
-                          const agentStats = stats as { total_executions?: number; success_rate?: number; avg_execution_time?: number }
+                          const agentStats = stats as { total_executions?: number; success_rate?: number; avg_execution_time?: number; total_tokens?: number; total_cost?: number }
                           const successRate = (agentStats.success_rate || 0) * 100
                           return (
                             <tr key={name} className="hover:bg-dark-hover/50">
@@ -2469,6 +2527,12 @@ export default function AgentsPage() {
                               </td>
                               <td className="py-3 text-gray-300">
                                 {(agentStats.avg_execution_time || 0).toFixed(2)}s
+                              </td>
+                              <td className="py-3 text-gray-300">
+                                {(agentStats.total_tokens || 0).toLocaleString()}
+                              </td>
+                              <td className="py-3 text-accent-green">
+                                ${(agentStats.total_cost || 0).toFixed(2)}
                               </td>
                             </tr>
                           )
