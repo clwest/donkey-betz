@@ -50,6 +50,9 @@ from .models_human_interface import *
 # Import orchestration layer models (Session 764 - Multi-agent workflows)
 from .models_orchestration import *
 
+# Import learning journey models (Session 773 - Real learning journeys)
+from .models_learning_journey import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
