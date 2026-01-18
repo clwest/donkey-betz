@@ -1090,6 +1090,18 @@ Use delegation when you need expertise outside your specialty. For example:
                     parts.append(f"\n\n## Current Trends")
                     parts.append(f"Trending topics: {', '.join(trend_names)}")
 
+            # Session 773: Add PA Knowledge if injected
+            pa_knowledge = spider_context.get('pa_knowledge')
+            if pa_knowledge and pa_knowledge.get('has_dynamic_context'):
+                try:
+                    from core.services.pa_knowledge_injector import get_pa_knowledge_injector
+                    injector = get_pa_knowledge_injector()
+                    pa_prompt_section = injector.format_for_prompt(pa_knowledge)
+                    if pa_prompt_section:
+                        parts.append(pa_prompt_section)
+                except Exception as e:
+                    logger.debug(f"Failed to format PA knowledge: {e}")
+
         # Session 565: Add platform intelligence context
         # Session 573: Now includes system state awareness
         if intelligence_context and intelligence_context.get('context_text'):

@@ -1264,10 +1264,15 @@ def _get_universal_agent_tool_definition() -> Dict:
                         "LegalDocDrafterAgent",
                         # Market Intelligence (1)
                         "MarketIntelligenceAgent",
-                        # Orchestration (3)
+                        # Orchestration (4)
                         "OpportunityPipelineAgent", "ContentExecutorAgent", "WorkflowAgent",
+                        "WorkflowOrchestrationAgent",
                         # Technical (1)
-                        "TechnicalDocumentAgent"
+                        "TechnicalDocumentAgent",
+                        # Training (2) - Session 773
+                        "CharacterTrainingAgent", "TrainedCreationAgent",
+                        # Content Diversity (1) - Session 773
+                        "ContentDiversityOrchestrator"
                     ]
                 },
                 "task": {
