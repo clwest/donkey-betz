@@ -79,15 +79,28 @@
 
 ---
 
+### 3. Timeline & Recent Executions - NOW DISPLAYED ✅
+
+**Previously:** Backend returned `timeline` and `recent_executions` but frontend ignored them
+**Now:** Both are displayed in the Monitoring tab
+
+**New UI Components:**
+- **Execution Timeline Chart** - Bar chart showing executions over time
+  - Color-coded: cyan for total, green overlay for successful
+  - Hover tooltips showing exact counts
+  - Time labels on x-axis
+- **Recent Executions Feed** - List of 10 most recent executions
+  - Shows agent name, status, execution time, tokens used
+  - Visual status indicators (green checkmark, red X, amber clock)
+  - Status badges (completed/failed/running)
+
+---
+
 ## Remaining Priorities
 
 ### MEDIUM PRIORITY
 
-1. **Display Timeline & Recent Executions**
-   - Backend returns `timeline` and `recent_executions` arrays in monitoring data
-   - Frontend currently ignores these (chart/list data)
-
-2. **Remove Orchestration Duplication**
+1. **Remove Orchestration Duplication**
    - Remove `orchestrationApi` sub-tabs from AgentsPage
    - Keep OrchestrationPage as dedicated orchestration UI
 
@@ -155,4 +168,5 @@ cat docs/UI_COMPREHENSIVE_AUDIT.md
 ✅ **Migration Applied:** 0176_learning_journey_models.py
 ✅ **Unused Endpoints:** Connected dashboard_summary with "While You Were Away" widget
 ✅ **API Cleanup:** Added missing dashboardApi methods (liveAgentActivity, advisorInsights)
-📋 **Remaining:** Timeline/recent_executions display, orchestration duplication cleanup
+✅ **Timeline Display:** Execution timeline chart + recent executions feed in Monitoring tab
+📋 **Remaining:** Orchestration duplication cleanup (AgentsPage has duplicate of OrchestrationPage)
