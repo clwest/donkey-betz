@@ -566,6 +566,10 @@ export const dashboardApi = {
   stats: () => api.get('/dashboard/stats/'),
   health: () => api.get('/v1/health/'),
   runAgentCycle: () => api.post('/v1/agents/force-cycle/'),
+  // Session 774: Connect unused rich endpoints
+  summary: () => api.get('/dashboard/summary/'),  // Personalized greeting + "While You Were Away"
+  liveAgentActivity: () => api.get('/dashboard/agents/'),  // Real-time agent status
+  advisorInsights: () => api.get('/dashboard/advisors/'),  // Advisor recommendations
 }
 
 export const spidersApi = {
