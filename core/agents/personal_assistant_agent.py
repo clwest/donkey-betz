@@ -3683,6 +3683,21 @@ Actions:
         # Session 565: Store intelligence context for use in question answering
         self._intelligence_context = intelligence_context
 
+        # Session 773: Inject dynamic PA knowledge based on query triggers
+        try:
+            from core.services.pa_knowledge_injector import get_pa_knowledge_injector
+            injector = get_pa_knowledge_injector()
+            pa_knowledge = injector.get_context_for_query(task)
+            if pa_knowledge.get('has_dynamic_context'):
+                spider_context['pa_knowledge'] = pa_knowledge
+                self._current_spider_context = spider_context  # Update stored context
+                logger.info(
+                    f"🧠 [Session 773] PA Knowledge injected: "
+                    f"triggers={pa_knowledge.get('triggered_by', [])}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to inject PA knowledge: {e}")
+
         # Session 565: Debug logging for platform intelligence
         if intelligence_context:
             metadata = intelligence_context.get('metadata', {})

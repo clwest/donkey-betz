@@ -663,60 +663,110 @@ DO NOT USE FOR:
     # SESSION 674: UNIVERSAL AGENT TOOL
     # -------------------------------------------------------------------------
 
-    "universal_agent_tool": """Invoke ANY specialized agent by name for tasks not covered by dedicated tools.
+    "universal_agent_tool": """Invoke ANY of the 46 specialized agents by name for tasks not covered by dedicated tools.
 
-USE THIS WHEN user requests:
-- BLOCKCHAIN: "Audit this smart contract", "Watch whale wallets", "Check for exploits"
-  -> agent: BlockchainAuditCoordinator, SmartContractAuditorAgent, WhaleWatcherAgent, ExploitDetectorAgent
+This is the gateway to ALL agents in the system. Match user requests to the appropriate agent:
 
-- STOCK ANALYSIS: "Analyze NVDA stock", "Watch market movements", "Check institutional activity"
-  -> agent: StockAuditCoordinator, StockAnalystAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent
+=== BLOCKCHAIN & CRYPTO (5 agents) ===
+USE FOR: smart contract audits, whale watching, exploit detection, transaction monitoring
+- "Audit this smart contract" → BlockchainAuditCoordinator (coordinates full audit)
+- "Check for exploits in this contract" → ExploitDetectorAgent
+- "Watch whale wallets" → WhaleWatcherAgent
+- "Monitor transactions" → TransactionMonitorAgent
+- "Audit this Solidity code" → SmartContractAuditorAgent
 
-- DEVELOPMENT: "Generate code for X", "Review this code", "Help with DevOps"
-  -> agent: CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent
+=== STOCK & FINANCIAL ANALYSIS (9 agents) ===
+USE FOR: stock analysis, market movements, institutional activity, bull/bear cases
+- "Analyze NVDA stock" → StockAnalystAgent
+- "What's the bull case for AAPL?" → BullCaseAgent
+- "Bear case for Tesla" → BearCaseAgent
+- "Watch market movements" → MarketMovementMonitorAgent
+- "Check institutional activity" → InstitutionalWatcherAgent
+- "Detect market anomalies" → MarketAnomalyDetectorAgent
+- "Scan for trading signals" → SignalScannerAgent
+- "Full stock audit" → StockAuditCoordinator (coordinates all stock agents)
+- "Market intelligence report" → MarketIntelligenceCoordinator
 
-- PODCAST: "Create a podcast debate about X", "Have agents discuss Y"
-  -> agent: PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent
+=== PREDICTION MARKETS & BETTING (3 agents) ===
+USE FOR: prediction markets, sports odds, arbitrage opportunities
+- "Analyze Kalshi/Polymarket" → PredictionMarketAnalyst
+- "Check sports odds" → SportsOddsAnalyst
+- "Find arbitrage opportunities" → ArbitrageDetector
 
-- MARKETS: "Analyze prediction markets", "Check sports odds", "Find arbitrage opportunities"
-  -> agent: PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
+=== DEVELOPMENT (4 agents) ===
+USE FOR: code generation, code review, full-stack development, DevOps
+- "Generate code for X" → CodeGeneratorAgent
+- "Review this code for bugs" → CodeReviewAgent
+- "Build a full feature" → FullStackDeveloperAgent
+- "Help with CI/CD/Docker" → DevOpsAgent
 
-- NARRATIVE: "Track narrative drift", "Analyze cultural trends", "Find trend breaks"
-  -> agent: NarrativeDriftCoordinator, NarrativeHistorianAgent, CulturalImpactAgent
+=== PODCAST & DEBATES (4 agents) ===
+USE FOR: AI debates, podcast generation, moderated discussions
+- "Create a podcast debate about AI" → PodcastCoordinatorAgent (coordinates full podcast)
+- "Argue FOR this position" → DebateAdvocateAgent
+- "Argue AGAINST this position" → DebateSkepticAgent
+- "Moderate a discussion" → ModeratorAgent
 
-- CONTENT STUDIO: "Autonomous content generation", "Topic mining", "Performance analysis"
-  -> agent: AutonomousContentStudioCoordinator, TopicMinerAgent, ContrarianAgent
+=== NARRATIVE & CULTURE (4 agents) ===
+USE FOR: narrative analysis, cultural trends, trend detection
+- "Track narrative drift on X topic" → NarrativeDriftCoordinator
+- "Analyze cultural impact" → CulturalImpactAgent
+- "Find historical narrative patterns" → NarrativeHistorianAgent
+- "Detect trend breaks" → TrendBreakDetectorAgent
 
-- RENDERING: "Render video in DaVinci Resolve"
-  -> agent: ResolveAgent
+=== CONTENT STUDIO (4 agents) ===
+USE FOR: autonomous content, topic mining, contrarian perspectives
+- "Run autonomous content generation" → AutonomousContentStudioCoordinator
+- "Mine topics for content" → TopicMinerAgent
+- "Get contrarian perspective" → ContrarianAgent
+- "Analyze content performance" → PerformanceAnalystAgent
 
-- SYSTEM: "Check system health", "Platform diagnostics"
-  -> agent: SystemIntelligenceAgent, ThinkingAgent
+=== CAMPAIGNS & WORKFLOWS (2 agents) ===
+USE FOR: marketing campaigns, AI series workflows
+- "Orchestrate marketing campaign" → CampaignOrchestratorAgent
+- "Run AI series workflow" → AISeriesWorkflowAgent
 
-- CAMPAIGNS: "Orchestrate marketing campaign", "Run AI series workflow"
-  -> agent: CampaignOrchestratorAgent, AISeriesWorkflowAgent
+=== ORCHESTRATION (3 agents) ===
+USE FOR: workflow execution, opportunity pipelines, content execution
+- "Execute workflow" → WorkflowAgent
+- "Manage opportunity pipeline" → OpportunityPipelineAgent
+- "Execute content plan" → ContentExecutorAgent
 
-Available agent categories and their agents:
-1. Blockchain (5): BlockchainAuditCoordinator, SmartContractAuditorAgent, TransactionMonitorAgent, WhaleWatcherAgent, ExploitDetectorAgent
-2. Stocks (9): StockAuditCoordinator, StockAnalystAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent, MarketAnomalyDetectorAgent, BullCaseAgent, BearCaseAgent, SignalScannerAgent, MarketIntelligenceCoordinator
-3. Development (4): CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent
-4. Podcast (4): PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent
-5. Markets (3): PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
-6. Narrative (4): NarrativeDriftCoordinator, NarrativeHistorianAgent, TrendBreakDetectorAgent, CulturalImpactAgent
-7. Content Studio (4): AutonomousContentStudioCoordinator, TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent
-8. Rendering (1): ResolveAgent
-9. System (2): SystemIntelligenceAgent, ThinkingAgent
-10. Campaign (2): CampaignOrchestratorAgent, AISeriesWorkflowAgent
-11. Security (2): MemoryIsolationAgent, ContentAuditAgent
-12. Legal (1): LegalDocDrafterAgent
-13. Market Intelligence (1): MarketIntelligenceAgent
+=== SYSTEM & ANALYSIS (3 agents) ===
+USE FOR: system diagnostics, deep reasoning, technical documentation
+- "Check system health" → SystemIntelligenceAgent
+- "Deep reasoning on X" → ThinkingAgent
+- "Create technical documentation" → TechnicalDocumentAgent
+
+=== SECURITY (2 agents) ===
+USE FOR: memory isolation, content auditing
+- "Isolate memory" → MemoryIsolationAgent
+- "Audit content for compliance" → ContentAuditAgent
+
+=== LEGAL (1 agent) ===
+USE FOR: Colorado family law questions (general info only)
+- "Help with custody questions" → LegalDocDrafterAgent
+- "Draft a motion template" → LegalDocDrafterAgent
+
+=== RENDERING (1 agent) ===
+USE FOR: DaVinci Resolve integration, professional video rendering
+- "Render video in DaVinci Resolve" → ResolveAgent
+
+=== TRAINING (2 agents) ===
+USE FOR: character/style training, trained model generation
+- "Train a character style" → CharacterTrainingAgent
+- "Generate with trained model" → TrainedCreationAgent
+
+=== MARKET INTELLIGENCE (1 agent) ===
+USE FOR: comprehensive market analysis
+- "Market intelligence report" → MarketIntelligenceAgent
 
 DO NOT USE FOR:
-- Image creation -> use image_generation_agent
-- Video creation -> use video_generation_agent
-- Research -> use web_search
-- Strategy -> use strategy agents (brand_strategy_agent, etc.)
-- Executive decisions -> use cto_agent, coo_agent, etc.""",
+- Image creation → use image_generation_agent
+- Video creation → use video_generation_agent
+- General research → use web_search
+- Strategy research → use brand_strategy_agent, content_strategy_agent, etc.
+- Written content → use content_writer_agent""",
 
 
     # -------------------------------------------------------------------------
