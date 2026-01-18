@@ -1,8 +1,8 @@
-# Session 775 - LearningJourneyPage Complete
+# Session 775 - Orchestration Duplication Removed
 
 **Previous Session:** 774 (LearningJourneyPage Implementation)
 **Date:** January 18, 2026
-**Status:** LearningJourneyPage now fully database-backed
+**Status:** AgentsPage cleaned up - orchestration code moved to dedicated OrchestrationPage
 
 ## Full Audit Document
 
@@ -15,7 +15,30 @@
 
 ---
 
-## Session 774 Accomplishments
+## Session 775 Accomplishments
+
+### 1. Orchestration Duplication Removal - COMPLETE ✅
+
+**Problem:** AgentsPage had ~1,820 lines of orchestration code duplicating OrchestrationPage
+**Solution:** Removed all orchestration functionality from AgentsPage
+
+**Changes Made:**
+- Removed 'orchestrations' from tab list (Session 774)
+- Removed orchestration state variables, queries, mutations (Session 774)
+- Removed orchestration UI components: tab content + 4 modals (Session 775)
+- Cleaned up unused imports (GitMerge, Play, Pause, CircleDot, Workflow)
+- Cleaned up API imports (agentOrchestrationsApi, orchestrationApi, types)
+
+**File Size Reduction:**
+- Before: 6,729 lines
+- After: 4,910 lines
+- Removed: 1,819 lines (~27% reduction)
+
+**OrchestrationPage:** Use `/orchestration` for all workflow management
+
+---
+
+## Session 774 Accomplishments (Previous)
 
 ### 1. LearningJourneyPage - COMPLETE ✅
 
@@ -37,76 +60,30 @@
 | `UserLearningAchievement` | User earned achievements |
 | `UserLearningStreak` | Streak tracking (consecutive days) |
 
-**Default Data Created:**
-- 5 learning journey templates (beginner to advanced)
-- 6 achievements (First Steps, Quick Learner, Journey Complete, etc.)
-
-**API Endpoints (15 total):**
-- `GET /api/learning/templates/` - List all templates
-- `GET /api/learning/templates/<id>/` - Template detail with steps
-- `GET /api/learning/journeys/` - User's journeys
-- `GET /api/learning/journeys/active/` - Active journeys only
-- `POST /api/learning/journeys/start/` - Start a new journey
-- `GET /api/learning/journeys/<id>/` - Journey detail
-- `POST /api/learning/journeys/<id>/pause/` - Pause journey
-- `POST /api/learning/journeys/<id>/resume/` - Resume journey
-- `POST /api/learning/journeys/<id>/complete/` - Complete journey
-- `POST /api/learning/journeys/<id>/abandon/` - Abandon journey
-- `POST /api/learning/journeys/<id>/step/<n>/start/` - Start step
-- `POST /api/learning/journeys/<id>/step/<n>/complete/` - Complete step
-- `POST /api/learning/journeys/<id>/step/<n>/skip/` - Skip step
-- `GET /api/learning/journeys/analytics/` - User learning analytics
-- `GET /api/learning/achievements/` - User achievements
-
----
-
-## Session 774 - Additional Accomplishments
-
 ### 2. Unused Dashboard Endpoints - NOW CONNECTED ✅
-
-**Previously:** 4 rich endpoints in `views_dashboard_stats.py` were never used
-**Now:** Connected to frontend with new "While You Were Away" widget
 
 **Connected Endpoints:**
 - `GET /api/dashboard/summary/` → Personalized greeting + activity since last visit
-- `GET /api/dashboard/stats/` → Rich dashboard stats (already existed in API, now documented)
-- `GET /api/dashboard/agents/` → Live agent activity (API connected, UI pending)
-- `GET /api/dashboard/advisors/` → Advisor insights (API connected, UI pending)
+- `GET /api/dashboard/stats/` → Rich dashboard stats
+- `GET /api/dashboard/agents/` → Live agent activity
+- `GET /api/dashboard/advisors/` → Advisor insights
 
 **New Dashboard Feature:**
-- Personalized "Welcome back, {name}!" greeting
-- "While You Were Away" shows: spider data points, agent dreams, conversations, opportunities, images created
-
----
+- "While You Were Away" widget with activity summary
 
 ### 3. Timeline & Recent Executions - NOW DISPLAYED ✅
 
-**Previously:** Backend returned `timeline` and `recent_executions` but frontend ignored them
-**Now:** Both are displayed in the Monitoring tab
-
-**New UI Components:**
-- **Execution Timeline Chart** - Bar chart showing executions over time
-  - Color-coded: cyan for total, green overlay for successful
-  - Hover tooltips showing exact counts
-  - Time labels on x-axis
-- **Recent Executions Feed** - List of 10 most recent executions
-  - Shows agent name, status, execution time, tokens used
-  - Visual status indicators (green checkmark, red X, amber clock)
-  - Status badges (completed/failed/running)
+**New UI Components in Monitoring tab:**
+- Execution Timeline Chart (bar chart with color-coded executions)
+- Recent Executions Feed (10 most recent with status, time, tokens)
 
 ---
 
 ## Remaining Priorities
 
-### MEDIUM PRIORITY
-
-1. **Remove Orchestration Duplication**
-   - Remove `orchestrationApi` sub-tabs from AgentsPage
-   - Keep OrchestrationPage as dedicated orchestration UI
-
 ### LOW PRIORITY
 
-3. **Optional: Expand live_agent_activity and advisor_insights usage**
+1. **Optional: Expand live_agent_activity and advisor_insights usage**
    - Neural Orchestra could use live_agent_activity for real-time agent status
    - Advisors page could show recent advisor_insights
 
@@ -137,10 +114,10 @@ cat docs/UI_COMPREHENSIVE_AUDIT.md
 |-----------|-------|--------|
 | **Frontend Pages** | 43 | Audited ✅ |
 | **APIs** | 55+ | All connected ✅ |
-| **Learning Models** | 6 | NEW - Database-backed ✅ |
+| **Learning Models** | 6 | Database-backed ✅ |
 | **Learning Templates** | 5 | Default content created ✅ |
 | **Achievements** | 6 | Ready to earn ✅ |
-| **Unused Endpoints** | 4 | Need decision |
+| **AgentsPage Lines** | 4,910 | Reduced from 6,729 ✅ |
 | **Agents** | 72 | All routable |
 | **Integration Score** | 95% | Stable |
 
@@ -150,7 +127,8 @@ cat docs/UI_COMPREHENSIVE_AUDIT.md
 
 | Session | Focus | Document |
 |---------|-------|----------|
-| **774** | **LearningJourneyPage Complete** | This file |
+| **775** | **Orchestration Duplication Removed** | This file |
+| 774 | LearningJourneyPage Complete | See commits |
 | 773 | Deep Data Flow Audit | `docs/UI_COMPREHENSIVE_AUDIT.md` |
 | 772 | UI Comprehensive Audit | `SESSION_772_UI_COMPREHENSIVE_AUDIT.md` |
 | 771 | Tool Result Rendering | See commits |
@@ -159,14 +137,12 @@ cat docs/UI_COMPREHENSIVE_AUDIT.md
 
 ---
 
-## Session 774 Complete - Summary
+## Session 775 Complete - Summary
 
-✅ **LearningJourneyPage:** Replaced all stubs with real database-backed implementation
-✅ **6 New Models:** Template, Journey, Step, Achievement, UserAchievement, UserStreak
-✅ **15 API Endpoints:** Full CRUD for learning journeys and steps
-✅ **Default Content:** 5 templates + 6 achievements seeded
-✅ **Migration Applied:** 0176_learning_journey_models.py
-✅ **Unused Endpoints:** Connected dashboard_summary with "While You Were Away" widget
-✅ **API Cleanup:** Added missing dashboardApi methods (liveAgentActivity, advisorInsights)
-✅ **Timeline Display:** Execution timeline chart + recent executions feed in Monitoring tab
-📋 **Remaining:** Orchestration duplication cleanup (AgentsPage has duplicate of OrchestrationPage)
+✅ **Orchestration Duplication:** Removed ~1,820 lines of duplicate code from AgentsPage
+✅ **Tab Cleanup:** Removed 'orchestrations' tab from AgentsPage
+✅ **State Cleanup:** Removed orchestration state, queries, mutations
+✅ **UI Cleanup:** Removed orchestration tab content and 4 modals
+✅ **Import Cleanup:** Removed unused icons and API imports
+✅ **File Size:** AgentsPage reduced from 6,729 to 4,910 lines (27% reduction)
+✅ **Build Passes:** Frontend builds successfully with no errors
