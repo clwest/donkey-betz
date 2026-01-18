@@ -57,6 +57,176 @@ const executionModeInfo = {
   dependency: { label: 'Dependency', desc: 'Steps run based on dependencies', icon: GitBranch },
 }
 
+/**
+ * Session 770: Smart tool result renderer
+ * Formats tool results in a human-readable way instead of raw JSON
+ */
+function renderToolResult(data: unknown, depth = 0): React.ReactNode {
+  if (data === null || data === undefined) {
+    return <span className="text-gray-500 italic">No result</span>
+  }
+
+  // Handle simple primitives
+  if (typeof data === 'string') {
+    // Check if it's a long string or multi-line
+    if (data.length > 100 || data.includes('\n')) {
+      return <p className="text-xs text-gray-300 whitespace-pre-wrap">{data.slice(0, 500)}{data.length > 500 ? '...' : ''}</p>
+    }
+    return <span className="text-sm text-gray-300">{data}</span>
+  }
+  if (typeof data === 'number' || typeof data === 'boolean') {
+    return <span className="text-sm text-blue-300">{String(data)}</span>
+  }
+
+  // Handle arrays
+  if (Array.isArray(data)) {
+    if (data.length === 0) {
+      return <span className="text-xs text-gray-500 italic">Empty</span>
+    }
+
+    // Check if it's a topics/counts array (common pattern)
+    if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
+      const firstItem = data[0] as Record<string, unknown>
+
+      // Topics with counts pattern: [{topic: "ai", count: 150}, ...]
+      if ('topic' in firstItem && 'count' in firstItem) {
+        return (
+          <div className="flex flex-wrap gap-1.5">
+            {data.slice(0, 15).map((item, idx) => {
+              const t = item as { topic: string; count: number }
+              return (
+                <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-xs">
+                  <span className="font-medium">{t.topic}</span>
+                  <span className="text-purple-400/60">({t.count})</span>
+                </span>
+              )
+            })}
+            {data.length > 15 && (
+              <span className="text-xs text-gray-500">+{data.length - 15} more</span>
+            )}
+          </div>
+        )
+      }
+
+      // Items with title/name pattern: [{title: "...", ...}, ...]
+      if ('title' in firstItem || 'name' in firstItem || 'headline' in firstItem) {
+        return (
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {data.slice(0, 8).map((item, idx) => {
+              const i = item as Record<string, unknown>
+              const label = (i.title || i.name || i.headline || 'Item') as string
+              const subtitle = (i.source || i.author || i.type || i.category || '') as string
+              const score = i.score || i.points || i.count
+              return (
+                <div key={idx} className="flex items-start gap-2 text-xs bg-black/20 rounded px-2 py-1">
+                  <span className="text-gray-500 shrink-0">{idx + 1}.</span>
+                  <span className="text-gray-300 flex-1 line-clamp-2">{String(label)}</span>
+                  {subtitle && <span className="text-gray-500 shrink-0">{String(subtitle)}</span>}
+                  {score !== undefined && <span className="text-blue-400 shrink-0">{String(score)}</span>}
+                </div>
+              )
+            })}
+            {data.length > 8 && (
+              <p className="text-xs text-gray-500">+{data.length - 8} more items</p>
+            )}
+          </div>
+        )
+      }
+
+      // URLs or links pattern
+      if ('url' in firstItem || 'link' in firstItem) {
+        return (
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {data.slice(0, 6).map((item, idx) => {
+              const i = item as Record<string, unknown>
+              const title = (i.title || i.name || 'Link') as string
+              return (
+                <div key={idx} className="text-xs text-blue-400 truncate">
+                  • {String(title).slice(0, 80)}
+                </div>
+              )
+            })}
+            {data.length > 6 && (
+              <p className="text-xs text-gray-500">+{data.length - 6} more links</p>
+            )}
+          </div>
+        )
+      }
+    }
+
+    // Simple array of strings/numbers
+    if (data.length > 0 && (typeof data[0] === 'string' || typeof data[0] === 'number')) {
+      return (
+        <div className="flex flex-wrap gap-1">
+          {data.slice(0, 12).map((item, idx) => (
+            <span key={idx} className="px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300 text-xs">
+              {String(item).slice(0, 30)}
+            </span>
+          ))}
+          {data.length > 12 && (
+            <span className="text-xs text-gray-500">+{data.length - 12} more</span>
+          )}
+        </div>
+      )
+    }
+
+    // Fallback: show first few items as mini cards
+    return (
+      <div className="space-y-1 max-h-32 overflow-y-auto">
+        {data.slice(0, 5).map((item, idx) => (
+          <div key={idx} className="text-xs bg-black/20 rounded px-2 py-1">
+            {typeof item === 'object' ? JSON.stringify(item).slice(0, 100) : String(item)}
+          </div>
+        ))}
+        {data.length > 5 && <p className="text-xs text-gray-500">+{data.length - 5} more</p>}
+      </div>
+    )
+  }
+
+  // Handle objects - drill into nested structures
+  if (typeof data === 'object') {
+    const obj = data as Record<string, unknown>
+    const entries = Object.entries(obj)
+
+    // Filter out empty arrays and nulls for cleaner display
+    const meaningfulEntries = entries.filter(([, v]) => {
+      if (v === null || v === undefined) return false
+      if (Array.isArray(v) && v.length === 0) return false
+      return true
+    })
+
+    if (meaningfulEntries.length === 0) {
+      return <span className="text-xs text-gray-500 italic">No data</span>
+    }
+
+    // Render each field with proper formatting
+    return (
+      <div className="space-y-2">
+        {meaningfulEntries.slice(0, 8).map(([key, value]) => (
+          <div key={key} className="border-l-2 border-gray-700 pl-2">
+            <div className="text-xs text-gray-500 font-medium mb-0.5">
+              {key.replace(/_/g, ' ')}
+              {Array.isArray(value) && <span className="text-gray-600 ml-1">({value.length})</span>}
+            </div>
+            <div className="pl-1">
+              {depth < 2 ? renderToolResult(value, depth + 1) : (
+                <span className="text-xs text-gray-400">
+                  {Array.isArray(value) ? `[${value.length} items]` : typeof value === 'object' ? '{...}' : String(value).slice(0, 50)}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+        {meaningfulEntries.length > 8 && (
+          <p className="text-xs text-gray-500">+{meaningfulEntries.length - 8} more fields</p>
+        )}
+      </div>
+    )
+  }
+
+  return <span className="text-gray-500">Unknown data type</span>
+}
+
 export default function OrchestrationPage() {
   const [activeTab, setActiveTab] = useState<TabType>('workflows')
   const [selectedExecution, setSelectedExecution] = useState<string | null>(null)
@@ -1667,15 +1837,12 @@ function StepIntelligencePanel({ intelligence }: { intelligence: StepIntelligenc
                   </div>
                 )}
 
-                {/* Result summary */}
+                {/* Result summary - Session 770: Smart formatting */}
                 {result?.data && (
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Result Preview:</p>
-                    <div className="bg-black/20 rounded p-2 max-h-32 overflow-y-auto">
-                      <pre className="text-xs text-gray-300">
-                        {JSON.stringify(result.data, null, 2).slice(0, 500)}
-                        {JSON.stringify(result.data).length > 500 && '...'}
-                      </pre>
+                    <p className="text-xs text-gray-500 mb-1">Result:</p>
+                    <div className="bg-black/20 rounded p-2 max-h-48 overflow-y-auto">
+                      {renderToolResult(result.data)}
                     </div>
                   </div>
                 )}
