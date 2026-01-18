@@ -111,6 +111,39 @@ self._create_execution_memory(result, task, memory_type="success")
 self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...})
 ```
 
+### Health Check Mode (Session 768)
+
+When testing agent connectivity without polluting the learning system, use `health_check_mode`:
+
+```python
+from core.agents.image_agent import ImageAgent
+
+# Create agent in health check mode
+agent = ImageAgent(user, health_check_mode=True)
+
+# Execute - NO memory created, NO learning recorded
+result = agent.execute(
+    "Say your name and one capability",
+    context={},
+    scifi_context={},
+    spider_context={}
+)
+```
+
+**What happens in health_check_mode:**
+- `_record_learning_outcome()` - Skips recording
+- `_create_execution_memory()` - Skips memory creation
+- No embeddings generated
+- Execution still works normally, just no persistence
+
+**When to use:**
+- Agent connectivity tests
+- Health checks
+- Wiring verification
+- Testing prompts without learning
+
+See: `docs/MEMORY_SAFETY_CLASSIFICATION.md` for full documentation.
+
 ---
 
 ## Complete Agent Reference (72 Agents)

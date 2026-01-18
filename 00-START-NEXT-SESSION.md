@@ -1,12 +1,83 @@
-# Session 767 - Post-Dream Origin Tracking
+# Session 768 - Memory Safety Classification System
 
-**Previous Session:** 766 (Dream Origin Tracking)
-**Date:** January 15, 2026
-**Status:** All systems operational, build passing
+**Previous Session:** 767 (Data Flow Dead Ends)
+**Date:** January 17, 2026
+**Status:** All systems operational, migration applied
 
 ---
 
-## Session 766 Accomplishments - COMPLETE
+## Session 768 Accomplishments - COMPLETE
+
+### Memory Safety Classification - COMPLETE
+
+Implemented ChatGPT's recommendation to prevent test/exploratory content from polluting the learning system. When testing agents with "Say your name and one capability", those test interactions were being captured as learning artifacts.
+
+**The Problem:** Test prompts became learning artifacts. "Convenience prompts that generate bad long-term memory" - capability one-liners, self-promotional blurbs, and test responses were being embedded and retrieved later.
+
+**The Solution:** Memory Safety Classification system with:
+
+1. **safety_class field** on AgentMemory:
+   - `test_only` - Health checks, connectivity tests - NEVER embed/learn
+   - `exploratory` - Research, exploration - review before using
+   - `candidate` - Default, potential learning - requires validation
+   - `approved` - Validated, safe to embed and learn from
+
+2. **Poison Risk Detection** - `_detect_poison_risk()` flags:
+   - Too short content (<15 words)
+   - Self-promotional patterns ("I can", "I specialize in")
+   - Test patterns ("say your name", "health check")
+   - Lacks context
+   - Highly abstract (no concrete details)
+
+3. **health_check_mode** in BaseAgent:
+   - `agent = SomeAgent(user, health_check_mode=True)`
+   - Skips `_record_learning_outcome()`
+   - Skips `_create_execution_memory()`
+   - No embeddings generated
+
+**Files Changed:**
+| File | Changes |
+|------|---------|
+| `core/models_unified_system.py` | `safety_class`, `poison_risk_score`, `poison_risk_factors` fields + `_detect_poison_risk()` |
+| `core/services/memory_embedding_service.py` | Safety classification in `create_memory()`, `update_memory_embedding()`, `backfill_embeddings()` |
+| `core/agents/base_agent.py` | `health_check_mode` parameter + checks in learning methods |
+
+**Migration:** `0172_session_768_memory_safety_classification.py`
+
+**Full Details:** See `docs/handoffs/SESSION_768_MEMORY_SAFETY_CLASSIFICATION.md`
+
+---
+
+## Session 766-767 Accomplishments - COMPLETE
+
+### Data Flow Dead Ends Audit - COMPLETE
+
+**The Core Discovery:** The system generates massive amounts of data but none of it leads to action. We built a sophisticated orchestration system (Session 764) but it has never executed a single workflow.
+
+**Full Report:** See `docs/DATA_FLOW_DEAD_ENDS.md`
+
+**Key Statistics:**
+| Component | Count | Action Rate |
+|-----------|-------|-------------|
+| Agent Dreams | 7,990 | 0% acted |
+| Agent Conversations | 4,388 | 0% actioned |
+| HiveMind Sessions | 321 | 0% acted |
+| Opportunities | 6,709 | 0% actioned |
+| Human Attention Items | 992 | 1.3% acted |
+| **Orchestration Executions** | **0** | **0%** |
+
+**Root Cause:** Three layers are disconnected:
+1. **Data Generation** (working) - Dreams, conversations, opportunities
+2. **Human Interface** (broken gateway) - 96.9% of items never processed
+3. **Orchestration** (never triggered) - 10 workflows, 0 executions
+
+**Proposed Solution:** Create pipelines to connect data sources to orchestration:
+- `DreamExecutionPipeline` - When dream approved → Create workflow → Execute
+- `ConversationActionExtractor` - When conversation ends → Extract decisions → Execute
+- `HiveMindSynthesisExecutor` - When synthesis populated → Create project → Execute
+- Auto-approve timeout for Human Attention Items
+
+---
 
 ### Dream Origin Tracking - COMPLETE
 
@@ -118,30 +189,31 @@ GET /api/orchestration/executions/{id}/steps/{step}/intelligence/
 
 ## Next Session Options
 
-### Option A: Execute Real Workflows
-Test the intelligence link by executing workflows and verifying:
-- Context injection shows up
-- Memories are created and linked
-- Tool calls appear
-- Step details are correct
+### Option A: DreamExecutionPipeline (RECOMMENDED)
+Connect approved dreams to orchestration:
+1. Create `DreamExecutionPipeline` service
+2. When dream approved → Auto-create `PartnershipProject`
+3. Generate workflow using ThinkingAgent
+4. Queue for orchestration execution
+5. Finally see orchestration data in the UI!
 
-### Option B: Memory Palace Link
-Add deep links from step intelligence to Memory Palace:
-- Click on memory → opens in Memory Palace
-- View related memories by execution
-- Navigate conversation history
+### Option B: Human Attention Auto-Approve
+Fix the 96.9% pending items:
+1. Add auto-approve timeout (24h for low-risk items)
+2. Implement batch approval UI
+3. Connect approved items to orchestration triggers
 
-### Option C: Conversation/Collaboration History
-When steps involve multi-agent collaboration (HiveMindSession), show:
-- Which agents contributed
-- Conversation turns
-- Final synthesis
+### Option C: HiveMind → Orchestration
+Connect HiveMind synthesis to action:
+1. Parse synthesis for recommendations
+2. Create project for each recommendation
+3. Execute via orchestration
 
-### Option D: Integration Testing
-Write comprehensive tests for the orchestration layer:
-- Unit tests for each service
-- Integration tests for full workflow execution
-- Mission Control approval flow testing
+### Option D: Execute Test Workflow
+Manually trigger an orchestration workflow to verify the system works:
+1. Use API to execute a workflow
+2. Verify intelligence link shows data
+3. Test end-to-end execution
 
 ---
 

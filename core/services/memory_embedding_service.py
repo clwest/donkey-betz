@@ -122,10 +122,14 @@ class MemoryEmbeddingService:
         importance_score: float = 0.5,
         source_type: str = "",
         source_id: str = "",
-        tags: List[str] = None
+        tags: List[str] = None,
+        safety_class: str = "candidate"
     ):
         """
         Create a new memory with auto-generated embedding.
+
+        Session 768: Added safety_class for Memory Safety Classification.
+        Embeddings are ONLY generated for 'approved' safety_class with low poison risk.
 
         Args:
             agent: The Agent model instance
@@ -138,17 +142,39 @@ class MemoryEmbeddingService:
             source_type: What triggered this memory
             source_id: ID of the source event
             tags: List of tags for grouping
+            safety_class: test_only, exploratory, candidate, approved
 
         Returns:
             Created AgentMemory instance
         """
         from core.models_unified_system import AgentMemory
 
-        # Generate embedding
-        memory_text = self._build_memory_text(title, content, context, memory_type)
-        embedding = self._generate_embedding(memory_text)
+        # Session 768: Detect poison risk before deciding on embedding
+        poison_risk, risk_factors = AgentMemory._detect_poison_risk(title, content, context)
 
-        # Create memory
+        # Determine if we should generate embedding
+        # NEVER embed test_only or high-risk content
+        should_embed = False
+        final_safety_class = safety_class
+
+        if safety_class == 'approved' and poison_risk < 0.5:
+            should_embed = True
+        elif safety_class == 'candidate' and poison_risk < 0.3:
+            # Auto-approve low-risk candidates
+            final_safety_class = 'approved'
+            should_embed = True
+        elif safety_class == 'test_only':
+            # NEVER embed test content
+            should_embed = False
+            logger.info(f"Skipping embedding for test_only memory: {title[:50]}")
+
+        # Generate embedding only if safe
+        embedding = None
+        if should_embed:
+            memory_text = self._build_memory_text(title, content, context, memory_type)
+            embedding = self._generate_embedding(memory_text)
+
+        # Create memory with safety classification
         memory = AgentMemory.objects.create(
             agent=agent,
             title=title,
@@ -160,12 +186,18 @@ class MemoryEmbeddingService:
             embedding=embedding,
             source_type=source_type,
             source_id=source_id,
-            tags=tags or []
+            tags=tags or [],
+            safety_class=final_safety_class,
+            poison_risk_score=poison_risk,
+            poison_risk_factors=risk_factors
         )
 
-        logger.info(f"Created memory '{title}' for agent {agent.name} (embedding: {'yes' if embedding else 'no'})")
+        embed_status = 'yes' if embedding else 'no (safety_class={}, poison_risk={:.2f})'.format(
+            final_safety_class, poison_risk
+        )
+        logger.info(f"Created memory '{title}' for agent {agent.name} (embedding: {embed_status})")
 
-        # Find and connect related memories
+        # Find and connect related memories only if embedded
         if embedding:
             self._connect_related_memories(memory, threshold=0.7)
 
@@ -175,11 +207,23 @@ class MemoryEmbeddingService:
         """
         Update embedding for an existing memory.
 
+        Session 768: Now respects safety_class - will not embed test_only or high-risk content.
         Use this when memory content has changed or to backfill missing embeddings.
 
         Returns:
             True if embedding was updated successfully
         """
+        # Session 768: Check safety_class before embedding
+        if hasattr(memory, 'safety_class') and memory.safety_class == 'test_only':
+            logger.info(f"Skipping embedding update for test_only memory {memory.id}")
+            return False
+
+        # Check poison risk
+        poison_risk = getattr(memory, 'poison_risk_score', 0.0)
+        if poison_risk >= 0.5:
+            logger.warning(f"Skipping embedding update for high-risk memory {memory.id} (risk={poison_risk:.2f})")
+            return False
+
         memory_text = self._build_memory_text(
             memory.title,
             memory.content,
@@ -210,7 +254,11 @@ class MemoryEmbeddingService:
         from core.models_unified_system import AgentMemory
 
         # Find memories without embeddings
+        # Session 768: Exclude test_only and high-risk memories from backfill
         queryset = AgentMemory.objects.filter(embedding__isnull=True)
+        if hasattr(AgentMemory, 'safety_class'):
+            queryset = queryset.exclude(safety_class='test_only')
+            queryset = queryset.exclude(poison_risk_score__gte=0.5)
         if agent:
             queryset = queryset.filter(agent=agent)
 

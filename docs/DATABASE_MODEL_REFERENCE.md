@@ -82,6 +82,68 @@ CoordinatorOutcome.objects.count()  # 3,963
 
 ---
 
+## AgentMemory Model Fields (Session 768)
+
+The `AgentMemory` model stores agent execution memories with embeddings for semantic retrieval. Session 768 added **Memory Safety Classification** to prevent test content from polluting learning.
+
+### Core Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `agent` | FK(Agent) | Which agent owns this memory |
+| `title` | CharField(200) | Brief title/summary |
+| `content` | TextField | Detailed memory content |
+| `context` | TextField | Context in which memory was formed |
+| `memory_type` | CharField | success, failure, preference, technique, insight, interaction, feedback |
+| `valence` | CharField | positive, negative, neutral |
+| `importance_score` | Float(0-1) | How important is this memory |
+| `memory_outcome` | CharField | success, failure, partial, unknown |
+
+### Session 768: Safety Classification Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `safety_class` | CharField | **test_only** (never embed), **exploratory** (review), **candidate** (default), **approved** (embed) |
+| `poison_risk_score` | Float(0-1) | Risk of polluting embeddings (0=safe, 1=dangerous) |
+| `poison_risk_factors` | JSONField | List of detected risks: `too_short`, `self_promotional`, `test_pattern`, `lacks_context`, `highly_abstract` |
+
+### Embedding & Metadata
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `embedding` | VectorField(1536) | pgvector embedding for semantic search |
+| `tags` | JSONField | List of tags for grouping |
+| `source_type` | CharField | What triggered: task, conversation, dream, hive_mind |
+| `source_id` | CharField | ID of source event |
+| `access_count` | PositiveInt | How many times retrieved |
+| `last_accessed_at` | DateTime | When last retrieved |
+
+### Usage Examples
+
+```python
+from core.models_unified_system import AgentMemory
+
+# Get only approved memories (safe for learning)
+approved = AgentMemory.objects.filter(safety_class='approved')
+
+# Exclude test memories from retrieval
+learnable = AgentMemory.objects.exclude(safety_class='test_only')
+
+# Find high-risk memories needing review
+risky = AgentMemory.objects.filter(poison_risk_score__gte=0.5)
+
+# Create test memory (won't generate embedding)
+memory = AgentMemory.create_memory(
+    agent=agent,
+    title="Health check response",
+    content="Agent says hello",
+    safety_class='test_only'
+)
+```
+
+---
+
 ## All Models by Category
 
 ### Agent Models (33 models, 109,198 records)

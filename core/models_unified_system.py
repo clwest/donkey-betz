@@ -796,6 +796,16 @@ class Opportunity(models.Model):
         help_text="Direct link to opportunity listing"
     )
 
+    # Session 766: Link to project when opportunity is executed
+    project = models.ForeignKey(
+        'PartnershipProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunities',
+        help_text="Project created from this opportunity when executed via orchestration"
+    )
+
     def save(self, *args, **kwargs):
         """Auto-assign user_friendly_id on creation."""
         if self._state.adding and self.user_friendly_id is None:
@@ -9754,6 +9764,34 @@ class AgentMemory(models.Model):
         help_text="Outcome of the task/action that created this memory"
     )
 
+    # Session 768: Memory Safety Classification
+    # Prevents test/exploratory content from polluting learning/embeddings
+    SAFETY_CLASS_CHOICES = [
+        ('test_only', 'Test Only'),           # Health checks, connectivity tests - NEVER embed/learn
+        ('exploratory', 'Exploratory'),       # Research, exploration - review before using
+        ('candidate', 'Candidate Learning'),  # Potential learning - requires validation
+        ('approved', 'Approved Learning'),    # Validated, safe to embed and learn from
+    ]
+    safety_class = models.CharField(
+        max_length=20,
+        choices=SAFETY_CLASS_CHOICES,
+        default='candidate',
+        db_index=True,
+        help_text="Memory safety classification - controls embedding/learning eligibility"
+    )
+
+    # Session 768: Embedding Poison Risk Score
+    # Flags content that could pollute the embedding space
+    poison_risk_score = models.FloatField(
+        default=0.0,
+        help_text="Risk of this memory poisoning embeddings (0=safe, 1=dangerous)"
+    )
+    poison_risk_factors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of detected risk factors (self_promotional, too_short, lacks_context, etc.)"
+    )
+
     # Embedding for semantic search
     # Session 730: Migrated to pgvector VectorField
     embedding = VectorField(
@@ -9868,8 +9906,22 @@ class AgentMemory(models.Model):
 
     @classmethod
     def create_memory(cls, agent, title, content, memory_type='interaction',
-                      valence='neutral', importance=0.5, context='', source_type='', source_id=''):
-        """Helper to create a memory with optional embedding generation."""
+                      valence='neutral', importance=0.5, context='', source_type='', source_id='',
+                      safety_class='candidate'):
+        """
+        Helper to create a memory with optional embedding generation.
+
+        Session 768: Added safety_class parameter and poison risk detection.
+        - test_only: NEVER embedded (health checks, connectivity tests)
+        - exploratory: Review before using
+        - candidate: Requires validation before approved
+        - approved: Safe to embed and learn from
+
+        Embedding is only generated for 'approved' safety_class memories.
+        """
+        # Detect poison risk before creating
+        poison_risk, risk_factors = cls._detect_poison_risk(title, content, context)
+
         memory = cls.objects.create(
             agent=agent,
             title=title,
@@ -9879,12 +9931,88 @@ class AgentMemory(models.Model):
             importance_score=importance,
             context=context,
             source_type=source_type,
-            source_id=source_id
+            source_id=source_id,
+            safety_class=safety_class,
+            poison_risk_score=poison_risk,
+            poison_risk_factors=risk_factors
         )
-        # Queue embedding generation
-        from core.tasks import generate_memory_embedding
-        generate_memory_embedding.delay(str(memory.id))
+
+        # Session 768: Only generate embeddings for approved memories with low poison risk
+        if safety_class == 'approved' and poison_risk < 0.5:
+            from core.tasks import generate_memory_embedding
+            generate_memory_embedding.delay(str(memory.id))
+        elif safety_class == 'candidate' and poison_risk < 0.3:
+            # Auto-approve low-risk candidates and embed
+            memory.safety_class = 'approved'
+            memory.save(update_fields=['safety_class'])
+            from core.tasks import generate_memory_embedding
+            generate_memory_embedding.delay(str(memory.id))
+
         return memory
+
+    @classmethod
+    def _detect_poison_risk(cls, title: str, content: str, context: str) -> tuple:
+        """
+        Session 768: Detect embedding poison risk.
+
+        Flags content that could pollute the embedding space:
+        - Self-promotional (capability one-liners)
+        - Too short (lacks context)
+        - Highly abstract
+        - Gameable patterns
+
+        Returns:
+            tuple: (risk_score: float, risk_factors: list)
+        """
+        risk_factors = []
+        risk_score = 0.0
+
+        combined_text = f"{title} {content}".lower()
+        word_count = len(combined_text.split())
+
+        # Check 1: Too short (capability one-liners) - ChatGPT's key insight
+        if word_count < 15:
+            risk_factors.append('too_short')
+            risk_score += 0.3
+
+        # Check 2: Self-promotional patterns
+        self_promo_patterns = [
+            'i can ', 'i am able to', 'my capability', 'i specialize in',
+            'i am the', 'i excel at', 'my expertise', 'i am designed to',
+            'i help with', 'i am responsible for', 'my role is'
+        ]
+        for pattern in self_promo_patterns:
+            if pattern in combined_text:
+                risk_factors.append('self_promotional')
+                risk_score += 0.25
+                break
+
+        # Check 3: Lacks context (no task/situation details)
+        if not context or len(context.strip()) < 20:
+            risk_factors.append('lacks_context')
+            risk_score += 0.15
+
+        # Check 4: Gameable test patterns
+        test_patterns = [
+            'say your name', 'introduce yourself', 'what can you do',
+            'describe yourself', 'state your capability', 'health check',
+            'connectivity test', 'testing', 'verify agent'
+        ]
+        for pattern in test_patterns:
+            if pattern in combined_text or pattern in (context or '').lower():
+                risk_factors.append('test_pattern')
+                risk_score += 0.4
+                break
+
+        # Check 5: Highly abstract (no concrete details)
+        concrete_indicators = ['file', 'code', 'data', 'result', 'output', 'created', 'generated',
+                               'analyzed', 'processed', 'completed', 'error', 'success', 'failed']
+        has_concrete = any(ind in combined_text for ind in concrete_indicators)
+        if not has_concrete and word_count > 10:
+            risk_factors.append('highly_abstract')
+            risk_score += 0.2
+
+        return min(risk_score, 1.0), risk_factors
 
     @classmethod
     def search_memories(cls, agent, query, limit=5, memory_types=None):

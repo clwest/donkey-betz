@@ -176,12 +176,14 @@ class BaseAgent(ABC, TimeTravelMixin):
     tools: List[Dict[str, Any]] = []
     can_delegate: bool = True  # Session 744: Enable autonomous delegation to specialists
 
-    def __init__(self, user=None):
+    def __init__(self, user=None, health_check_mode: bool = False):
         """
         Initialize the agent.
 
         Args:
             user: Django User object for session tracking
+            health_check_mode: Session 768 - If True, skip learning/memory creation.
+                               Use for connectivity tests, agent health checks.
         """
         self.user = user
         self.agent_name = self.name  # For TimeTravelMixin compatibility
@@ -195,6 +197,8 @@ class BaseAgent(ABC, TimeTravelMixin):
         # Session 735: Cost tracking for orchestration
         self._accumulated_cost = 0.0
         self._accumulated_tokens = 0
+        # Session 768: Health check mode - skip learning/embedding for test interactions
+        self._health_check_mode = health_check_mode
 
     # ==================== Cost Tracking Helpers (Session 735) ====================
 
@@ -2506,6 +2510,8 @@ Consider this current data when formulating your response."""
         2. Award XP to the agent on success
         3. Detect patterns in successful/failed interactions
 
+        Session 768: Respects health_check_mode - skips recording for test interactions.
+
         Args:
             result: The AgentResult from execution
             task: The original task
@@ -2517,6 +2523,11 @@ Consider this current data when formulating your response."""
         Returns:
             Outcome ID if recorded, None otherwise
         """
+        # Session 768: Skip learning in health check mode
+        if getattr(self, '_health_check_mode', False):
+            logger.debug(f"Skipping learning outcome recording in health_check_mode for {self.name}")
+            return None
+
         if not self.learning_loop:
             return None
 
@@ -2572,10 +2583,12 @@ Consider this current data when formulating your response."""
         result: 'AgentResult',
         task: str,
         memory_type: str = "interaction",
-        importance: float = 0.5
+        importance: float = 0.5,
+        safety_class: str = "candidate"
     ) -> Optional[Any]:
         """
         Session 757: Enhanced to store RICH memories with actual content.
+        Session 768: Added safety_class parameter for Memory Safety Classification.
 
         Create a memory from a meaningful interaction, including:
         - Actual output/results from result.data
@@ -2594,10 +2607,16 @@ Consider this current data when formulating your response."""
             task: The original task
             memory_type: success, failure, preference, technique, insight, interaction
             importance: 0-1 importance rating (default 0.5)
+            safety_class: test_only, exploratory, candidate, approved (Session 768)
 
         Returns:
             Created AgentMemory instance or None
         """
+        # Session 768: Skip memory creation in health check mode
+        if getattr(self, '_health_check_mode', False):
+            logger.debug(f"Skipping memory creation in health_check_mode for {self.name}")
+            return None
+
         if not self.memory_service or not self.agent_model:
             return None
 
@@ -2619,7 +2638,8 @@ Consider this current data when formulating your response."""
                 importance_score=importance,
                 source_type="agent_execution",
                 source_id=result.agent_name,
-                tags=tags
+                tags=tags,
+                safety_class=safety_class  # Session 768: Pass safety classification
             )
 
             logger.debug(f"Created rich memory: {memory.title}")
