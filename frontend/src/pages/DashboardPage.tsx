@@ -196,6 +196,13 @@ export default function DashboardPage() {
     staleTime: 60000, // Cache for 1 minute
   })
 
+  // Session 774: Personalized greeting + "While You Were Away"
+  const { data: summaryData } = useQuery({
+    queryKey: ['dashboard-summary'],
+    queryFn: () => dashboardApi.summary(),
+    staleTime: 300000, // Cache for 5 minutes
+  })
+
   // Initialize recentActivity with fetched data
   useEffect(() => {
     if (initialActivity?.data?.activities) {
@@ -257,6 +264,9 @@ export default function DashboardPage() {
 
   const stats = ecosystemStats?.data || {}
   const health = healthData?.data || {}
+  // Session 774: Personalized summary data
+  const summary = summaryData?.data || {}
+  const whileAway = summary.while_away || {}
   // Session 745: Revenue and velocity data
   const revenue = revenueData?.data?.dashboard || revenueData?.data || {}
   // Session 745: Transform velocity API response to expected format
@@ -293,13 +303,69 @@ export default function DashboardPage() {
 
   const isLoading = agentCycleMutation.isPending || spiderCheckMutation.isPending || reportMutation.isPending
 
+  // Session 774: Calculate if any activity happened while away
+  const hasAwayActivity = Object.values(whileAway).some((v) => typeof v === 'number' && v > 0)
+
   return (
     <div className="space-y-6">
-      {/* Header with connection status */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">System Overview</h1>
-        <ConnectionBadge status={wsStatus} />
-      </div>
+      {/* Session 774: Personalized Greeting + While You Were Away */}
+      {summary.user_name && (
+        <div className="card bg-gradient-to-r from-primary-500/10 to-accent-purple/10 border-primary-500/30">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">
+                Welcome back, {summary.user_name}!
+              </h1>
+              {hasAwayActivity && (
+                <p className="text-gray-400 mt-1">Here's what happened while you were away:</p>
+              )}
+            </div>
+            <ConnectionBadge status={wsStatus} />
+          </div>
+          {hasAwayActivity && (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+              {whileAway.new_spider_data > 0 && (
+                <div className="flex items-center gap-2 bg-dark-bg rounded-lg px-3 py-2">
+                  <Brain size={16} className="text-accent-green" />
+                  <span className="text-sm"><strong>{whileAway.new_spider_data}</strong> spider data points</span>
+                </div>
+              )}
+              {whileAway.agent_dreams > 0 && (
+                <div className="flex items-center gap-2 bg-dark-bg rounded-lg px-3 py-2">
+                  <Lightbulb size={16} className="text-accent-purple" />
+                  <span className="text-sm"><strong>{whileAway.agent_dreams}</strong> agent dreams</span>
+                </div>
+              )}
+              {whileAway.agent_conversations > 0 && (
+                <div className="flex items-center gap-2 bg-dark-bg rounded-lg px-3 py-2">
+                  <Users size={16} className="text-accent-cyan" />
+                  <span className="text-sm"><strong>{whileAway.agent_conversations}</strong> conversations</span>
+                </div>
+              )}
+              {whileAway.new_opportunities > 0 && (
+                <div className="flex items-center gap-2 bg-dark-bg rounded-lg px-3 py-2">
+                  <TrendingUp size={16} className="text-accent-gold" />
+                  <span className="text-sm"><strong>{whileAway.new_opportunities}</strong> opportunities</span>
+                </div>
+              )}
+              {whileAway.images_created > 0 && (
+                <div className="flex items-center gap-2 bg-dark-bg rounded-lg px-3 py-2">
+                  <Zap size={16} className="text-accent-pink" />
+                  <span className="text-sm"><strong>{whileAway.images_created}</strong> images created</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header with connection status (fallback if no summary) */}
+      {!summary.user_name && (
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">System Overview</h1>
+          <ConnectionBadge status={wsStatus} />
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
