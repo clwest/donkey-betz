@@ -1415,6 +1415,336 @@ def get_chart_dashboard(request):
 
 
 # =============================================================================
+# SESSION 775: MISSING CHART ENDPOINTS
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_agent_activity(request):
+    """
+    GET /api/analytics/charts/agent-activity/
+
+    Get agent activity chart data for visualization.
+    Combines execution counts and activity patterns.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from core.services.analytics_service import get_analytics_service
+    from django.utils import timezone
+    from datetime import timedelta
+
+    days = int(request.GET.get('days', 30))
+    service = get_analytics_service(request.user)
+
+    # Get agent performance trends which includes activity data
+    trends = service.get_agent_performance_trends(days)
+    heatmap = service.get_agent_activity_heatmap(days)
+
+    return Response({
+        'success': True,
+        'data': {
+            'trends': trends.to_dict() if hasattr(trends, 'to_dict') else trends,
+            'heatmap': heatmap,
+            'period_days': days,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_content_production(request):
+    """
+    GET /api/analytics/charts/content-production/
+
+    Get content production metrics for visualization.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import ContentItem, AgentExecution
+
+    days = int(request.GET.get('days', 30))
+    cutoff = timezone.now() - timedelta(days=days)
+
+    # Get content creation stats
+    content_by_type = {}
+    try:
+        content_items = ContentItem.objects.filter(created_at__gte=cutoff)
+        for item in content_items:
+            content_type = item.content_type or 'other'
+            content_by_type[content_type] = content_by_type.get(content_type, 0) + 1
+    except Exception:
+        pass
+
+    # Get agent executions that produced content
+    executions_by_day = []
+    try:
+        for i in range(days):
+            day = timezone.now() - timedelta(days=i)
+            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            count = AgentExecution.objects.filter(
+                created_at__gte=day_start,
+                created_at__lt=day_end,
+                status='completed'
+            ).count()
+            executions_by_day.append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'count': count
+            })
+    except Exception:
+        pass
+
+    return Response({
+        'success': True,
+        'data': {
+            'content_by_type': content_by_type,
+            'production_trend': list(reversed(executions_by_day)),
+            'total_items': sum(content_by_type.values()),
+            'period_days': days,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_revenue(request):
+    """
+    GET /api/analytics/charts/revenue/
+
+    Get revenue/cost tracking metrics.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    days = int(request.GET.get('days', 30))
+    cutoff = timezone.now() - timedelta(days=days)
+
+    # Aggregate costs from agent executions
+    daily_costs = []
+    total_cost = 0.0
+    try:
+        for i in range(days):
+            day = timezone.now() - timedelta(days=i)
+            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            executions = AgentExecution.objects.filter(
+                created_at__gte=day_start,
+                created_at__lt=day_end
+            )
+            day_cost = sum(float(e.cost or 0) for e in executions)
+            total_cost += day_cost
+            daily_costs.append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'cost': round(day_cost, 4)
+            })
+    except Exception:
+        pass
+
+    return Response({
+        'success': True,
+        'data': {
+            'daily_costs': list(reversed(daily_costs)),
+            'total_cost': round(total_cost, 2),
+            'average_daily': round(total_cost / max(days, 1), 2),
+            'period_days': days,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_user_engagement(request):
+    """
+    GET /api/analytics/charts/user-engagement/
+
+    Get user engagement metrics.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_scifi import AgentConversation
+    from core.models_unified_system import AgentExecution
+
+    days = int(request.GET.get('days', 30))
+    cutoff = timezone.now() - timedelta(days=days)
+
+    engagement_data = {
+        'conversations': 0,
+        'executions': 0,
+        'daily_trend': []
+    }
+
+    try:
+        engagement_data['conversations'] = AgentConversation.objects.filter(
+            created_at__gte=cutoff
+        ).count()
+    except Exception:
+        pass
+
+    try:
+        engagement_data['executions'] = AgentExecution.objects.filter(
+            created_at__gte=cutoff
+        ).count()
+    except Exception:
+        pass
+
+    return Response({
+        'success': True,
+        'data': engagement_data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_spider_performance(request):
+    """
+    GET /api/analytics/charts/spider-performance/
+
+    Get spider network performance metrics.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import SpiderResult
+
+    days = int(request.GET.get('days', 30))
+    cutoff = timezone.now() - timedelta(days=days)
+
+    spider_stats = {
+        'total_results': 0,
+        'by_spider': {},
+        'success_rate': 0,
+    }
+
+    try:
+        results = SpiderResult.objects.filter(created_at__gte=cutoff)
+        spider_stats['total_results'] = results.count()
+
+        for result in results:
+            spider_name = result.spider_name or 'unknown'
+            if spider_name not in spider_stats['by_spider']:
+                spider_stats['by_spider'][spider_name] = {'total': 0, 'success': 0}
+            spider_stats['by_spider'][spider_name]['total'] += 1
+            if result.status == 'success':
+                spider_stats['by_spider'][spider_name]['success'] += 1
+
+        total = spider_stats['total_results']
+        success = sum(s['success'] for s in spider_stats['by_spider'].values())
+        spider_stats['success_rate'] = round((success / max(total, 1)) * 100, 1)
+    except Exception:
+        pass
+
+    return Response({
+        'success': True,
+        'data': spider_stats
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_learning_progress(request):
+    """
+    GET /api/analytics/charts/learning-progress/
+
+    Get learning and knowledge transfer metrics.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_scifi import AgentMemory, KnowledgeTransfer
+
+    days = int(request.GET.get('days', 30))
+    cutoff = timezone.now() - timedelta(days=days)
+
+    learning_data = {
+        'memories_created': 0,
+        'knowledge_transfers': 0,
+        'memory_types': {},
+    }
+
+    try:
+        memories = AgentMemory.objects.filter(created_at__gte=cutoff)
+        learning_data['memories_created'] = memories.count()
+
+        for memory in memories:
+            mem_type = memory.memory_type or 'general'
+            learning_data['memory_types'][mem_type] = learning_data['memory_types'].get(mem_type, 0) + 1
+    except Exception:
+        pass
+
+    try:
+        learning_data['knowledge_transfers'] = KnowledgeTransfer.objects.filter(
+            transferred_at__gte=cutoff
+        ).count()
+    except Exception:
+        pass
+
+    return Response({
+        'success': True,
+        'data': learning_data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chart_collaboration(request):
+    """
+    GET /api/analytics/charts/collaboration/
+
+    Get agent collaboration metrics.
+
+    Query params:
+        days: Number of days (default 30)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_scifi import AgentConversation
+
+    days = int(request.GET.get('days', 30))
+    cutoff = timezone.now() - timedelta(days=days)
+
+    collab_data = {
+        'total_conversations': 0,
+        'multi_agent': 0,
+        'by_type': {},
+    }
+
+    try:
+        conversations = AgentConversation.objects.filter(created_at__gte=cutoff)
+        collab_data['total_conversations'] = conversations.count()
+
+        for conv in conversations:
+            conv_type = conv.conversation_type or 'general'
+            collab_data['by_type'][conv_type] = collab_data['by_type'].get(conv_type, 0) + 1
+
+            # Count as multi-agent if more than one participant
+            participants = conv.participants or []
+            if len(participants) > 1:
+                collab_data['multi_agent'] += 1
+    except Exception:
+        pass
+
+    return Response({
+        'success': True,
+        'data': collab_data
+    })
+
+
+# =============================================================================
 # SESSION 221: PHASE F - ADVANCED ANALYTICS SERVICE
 # =============================================================================
 
