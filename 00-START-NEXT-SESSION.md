@@ -60,22 +60,42 @@
 
 ---
 
+## Session 774 - Additional Accomplishments
+
+### 2. Unused Dashboard Endpoints - NOW CONNECTED ✅
+
+**Previously:** 4 rich endpoints in `views_dashboard_stats.py` were never used
+**Now:** Connected to frontend with new "While You Were Away" widget
+
+**Connected Endpoints:**
+- `GET /api/dashboard/summary/` → Personalized greeting + activity since last visit
+- `GET /api/dashboard/stats/` → Rich dashboard stats (already existed in API, now documented)
+- `GET /api/dashboard/agents/` → Live agent activity (API connected, UI pending)
+- `GET /api/dashboard/advisors/` → Advisor insights (API connected, UI pending)
+
+**New Dashboard Feature:**
+- Personalized "Welcome back, {name}!" greeting
+- "While You Were Away" shows: spider data points, agent dreams, conversations, opportunities, images created
+
+---
+
 ## Remaining Priorities
 
 ### MEDIUM PRIORITY
 
-1. **Evaluate Unused Endpoints**
-   - 4 rich endpoints built but never connected to UI
-   - Either connect `dashboard_stats`, `live_agent_activity`, etc. to UI
-   - Or remove dead code from `views_dashboard_stats.py`
+1. **Display Timeline & Recent Executions**
+   - Backend returns `timeline` and `recent_executions` arrays in monitoring data
+   - Frontend currently ignores these (chart/list data)
 
 2. **Remove Orchestration Duplication**
    - Remove `orchestrationApi` sub-tabs from AgentsPage
    - Keep OrchestrationPage as dedicated orchestration UI
 
-3. **Display Timeline & Recent Executions**
-   - Backend returns `timeline` and `recent_executions` arrays
-   - Frontend currently ignores these (chart/list data)
+### LOW PRIORITY
+
+3. **Optional: Expand live_agent_activity and advisor_insights usage**
+   - Neural Orchestra could use live_agent_activity for real-time agent status
+   - Advisors page could show recent advisor_insights
 
 ---
 
@@ -133,4 +153,6 @@ cat docs/UI_COMPREHENSIVE_AUDIT.md
 ✅ **15 API Endpoints:** Full CRUD for learning journeys and steps
 ✅ **Default Content:** 5 templates + 6 achievements seeded
 ✅ **Migration Applied:** 0176_learning_journey_models.py
-📋 **Remaining:** Unused endpoints decision, orchestration duplication cleanup
+✅ **Unused Endpoints:** Connected dashboard_summary with "While You Were Away" widget
+✅ **API Cleanup:** Added missing dashboardApi methods (liveAgentActivity, advisorInsights)
+📋 **Remaining:** Timeline/recent_executions display, orchestration duplication cleanup
