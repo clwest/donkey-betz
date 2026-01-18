@@ -7834,6 +7834,32 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                     topic = agent.specialization or agent.description or f"{agent.name}'s expertise"
                     topic = topic[:100]  # Truncate for safety
 
+                # Session 770: Check blacklist and topic diversity before generating dream
+                try:
+                    from core.models_unified_system import ContentQualityBlacklist, TopicDiversityTracker
+
+                    # Check if topic is blacklisted
+                    is_blocked, blacklist_item = ContentQualityBlacklist.is_blocked(topic)
+                    if is_blocked:
+                        logger.info(f"💭 [DREAMS] Topic blocked by blacklist: {topic} (reason: {blacklist_item.reason})")
+                        continue  # Skip this dream
+
+                    # Also check if content from inspiration_source is blocked
+                    if knowledge and knowledge.summary:
+                        content_blocked, _ = ContentQualityBlacklist.is_blocked(knowledge.summary[:500])
+                        if content_blocked:
+                            logger.info(f"💭 [DREAMS] Knowledge content blocked by blacklist for: {topic}")
+                            continue
+
+                    # Check topic diversity (is topic on cooldown?)
+                    is_available, tracker, reason = TopicDiversityTracker.is_topic_available(topic)
+                    if not is_available:
+                        logger.info(f"💭 [DREAMS] Topic on cooldown: {topic} ({reason})")
+                        continue  # Skip - this topic was used too recently
+
+                except Exception as blacklist_err:
+                    logger.debug(f"💭 [DREAMS] Blacklist check error (proceeding): {blacklist_err}")
+
                 # Session 249: Pick dream type using weighted random selection
                 # instead of uniform random
                 templates_with_weights = []
@@ -7937,6 +7963,13 @@ Guidelines:
 
                     stats['dreams_generated'] += 1
                     logger.debug(f"💭 [DREAMS] {agent.name} dreamed: {title}")
+
+                    # Session 770: Record topic usage for diversity tracking
+                    try:
+                        tracker = TopicDiversityTracker.get_or_create_topic(topic)
+                        tracker.record_dream_use()
+                    except Exception as tracker_err:
+                        logger.debug(f"💭 [DREAMS] Topic tracking failed (non-critical): {tracker_err}")
 
                     # Session 419: Send Discord notification
                     try:
@@ -17770,6 +17803,15 @@ Use the generate_podcast_script tool to create the full script with speaker labe
                 if audio_result['success']:
                     logger.info(f"🎙️ [PODCAST] Audio generated: {audio_result['duration_seconds']:.1f}s")
 
+                    # Session 770: Save TTS cost to episode
+                    cost_breakdown = audio_result.get('cost_breakdown', {})
+                    if cost_breakdown:
+                        from decimal import Decimal
+                        episode.tts_cost = Decimal(str(cost_breakdown.get('elevenlabs_tts', 0)))
+                        episode.tts_cost_breakdown = cost_breakdown
+                        episode.save(update_fields=['tts_cost', 'tts_cost_breakdown'])
+                        logger.info(f"🎙️ [PODCAST] TTS cost: ${episode.tts_cost:.4f}")
+
                     # Post to Discord podcast library
                     try:
                         from core.services.discord_notifications import discord_notify
@@ -24724,4 +24766,131 @@ def get_content_pipeline_stats():
 
     except Exception as e:
         logger.error(f"🎬 [CONTENT PIPELINE] Failed to get stats: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# Session 767: Learning Pattern Mining Tasks
+# =============================================================================
+
+@shared_task(name='core.tasks.mine_learning_patterns')
+def mine_learning_patterns(days_back: int = 30):
+    """
+    Session 767: Mine AgentLearning records to discover patterns.
+
+    Analyzes agent learning data to create LearningPattern records for:
+    1. spider_effectiveness - Which spider data helps which agents
+    2. agent_collaboration - Which teacher-student pairs work best
+    3. learning_type_impact - Which learning types produce best gains
+    4. top_teacher - Most effective teaching agents
+
+    These patterns are then injected into agent prompts to improve performance.
+
+    Args:
+        days_back: How many days of data to analyze (default 30)
+
+    Returns:
+        Mining statistics
+    """
+    from core.services.learning_pattern_engine import get_learning_pattern_engine
+
+    logger.info(f"🔍 [PATTERN MINING] Starting pattern mining (last {days_back} days)...")
+
+    try:
+        engine = get_learning_pattern_engine()
+        result = engine.mine_patterns(days_back=days_back)
+
+        logger.info(
+            f"🔍 [PATTERN MINING] Complete: "
+            f"{result.get('patterns_created', 0)} created, "
+            f"{result.get('patterns_updated', 0)} updated, "
+            f"{result.get('total_active_patterns', 0)} total active"
+        )
+
+        return {
+            'success': True,
+            **result
+        }
+
+    except Exception as e:
+        logger.error(f"🔍 [PATTERN MINING] Failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.maintain_knowledge_freshness')
+def maintain_knowledge_freshness():
+    """
+    Session 767: Maintain knowledge source freshness.
+
+    Decays freshness scores based on age, deactivates stale sources,
+    and identifies agents needing knowledge refresh.
+
+    Run daily to keep knowledge sources properly aged.
+
+    Returns:
+        Maintenance statistics
+    """
+    from core.services.learning_pattern_engine import get_learning_pattern_engine
+
+    logger.info("🔄 [FRESHNESS] Starting knowledge freshness maintenance...")
+
+    try:
+        engine = get_learning_pattern_engine()
+        result = engine.maintain_knowledge_freshness()
+
+        logger.info(
+            f"🔄 [FRESHNESS] Complete: "
+            f"{result.get('sources_decayed', 0)} decayed, "
+            f"{result.get('sources_deactivated', 0)} deactivated, "
+            f"{result.get('total_active', 0)} active"
+        )
+
+        return {
+            'success': True,
+            **result
+        }
+
+    except Exception as e:
+        logger.error(f"🔄 [FRESHNESS] Failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.promote_to_shared_knowledge')
+def promote_to_shared_knowledge(min_confidence: float = 0.7):
+    """
+    Session 767: Promote high-confidence knowledge to SharedKnowledge.
+
+    Scans AgentKnowledgeSource and KnowledgeTransfer for well-validated
+    knowledge and promotes it to the shared repository.
+
+    Run weekly to grow the shared knowledge base.
+
+    Args:
+        min_confidence: Minimum confidence for promotion (default 0.7)
+
+    Returns:
+        Promotion statistics
+    """
+    from core.services.learning_pattern_engine import get_learning_pattern_engine
+
+    logger.info(f"🚀 [KNOWLEDGE PROMOTION] Starting (min_confidence={min_confidence})...")
+
+    try:
+        engine = get_learning_pattern_engine()
+        result = engine.promote_to_shared_knowledge(min_confidence=min_confidence)
+
+        logger.info(
+            f"🚀 [KNOWLEDGE PROMOTION] Complete: "
+            f"{result.get('promoted_from_sources', 0)} from sources, "
+            f"{result.get('promoted_from_transfers', 0)} from transfers, "
+            f"{result.get('total_shared_knowledge', 0)} total"
+        )
+
+        return {
+            'success': True,
+            **result
+        }
+
+    except Exception as e:
+        logger.error(f"🚀 [KNOWLEDGE PROMOTION] Failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}

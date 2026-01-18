@@ -1967,6 +1967,78 @@ export interface OrchestrationWorkflow {
   updated_at: string | null
 }
 
+// Session 768: Workflow step with full configuration
+export interface OrchestrationWorkflowStep {
+  id: string
+  order: number
+  name: string
+  description: string
+  agent: string
+  prompt_template: string
+  input_params: string[]
+  config: Record<string, unknown>
+  timeout_seconds: number
+  requires_approval: boolean
+  approval_config: Record<string, unknown>
+  depends_on_steps: number[]
+  rollback_step: number | null
+  cost_limit: string | null
+  retry_count: number
+  is_required: boolean
+}
+
+// Session 768: Full workflow detail with steps
+export interface OrchestrationWorkflowDetail {
+  id: string
+  name: string
+  description: string
+  execution_mode: 'sequential' | 'parallel' | 'dependency'
+  max_retries: number
+  timeout_seconds: number
+  cost_budget: string | null
+  require_approval_on_error: boolean
+  created_by: string | null
+  is_template: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+// Session 768: Available agent for workflow configuration
+export interface OrchestrationAgent {
+  key: string
+  name: string
+  description: string
+  category: string
+  capabilities: string[]
+}
+
+// Session 768: Create workflow request
+export interface CreateWorkflowRequest {
+  name: string
+  description?: string
+  execution_mode?: 'sequential' | 'parallel' | 'dependency'
+  max_retries?: number
+  timeout_seconds?: number
+  cost_budget?: string
+  require_approval_on_error?: boolean
+  steps: {
+    order?: number
+    name: string
+    description?: string
+    agent: string
+    prompt_template: string
+    config?: Record<string, unknown>
+    timeout_seconds?: number
+    requires_approval?: boolean
+    approval_config?: Record<string, unknown>
+    depends_on_steps?: number[]
+    rollback_step?: number
+    cost_limit?: string
+    retry_count?: number
+    is_required?: boolean
+  }[]
+}
+
 export interface OrchestrationExecution {
   id: string
   workflow_id: string
@@ -1976,6 +2048,10 @@ export interface OrchestrationExecution {
   total_steps: number
   total_cost: string
   total_tokens: number
+  // Session 769: External API cost tracking
+  total_external_cost?: string
+  external_cost_breakdown?: Record<string, number>
+  total_combined_cost?: string
   started_at: string | null
   completed_at: string | null
   error_message: string | null
@@ -1990,6 +2066,10 @@ export interface OrchestrationStepExecution {
   completed_at: string | null
   cost: string
   tokens: number
+  // Session 769: External API cost tracking per step
+  external_cost?: string
+  external_cost_breakdown?: Record<string, number>
+  combined_cost?: string
   retry_count: number
   error_message: string | null
   output_preview: string | null
@@ -2008,6 +2088,17 @@ export interface OrchestrationExecutionDetail {
     created_at: string | null
     expires_at: string | null
   }[]
+  // Session 770: Podcast TTS cost info if this is a podcast workflow
+  podcast_info?: {
+    episode_id: string
+    title: string
+    topic: string
+    status: string
+    tts_cost: string
+    tts_cost_breakdown: Record<string, number>
+    audio_url: string
+    audio_duration_seconds: number | null
+  }
 }
 
 // Session 765: Step intelligence data linking to core agent systems
@@ -2035,6 +2126,19 @@ export interface StepIntelligenceData {
     output_data: Record<string, unknown>
     error_message: string | null
     retry_count: number
+    // Session 767: Full context from workflow step config (not truncated)
+    full_context?: {
+      dream_context?: {
+        title?: string
+        content?: string
+        type?: string
+      }
+      hivemind_context?: {
+        question?: string
+        synthesis?: string
+        mode?: string
+      }
+    }
   }
   agent_execution: {
     id: string
@@ -2057,11 +2161,18 @@ export interface StepIntelligenceData {
     performance_feedback?: boolean
     knowledge_state?: boolean
     scifi_context?: boolean
+    // Session 769: Additional context fields can be added dynamically
+    [key: string]: unknown
   }
   tool_calls: Array<{
+    tool?: string  // Session 769: Primary tool name field
     name?: string
     function?: string
     arguments?: Record<string, unknown>
+    result?: {
+      success?: boolean
+      data?: Record<string, unknown>
+    }
   }>
 }
 
@@ -2070,6 +2181,28 @@ export const orchestrationApi = {
   listWorkflows: () =>
     api.get<{ success: boolean; workflows: OrchestrationWorkflow[]; count: number }>(
       '/orchestration/workflows/'
+    ),
+
+  // Session 768: Get workflow detail with all steps
+  getWorkflowDetail: (workflowId: string) =>
+    api.get<{
+      success: boolean
+      workflow: OrchestrationWorkflowDetail
+      steps: OrchestrationWorkflowStep[]
+      input_parameters: string[]
+    }>(`/orchestration/workflows/${workflowId}/`),
+
+  // Session 768: Get available agents for workflow configuration
+  getAgents: () =>
+    api.get<{ success: boolean; agents: OrchestrationAgent[]; count: number }>(
+      '/orchestration/agents/'
+    ),
+
+  // Session 768: Create a new workflow
+  createWorkflow: (data: CreateWorkflowRequest) =>
+    api.post<{ success: boolean; workflow_id: string; message: string }>(
+      '/orchestration/workflows/create/',
+      data
     ),
 
   // Execute a workflow
