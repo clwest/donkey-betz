@@ -1464,18 +1464,25 @@ def get_chart_content_production(request):
     """
     from django.utils import timezone
     from datetime import timedelta
-    from core.models_unified_system import ContentItem, AgentExecution
+    from core.models_unified_system import AgentExecution
 
     days = int(request.GET.get('days', 30))
     cutoff = timezone.now() - timedelta(days=days)
 
-    # Get content creation stats
+    # Get content creation stats from agent executions (content-producing agents)
     content_by_type = {}
     try:
-        content_items = ContentItem.objects.filter(created_at__gte=cutoff)
-        for item in content_items:
-            content_type = item.content_type or 'other'
-            content_by_type[content_type] = content_by_type.get(content_type, 0) + 1
+        # Count executions by agent type as a proxy for content production
+        content_agents = ['ImageAgent', 'VideoAgent', 'AudioAgent', 'ContentWriterAgent',
+                         'PodcastCoordinatorAgent', 'ResearchAgent', 'ThreeDAgent']
+        executions = AgentExecution.objects.filter(
+            created_at__gte=cutoff,
+            status='completed'
+        )
+        for exec in executions:
+            agent_name = exec.agent_name or 'other'
+            if agent_name in content_agents:
+                content_by_type[agent_name] = content_by_type.get(agent_name, 0) + 1
     except Exception:
         pass
 
@@ -1617,7 +1624,6 @@ def get_chart_spider_performance(request):
     """
     from django.utils import timezone
     from datetime import timedelta
-    from core.models_unified_system import SpiderResult
 
     days = int(request.GET.get('days', 30))
     cutoff = timezone.now() - timedelta(days=days)
@@ -1629,6 +1635,8 @@ def get_chart_spider_performance(request):
     }
 
     try:
+        # Try to import SpiderResult if it exists
+        from core.models_unified_system import SpiderResult
         results = SpiderResult.objects.filter(created_at__gte=cutoff)
         spider_stats['total_results'] = results.count()
 
@@ -1643,6 +1651,9 @@ def get_chart_spider_performance(request):
         total = spider_stats['total_results']
         success = sum(s['success'] for s in spider_stats['by_spider'].values())
         spider_stats['success_rate'] = round((success / max(total, 1)) * 100, 1)
+    except ImportError:
+        # SpiderResult model not available, return empty stats
+        pass
     except Exception:
         pass
 
