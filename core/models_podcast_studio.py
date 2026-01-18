@@ -184,6 +184,10 @@ class PodcastEpisode(models.Model):
     # Format: [{segment_id, speaker, audio_url, duration_seconds}]
     audio_segments = models.JSONField(default=list)
 
+    # TTS Cost Tracking (Session 770)
+    tts_cost = models.DecimalField(max_digits=10, decimal_places=4, default=0)
+    tts_cost_breakdown = models.JSONField(default=dict)  # {elevenlabs: 0.XX, characters: 1234}
+
     # Status
     STATUS_CHOICES = [
         ('draft', 'Draft'),

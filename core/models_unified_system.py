@@ -9,6 +9,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+from datetime import timedelta
 from decimal import Decimal
 import json
 import uuid
@@ -8935,6 +8936,262 @@ class AgentDream(models.Model):
         if topic:
             qs = qs.filter(directed_topic__icontains=topic)
         return qs.select_related('agent').order_by('-dreamed_at')[:limit]
+
+
+class ContentQualityBlacklist(models.Model):
+    """
+    Session 770: Bad Idea Blacklist
+
+    Tracks topics, patterns, and concepts that should NOT be used for:
+    - Dream inspiration
+    - Knowledge source creation
+    - Content generation
+
+    When an idea is flagged as problematic (e.g., test probes, bad concepts),
+    it gets added here to prevent recycling.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # What to block
+    BLOCK_TYPE_CHOICES = [
+        ('topic', 'Topic'),              # Block specific topic/phrase
+        ('pattern', 'Pattern'),          # Block regex pattern
+        ('concept', 'Concept'),          # Block conceptual category
+    ]
+    block_type = models.CharField(max_length=20, choices=BLOCK_TYPE_CHOICES, default='topic')
+    pattern = models.CharField(
+        max_length=500,
+        help_text="The topic, phrase, or regex pattern to block"
+    )
+    pattern_normalized = models.CharField(
+        max_length=500,
+        db_index=True,
+        help_text="Lowercase normalized version for matching"
+    )
+
+    # Why it's blocked
+    REASON_CHOICES = [
+        ('test_probe', 'Test/Probe'),         # User was testing the system
+        ('joke', 'Joke/Humor'),               # Not serious
+        ('unrealistic', 'Unrealistic'),       # Mythology violation
+        ('harmful', 'Harmful'),               # Could cause harm
+        ('low_quality', 'Low Quality'),       # Generic/template content
+        ('recycled', 'Over-recycled'),        # Topic used too many times
+        ('user_rejected', 'User Rejected'),   # User explicitly rejected
+    ]
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+    reason_detail = models.TextField(blank=True, help_text="Detailed explanation")
+
+    # Scope
+    is_global = models.BooleanField(default=True, help_text="Applies to all users")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='content_blacklist',
+        help_text="User-specific blacklist item (if not global)"
+    )
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='blacklist_created',
+    )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this blacklist item expires (null = permanent)"
+    )
+    is_active = models.BooleanField(default=True)
+
+    # Stats
+    times_blocked = models.IntegerField(default=0)
+    last_blocked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Content Quality Blacklist'
+        verbose_name_plural = 'Content Quality Blacklist Items'
+        indexes = [
+            models.Index(fields=['pattern_normalized', 'is_active']),
+            models.Index(fields=['block_type', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"[{self.block_type}] {self.pattern[:50]} ({self.reason})"
+
+    def save(self, *args, **kwargs):
+        # Normalize pattern for matching
+        self.pattern_normalized = self.pattern.lower().strip()
+        super().save(*args, **kwargs)
+
+    def record_block(self):
+        """Record that this pattern blocked something."""
+        self.times_blocked += 1
+        self.last_blocked_at = timezone.now()
+        self.save(update_fields=['times_blocked', 'last_blocked_at'])
+
+    @classmethod
+    def is_blocked(cls, text: str, user=None) -> tuple:
+        """
+        Check if text matches any blacklist pattern.
+
+        Returns:
+            tuple: (is_blocked: bool, blacklist_item: ContentQualityBlacklist or None)
+        """
+        import re
+        text_lower = text.lower().strip()
+
+        # Get active blacklist items
+        items = cls.objects.filter(is_active=True)
+
+        # Apply expiry filter
+        items = items.filter(
+            models.Q(expires_at__isnull=True) |
+            models.Q(expires_at__gt=timezone.now())
+        )
+
+        # Apply scope filter
+        if user:
+            items = items.filter(
+                models.Q(is_global=True) |
+                models.Q(user=user)
+            )
+        else:
+            items = items.filter(is_global=True)
+
+        for item in items:
+            matched = False
+
+            if item.block_type == 'topic':
+                # Simple substring match
+                if item.pattern_normalized in text_lower:
+                    matched = True
+            elif item.block_type == 'pattern':
+                # Regex match
+                try:
+                    if re.search(item.pattern, text, re.IGNORECASE):
+                        matched = True
+                except re.error:
+                    pass  # Invalid regex, skip
+            elif item.block_type == 'concept':
+                # Conceptual match - check if any word matches
+                pattern_words = set(item.pattern_normalized.split())
+                text_words = set(text_lower.split())
+                if pattern_words & text_words:  # Intersection
+                    matched = True
+
+            if matched:
+                item.record_block()
+                return True, item
+
+        return False, None
+
+    @classmethod
+    def add_blacklist(cls, pattern: str, reason: str, block_type: str = 'topic',
+                      reason_detail: str = '', user=None, created_by=None,
+                      expires_at=None) -> 'ContentQualityBlacklist':
+        """Add a new blacklist item."""
+        return cls.objects.create(
+            pattern=pattern,
+            block_type=block_type,
+            reason=reason,
+            reason_detail=reason_detail,
+            is_global=user is None,
+            user=user,
+            created_by=created_by,
+            expires_at=expires_at,
+        )
+
+
+class TopicDiversityTracker(models.Model):
+    """
+    Session 770: Topic Diversity Tracking
+
+    Tracks how often topics are used for dream generation to prevent
+    excessive recycling of the same ideas.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    topic = models.CharField(max_length=200, db_index=True)
+    topic_normalized = models.CharField(max_length=200, db_index=True)
+
+    # Usage counts
+    dream_count = models.IntegerField(default=0)
+    knowledge_count = models.IntegerField(default=0)
+    last_used_at = models.DateTimeField(auto_now=True)
+    first_used_at = models.DateTimeField(auto_now_add=True)
+
+    # Cooldown management
+    cooldown_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Topic is on cooldown until this time"
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = 'Topic Diversity Tracker'
+        verbose_name_plural = 'Topic Diversity Trackers'
+
+    def __str__(self):
+        return f"{self.topic} (dreams: {self.dream_count})"
+
+    def save(self, *args, **kwargs):
+        self.topic_normalized = self.topic.lower().strip()
+        super().save(*args, **kwargs)
+
+    def record_dream_use(self):
+        """Record that this topic was used for a dream."""
+        self.dream_count += 1
+        self.last_used_at = timezone.now()
+
+        # Apply cooldown if used too frequently
+        # More than 5 dreams in last 24h = 24h cooldown
+        # More than 10 total = 48h cooldown
+        if self.dream_count > 10:
+            self.cooldown_until = timezone.now() + timedelta(hours=48)
+        elif self.dream_count > 5:
+            self.cooldown_until = timezone.now() + timedelta(hours=24)
+
+        self.save()
+
+    @property
+    def is_on_cooldown(self) -> bool:
+        """Check if topic is currently on cooldown."""
+        if not self.cooldown_until:
+            return False
+        return timezone.now() < self.cooldown_until
+
+    @classmethod
+    def get_or_create_topic(cls, topic: str) -> 'TopicDiversityTracker':
+        """Get or create a tracker for a topic."""
+        normalized = topic.lower().strip()
+        tracker, _ = cls.objects.get_or_create(
+            topic_normalized=normalized,
+            defaults={'topic': topic}
+        )
+        return tracker
+
+    @classmethod
+    def is_topic_available(cls, topic: str) -> tuple:
+        """
+        Check if a topic is available for use (not on cooldown).
+
+        Returns:
+            tuple: (is_available: bool, tracker: TopicDiversityTracker or None, reason: str)
+        """
+        try:
+            tracker = cls.objects.get(topic_normalized=topic.lower().strip())
+            if tracker.is_on_cooldown:
+                return False, tracker, f"Topic on cooldown until {tracker.cooldown_until}"
+            return True, tracker, "Topic available"
+        except cls.DoesNotExist:
+            return True, None, "New topic"
 
 
 class DreamImplementation(models.Model):
