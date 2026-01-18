@@ -2542,6 +2542,119 @@ export default function AgentsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Session 774: Execution Timeline - Previously Hidden Data */}
+              {monitoringData.timeline && monitoringData.timeline.length > 0 && (
+                <div className="card">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <TrendingUp size={18} className="text-accent-cyan" />
+                    Execution Timeline
+                  </h4>
+                  <div className="h-48">
+                    {/* Simple bar chart visualization */}
+                    <div className="flex items-end justify-between h-full gap-1">
+                      {monitoringData.timeline.map((point: { timestamp: string; executions: number; successful: number }, idx: number) => {
+                        const maxExec = Math.max(...monitoringData.timeline.map((p: { executions: number }) => p.executions), 1)
+                        const height = (point.executions / maxExec) * 100
+                        const successHeight = (point.successful / maxExec) * 100
+                        const timeLabel = point.timestamp ? new Date(point.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+                        return (
+                          <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
+                            <div className="relative w-full h-40 flex items-end">
+                              {/* Total executions bar */}
+                              <div
+                                className="w-full bg-accent-cyan/30 rounded-t transition-all group-hover:bg-accent-cyan/50"
+                                style={{ height: `${height}%` }}
+                              >
+                                {/* Successful overlay */}
+                                <div
+                                  className="w-full bg-accent-green rounded-t absolute bottom-0"
+                                  style={{ height: `${successHeight}%` }}
+                                />
+                              </div>
+                              {/* Tooltip on hover */}
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-dark-card border border-dark-border rounded px-2 py-1 text-xs whitespace-nowrap z-10">
+                                {point.executions} total, {point.successful} successful
+                              </div>
+                            </div>
+                            {idx % Math.ceil(monitoringData.timeline.length / 6) === 0 && (
+                              <span className="text-xs text-gray-500 truncate max-w-full">{timeLabel}</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-accent-cyan/30" />
+                      <span className="text-gray-400">Total Executions</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-accent-green" />
+                      <span className="text-gray-400">Successful</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Session 774: Recent Executions Feed - Previously Hidden Data */}
+              {monitoringData.recent_executions && monitoringData.recent_executions.length > 0 && (
+                <div className="card">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Activity size={18} className="text-accent-purple" />
+                    Recent Executions
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-accent-purple/20 text-accent-purple">
+                      {monitoringData.recent_executions.length}
+                    </span>
+                  </h4>
+                  <div className="space-y-2">
+                    {monitoringData.recent_executions.map((exec: { id: string; agent_name: string; status: string; execution_time_ms: number; tokens_used: number; created_at: string }) => (
+                      <div
+                        key={exec.id}
+                        className={cn(
+                          "flex items-center justify-between p-3 rounded-lg border",
+                          exec.status === 'completed' ? 'bg-accent-green/5 border-accent-green/20' :
+                          exec.status === 'failed' ? 'bg-accent-red/5 border-accent-red/20' :
+                          'bg-dark-hover border-dark-border'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          {exec.status === 'completed' ? (
+                            <CheckCircle size={16} className="text-accent-green" />
+                          ) : exec.status === 'failed' ? (
+                            <XCircle size={16} className="text-accent-red" />
+                          ) : (
+                            <Clock size={16} className="text-accent-amber animate-pulse" />
+                          )}
+                          <div>
+                            <p className="font-medium text-sm">{exec.agent_name}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(exec.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-gray-400">
+                            {exec.execution_time_ms ? `${(exec.execution_time_ms / 1000).toFixed(2)}s` : '—'}
+                          </span>
+                          <span className="text-gray-400">
+                            {exec.tokens_used?.toLocaleString() || '0'} tokens
+                          </span>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-xs",
+                            exec.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                            exec.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                            'bg-accent-amber/20 text-accent-amber'
+                          )}>
+                            {exec.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="card text-center py-12 text-gray-400">
