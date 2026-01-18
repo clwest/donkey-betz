@@ -1074,7 +1074,11 @@ from core.views_analytics import (
     # Session 221: Advanced Analytics Phase F
     analytics_overview_v2, usage_timeline_v2, performance_timeline_v2,
     cost_breakdown_v2, analytics_dashboards_v2, analytics_alerts_v2,
-    realtime_stats_v2, track_event_v2
+    realtime_stats_v2, track_event_v2,
+    # Session 775: Missing chart endpoints
+    get_chart_agent_activity, get_chart_content_production, get_chart_revenue,
+    get_chart_user_engagement, get_chart_spider_performance,
+    get_chart_learning_progress, get_chart_collaboration,
 )
 # Session 217B: Agent Training
 from core.views_agent_training import (
@@ -2244,6 +2248,15 @@ urlpatterns = [
     path('api/analytics/charts/knowledge-domains/', get_chart_knowledge_domains, name='chart-knowledge-domains'),
     path('api/analytics/charts/system-health/', get_chart_system_health, name='chart-system-health'),
     path('api/analytics/charts/dashboard/', get_chart_dashboard, name='chart-dashboard'),
+
+    # Session 775: Missing chart endpoints for AnalyticsDashboardPage
+    path('api/analytics/charts/agent-activity/', get_chart_agent_activity, name='chart-agent-activity'),
+    path('api/analytics/charts/content-production/', get_chart_content_production, name='chart-content-production'),
+    path('api/analytics/charts/revenue/', get_chart_revenue, name='chart-revenue'),
+    path('api/analytics/charts/user-engagement/', get_chart_user_engagement, name='chart-user-engagement'),
+    path('api/analytics/charts/spider-performance/', get_chart_spider_performance, name='chart-spider-performance'),
+    path('api/analytics/charts/learning-progress/', get_chart_learning_progress, name='chart-learning-progress'),
+    path('api/analytics/charts/collaboration/', get_chart_collaboration, name='chart-collaboration'),
 
     # Session 221: Advanced Analytics Phase F
     path('api/analytics/v2/overview/', analytics_overview_v2, name='analytics-overview-v2'),
