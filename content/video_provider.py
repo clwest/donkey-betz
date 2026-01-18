@@ -2,6 +2,8 @@
 RunwayML Video Generation Provider
 
 Handles text-to-video and image-to-video generation using RunwayML Gen-3 Alpha.
+
+Session 769: Added cost tracking for video generation.
 """
 
 import logging
@@ -10,10 +12,11 @@ import json
 import base64
 import requests
 from typing import Dict, Any, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from django.conf import settings
 from django.core.files.base import ContentFile
 from core.error_messages import ErrorMessageBuilder
+from core.services.api_cost_config import calculate_runway_cost
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,9 @@ class VideoGenerationResult:
     estimated_time: int = 0
     progress: int = 0
     progress_message: str = ""
+    # Session 769: Cost tracking
+    cost: float = 0.0
+    cost_info: Dict[str, Any] = field(default_factory=dict)
 
 
 class RunwayMLProvider:
@@ -121,11 +127,24 @@ class RunwayMLProvider:
 
             data = response.json()
 
+            # Session 769: Calculate cost for this video generation
+            # Map model names to our config format
+            model_for_cost = self._map_model_to_cost_config(model)
+            cost_info = calculate_runway_cost(
+                duration_seconds=duration,
+                model=model_for_cost,
+            )
+
+            logger.info(f"💰 Runway text-to-video cost: ${cost_info['cost']:.4f} ({duration}s @ {model})")
+
             return VideoGenerationResult(
                 success=True,
                 task_id=data.get('id', ''),
                 status='pending',
-                estimated_time=self._estimate_generation_time(model, duration)
+                duration=duration,
+                estimated_time=self._estimate_generation_time(model, duration),
+                cost=float(cost_info['cost']),
+                cost_info=cost_info,
             )
 
         except Exception as e:
@@ -134,7 +153,19 @@ class RunwayMLProvider:
                 success=False,
                 error_message=str(e)
             )
-    
+
+    def _map_model_to_cost_config(self, model: str) -> str:
+        """Map Runway model names to cost config format."""
+        mapping = {
+            'veo3.1': 'gen-4',
+            'veo3.1_fast': 'gen-4-turbo',
+            'gen3a': 'gen-3-alpha',
+            'gen3a_turbo': 'gen-3-alpha-turbo',
+            'gen4': 'gen-4',
+            'gen4_turbo': 'gen-4-turbo',
+        }
+        return mapping.get(model, 'gen-4-turbo')
+
     def image_to_video(
         self,
         image_url: str,
@@ -220,11 +251,23 @@ class RunwayMLProvider:
 
             data = response.json()
 
+            # Session 769: Calculate cost for this video generation
+            model_for_cost = self._map_model_to_cost_config(model)
+            cost_info = calculate_runway_cost(
+                duration_seconds=duration,
+                model=model_for_cost,
+            )
+
+            logger.info(f"💰 Runway image-to-video cost: ${cost_info['cost']:.4f} ({duration}s @ {model})")
+
             return VideoGenerationResult(
                 success=True,
                 task_id=data.get('id', ''),
                 status='pending',
-                estimated_time=self._estimate_generation_time(model, duration)
+                duration=duration,
+                estimated_time=self._estimate_generation_time(model, duration),
+                cost=float(cost_info['cost']),
+                cost_info=cost_info,
             )
 
         except Exception as e:
@@ -233,7 +276,7 @@ class RunwayMLProvider:
                 success=False,
                 error_message=str(e)
             )
-    
+
     def check_status(self, task_id: str) -> VideoGenerationResult:
         """
         Check the status of a video generation task

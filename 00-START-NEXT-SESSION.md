@@ -1,219 +1,97 @@
-# Session 768 - Memory Safety Classification System
+# Session 772 - Comprehensive UI Audit
 
-**Previous Session:** 767 (Data Flow Dead Ends)
-**Date:** January 17, 2026
-**Status:** All systems operational, migration applied
-
----
-
-## Session 768 Accomplishments - COMPLETE
-
-### Memory Safety Classification - COMPLETE
-
-Implemented ChatGPT's recommendation to prevent test/exploratory content from polluting the learning system. When testing agents with "Say your name and one capability", those test interactions were being captured as learning artifacts.
-
-**The Problem:** Test prompts became learning artifacts. "Convenience prompts that generate bad long-term memory" - capability one-liners, self-promotional blurbs, and test responses were being embedded and retrieved later.
-
-**The Solution:** Memory Safety Classification system with:
-
-1. **safety_class field** on AgentMemory:
-   - `test_only` - Health checks, connectivity tests - NEVER embed/learn
-   - `exploratory` - Research, exploration - review before using
-   - `candidate` - Default, potential learning - requires validation
-   - `approved` - Validated, safe to embed and learn from
-
-2. **Poison Risk Detection** - `_detect_poison_risk()` flags:
-   - Too short content (<15 words)
-   - Self-promotional patterns ("I can", "I specialize in")
-   - Test patterns ("say your name", "health check")
-   - Lacks context
-   - Highly abstract (no concrete details)
-
-3. **health_check_mode** in BaseAgent:
-   - `agent = SomeAgent(user, health_check_mode=True)`
-   - Skips `_record_learning_outcome()`
-   - Skips `_create_execution_memory()`
-   - No embeddings generated
-
-**Files Changed:**
-| File | Changes |
-|------|---------|
-| `core/models_unified_system.py` | `safety_class`, `poison_risk_score`, `poison_risk_factors` fields + `_detect_poison_risk()` |
-| `core/services/memory_embedding_service.py` | Safety classification in `create_memory()`, `update_memory_embedding()`, `backfill_embeddings()` |
-| `core/agents/base_agent.py` | `health_check_mode` parameter + checks in learning methods |
-
-**Migration:** `0172_session_768_memory_safety_classification.py`
-
-**Full Details:** See `docs/handoffs/SESSION_768_MEMORY_SAFETY_CLASSIFICATION.md`
+**Previous Session:** 771 (Tool Result Rendering + RevenueMetrics Fix)
+**Date:** January 18, 2026
+**Status:** All systems operational
 
 ---
 
-## Session 766-767 Accomplishments - COMPLETE
+## Session 772 Focus: UI Comprehensive Audit
 
-### Data Flow Dead Ends Audit - COMPLETE
+This session focuses **solely on the frontend UI**:
+- What's connected to what
+- What's duplicated
+- What's disconnected
+- What's missing
 
-**The Core Discovery:** The system generates massive amounts of data but none of it leads to action. We built a sophisticated orchestration system (Session 764) but it has never executed a single workflow.
-
-**Full Report:** See `docs/DATA_FLOW_DEAD_ENDS.md`
-
-**Key Statistics:**
-| Component | Count | Action Rate |
-|-----------|-------|-------------|
-| Agent Dreams | 7,990 | 0% acted |
-| Agent Conversations | 4,388 | 0% actioned |
-| HiveMind Sessions | 321 | 0% acted |
-| Opportunities | 6,709 | 0% actioned |
-| Human Attention Items | 992 | 1.3% acted |
-| **Orchestration Executions** | **0** | **0%** |
-
-**Root Cause:** Three layers are disconnected:
-1. **Data Generation** (working) - Dreams, conversations, opportunities
-2. **Human Interface** (broken gateway) - 96.9% of items never processed
-3. **Orchestration** (never triggered) - 10 workflows, 0 executions
-
-**Proposed Solution:** Create pipelines to connect data sources to orchestration:
-- `DreamExecutionPipeline` - When dream approved → Create workflow → Execute
-- `ConversationActionExtractor` - When conversation ends → Extract decisions → Execute
-- `HiveMindSynthesisExecutor` - When synthesis populated → Create project → Execute
-- Auto-approve timeout for Human Attention Items
+**Full Audit Document:** `docs/handoffs/SESSION_772_UI_COMPREHENSIVE_AUDIT.md`
 
 ---
 
-### Dream Origin Tracking - COMPLETE
+## Key Findings
 
-Added origin tracking to AgentDream to prevent jokes and probes from being treated the same as serious ideas. Now when users test or joke with the system, those dreams won't keep resurfacing.
+### 43 Frontend Pages
 
-**The Problem:** Dreams from testing/jokes were being resurfaced with the same priority as serious ideas.
+The frontend has grown to 43 pages with 55+ API objects. Many were added in Session 745 and need verification.
 
-**The Solution:** Added `origin` field (serious/speculative/probe/joke) with weighted composite scores:
-- **Serious:** 100% weight (full score)
-- **Speculative:** 80% weight
-- **Probe:** 30% weight (heavily reduced)
-- **Joke:** 10% weight (almost never resurface)
+### Critical Issues Identified
 
-**New Fields on AgentDream:**
-| Field | Purpose |
-|-------|---------|
-| `origin` | Classification (serious/speculative/probe/joke) |
-| `confidence_floor` | Minimum threshold for resurfacing (0-1) |
-| `human_intent` | Raw description of user intent |
+#### 1. Duplicate Functionality
+- **Two Orchestration Systems** - AgentsPage and OrchestrationPage both have orchestration UIs
+- **Multiple Agent Activity Views** - 5 different places showing agent activity
+- **Learning Overlap** - "Learning" appears in 4 different pages
 
-**Methods Updated:**
-- `save()` - Applies origin weight to composite_score
-- `get_unshown_dreams()` - Excludes jokes by default
-- `get_top_actionable_dreams()` - Only serious/speculative for boardroom
-- `get_dreams_while_away()` - Excludes jokes by default
-- `promote_to_boardroom()` - Blocks jokes/probes unless forced
+#### 2. Session 745 Pages Need Verification
+8 pages added in Session 745 may not have working backends:
+- DistributionPage
+- AutonomousSystemsPage
+- ReasoningEnginePage
+- VoiceMarketplacePage
+- BillingPage
+- LearningJourneyPage
+- CollectiveIntelligencePage
+- AnalyticsDashboardPage
 
-**Migration:** `0170_agentdream_origin_tracking.py`
-
-**Backfill Command:** `python manage.py backfill_dream_origins`
-- Analyzes dream titles/content to classify as joke/probe/speculative/serious
-- Uses strict patterns to avoid false positives (agent dreams are almost always serious)
-- Recalculates composite scores with origin weight applied
-- Run with `--dry-run` to preview changes
-
-**Backfill Results:**
-| Origin | Count |
-|--------|-------|
-| Serious | 7,959 |
-| Speculative | 8 |
-| Probe | 0 |
-| Joke | 0 |
+#### 3. APIs Without UI
+Several API objects exist but may have no corresponding UI:
+- agentChannelsApi
+- agentMonitoringApi
+- agentToolsApi
+- agentTemplatesApi
+- experimentRecommendationsApi
+- userLearningApi
+- nervousApi
 
 ---
 
-## Session 765 Accomplishments - COMPLETE
+## Audit Tasks
 
-### Orchestration Intelligence Link - COMPLETE
+### Phase 1: Verify Backend Connections (High Priority)
+1. Check each Session 745 page has working backend endpoints
+2. Test each API endpoint used by these pages
+3. Document any that return 404 or mock data
 
-Connected the orchestration layer to the core agent intelligence systems. Users can now click on workflow steps to see:
+### Phase 2: Remove Duplications (Medium Priority)
+1. Decide: Keep AgentsPage orchestrations OR OrchestrationPage (not both)
+2. Consolidate learning-related pages or clearly differentiate
+3. Merge duplicate activity views
 
-- **Context Injected** - Spider data, learning patterns, advisor insights, etc.
-- **Tool Calls** - What tools the agent used
-- **Memories Created** - Success/failure memories from execution
-- **Execution Details** - Full task, tokens, cost, execution ID
+### Phase 3: Add Missing Connections (Medium Priority)
+1. Show dream → project → workflow → execution flow
+2. Add spider action indicators
+3. Link HiveMind sessions to their resulting projects
 
-**The Problem:** Orchestration steps were disconnected from agent thinking. Users could see steps executed but not what happened inside.
-
-**The Solution:** Added `execution_id` field linking `OrchestrationStepExecution` → `AgentExecution`, created intelligence API endpoint, and built expandable step panels in the UI.
-
-**Files Modified:**
-| File | Purpose |
-|------|---------|
-| `core/models_orchestration.py` | Added `execution_id` field |
-| `core/agents/base_agent.py` | Added `execution_id` to AgentResult |
-| `core/agent_router.py` | Set `execution_id` on result |
-| `core/services/orchestration_step_executor.py` | Capture execution_id |
-| `core/views_orchestration.py` | Added intelligence API endpoint |
-| `frontend/src/lib/api.ts` | Added types and API function |
-| `frontend/src/pages/AgentsPage.tsx` | Clickable steps with intelligence panel |
-
-**New API Endpoint:**
-```
-GET /api/orchestration/executions/{id}/steps/{step}/intelligence/
-```
+### Phase 4: Standardize UI Patterns (Lower Priority)
+1. Create shared card components
+2. Standardize tab patterns
+3. Ensure all data has expand/detail options
 
 ---
 
-## Handoff Documents
+## Session 771 Accomplishments
 
-| Session | Focus | Document |
-|---------|-------|----------|
-| **766** | **Dream Origin Tracking** | *See 00-START-NEXT-SESSION.md* |
-| 765 | Orchestration Intelligence Link | `SESSION_765_ORCHESTRATION_INTELLIGENCE_LINK.md` |
-| 764 | Orchestration Layer | `SESSION_764_ORCHESTRATION_LAYER.md` |
-| 763 | Mission Control System | `SESSION_763_MISSION_CONTROL_SYSTEM.md` |
-| 761 | Learning Tab Fixes + Monitoring | `SESSION_761_LEARNING_TAB_FIXES.md` |
-| 760 | Agent Output Detail Modal | `SESSION_760_AGENT_OUTPUT_DETAIL_MODAL.md` |
-| 759 | Memory Blog Fixes | `SESSION_759_MEMORY_BLOG_FIXES.md` |
+### Tool Result Rendering
+Fixed OrchestrationPage Tool Calls tab showing raw JSON. Added `renderToolResult()` function that:
+- Displays topics as purple pills with counts
+- Shows discussions as numbered lists
+- Renders URLs as clickable links
+- Drills into nested structures up to 2 levels
 
----
-
-## System Stats
-
-| Component | Count | Status |
-|-----------|-------|--------|
-| **Agents** | 73 | All routable via AgentRouter |
-| **Spiders** | 77 | 72 working, 5 need API keys |
-| **PA Tools** | 86 | All operational |
-| **Database Models** | 367+ | +execution_id field on step |
-| **Celery Tasks** | 142 | All operational |
-| **Body Systems** | 9/9 | 100% healthy |
-| **Sci-Fi Features** | 14/14 | 100% with UI |
-| **Integration Score** | 95% | Context injection working |
-| **Mission Control** | ACTIVE | 20 handlers registered |
-| **Orchestration** | READY | Intelligence linked |
-
----
-
-## Next Session Options
-
-### Option A: DreamExecutionPipeline (RECOMMENDED)
-Connect approved dreams to orchestration:
-1. Create `DreamExecutionPipeline` service
-2. When dream approved → Auto-create `PartnershipProject`
-3. Generate workflow using ThinkingAgent
-4. Queue for orchestration execution
-5. Finally see orchestration data in the UI!
-
-### Option B: Human Attention Auto-Approve
-Fix the 96.9% pending items:
-1. Add auto-approve timeout (24h for low-risk items)
-2. Implement batch approval UI
-3. Connect approved items to orchestration triggers
-
-### Option C: HiveMind → Orchestration
-Connect HiveMind synthesis to action:
-1. Parse synthesis for recommendations
-2. Create project for each recommendation
-3. Execute via orchestration
-
-### Option D: Execute Test Workflow
-Manually trigger an orchestration workflow to verify the system works:
-1. Use API to execute a workflow
-2. Verify intelligence link shows data
-3. Test end-to-end execution
+### RevenueMetrics Fix
+Fixed `sync_revenue_metrics` Celery task error:
+- Error: `type object 'RevenueMetrics' has no attribute 'update_metrics_for_date'`
+- Cause: RevenueMetrics was a proxy class without the method
+- Fix: Added `update_metrics_for_date()` classmethod to intelligence/models/revenue_compat.py
 
 ---
 
@@ -227,44 +105,80 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Navigate to Agents → Orchestrations tab
-# 4. Execute a workflow
-# 5. Click on steps to see intelligence data
+# 3. Read the full UI audit
+cat docs/handoffs/SESSION_772_UI_COMPREHENSIVE_AUDIT.md
 
-# 6. Read Session 765 handoff for details
-cat docs/handoffs/SESSION_765_ORCHESTRATION_INTELLIGENCE_LINK.md
+# 4. Test Session 745 pages
+# Navigate to each and check if data loads:
+# - /distribution
+# - /autonomous
+# - /reasoning
+# - /voice-marketplace
+# - /billing
+# - /learning-journey
+# - /collective
+# - /analytics
 ```
 
 ---
 
-## Mission Control Handlers (20 Total)
+## Page Inventory Summary
 
-From Session 763:
-- review, set_alert, watchlist, dismiss (StockAnalyst)
-- publish, schedule, edit, reject (ContentWriter)
-- deep_dive, share, archive (Research)
-- watch, research_more, pass (PredictionMarket)
-- paper_trade, acknowledge, snooze (General)
+| Category | Count | Status |
+|----------|-------|--------|
+| Core Pages | 13 | Mostly connected |
+| Sci-Fi Pages | 14 | All connected |
+| Session 745 Pages | 8 | **NEEDS VERIFICATION** |
+| Specialized Pages | 8 | Mostly connected |
+| **Total** | **43** | |
 
-From Session 764:
-- approve_orchestration_step
-- reject_orchestration_step
-- modify_orchestration_step
+---
+
+## Files to Review
+
+### Most Complex Pages
+| File | Lines | Tabs |
+|------|-------|------|
+| AgentsPage.tsx | ~3500+ | 9 tabs |
+| OrchestrationPage.tsx | ~2000+ | 4 tabs |
+| IntelligencePage.tsx | ~2000+ | 5 tabs |
+| HumanPage.tsx | ~1500+ | 4 sections |
+
+### API File
+- `frontend/src/lib/api.ts` (~2200 lines)
+
+---
+
+## System Stats
+
+| Component | Count | Status |
+|-----------|-------|--------|
+| **Frontend Pages** | 43 | Need audit |
+| **API Objects** | 55+ | Need mapping |
+| **Agents** | 72 | All routable |
+| **Spiders** | 77 | 72 working |
+| **Body Systems** | 9/9 | 100% healthy |
+| **Sci-Fi Features** | 14/14 | 100% with UI |
+| **Integration Score** | 95% | Stable |
+
+---
+
+## Handoff Documents
+
+| Session | Focus | Document |
+|---------|-------|----------|
+| **772** | **UI Comprehensive Audit** | `SESSION_772_UI_COMPREHENSIVE_AUDIT.md` |
+| 771 | Tool Result Rendering | See commits |
+| 770 | Content Quality + Podcast TTS | See commits |
+| 768 | Memory Safety Classification | `SESSION_768_MEMORY_SAFETY_CLASSIFICATION.md` |
+| 766-767 | Data Flow Dead Ends | `DATA_FLOW_DEAD_ENDS.md` |
 
 ---
 
 ## Recent Commits
 
-Session 766:
-- Dream Origin Tracking - origin, confidence_floor, human_intent fields
-- Updated resurfacing methods to weight by origin
-- Jokes and probes now have reduced scores (10% and 30%)
+Session 771:
+- `fix(Session 771): Tool result rendering + RevenueMetrics sync`
 
-Session 765:
-- Orchestration Intelligence Link (see handoff for details)
-
-Session 764:
-- Orchestration Layer implementation
-
-Session 763:
-- Mission Control System - Agent outputs to Human Page actions
+Session 770:
+- `feat(Session 770): Content Quality System + Podcast TTS Cost Display`

@@ -1,20 +1,23 @@
 """
 Podcast Audio Service - Session 496
+Session 769: Added cost tracking for ElevenLabs TTS
 
 Generates audio for AI Podcast Studio episodes using ElevenLabs TTS.
 Parses scripts with speaker labels, generates audio per segment, and concatenates.
 
 Workflow:
 1. Parse script into speaker segments
-2. Generate audio for each segment via ElevenLabs
+2. Generate audio for each segment via ElevenLabs (with cost tracking)
 3. Concatenate segments with pydub
 4. Save final podcast audio
+5. Return cost breakdown
 """
 
 import logging
 import os
 import re
 import uuid
+from decimal import Decimal
 from typing import Dict, List, Any, Optional
 from io import BytesIO
 
@@ -23,6 +26,8 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from pydub import AudioSegment
+
+from core.services.api_cost_config import calculate_elevenlabs_cost, ELEVENLABS_COSTS
 
 logger = logging.getLogger(__name__)
 
@@ -108,25 +113,32 @@ def generate_segment_audio(
     text: str,
     voice_id: str,
     stability: float = 0.5,
-    similarity_boost: float = 0.75
+    similarity_boost: float = 0.75,
+    model_id: str = "eleven_monolingual_v1"
 ) -> Dict[str, Any]:
     """
     Generate audio for a single segment using ElevenLabs TTS.
+
+    Session 769: Now includes cost tracking.
 
     Args:
         text: Text to convert to speech
         voice_id: ElevenLabs voice ID
         stability: Voice stability (0.0-1.0)
         similarity_boost: Voice similarity boost (0.0-1.0)
+        model_id: ElevenLabs model ID
 
     Returns:
-        Dict with success, audio_data (bytes), error (if failed)
+        Dict with success, audio_data (bytes), cost_info, error (if failed)
     """
     # Get ElevenLabs API key
     elevenlabs_key = os.getenv('ELEVENLABS_API_KEY') or settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY')
 
     if not elevenlabs_key:
         return {'success': False, 'error': 'ElevenLabs API key not configured'}
+
+    # Session 769: Calculate cost before making the API call
+    cost_info = calculate_elevenlabs_cost(text, model=model_id)
 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -136,7 +148,7 @@ def generate_segment_audio(
     }
     data = {
         "text": text,
-        "model_id": "eleven_monolingual_v1",
+        "model_id": model_id,
         "voice_settings": {
             "stability": stability,
             "similarity_boost": similarity_boost
@@ -148,15 +160,18 @@ def generate_segment_audio(
 
         if response.status_code != 200:
             logger.error(f"❌ ElevenLabs TTS failed: {response.text}")
-            return {'success': False, 'error': f'TTS failed: {response.text}'}
+            return {'success': False, 'error': f'TTS failed: {response.text}', 'cost_info': None}
+
+        logger.info(f"💰 ElevenLabs TTS cost: ${cost_info['cost']:.4f} ({cost_info['character_count']} chars)")
 
         return {
             'success': True,
-            'audio_data': response.content
+            'audio_data': response.content,
+            'cost_info': cost_info,
         }
 
     except requests.exceptions.Timeout:
-        return {'success': False, 'error': 'ElevenLabs API timeout'}
+        return {'success': False, 'error': 'ElevenLabs API timeout', 'cost_info': None}
     except Exception as e:
         logger.error(f"❌ ElevenLabs TTS error: {e}")
         return {'success': False, 'error': str(e)}
@@ -248,8 +263,11 @@ def generate_podcast_audio(
     logger.info(f"🎙️ Generating audio for {len(segments)} segments")
 
     # 2. Generate audio for each segment
+    # Session 769: Track costs per segment
     audio_segments = []
     segment_info = []
+    total_tts_cost = Decimal('0')
+    total_characters = 0
 
     for i, segment in enumerate(segments):
         progress_percent = 5 + int((i / len(segments)) * 80)  # 5-85%
@@ -274,10 +292,18 @@ def generate_podcast_audio(
             continue
 
         audio_segments.append(result['audio_data'])
+
+        # Session 769: Track cost from this segment
+        cost_info = result.get('cost_info')
+        if cost_info:
+            total_tts_cost += Decimal(str(cost_info['cost']))
+            total_characters += cost_info['character_count']
+
         segment_info.append({
             'speaker': segment['speaker'],
             'voice': segment['voice_name'],
-            'text_length': len(segment['text'])
+            'text_length': len(segment['text']),
+            'cost': float(cost_info['cost']) if cost_info else 0,
         })
 
     if not audio_segments:
@@ -326,16 +352,25 @@ def generate_podcast_audio(
     episode.save()
 
     logger.info(f"✅ Podcast audio generated: {saved_path} ({duration_seconds:.1f}s)")
+    logger.info(f"💰 Total TTS cost: ${float(total_tts_cost):.4f} ({total_characters} characters)")
 
     if progress_callback:
         progress_callback(100, "Audio complete!")
 
+    # Session 769: Include cost breakdown in return
     return {
         'success': True,
         'audio_url': audio_url,
         'duration_seconds': duration_seconds,
         'segment_count': len(audio_segments),
-        'saved_path': saved_path
+        'saved_path': saved_path,
+        # Session 769: Cost tracking
+        'cost_breakdown': {
+            'elevenlabs_tts': float(total_tts_cost),
+            'total_characters': total_characters,
+            'segments': segment_info,
+        },
+        'total_external_cost': float(total_tts_cost),
     }
 
 

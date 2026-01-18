@@ -553,11 +553,86 @@ class AgentRouter:
                 'error': str(e)
             }
 
-    def route(
+    def gather_context(
         self,
         agent_name: str,
         task: str,
         context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Session 769: Gather all context for an agent without executing.
+
+        This allows callers to pre-gather context before starting a timeout,
+        so the timeout only applies to agent execution, not context gathering.
+
+        Args:
+            agent_name: Name of the agent
+            task: The task to perform
+            context: Optional additional context
+
+        Returns:
+            Dict with 'scifi_context', 'spider_context', 'learning_context', etc.
+        """
+        context = context or {}
+
+        # Validate agent name
+        agent_class = self.AGENT_MAP.get(agent_name)
+        if not agent_class:
+            return {'error': f'Unknown agent: {agent_name}'}
+
+        # Gather all context types
+        scifi_context = self._get_scifi_context(agent_name, task)
+        spider_context = self._get_spider_context(task, agent_name=agent_name)
+        learning_context = self._get_learning_context(agent_name, task)
+        advisor_context = self._get_advisor_context(agent_name, task)
+        feedback_context = self._get_feedback_context(agent_name, task)
+        knowledge_context = self._get_knowledge_context(agent_name, task)
+
+        # Merge contexts (same logic as in route())
+        if learning_context and learning_context.get('has_patterns'):
+            spider_context['learning_patterns'] = learning_context
+            spider_context['learned_best_practices'] = learning_context.get('best_practices', [])
+            spider_context['learning_summary'] = learning_context.get('summary', '')
+
+        if advisor_context and advisor_context.get('has_advice'):
+            spider_context['advisor_insights'] = advisor_context
+            spider_context['advisor_principles'] = advisor_context.get('key_principles', [])
+            spider_context['advisor_frameworks'] = advisor_context.get('decision_frameworks', [])
+            spider_context['advisor_summary'] = advisor_context.get('summary', '')
+            spider_context['advisor_approach'] = advisor_context.get('recommended_approach', '')
+
+        if feedback_context and feedback_context.get('has_feedback'):
+            spider_context['performance_feedback'] = feedback_context
+            spider_context['reliability_score'] = feedback_context.get('reliability_score', 0)
+            spider_context['performance_rating'] = feedback_context.get('performance_rating', 'unknown')
+            spider_context['performance_recommendations'] = feedback_context.get('recommendations', [])
+            spider_context['feedback_summary'] = feedback_context.get('summary', '')
+
+        if knowledge_context and knowledge_context.get('has_knowledge'):
+            spider_context['knowledge_state'] = knowledge_context
+            spider_context['knowledge_decision'] = knowledge_context.get('knowledge_decision', 'unknown')
+            spider_context['knowledge_coverage'] = knowledge_context.get('knowledge_coverage', 0)
+            spider_context['knowledge_freshness'] = knowledge_context.get('knowledge_freshness', 0)
+            spider_context['knowledge_summary'] = knowledge_context.get('knowledge_summary', '')
+            spider_context['relevant_knowledge'] = knowledge_context.get('relevant_knowledge', [])
+            spider_context['use_cached_knowledge'] = knowledge_context.get('use_cached_knowledge', False)
+
+        return {
+            'scifi_context': scifi_context,
+            'spider_context': spider_context,
+            'learning_context': learning_context,
+            'advisor_context': advisor_context,
+            'feedback_context': feedback_context,
+            'knowledge_context': knowledge_context,
+            'gathered': True,
+        }
+
+    def route(
+        self,
+        agent_name: str,
+        task: str,
+        context: Optional[Dict[str, Any]] = None,
+        pre_gathered_context: Optional[Dict[str, Any]] = None
     ) -> AgentResult:
         """
         Route a task to the appropriate agent.
@@ -565,7 +640,7 @@ class AgentRouter:
         This is the main entry point. It:
         1. Validates the agent name
         2. Instantiates the agent
-        3. Gathers sci-fi and spider context
+        3. Gathers sci-fi and spider context (unless pre_gathered_context provided)
         4. Executes the agent
         5. Returns the result
 
@@ -573,6 +648,7 @@ class AgentRouter:
             agent_name: Name of the agent to route to (e.g., "ImageAgent")
             task: The task to perform in natural language
             context: Optional additional context (count, style, reference_id, etc.)
+            pre_gathered_context: Session 769: Pre-gathered context to skip context gathering
 
         Returns:
             AgentResult from the agent execution
@@ -595,18 +671,28 @@ class AgentRouter:
         # Instantiate the agent
         agent = agent_class(user=self.user)
 
-        # Gather context
-        scifi_context = self._get_scifi_context(agent_name, task)
-        # Session 744: Use SpiderContextBuilder for agent-specific spider context
-        spider_context = self._get_spider_context(task, agent_name=agent_name)
-        # Session 744 Phase 3: Get learning patterns for this agent
-        learning_context = self._get_learning_context(agent_name, task)
-        # Session 744 Phase 4: Get advisor wisdom for this agent
-        advisor_context = self._get_advisor_context(agent_name, task)
-        # Session 744 Phase 5: Get performance feedback for this agent
-        feedback_context = self._get_feedback_context(agent_name, task)
-        # Session 744: Get knowledge-first routing context (checks existing knowledge BEFORE external queries)
-        knowledge_context = self._get_knowledge_context(agent_name, task)
+        # Session 769: Use pre-gathered context if provided (for timeout isolation)
+        if pre_gathered_context and pre_gathered_context.get('gathered'):
+            scifi_context = pre_gathered_context.get('scifi_context', {})
+            spider_context = pre_gathered_context.get('spider_context', {})
+            learning_context = pre_gathered_context.get('learning_context', {})
+            advisor_context = pre_gathered_context.get('advisor_context', {})
+            feedback_context = pre_gathered_context.get('feedback_context', {})
+            knowledge_context = pre_gathered_context.get('knowledge_context', {})
+            logger.info(f"Using pre-gathered context for {agent_name} (context gathering done outside timeout)")
+        else:
+            # Gather context (original behavior)
+            scifi_context = self._get_scifi_context(agent_name, task)
+            # Session 744: Use SpiderContextBuilder for agent-specific spider context
+            spider_context = self._get_spider_context(task, agent_name=agent_name)
+            # Session 744 Phase 3: Get learning patterns for this agent
+            learning_context = self._get_learning_context(agent_name, task)
+            # Session 744 Phase 4: Get advisor wisdom for this agent
+            advisor_context = self._get_advisor_context(agent_name, task)
+            # Session 744 Phase 5: Get performance feedback for this agent
+            feedback_context = self._get_feedback_context(agent_name, task)
+            # Session 744: Get knowledge-first routing context (checks existing knowledge BEFORE external queries)
+            knowledge_context = self._get_knowledge_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -777,6 +863,8 @@ class AgentRouter:
             # Session 744: Pass tokens_used and cost to execution record
             # Session 757: Save FULL result data (not just preview) so blog content is accessible
             # Session 759: Include result.error for failed executions
+            # Session 766: Pass applied_pattern_ids for tracking
+            applied_pattern_ids = learning_context.get('applied_pattern_ids', []) if learning_context else []
             self._complete_execution(
                 execution_record,
                 agent_name,
@@ -787,10 +875,12 @@ class AgentRouter:
                     'data': result.data,  # Full result data including generated content
                     'message': result.message,
                     'error': result.error if not result.success else None,  # Session 759: Include error
+                    'tool_calls': result.tool_calls if result.tool_calls else [],  # Session 769: Include tool calls
                 },
                 error_message=result.error if not result.success else None,  # Session 759: Pass to record
                 tokens_used=result.tokens_used,
-                cost=result.cost
+                cost=result.cost,
+                applied_pattern_ids=applied_pattern_ids  # Session 766: Track pattern application
             )
 
             # Session 765: Set execution_id on result for orchestration linking
@@ -1105,13 +1195,15 @@ class AgentRouter:
         output_data: dict = None,
         error_message: str = None,
         tokens_used: int = 0,
-        cost: float = 0.0
+        cost: float = 0.0,
+        applied_pattern_ids: Optional[list] = None  # Session 766
     ):
         """
         Complete an execution record and update agent stats.
         Session 641: Added for Agent Performance Dashboard.
         Session 729: Added AgentExecutionMemory creation for intelligent recommendations.
         Session 744: Added tokens_used and cost tracking.
+        Session 766: Added applied_pattern_ids for learning pattern tracking.
         """
         try:
             from core.models_unified_system import Agent
@@ -1174,6 +1266,21 @@ class AgentRouter:
                     logger.debug(f"Created AgentExecutionMemory for {agent_name}")
                 except Exception as mem_error:
                     logger.debug(f"AgentExecutionMemory creation failed (non-critical): {mem_error}")
+
+            # Session 766: Track learning pattern application
+            if applied_pattern_ids:
+                try:
+                    tracking_result = self.learning_pattern_engine.track_pattern_application(
+                        pattern_ids=applied_pattern_ids,
+                        was_successful=success
+                    )
+                    if tracking_result.get('tracked', 0) > 0:
+                        logger.debug(
+                            f"📊 [Session 766] Tracked {tracking_result['tracked']} patterns "
+                            f"for {agent_name}"
+                        )
+                except Exception as pattern_error:
+                    logger.debug(f"Pattern tracking failed (non-critical): {pattern_error}")
 
             logger.debug(f"Tracked execution for {agent_name}: success={success}, time={execution_time_ms}ms")
 

@@ -401,6 +401,99 @@ After starting the worker:
 ### Recommendation
 Consider adding process health monitoring to detect when workers die without updating PID files. The Makefile's existing check relies on `pgrep` which may not work correctly with stale PIDs.
 
+## Learning System Improvements
+
+Session 767 also included a comprehensive review and improvement of the agent learning system.
+
+### Issues Identified
+
+| Issue | Before | After |
+|-------|--------|-------|
+| Isolated agents | 25 agents with no learning connections | 0 (all connected) |
+| Pattern mining | Only 1 LearningPattern from 64k events | 12 active patterns |
+| Knowledge freshness | 28% stale sources, no decay | Auto-decay + freshness tracking |
+| Teaching distribution | 99.98% self-learning | Cross-agent propagation enabled |
+| SharedKnowledge | 50 entries | 121 entries (promoted) |
+
+### Fixes Applied
+
+#### Fix 1: Created 75 New AgentLearningConnection Records
+25 isolated agents now have learning connections:
+- Stock/Market agents (9): StockAnalystAgent, MarketMovementMonitorAgent, etc.
+- Blockchain agents (5): BlockchainAuditCoordinator, SmartContractAuditorAgent, etc.
+- Narrative/Content agents (6): NarrativeDriftCoordinator, AutonomousContentStudioCoordinator, etc.
+- System/Orchestration agents (5): WorkflowOrchestrationAgent, OpportunityPipelineAgent, etc.
+
+#### Fix 2: Pattern Mining Task (core/tasks.py)
+Added `mine_learning_patterns()` Celery task that:
+- Mines AgentLearning records to create LearningPattern entries
+- Creates 4 pattern types: spider_effectiveness, agent_collaboration, learning_type_impact, top_teacher
+- Runs every 12 hours at :45
+
+#### Fix 3: Knowledge Freshness Maintenance (core/tasks.py)
+Added `maintain_knowledge_freshness()` Celery task that:
+- Decays freshness_score based on age (formula: max(0.1, 1.0 - days/60))
+- Deactivates very stale sources (>90 days, <0.1 freshness)
+- Marks expired sources as inactive
+- Reports agents needing knowledge refresh
+- Runs daily at 4:15 AM
+
+#### Fix 4: Cross-Agent Learning Propagation (intelligence/spider_agent_connector.py)
+Modified `_create_learning_record()` to propagate learning to connected agents:
+- When agent learns from spider data, shares with up to 5 connected students
+- Creates proper cross-agent learning records
+- Updates AgentLearningConnection stats (total_transfers, avg_improvement_score)
+
+#### Fix 5: Knowledge Promotion (core/tasks.py)
+Added `promote_to_shared_knowledge()` Celery task that:
+- Promotes high-confidence AgentKnowledgeSource entries (≥0.7 confidence)
+- Promotes high-usefulness KnowledgeTransfer entries (≥0.8 usefulness)
+- Creates SharedKnowledge entries accessible to all agents
+- Runs weekly on Sunday at 5 AM
+
+### Files Modified
+
+1. **core/services/learning_pattern_engine.py**
+   - Added `mine_patterns()` method (lines 485-738)
+   - Added `maintain_knowledge_freshness()` method (lines 740-858)
+   - Added `promote_to_shared_knowledge()` method (lines 860-989)
+
+2. **intelligence/spider_agent_connector.py**
+   - Modified `_create_learning_record()` to propagate learning
+   - Added `_propagate_to_connected_agents()` method
+
+3. **core/tasks.py**
+   - Added `mine_learning_patterns()` task
+   - Added `maintain_knowledge_freshness()` task
+   - Added `promote_to_shared_knowledge()` task
+
+4. **core/settings.py** (lines 1235-1252)
+   - Added beat schedule for `mine-learning-patterns` (every 12h at :45)
+   - Added beat schedule for `maintain-knowledge-freshness` (daily at 4:15 AM)
+   - Added beat schedule for `promote-to-shared-knowledge` (weekly Sunday 5 AM)
+   - **Note:** Schedules must be in `settings.py` not `celery.py` because Django's
+     `CELERY_BEAT_SCHEDULE` setting overrides `app.conf.beat_schedule` via
+     `config_from_object('django.conf:settings', namespace='CELERY')`
+
+### Results
+
+```
+Learning Patterns: 1 → 12 active patterns
+- spider_effectiveness: 9 (which agents benefit from spider data)
+- learning_type_impact: 2 (spider_intelligence +15%, cross_agent_delegation)
+- application_outcome: 1 (original)
+
+Knowledge Freshness:
+- Fresh (≥0.7): 255 sources (7%)
+- Moderate (0.3-0.7): 3,133 sources (85%)
+- Stale (<0.3): 297 sources (8%)
+
+SharedKnowledge: 50 → 121 entries
+- insight: 57 (from AgentKnowledgeSource)
+- technique: 43 (from KnowledgeTransfer)
+- skill: 13, pattern: 8 (existing)
+```
+
 ## Summary of Session 767 Fixes
 
 | Bug | Root Cause | Fix | Status |
@@ -416,3 +509,8 @@ Consider adding process health monitoring to detect when workers die without upd
 | Existing bad URLs | Historical data had doubled URLs | Database fix (38 records) | ✅ Fixed |
 | Step status not updated | Threading/transaction issue | Needs investigation | ⚠️ Known Issue |
 | No activity for 16+ hours | long_running worker not started | Started missing worker | ✅ Fixed |
+| Isolated agents (25) | No learning connections created | Created 75 new connections | ✅ Fixed |
+| Pattern mining (1 pattern) | No task to mine AgentLearning | Added mine_learning_patterns task | ✅ Fixed |
+| Knowledge freshness | No decay mechanism | Added maintain_knowledge_freshness task | ✅ Fixed |
+| Teaching imbalance | No cross-agent propagation | Added propagation in spider connector | ✅ Fixed |
+| SharedKnowledge growth | No promotion mechanism | Added promote_to_shared_knowledge task | ✅ Fixed |

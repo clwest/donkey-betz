@@ -191,6 +191,64 @@ class SystemEventsConsumer(AsyncWebsocketConsumer):
             "timestamp": event.get("timestamp")
         }))
 
+    # ========== Session 768: Orchestration Events ==========
+
+    async def orchestration_started(self, event):
+        """An orchestration workflow started."""
+        await self.send(text_data=json.dumps({
+            "type": "orchestration_started",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
+    async def orchestration_step_started(self, event):
+        """An orchestration step started."""
+        await self.send(text_data=json.dumps({
+            "type": "orchestration_step_started",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
+    async def orchestration_step_completed(self, event):
+        """An orchestration step completed."""
+        await self.send(text_data=json.dumps({
+            "type": "orchestration_step_completed",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
+    async def orchestration_step_failed(self, event):
+        """An orchestration step failed."""
+        await self.send(text_data=json.dumps({
+            "type": "orchestration_step_failed",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
+    async def orchestration_paused(self, event):
+        """An orchestration is waiting for approval."""
+        await self.send(text_data=json.dumps({
+            "type": "orchestration_paused",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
+    async def orchestration_completed(self, event):
+        """An orchestration workflow completed."""
+        await self.send(text_data=json.dumps({
+            "type": "orchestration_completed",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
+    async def orchestration_failed(self, event):
+        """An orchestration workflow failed."""
+        await self.send(text_data=json.dumps({
+            "type": "orchestration_failed",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
     # ========== Helper Methods ==========
 
     @sync_to_async

@@ -1232,6 +1232,24 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.maintain_dream_backlog',
         'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
     },
+    # =========================================================================
+    # Session 767: Learning System Improvements
+    # =========================================================================
+    # Mine AgentLearning records to create discoverable patterns
+    'mine-learning-patterns': {
+        'task': 'core.tasks.mine_learning_patterns',
+        'schedule': crontab(hour='*/12', minute=45),  # Every 12 hours at :45
+    },
+    # Decay freshness scores and deactivate stale knowledge sources
+    'maintain-knowledge-freshness': {
+        'task': 'core.tasks.maintain_knowledge_freshness',
+        'schedule': crontab(hour=4, minute=15),  # Daily at 4:15 AM
+    },
+    # Promote high-confidence knowledge for all agents to access
+    'promote-to-shared-knowledge': {
+        'task': 'core.tasks.promote_to_shared_knowledge',
+        'schedule': crontab(day_of_week='sunday', hour=5, minute=0),  # Weekly Sunday 5 AM
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)

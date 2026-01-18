@@ -43,6 +43,7 @@ import LearningJourneyPage from '@/pages/LearningJourneyPage'  // Session 745: L
 import CollectiveIntelligencePage from '@/pages/CollectiveIntelligencePage'  // Session 745: Collective intelligence
 import AnalyticsDashboardPage from '@/pages/AnalyticsDashboardPage'  // Session 745: Analytics dashboard
 import IntegrationHealthPage from '@/pages/IntegrationHealthPage'  // Session 758: Integration observability
+import OrchestrationPage from '@/pages/OrchestrationPage'  // Session 768: Orchestration layer UI
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -108,6 +109,7 @@ function App() {
         <Route path="collective" element={<CollectiveIntelligencePage />} />  {/* Session 745: Collective intelligence */}
         <Route path="analytics" element={<AnalyticsDashboardPage />} />  {/* Session 745: Analytics dashboard */}
         <Route path="integration-health" element={<IntegrationHealthPage />} />  {/* Session 758: Integration observability */}
+        <Route path="orchestration" element={<OrchestrationPage />} />  {/* Session 768: Orchestration layer */}
         <Route path="blog/:blogId" element={<BlogViewerPage />} />  {/* Session 742: Blog viewer for content review */}
       </Route>
     </Routes>
