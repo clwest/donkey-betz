@@ -72,11 +72,28 @@ class OrchestrationExecution(models.Model):
     #     "retry_counts": {3: 2},  # step 3 retried twice
     # }
 
-    # Cost tracking
+    # Cost tracking (LLM costs)
     total_cost = models.DecimalField(
         max_digits=10, decimal_places=4, default=Decimal('0.0000')
     )
     total_tokens = models.IntegerField(default=0)
+
+    # Session 769: External API costs (ElevenLabs, Stability, Runway, etc.)
+    total_external_cost = models.DecimalField(
+        max_digits=10, decimal_places=4, default=Decimal('0.0000'),
+        help_text="Total cost from external APIs (TTS, images, video)"
+    )
+    external_cost_breakdown = models.JSONField(
+        default=dict,
+        help_text="Breakdown of external costs by API/service"
+    )
+    # Example:
+    # {
+    #     "elevenlabs_tts": 0.0432,
+    #     "stability_ai": 0.065,
+    #     "runway_ml": 0.0,
+    #     "trained_voice": 0.05,
+    # }
 
     # Error handling
     error_message = models.TextField(blank=True)
@@ -153,11 +170,37 @@ class OrchestrationExecution(models.Model):
         retry_counts = checkpoint.get('retry_counts', {})
         return retry_counts.get(str(step_number), 0)
 
-    def add_cost(self, cost: Decimal, tokens: int = 0):
-        """Add cost from a step execution."""
+    def add_cost(self, cost: Decimal, tokens: int = 0, external_cost: Decimal = None, external_breakdown: dict = None):
+        """
+        Add cost from a step execution.
+
+        Session 769: Now tracks both LLM costs and external API costs.
+
+        Args:
+            cost: LLM cost for this step
+            tokens: Token count for this step
+            external_cost: Total external API cost for this step
+            external_breakdown: Dict of external costs by API (e.g., {'elevenlabs_tts': 0.05})
+        """
         self.total_cost = (self.total_cost or Decimal('0.0000')) + cost
         self.total_tokens = (self.total_tokens or 0) + tokens
-        self.save(update_fields=['total_cost', 'total_tokens', 'updated_at'])
+
+        # Session 769: Track external costs
+        if external_cost:
+            self.total_external_cost = (self.total_external_cost or Decimal('0.0000')) + external_cost
+
+        if external_breakdown:
+            current_breakdown = self.external_cost_breakdown or {}
+            for api, api_cost in external_breakdown.items():
+                current_breakdown[api] = current_breakdown.get(api, 0) + float(api_cost)
+            self.external_cost_breakdown = current_breakdown
+
+        save_fields = ['total_cost', 'total_tokens', 'updated_at']
+        if external_cost:
+            save_fields.append('total_external_cost')
+        if external_breakdown:
+            save_fields.append('external_cost_breakdown')
+        self.save(update_fields=save_fields)
 
     def mark_paused(self, reason: str = 'Waiting for approval'):
         """Mark execution as paused (waiting for approval)."""
@@ -181,7 +224,10 @@ class OrchestrationExecution(models.Model):
         self.completed_at = timezone.now()
         if final_output:
             self.final_output = final_output
-        self.save(update_fields=['status', 'completed_at', 'final_output', 'updated_at'])
+            # Session 769: Sync total_tokens from final_output to model field
+            if 'total_tokens' in final_output:
+                self.total_tokens = final_output['total_tokens']
+        self.save(update_fields=['status', 'completed_at', 'final_output', 'total_tokens', 'updated_at'])
 
     def mark_failed(self, error_message: str, error_step: int = None):
         """Mark execution as failed."""
@@ -247,11 +293,21 @@ class OrchestrationStepExecution(models.Model):
     error_message = models.TextField(blank=True)
     retry_count = models.IntegerField(default=0)
 
-    # Cost tracking
+    # Cost tracking (LLM costs)
     cost = models.DecimalField(
         max_digits=10, decimal_places=4, default=Decimal('0.0000')
     )
     tokens_used = models.IntegerField(default=0)
+
+    # Session 769: External API costs (ElevenLabs, Stability, Runway, etc.)
+    external_cost = models.DecimalField(
+        max_digits=10, decimal_places=4, default=Decimal('0.0000'),
+        help_text="External API costs for this step (TTS, images, video)"
+    )
+    external_cost_breakdown = models.JSONField(
+        default=dict,
+        help_text="Breakdown of external costs by API for this step"
+    )
 
     # Timing
     started_at = models.DateTimeField(null=True, blank=True)
@@ -282,8 +338,19 @@ class OrchestrationStepExecution(models.Model):
         self.started_at = timezone.now()
         self.save(update_fields=['status', 'started_at', 'updated_at'])
 
-    def mark_completed(self, output_data: dict, cost: Decimal = None, tokens: int = 0):
-        """Mark step as completed with output."""
+    def mark_completed(
+        self,
+        output_data: dict,
+        cost: Decimal = None,
+        tokens: int = 0,
+        external_cost: Decimal = None,
+        external_breakdown: dict = None
+    ):
+        """
+        Mark step as completed with output.
+
+        Session 769: Now tracks external API costs.
+        """
         self.status = 'completed'
         self.output_data = output_data
         self.completed_at = timezone.now()
@@ -295,9 +362,16 @@ class OrchestrationStepExecution(models.Model):
             self.cost = cost
         self.tokens_used = tokens
 
+        # Session 769: Track external costs
+        if external_cost:
+            self.external_cost = external_cost
+        if external_breakdown:
+            self.external_cost_breakdown = external_breakdown
+
         self.save(update_fields=[
             'status', 'output_data', 'completed_at',
-            'duration_seconds', 'cost', 'tokens_used', 'updated_at'
+            'duration_seconds', 'cost', 'tokens_used',
+            'external_cost', 'external_cost_breakdown', 'updated_at'
         ])
 
     def mark_failed(self, error_message: str):

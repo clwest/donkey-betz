@@ -207,12 +207,99 @@ interface ToolResultOutput {
 interface ResearchResultOutput {
   source?: string
   data?: Record<string, unknown>
+  title?: string
+  summary?: string
+}
+
+interface RecommendationOutput {
+  title?: string
+  description?: string
+  priority?: 'high' | 'medium' | 'low'
+}
+
+interface SignalOutput {
+  type?: string
+  strength?: 'strong' | 'moderate' | 'weak'
+  description?: string
+  market?: string
+  confidence?: number
+}
+
+interface AnalysisOutput {
+  summary?: string
+  key_insights?: string[]
+  [key: string]: unknown
+}
+
+interface ThinkingResultOutput {
+  conclusion?: string
+  reasoning?: string
+  confidence?: number
+}
+
+interface WorkflowStepOutput {
+  step?: string
+  agent?: string
+  description?: string
+}
+
+interface ContentOutput {
+  title?: string
+  body?: string
+  [key: string]: unknown
+}
+
+interface DebateResultOutput {
+  topic?: string
+  winner?: string
+  summary?: string
 }
 
 interface OutputDataPayload {
+  // Image agents
   images?: ImageOutput[]
+  // Tool usage
   tool_results?: ToolResultOutput[]
+  // Research agents
   results?: ResearchResultOutput[]
+  query?: string
+  // ContentWriterAgent
+  content?: ContentOutput | string
+  metadata?: Record<string, unknown>
+  content_type?: string
+  // ContentStrategyAgent
+  task?: string
+  recommendations?: (string | RecommendationOutput)[]
+  // PredictionMarketAnalyst, SportsOddsAnalyst
+  signals?: SignalOutput[]
+  analysis?: AnalysisOutput
+  categories?: Record<string, unknown>
+  total_volume?: number
+  markets_analyzed?: number
+  sports?: Record<string, unknown>
+  upcoming_24h?: number
+  events_analyzed?: number
+  // ThinkingAgent
+  context?: Record<string, unknown>
+  thinking_result?: ThinkingResultOutput
+  // WorkflowAgent
+  workflow_type?: string
+  suggested_workflow?: (string | WorkflowStepOutput)[]
+  note?: string
+  // Debate agents
+  role?: string
+  voice_id?: string
+  // AutonomousContentStudioCoordinator
+  debate_result?: DebateResultOutput
+  // SystemIntelligenceAgent
+  info_count?: number
+  items_count?: number
+  warning_count?: number
+  critical_count?: number
+  execution_time?: number
+  // Generic fallback
+  type?: string
+  response?: string
   [key: string]: unknown
 }
 
@@ -4175,11 +4262,40 @@ export default function AgentsPage() {
                                     if (innerData?.recommendations || innerData?.tool_results) {
                                       const recommendations = innerData.recommendations as Array<Record<string, unknown>> | string | undefined
                                       const toolResults = innerData.tool_results as Array<Record<string, unknown>> | undefined
+                                      // Session 767: Use full_context from workflow step config (has full content, not truncated)
+                                      const fullContext = stepIntelligenceData.step_info?.full_context as Record<string, unknown> | undefined
+                                      const dreamCtx = fullContext?.dream_context as Record<string, unknown> | undefined
+                                      const hivemindCtx = fullContext?.hivemind_context as Record<string, unknown> | undefined
                                       const taskDesc = innerData.task ? String(innerData.task) : ''
 
                                       return (
                                         <div className="space-y-4">
-                                          {taskDesc && (
+                                          {/* Session 767: Show full context from workflow step config */}
+                                          {dreamCtx && (
+                                            <div className="bg-dark-bg rounded p-3 border border-dark-border">
+                                              <span className="text-accent-amber font-medium">Task</span>
+                                              <p className="text-gray-400 text-[11px] mt-1">{taskDesc.split('\n')[0]}</p>
+                                              <div className="mt-3 space-y-2">
+                                                <p className="text-gray-500 text-[10px]">Context from dream:</p>
+                                                <p className="text-white text-[11px]"><span className="text-gray-500">Title:</span> {dreamCtx.title ? String(dreamCtx.title) : 'N/A'}</p>
+                                                <p className="text-gray-300 text-[11px]"><span className="text-gray-500">Content:</span> {dreamCtx.content ? String(dreamCtx.content) : 'N/A'}</p>
+                                                <p className="text-gray-400 text-[10px]"><span className="text-gray-500">Type:</span> {dreamCtx.type ? String(dreamCtx.type) : 'N/A'}</p>
+                                              </div>
+                                            </div>
+                                          )}
+                                          {hivemindCtx && !dreamCtx && (
+                                            <div className="bg-dark-bg rounded p-3 border border-dark-border">
+                                              <span className="text-accent-amber font-medium">Task</span>
+                                              <p className="text-gray-400 text-[11px] mt-1">{taskDesc.split('\n')[0]}</p>
+                                              <div className="mt-3 space-y-2">
+                                                <p className="text-gray-500 text-[10px]">Context from HiveMind Session:</p>
+                                                <p className="text-white text-[11px]"><span className="text-gray-500">Question:</span> {hivemindCtx.question ? String(hivemindCtx.question) : 'N/A'}</p>
+                                                <p className="text-gray-300 text-[11px]"><span className="text-gray-500">Synthesis:</span> {hivemindCtx.synthesis ? String(hivemindCtx.synthesis) : 'N/A'}</p>
+                                                <p className="text-gray-400 text-[10px]"><span className="text-gray-500">Mode:</span> {hivemindCtx.mode ? String(hivemindCtx.mode) : 'N/A'}</p>
+                                              </div>
+                                            </div>
+                                          )}
+                                          {!dreamCtx && !hivemindCtx && taskDesc && (
                                             <div>
                                               <span className="text-accent-amber font-medium">Task</span>
                                               <p className="text-gray-300 mt-1 whitespace-pre-wrap">{taskDesc}</p>
@@ -4191,26 +4307,135 @@ export default function AgentsPage() {
                                               <summary className="text-accent-cyan font-medium cursor-pointer">
                                                 Tool Results ({toolResults.length})
                                               </summary>
-                                              <div className="space-y-2 mt-2">
+                                              <div className="space-y-3 mt-2">
                                                 {toolResults.map((tr, i) => {
                                                   const toolName = tr.tool ? String(tr.tool) : `Tool ${i + 1}`
-                                                  const toolOutput = tr.output || tr.result
-                                                  const outputStr = typeof toolOutput === 'object'
-                                                    ? JSON.stringify(toolOutput, null, 2)
-                                                    : String(toolOutput || '')
+                                                  const toolOutput = (tr.output || tr.result || {}) as Record<string, unknown>
+
+                                                  // Session 767: Format tool results nicely instead of raw JSON
+                                                  if (typeof toolOutput === 'object' && toolOutput !== null) {
+                                                    const success = toolOutput.success as boolean | undefined
+                                                    const niche = toolOutput.niche ? String(toolOutput.niche) : null
+                                                    const goal = toolOutput.goal ? String(toolOutput.goal) : null
+                                                    const hotTopics = toolOutput.hot_topics as string[] | undefined
+                                                    const stylesSugg = toolOutput.style_suggestions as string[] | undefined
+                                                    const opportunities = toolOutput.opportunities as Array<Record<string, unknown>> | undefined
+                                                    const recs = toolOutput.recommendations as Array<Record<string, unknown>> | undefined
+                                                    const mlAnalysis = toolOutput.ml_analysis as Record<string, unknown> | undefined
+
+                                                    return (
+                                                      <div key={i} className="bg-dark-bg rounded p-3 border border-dark-border">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                          <span className="text-accent-purple text-[11px] font-mono font-medium">{toolName}</span>
+                                                          {success !== undefined && (
+                                                            <span className={`text-[9px] px-1.5 py-0.5 rounded ${success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                              {success ? '✓ success' : '✗ failed'}
+                                                            </span>
+                                                          )}
+                                                          {niche && <span className="text-[9px] px-1.5 py-0.5 bg-accent-cyan/10 text-accent-cyan rounded">{niche}</span>}
+                                                          {goal && <span className="text-[9px] px-1.5 py-0.5 bg-accent-amber/10 text-accent-amber rounded">{goal}</span>}
+                                                        </div>
+
+                                                        {hotTopics && hotTopics.length > 0 && (
+                                                          <div className="mb-2">
+                                                            <span className="text-gray-500 text-[10px]">Hot Topics: </span>
+                                                            <div className="flex gap-1 mt-1 flex-wrap">
+                                                              {hotTopics.slice(0, 8).map((t, ti) => (
+                                                                <span key={ti} className="text-[9px] px-1.5 py-0.5 bg-accent-green/10 text-accent-green rounded">{t}</span>
+                                                              ))}
+                                                            </div>
+                                                          </div>
+                                                        )}
+
+                                                        {stylesSugg && stylesSugg.length > 0 && (
+                                                          <div className="mb-2">
+                                                            <span className="text-gray-500 text-[10px]">Styles: </span>
+                                                            <div className="flex gap-1 mt-1 flex-wrap">
+                                                              {stylesSugg.map((s, si) => (
+                                                                <span key={si} className="text-[9px] px-1.5 py-0.5 bg-accent-purple/10 text-accent-purple rounded">{s}</span>
+                                                              ))}
+                                                            </div>
+                                                          </div>
+                                                        )}
+
+                                                        {mlAnalysis && (() => {
+                                                          const modelsUsed = mlAnalysis.models_used ? (mlAnalysis.models_used as string[]).join(', ') : null
+                                                          const perfPred = mlAnalysis.performance_prediction as Record<string, unknown> | undefined
+                                                          const recType = perfPred?.recommended_type ? String(perfPred.recommended_type) : null
+                                                          return (
+                                                            <div className="mb-2 p-2 bg-dark-card rounded">
+                                                              <span className="text-gray-500 text-[10px]">ML Analysis</span>
+                                                              <div className="mt-1 grid grid-cols-2 gap-2 text-[10px]">
+                                                                {modelsUsed && (
+                                                                  <div><span className="text-gray-500">Models:</span> <span className="text-gray-300">{modelsUsed}</span></div>
+                                                                )}
+                                                                {recType && (
+                                                                  <div><span className="text-gray-500">Recommended:</span> <span className="text-accent-cyan">{recType}</span></div>
+                                                                )}
+                                                              </div>
+                                                            </div>
+                                                          )
+                                                        })()}
+
+                                                        {opportunities && opportunities.length > 0 && (
+                                                          <div className="mb-2">
+                                                            <span className="text-gray-500 text-[10px]">Opportunities ({opportunities.length})</span>
+                                                            <div className="mt-1 space-y-1">
+                                                              {opportunities.slice(0, 5).map((opp, oi) => {
+                                                                const oppTopic = opp.topic ? String(opp.topic) : 'item'
+                                                                const oppUrgency = opp.urgency ? String(opp.urgency) : null
+                                                                const oppDesc = opp.opportunity ? String(opp.opportunity) : null
+                                                                return (
+                                                                  <div key={oi} className="flex items-center gap-2 text-[10px]">
+                                                                    <span className="text-accent-amber">{oppTopic}</span>
+                                                                    {oppUrgency && <span className={`px-1 py-0.5 rounded text-[9px] ${oppUrgency === 'high' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{oppUrgency}</span>}
+                                                                    {oppDesc && <span className="text-gray-400">{oppDesc}</span>}
+                                                                  </div>
+                                                                )
+                                                              })}
+                                                              {opportunities.length > 5 && <span className="text-gray-600 text-[9px]">+{opportunities.length - 5} more</span>}
+                                                            </div>
+                                                          </div>
+                                                        )}
+
+                                                        {recs && recs.length > 0 && (
+                                                          <div>
+                                                            <span className="text-gray-500 text-[10px]">Recommendations ({recs.length})</span>
+                                                            <div className="mt-1 space-y-1">
+                                                              {recs.slice(0, 4).map((r, ri) => {
+                                                                const recName = r.name ? String(r.name) : `Item ${ri + 1}`
+                                                                const recType = r.content_type ? String(r.content_type) : null
+                                                                const recPriority = r.priority ? String(r.priority) : null
+                                                                return (
+                                                                  <div key={ri} className="flex items-center gap-2 text-[10px]">
+                                                                    <span className="text-white">{recName}</span>
+                                                                    {recType && <span className="text-accent-cyan text-[9px]">[{recType}]</span>}
+                                                                    {recPriority && <span className={`px-1 py-0.5 rounded text-[9px] ${recPriority === 'high' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-gray-400'}`}>{recPriority}</span>}
+                                                                  </div>
+                                                                )
+                                                              })}
+                                                              {recs.length > 4 && <span className="text-gray-600 text-[9px]">+{recs.length - 4} more</span>}
+                                                            </div>
+                                                          </div>
+                                                        )}
+
+                                                        {/* Fallback: show raw JSON in collapsible if no structured data found */}
+                                                        {!hotTopics && !stylesSugg && !opportunities && !recs && !mlAnalysis && (
+                                                          <details className="mt-1">
+                                                            <summary className="text-gray-500 text-[10px] cursor-pointer">View raw data</summary>
+                                                            <pre className="text-gray-400 text-[9px] mt-1 whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto">{JSON.stringify(toolOutput, null, 2)}</pre>
+                                                          </details>
+                                                        )}
+                                                      </div>
+                                                    )
+                                                  }
+
+                                                  // Fallback for non-object output
+                                                  const outputStr = String(toolOutput || '')
                                                   return (
                                                     <div key={i} className="bg-dark-bg rounded p-2 border border-dark-border">
                                                       <span className="text-accent-purple text-[11px] font-mono">{toolName}</span>
-                                                      {outputStr.length > 300 ? (
-                                                        <details className="mt-1">
-                                                          <summary className="text-gray-400 text-[10px] cursor-pointer">
-                                                            {outputStr.substring(0, 300)}...
-                                                          </summary>
-                                                          <pre className="text-gray-300 text-[10px] mt-1 whitespace-pre-wrap overflow-x-auto">{outputStr}</pre>
-                                                        </details>
-                                                      ) : (
-                                                        <pre className="text-gray-300 text-[10px] mt-1 whitespace-pre-wrap">{outputStr}</pre>
-                                                      )}
+                                                      <pre className="text-gray-300 text-[10px] mt-1 whitespace-pre-wrap">{outputStr}</pre>
                                                     </div>
                                                   )
                                                 })}
@@ -4224,13 +4449,62 @@ export default function AgentsPage() {
                                               {typeof recommendations === 'string' ? (
                                                 <p className="text-gray-300 mt-1 whitespace-pre-wrap">{recommendations}</p>
                                               ) : Array.isArray(recommendations) ? (
-                                                <ul className="mt-1 space-y-1">
-                                                  {recommendations.map((rec, i) => (
-                                                    <li key={i} className="text-gray-300 text-[11px] flex items-start gap-2">
-                                                      <span className="text-accent-green">•</span>
-                                                      <span>{typeof rec === 'object' ? JSON.stringify(rec) : String(rec)}</span>
-                                                    </li>
-                                                  ))}
+                                                <ul className="mt-2 space-y-2">
+                                                  {recommendations.map((rec, i) => {
+                                                    // Session 767: Format recommendation objects nicely
+                                                    if (typeof rec === 'object' && rec !== null) {
+                                                      const recObj = rec as Record<string, unknown>
+                                                      const name = recObj.name ? String(recObj.name) : recObj.topic ? String(recObj.topic) : null
+                                                      const desc = recObj.description ? String(recObj.description) : recObj.opportunity ? String(recObj.opportunity) : null
+                                                      const contentType = recObj.content_type ? String(recObj.content_type) : null
+                                                      const priority = recObj.priority ? String(recObj.priority) : recObj.urgency ? String(recObj.urgency) : null
+                                                      const styles = recObj.style_suggestions as string[] | undefined
+                                                      const keywords = recObj.trending_keywords as string[] | undefined
+                                                      const bestFor = recObj.best_for as string[] | undefined
+                                                      const suggestedStyle = recObj.suggested_style ? String(recObj.suggested_style) : null
+
+                                                      return (
+                                                        <li key={i} className="bg-dark-bg rounded p-2 border border-dark-border">
+                                                          <div className="flex items-center gap-2 flex-wrap">
+                                                            {name && <span className="text-white font-medium text-[11px]">{name}</span>}
+                                                            {contentType && <span className="text-accent-cyan text-[10px] px-1.5 py-0.5 bg-accent-cyan/10 rounded">{contentType}</span>}
+                                                            {priority && (
+                                                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                                                priority === 'high' ? 'bg-red-500/20 text-red-400' :
+                                                                priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                'bg-gray-500/20 text-gray-400'
+                                                              }`}>{priority}</span>
+                                                            )}
+                                                          </div>
+                                                          {desc && <p className="text-gray-400 text-[10px] mt-1">{desc}</p>}
+                                                          {suggestedStyle && <p className="text-gray-500 text-[10px] mt-1">Style: <span className="text-accent-purple">{suggestedStyle}</span></p>}
+                                                          {styles && styles.length > 0 && (
+                                                            <div className="flex gap-1 mt-1 flex-wrap">
+                                                              {styles.slice(0, 4).map((s, si) => (
+                                                                <span key={si} className="text-[9px] px-1 py-0.5 bg-accent-purple/10 text-accent-purple rounded">{s}</span>
+                                                              ))}
+                                                            </div>
+                                                          )}
+                                                          {keywords && keywords.length > 0 && (
+                                                            <div className="flex gap-1 mt-1 flex-wrap">
+                                                              {keywords.slice(0, 4).map((k, ki) => (
+                                                                <span key={ki} className="text-[9px] px-1 py-0.5 bg-accent-amber/10 text-accent-amber rounded">{k}</span>
+                                                              ))}
+                                                            </div>
+                                                          )}
+                                                          {bestFor && bestFor.length > 0 && (
+                                                            <p className="text-gray-500 text-[9px] mt-1">Best for: {bestFor.join(', ')}</p>
+                                                          )}
+                                                        </li>
+                                                      )
+                                                    }
+                                                    return (
+                                                      <li key={i} className="text-gray-300 text-[11px] flex items-start gap-2">
+                                                        <span className="text-accent-green">•</span>
+                                                        <span>{String(rec)}</span>
+                                                      </li>
+                                                    )
+                                                  })}
                                                 </ul>
                                               ) : null}
                                             </div>
@@ -5711,7 +5985,7 @@ export default function AgentsPage() {
                         <div className="mb-4">
                           <h5 className="text-sm font-medium text-accent-purple mb-2">Generated Images ({selectedExecution.output_data.data.images.length})</h5>
                           <div className="grid grid-cols-2 gap-3">
-                            {selectedExecution.output_data.data.images.map((img, idx) => (
+                            {selectedExecution.output_data.data.images.map((img: { image_url?: string; image_id?: string }, idx: number) => (
                               <div key={idx} className="bg-dark-card rounded-lg p-2 border border-dark-border">
                                 {img.image_url && (
                                   <a href={img.image_url} target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline text-sm">
@@ -5759,7 +6033,13 @@ export default function AgentsPage() {
                                 {result.source && (
                                   <span className="text-xs text-accent-green">{result.source}</span>
                                 )}
-                                {result.data && (
+                                {result.title && (
+                                  <p className="text-sm text-white font-medium mt-1">{result.title}</p>
+                                )}
+                                {result.summary && (
+                                  <p className="text-xs text-gray-400 mt-1">{result.summary}</p>
+                                )}
+                                {result.data && !result.summary && (
                                   <pre className="text-xs text-gray-400 mt-1 overflow-x-auto max-h-24">
                                     {JSON.stringify(result.data, null, 2)}
                                   </pre>
@@ -5770,7 +6050,261 @@ export default function AgentsPage() {
                         </div>
                       )}
 
-                      {/* Raw JSON for other data */}
+                      {/* Special handling for ContentWriterAgent content */}
+                      {selectedExecution.output_data.data.content && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-green mb-2">Generated Content</h5>
+                          <div className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                            {selectedExecution.output_data.data.content_type && (
+                              <span className="inline-block px-2 py-0.5 text-xs bg-accent-green/20 text-accent-green rounded mb-2">
+                                {selectedExecution.output_data.data.content_type}
+                              </span>
+                            )}
+                            {typeof selectedExecution.output_data.data.content === 'object' ? (
+                              <>
+                                {(selectedExecution.output_data.data.content as { title?: string }).title && (
+                                  <h6 className="text-white font-medium mb-2">{(selectedExecution.output_data.data.content as { title: string }).title}</h6>
+                                )}
+                                {(selectedExecution.output_data.data.content as { body?: string }).body && (
+                                  <p className="text-gray-300 text-sm whitespace-pre-wrap">{(selectedExecution.output_data.data.content as { body: string }).body}</p>
+                                )}
+                                {!(selectedExecution.output_data.data.content as { body?: string }).body && (
+                                  <pre className="text-xs text-gray-400 overflow-x-auto">
+                                    {JSON.stringify(selectedExecution.output_data.data.content, null, 2)}
+                                  </pre>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-gray-300 text-sm whitespace-pre-wrap">{String(selectedExecution.output_data.data.content)}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for recommendations */}
+                      {selectedExecution.output_data.data.recommendations && Array.isArray(selectedExecution.output_data.data.recommendations) && selectedExecution.output_data.data.recommendations.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-purple mb-2">Recommendations ({selectedExecution.output_data.data.recommendations.length})</h5>
+                          <div className="space-y-2">
+                            {selectedExecution.output_data.data.recommendations.map((rec: string | { title?: string; description?: string; priority?: string }, idx: number) => (
+                              <div key={idx} className="bg-dark-card rounded-lg p-3 border border-dark-border flex items-start gap-2">
+                                <span className="text-accent-purple font-mono text-xs mt-0.5">{idx + 1}.</span>
+                                {typeof rec === 'string' ? (
+                                  <p className="text-gray-300 text-sm">{rec}</p>
+                                ) : (
+                                  <div>
+                                    {rec.title && <p className="text-white font-medium text-sm">{rec.title}</p>}
+                                    {rec.description && <p className="text-gray-400 text-xs mt-1">{rec.description}</p>}
+                                    {rec.priority && (
+                                      <span className={`inline-block mt-1 px-1.5 py-0.5 text-xs rounded ${
+                                        rec.priority === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                                        rec.priority === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                                        'bg-gray-600/20 text-gray-400'
+                                      }`}>{rec.priority}</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for signals (PredictionMarketAnalyst, SportsOddsAnalyst) */}
+                      {selectedExecution.output_data.data.signals && Array.isArray(selectedExecution.output_data.data.signals) && selectedExecution.output_data.data.signals.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-cyan mb-2">Signals ({selectedExecution.output_data.data.signals.length})</h5>
+                          <div className="space-y-2">
+                            {selectedExecution.output_data.data.signals.slice(0, 10).map((signal: { type?: string; strength?: string; description?: string; market?: string; confidence?: number }, idx: number) => (
+                              <div key={idx} className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-white font-medium text-sm">{signal.type || signal.market || `Signal ${idx + 1}`}</span>
+                                  {signal.strength && (
+                                    <span className={`px-2 py-0.5 text-xs rounded ${
+                                      signal.strength === 'strong' ? 'bg-accent-green/20 text-accent-green' :
+                                      signal.strength === 'moderate' ? 'bg-accent-amber/20 text-accent-amber' :
+                                      'bg-gray-600/20 text-gray-400'
+                                    }`}>{signal.strength}</span>
+                                  )}
+                                  {signal.confidence !== undefined && (
+                                    <span className="text-xs text-gray-500">{(signal.confidence * 100).toFixed(0)}% confidence</span>
+                                  )}
+                                </div>
+                                {signal.description && (
+                                  <p className="text-gray-400 text-xs mt-1">{signal.description}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for analysis object */}
+                      {selectedExecution.output_data.data.analysis && typeof selectedExecution.output_data.data.analysis === 'object' && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-amber mb-2">Analysis</h5>
+                          <div className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                            {(selectedExecution.output_data.data.analysis as { summary?: string }).summary && (
+                              <p className="text-gray-300 text-sm mb-2">{(selectedExecution.output_data.data.analysis as { summary: string }).summary}</p>
+                            )}
+                            {(selectedExecution.output_data.data.analysis as { key_insights?: string[] }).key_insights && (
+                              <div className="mt-2">
+                                <span className="text-xs text-gray-500 uppercase">Key Insights:</span>
+                                <ul className="mt-1 space-y-1">
+                                  {((selectedExecution.output_data.data.analysis as { key_insights: string[] }).key_insights).map((insight: string, idx: number) => (
+                                    <li key={idx} className="text-xs text-gray-400 flex items-start gap-2">
+                                      <span className="text-accent-amber">•</span>
+                                      {insight}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {!(selectedExecution.output_data.data.analysis as { summary?: string }).summary && !(selectedExecution.output_data.data.analysis as { key_insights?: string[] }).key_insights && (
+                              <pre className="text-xs text-gray-400 overflow-x-auto">
+                                {JSON.stringify(selectedExecution.output_data.data.analysis, null, 2)}
+                              </pre>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for ThinkingAgent thinking_result */}
+                      {selectedExecution.output_data.data.thinking_result && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-purple mb-2">Thinking Process</h5>
+                          <div className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                            {(selectedExecution.output_data.data.thinking_result as { conclusion?: string }).conclusion && (
+                              <p className="text-white font-medium mb-2">{(selectedExecution.output_data.data.thinking_result as { conclusion: string }).conclusion}</p>
+                            )}
+                            {(selectedExecution.output_data.data.thinking_result as { reasoning?: string }).reasoning && (
+                              <p className="text-gray-400 text-sm whitespace-pre-wrap">{(selectedExecution.output_data.data.thinking_result as { reasoning: string }).reasoning}</p>
+                            )}
+                            {(selectedExecution.output_data.data.thinking_result as { confidence?: number }).confidence !== undefined && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="text-xs text-gray-500">Confidence:</span>
+                                <div className="flex-1 bg-dark-border rounded-full h-2">
+                                  <div
+                                    className="bg-accent-purple h-2 rounded-full"
+                                    style={{ width: `${((selectedExecution.output_data.data.thinking_result as { confidence: number }).confidence) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-400">
+                                  {(((selectedExecution.output_data.data.thinking_result as { confidence: number }).confidence) * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for WorkflowAgent suggested_workflow */}
+                      {selectedExecution.output_data.data.suggested_workflow && Array.isArray(selectedExecution.output_data.data.suggested_workflow) && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-cyan mb-2">
+                            Suggested Workflow
+                            {selectedExecution.output_data.data.workflow_type && (
+                              <span className="ml-2 px-2 py-0.5 text-xs bg-accent-cyan/20 rounded">{selectedExecution.output_data.data.workflow_type}</span>
+                            )}
+                          </h5>
+                          <div className="space-y-2">
+                            {selectedExecution.output_data.data.suggested_workflow.map((step: string | { step?: string; agent?: string; description?: string }, idx: number) => (
+                              <div key={idx} className="bg-dark-card rounded-lg p-3 border border-dark-border flex items-start gap-3">
+                                <div className="w-6 h-6 rounded-full bg-accent-cyan/20 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-accent-cyan text-xs font-medium">{idx + 1}</span>
+                                </div>
+                                {typeof step === 'string' ? (
+                                  <p className="text-gray-300 text-sm">{step}</p>
+                                ) : (
+                                  <div>
+                                    {step.step && <p className="text-white font-medium text-sm">{step.step}</p>}
+                                    {step.agent && <span className="text-xs text-accent-purple">{step.agent}</span>}
+                                    {step.description && <p className="text-gray-400 text-xs mt-1">{step.description}</p>}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for debate agents (role, voice_id) */}
+                      {selectedExecution.output_data.data.role && selectedExecution.output_data.data.voice_id && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-amber mb-2">Debate Role</h5>
+                          <div className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-accent-amber/20 flex items-center justify-center">
+                                <MessageSquare size={18} className="text-accent-amber" />
+                              </div>
+                              <div>
+                                <p className="text-white font-medium capitalize">{selectedExecution.output_data.data.role}</p>
+                                <p className="text-xs text-gray-500">Voice: {selectedExecution.output_data.data.voice_id}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special handling for SystemIntelligenceAgent stats */}
+                      {(selectedExecution.output_data.data.info_count !== undefined ||
+                        selectedExecution.output_data.data.warning_count !== undefined ||
+                        selectedExecution.output_data.data.critical_count !== undefined) && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-cyan mb-2">System Intelligence Summary</h5>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {selectedExecution.output_data.data.items_count !== undefined && (
+                              <div className="bg-dark-card rounded-lg p-3 border border-dark-border text-center">
+                                <p className="text-2xl font-bold text-white">{selectedExecution.output_data.data.items_count}</p>
+                                <p className="text-xs text-gray-500">Total Items</p>
+                              </div>
+                            )}
+                            {selectedExecution.output_data.data.info_count !== undefined && (
+                              <div className="bg-dark-card rounded-lg p-3 border border-accent-cyan/30 text-center">
+                                <p className="text-2xl font-bold text-accent-cyan">{selectedExecution.output_data.data.info_count}</p>
+                                <p className="text-xs text-gray-500">Info</p>
+                              </div>
+                            )}
+                            {selectedExecution.output_data.data.warning_count !== undefined && (
+                              <div className="bg-dark-card rounded-lg p-3 border border-accent-amber/30 text-center">
+                                <p className="text-2xl font-bold text-accent-amber">{selectedExecution.output_data.data.warning_count}</p>
+                                <p className="text-xs text-gray-500">Warnings</p>
+                              </div>
+                            )}
+                            {selectedExecution.output_data.data.critical_count !== undefined && (
+                              <div className="bg-dark-card rounded-lg p-3 border border-accent-red/30 text-center">
+                                <p className="text-2xl font-bold text-accent-red">{selectedExecution.output_data.data.critical_count}</p>
+                                <p className="text-xs text-gray-500">Critical</p>
+                              </div>
+                            )}
+                          </div>
+                          {selectedExecution.output_data.data.execution_time !== undefined && (
+                            <p className="text-xs text-gray-500 mt-2 text-right">
+                              Execution time: {selectedExecution.output_data.data.execution_time.toFixed(2)}s
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Special handling for debate_result from AutonomousContentStudioCoordinator */}
+                      {selectedExecution.output_data.data.debate_result && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-accent-purple mb-2">Debate Result</h5>
+                          <div className="bg-dark-card rounded-lg p-3 border border-dark-border">
+                            {(selectedExecution.output_data.data.debate_result as { topic?: string }).topic && (
+                              <p className="text-white font-medium mb-2">{(selectedExecution.output_data.data.debate_result as { topic: string }).topic}</p>
+                            )}
+                            {(selectedExecution.output_data.data.debate_result as { winner?: string }).winner && (
+                              <p className="text-accent-green text-sm">Winner: {(selectedExecution.output_data.data.debate_result as { winner: string }).winner}</p>
+                            )}
+                            {(selectedExecution.output_data.data.debate_result as { summary?: string }).summary && (
+                              <p className="text-gray-400 text-sm mt-2">{(selectedExecution.output_data.data.debate_result as { summary: string }).summary}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Raw JSON for remaining data - collapsed by default */}
                       <details className="mt-4">
                         <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300">View Raw JSON</summary>
                         <pre className="mt-2 text-xs text-gray-400 overflow-x-auto max-h-64 bg-dark-card p-3 rounded-lg">

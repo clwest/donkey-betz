@@ -38,6 +38,8 @@ from core.validators import validate_prompt, sanitize_prompt, validate_uuid, val
 # Phase 2 P1: Safe error handling
 # Session 487: Creator watermark integration
 from core.services.watermark_integration import save_watermarked_image
+# Session 769: Cost tracking for external APIs
+from core.services.api_cost_config import calculate_stability_cost
 
 logger = logging.getLogger(__name__)
 
@@ -838,8 +840,19 @@ def generate_with_stability(prompt, negative_prompt, width, height, num_images, 
     """
     Generate images using Stability AI API
     Documentation: https://platform.stability.ai/docs/api-reference
+
+    Session 769: Added cost tracking using api_cost_config
     """
-    url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+    model_id = "stable-diffusion-xl-1024-v1-0"
+    url = f"https://api.stability.ai/v1/generation/{model_id}/text-to-image"
+
+    # Session 769: Calculate cost before making the API call
+    resolution = f"{width}x{height}"
+    cost_info = calculate_stability_cost(
+        model=model_id,
+        resolution=resolution,
+        image_count=num_images
+    )
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -883,17 +896,21 @@ def generate_with_stability(prompt, negative_prompt, width, height, num_images, 
                     'format': 'png'
                 })
 
+        logger.info(f"💰 Stability AI cost: ${cost_info['cost']:.4f} ({num_images} images @ {resolution})")
+
         return {
             'success': True,
             'images': images,
-            'cost': 0.04 * num_images  # Approximate cost
+            'cost': float(cost_info['cost']),  # Session 769: Use calculated cost
+            'cost_info': cost_info,  # Session 769: Full cost breakdown
         }
     else:
         error_msg = response.json().get('message', response.text)
         logger.error(f"Stability AI error: {error_msg}")
         return {
             'success': False,
-            'error': error_msg
+            'error': error_msg,
+            'cost_info': None,
         }
 
 

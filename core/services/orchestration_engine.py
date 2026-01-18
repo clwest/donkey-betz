@@ -250,6 +250,11 @@ class OrchestrationEngine:
             OrchestrationStepExecution
         )
 
+        # Session 768: Import event emission
+        from core.services.orchestration_events import (
+            emit_execution_started, emit_execution_completed, emit_execution_failed
+        )
+
         workflow = execution.workflow
         execution.status = 'running'
         execution.started_at = execution.started_at or timezone.now()
@@ -257,6 +262,9 @@ class OrchestrationEngine:
         if not execution.timeout_at:
             execution.timeout_at = timezone.now() + timedelta(seconds=workflow.timeout_seconds)
         execution.save(update_fields=['status', 'started_at', 'timeout_at'])
+
+        # Session 768: Emit execution started event
+        emit_execution_started(execution)
 
         try:
             # Get ordered steps
@@ -280,6 +288,8 @@ class OrchestrationEngine:
         except Exception as e:
             logger.error(f"Orchestration execution failed: {e}", exc_info=True)
             execution.mark_failed(str(e), execution.current_step)
+            # Session 768: Emit execution failed event
+            emit_execution_failed(execution, str(e))
             return execution
 
     def _execute_sequential(
@@ -338,6 +348,9 @@ class OrchestrationEngine:
         # All steps completed
         execution.mark_completed(self._aggregate_outputs(execution))
         logger.info(f"Workflow execution {execution.id} completed successfully")
+        # Session 768: Emit completion event
+        from core.services.orchestration_events import emit_execution_completed
+        emit_execution_completed(execution)
         return execution
 
     def _execute_parallel(
@@ -400,6 +413,9 @@ class OrchestrationEngine:
                 return execution
 
         execution.mark_completed(self._aggregate_outputs(execution))
+        # Session 768: Emit completion event
+        from core.services.orchestration_events import emit_execution_completed
+        emit_execution_completed(execution)
         return execution
 
     def _execute_dependency(
@@ -442,6 +458,9 @@ class OrchestrationEngine:
             )
 
         execution.mark_completed(self._aggregate_outputs(execution))
+        # Session 768: Emit completion event
+        from core.services.orchestration_events import emit_execution_completed
+        emit_execution_completed(execution)
         return execution
 
     def _execute_step(
@@ -505,7 +524,16 @@ class OrchestrationEngine:
                 # Add cost
                 cost = Decimal(str(result.get('cost', 0)))
                 tokens = result.get('tokens', 0)
-                execution.add_cost(cost, tokens)
+                # Session 769: Track external costs alongside LLM costs
+                external_cost = result.get('external_cost')
+                if external_cost:
+                    external_cost = Decimal(str(external_cost))
+                external_breakdown = result.get('external_breakdown')
+                execution.add_cost(
+                    cost, tokens,
+                    external_cost=external_cost,
+                    external_breakdown=external_breakdown
+                )
 
                 return 'success'
 
@@ -516,7 +544,15 @@ class OrchestrationEngine:
                 )
                 continue
 
-        # All retries exhausted
+        # All retries exhausted - check if rollback step is defined
+        if step.rollback_step:
+            logger.info(f"Step {step.order} failed, executing rollback step {step.rollback_step}")
+            rollback_result = self._execute_rollback(execution, step, context)
+            if rollback_result == 'success':
+                logger.info(f"Rollback step {step.rollback_step} completed successfully")
+            else:
+                logger.warning(f"Rollback step {step.rollback_step} also failed")
+
         execution.mark_failed(
             result.get('error', 'Step execution failed'),
             step.order
@@ -574,18 +610,96 @@ class OrchestrationEngine:
             error_message=reason
         )
 
+    def _execute_rollback(
+        self,
+        execution,
+        failed_step,
+        context: Dict[str, Any]
+    ) -> str:
+        """
+        Execute a rollback step when the main step fails.
+
+        Args:
+            execution: OrchestrationExecution instance
+            failed_step: The step that failed
+            context: Current execution context
+
+        Returns:
+            'success' or 'failed'
+        """
+        from core.models_orchestration import OrchestrationStepExecution
+
+        workflow = execution.workflow
+        rollback_step_order = failed_step.rollback_step
+
+        # Find the rollback step definition
+        rollback_step = workflow.steps.filter(order=rollback_step_order).first()
+        if not rollback_step:
+            logger.error(f"Rollback step {rollback_step_order} not found in workflow")
+            return 'failed'
+
+        # Add failure context for the rollback step
+        rollback_context = {
+            **context,
+            'rollback_info': {
+                'failed_step_order': failed_step.order,
+                'failed_step_name': failed_step.name,
+                'failed_step_agent': failed_step.agent,
+                'error_message': context.get('last_error', 'Unknown error'),
+            }
+        }
+
+        try:
+            # Execute the rollback step (no retries for rollback)
+            result = self.step_executor.execute(
+                execution=execution,
+                step=rollback_step,
+                context=rollback_context,
+                attempt=0
+            )
+
+            if result['success']:
+                # Mark the step execution as rolled_back
+                step_exec = execution.step_executions.filter(
+                    step_number=failed_step.order
+                ).last()
+                if step_exec:
+                    step_exec.status = 'rolled_back'
+                    step_exec.save(update_fields=['status', 'updated_at'])
+
+                return 'success'
+            else:
+                return 'failed'
+
+        except Exception as e:
+            logger.error(f"Rollback step execution failed: {e}", exc_info=True)
+            return 'failed'
+
     def _aggregate_outputs(self, execution) -> Dict[str, Any]:
         """Aggregate outputs from all steps into final output."""
         outputs = {}
+        total_tokens = 0
 
         for step_exec in execution.step_executions.filter(status='completed'):
             if step_exec.output_data:
                 outputs[step_exec.agent_name] = step_exec.output_data
+                # Session 769: Sum tokens from step output_data.tokens_used
+                step_tokens = step_exec.output_data.get('tokens_used') or step_exec.tokens_used or 0
+                total_tokens += step_tokens
 
+        # Session 769: Include comprehensive cost breakdown
         return {
             'step_outputs': outputs,
             'total_cost': float(execution.total_cost),
-            'total_tokens': execution.total_tokens,
+            'total_tokens': total_tokens,
+            # Session 769: External API costs
+            'total_external_cost': float(execution.total_external_cost or 0),
+            'external_cost_breakdown': execution.external_cost_breakdown or {},
+            # Combined total
+            'total_combined_cost': float(
+                (execution.total_cost or Decimal('0')) +
+                (execution.total_external_cost or Decimal('0'))
+            ),
             'completed_at': timezone.now().isoformat(),
         }
 

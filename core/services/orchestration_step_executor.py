@@ -81,6 +81,10 @@ class OrchestrationStepExecutor:
 
         step_exec.mark_running()
 
+        # Session 768: Emit step started event
+        from core.services.orchestration_events import emit_step_started
+        emit_step_started(execution, step)
+
         try:
             # Build the task description from step config
             task = self._build_task(step, context)
@@ -111,9 +115,21 @@ class OrchestrationStepExecutor:
                 agent_context['user_id'] = user.id if hasattr(user, 'id') else None
                 agent_context['username'] = user.username if hasattr(user, 'username') else str(user)
 
+            # Session 769: Pre-gather context BEFORE starting the timeout
+            # This fixes the race condition where context gathering takes too long
+            # and the step times out before the agent even starts executing
+            logger.info(f"Step {step.order}: Pre-gathering context for {step.agent}...")
+            context_start = timezone.now()
+            pre_gathered_context = self.router.gather_context(
+                agent_name=step.agent,
+                task=task,
+                context=agent_context,
+            )
+            context_time = (timezone.now() - context_start).total_seconds()
+            logger.info(f"Step {step.order}: Context gathered in {context_time:.1f}s")
+
             # Session 767: Execute with timeout enforcement
-            # Use ThreadPoolExecutor to enforce timeout on agent execution
-            # Session 767 fix: Don't use context manager - it waits for task completion on exit
+            # Now the timeout only applies to agent execution, not context gathering
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
             try:
                 future = executor.submit(
@@ -121,6 +137,7 @@ class OrchestrationStepExecutor:
                     agent_name=step.agent,
                     task=task,
                     context=agent_context,
+                    pre_gathered_context=pre_gathered_context,
                 )
                 try:
                     result = future.result(timeout=timeout)
@@ -144,15 +161,47 @@ class OrchestrationStepExecutor:
             else:
                 output = {'result': str(result)}
 
-            # Get cost from agent if available
+            # Get cost and tokens from agent if available
             cost = Decimal('0.0000')
             tokens = 0
+            # Session 769: Track external API costs
+            external_cost = Decimal('0.0000')
+            external_breakdown = {}
 
             if hasattr(result, 'cost'):
                 cost = Decimal(str(result.cost))
-            elif isinstance(result, dict):
-                cost = Decimal(str(result.get('cost', 0)))
-                tokens = result.get('tokens', 0)
+            if hasattr(result, 'tokens_used'):
+                tokens = result.tokens_used or 0
+
+            # Also check dict format
+            if isinstance(result, dict):
+                if not cost:
+                    cost = Decimal(str(result.get('cost', 0)))
+                # Session 769: Check both 'tokens_used' and 'tokens' fields
+                if not tokens:
+                    tokens = result.get('tokens_used') or result.get('tokens') or 0
+
+                # Session 769: Extract external API costs from agent results
+                # Agents return cost_breakdown with keys like 'elevenlabs_tts', 'stability_ai', etc.
+                if 'total_external_cost' in result:
+                    external_cost = Decimal(str(result['total_external_cost']))
+                if 'cost_breakdown' in result:
+                    cost_data = result['cost_breakdown']
+                    # Extract external costs (non-LLM)
+                    for key in ['elevenlabs_tts', 'stability_ai', 'runway_ml', 'trained_voice']:
+                        if key in cost_data:
+                            val = cost_data[key]
+                            external_breakdown[key] = float(val) if val else 0
+                            if not external_cost:
+                                external_cost += Decimal(str(val)) if val else Decimal('0')
+
+            # Also check object attributes for external costs
+            if hasattr(result, 'total_external_cost') and result.total_external_cost:
+                external_cost = Decimal(str(result.total_external_cost))
+            if hasattr(result, 'cost_breakdown') and result.cost_breakdown:
+                for key in ['elevenlabs_tts', 'stability_ai', 'runway_ml', 'trained_voice']:
+                    if key in result.cost_breakdown:
+                        external_breakdown[key] = float(result.cost_breakdown[key])
 
             # Session 765: Capture execution_id for intelligence linking
             execution_id = None
@@ -167,24 +216,41 @@ class OrchestrationStepExecutor:
                 step_exec.save(update_fields=['execution_id'])
 
             # Mark step as completed
-            step_exec.mark_completed(output, cost, tokens)
+            # Session 769: Include external costs
+            step_exec.mark_completed(
+                output, cost, tokens,
+                external_cost=external_cost if external_cost else None,
+                external_breakdown=external_breakdown if external_breakdown else None
+            )
 
             logger.info(
                 f"Step {step.order} completed successfully. "
-                f"Cost: ${cost}, Tokens: {tokens}"
+                f"Cost: ${cost}, Tokens: {tokens}, "
+                f"External: ${external_cost} {external_breakdown if external_breakdown else ''}"
             )
+
+            # Session 768: Emit step completed event
+            from core.services.orchestration_events import emit_step_completed
+            emit_step_completed(execution, step, float(cost), tokens)
 
             return {
                 'success': True,
                 'output': output,
                 'cost': cost,
                 'tokens': tokens,
+                # Session 769: Include external costs in return
+                'external_cost': external_cost,
+                'external_breakdown': external_breakdown,
             }
 
         except TimeoutError as e:
             error_msg = f"Step timed out after {step.timeout_seconds}s"
             step_exec.mark_failed(error_msg)
             logger.warning(f"Step {step.order} timed out: {e}")
+
+            # Session 768: Emit step failed event
+            from core.services.orchestration_events import emit_step_failed
+            emit_step_failed(execution, step, error_msg)
 
             return {
                 'success': False,
@@ -195,6 +261,10 @@ class OrchestrationStepExecutor:
             error_msg = str(e)
             step_exec.mark_failed(error_msg)
             logger.error(f"Step {step.order} failed: {e}", exc_info=True)
+
+            # Session 768: Emit step failed event
+            from core.services.orchestration_events import emit_step_failed
+            emit_step_failed(execution, step, error_msg)
 
             return {
                 'success': False,

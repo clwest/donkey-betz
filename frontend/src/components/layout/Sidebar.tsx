@@ -40,6 +40,7 @@ import {
   GraduationCap,
   BarChart3,
   Stethoscope,
+  GitBranch,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -57,6 +58,7 @@ const navItems = [
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
   { path: '/body-health', label: 'Body Health', icon: Activity },
   { path: '/integration-health', label: 'Integration', icon: Stethoscope },
+  { path: '/orchestration', label: 'Orchestration', icon: GitBranch },
   { path: '/hive-mind', label: 'Hive Mind', icon: Users },
   { path: '/memory-palace', label: 'Memory Palace', icon: Castle },
   { path: '/evolution', label: 'Evolution', icon: Trophy },

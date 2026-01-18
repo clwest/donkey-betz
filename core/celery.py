@@ -106,6 +106,54 @@ app.conf.beat_schedule = {
             'expires': 900,
         }
     },
+    # Session 766: Human Attention lifecycle (auto-expire, auto-approve, escalation)
+    'process-human-attention-lifecycle': {
+        'task': 'core.tasks.process_human_attention_lifecycle',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+        'options': {
+            'expires': 600,
+        }
+    },
+    # Session 766: HiveMind synthesis to Orchestration
+    'process-hivemind-sessions': {
+        'task': 'core.tasks.process_hivemind_sessions',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,
+        }
+    },
+    # Session 766: High-scoring opportunities to Orchestration
+    'process-high-scoring-opportunities': {
+        'task': 'core.tasks.process_high_scoring_opportunities',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes
+        'options': {
+            'expires': 1200,
+        }
+    },
+    # Session 766: Spider Action Pipeline - convert spider data to actions
+    'process-spider-actions': {
+        'task': 'core.tasks.process_spider_actions',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,
+        }
+    },
+    # Session 766: Gate Progression Pipeline - auto-progress gates and start pilots
+    'process-gate-progression': {
+        'task': 'core.tasks.process_gate_progression',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,
+        }
+    },
+    # Session 766: Content Idea Pipeline - mine Dreams/Conversations for content ideas
+    'process-content-ideas': {
+        'task': 'core.tasks.process_content_ideas',
+        'schedule': crontab(hour='*/6'),  # Every 6 hours
+        'options': {
+            'expires': 21600,
+        }
+    },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system
     'evaluate-completed-predictions': {
@@ -394,6 +442,35 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=5, minute=30),  # Daily at 5:30 AM
         'options': {
             'expires': 3600,
+        }
+    },
+    # Session 767: Learning Pattern Mining
+    # Mines AgentLearning records to create discoverable patterns
+    'mine-learning-patterns': {
+        'task': 'core.tasks.mine_learning_patterns',
+        'schedule': crontab(hour='*/12', minute=45),  # Every 12 hours at :45
+        'kwargs': {'days_back': 30},
+        'options': {
+            'expires': 43200,  # 12 hours
+        }
+    },
+    # Session 767: Knowledge Freshness Maintenance
+    # Decays freshness scores and deactivates stale knowledge sources
+    'maintain-knowledge-freshness': {
+        'task': 'core.tasks.maintain_knowledge_freshness',
+        'schedule': crontab(hour=4, minute=15),  # Daily at 4:15 AM
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
+    # Session 767: Knowledge Promotion to SharedKnowledge
+    # Promotes high-confidence knowledge for all agents to access
+    'promote-to-shared-knowledge': {
+        'task': 'core.tasks.promote_to_shared_knowledge',
+        'schedule': crontab(day_of_week='sunday', hour=5, minute=0),  # Weekly on Sunday at 5 AM
+        'kwargs': {'min_confidence': 0.7},
+        'options': {
+            'expires': 86400,  # 24 hours
         }
     },
     'broadcast-learning-status': {
@@ -1746,6 +1823,14 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # 5 minutes
+        }
+    },
+    # Session 766: Execute approved dreams through orchestration layer
+    'execute-approved-dreams-via-orchestration': {
+        'task': 'core.tasks.execute_approved_dreams_via_orchestration',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+        'options': {
+            'expires': 600,  # 10 minutes
         }
     },
 }
