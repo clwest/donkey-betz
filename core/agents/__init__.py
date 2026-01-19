@@ -209,11 +209,12 @@ from core.agents.business import (
     MarketingStrategyAgent,
 )
 
-# Development Agents (Session 436)
+# Development Agents (Session 436, expanded Session 778)
 from core.agents.code_generator_agent import CodeGeneratorAgent
 from core.agents.fullstack_developer_agent import FullStackDeveloperAgent
 from core.agents.code_review_agent import CodeReviewAgent
 from core.agents.devops_agent import DevOpsAgent
+from core.agents.prompt_engineering_agent import PromptEngineeringAgent
 
 # Series Workflow Agent (Session 445)
 from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent, get_ai_series_workflow_agent
@@ -377,11 +378,12 @@ __all__ = [
     'BusinessContentStrategyAgent',
     'MarketingStrategyAgent',
 
-    # Development Agents (4) - Session 436
+    # Development Agents (5) - Session 436, expanded Session 778
     'CodeGeneratorAgent',
     'FullStackDeveloperAgent',
     'CodeReviewAgent',
     'DevOpsAgent',
+    'PromptEngineeringAgent',
 
     # Series Workflow Agent (1) - Session 445
     'AISeriesWorkflowAgent',
