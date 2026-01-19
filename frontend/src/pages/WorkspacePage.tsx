@@ -9,7 +9,7 @@ import {
   GitCommit, CheckCircle, XCircle, AlertTriangle,
   Loader2, Search, RotateCcw, Eye, Clock, X,
   FolderTree, Activity, Trash2, Heart, ExternalLink,
-  FileEdit, Users, PieChart, Calendar
+  FileEdit, Users, PieChart, Calendar, Wifi, WifiOff
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
@@ -31,6 +31,11 @@ interface Workspace {
     total_lines_of_code: number
     operations_count: number
   }
+  // Session 776: Tech stack data
+  tech_stack?: Record<string, string>
+  root_path?: string
+  workspace_type?: string
+  entry_points?: string[]
 }
 
 interface WorkspaceOperation {
@@ -562,12 +567,163 @@ function GitCommitModal({ onClose, onCommit, isLoading, bodyGovernance }: {
   )
 }
 
+// Session 776: Git Branch Modal
+function GitBranchModal({ onClose, onCreate, isLoading, bodyGovernance, currentBranch }: {
+  onClose: () => void
+  onCreate: (branchName: string) => void
+  isLoading: boolean
+  bodyGovernance?: { allowed: boolean; reason?: string }
+  currentBranch?: string
+}) {
+  const [branchName, setBranchName] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!branchName.trim()) return
+    if (bodyGovernance && !bodyGovernance.allowed) return
+    onCreate(branchName)
+  }
+
+  const isBlocked = bodyGovernance && !bodyGovernance.allowed
+
+  // Validate branch name (no spaces, special chars, etc.)
+  const isValidBranchName = branchName.trim().length > 0 && /^[a-zA-Z0-9_\-./]+$/.test(branchName)
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-md mx-4 p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Create New Branch</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Current Branch Info */}
+        {currentBranch && (
+          <div className="flex items-center gap-2 p-3 bg-dark-bg rounded-lg mb-4 text-sm">
+            <GitBranch size={16} className="text-primary-400" />
+            <span className="text-gray-400">From:</span>
+            <span className="font-mono text-primary-400">{currentBranch}</span>
+          </div>
+        )}
+
+        {/* Body Governance Warning */}
+        {bodyGovernance?.reason && (
+          <div className={cn(
+            'flex items-start gap-3 p-3 rounded-lg mb-4',
+            isBlocked
+              ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+              : 'bg-amber-500/20 border border-amber-500/30 text-amber-200'
+          )}>
+            {isBlocked ? (
+              <Heart size={18} className="text-red-400 animate-pulse flex-shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            )}
+            <div className="text-sm">
+              <p className="font-medium">{isBlocked ? 'Operation Blocked' : 'Health Warning'}</p>
+              <p className="opacity-90 mt-0.5">{bodyGovernance.reason}</p>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Branch Name *</label>
+            <input
+              type="text"
+              value={branchName}
+              onChange={(e) => setBranchName(e.target.value)}
+              placeholder="feature/my-new-feature"
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none font-mono"
+              required
+              disabled={isBlocked}
+            />
+            {branchName && !isValidBranchName && (
+              <p className="text-xs text-accent-amber mt-1">
+                Branch names can only contain letters, numbers, hyphens, underscores, dots, and slashes
+              </p>
+            )}
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading || !isValidBranchName || isBlocked}
+              className={cn(
+                'btn flex-1 flex items-center justify-center gap-2',
+                isBlocked ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'
+              )}
+              title={isBlocked ? bodyGovernance?.reason : undefined}
+            >
+              {isLoading && <Loader2 size={16} className="animate-spin" />}
+              <GitBranch size={16} />
+              {isBlocked ? 'Blocked' : 'Create Branch'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Session 776: File History Modal
+function FileHistoryModal({ filePath, operations, isLoading, onClose }: {
+  filePath: string
+  operations: WorkspaceOperation[]
+  isLoading: boolean
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div>
+            <h3 className="text-lg font-semibold">File History</h3>
+            <p className="text-xs text-gray-400 font-mono mt-1">{filePath}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-4 overflow-y-auto max-h-[60vh]">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 size={24} className="animate-spin text-primary-400" />
+            </div>
+          ) : operations.length > 0 ? (
+            <div className="space-y-3">
+              {operations.map(op => (
+                <OperationRow key={op.id} operation={op} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <History size={32} className="mx-auto text-gray-500 mb-2" />
+              <p className="text-gray-400">No operations recorded for this file</p>
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-dark-border flex justify-between items-center">
+          <span className="text-sm text-gray-400">{operations.length} operation{operations.length !== 1 ? 's' : ''}</span>
+          <button onClick={onClose} className="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function WorkspacePage() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview')
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [showCommitModal, setShowCommitModal] = useState(false)
+  const [showBranchModal, setShowBranchModal] = useState(false)
   const [selectedFilePath, setSelectedFilePath] = useState<string>()
+  const [showFileHistory, setShowFileHistory] = useState(false)
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [operationFilter, setOperationFilter] = useState<string>('')
   const queryClient = useQueryClient()
@@ -577,11 +733,23 @@ export default function WorkspacePage() {
     queryClient.invalidateQueries({ queryKey: ['workspace-files'] })
     queryClient.invalidateQueries({ queryKey: ['workspace-git-status'] })
     queryClient.invalidateQueries({ queryKey: ['workspace-operations'] })
+    queryClient.invalidateQueries({ queryKey: ['workspace-pending-reviews'] })
+    queryClient.invalidateQueries({ queryKey: ['workspace-stats'] })
+  }, [queryClient])
+
+  // Session 776: Handler for agent execution events that might affect workspace
+  const handleAgentExecution = useCallback(() => {
+    // Agent executions may create workspace operations
+    queryClient.invalidateQueries({ queryKey: ['workspace-operations'] })
+    queryClient.invalidateQueries({ queryKey: ['workspace-pending-reviews'] })
+    queryClient.invalidateQueries({ queryKey: ['workspace-stats'] })
   }, [queryClient])
 
   // Session 714: Subscribe to system events
-  useSystemEvents({
+  // Session 776: Added agent execution handlers for workspace operation updates
+  const { status: wsStatus } = useSystemEvents({
     onFileModified: handleFileModified,
+    onAgentExecutionComplete: handleAgentExecution,
   })
 
   // Session 713: Body Governance - Check file write permissions
@@ -635,6 +803,13 @@ export default function WorkspacePage() {
     queryKey: ['workspace-file', activeWorkspace?.id, selectedFilePath],
     queryFn: () => activeWorkspace && selectedFilePath ? workspaceApi.readFile(activeWorkspace.id, selectedFilePath) : null,
     enabled: !!activeWorkspace?.id && !!selectedFilePath,
+  })
+
+  // Session 776: File history for selected file
+  const { data: fileHistoryData, isLoading: loadingFileHistory } = useQuery({
+    queryKey: ['workspace-file-history', activeWorkspace?.id, selectedFilePath],
+    queryFn: () => activeWorkspace && selectedFilePath ? workspaceApi.fileHistory(activeWorkspace.id, selectedFilePath) : null,
+    enabled: !!activeWorkspace?.id && !!selectedFilePath && showFileHistory,
   })
 
   // Operations
@@ -704,6 +879,20 @@ export default function WorkspacePage() {
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to create commit' })
+    },
+  })
+
+  // Session 776: Git Branch Creation
+  const createBranchMutation = useMutation({
+    mutationFn: ({ id, branchName }: { id: string; branchName: string }) =>
+      workspaceApi.gitBranch(id, { branch_name: branchName }),
+    onSuccess: (data) => {
+      refetchGitStatus()
+      setShowBranchModal(false)
+      setActionResult({ type: 'success', message: `Branch "${data?.data?.branch_name}" created` })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to create branch' })
     },
   })
 
@@ -806,6 +995,21 @@ export default function WorkspacePage() {
           <p className="text-sm text-gray-400 mt-1">SKIN Layer - Agent Project Execution System</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Session 776: WebSocket status indicator */}
+          <div
+            className={cn(
+              'flex items-center gap-1.5 px-2 py-1 rounded text-xs',
+              wsStatus === 'connected' ? 'bg-accent-green/10 text-accent-green' :
+              wsStatus === 'connecting' ? 'bg-accent-amber/10 text-accent-amber' :
+              'bg-gray-500/10 text-gray-500'
+            )}
+            title={`WebSocket: ${wsStatus}${wsStatus === 'connected' ? ' - Real-time updates active' : ''}`}
+          >
+            {wsStatus === 'connected' ? <Wifi size={12} /> : <WifiOff size={12} />}
+            <span className="hidden sm:inline">
+              {wsStatus === 'connected' ? 'Live' : wsStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+            </span>
+          </div>
           <button
             onClick={() => setShowWorkspaceSelector(true)}
             className="btn btn-secondary flex items-center gap-2"
@@ -1066,6 +1270,24 @@ export default function WorkspacePage() {
                 </div>
               )}
 
+              {/* Session 776: Tech Stack Display */}
+              {activeWorkspace?.tech_stack && Object.keys(activeWorkspace.tech_stack).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Code size={18} className="text-accent-cyan" />
+                    <h3 className="text-lg font-semibold">Tech Stack</h3>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {Object.entries(activeWorkspace.tech_stack).map(([category, technology]) => (
+                      <div key={category} className="bg-dark-bg rounded-lg p-3">
+                        <p className="text-xs text-gray-400 capitalize mb-1">{category.replace('_', ' ')}</p>
+                        <p className="text-sm font-medium text-accent-cyan">{technology}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Session 712: Body Health Card - SKIN connected to Body */}
               {bodyVitals && (
                 <div className="card">
@@ -1203,15 +1425,27 @@ export default function WorkspacePage() {
                     <h3 className="text-lg font-semibold">
                       {selectedFilePath ? selectedFilePath.split('/').pop() : 'Select a file'}
                     </h3>
-                    {selectedFilePath && fileContentData?.data && (
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        {fileContentData.data.size !== undefined && (
-                          <span>{(fileContentData.data.size / 1024).toFixed(1)} KB</span>
-                        )}
-                        {fileContentData.data.truncated && (
-                          <span className="px-2 py-0.5 bg-accent-amber/20 text-accent-amber rounded">
-                            Truncated (file too large)
-                          </span>
+                    {selectedFilePath && (
+                      <div className="flex items-center gap-3">
+                        {/* Session 776: View History button */}
+                        <button
+                          onClick={() => setShowFileHistory(true)}
+                          className="btn btn-secondary btn-sm flex items-center gap-1.5"
+                        >
+                          <History size={14} />
+                          View History
+                        </button>
+                        {fileContentData?.data && (
+                          <div className="flex items-center gap-3 text-xs text-gray-500">
+                            {fileContentData.data.size !== undefined && (
+                              <span>{(fileContentData.data.size / 1024).toFixed(1)} KB</span>
+                            )}
+                            {fileContentData.data.truncated && (
+                              <span className="px-2 py-0.5 bg-accent-amber/20 text-accent-amber rounded">
+                                Truncated (file too large)
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
@@ -1290,6 +1524,22 @@ export default function WorkspacePage() {
                 >
                   <GitCommit size={16} />
                   New Commit
+                  {!canWriteFile.allowed && (
+                    <Heart size={14} className="text-red-400 animate-pulse ml-1" />
+                  )}
+                </button>
+                {/* Session 776: New Branch button */}
+                <button
+                  onClick={() => setShowBranchModal(true)}
+                  disabled={!canWriteFile.allowed}
+                  className={cn(
+                    'btn flex items-center gap-2',
+                    canWriteFile.allowed ? 'btn-secondary' : 'btn-secondary opacity-50 cursor-not-allowed'
+                  )}
+                  title={!canWriteFile.allowed ? canWriteFile.reason : undefined}
+                >
+                  <GitBranch size={16} />
+                  New Branch
                   {!canWriteFile.allowed && (
                     <Heart size={14} className="text-red-400 animate-pulse ml-1" />
                   )}
@@ -1451,6 +1701,27 @@ export default function WorkspacePage() {
           onCommit={(message) => commitMutation.mutate({ id: activeWorkspace.id, message })}
           isLoading={commitMutation.isPending}
           bodyGovernance={canWriteFile}
+        />
+      )}
+
+      {/* Session 776: Git Branch Modal */}
+      {showBranchModal && activeWorkspace && (
+        <GitBranchModal
+          onClose={() => setShowBranchModal(false)}
+          onCreate={(branchName) => createBranchMutation.mutate({ id: activeWorkspace.id, branchName })}
+          isLoading={createBranchMutation.isPending}
+          bodyGovernance={canWriteFile}
+          currentBranch={gitStatus.branch}
+        />
+      )}
+
+      {/* Session 776: File History Modal */}
+      {showFileHistory && selectedFilePath && (
+        <FileHistoryModal
+          filePath={selectedFilePath}
+          operations={(fileHistoryData?.data?.operations || []) as WorkspaceOperation[]}
+          isLoading={loadingFileHistory}
+          onClose={() => setShowFileHistory(false)}
         />
       )}
 

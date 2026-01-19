@@ -1081,6 +1081,10 @@ export const workspaceApi = {
   operations: (id: string, params?: { type?: string; agent?: string; success?: boolean }) =>
     api.get(`/workspaces/${id}/operations/`, { params }),
   stats: (id: string) => api.get(`/workspaces/${id}/stats/`),
+
+  // Session 776: File History
+  fileHistory: (id: string, path: string) =>
+    api.get(`/workspaces/${id}/file-history/`, { params: { path } }),
 }
 
 // Session 696: Workspace Operations API (Audit Trail)
