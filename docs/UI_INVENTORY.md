@@ -2,7 +2,7 @@
 
 **Last Updated:** January 18, 2026 - Session 775
 **Frontend Stack:** React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
-**Total Lines:** 45,678 (pages only)
+**Total Lines:** 51,512 (all frontend source)
 
 ---
 
@@ -15,7 +15,28 @@
 | **Total Modals/Dialogs** | ~65 |
 | **Total Components** | 11 |
 | **Lines of TSX (pages)** | 45,678 |
+| **Lines of TS (lib/stores/hooks)** | 5,834 |
+| **Total Frontend Source** | 51,512 |
 | **API Endpoints Used** | 55+ |
+
+### Non-Page Source Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `lib/api.ts` | 2,251 | API client (55+ endpoints) |
+| `stores/unifiedStore.ts` | 426 | Unified state store |
+| `components/HeartWidget.tsx` | 420 | Body systems widget |
+| `hooks/useWebSocket.ts` | 416 | WebSocket hook |
+| `components/DiagnosticPanel.tsx` | 376 | Diagnostic display |
+| `components/EntityLink.tsx` | 349 | Entity navigation links |
+| `stores/bodyStore.ts` | 318 | Body systems state |
+| `components/Breadcrumb.tsx` | 223 | Navigation breadcrumbs |
+| `components/GlobalAlertBanner.tsx` | 209 | Alert notifications |
+| `services/bodyGovernance.ts` | 191 | Body governance service |
+| `components/layout/Sidebar.tsx` | 183 | Navigation sidebar |
+| `stores/navigationStore.ts` | 144 | Navigation state |
+| `App.tsx` | 119 | App root component |
+| Other files | ~200 | Various utilities |
 
 ---
 
