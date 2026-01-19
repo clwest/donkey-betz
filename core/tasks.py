@@ -25307,3 +25307,840 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     except Exception as e:
         logger.error(f"📊 [SKIN LAYER] Daily summary failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# Session 777: UNIVERSAL AGENT WORKSPACE INTEGRATION
+# All 74 agents connected to SKIN Layer for workspace output
+# =============================================================================
+
+# Agent Registry: Maps agent names to their output configurations
+AGENT_WORKSPACE_REGISTRY = {
+    # =========================================================================
+    # ANALYSIS & RESEARCH AGENTS - Produce reports and analysis
+    # =========================================================================
+    'ResearchAgent': {
+        'category': 'research',
+        'output_dir': 'research',
+        'output_type': 'report',
+        'task_template': 'Research current trends and developments in {topic}',
+        'default_topic': 'AI and technology innovation',
+    },
+    'TrendAnalysisAgent': {
+        'category': 'research',
+        'output_dir': 'analysis/trends',
+        'output_type': 'report',
+        'task_template': 'Analyze emerging trends in {topic}',
+        'default_topic': 'technology and market movements',
+    },
+    'MarketIntelligenceAgent': {
+        'category': 'research',
+        'output_dir': 'analysis/market',
+        'output_type': 'report',
+        'task_template': 'Provide market intelligence analysis for {topic}',
+        'default_topic': 'current market conditions',
+    },
+    'CompetitorAnalysisAgent': {
+        'category': 'research',
+        'output_dir': 'analysis/competitors',
+        'output_type': 'report',
+        'task_template': 'Analyze competitive landscape for {topic}',
+        'default_topic': 'AI content creation tools',
+    },
+    'CustomerResearchAgent': {
+        'category': 'research',
+        'output_dir': 'analysis/customers',
+        'output_type': 'report',
+        'task_template': 'Research customer insights for {topic}',
+        'default_topic': 'AI-powered productivity tools',
+    },
+    'OpportunityScoringAgent': {
+        'category': 'research',
+        'output_dir': 'analysis/opportunities',
+        'output_type': 'report',
+        'task_template': 'Score and analyze opportunities in {topic}',
+        'default_topic': 'emerging technology markets',
+    },
+
+    # =========================================================================
+    # STRATEGY AGENTS - Produce strategy documents
+    # =========================================================================
+    'BrandStrategyAgent': {
+        'category': 'strategy',
+        'output_dir': 'strategy/brand',
+        'output_type': 'strategy',
+        'task_template': 'Develop brand strategy recommendations for {topic}',
+        'default_topic': 'AI-powered platforms',
+    },
+    'ContentStrategyAgent': {
+        'category': 'strategy',
+        'output_dir': 'strategy/content',
+        'output_type': 'strategy',
+        'task_template': 'Create content strategy for {topic}',
+        'default_topic': 'technical blog and documentation',
+    },
+    'MarketingStrategyAgent': {
+        'category': 'strategy',
+        'output_dir': 'strategy/marketing',
+        'output_type': 'strategy',
+        'task_template': 'Develop marketing strategy for {topic}',
+        'default_topic': 'developer tools and platforms',
+    },
+    'SEOOptimizerAgent': {
+        'category': 'strategy',
+        'output_dir': 'strategy/seo',
+        'output_type': 'report',
+        'task_template': 'SEO optimization recommendations for {topic}',
+        'default_topic': 'AI development content',
+    },
+    'SocialMediaAgent': {
+        'category': 'strategy',
+        'output_dir': 'strategy/social',
+        'output_type': 'strategy',
+        'task_template': 'Social media strategy for {topic}',
+        'default_topic': 'AI and tech community engagement',
+    },
+    'BrandIdentityAgent': {
+        'category': 'strategy',
+        'output_dir': 'strategy/identity',
+        'output_type': 'strategy',
+        'task_template': 'Brand identity guidelines for {topic}',
+        'default_topic': 'AI-first technology brands',
+    },
+
+    # =========================================================================
+    # CONTENT CREATION AGENTS - Produce content files
+    # =========================================================================
+    'ContentWriterAgent': {
+        'category': 'content',
+        'output_dir': 'content/articles',
+        'output_type': 'article',
+        'task_template': 'Write an informative article about {topic}',
+        'default_topic': 'AI development best practices',
+    },
+    'TechnicalDocumentAgent': {
+        'category': 'content',
+        'output_dir': 'content/documentation',
+        'output_type': 'documentation',
+        'task_template': 'Create technical documentation for {topic}',
+        'default_topic': 'API integration patterns',
+    },
+    'LegalDocDrafterAgent': {
+        'category': 'content',
+        'output_dir': 'content/legal',
+        'output_type': 'document',
+        'task_template': 'Draft legal document template for {topic}',
+        'default_topic': 'software licensing terms',
+    },
+
+    # =========================================================================
+    # FINANCIAL/MARKET AGENTS - Produce market analysis
+    # =========================================================================
+    'StockAuditCoordinator': {
+        'category': 'financial',
+        'output_dir': 'financial/stocks',
+        'output_type': 'report',
+        'task_template': 'Coordinate comprehensive stock analysis for {topic}',
+        'default_topic': 'AI and technology sector',
+    },
+    'StockAnalystAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/analysis',
+        'output_type': 'report',
+        'task_template': 'Analyze stock performance for {topic}',
+        'default_topic': 'major tech companies',
+    },
+    'MarketMovementMonitorAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/movements',
+        'output_type': 'report',
+        'task_template': 'Monitor market movements for {topic}',
+        'default_topic': 'technology sector indices',
+    },
+    'InstitutionalWatcherAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/institutional',
+        'output_type': 'report',
+        'task_template': 'Track institutional activity in {topic}',
+        'default_topic': 'AI company holdings',
+    },
+    'MarketAnomalyDetectorAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/anomalies',
+        'output_type': 'alert',
+        'task_template': 'Detect market anomalies in {topic}',
+        'default_topic': 'technology stocks',
+    },
+    'BullCaseAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/bull-cases',
+        'output_type': 'analysis',
+        'task_template': 'Build bull case analysis for {topic}',
+        'default_topic': 'AI sector growth',
+    },
+    'BearCaseAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/bear-cases',
+        'output_type': 'analysis',
+        'task_template': 'Build bear case analysis for {topic}',
+        'default_topic': 'AI sector risks',
+    },
+    'SignalScannerAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/signals',
+        'output_type': 'report',
+        'task_template': 'Scan for trading signals in {topic}',
+        'default_topic': 'technology stocks',
+    },
+    'MarketIntelligenceCoordinator': {
+        'category': 'financial',
+        'output_dir': 'financial/intelligence',
+        'output_type': 'report',
+        'task_template': 'Coordinate market intelligence for {topic}',
+        'default_topic': 'global technology markets',
+    },
+
+    # =========================================================================
+    # PREDICTION/BETTING AGENTS - Produce predictions and odds analysis
+    # =========================================================================
+    'PredictionMarketAnalyst': {
+        'category': 'predictions',
+        'output_dir': 'predictions/markets',
+        'output_type': 'analysis',
+        'task_template': 'Analyze prediction markets for {topic}',
+        'default_topic': 'technology and AI developments',
+    },
+    'SportsOddsAnalyst': {
+        'category': 'predictions',
+        'output_dir': 'predictions/sports',
+        'output_type': 'analysis',
+        'task_template': 'Analyze sports betting opportunities for {topic}',
+        'default_topic': 'upcoming major sporting events',
+    },
+    'ArbitrageDetector': {
+        'category': 'predictions',
+        'output_dir': 'predictions/arbitrage',
+        'output_type': 'alert',
+        'task_template': 'Detect arbitrage opportunities in {topic}',
+        'default_topic': 'sports betting markets',
+    },
+
+    # =========================================================================
+    # BLOCKCHAIN AGENTS - Produce blockchain analysis
+    # =========================================================================
+    'BlockchainAuditCoordinator': {
+        'category': 'blockchain',
+        'output_dir': 'blockchain/audits',
+        'output_type': 'report',
+        'task_template': 'Coordinate blockchain audit for {topic}',
+        'default_topic': 'DeFi protocols',
+    },
+    'SmartContractAuditorAgent': {
+        'category': 'blockchain',
+        'output_dir': 'blockchain/contracts',
+        'output_type': 'audit',
+        'task_template': 'Audit smart contract patterns for {topic}',
+        'default_topic': 'common DeFi vulnerabilities',
+    },
+    'TransactionMonitorAgent': {
+        'category': 'blockchain',
+        'output_dir': 'blockchain/transactions',
+        'output_type': 'report',
+        'task_template': 'Monitor blockchain transactions for {topic}',
+        'default_topic': 'large wallet movements',
+    },
+    'WhaleWatcherAgent': {
+        'category': 'blockchain',
+        'output_dir': 'blockchain/whales',
+        'output_type': 'alert',
+        'task_template': 'Track whale activity for {topic}',
+        'default_topic': 'major cryptocurrency wallets',
+    },
+    'ExploitDetectorAgent': {
+        'category': 'blockchain',
+        'output_dir': 'blockchain/exploits',
+        'output_type': 'alert',
+        'task_template': 'Detect potential exploits in {topic}',
+        'default_topic': 'DeFi protocol patterns',
+    },
+
+    # =========================================================================
+    # NARRATIVE/CULTURAL AGENTS - Produce narrative analysis
+    # =========================================================================
+    'NarrativeDriftCoordinator': {
+        'category': 'narrative',
+        'output_dir': 'narrative/drift',
+        'output_type': 'report',
+        'task_template': 'Analyze narrative drift patterns for {topic}',
+        'default_topic': 'AI technology discourse',
+    },
+    'NarrativeHistorianAgent': {
+        'category': 'narrative',
+        'output_dir': 'narrative/history',
+        'output_type': 'report',
+        'task_template': 'Document narrative history for {topic}',
+        'default_topic': 'AI development milestones',
+    },
+    'TrendBreakDetectorAgent': {
+        'category': 'narrative',
+        'output_dir': 'narrative/trends',
+        'output_type': 'alert',
+        'task_template': 'Detect trend breaks in {topic}',
+        'default_topic': 'technology narratives',
+    },
+    'CulturalImpactAgent': {
+        'category': 'narrative',
+        'output_dir': 'narrative/cultural',
+        'output_type': 'report',
+        'task_template': 'Analyze cultural impact of {topic}',
+        'default_topic': 'AI on society and work',
+    },
+
+    # =========================================================================
+    # PODCAST/DEBATE AGENTS - Produce show notes and transcripts
+    # =========================================================================
+    'PodcastCoordinatorAgent': {
+        'category': 'podcast',
+        'output_dir': 'podcast/episodes',
+        'output_type': 'show_notes',
+        'task_template': 'Generate podcast episode outline for {topic}',
+        'default_topic': 'AI innovation and ethics',
+    },
+    'DebateAdvocateAgent': {
+        'category': 'podcast',
+        'output_dir': 'podcast/debates/advocate',
+        'output_type': 'argument',
+        'task_template': 'Build advocate arguments for {topic}',
+        'default_topic': 'benefits of AI automation',
+    },
+    'DebateSkepticAgent': {
+        'category': 'podcast',
+        'output_dir': 'podcast/debates/skeptic',
+        'output_type': 'argument',
+        'task_template': 'Build skeptic arguments for {topic}',
+        'default_topic': 'risks of AI automation',
+    },
+    'ModeratorAgent': {
+        'category': 'podcast',
+        'output_dir': 'podcast/moderation',
+        'output_type': 'summary',
+        'task_template': 'Moderate discussion and summarize for {topic}',
+        'default_topic': 'AI development debates',
+    },
+    'AutonomousContentStudioCoordinator': {
+        'category': 'podcast',
+        'output_dir': 'podcast/studio',
+        'output_type': 'production_plan',
+        'task_template': 'Create content studio production plan for {topic}',
+        'default_topic': 'weekly AI news coverage',
+    },
+    'TopicMinerAgent': {
+        'category': 'podcast',
+        'output_dir': 'podcast/topics',
+        'output_type': 'topic_list',
+        'task_template': 'Mine trending topics for {topic}',
+        'default_topic': 'AI and technology news',
+    },
+    'ContrarianAgent': {
+        'category': 'podcast',
+        'output_dir': 'podcast/contrarian',
+        'output_type': 'perspective',
+        'task_template': 'Provide contrarian perspective on {topic}',
+        'default_topic': 'popular AI assumptions',
+    },
+    'PerformanceAnalystAgent': {
+        'category': 'podcast',
+        'output_dir': 'podcast/performance',
+        'output_type': 'report',
+        'task_template': 'Analyze content performance for {topic}',
+        'default_topic': 'recent podcast episodes',
+    },
+
+    # =========================================================================
+    # DEVELOPMENT AGENTS - Produce code and technical artifacts
+    # =========================================================================
+    'CodeGeneratorAgent': {
+        'category': 'development',
+        'output_dir': 'development/generated',
+        'output_type': 'code',
+        'task_template': 'Generate code example for {topic}',
+        'default_topic': 'Python utility functions',
+    },
+    'FullStackDeveloperAgent': {
+        'category': 'development',
+        'output_dir': 'development/fullstack',
+        'output_type': 'code',
+        'task_template': 'Create full-stack implementation plan for {topic}',
+        'default_topic': 'REST API endpoints',
+    },
+    'CodeReviewAgent': {
+        'category': 'development',
+        'output_dir': 'development/reviews',
+        'output_type': 'review',
+        'task_template': 'Code review guidelines for {topic}',
+        'default_topic': 'Python best practices',
+    },
+    'DevOpsAgent': {
+        'category': 'development',
+        'output_dir': 'development/devops',
+        'output_type': 'runbook',
+        'task_template': 'Create DevOps runbook for {topic}',
+        'default_topic': 'CI/CD pipeline maintenance',
+    },
+    'PromptEngineeringAgent': {
+        'category': 'development',
+        'output_dir': 'development/prompts',
+        'output_type': 'prompt_library',
+        'task_template': 'Design prompt templates for {topic}',
+        'default_topic': 'code generation tasks',
+    },
+
+    # =========================================================================
+    # MEDIA CREATION AGENTS - Produce creative briefs
+    # =========================================================================
+    'ImageAgent': {
+        'category': 'media',
+        'output_dir': 'media/images',
+        'output_type': 'creative_brief',
+        'task_template': 'Create image generation brief for {topic}',
+        'default_topic': 'AI technology visualizations',
+    },
+    'VideoAgent': {
+        'category': 'media',
+        'output_dir': 'media/videos',
+        'output_type': 'creative_brief',
+        'task_template': 'Create video production brief for {topic}',
+        'default_topic': 'AI explainer videos',
+    },
+    'AudioAgent': {
+        'category': 'media',
+        'output_dir': 'media/audio',
+        'output_type': 'creative_brief',
+        'task_template': 'Create audio production brief for {topic}',
+        'default_topic': 'podcast intro music',
+    },
+    'ThreeDAgent': {
+        'category': 'media',
+        'output_dir': 'media/3d',
+        'output_type': 'creative_brief',
+        'task_template': 'Create 3D asset brief for {topic}',
+        'default_topic': 'AI visualization models',
+    },
+    'ImageEditingAgent': {
+        'category': 'media',
+        'output_dir': 'media/editing/images',
+        'output_type': 'editing_guide',
+        'task_template': 'Create image editing guidelines for {topic}',
+        'default_topic': 'brand consistency',
+    },
+    'VideoEditingAgent': {
+        'category': 'media',
+        'output_dir': 'media/editing/videos',
+        'output_type': 'editing_guide',
+        'task_template': 'Create video editing guidelines for {topic}',
+        'default_topic': 'content pacing and structure',
+    },
+    'ResolveAgent': {
+        'category': 'media',
+        'output_dir': 'media/resolve',
+        'output_type': 'project_settings',
+        'task_template': 'Create DaVinci Resolve project settings for {topic}',
+        'default_topic': 'YouTube content workflow',
+    },
+    'TrainedCreationAgent': {
+        'category': 'media',
+        'output_dir': 'media/trained',
+        'output_type': 'style_guide',
+        'task_template': 'Document trained model style guide for {topic}',
+        'default_topic': 'brand-specific imagery',
+    },
+    'CharacterTrainingAgent': {
+        'category': 'media',
+        'output_dir': 'media/characters',
+        'output_type': 'character_sheet',
+        'task_template': 'Create character training documentation for {topic}',
+        'default_topic': 'AI mascot characters',
+    },
+
+    # =========================================================================
+    # COORDINATION/EXECUTIVE AGENTS - Produce summaries and plans
+    # =========================================================================
+    'CTOAgent': {
+        'category': 'executive',
+        'output_dir': 'executive/cto',
+        'output_type': 'memo',
+        'task_template': 'Technical leadership memo on {topic}',
+        'default_topic': 'architecture decisions',
+    },
+    'COOAgent': {
+        'category': 'executive',
+        'output_dir': 'executive/coo',
+        'output_type': 'memo',
+        'task_template': 'Operations memo on {topic}',
+        'default_topic': 'process improvements',
+    },
+    'CreativeDirectorAgent': {
+        'category': 'executive',
+        'output_dir': 'executive/creative',
+        'output_type': 'direction',
+        'task_template': 'Creative direction for {topic}',
+        'default_topic': 'upcoming content campaigns',
+    },
+    'MeetingCoordinatorAgent': {
+        'category': 'executive',
+        'output_dir': 'executive/meetings',
+        'output_type': 'agenda',
+        'task_template': 'Meeting agenda for {topic}',
+        'default_topic': 'weekly team sync',
+    },
+    'WorkflowAgent': {
+        'category': 'coordination',
+        'output_dir': 'workflows/definitions',
+        'output_type': 'workflow',
+        'task_template': 'Define workflow for {topic}',
+        'default_topic': 'content production pipeline',
+    },
+    'WorkflowOrchestrationAgent': {
+        'category': 'coordination',
+        'output_dir': 'workflows/orchestration',
+        'output_type': 'orchestration_plan',
+        'task_template': 'Orchestration plan for {topic}',
+        'default_topic': 'multi-agent collaboration',
+    },
+    'OpportunityPipelineAgent': {
+        'category': 'coordination',
+        'output_dir': 'pipelines/opportunities',
+        'output_type': 'pipeline_status',
+        'task_template': 'Pipeline status for {topic}',
+        'default_topic': 'active opportunities',
+    },
+    'ContentExecutorAgent': {
+        'category': 'coordination',
+        'output_dir': 'execution/content',
+        'output_type': 'execution_log',
+        'task_template': 'Content execution log for {topic}',
+        'default_topic': 'recent content deliverables',
+    },
+    'CampaignOrchestratorAgent': {
+        'category': 'coordination',
+        'output_dir': 'campaigns/orchestration',
+        'output_type': 'campaign_plan',
+        'task_template': 'Campaign orchestration plan for {topic}',
+        'default_topic': 'quarterly content campaign',
+    },
+    'AISeriesWorkflowAgent': {
+        'category': 'coordination',
+        'output_dir': 'series/workflows',
+        'output_type': 'series_plan',
+        'task_template': 'AI series workflow plan for {topic}',
+        'default_topic': 'educational content series',
+    },
+    'ContentDiversityOrchestrator': {
+        'category': 'coordination',
+        'output_dir': 'diversity/analysis',
+        'output_type': 'diversity_report',
+        'task_template': 'Content diversity analysis for {topic}',
+        'default_topic': 'recent content output',
+    },
+
+    # =========================================================================
+    # SYSTEM/SECURITY AGENTS - Produce system reports
+    # =========================================================================
+    'SystemIntelligenceAgent': {
+        'category': 'system',
+        'output_dir': 'system/intelligence',
+        'output_type': 'status_report',
+        'task_template': 'System intelligence report on {topic}',
+        'default_topic': 'overall platform health',
+    },
+    'ThinkingAgent': {
+        'category': 'system',
+        'output_dir': 'system/thinking',
+        'output_type': 'reflection',
+        'task_template': 'Thinking reflection on {topic}',
+        'default_topic': 'system improvement opportunities',
+    },
+    'MemoryIsolationAgent': {
+        'category': 'security',
+        'output_dir': 'security/memory',
+        'output_type': 'audit',
+        'task_template': 'Memory isolation audit for {topic}',
+        'default_topic': 'cross-agent data boundaries',
+    },
+    'ContentAuditAgent': {
+        'category': 'security',
+        'output_dir': 'security/content',
+        'output_type': 'audit',
+        'task_template': 'Content audit report for {topic}',
+        'default_topic': 'recent content output quality',
+    },
+
+    # =========================================================================
+    # PERSONAL ASSISTANT - Special handling
+    # =========================================================================
+    'PersonalAssistantAgent': {
+        'category': 'assistant',
+        'output_dir': 'assistant/logs',
+        'output_type': 'activity_log',
+        'task_template': 'Personal assistant activity summary for {topic}',
+        'default_topic': 'recent interactions and tasks',
+    },
+}
+
+# Get all categories for scheduling
+AGENT_CATEGORIES = list(set(config['category'] for config in AGENT_WORKSPACE_REGISTRY.values()))
+
+
+@shared_task(name='core.tasks.universal_agent_workspace_output')
+def universal_agent_workspace_output(agent_name: str, topic: str = None):
+    """
+    Session 777: Universal task to execute any agent and write output to workspace.
+
+    This task can run any registered agent and write its output to the SKIN Layer.
+
+    Args:
+        agent_name: Name of the agent to execute
+        topic: Optional topic override
+
+    Returns:
+        Operation result
+    """
+    from django.contrib.auth import get_user_model
+    from core.models_skin_layer import ProjectWorkspace
+    from core.services.workspace_manager import WorkspaceManager
+    from datetime import datetime
+    import importlib
+
+    logger.info(f"🤖 [SKIN LAYER] Universal agent execution: {agent_name}")
+
+    # Get agent config
+    config = AGENT_WORKSPACE_REGISTRY.get(agent_name)
+    if not config:
+        logger.warning(f"Agent {agent_name} not in registry, using defaults")
+        config = {
+            'category': 'uncategorized',
+            'output_dir': f'agents/{agent_name.lower()}',
+            'output_type': 'output',
+            'task_template': 'Generate output for {topic}',
+            'default_topic': 'general task',
+        }
+
+    User = get_user_model()
+
+    try:
+        user = User.objects.filter(is_superuser=True).first()
+        if not user:
+            return {'success': False, 'error': 'No admin user found'}
+
+        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        if not workspace:
+            return {'success': False, 'error': 'No active workspace found'}
+
+        # Determine topic
+        actual_topic = topic or config['default_topic']
+        task_description = config['task_template'].format(topic=actual_topic)
+
+        # Dynamically import and instantiate agent
+        agent_class = None
+
+        # Try common module patterns
+        module_patterns = [
+            f"core.agents.{agent_name.lower().replace('agent', '_agent')}",
+            f"core.agents.{agent_name.lower()}",
+            f"core.agents.{agent_name[0].lower() + agent_name[1:]}",
+        ]
+
+        # Convert CamelCase to snake_case for module name
+        import re
+        snake_name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', agent_name)
+        snake_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', snake_name).lower()
+        module_patterns.insert(0, f"core.agents.{snake_name}")
+
+        for module_path in module_patterns:
+            try:
+                module = importlib.import_module(module_path)
+                if hasattr(module, agent_name):
+                    agent_class = getattr(module, agent_name)
+                    break
+            except (ImportError, ModuleNotFoundError):
+                continue
+
+        if not agent_class:
+            # Try to get from agent registry
+            try:
+                from core.agent_router import AgentRouter
+                router = AgentRouter()
+                agent_class = router.get_agent_class(agent_name)
+            except Exception:
+                pass
+
+        if not agent_class:
+            return {
+                'success': False,
+                'error': f'Could not find agent class: {agent_name}',
+                'tried_modules': module_patterns
+            }
+
+        # Execute agent
+        agent = agent_class()
+        result = agent.execute(
+            task=task_description,
+            context={'topic': actual_topic, 'output_format': 'markdown'},
+            scifi_context={},
+            spider_context={}
+        )
+
+        # Extract output from AgentResult
+        if hasattr(result, 'data'):
+            output_content = result.data.get('output', '') or result.message or f'Execution completed for: {task_description}'
+        else:
+            output_content = str(result)
+
+        # Format output file
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        safe_topic = actual_topic[:30].replace(' ', '_').replace('/', '-').replace(':', '')
+        filename = f"{config['output_dir']}/{config['output_type']}_{safe_topic}_{timestamp}.md"
+
+        content = f"""# {agent_name}: {actual_topic}
+Type: {config['output_type'].replace('_', ' ').title()}
+Category: {config['category'].title()}
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+---
+
+{output_content}
+
+---
+*Generated via SKIN Layer - Universal Agent Workspace Integration*
+"""
+
+        # Write to workspace
+        manager = WorkspaceManager(user)
+        operation = manager.write_file(
+            workspace=workspace,
+            file_path=filename,
+            content=content,
+            agent_name=agent_name,
+            agent_task=task_description
+        )
+
+        logger.info(
+            f"🤖 [SKIN LAYER] {agent_name} output written: {filename} "
+            f"(success: {operation.success})"
+        )
+
+        return {
+            'success': operation.success,
+            'agent': agent_name,
+            'category': config['category'],
+            'file': filename,
+            'topic': actual_topic,
+            'operation_id': str(operation.id)
+        }
+
+    except Exception as e:
+        logger.error(f"🤖 [SKIN LAYER] {agent_name} execution failed: {e}", exc_info=True)
+        return {'success': False, 'agent': agent_name, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.agent_category_rotation')
+def agent_category_rotation(category: str):
+    """
+    Session 777: Execute all agents in a category and write outputs to workspace.
+
+    This task runs all agents in a given category sequentially.
+
+    Args:
+        category: The agent category to execute (research, financial, etc.)
+
+    Returns:
+        Summary of all agent executions
+    """
+    logger.info(f"🔄 [SKIN LAYER] Starting category rotation: {category}")
+
+    agents_in_category = [
+        name for name, config in AGENT_WORKSPACE_REGISTRY.items()
+        if config['category'] == category
+    ]
+
+    if not agents_in_category:
+        return {'success': False, 'error': f'No agents found in category: {category}'}
+
+    results = []
+    for agent_name in agents_in_category:
+        try:
+            result = universal_agent_workspace_output(agent_name)
+            results.append({
+                'agent': agent_name,
+                'success': result.get('success', False),
+                'file': result.get('file'),
+                'error': result.get('error')
+            })
+        except Exception as e:
+            results.append({
+                'agent': agent_name,
+                'success': False,
+                'error': str(e)
+            })
+
+    successful = sum(1 for r in results if r['success'])
+    logger.info(
+        f"🔄 [SKIN LAYER] Category {category} complete: "
+        f"{successful}/{len(results)} agents succeeded"
+    )
+
+    return {
+        'success': successful > 0,
+        'category': category,
+        'total_agents': len(results),
+        'successful': successful,
+        'failed': len(results) - successful,
+        'results': results
+    }
+
+
+@shared_task(name='core.tasks.full_agent_rotation')
+def full_agent_rotation():
+    """
+    Session 777: Execute ALL agents in the registry and write outputs to workspace.
+
+    This is the master task that ensures every agent produces workspace output.
+    Should be run periodically (e.g., weekly) to ensure all agents are active.
+
+    Returns:
+        Summary of all agent executions by category
+    """
+    logger.info("🌟 [SKIN LAYER] Starting FULL agent rotation - all 74 agents")
+
+    category_results = {}
+
+    for category in AGENT_CATEGORIES:
+        try:
+            result = agent_category_rotation(category)
+            category_results[category] = {
+                'success': result.get('success', False),
+                'total': result.get('total_agents', 0),
+                'successful': result.get('successful', 0),
+                'failed': result.get('failed', 0)
+            }
+        except Exception as e:
+            category_results[category] = {
+                'success': False,
+                'error': str(e)
+            }
+
+    total_agents = sum(r.get('total', 0) for r in category_results.values())
+    total_successful = sum(r.get('successful', 0) for r in category_results.values())
+
+    logger.info(
+        f"🌟 [SKIN LAYER] Full rotation complete: "
+        f"{total_successful}/{total_agents} agents succeeded"
+    )
+
+    return {
+        'success': total_successful > 0,
+        'total_agents': total_agents,
+        'successful': total_successful,
+        'failed': total_agents - total_successful,
+        'categories': category_results
+    }
