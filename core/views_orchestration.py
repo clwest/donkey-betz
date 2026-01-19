@@ -813,11 +813,17 @@ class OrchestrationStepIntelligenceView(View):
                     'error': 'Permission denied',
                 }, status=403)
 
-            # Get the step execution
-            step_exec = OrchestrationStepExecution.objects.get(
+            # Get the step execution (use latest if there are retries with same step_number)
+            step_exec = OrchestrationStepExecution.objects.filter(
                 orchestration=execution,
                 step_number=step_number
-            )
+            ).order_by('-id').first()
+
+            if not step_exec:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Step {step_number} not found',
+                }, status=404)
 
             # Session 767: Get full context from workflow step config (stored data may be truncated)
             full_context = {}
