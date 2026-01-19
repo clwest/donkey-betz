@@ -1,8 +1,9 @@
 # WorkspacePage Deep Dive - SKIN Layer Documentation
 
 **Created:** Session 776
-**Status:** Reference document for future development
-**Frontend:** `frontend/src/pages/WorkspacePage.tsx` (1,191 lines)
+**Updated:** Session 776 (Priority 1 + Priority 2 complete)
+**Status:** 100% Complete - All features implemented ✅
+**Frontend:** `frontend/src/pages/WorkspacePage.tsx` (1,732 lines)
 **Backend:** `core/views_workspace_api.py` (1,051 lines)
 **Models:** `core/models_skin_layer.py` (637 lines)
 
@@ -31,21 +32,24 @@ HANDS/SKIN        = THIS LAYER - touches the real world
 ### Component Structure
 
 ```
-WorkspacePage.tsx (1,191 lines)
+WorkspacePage.tsx (1,732 lines)
 ├── Header
+│   ├── WebSocket status indicator (Live/Offline)
 │   ├── Workspace selector dropdown
 │   ├── Register new workspace button
-│   └── Body health status indicator
+│   └── Scan button
 ├── Tabs
-│   ├── Overview - Stats & context summary
-│   ├── Files - Browseable file tree
-│   ├── Git - Status & commit functionality
-│   ├── Operations - Audit trail with diffs
-│   └── Reviews - Pending human approvals
+│   ├── Overview - Stats, context summary, tech stack, body health
+│   ├── Files - Browseable file tree with history button
+│   ├── Git - Status, commit, & branch creation
+│   ├── Operations - Audit trail with diffs, execution times, errors
+│   └── Reviews - Pending human approvals with approve/reject
 └── Modals
     ├── WorkspaceSelectorModal
     ├── RegisterWorkspaceModal
     ├── GitCommitModal
+    ├── GitBranchModal (Session 776)
+    ├── FileHistoryModal (Session 776)
     └── Toast notifications
 ```
 
@@ -631,11 +635,11 @@ This section is for planning future work on the Workspace page.
 - [x] Show human approval status after review (Approved/Rejected badges)
 - [x] Show `can_rollback` indicator
 
-### Priority 2: New Features
-- [ ] Expose file history view in UI (`/file-history/` endpoint)
-- [ ] Add git branch creation to UI (`/git-branch/` endpoint)
-- [ ] Show detected tech stack in overview
-- [ ] Real-time WebSocket updates for operations
+### Priority 2: New Features - COMPLETE ✅
+- [x] Expose file history view in UI (`/file-history/` endpoint) - FileHistoryModal component
+- [x] Add git branch creation to UI (`/git-branch/` endpoint) - GitBranchModal component
+- [x] Show detected tech stack in overview - Tech Stack cards in Overview tab
+- [x] Real-time WebSocket updates for operations - WebSocket status indicator + enhanced handlers
 
 ### Priority 3: User Experience
 - [ ] Batch review/approve multiple operations
