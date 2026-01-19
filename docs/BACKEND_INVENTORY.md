@@ -2,7 +2,7 @@
 
 **Last Updated:** January 18, 2026 - Session 775
 **Backend Stack:** Django 4.2 + Django REST Framework + Celery + Redis + PostgreSQL + Channels (WebSockets)
-**Total Lines:** 218,917 (with migrations) / 106,196 (without migrations)
+**Total Lines:** 1,029,692 (with migrations) / 956,014 (without migrations)
 
 ---
 
@@ -10,28 +10,63 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total Python Lines** | 218,917 |
-| **Lines (excl. migrations)** | 106,196 |
+| **Total Python Lines** | 1,029,692 |
+| **Lines (excl. migrations)** | 956,014 |
+| **Django Apps** | 12+ |
 | **Django Models** | 413 |
 | **URL Endpoints** | 1,578 |
 | **Celery Tasks** | 243 |
-| **Agents** | 86 files (72 unique agents) |
+| **Agents** | 86+ files (72 unique agents) |
 | **Services** | 167 files |
 | **Spiders** | 77 (172 files including management) |
 | **Views Files** | 164 |
 | **Management Commands** | 63 |
 | **WebSocket Consumers** | 52 |
 | **Discord Commands** | 231 |
+| **Script Files** | 311 |
+| **Test Files** | 87+ |
 
 ---
 
 ## Code Distribution
 
-### By Directory
+### All Top-Level Directories
 
-| Directory | Lines | Purpose |
-|-----------|-------|---------|
-| `core/` | 528,007 | Main application (includes subdirs) |
+| Directory | Lines | Files | Purpose |
+|-----------|-------|-------|---------|
+| `core/` | 528,007 | 1,200+ | Main Django application |
+| `ai_core/` | 118,044 | 172 | Spider network |
+| `scripts/` | 68,205 | 311 | Setup, migration, utility scripts |
+| `archive/` | 54,985 | 193 | Archived/deprecated code |
+| `intelligence/` | 45,935 | 103 | Intelligence Django app |
+| `content/` | 21,825 | 71 | Content Django app |
+| `tests/` | 19,705 | 87 | Test suite |
+| `sports/` | 14,248 | 32 | Sports betting Django app |
+| `agents/` | 14,024 | 93 | Additional agent definitions |
+| `ml/` | 10,344 | 24 | Machine learning models |
+| `persistence/` | 4,519 | 17 | Persistence Django app |
+| `self_awareness/` | 4,322 | 13 | Self-awareness Django app |
+| `mythology/` | 2,809 | 10 | Mythology/hallucination Django app |
+| `resolve_node/` | 2,353 | 9 | DaVinci Resolve integration |
+| `coleadership/` | 2,265 | 10 | Co-leadership features |
+| `advisors/` | 1,640 | 2 | Advisor system |
+| `style_memory/` | 1,594 | 11 | Style memory system |
+| `pipelines/` | 1,499 | 11 | Data pipelines |
+| `davinci_bridge/` | 1,359 | 3 | DaVinci bridge |
+| `ml_pipeline/` | 1,128 | 2 | ML pipeline |
+| `dashboard/` | 915 | 8 | Dashboard features |
+| `rendering/` | 886 | 9 | Rendering services |
+| `revenue/` | 799 | 2 | Revenue tracking |
+| `workflows/` | 548 | 2 | Workflow definitions |
+| `sports_betting/` | 464 | 7 | Sports betting utilities |
+| `tools/` | 399 | 3 | Utility tools |
+| `ml_intelligence/` | 367 | 2 | ML intelligence |
+| Other small dirs | ~5,000 | 50+ | Various utilities |
+
+### Core App Breakdown
+
+| Subdirectory | Lines | Purpose |
+|--------------|-------|---------|
 | `core/services/` | 122,086 | Business logic services |
 | `core/agents/` | 81,966 | AI agent implementations |
 | `core/management/` | 17,130 | Django management commands |
@@ -43,7 +78,6 @@
 | `core/learning_bridges/` | 2,810 | Learning system bridges |
 | `core/prompts/` | 2,795 | Prompt templates |
 | `core/views/` | 2,606 | Additional views |
-| `ai_core/` | 118,044 | Spider network |
 
 ---
 
@@ -455,6 +489,99 @@ unified-donkey-betz/
 | **Body Systems** | 20+ | HeartStatus, LungsCapacity, SkinPulse |
 | **Betting** | 14 | SportEvent, Wager, Arbitrage, BettingMarket |
 | **Legal** | 10+ | LegalDocument, Case, LitigationItem |
+
+---
+
+## Additional Django Apps
+
+Beyond the main `core` app, these Django apps provide specialized functionality:
+
+### intelligence/ (45,935 lines, 103 files)
+
+AI intelligence and decision-making system.
+
+| Component | Purpose |
+|-----------|---------|
+| `models.py` | Gate, Pilot, Opportunity, Prediction models |
+| `tasks.py` | Celery tasks for intelligence processing |
+| `consumers.py` | WebSocket consumers |
+| `personal_assistant_interviewer.py` | User interview system |
+
+### content/ (21,825 lines, 71 files)
+
+Content creation and management.
+
+| Component | Purpose |
+|-----------|---------|
+| `models.py` | ContentPiece, Episode, Channel models |
+| `video_provider.py` | Video generation providers |
+| `processors.py` | Content processors |
+| `hybrid_video_processor.py` | Hybrid video processing |
+
+### sports/ (14,248 lines, 32 files)
+
+Sports betting and analytics.
+
+| Component | Purpose |
+|-----------|---------|
+| `models.py` | SportEvent, Wager, Market models |
+| `services.py` | Betting services |
+| `consumers.py` | Real-time odds consumers |
+| `views.py` | Sports API views |
+
+### persistence/ (4,519 lines, 17 files)
+
+Data persistence and knowledge base.
+
+| Component | Purpose |
+|-----------|---------|
+| `models.py` | PersistentMemory, KnowledgeBase |
+| `services.py` | Persistence services |
+
+### self_awareness/ (4,322 lines, 13 files)
+
+System self-awareness and monitoring.
+
+| Component | Purpose |
+|-----------|---------|
+| `intelligence.py` | Self-awareness intelligence |
+| `embeddings.py` | Self-awareness embeddings |
+
+### mythology/ (2,809 lines, 10 files)
+
+Hallucination detection and testing.
+
+| Component | Purpose |
+|-----------|---------|
+| `views.py` | Mythology lab views |
+| `models.py` | MythologyTest, HallucinationCase |
+
+---
+
+## Scripts Directory (68,205 lines, 311 files)
+
+Utility and setup scripts organized by purpose:
+
+| Category | Files | Purpose |
+|----------|-------|---------|
+| `scripts/setup/` | 50+ | System setup and initialization |
+| `scripts/migrations/` | 30+ | Data migration scripts |
+| `scripts/testing/` | 20+ | Test utilities |
+| `scripts/analysis/` | 20+ | Data analysis scripts |
+| `scripts/deployment/` | 15+ | Deployment scripts |
+| `scripts/utilities/` | 100+ | Various utilities |
+
+---
+
+## Machine Learning (ml/, 10,344 lines)
+
+ML model definitions and training.
+
+| Component | Purpose |
+|-----------|---------|
+| Model definitions | 17 ML models |
+| Training scripts | Model training |
+| Inference | Model inference |
 
 ---
 
