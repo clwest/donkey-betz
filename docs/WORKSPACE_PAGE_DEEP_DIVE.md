@@ -432,6 +432,81 @@ if (skinStatus === 'damaged' || skinStatus === 'irritated') {
 - ✅ Human review approval/rejection
 - ✅ Body health integration
 
+---
+
+## Data Verification Audit (Session 776)
+
+**Methodology:** Compared all API response fields against UI display for each tab.
+
+### Overview Tab - Hidden Data
+
+| Field | Source | Status |
+|-------|--------|--------|
+| `totals.operations` (all-time) | `/stats/` | ❌ NOT DISPLAYED |
+| `totals.files_written` | `/stats/` | ❌ NOT DISPLAYED |
+| `totals.commits` | `/stats/` | ❌ NOT DISPLAYED |
+| `last_24h.successful` | `/stats/` | ❌ NOT DISPLAYED |
+| `last_24h.failed` | `/stats/` | ❌ NOT DISPLAYED |
+| `last_7d.operations` | `/stats/` | ❌ NOT DISPLAYED |
+| `last_7d.by_type` | `/stats/` | ❌ NOT DISPLAYED |
+| `last_7d.by_agent` | `/stats/` | ❌ NOT DISPLAYED |
+| `rollback_available` | `/stats/` | ❌ NOT DISPLAYED |
+| `project.total_directories` | `/stats/` | ❌ NOT DISPLAYED |
+| `project.file_types` | `/stats/` | ❌ NOT DISPLAYED |
+| `project.last_scanned` | `/stats/` | ❌ NOT DISPLAYED |
+
+**Currently Displayed:** 4 StatCards (Total Files, Lines of Code, Operations 24h, Pending Reviews)
+**Available but Hidden:** 12 additional data points
+
+### Files Tab - Hidden Data
+
+| Field | Source | Status |
+|-------|--------|--------|
+| `total_files` | `/files/` | ❌ NOT DISPLAYED |
+| `total_directories` | `/files/` | ❌ NOT DISPLAYED |
+| `last_scanned` | `/files/` | ❌ NOT DISPLAYED |
+| File `size` | `/file/` | ❌ NOT DISPLAYED |
+| File `truncated` flag | `/file/` | ❌ NOT DISPLAYED |
+
+### Git Tab - Hidden Data
+
+| Field | Source | Status |
+|-------|--------|--------|
+| `deleted` files | `/git-status/` | ❌ NOT DISPLAYED |
+| Untracked file list | `/git-status/` | Only count shown |
+
+### Operations Tab - Hidden Data
+
+| Field | Source | Status |
+|-------|--------|--------|
+| `error_message` | List serializer | ❌ NOT DISPLAYED |
+| `execution_time_ms` | List serializer | ❌ NOT DISPLAYED |
+| `human_approved` | List serializer | ❌ NOT DISPLAYED |
+| `rolled_back` | List serializer | ❌ NOT DISPLAYED |
+| `lines_changed` | Detail serializer | ❌ NOT DISPLAYED |
+| `file_size_before/after` | Detail serializer | ❌ NOT DISPLAYED |
+| `command` | Detail serializer | ❌ NOT DISPLAYED |
+| `command_output` | Detail serializer | ❌ NOT DISPLAYED |
+
+### Reviews Tab
+
+Uses same `OperationRow` component as Operations tab - same hidden fields.
+
+### Summary
+
+| Tab | Fields Displayed | Fields Hidden | Display Rate |
+|-----|------------------|---------------|--------------|
+| Overview | 4 | 12 | 25% |
+| Files | 2 | 5 | 29% |
+| Git | 4 | 2 | 67% |
+| Operations | 8 | 8 | 50% |
+| Reviews | 8 | 8 | 50% |
+| **Total** | **26** | **35** | **43%** |
+
+**Conclusion:** ~57% of available API data is NOT displayed in the UI.
+
+---
+
 ### Potential Improvements
 
 1. **File Editing in UI** - Currently read-only, could add inline editing
@@ -519,17 +594,41 @@ curl -X POST /api/workspace-operations/{id}/review/ \
 
 This section is for planning future work on the Workspace page.
 
-### Priority 1: Core Functionality
-- [ ] Expose file history view in UI
-- [ ] Add git branch creation to UI
-- [ ] Show detected tech stack in overview
+### Priority 1: Display Hidden Data (Quick Wins)
 
-### Priority 2: User Experience
+**Overview Tab:**
+- [ ] Add 4 more StatCards: Total Operations, Files Written, Commits, Rollbacks Available
+- [ ] Add success/fail breakdown for 24h operations
+- [ ] Show "Last Scanned" timestamp
+- [ ] Add file type breakdown (pie chart or list)
+- [ ] Show 7-day trends (by type, by agent)
+
+**Files Tab:**
+- [ ] Show file count and directory count in header
+- [ ] Show "Last Scanned" timestamp
+- [ ] Display file size when viewing file content
+- [ ] Show truncation warning for large files
+
+**Git Tab:**
+- [ ] Show deleted files in "Changed Files" section with 'D' marker
+- [ ] Expand untracked files to show full list (not just count)
+
+**Operations Tab:**
+- [ ] Show `error_message` for failed operations
+- [ ] Display `execution_time_ms`
+- [ ] Show `lines_changed` count
+- [ ] Add "Rolled Back" indicator for rolled-back operations
+- [ ] Show human approval status after review
+
+### Priority 2: New Features
+- [ ] Expose file history view in UI (`/file-history/` endpoint)
+- [ ] Add git branch creation to UI (`/git-branch/` endpoint)
+- [ ] Show detected tech stack in overview
 - [ ] Real-time WebSocket updates for operations
+
+### Priority 3: User Experience
 - [ ] Batch review/approve multiple operations
 - [ ] Inline file editing
-
-### Priority 3: Advanced Features
 - [ ] Protected paths configuration UI
 - [ ] Workspace templates for common project types
 - [ ] Cross-workspace operation comparison
@@ -538,4 +637,4 @@ This section is for planning future work on the Workspace page.
 ---
 
 *Document created: Session 776*
-*Last updated: Session 776*
+*Last updated: Session 776 (Data Verification Audit added)*
