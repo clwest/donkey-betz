@@ -1872,6 +1872,122 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
+    # ==========================================================================
+    # Session 777: UNIVERSAL AGENT WORKSPACE INTEGRATION
+    # Category rotation schedules - each category runs at different times
+    # All 74 agents covered across 14 categories
+    # ==========================================================================
+    # Research agents - Every 6 hours at :00
+    'agent-category-research': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=0, hour='*/6'),
+        'args': ('research',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Strategy agents - Daily at 7 AM
+    'agent-category-strategy': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=0, hour=7),
+        'args': ('strategy',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Content agents - Every 8 hours at :15
+    'agent-category-content': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=15, hour='*/8'),
+        'args': ('content',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Financial agents - Every 4 hours (market hours focus)
+    'agent-category-financial': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=30, hour='*/4'),
+        'args': ('financial',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Predictions agents - Every 6 hours at :45
+    'agent-category-predictions': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=45, hour='*/6'),
+        'args': ('predictions',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Blockchain agents - Every 4 hours at :20
+    'agent-category-blockchain': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=20, hour='*/4'),
+        'args': ('blockchain',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Narrative agents - Every 8 hours at :40
+    'agent-category-narrative': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=40, hour='*/8'),
+        'args': ('narrative',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Podcast agents - Every 12 hours at :00
+    'agent-category-podcast': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=0, hour='5,17'),
+        'args': ('podcast',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Development agents - Every 8 hours at :50
+    'agent-category-development': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=50, hour='*/8'),
+        'args': ('development',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Media agents - Every 12 hours at :10
+    'agent-category-media': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=10, hour='8,20'),
+        'args': ('media',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Executive agents - Daily at 8 AM
+    'agent-category-executive': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=0, hour=8),
+        'args': ('executive',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Coordination agents - Every 6 hours at :25
+    'agent-category-coordination': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=25, hour='*/6'),
+        'args': ('coordination',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # System agents - Every 4 hours at :05
+    'agent-category-system': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=5, hour='*/4'),
+        'args': ('system',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Security agents - Every 6 hours at :35
+    'agent-category-security': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=35, hour='*/6'),
+        'args': ('security',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Assistant agents - Daily at 9 AM
+    'agent-category-assistant': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=0, hour=9),
+        'args': ('assistant',),
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
+    # Full rotation - Weekly on Sunday at 3 AM (all 74 agents)
+    'agent-full-rotation-weekly': {
+        'task': 'core.tasks.full_agent_rotation',
+        'schedule': crontab(minute=0, hour=3, day_of_week=0),  # Sunday 3 AM
+        'options': {'expires': 14400, 'queue': 'long_running'}
+    },
 }
 
 # Task routing configuration
