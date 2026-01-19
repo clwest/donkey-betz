@@ -8,7 +8,8 @@ import {
   RefreshCw, ChevronRight, ChevronDown, File, Folder, Code,
   GitCommit, CheckCircle, XCircle, AlertTriangle,
   Loader2, Search, RotateCcw, Eye, Clock, X,
-  FolderTree, Activity, Trash2, Heart, ExternalLink
+  FolderTree, Activity, Trash2, Heart, ExternalLink,
+  FileEdit, Users, PieChart, Calendar
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
@@ -44,6 +45,14 @@ interface WorkspaceOperation {
   diff?: string
   content_before?: string
   content_after?: string
+  // Session 776: Added hidden fields
+  error_message?: string
+  execution_time_ms?: number
+  requires_review?: boolean
+  reviewed_by_human?: boolean
+  human_approved?: boolean | null
+  can_rollback?: boolean
+  rolled_back?: boolean
 }
 
 interface FileNode {
@@ -196,19 +205,40 @@ function OperationRow({ operation, onRollback, onReview }: {
     switch (type) {
       case 'file_create': return <Plus size={14} className="text-accent-green" />
       case 'file_update': return <Code size={14} className="text-accent-amber" />
+      case 'file_modify': return <Code size={14} className="text-accent-amber" />
       case 'file_delete': return <Trash2 size={14} className="text-accent-red" />
       case 'git_commit': return <GitCommit size={14} className="text-primary-400" />
       default: return <File size={14} className="text-gray-400" />
     }
   }
 
+  // Session 776: Determine review status after human review
+  const getReviewStatus = () => {
+    if (!operation.reviewed_by_human) return null
+    if (operation.human_approved === true) return 'approved'
+    if (operation.human_approved === false) return 'rejected'
+    return null
+  }
+  const reviewStatus = getReviewStatus()
+
   return (
-    <div className="border border-dark-border rounded-lg p-3 space-y-2">
+    <div className={cn(
+      "border rounded-lg p-3 space-y-2",
+      operation.rolled_back ? "border-gray-600 bg-dark-bg/50 opacity-70" : "border-dark-border"
+    )}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {getOperationIcon(operation.operation_type)}
           <div>
-            <p className="text-sm font-medium">{operation.file_path}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">{operation.file_path || operation.operation_type}</p>
+              {operation.rolled_back && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 flex items-center gap-1">
+                  <RotateCcw size={10} />
+                  Rolled Back
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 text-xs text-gray-400">
               {/* Session 713: EntityLink for agent navigation */}
               <EntityLink
@@ -221,6 +251,13 @@ function OperationRow({ operation, onRollback, onReview }: {
               <span>•</span>
               <Clock size={12} />
               <span>{new Date(operation.created_at).toLocaleString()}</span>
+              {/* Session 776: Show execution time */}
+              {operation.execution_time_ms !== undefined && (
+                <>
+                  <span>•</span>
+                  <span>{operation.execution_time_ms}ms</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -230,14 +267,41 @@ function OperationRow({ operation, onRollback, onReview }: {
           ) : (
             <span className="text-xs px-2 py-1 rounded bg-accent-red/20 text-accent-red">Failed</span>
           )}
-          {operation.pending_review && (
+          {/* Session 776: Show review status after human review */}
+          {reviewStatus === 'approved' && (
+            <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green flex items-center gap-1">
+              <CheckCircle size={10} />
+              Approved
+            </span>
+          )}
+          {reviewStatus === 'rejected' && (
+            <span className="text-xs px-2 py-1 rounded bg-accent-red/20 text-accent-red flex items-center gap-1">
+              <XCircle size={10} />
+              Rejected
+            </span>
+          )}
+          {operation.pending_review && !operation.reviewed_by_human && (
             <span className="text-xs px-2 py-1 rounded bg-accent-amber/20 text-accent-amber">Pending Review</span>
+          )}
+          {/* Session 776: Show if rollback is available */}
+          {operation.can_rollback && !operation.rolled_back && operation.success && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/10 text-primary-400" title="Rollback available">
+              <RotateCcw size={12} />
+            </span>
           )}
         </div>
       </div>
 
       {operation.description && (
         <p className="text-xs text-gray-400">{operation.description}</p>
+      )}
+
+      {/* Session 776: Show error message for failed operations */}
+      {!operation.success && operation.error_message && (
+        <div className="flex items-start gap-2 p-2 bg-accent-red/10 border border-accent-red/20 rounded text-xs text-accent-red">
+          <XCircle size={14} className="flex-shrink-0 mt-0.5" />
+          <span>{operation.error_message}</span>
+        </div>
       )}
 
       <div className="flex items-center gap-2">
@@ -250,7 +314,7 @@ function OperationRow({ operation, onRollback, onReview }: {
             {showDiff ? 'Hide Diff' : 'Show Diff'}
           </button>
         )}
-        {onRollback && operation.success && (
+        {onRollback && operation.success && operation.can_rollback && !operation.rolled_back && (
           <button
             onClick={onRollback}
             className="text-xs text-accent-amber hover:text-accent-amber/80 flex items-center gap-1"
@@ -259,7 +323,7 @@ function OperationRow({ operation, onRollback, onReview }: {
             Rollback
           </button>
         )}
-        {onReview && operation.pending_review && (
+        {onReview && operation.pending_review && !operation.reviewed_by_human && (
           <>
             <button
               onClick={() => onReview(true)}
@@ -818,6 +882,12 @@ export default function WorkspacePage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {stats.project?.last_scanned && (
+                      <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <Calendar size={12} />
+                        Scanned {new Date(stats.project.last_scanned).toLocaleDateString()}
+                      </span>
+                    )}
                     {activeWorkspace.is_git_repo && (
                       <span className="text-xs px-2 py-1 rounded bg-primary-500/20 text-primary-400 flex items-center gap-1">
                         <GitBranch size={12} />
@@ -829,7 +899,7 @@ export default function WorkspacePage() {
                 </div>
               </div>
 
-              {/* Stats */}
+              {/* Stats Row 1: Project Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                   title="Total Files"
@@ -838,16 +908,16 @@ export default function WorkspacePage() {
                   color="#8b5cf6"
                 />
                 <StatCard
+                  title="Directories"
+                  value={stats.project?.total_directories || 0}
+                  icon={Folder}
+                  color="#a855f7"
+                />
+                <StatCard
                   title="Lines of Code"
                   value={stats.project?.total_lines_of_code || dashboard.total_lines || 0}
                   icon={Code}
                   color="#22c55e"
-                />
-                <StatCard
-                  title="Operations (24h)"
-                  value={stats.last_24h?.operations || 0}
-                  icon={History}
-                  color="#f59e0b"
                 />
                 <StatCard
                   title="Pending Reviews"
@@ -856,6 +926,145 @@ export default function WorkspacePage() {
                   color="#06b6d4"
                 />
               </div>
+
+              {/* Stats Row 2: Operations Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total Operations"
+                  value={stats.totals?.operations || 0}
+                  icon={Activity}
+                  color="#3b82f6"
+                />
+                <StatCard
+                  title="Files Written"
+                  value={stats.totals?.files_written || 0}
+                  icon={FileEdit}
+                  color="#10b981"
+                />
+                <StatCard
+                  title="Git Commits"
+                  value={stats.totals?.commits || 0}
+                  icon={GitCommit}
+                  color="#f59e0b"
+                />
+                <StatCard
+                  title="Rollbacks Available"
+                  value={stats.rollback_available || 0}
+                  icon={RotateCcw}
+                  color="#ef4444"
+                />
+              </div>
+
+              {/* 24h Activity Breakdown */}
+              {stats.last_24h && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Last 24 Hours</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-dark-bg rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Operations</span>
+                        <span className="text-xl font-bold">{stats.last_24h.operations || 0}</span>
+                      </div>
+                    </div>
+                    <div className="bg-dark-bg rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Successful</span>
+                        <span className="text-xl font-bold text-accent-green">{stats.last_24h.successful || 0}</span>
+                      </div>
+                      {stats.last_24h.operations > 0 && (
+                        <div className="mt-2 h-1.5 bg-dark-border rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-accent-green rounded-full"
+                            style={{ width: `${((stats.last_24h.successful || 0) / stats.last_24h.operations) * 100}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-dark-bg rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Failed</span>
+                        <span className="text-xl font-bold text-accent-red">{stats.last_24h.failed || 0}</span>
+                      </div>
+                      {stats.last_24h.operations > 0 && (
+                        <div className="mt-2 h-1.5 bg-dark-border rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-accent-red rounded-full"
+                            style={{ width: `${((stats.last_24h.failed || 0) / stats.last_24h.operations) * 100}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 7-Day Trends */}
+              {stats.last_7d && (stats.last_7d.by_type || stats.last_7d.by_agent) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* By Type */}
+                  {stats.last_7d.by_type && Object.keys(stats.last_7d.by_type).length > 0 && (
+                    <div className="card">
+                      <div className="flex items-center gap-2 mb-4">
+                        <PieChart size={18} className="text-primary-400" />
+                        <h3 className="text-lg font-semibold">7-Day by Type</h3>
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(stats.last_7d.by_type).map(([type, count]) => (
+                          <div key={type} className="flex items-center justify-between p-2 bg-dark-bg rounded">
+                            <span className="text-sm capitalize">{type.replace('_', ' ')}</span>
+                            <span className="text-sm font-medium text-primary-400">{count as number}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* By Agent */}
+                  {stats.last_7d.by_agent && Object.keys(stats.last_7d.by_agent).length > 0 && (
+                    <div className="card">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Users size={18} className="text-accent-cyan" />
+                        <h3 className="text-lg font-semibold">7-Day by Agent</h3>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {Object.entries(stats.last_7d.by_agent)
+                          .sort((a, b) => (b[1] as number) - (a[1] as number))
+                          .slice(0, 10)
+                          .map(([agent, count]) => (
+                            <div key={agent} className="flex items-center justify-between p-2 bg-dark-bg rounded">
+                              <span className="text-sm">{agent}</span>
+                              <span className="text-sm font-medium text-accent-cyan">{count as number}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* File Types Breakdown */}
+              {stats.project?.file_types && Object.keys(stats.project.file_types).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileCode size={18} className="text-accent-amber" />
+                    <h3 className="text-lg font-semibold">File Types</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(stats.project.file_types)
+                      .sort((a, b) => (b[1] as number) - (a[1] as number))
+                      .slice(0, 20)
+                      .map(([ext, count]) => (
+                        <span
+                          key={ext}
+                          className="px-3 py-1.5 bg-dark-bg rounded-lg text-sm flex items-center gap-2"
+                        >
+                          <span className="text-accent-amber font-mono">{ext}</span>
+                          <span className="text-gray-400">{count as number}</span>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               {/* Session 712: Body Health Card - SKIN connected to Body */}
               {bodyVitals && (
@@ -952,40 +1161,86 @@ export default function WorkspacePage() {
 
           {/* Files Tab */}
           {activeTab === 'files' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* File Tree */}
-              <div className="card lg:col-span-1">
-                <h3 className="text-lg font-semibold mb-4">Files</h3>
-                <div className="max-h-[500px] overflow-y-auto">
-                  {files.length > 0 ? (
-                    <FileTree files={files} onSelect={setSelectedFilePath} selectedPath={selectedFilePath} />
-                  ) : (
-                    <p className="text-gray-400 text-sm text-center py-8">No files found</p>
-                  )}
+            <div className="space-y-6">
+              {/* Files Stats Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <File size={16} className="text-primary-400" />
+                    <span className="text-gray-400">Files:</span>
+                    <span className="font-medium">{filesData?.data?.total_files || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Folder size={16} className="text-accent-amber" />
+                    <span className="text-gray-400">Directories:</span>
+                    <span className="font-medium">{filesData?.data?.total_directories || 0}</span>
+                  </div>
                 </div>
-              </div>
-
-              {/* File Content */}
-              <div className="card lg:col-span-2">
-                <h3 className="text-lg font-semibold mb-4">
-                  {selectedFilePath ? selectedFilePath.split('/').pop() : 'Select a file'}
-                </h3>
-                {selectedFilePath ? (
-                  loadingFileContent ? (
-                    <div className="flex items-center justify-center h-64">
-                      <Loader2 size={24} className="animate-spin text-primary-400" />
-                    </div>
-                  ) : (
-                    <pre className="text-xs bg-dark-bg p-4 rounded-lg overflow-auto max-h-[500px] font-mono">
-                      {fileContentData?.data?.content || 'File is empty or could not be read'}
-                    </pre>
-                  )
-                ) : (
-                  <div className="text-gray-400 text-sm text-center py-16">
-                    <FileCode size={32} className="mx-auto mb-2 opacity-50" />
-                    <p>Select a file from the tree to view its content</p>
+                {filesData?.data?.last_scanned && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Calendar size={12} />
+                    <span>Last scanned: {new Date(filesData.data.last_scanned).toLocaleString()}</span>
                   </div>
                 )}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* File Tree */}
+                <div className="card lg:col-span-1">
+                  <h3 className="text-lg font-semibold mb-4">Files</h3>
+                  <div className="max-h-[500px] overflow-y-auto">
+                    {files.length > 0 ? (
+                      <FileTree files={files} onSelect={setSelectedFilePath} selectedPath={selectedFilePath} />
+                    ) : (
+                      <p className="text-gray-400 text-sm text-center py-8">No files found. Try scanning the workspace.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* File Content */}
+                <div className="card lg:col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">
+                      {selectedFilePath ? selectedFilePath.split('/').pop() : 'Select a file'}
+                    </h3>
+                    {selectedFilePath && fileContentData?.data && (
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        {fileContentData.data.size !== undefined && (
+                          <span>{(fileContentData.data.size / 1024).toFixed(1)} KB</span>
+                        )}
+                        {fileContentData.data.truncated && (
+                          <span className="px-2 py-0.5 bg-accent-amber/20 text-accent-amber rounded">
+                            Truncated (file too large)
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {selectedFilePath ? (
+                    loadingFileContent ? (
+                      <div className="flex items-center justify-center h-64">
+                        <Loader2 size={24} className="animate-spin text-primary-400" />
+                      </div>
+                    ) : (
+                      <>
+                        {fileContentData?.data?.truncated && (
+                          <div className="flex items-center gap-2 p-2 mb-2 bg-accent-amber/10 border border-accent-amber/20 rounded text-xs text-accent-amber">
+                            <AlertTriangle size={14} />
+                            <span>File content truncated. Only showing first 100KB.</span>
+                          </div>
+                        )}
+                        <pre className="text-xs bg-dark-bg p-4 rounded-lg overflow-auto max-h-[500px] font-mono">
+                          {fileContentData?.data?.content || 'File is empty or could not be read'}
+                        </pre>
+                      </>
+                    )
+                  ) : (
+                    <div className="text-gray-400 text-sm text-center py-16">
+                      <FileCode size={32} className="mx-auto mb-2 opacity-50" />
+                      <p>Select a file from the tree to view its content</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1059,6 +1314,10 @@ export default function WorkspacePage() {
                       <span className="text-sm text-accent-green">{gitStatus.staged?.length || 0}</span>
                     </div>
                     <div className="flex items-center justify-between p-2 bg-dark-bg rounded">
+                      <span className="text-sm">Deleted Files</span>
+                      <span className="text-sm text-accent-red">{gitStatus.deleted?.length || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-dark-bg rounded">
                       <span className="text-sm">Untracked Files</span>
                       <span className="text-sm text-gray-400">{gitStatus.untracked?.length || 0}</span>
                     </div>
@@ -1068,19 +1327,31 @@ export default function WorkspacePage() {
                 <div className="card">
                   <h3 className="text-lg font-semibold mb-4">Changed Files</h3>
                   <div className="space-y-1 max-h-64 overflow-y-auto">
-                    {(gitStatus.modified || []).map((file: string) => (
-                      <div key={file} className="flex items-center gap-2 p-2 bg-dark-bg rounded text-sm">
-                        <span className="text-accent-amber">M</span>
-                        <span className="font-mono truncate">{file}</span>
-                      </div>
-                    ))}
                     {(gitStatus.staged || []).map((file: string) => (
-                      <div key={file} className="flex items-center gap-2 p-2 bg-dark-bg rounded text-sm">
-                        <span className="text-accent-green">A</span>
+                      <div key={`staged-${file}`} className="flex items-center gap-2 p-2 bg-dark-bg rounded text-sm">
+                        <span className="text-accent-green font-medium w-4">A</span>
                         <span className="font-mono truncate">{file}</span>
                       </div>
                     ))}
-                    {(!gitStatus.modified?.length && !gitStatus.staged?.length) && (
+                    {(gitStatus.modified || []).map((file: string) => (
+                      <div key={`mod-${file}`} className="flex items-center gap-2 p-2 bg-dark-bg rounded text-sm">
+                        <span className="text-accent-amber font-medium w-4">M</span>
+                        <span className="font-mono truncate">{file}</span>
+                      </div>
+                    ))}
+                    {(gitStatus.deleted || []).map((file: string) => (
+                      <div key={`del-${file}`} className="flex items-center gap-2 p-2 bg-dark-bg rounded text-sm">
+                        <span className="text-accent-red font-medium w-4">D</span>
+                        <span className="font-mono truncate line-through opacity-70">{file}</span>
+                      </div>
+                    ))}
+                    {(gitStatus.untracked || []).map((file: string) => (
+                      <div key={`new-${file}`} className="flex items-center gap-2 p-2 bg-dark-bg rounded text-sm">
+                        <span className="text-gray-500 font-medium w-4">?</span>
+                        <span className="font-mono truncate text-gray-400">{file}</span>
+                      </div>
+                    ))}
+                    {(!gitStatus.modified?.length && !gitStatus.staged?.length && !gitStatus.deleted?.length && !gitStatus.untracked?.length) && (
                       <p className="text-gray-400 text-sm text-center py-4">Working tree clean</p>
                     )}
                   </div>
