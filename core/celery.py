@@ -1833,6 +1833,45 @@ app.conf.beat_schedule = {
             'expires': 600,  # 10 minutes
         }
     },
+    # ==========================================================================
+    # Session 776: SKIN Layer Agent Integration - Agents Write to Workspace
+    # ==========================================================================
+    # System status report every 6 hours
+    'agent-workspace-status-report': {
+        'task': 'core.tasks.agent_workspace_status_report',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+        'options': {
+            'expires': 3600,
+            'queue': 'long_running',  # Agent execution may take time
+        }
+    },
+    # Daily summary at midnight
+    'agent-daily-summary': {
+        'task': 'core.tasks.agent_daily_summary',
+        'schedule': crontab(minute=0, hour=0),  # Daily at midnight
+        'options': {
+            'expires': 3600,
+            'queue': 'default',
+        }
+    },
+    # Research task every 8 hours (3x daily)
+    'agent-research-to-workspace': {
+        'task': 'core.tasks.agent_research_to_workspace',
+        'schedule': crontab(minute=30, hour='*/8'),  # Every 8 hours at :30
+        'options': {
+            'expires': 3600,
+            'queue': 'long_running',
+        }
+    },
+    # Content generation every 12 hours (2x daily)
+    'agent-content-to-workspace': {
+        'task': 'core.tasks.agent_content_to_workspace',
+        'schedule': crontab(minute=0, hour='6,18'),  # 6 AM and 6 PM
+        'options': {
+            'expires': 3600,
+            'queue': 'long_running',
+        }
+    },
 }
 
 # Task routing configuration

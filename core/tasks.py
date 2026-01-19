@@ -24894,3 +24894,416 @@ def promote_to_shared_knowledge(min_confidence: float = 0.7):
     except Exception as e:
         logger.error(f"🚀 [KNOWLEDGE PROMOTION] Failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
+
+
+# ==================== SESSION 776: SKIN LAYER AGENT INTEGRATION ====================
+
+
+@shared_task(name='core.tasks.agent_workspace_status_report')
+def agent_workspace_status_report():
+    """
+    Session 776: Generate a workspace status report via SystemIntelligenceAgent.
+
+    Creates a status report file in the active workspace documenting:
+    - Current system health
+    - Recent agent activity
+    - Active pilots and gates
+    - Learning metrics
+
+    Runs every 6 hours to maintain visibility into system state.
+
+    Returns:
+        Operation result
+    """
+    from django.contrib.auth import get_user_model
+    from core.models_skin_layer import ProjectWorkspace
+    from core.services.workspace_manager import WorkspaceManager
+    from core.agents.system_intelligence_agent import SystemIntelligenceAgent
+
+    logger.info("🖥️ [SKIN LAYER] Starting workspace status report generation...")
+
+    User = get_user_model()
+
+    try:
+        # Get admin user and active workspace
+        user = User.objects.filter(is_superuser=True).first()
+        if not user:
+            return {'success': False, 'error': 'No admin user found'}
+
+        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        if not workspace:
+            return {'success': False, 'error': 'No active workspace found'}
+
+        # Generate status report using SystemIntelligenceAgent
+        agent = SystemIntelligenceAgent()
+        report_content = agent.execute(
+            task="Generate a comprehensive system status report including: "
+                 "1) Overall system health metrics "
+                 "2) Active agents and their recent activity "
+                 "3) Current pilot status "
+                 "4) Learning and knowledge metrics "
+                 "5) Any warnings or issues that need attention",
+            context={'report_type': 'status', 'output_format': 'markdown'},
+            scifi_context={},
+            spider_context={}
+        )
+
+        # Format the report
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        filename = f"reports/system_status_{timestamp}.md"
+
+        # AgentResult has .data dict and .message for output
+        output_content = report_content.data.get('output', '') or report_content.message or 'No output generated'
+
+        content = f"""# System Status Report
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Agent: SystemIntelligenceAgent
+
+---
+
+{output_content}
+
+---
+*This report was automatically generated via the SKIN Layer.*
+"""
+
+        # Write to workspace
+        manager = WorkspaceManager(user)
+        operation = manager.write_file(
+            workspace=workspace,
+            file_path=filename,
+            content=content,
+            agent_name='SystemIntelligenceAgent',
+            agent_task='Automated system status report'
+        )
+
+        logger.info(
+            f"🖥️ [SKIN LAYER] Status report generated: {filename} "
+            f"(success: {operation.success})"
+        )
+
+        return {
+            'success': operation.success,
+            'file': filename,
+            'operation_id': str(operation.id)
+        }
+
+    except Exception as e:
+        logger.error(f"🖥️ [SKIN LAYER] Status report failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.agent_research_to_workspace')
+def agent_research_to_workspace(topic: str = None):
+    """
+    Session 776: Have ResearchAgent write research findings to workspace.
+
+    Conducts research on a topic (or trending topics) and writes
+    the findings to a markdown file in the workspace.
+
+    Args:
+        topic: Specific topic to research, or None for trending topics
+
+    Returns:
+        Operation result
+    """
+    from django.contrib.auth import get_user_model
+    from core.models_skin_layer import ProjectWorkspace
+    from core.services.workspace_manager import WorkspaceManager
+    from core.agents.research_agent import ResearchAgent
+
+    logger.info(f"🔬 [SKIN LAYER] Starting research task (topic: {topic or 'trending'})...")
+
+    User = get_user_model()
+
+    try:
+        user = User.objects.filter(is_superuser=True).first()
+        if not user:
+            return {'success': False, 'error': 'No admin user found'}
+
+        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        if not workspace:
+            return {'success': False, 'error': 'No active workspace found'}
+
+        # Determine topic
+        if not topic:
+            topic = "current AI and technology trends for content creation"
+
+        # Conduct research
+        agent = ResearchAgent()
+        research_result = agent.execute(
+            task=f"Research the following topic and provide a comprehensive summary: {topic}",
+            context={'research_topic': topic, 'output_format': 'markdown'},
+            scifi_context={},
+            spider_context={}
+        )
+
+        # Format the research
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        safe_topic = topic[:30].replace(' ', '_').replace('/', '-')
+        filename = f"research/{safe_topic}_{timestamp}.md"
+
+        # AgentResult has .data dict and .message for output
+        output_content = research_result.data.get('output', '') or research_result.message or 'No research output generated'
+
+        content = f"""# Research: {topic}
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Agent: ResearchAgent
+
+---
+
+{output_content}
+
+---
+*Research conducted via SKIN Layer automation.*
+"""
+
+        # Write to workspace
+        manager = WorkspaceManager(user)
+        operation = manager.write_file(
+            workspace=workspace,
+            file_path=filename,
+            content=content,
+            agent_name='ResearchAgent',
+            agent_task=f'Research: {topic}'
+        )
+
+        logger.info(
+            f"🔬 [SKIN LAYER] Research written: {filename} "
+            f"(success: {operation.success})"
+        )
+
+        return {
+            'success': operation.success,
+            'file': filename,
+            'topic': topic,
+            'operation_id': str(operation.id)
+        }
+
+    except Exception as e:
+        logger.error(f"🔬 [SKIN LAYER] Research task failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.agent_content_to_workspace')
+def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
+    """
+    Session 776: Have ContentWriterAgent generate content and write to workspace.
+
+    Generates content (blog post, article, etc.) and writes it to the workspace.
+
+    Args:
+        content_type: Type of content ('blog', 'article', 'tutorial')
+        topic: Topic for the content, or None for AI-selected topic
+
+    Returns:
+        Operation result
+    """
+    from django.contrib.auth import get_user_model
+    from core.models_skin_layer import ProjectWorkspace
+    from core.services.workspace_manager import WorkspaceManager
+    from core.agents.content_writer_agent import ContentWriterAgent
+
+    logger.info(f"✍️ [SKIN LAYER] Starting content generation ({content_type})...")
+
+    User = get_user_model()
+
+    try:
+        user = User.objects.filter(is_superuser=True).first()
+        if not user:
+            return {'success': False, 'error': 'No admin user found'}
+
+        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        if not workspace:
+            return {'success': False, 'error': 'No active workspace found'}
+
+        # Determine topic
+        if not topic:
+            topic = "AI-assisted software development best practices"
+
+        # Generate content
+        agent = ContentWriterAgent()
+        content_result = agent.execute(
+            task=f"Write a {content_type} about: {topic}. "
+                 f"Include practical examples, clear explanations, and actionable insights.",
+            context={'content_type': content_type, 'topic': topic, 'output_format': 'markdown'},
+            scifi_context={},
+            spider_context={}
+        )
+
+        # Format and write
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        safe_topic = topic[:30].replace(' ', '_').replace('/', '-')
+        filename = f"content/{content_type}_{safe_topic}_{timestamp}.md"
+
+        # AgentResult has .data dict and .message for output
+        output_content = content_result.data.get('output', '') or content_result.message or 'No content generated'
+
+        content_body = f"""# {topic}
+Type: {content_type.title()}
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Agent: ContentWriterAgent
+
+---
+
+{output_content}
+
+---
+*Content generated via SKIN Layer automation.*
+"""
+
+        manager = WorkspaceManager(user)
+        operation = manager.write_file(
+            workspace=workspace,
+            file_path=filename,
+            content=content_body,
+            agent_name='ContentWriterAgent',
+            agent_task=f'{content_type.title()}: {topic}'
+        )
+
+        logger.info(
+            f"✍️ [SKIN LAYER] Content written: {filename} "
+            f"(success: {operation.success})"
+        )
+
+        return {
+            'success': operation.success,
+            'file': filename,
+            'content_type': content_type,
+            'topic': topic,
+            'operation_id': str(operation.id)
+        }
+
+    except Exception as e:
+        logger.error(f"✍️ [SKIN LAYER] Content task failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.agent_daily_summary')
+def agent_daily_summary():
+    """
+    Session 776: Generate a daily summary of all agent activities.
+
+    Creates a comprehensive daily summary including:
+    - Agent execution counts
+    - Content generated
+    - Learning achievements
+    - System health overview
+
+    Runs once daily at midnight.
+
+    Returns:
+        Operation result
+    """
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_skin_layer import ProjectWorkspace, WorkspaceOperation
+    from core.models_unified_system import AgentExecution, AgentMemory
+    from core.services.workspace_manager import WorkspaceManager
+
+    logger.info("📊 [SKIN LAYER] Generating daily summary...")
+
+    User = get_user_model()
+
+    try:
+        user = User.objects.filter(is_superuser=True).first()
+        if not user:
+            return {'success': False, 'error': 'No admin user found'}
+
+        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        if not workspace:
+            return {'success': False, 'error': 'No active workspace found'}
+
+        # Gather daily statistics
+        yesterday = timezone.now() - timedelta(days=1)
+
+        # Agent executions
+        executions = AgentExecution.objects.filter(created_at__gte=yesterday)
+        execution_count = executions.count()
+        successful = executions.filter(status='completed').count()
+        failed = executions.filter(status='failed').count()
+
+        # By agent
+        from django.db.models import Count
+        by_agent = list(
+            executions.values('agent__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+
+        # Workspace operations
+        operations = WorkspaceOperation.objects.filter(
+            workspace=workspace,
+            created_at__gte=yesterday
+        )
+        ops_count = operations.count()
+        files_created = operations.filter(operation_type='file_create').count()
+        files_modified = operations.filter(operation_type='file_update').count()
+
+        # Memories created
+        memories = AgentMemory.objects.filter(created_at__gte=yesterday).count()
+
+        # Build summary content
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        content = f"""# Daily Agent Summary - {today}
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+## Agent Executions (Last 24h)
+- **Total Executions:** {execution_count}
+- **Successful:** {successful} ({(successful/execution_count*100) if execution_count else 0:.1f}%)
+- **Failed:** {failed}
+
+### Top Agents by Activity
+"""
+        for item in by_agent:
+            content += f"- {item['agent__name']}: {item['count']} executions\n"
+
+        content += f"""
+## Workspace Operations
+- **Total Operations:** {ops_count}
+- **Files Created:** {files_created}
+- **Files Modified:** {files_modified}
+
+## Learning & Memory
+- **New Memories Created:** {memories}
+
+---
+*Daily summary generated via SKIN Layer automation.*
+"""
+
+        # Write to workspace
+        filename = f"summaries/daily_{today}.md"
+        manager = WorkspaceManager(user)
+        operation = manager.write_file(
+            workspace=workspace,
+            file_path=filename,
+            content=content,
+            agent_name='DailySummaryTask',
+            agent_task='Automated daily summary generation'
+        )
+
+        logger.info(
+            f"📊 [SKIN LAYER] Daily summary generated: {filename} "
+            f"(success: {operation.success})"
+        )
+
+        return {
+            'success': operation.success,
+            'file': filename,
+            'stats': {
+                'executions': execution_count,
+                'operations': ops_count,
+                'memories': memories
+            },
+            'operation_id': str(operation.id)
+        }
+
+    except Exception as e:
+        logger.error(f"📊 [SKIN LAYER] Daily summary failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
