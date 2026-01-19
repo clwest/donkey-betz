@@ -896,14 +896,14 @@ function ExecutionDetail({
           Execution Steps
         </h4>
         <div className="space-y-2">
-          {steps.map((step) => {
+          {steps.map((step, stepIndex) => {
             const stepConfig = statusConfig[step.status] || statusConfig.pending
             const StepIcon = stepConfig.icon
             const isSelected = selectedStep === step.step_number
 
             return (
               <div
-                key={step.step_number}
+                key={`${step.step_number}-${stepIndex}`}
                 className={cn(
                   'w-full text-left p-3 rounded-lg border transition-colors',
                   isSelected
