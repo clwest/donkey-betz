@@ -9,7 +9,7 @@ import {
   GitCommit, CheckCircle, XCircle, AlertTriangle,
   Loader2, Search, RotateCcw, Eye, Clock, X,
   FolderTree, Activity, Trash2, Heart, ExternalLink,
-  FileEdit, Users, PieChart, Calendar, Wifi, WifiOff
+  FileEdit, Users, PieChart, Calendar, Wifi, WifiOff, FileText, Copy, Check
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
@@ -199,10 +199,11 @@ function FileTree({ files, onSelect, selectedPath }: { files: FileNode[]; onSele
 }
 
 // Operation Row Component
-function OperationRow({ operation, onRollback, onReview }: {
+function OperationRow({ operation, onRollback, onReview, onViewContent }: {
   operation: WorkspaceOperation
   onRollback?: () => void
   onReview?: (approved: boolean) => void
+  onViewContent?: () => void  // Session 779: View file content callback
 }) {
   const [showDiff, setShowDiff] = useState(false)
 
@@ -310,6 +311,16 @@ function OperationRow({ operation, onRollback, onReview }: {
       )}
 
       <div className="flex items-center gap-2">
+        {/* Session 779: View Content button for file operations */}
+        {onViewContent && operation.success && ['file_create', 'file_update', 'file_modify'].includes(operation.operation_type) && (
+          <button
+            onClick={onViewContent}
+            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+          >
+            <FileText size={12} />
+            View Content
+          </button>
+        )}
         {operation.diff && (
           <button
             onClick={() => setShowDiff(!showDiff)}
@@ -716,6 +727,156 @@ function FileHistoryModal({ filePath, operations, isLoading, onClose }: {
   )
 }
 
+// Session 779: File Content Modal - View content of workspace operation outputs
+interface OperationDetail {
+  id: string
+  file_path: string
+  file_content_after?: string
+  file_content_before?: string
+  operation_type: string
+  agent_name: string
+  created_at: string
+  diff?: string
+  success: boolean
+}
+
+function FileContentModal({ operation, isLoading, onClose }: {
+  operation: OperationDetail | null
+  isLoading: boolean
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)
+
+  const content = operation?.file_content_after || ''
+  const isMarkdown = operation?.file_path?.endsWith('.md') || operation?.file_path?.endsWith('.markdown')
+  const fileName = operation?.file_path?.split('/').pop() || 'Unknown'
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Simple markdown to HTML conversion for display
+  const renderMarkdown = (text: string) => {
+    // Convert headers
+    let html = text
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2 text-white">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-white">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-4 text-white">$1</h1>')
+      // Convert bold and italic
+      .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Convert inline code
+      .replace(/`([^`]+)`/g, '<code class="bg-dark-bg px-1.5 py-0.5 rounded text-primary-400 text-sm">$1</code>')
+      // Convert code blocks
+      .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-dark-bg p-3 rounded-lg my-3 overflow-x-auto text-sm"><code>$2</code></pre>')
+      // Convert unordered lists
+      .replace(/^\s*[-*]\s+(.*)$/gim, '<li class="ml-4 list-disc">$1</li>')
+      // Convert horizontal rules
+      .replace(/^---+$/gim, '<hr class="border-dark-border my-4" />')
+      // Convert links
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-400 hover:underline" target="_blank" rel="noopener">$1</a>')
+      // Convert line breaks
+      .replace(/\n\n/g, '</p><p class="my-2">')
+      .replace(/\n/g, '<br />')
+
+    return `<p class="my-2">${html}</p>`
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-dark-border flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <FileText size={20} className="text-primary-400" />
+            <div>
+              <h3 className="text-lg font-semibold">{fileName}</h3>
+              <p className="text-xs text-gray-400 font-mono">{operation?.file_path}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {operation?.agent_name && (
+              <span className="text-xs px-2 py-1 rounded bg-primary-500/10 text-primary-400">
+                {operation.agent_name}
+              </span>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-white">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Toolbar */}
+        {!isLoading && content && (
+          <div className="flex items-center justify-between p-2 border-b border-dark-border bg-dark-bg/50 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              {isMarkdown && (
+                <button
+                  onClick={() => setShowRaw(!showRaw)}
+                  className={cn(
+                    "text-xs px-2 py-1 rounded transition-colors",
+                    showRaw ? "bg-primary-500/20 text-primary-400" : "bg-dark-border text-gray-400 hover:text-white"
+                  )}
+                >
+                  {showRaw ? 'Rendered' : 'Raw'}
+                </button>
+              )}
+              <span className="text-xs text-gray-500">
+                {content.length.toLocaleString()} characters • {content.split('\n').length} lines
+              </span>
+            </div>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-dark-border text-gray-400 hover:text-white transition-colors"
+            >
+              {copied ? <Check size={12} className="text-accent-green" /> : <Copy size={12} />}
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 size={32} className="animate-spin text-primary-400" />
+            </div>
+          ) : !content ? (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+              <FileText size={48} className="mb-4 opacity-50" />
+              <p>No content available</p>
+              <p className="text-xs mt-1">The file content was not stored for this operation</p>
+            </div>
+          ) : isMarkdown && !showRaw ? (
+            <div
+              className="prose prose-invert prose-sm max-w-none text-gray-300"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+            />
+          ) : (
+            <pre className="text-sm font-mono whitespace-pre-wrap break-words text-gray-300 leading-relaxed">
+              {content}
+            </pre>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-dark-border flex justify-between items-center flex-shrink-0">
+          <div className="text-xs text-gray-400">
+            {operation?.created_at && (
+              <span>Created: {new Date(operation.created_at).toLocaleString()}</span>
+            )}
+          </div>
+          <button onClick={onClose} className="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function WorkspacePage() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview')
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
@@ -726,6 +887,9 @@ export default function WorkspacePage() {
   const [showFileHistory, setShowFileHistory] = useState(false)
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [operationFilter, setOperationFilter] = useState<string>('')
+  // Session 779: File content modal state
+  const [showFileContent, setShowFileContent] = useState(false)
+  const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Session 714: Real-time event handlers - refresh data when file events occur
@@ -825,6 +989,13 @@ export default function WorkspacePage() {
     queryFn: () => workspaceOperationsApi.pendingReviews(),
     enabled: activeTab === 'reviews',
     retry: false,
+  })
+
+  // Session 779: Fetch operation detail for file content viewing
+  const { data: operationDetailData, isLoading: loadingOperationDetail } = useQuery({
+    queryKey: ['workspace-operation-detail', selectedOperationId],
+    queryFn: () => selectedOperationId ? workspaceOperationsApi.detail(selectedOperationId) : null,
+    enabled: !!selectedOperationId && showFileContent,
   })
 
   // Session 712: Body Health integration - SKIN connected to Body
@@ -1371,7 +1542,14 @@ export default function WorkspacePage() {
                 {operations.length > 0 ? (
                   <div className="space-y-3">
                     {operations.slice(0, 5).map(op => (
-                      <OperationRow key={op.id} operation={op} />
+                      <OperationRow
+                        key={op.id}
+                        operation={op}
+                        onViewContent={() => {
+                          setSelectedOperationId(op.id)
+                          setShowFileContent(true)
+                        }}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -1640,6 +1818,10 @@ export default function WorkspacePage() {
                       key={op.id}
                       operation={op}
                       onRollback={() => rollbackMutation.mutate(op.id)}
+                      onViewContent={() => {
+                        setSelectedOperationId(op.id)
+                        setShowFileContent(true)
+                      }}
                     />
                   ))}
                 </div>
@@ -1663,6 +1845,10 @@ export default function WorkspacePage() {
                       key={op.id}
                       operation={op}
                       onReview={(approved) => reviewMutation.mutate({ id: op.id, approved })}
+                      onViewContent={() => {
+                        setSelectedOperationId(op.id)
+                        setShowFileContent(true)
+                      }}
                     />
                   ))}
                 </div>
@@ -1722,6 +1908,18 @@ export default function WorkspacePage() {
           operations={(fileHistoryData?.data?.operations || []) as WorkspaceOperation[]}
           isLoading={loadingFileHistory}
           onClose={() => setShowFileHistory(false)}
+        />
+      )}
+
+      {/* Session 779: File Content Modal - View content of workspace operation outputs */}
+      {showFileContent && (
+        <FileContentModal
+          operation={operationDetailData?.data as OperationDetail | null}
+          isLoading={loadingOperationDetail}
+          onClose={() => {
+            setShowFileContent(false)
+            setSelectedOperationId(null)
+          }}
         />
       )}
 
