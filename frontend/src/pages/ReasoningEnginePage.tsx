@@ -137,6 +137,60 @@ export default function ReasoningEnginePage() {
     },
   })
 
+  // Helper functions - defined before data extraction that uses them
+  function mapThoughtStatus(status: string): 'pending' | 'processing' | 'completed' | 'failed' {
+    switch (status) {
+      case 'completed': return 'completed'
+      case 'failed': return 'failed'
+      case 'thinking':
+      case 'deciding':
+      case 'executing': return 'processing'
+      default: return 'pending'
+    }
+  }
+
+  function mapActionStatus(status: string): 'pending' | 'approved' | 'rejected' | 'executed' | 'failed' {
+    switch (status) {
+      case 'completed':
+      case 'executed': return 'executed'
+      case 'approved':
+      case 'queued': return 'approved'
+      case 'rejected':
+      case 'cancelled': return 'rejected'
+      case 'failed': return 'failed'
+      default: return 'pending'
+    }
+  }
+
+  function mapPriority(priority: string): 'low' | 'medium' | 'high' | 'critical' {
+    switch (priority) {
+      case 'critical': return 'critical'
+      case 'high': return 'high'
+      case 'low':
+      case 'background': return 'low'
+      default: return 'medium'
+    }
+  }
+
+  function mapSeverity(severity: string): 'low' | 'medium' | 'high' | 'critical' {
+    switch (severity) {
+      case 'critical': return 'critical'
+      case 'high': return 'high'
+      case 'low': return 'low'
+      default: return 'medium'
+    }
+  }
+
+  function mapConcernStatus(status: string): 'open' | 'investigating' | 'resolved' | 'dismissed' {
+    switch (status) {
+      case 'resolved': return 'resolved'
+      case 'accepted': return 'dismissed'
+      case 'in_progress':
+      case 'monitoring': return 'investigating'
+      default: return 'open'
+    }
+  }
+
   // Data extraction - map API response to expected interface
   // Session 782: Handle actual API structure from views_autonomous_reasoning.py
   const rawDashboard = dashboardData?.data || {}
@@ -217,64 +271,6 @@ export default function ReasoningEnginePage() {
   })) : []
 
   const unresolvedConcerns = concerns.filter(c => c.status === 'open' || c.status === 'investigating')
-
-  // Helper to map thought status
-  function mapThoughtStatus(status: string): 'pending' | 'processing' | 'completed' | 'failed' {
-    switch (status) {
-      case 'completed': return 'completed'
-      case 'failed': return 'failed'
-      case 'thinking':
-      case 'deciding':
-      case 'executing': return 'processing'
-      default: return 'pending'
-    }
-  }
-
-  // Helper to map action status
-  function mapActionStatus(status: string): 'pending' | 'approved' | 'rejected' | 'executed' | 'failed' {
-    switch (status) {
-      case 'completed':
-      case 'executed': return 'executed'
-      case 'approved':
-      case 'queued': return 'approved'
-      case 'rejected':
-      case 'cancelled': return 'rejected'
-      case 'failed': return 'failed'
-      default: return 'pending'
-    }
-  }
-
-  // Helper to map priority
-  function mapPriority(priority: string): 'low' | 'medium' | 'high' | 'critical' {
-    switch (priority) {
-      case 'critical': return 'critical'
-      case 'high': return 'high'
-      case 'low':
-      case 'background': return 'low'
-      default: return 'medium'
-    }
-  }
-
-  // Helper to map severity
-  function mapSeverity(severity: string): 'low' | 'medium' | 'high' | 'critical' {
-    switch (severity) {
-      case 'critical': return 'critical'
-      case 'high': return 'high'
-      case 'low': return 'low'
-      default: return 'medium'
-    }
-  }
-
-  // Helper to map concern status
-  function mapConcernStatus(status: string): 'open' | 'investigating' | 'resolved' | 'dismissed' {
-    switch (status) {
-      case 'resolved': return 'resolved'
-      case 'accepted': return 'dismissed'
-      case 'in_progress':
-      case 'monitoring': return 'investigating'
-      default: return 'open'
-    }
-  }
 
   const tabs = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: BarChart3 },
