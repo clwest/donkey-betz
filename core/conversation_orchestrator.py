@@ -50,6 +50,147 @@ class ConversationState:
     insights_mentioned: List[str] = field(default_factory=list)
     last_tension_turn: int = -3  # Start at -3 so first tension can be at turn 0
     grounding_refs: List[str] = field(default_factory=list)
+    # Session 781: Track used openers to prevent repetition
+    used_openers: List[str] = field(default_factory=list)
+    # Session 781 Level 3: Track discourse markers for comprehensive repetition prevention
+    used_discourse_markers: List[str] = field(default_factory=list)
+
+
+# Session 781: Disallowed opener patterns - these are banned globally
+DISALLOWED_OPENERS = [
+    "I'd push back slightly",
+    "That's a great point",
+    "Great point",
+    "I agree, but",
+    "I agree, however",
+    "That's a fair point",
+    "Absolutely",
+    "With all due respect",
+    "I love that",
+    "Exactly right",
+]
+
+# Session 781 Level 3: Discourse markers to track for repetition prevention
+# These are common phrases that make conversations feel templated when repeated
+DISCOURSE_MARKERS = {
+    # Transition markers
+    'transitions': [
+        "however", "that said", "building on that", "additionally",
+        "furthermore", "moreover", "on the other hand", "nevertheless",
+        "in contrast", "similarly", "likewise", "consequently",
+        "as a result", "therefore", "thus", "hence",
+    ],
+    # Agreement markers
+    'agreement': [
+        "i see your point", "that makes sense", "you're right",
+        "i agree with", "exactly", "precisely", "indeed",
+        "that's correct", "absolutely right", "spot on",
+        "that resonates", "i'm aligned with",
+    ],
+    # Disagreement markers
+    'disagreement': [
+        "i'd question", "the concern is", "but have we considered",
+        "i'm not sure about", "the risk here is", "my concern is",
+        "i'd challenge", "the problem with", "the issue is",
+        "that overlooks", "we're missing",
+    ],
+    # Filler phrases
+    'fillers': [
+        "to be honest", "in my view", "from my perspective",
+        "i think that", "it seems to me", "in my opinion",
+        "i believe that", "i would say", "if i'm being honest",
+        "frankly", "honestly", "truthfully",
+    ],
+    # Hedging phrases
+    'hedges': [
+        "sort of", "kind of", "a bit", "slightly",
+        "somewhat", "perhaps", "maybe", "possibly",
+        "i suppose", "i guess", "arguably",
+    ],
+}
+
+
+def extract_opener(text: str) -> Optional[str]:
+    """
+    Session 781: Extract the opening phrase from a response.
+
+    Returns the first sentence or clause (up to 60 chars) that starts the response.
+    This is used to track what openers have been used and prevent repetition.
+    """
+    if not text:
+        return None
+
+    # Clean up the text
+    text = text.strip()
+
+    # Find the first sentence or clause break
+    break_chars = ['.', '!', '?', '—', ' - ', ':']
+    first_break = len(text)
+
+    for char in break_chars:
+        pos = text.find(char)
+        if pos > 0 and pos < first_break:
+            first_break = pos
+
+    # Extract opener (max 60 chars)
+    opener = text[:min(first_break, 60)].strip()
+
+    # If it's too short, it's not meaningful
+    if len(opener) < 10:
+        return None
+
+    return opener
+
+
+def extract_discourse_markers(text: str) -> List[str]:
+    """
+    Session 781 Level 3: Extract discourse markers used in a response.
+
+    This tracks common transitional, agreement, disagreement, filler, and
+    hedging phrases to prevent repetition across the conversation.
+    """
+    if not text:
+        return []
+
+    text_lower = text.lower()
+    found_markers = []
+
+    for category, markers in DISCOURSE_MARKERS.items():
+        for marker in markers:
+            if marker in text_lower:
+                found_markers.append(marker)
+
+    return found_markers
+
+
+def get_discourse_avoidance_prompt(used_markers: List[str], max_show: int = 8) -> str:
+    """
+    Session 781 Level 3: Generate a prompt section listing phrases to avoid.
+
+    Groups the most frequently used markers and instructs the model to
+    use fresh language instead.
+    """
+    if not used_markers:
+        return ""
+
+    # Count occurrences
+    from collections import Counter
+    marker_counts = Counter(used_markers)
+
+    # Get the most overused markers
+    most_used = [marker for marker, count in marker_counts.most_common(max_show) if count >= 2]
+
+    if not most_used:
+        return ""
+
+    markers_list = ", ".join([f'"{m}"' for m in most_used])
+
+    return f"""
+DISCOURSE MEMORY (Session 781 Level 3):
+These phrases have been OVERUSED in this conversation - find fresh alternatives:
+{markers_list}
+
+Vary your language. Don't fall into repetitive patterns."""
 
 
 class ConversationOrchestrator:
@@ -352,6 +493,18 @@ class ConversationOrchestrator:
             if msg_has_empty_agreement:
                 state.empty_agreement_count += 1
 
+            # Session 781: Track opener to prevent repetition in future turns
+            opener = extract_opener(response)
+            if opener:
+                state.used_openers.append(opener)
+                logger.debug(f"Tracked opener: '{opener[:40]}...'")  # Log first 40 chars
+
+            # Session 781 Level 3: Track discourse markers for comprehensive repetition prevention
+            discourse_markers = extract_discourse_markers(response)
+            if discourse_markers:
+                state.used_discourse_markers.extend(discourse_markers)
+                logger.debug(f"Tracked {len(discourse_markers)} discourse markers")
+
             # Determine message type
             msg_type = self._classify_message(response, turn, num_turns)
 
@@ -391,7 +544,14 @@ class ConversationOrchestrator:
                 'tension_count': state.tension_count,
                 'grounding_count': state.grounding_count,
                 'empty_agreement_count': state.empty_agreement_count,
-                'unique_grounding_refs': list(set(state.grounding_refs))
+                'unique_grounding_refs': list(set(state.grounding_refs)),
+                # Session 781: Track unique openers used
+                'unique_openers_count': len(set(state.used_openers)),
+                'used_openers': state.used_openers,
+                # Session 781 Level 3: Discourse marker stats
+                'discourse_markers_total': len(state.used_discourse_markers),
+                'discourse_markers_unique': len(set(state.used_discourse_markers)),
+                'overused_phrases': self._get_overused_phrases(state.used_discourse_markers)
             },
             'topic': topic,
             'participants': [agent1['name'], agent2['name']],
@@ -453,19 +613,23 @@ Continue this {conversation_type} conversation about: "{topic}"
 - Build toward actionable conclusions
 - Keep it to 2-4 sentences""")
 
-        # Force tension if needed
+        # Force tension if needed (Session 781: Use role-specific disagreement styles)
         if force_tension:
             turn_instructions.append("""
 TENSION REQUIREMENT (MANDATORY FOR THIS TURN):
-You MUST include constructive tension in this response. Use one of these approaches:
+You MUST include constructive tension in this response.
 
-- Challenge an assumption: "However, I'd question whether..."
-- Highlight a trade-off: "The trade-off here is..."
-- Offer an alternative: "What if instead we..."
-- Raise a concern: "My concern with that approach is..."
-- Add a caveat: "That works, but we should be careful about..."
+Use YOUR ROLE-SPECIFIC DISAGREEMENT STYLE from above - challenge from your unique expertise.
 
-DO NOT just agree. Add friction to make this conversation valuable.""")
+NEVER use these generic hedging phrases:
+- "I'd push back slightly..."
+- "That's a great point, but..."
+- "However, I'd question whether..."
+- "I agree, however..."
+- "With all due respect..."
+
+Instead, disagree DIRECTLY using your domain voice (examples in Your Disagreement Style above).
+Add friction to make this conversation valuable - but do it YOUR way.""")
 
         # Final turn requirements
         if is_final_turn:
@@ -483,12 +647,30 @@ The DecisionSummary MUST appear at the end of your message. This is required."""
         # Session 318: Removed generic grounding reminder
         # Agents now ground in their ACTUAL knowledge/experiences, not generic platform stats
 
-        # Anti-agreement reminder
+        # Anti-agreement reminder (Session 781: Updated with explicit bans)
         turn_instructions.append("""
-AGREEMENT RULES:
+VOICE RULES:
 - NEVER say: "Absolutely!", "Great point!", "I love that!", "Exactly right!"
-- If you agree, still add nuance: "That aligns with the data, though one consideration is..."
-- Always contribute something new, don't just validate""")
+- NEVER use: "I'd push back slightly", "That's a fair point", "I agree, but..."
+- If you agree, add value from YOUR expertise - don't just validate
+- Speak in YOUR distinct voice, not corporate AI hedging""")
+
+        # Session 781: De-duplication - prevent reusing openers from this conversation
+        if state.used_openers:
+            # Show recent openers (last 5) so agent knows what to avoid
+            recent_openers = state.used_openers[-5:]
+            openers_list = "\n".join([f'- "{op}"' for op in recent_openers])
+            turn_instructions.append(f"""
+OPENER DE-DUPLICATION (CRITICAL):
+These opening phrases have ALREADY been used in this conversation. Do NOT start with similar phrasing:
+{openers_list}
+
+Start your response with a FRESH, UNIQUE opening that hasn't been used yet.""")
+
+        # Session 781 Level 3: Discourse memory - prevent overused phrases
+        discourse_avoidance = get_discourse_avoidance_prompt(state.used_discourse_markers)
+        if discourse_avoidance:
+            turn_instructions.append(discourse_avoidance)
 
         # Assemble full prompt with agent knowledge (Session 318) and system context
         prompt = f"""{role_prompt}
@@ -539,6 +721,20 @@ Approach: Examine data, consider implications, draw conclusions."""
         }
 
         return instructions.get(conversation_type, instructions['brainstorm'])
+
+    def _get_overused_phrases(self, markers: List[str], threshold: int = 2) -> List[Dict[str, Any]]:
+        """
+        Session 781 Level 3: Get list of overused discourse phrases.
+
+        Returns phrases that were used more than `threshold` times with their counts.
+        """
+        from collections import Counter
+        marker_counts = Counter(markers)
+        return [
+            {'phrase': phrase, 'count': count}
+            for phrase, count in marker_counts.most_common()
+            if count >= threshold
+        ]
 
     def _generate_message(
         self,
