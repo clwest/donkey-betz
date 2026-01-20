@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { contentApi } from '@/lib/api'
 import {
   Radio,
@@ -15,6 +16,7 @@ import {
   Loader2,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   Youtube,
   MessageSquare,
   Eye,
@@ -24,8 +26,31 @@ import {
   Sparkles,
   Users,
   X,
+  BookOpen,
+  Search,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+
+// Blog interface for SelfBlog posts
+interface Blog {
+  id: string
+  title: string
+  meta_description: string
+  intro: string
+  tags: string[]
+  tone: string
+  word_count: number
+  created_at: string
+}
+
+interface BlogPagination {
+  page: number
+  per_page: number
+  total: number
+  total_pages: number
+  has_next: boolean
+  has_prev: boolean
+}
 
 interface Episode {
   id: string
@@ -371,7 +396,176 @@ function ChannelCard({ channel }: { channel: Channel }) {
   )
 }
 
+// Blog Library Component - Session 780
+function BlogLibrary() {
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['blog-library', page, search],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: '12',
+        ...(search && { search }),
+      })
+      const response = await fetch(`/api/v1/research/self-blog/list/?${params}`)
+      return response.json()
+    },
+  })
+
+  const blogs: Blog[] = data?.blogs || []
+  const pagination: BlogPagination = data?.pagination || {
+    page: 1,
+    per_page: 12,
+    total: 0,
+    total_pages: 0,
+    has_next: false,
+    has_prev: false,
+  }
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSearch(searchInput)
+    setPage(1)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="card text-center py-12">
+        <BookOpen className="mx-auto mb-4 text-accent-red" size={48} />
+        <h3 className="text-lg font-semibold mb-2">Failed to Load Blogs</h3>
+        <p className="text-gray-400">Please try again later.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Search */}
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search blogs by title, content, or tags..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
+          />
+        </div>
+        <button type="submit" className="btn btn-primary">
+          Search
+        </button>
+        {search && (
+          <button
+            type="button"
+            onClick={() => { setSearch(''); setSearchInput(''); setPage(1); }}
+            className="btn btn-secondary"
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
+      {/* Stats */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-400">
+          {pagination.total} AI-generated blog posts
+          {search && ` matching "${search}"`}
+        </p>
+        <p className="text-sm text-gray-400">
+          Page {pagination.page} of {pagination.total_pages}
+        </p>
+      </div>
+
+      {/* Blog Grid */}
+      {blogs.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {blogs.map((blog) => (
+            <Link
+              key={blog.id}
+              to={`/blog/${blog.id}`}
+              className="card hover:border-primary-500/50 transition-colors cursor-pointer"
+            >
+              <h3 className="font-semibold mb-2 line-clamp-2">{blog.title}</h3>
+              <p className="text-sm text-gray-400 mb-3 line-clamp-3">{blog.intro}</p>
+              <div className="flex flex-wrap gap-1 mb-3">
+                {blog.tags.slice(0, 3).map((tag, i) => (
+                  <span
+                    key={i}
+                    className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400"
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {blog.tags.length > 3 && (
+                  <span className="text-xs text-gray-500">+{blog.tags.length - 3} more</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <FileText size={12} />
+                  {blog.word_count} words
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar size={12} />
+                  {new Date(blog.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="card text-center py-12">
+          <BookOpen className="mx-auto mb-4 text-gray-500" size={48} />
+          <h3 className="text-lg font-semibold mb-2">No Blogs Found</h3>
+          <p className="text-gray-400">
+            {search ? `No blogs match "${search}"` : 'No AI-generated blogs yet.'}
+          </p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pagination.total_pages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={!pagination.has_prev}
+            className="btn btn-secondary disabled:opacity-50"
+          >
+            <ChevronLeft size={16} />
+            Previous
+          </button>
+          <span className="px-4 text-sm text-gray-400">
+            {pagination.page} / {pagination.total_pages}
+          </span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!pagination.has_next}
+            className="btn btn-secondary disabled:opacity-50"
+          >
+            Next
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ContentChannelsPage() {
+  const [activeTab, setActiveTab] = useState<'channels' | 'blogs'>('channels')
+
   const { data: channelsData, isLoading, error } = useQuery({
     queryKey: ['content-channels'],
     queryFn: () => contentApi.channels(10),
@@ -420,7 +614,40 @@ export default function ContentChannelsPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-dark-border pb-2">
+        <button
+          onClick={() => setActiveTab('channels')}
+          className={cn(
+            'px-4 py-2 rounded-t-lg font-medium transition-colors flex items-center gap-2',
+            activeTab === 'channels'
+              ? 'bg-primary-500/20 text-primary-400 border-b-2 border-primary-500'
+              : 'text-gray-400 hover:text-white'
+          )}
+        >
+          <Radio size={18} />
+          Channels ({stats.total_channels})
+        </button>
+        <button
+          onClick={() => setActiveTab('blogs')}
+          className={cn(
+            'px-4 py-2 rounded-t-lg font-medium transition-colors flex items-center gap-2',
+            activeTab === 'blogs'
+              ? 'bg-primary-500/20 text-primary-400 border-b-2 border-primary-500'
+              : 'text-gray-400 hover:text-white'
+          )}
+        >
+          <BookOpen size={18} />
+          Blog Library
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'blogs' ? (
+        <BlogLibrary />
+      ) : (
+        <>
+          {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="card">
           <div className="flex items-center gap-3">
@@ -491,6 +718,8 @@ export default function ContentChannelsPage() {
             Content channels will appear here when the autonomous content studio creates them.
           </p>
         </div>
+      )}
+        </>
       )}
     </div>
   )

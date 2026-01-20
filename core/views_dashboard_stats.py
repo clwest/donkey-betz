@@ -7,8 +7,12 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, Q
+from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from core.models import (
     Agent, AgentExecution, UserProfile,
@@ -16,8 +20,8 @@ from core.models import (
     SpiderData, Advisor, Collaboration
 )
 
-@require_http_methods(["GET"])
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def dashboard_stats(request):
     """
     Get real-time dashboard statistics for the unified command center.
@@ -183,36 +187,39 @@ def dashboard_stats(request):
         }
     }
 
-    return JsonResponse(stats)
+    return Response(stats)
 
-@require_http_methods(["GET"])
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def live_agent_activity(request):
     """
     Get real-time agent activity for Neural Orchestra visualization
+    Session 780: Fixed field names, timezone issues, and auth decorators
     """
     user = request.user
+    now = timezone.now()
 
-    # Get all active agents with recent activity
+    # Get all active agents assigned to this user
     active_agents = Agent.objects.filter(
         is_active=True,
         user_assignments=user
-    ).select_related('current_execution').prefetch_related(
-        'collaborations',
-        'executions'
-    )
+    ).prefetch_related('executions')
 
     agent_data = []
     for agent in active_agents:
-        # Get current status
+        # Get current in-progress execution
         current_execution = agent.executions.filter(
             status='in_progress'
         ).first()
 
-        # Get recent collaborations
-        recent_collabs = agent.collaborations.filter(
-            created_at__gte=datetime.now() - timedelta(minutes=5)
-        ).values_list('collaborator__name', flat=True)
+        # Get recent collaborations where this agent participated
+        # Session 780: Fixed - collaborations uses collaborating_agents M2M, not collaborator FK
+        recent_collabs = Collaboration.objects.filter(
+            collaborating_agents=agent,
+            created_at__gte=now - timedelta(minutes=5)
+        ).select_related('lead_agent')
+
+        collab_names = [c.lead_agent.name for c in recent_collabs if c.lead_agent != agent]
 
         agent_data.append({
             'id': agent.id,
@@ -220,59 +227,68 @@ def live_agent_activity(request):
             'type': agent.agent_type,
             'status': 'active' if current_execution else 'idle',
             'current_task': current_execution.task if current_execution else None,
-            'collaborating_with': list(recent_collabs),
+            'collaborating_with': collab_names,
             'last_active': agent.last_active.isoformat() if agent.last_active else None,
             'metrics': {
                 'tasks_completed': agent.executions.filter(status='completed').count(),
-                'success_rate': agent.success_rate if hasattr(agent, 'success_rate') else 0,
-                'specialization': agent.specialization if hasattr(agent, 'specialization') else agent.agent_type
+                'success_rate': getattr(agent, 'success_rate', 0) or 0,
+                'specialization': getattr(agent, 'specialization', None) or agent.agent_type
             }
         })
 
-    return JsonResponse({
+    return Response({
         'agents': agent_data,
         'total_agents': len(agent_data),
-        'timestamp': datetime.now().isoformat()
+        'timestamp': now.isoformat()
     })
 
-@require_http_methods(["GET"])
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def advisor_insights(request):
     """
     Get insights and recommendations from legendary advisors
+    Session 780: Fixed timezone issues, correct model, and auth decorators
     """
+    from core.models_unified_system import AdvisorInsight
+
     user = request.user
+    now = timezone.now()
 
     # Get active advisors
     advisors = Advisor.objects.filter(is_active=True)
 
     insights = []
     for advisor in advisors:
-        # Get recent insights for this user
-        recent_insights = advisor.insights.filter(
-            user=user,
-            created_at__gte=datetime.now() - timedelta(days=1)
-        ).order_by('-created_at')[:3]
+        # Session 780: Use AdvisorInsight model (has related_name='insights' on Advisor)
+        try:
+            recent_insights = AdvisorInsight.objects.filter(
+                advisor=advisor,
+                user=user,
+                created_at__gte=now - timedelta(days=1)
+            ).order_by('-created_at')[:3]
 
-        for insight in recent_insights:
-            insights.append({
-                'advisor': {
-                    'name': advisor.name,
-                    'title': advisor.title,
-                    'expertise': advisor.expertise,
-                    'avatar': advisor.avatar_url
-                },
-                'insight': insight.content,
-                'confidence': insight.confidence,
-                'category': insight.category,
-                'actionable': insight.is_actionable,
-                'created_at': insight.created_at.isoformat()
-            })
+            for insight in recent_insights:
+                insights.append({
+                    'advisor': {
+                        'name': advisor.name,
+                        'title': getattr(advisor, 'title', advisor.expertise),
+                        'expertise': advisor.expertise,
+                        'avatar': getattr(advisor, 'avatar_url', None)
+                    },
+                    'insight': insight.content,
+                    'confidence': getattr(insight, 'confidence', 0.8),
+                    'category': getattr(insight, 'category', 'general'),
+                    'actionable': getattr(insight, 'is_actionable', True),
+                    'created_at': insight.created_at.isoformat()
+                })
+        except Exception:
+            # If there's any issue with this advisor, skip it
+            continue
 
-    return JsonResponse({
+    return Response({
         'insights': insights,
         'total_advisors': advisors.count(),
-        'timestamp': datetime.now().isoformat()
+        'timestamp': now.isoformat()
     })
 
 
