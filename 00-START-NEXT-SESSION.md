@@ -1,69 +1,108 @@
-# Session 785 - Ready for Next Task
+# Session 786 - Ready for Next Task
 
-**Previous Session:** 784 (Documentation Index Browser)
+**Previous Session:** 785 (Hybrid Workspace Autopilot)
 **Date:** January 20, 2026
-**Status:** 74/74 Agents Complete | 45 Frontend Pages | Docs Index Browser Live
+**Status:** 74/74 Agents Complete | 45 Frontend Pages | Workspace Autopilot Active
 
 ---
 
-## Session 784 Accomplishments
+## Session 785 Accomplishments
 
-### Documentation Index Browser - Cognitive Build Ledger UI
+### Hybrid Workspace Autopilot System
 
-Created a full-featured UI for browsing the documentation index (`docs/_index.json`). The index tracks 1,512 documents with status badges, cross-reference graph, broken link detection, and orphan warnings.
+Implemented event-driven autonomous workspace operations. Replaces 14+ individual scheduled tasks with a single conductor that drains a work queue. Fixes the issue where agents weren't executing autonomously because Celery Beat's DatabaseScheduler ignores static `beat_schedule` definitions in `celery.py`.
 
-**Session 784 Commits:**
+**Architecture:**
 ```
-9bc551bd feat(Session 784): Documentation Index Browser UI
-2e46f04d feat(Session 784): Documentation index v2.2 - context & broken links
-e74e5b7a feat(Session 784): Cross-reference graph for documentation index
-9d7832ef feat(Session 784): Auto-generated documentation index
+SpiderData created
+    |
+    v
+post_save signal fires
+    |
+    v
+evaluate_workspace_triggers_for_spider_data()
+    |
+    v (if match)
+WorkspaceTrigger record created (pending)
+    |
+    v (every 5 min)
+workspace_autopilot_tick() conductor drains queue
+    |
+    v
+Agent executes work via SKIN Layer
 ```
 
-#### 1. Backend: `build_docs_index` v2.2
-Enhanced the management command with:
-- **Code block filtering** - Strips fenced/indented code before extracting links
-- **Link context** - Tracks occurrences count + context snippets per link
-- **Broken links detection** - 100 broken links found
-- **Cross-reference graph** - 1,816 total links mapped
+#### 1. New Models (`core/models_skin_layer.py`)
 
-#### 2. Backend API: 4 Endpoints (`core/views_docs_index.py`)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/docs/index/` | Full index with filtering (status, type, subsystem, search) |
-| GET | `/api/docs/stats/` | Stats for dashboard widgets |
-| GET | `/api/docs/graph/` | Cross-reference graph summary |
-| GET | `/api/docs/detail/<path>/` | Document detail with inbound/outbound links |
+| Model | Purpose |
+|-------|---------|
+| `WorkspaceTriggerType` | Enum with 8 trigger types (spider_code_insight, spider_security_alert, etc.) |
+| `WorkspaceTrigger` | Event-driven work queue item with TTL, dedupe, priority, status tracking |
+| `WorkspaceTriggerConfig` | Configurable trigger rules (match_field, match_operator, cooldown, etc.) |
 
-#### 3. Frontend: DocsIndexPage (~400 lines)
-- **Stats Dashboard** - Total docs (1,512), active (384), cross-links (1,816), broken (100), orphans (50)
-- **Filterable List** - Search, status filter, type filter
-- **Document Cards** - Status badge, type, orphan warning, link counts
-- **DocDetailsPanel** - Slide-out panel showing:
-  - Status badge, lines, type, frontmatter indicator
-  - Orphan warning (yellow banner)
-  - Subsystems list
-  - Outbound links with occurrences and context snippets
-  - Inbound links with occurrences and context snippets
+**WorkspaceTrigger Features:**
+- `dedupe_hash` - Prevents duplicate work items
+- `expires_at` - TTL-based auto-expiration
+- `priority` - P0 (critical) to P3 (low)
+- `status` - pending/processing/completed/failed/expired/skipped
+- `target_agent` - Optional specific agent routing
+- `context_data` - JSON payload for agent execution
 
-**Status Badges:**
-- `active` - Green (384 docs)
-- `superseded` - Yellow (1,128 docs)
-- `deprecated` - Red
-- `draft` - Blue
-- `unknown` - Gray
+**WorkspaceTriggerConfig Features:**
+- `match_field` - Dot-notation path to check (e.g., "title", "items.0.content")
+- `match_operator` - contains, regex, gt, lt
+- `target_spiders` - Optional list of spider names to match
+- `cooldown_minutes` - Rate limiting per config
+- `trigger_title_template` - Dynamic title with {spider_name}, {matched_value}
 
-**Route:** `/docs-index`
+#### 2. Signal Handler (`core/signals/trigger_signals.py`)
 
-**Files Created/Modified:**
-- `core/management/commands/build_docs_index.py` (v2.2 with code block filtering, snippets, broken links)
-- `core/views_docs_index.py` (new, ~210 lines)
-- `core/urls.py` (+4 routes)
-- `core/auth_middleware.py` (+PUBLIC_PATH)
-- `frontend/src/lib/api.ts` (+docsIndexApi with TypeScript interfaces)
-- `frontend/src/pages/DocsIndexPage.tsx` (new, ~400 lines)
-- `frontend/src/App.tsx` (+route)
-- `frontend/src/components/layout/Sidebar.tsx` (+nav item with Book icon)
+Added `evaluate_workspace_triggers_for_spider_data()`:
+- Evaluates all active WorkspaceTriggerConfig rules on each SpiderData creation
+- Supports cooldown checking, spider matching, nested field extraction
+- Creates WorkspaceTrigger records when conditions match
+- Updates config statistics (total_triggers_created, last_triggered_at)
+
+#### 3. Conductor Task (`core/tasks.py`)
+
+Added `workspace_autopilot_tick`:
+- Runs every 5 minutes (configurable)
+- Marks expired triggers as 'expired'
+- Gets pending triggers (respects budget, priority, category)
+- Routes to appropriate agent based on trigger_type and target_category
+- Executes via agent's process_request() or health_check()
+- Updates trigger status (completed/failed)
+
+#### 4. Management Command (`core/management/commands/setup_workspace_autopilot.py`)
+
+```bash
+# Basic setup (creates PeriodicTask)
+python manage.py setup_workspace_autopilot
+
+# With custom interval and budget
+python manage.py setup_workspace_autopilot --interval=300 --budget=5
+
+# Seed default trigger configs
+python manage.py setup_workspace_autopilot --seed-configs
+
+# Disable autopilot
+python manage.py setup_workspace_autopilot --disable
+```
+
+#### 5. Admin Interface (`core/admin.py`)
+
+Added admin panels for:
+- **WorkspaceTriggerAdmin** - View/filter triggers, see execution history
+- **WorkspaceTriggerConfigAdmin** - Create/edit trigger rules
+
+**Default WorkspaceTriggerConfig Rules (4 seeded):**
+
+| Name | Match Field | Operator | Match Value | Target |
+|------|-------------|----------|-------------|--------|
+| Security Alert Scanner | title | contains | vulnerability\|exploit\|CVE\|security | SecuritySystemMonitor |
+| Dependency Update Detector | title | contains | update\|upgrade\|version\|release | DependencyAnalyst |
+| Code Best Practice Monitor | content | regex | (TODO\|FIXME\|HACK\|XXX) | CodeQualityReviewer |
+| Bug Pattern Detector | title | contains | bug\|error\|crash\|fail | BugTriageAgent |
 
 ---
 
@@ -74,32 +113,63 @@ Enhanced the management command with:
 make start
 make celery
 
-# 2. Access AI Studio
+# 2. Setup autopilot (if not already done)
+python manage.py setup_workspace_autopilot --seed-configs
+
+# 3. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Navigate to Docs Index
-# Click "Docs Index" in sidebar (Book icon)
-# Or visit http://localhost:3001/docs-index (dev server)
+# 4. Admin panel for triggers
+open http://localhost:8000/admin/core/workspacetrigger/
+open http://localhost:8000/admin/core/workspacetriggerconfig/
+```
+
+---
+
+## Files Created/Modified
+
+| File | Changes |
+|------|---------|
+| `core/models_skin_layer.py` | +WorkspaceTriggerType, +WorkspaceTrigger, +WorkspaceTriggerConfig, +DEFAULT_WORKSPACE_TRIGGER_CONFIGS |
+| `core/signals/trigger_signals.py` | +evaluate_workspace_triggers_for_spider_data(), updated on_spider_data_created() |
+| `core/tasks.py` | +workspace_autopilot_tick conductor task |
+| `core/management/commands/setup_workspace_autopilot.py` | New management command |
+| `core/admin.py` | +WorkspaceTriggerAdmin, +WorkspaceTriggerConfigAdmin |
+| `core/migrations/0179_workspace_triggers_session_785.py` | New migration |
+
+---
+
+## Verification
+
+```bash
+# Check active trigger configs
+python manage.py shell -c "from core.models_skin_layer import WorkspaceTriggerConfig; print(f'Active configs: {WorkspaceTriggerConfig.objects.filter(is_active=True).count()}')"
+
+# Check PeriodicTask
+python manage.py shell -c "from django_celery_beat.models import PeriodicTask; t=PeriodicTask.objects.filter(name='Workspace Autopilot Conductor').first(); print(f'Task: {t.name}, Enabled: {t.enabled}, Interval: {t.interval}')"
+
+# Check pending triggers
+python manage.py shell -c "from core.models_skin_layer import WorkspaceTrigger; print(f'Pending: {WorkspaceTrigger.objects.filter(status=\"pending\").count()}')"
+
+# Manually run conductor (dry run)
+python manage.py shell -c "from core.tasks import workspace_autopilot_tick; workspace_autopilot_tick(dry_run=True)"
 ```
 
 ---
 
 ## What's Next?
 
-The platform is feature-complete with:
-- 74 agents (all working)
-- 77 spiders (72 working)
-- 9 body systems
-- 14 sci-fi features
-- 45 frontend pages
-- Documentation Index Browser for codebase navigation
+The Hybrid Workspace Autopilot is now active:
+- **4 WorkspaceTriggerConfig rules** scanning all new SpiderData
+- **PeriodicTask running every 5 minutes** draining the queue
+- **Budget of 5 triggers per tick** to prevent overload
 
 Potential areas for future work:
-1. **Fix broken links** - 100 broken internal doc references need fixing
-2. **Reduce orphans** - 50 orphan docs need integration or removal
-3. **Add frontmatter** - 0 docs have frontmatter metadata
-4. **Visualize graph** - Force-directed graph of document relationships
-5. **Auto-fix suggestions** - Suggest fixes for broken links
+1. **More trigger configs** - Add configs for market movements, content ideas, tech trends
+2. **Frontend trigger dashboard** - View/manage triggers in React UI
+3. **Trigger analytics** - Track effectiveness of different trigger types
+4. **Manual trigger creation** - UI to manually queue workspace tasks
+5. **Trigger notifications** - Alert when high-priority triggers fire
 
 ---
 
@@ -107,43 +177,13 @@ Potential areas for future work:
 
 | File | Purpose |
 |------|---------|
-| `core/management/commands/build_docs_index.py` | Documentation indexer v2.2 |
-| `core/views_docs_index.py` | Docs Index API (4 endpoints) |
-| `docs/_index.json` | Generated documentation index |
-| `docs/INDEX.md` | Human-readable index summary |
-| `frontend/src/pages/DocsIndexPage.tsx` | Browser UI with filters & detail panel |
+| `core/models_skin_layer.py` | WorkspaceTrigger + WorkspaceTriggerConfig models |
+| `core/signals/trigger_signals.py` | Event-driven trigger evaluation |
+| `core/tasks.py` | workspace_autopilot_tick conductor task |
+| `core/management/commands/setup_workspace_autopilot.py` | Setup/configure autopilot |
 
 ---
 
-## Verification
+## Session 784 Summary
 
-Test the Documentation Index API:
-```bash
-# Get stats
-curl http://localhost:8000/api/docs/stats/
-
-# Get index with filter
-curl "http://localhost:8000/api/docs/index/?status=active&limit=5"
-
-# Get document detail
-curl "http://localhost:8000/api/docs/detail/CLAUDE.md/"
-
-# Get graph summary
-curl http://localhost:8000/api/docs/graph/
-```
-
-Rebuild the index after doc changes:
-```bash
-python manage.py build_docs_index
-
-# Or dry-run to preview
-python manage.py build_docs_index --dry-run
-```
-
-Verify frontend:
-1. Start frontend: `cd frontend && npm run dev`
-2. Navigate to http://localhost:3001/docs-index
-3. See stats cards at top (docs, links, broken, orphans)
-4. Use filters (status, type, search)
-5. Click document to see detail panel
-6. Check inbound/outbound links with snippets
+Created Documentation Index Browser UI for browsing `docs/_index.json` with 1,512 documents, status badges, cross-reference graph, and broken link detection. See `docs/handoffs/SESSION_784_DOCS_INDEX_BROWSER.md` for details.

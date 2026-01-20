@@ -634,3 +634,475 @@ class WorkspaceContext(models.Model):
                     })
 
         return sorted(similar, key=lambda x: len(x['common_terms']), reverse=True)[:limit]
+
+
+# =============================================================================
+# Session 785: Workspace Trigger System (Hybrid Autopilot)
+# =============================================================================
+
+class WorkspaceTriggerType(models.TextChoices):
+    """Types of workspace triggers that can spawn work items."""
+    # Spider-driven triggers
+    SPIDER_CODE_INSIGHT = 'spider_code_insight', 'Spider: Code/Tech Insight'
+    SPIDER_BUG_PATTERN = 'spider_bug_pattern', 'Spider: Bug Pattern Detected'
+    SPIDER_SECURITY_ALERT = 'spider_security_alert', 'Spider: Security Alert'
+    SPIDER_DEPENDENCY_UPDATE = 'spider_dependency_update', 'Spider: Dependency Update'
+    SPIDER_BEST_PRACTICE = 'spider_best_practice', 'Spider: Best Practice Detected'
+
+    # Agent-driven triggers (agents requesting follow-up work)
+    AGENT_REFACTOR_SUGGESTION = 'agent_refactor', 'Agent: Refactor Suggestion'
+    AGENT_TEST_NEEDED = 'agent_test_needed', 'Agent: Test Coverage Needed'
+    AGENT_DOC_NEEDED = 'agent_doc_needed', 'Agent: Documentation Needed'
+    AGENT_OPTIMIZATION = 'agent_optimization', 'Agent: Optimization Opportunity'
+
+    # Human-driven triggers
+    HUMAN_TASK_REQUEST = 'human_task', 'Human: Task Request'
+    HUMAN_REVIEW_RESPONSE = 'human_review', 'Human: Review Response'
+
+    # Schedule-driven (from category rotation)
+    SCHEDULED_CATEGORY = 'scheduled_category', 'Scheduled: Category Rotation'
+    SCHEDULED_MAINTENANCE = 'scheduled_maintenance', 'Scheduled: Maintenance'
+
+
+class WorkspaceTrigger(models.Model):
+    """
+    Event-driven work queue for autonomous workspace operations.
+
+    The hybrid approach:
+    1. Events (spider data, agent outputs, human requests) INSERT triggers
+    2. Single conductor task (workspace_autopilot_tick) DRAINS queue
+    3. Budgets, TTLs, gates prevent runaway execution
+
+    This replaces the need for 14+ individual scheduled tasks with:
+    - Event-driven trigger insertion (immediate when data arrives)
+    - Single conductor task draining with budgets
+    - TTL expiration for stale triggers
+    - Deduplication to prevent spam
+
+    Session 785 - Hybrid Workspace Autopilot
+    """
+
+    # Status choices
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('queued', 'Queued for Execution'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('expired', 'Expired (TTL)'),
+        ('skipped', 'Skipped (Dedupe/Gate)'),
+    ]
+
+    PRIORITY_CHOICES = [
+        (1, 'Low'),
+        (2, 'Normal'),
+        (3, 'High'),
+        (4, 'Urgent'),
+        (5, 'Critical'),
+    ]
+
+    # Identity
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Trigger metadata
+    trigger_type = models.CharField(
+        max_length=50,
+        choices=WorkspaceTriggerType.choices,
+        db_index=True
+    )
+    title = models.CharField(
+        max_length=200,
+        help_text="Brief description of the work to be done"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Detailed description or context for the work"
+    )
+
+    # Deduplication
+    dedupe_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="SHA256 hash for deduplication"
+    )
+
+    # Target
+    workspace = models.ForeignKey(
+        ProjectWorkspace,
+        on_delete=models.CASCADE,
+        related_name='triggers',
+        null=True,
+        blank=True,
+        help_text="Target workspace (null = system-wide)"
+    )
+    target_agent = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Specific agent to handle (empty = auto-route)"
+    )
+    target_category = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Agent category (e.g., 'development', 'research')"
+    )
+
+    # Source tracking
+    source_spider = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Spider that generated this trigger"
+    )
+    source_spider_data_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="SpiderData record that triggered this"
+    )
+    source_agent = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Agent that requested this work"
+    )
+    source_user_id = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="User who requested this work"
+    )
+
+    # Context for execution
+    context_data = models.JSONField(
+        default=dict,
+        help_text="Additional context passed to the executing agent"
+    )
+
+    # Priority and TTL
+    priority = models.IntegerField(
+        choices=PRIORITY_CHOICES,
+        default=2,
+        db_index=True
+    )
+    expires_at = models.DateTimeField(
+        db_index=True,
+        help_text="Trigger expires and won't be processed after this time"
+    )
+    ttl_hours = models.IntegerField(
+        default=24,
+        help_text="Default TTL in hours (used to calculate expires_at)"
+    )
+
+    # Execution state
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True
+    )
+    execution_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="AgentExecution ID if started"
+    )
+    result_summary = models.TextField(
+        blank=True,
+        help_text="Brief summary of execution result"
+    )
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if failed"
+    )
+
+    # Execution timing
+    queued_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    execution_time_ms = models.IntegerField(
+        null=True,
+        blank=True
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_workspace_triggers'
+        ordering = ['-priority', 'created_at']
+        verbose_name = 'Workspace Trigger'
+        verbose_name_plural = 'Workspace Triggers'
+        indexes = [
+            models.Index(fields=['status', '-priority', 'created_at']),
+            models.Index(fields=['trigger_type', 'status']),
+            models.Index(fields=['target_category', 'status']),
+            models.Index(fields=['expires_at']),
+            models.Index(fields=['dedupe_hash', 'status']),
+        ]
+
+    def __str__(self):
+        return f"[{self.get_priority_display()}] {self.title} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        from datetime import timedelta
+        import hashlib
+
+        # Auto-calculate expires_at if not set
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=self.ttl_hours)
+
+        # Auto-generate dedupe_hash if not set
+        if not self.dedupe_hash:
+            # Hash based on trigger_type + title + target
+            dedupe_string = f"{self.trigger_type}:{self.title}:{self.target_agent}:{self.target_category}"
+            self.dedupe_hash = hashlib.sha256(dedupe_string.encode()).hexdigest()
+
+        super().save(*args, **kwargs)
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if trigger has expired."""
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+    @classmethod
+    def create_from_spider_data(cls, spider_data, trigger_type, title, description='',
+                                 target_agent='', target_category='', priority=2,
+                                 ttl_hours=24, context_data=None, workspace=None):
+        """
+        Factory method to create a trigger from spider data.
+        Handles deduplication automatically.
+        """
+        import hashlib
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Build dedupe hash
+        dedupe_string = f"{trigger_type}:{title}:{target_agent}:{target_category}:{spider_data.spider_name}"
+        dedupe_hash = hashlib.sha256(dedupe_string.encode()).hexdigest()
+
+        # Check for duplicate pending triggers
+        existing = cls.objects.filter(
+            dedupe_hash=dedupe_hash,
+            status__in=['pending', 'queued', 'in_progress']
+        ).first()
+
+        if existing:
+            # Duplicate exists - don't create new one
+            return None
+
+        # Create new trigger
+        return cls.objects.create(
+            trigger_type=trigger_type,
+            title=title,
+            description=description,
+            dedupe_hash=dedupe_hash,
+            workspace=workspace,
+            target_agent=target_agent,
+            target_category=target_category,
+            source_spider=spider_data.spider_name,
+            source_spider_data_id=spider_data.id,
+            context_data=context_data or {'spider_data_id': str(spider_data.id)},
+            priority=priority,
+            ttl_hours=ttl_hours,
+            expires_at=timezone.now() + timedelta(hours=ttl_hours)
+        )
+
+    @classmethod
+    def get_pending_triggers(cls, limit=10, category=None, min_priority=None):
+        """
+        Get pending triggers for processing, respecting TTL.
+        Used by the conductor task.
+        """
+        from django.utils import timezone
+
+        # Mark expired triggers first
+        cls.objects.filter(
+            status='pending',
+            expires_at__lt=timezone.now()
+        ).update(status='expired')
+
+        # Query pending triggers
+        qs = cls.objects.filter(status='pending')
+
+        if category:
+            qs = qs.filter(target_category=category)
+
+        if min_priority:
+            qs = qs.filter(priority__gte=min_priority)
+
+        # Order by priority (desc) then created_at (asc)
+        return qs.order_by('-priority', 'created_at')[:limit]
+
+
+class WorkspaceTriggerConfig(models.Model):
+    """
+    Configuration for trigger evaluation rules.
+
+    Defines which spider data patterns should create workspace triggers.
+    Similar to SituationTrigger but for workspace work items.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Config identity
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    # Spider matching
+    target_spiders = models.JSONField(
+        default=list,
+        help_text="List of spider names to monitor (empty = all)"
+    )
+
+    # Content matching
+    match_field = models.CharField(
+        max_length=100,
+        help_text="JSON path in raw_data to check (e.g., 'items.0.title')"
+    )
+    match_operator = models.CharField(
+        max_length=20,
+        choices=[
+            ('contains', 'Contains (text)'),
+            ('regex', 'Regex Match'),
+            ('gt', 'Greater Than'),
+            ('lt', 'Less Than'),
+        ],
+        default='contains'
+    )
+    match_value = models.CharField(
+        max_length=500,
+        help_text="Value to match against (keywords separated by | for contains)"
+    )
+
+    # Trigger creation settings
+    trigger_type = models.CharField(
+        max_length=50,
+        choices=WorkspaceTriggerType.choices,
+        default=WorkspaceTriggerType.SPIDER_CODE_INSIGHT
+    )
+    trigger_title_template = models.CharField(
+        max_length=200,
+        default="{match_field}: {matched_value}",
+        help_text="Template for trigger title. Use {spider_name}, {match_field}, {matched_value}"
+    )
+    target_agent = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Agent to handle (empty = auto-route)"
+    )
+    target_category = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Agent category for routing"
+    )
+    priority = models.IntegerField(
+        choices=WorkspaceTrigger.PRIORITY_CHOICES,
+        default=2
+    )
+    ttl_hours = models.IntegerField(default=24)
+
+    # Rate limiting
+    cooldown_minutes = models.IntegerField(
+        default=60,
+        help_text="Minimum minutes between triggers from this config"
+    )
+    last_triggered_at = models.DateTimeField(null=True, blank=True)
+
+    # Stats
+    total_triggers_created = models.IntegerField(default=0)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_workspace_trigger_configs'
+        ordering = ['name']
+        verbose_name = 'Workspace Trigger Config'
+        verbose_name_plural = 'Workspace Trigger Configs'
+
+    def __str__(self):
+        status = "✓" if self.is_active else "✗"
+        return f"[{status}] {self.name} → {self.get_trigger_type_display()}"
+
+    def is_on_cooldown(self) -> bool:
+        """Check if config is in cooldown period."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        if not self.last_triggered_at:
+            return False
+        cooldown_end = self.last_triggered_at + timedelta(minutes=self.cooldown_minutes)
+        return timezone.now() < cooldown_end
+
+
+# =============================================================================
+# Default Workspace Trigger Configs
+# =============================================================================
+
+DEFAULT_WORKSPACE_TRIGGER_CONFIGS = [
+    {
+        'name': 'GitHub Security Advisory',
+        'description': 'Create trigger when security advisories are detected',
+        'target_spiders': ['github', 'hackernews', 'devto'],
+        'match_field': 'title',
+        'match_operator': 'contains',
+        'match_value': 'security|vulnerability|CVE|exploit|patch|advisory',
+        'trigger_type': 'spider_security_alert',
+        'trigger_title_template': 'Security: {matched_value}',
+        'target_category': 'security',
+        'priority': 4,
+        'ttl_hours': 12,
+        'cooldown_minutes': 30,
+    },
+    {
+        'name': 'Dependency Update Alert',
+        'description': 'Create trigger when major dependency updates are announced',
+        'target_spiders': ['hackernews', 'devto', 'reddit'],
+        'match_field': 'title',
+        'match_operator': 'contains',
+        'match_value': 'release|v2|v3|update|upgrade|breaking change|migration',
+        'trigger_type': 'spider_dependency_update',
+        'trigger_title_template': 'Dependency: {matched_value}',
+        'target_category': 'development',
+        'priority': 3,
+        'ttl_hours': 48,
+        'cooldown_minutes': 120,
+    },
+    {
+        'name': 'Code Pattern/Best Practice',
+        'description': 'Create trigger when coding best practices are discussed',
+        'target_spiders': ['hackernews', 'devto', 'reddit'],
+        'match_field': 'title',
+        'match_operator': 'contains',
+        'match_value': 'best practice|pattern|anti-pattern|refactor|clean code|architecture',
+        'trigger_type': 'spider_best_practice',
+        'trigger_title_template': 'Pattern: {matched_value}',
+        'target_agent': 'CodeReviewAgent',
+        'priority': 2,
+        'ttl_hours': 72,
+        'cooldown_minutes': 240,
+    },
+    {
+        'name': 'Bug Pattern Detection',
+        'description': 'Create trigger when bug patterns are discussed',
+        'target_spiders': ['hackernews', 'stackoverflow', 'reddit'],
+        'match_field': 'title',
+        'match_operator': 'contains',
+        'match_value': 'bug|error|crash|memory leak|race condition|deadlock|infinite loop',
+        'trigger_type': 'spider_bug_pattern',
+        'trigger_title_template': 'Bug Pattern: {matched_value}',
+        'target_category': 'development',
+        'priority': 3,
+        'ttl_hours': 24,
+        'cooldown_minutes': 60,
+    },
+]
