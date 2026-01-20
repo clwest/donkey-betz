@@ -41,6 +41,7 @@ import {
   BarChart3,
   Stethoscope,
   GitBranch,
+  Book,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -73,6 +74,7 @@ const navItems = [
   { path: '/spiders', label: 'Spiders', icon: Bug },
   { path: '/spider-feed', label: 'Spider Feed', icon: Newspaper },
   { path: '/documents', label: 'Documents', icon: FileText },
+  { path: '/docs-index', label: 'Docs Index', icon: Book },
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
