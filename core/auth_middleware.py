@@ -336,6 +336,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/spider-dashboard/',  # Spider network data, activity feed
         '/api/spider-intelligence/',  # Spider registry, feed, trends, knowledge, timeline, detail
         '/api/spider-feed/',  # Session 783: Spider News Feed (human-facing with agent annotations)
+        '/api/docs/',  # Session 784: Documentation Index API
 
         # Session 718: Memory Clusters APIs (semantic memory grouping for Memory Palace)
         '/api/memory-clusters/',  # Overview, agent clusters, visualization, evolution, find-similar

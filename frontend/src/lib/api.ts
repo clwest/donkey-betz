@@ -2291,3 +2291,93 @@ export const orchestrationApi = {
       `/orchestration/executions/${executionId}/steps/${stepNumber}/intelligence/`
     ),
 }
+
+// Session 784: Documentation Index API
+export interface DocsDocument {
+  path: string
+  title: string
+  status: 'active' | 'superseded' | 'deprecated' | 'draft' | 'unknown'
+  type: string
+  subsystems: string[]
+  lines: number
+  has_frontmatter: boolean
+  outbound_links: Array<{
+    target: string
+    occurrences: number
+    snippets: string[]
+  }>
+  inbound_links_count: number
+  created_at?: string
+  modified_at?: string
+}
+
+export interface DocsIndexResponse {
+  generated_at: string
+  version: string
+  total_count: number
+  filtered_count: number
+  documents: DocsDocument[]
+  graph: {
+    total_links: number
+    most_referenced: Array<{ path: string; count: number }>
+    orphan_docs: string[]
+    broken_links: Array<{ source: string; target: string }>
+  }
+  filters: {
+    statuses: string[]
+    types: string[]
+    subsystems: string[]
+  }
+}
+
+export interface DocsDetailResponse {
+  document: DocsDocument
+  inbound_links: Array<{
+    source: string
+    title: string
+    occurrences: number
+    snippets: string[]
+  }>
+  inbound_count: number
+  is_orphan: boolean
+}
+
+export interface DocsStatsResponse {
+  total_documents: number
+  total_lines: number
+  with_frontmatter: number
+  by_status: Record<string, number>
+  by_type: Record<string, number>
+  graph: {
+    total_links: number
+    broken_links: number
+    orphan_docs: number
+  }
+  generated_at: string
+  version: string
+}
+
+export const docsIndexApi = {
+  // Get full documentation index with filtering
+  index: (params?: { status?: string; type?: string; subsystem?: string; search?: string; limit?: number }) =>
+    api.get<DocsIndexResponse>('/docs/index/', { params }),
+
+  // Get stats for dashboard widgets
+  stats: () => api.get<DocsStatsResponse>('/docs/stats/'),
+
+  // Get cross-reference graph summary
+  graph: () => api.get<{
+    total_links: number
+    most_referenced: Array<{ path: string; count: number }>
+    orphan_docs: string[]
+    broken_links: Array<{ source: string; target: string }>
+    stats: {
+      total_documents: number
+      by_status: Record<string, number>
+      by_type: Record<string, number>
+    }
+  }>('/docs/graph/'),
+
+  // Get details for a specific document
+  detail: (docPath: string) => api.get<DocsDetailResponse>(`/docs/detail/${docPath}/`),
+}

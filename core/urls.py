@@ -243,6 +243,14 @@ from core.views_spider_feed import (
     spider_feed_stats,
 )
 
+# Session 784: Documentation index API
+from core.views_docs_index import (
+    docs_index,
+    docs_detail,
+    docs_graph_summary,
+    docs_stats,
+)
+
 # Session 219: Import agent intelligence views (Phase A)
 from core.views_agent_intelligence import (
     list_agents as ai_agents_list,
@@ -2876,6 +2884,12 @@ urlpatterns = [
     path('api/spider-feed/<uuid:item_id>/annotate/', spider_feed_annotate, name='spider-feed-annotate'),
     path('api/spider-feed/<uuid:item_id>/vote/', spider_feed_vote, name='spider-feed-vote'),
     path('api/spider-feed/stats/', spider_feed_stats, name='spider-feed-stats'),
+
+    # Session 784: Documentation Index API
+    path('api/docs/index/', docs_index, name='docs-index'),
+    path('api/docs/stats/', docs_stats, name='docs-stats'),
+    path('api/docs/graph/', docs_graph_summary, name='docs-graph'),
+    path('api/docs/detail/<path:doc_path>/', docs_detail, name='docs-detail'),
 
     # Session 536: Cross-references for Intelligence Command Center
     path('api/intelligence/cross-references/', intelligence_cross_references, name='intelligence-cross-references'),

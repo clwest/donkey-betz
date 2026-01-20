@@ -45,6 +45,7 @@ import AnalyticsDashboardPage from '@/pages/AnalyticsDashboardPage'  // Session 
 import IntegrationHealthPage from '@/pages/IntegrationHealthPage'  // Session 758: Integration observability
 import OrchestrationPage from '@/pages/OrchestrationPage'  // Session 768: Orchestration layer UI
 import SpiderFeedPage from '@/pages/SpiderFeedPage'  // Session 783: Spider News Feed
+import DocsIndexPage from '@/pages/DocsIndexPage'  // Session 784: Documentation Index Browser
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -112,6 +113,7 @@ function App() {
         <Route path="integration-health" element={<IntegrationHealthPage />} />  {/* Session 758: Integration observability */}
         <Route path="orchestration" element={<OrchestrationPage />} />  {/* Session 768: Orchestration layer */}
         <Route path="spider-feed" element={<SpiderFeedPage />} />  {/* Session 783: Spider News Feed */}
+        <Route path="docs-index" element={<DocsIndexPage />} />  {/* Session 784: Documentation Index Browser */}
         <Route path="blog/:blogId" element={<BlogViewerPage />} />  {/* Session 742: Blog viewer for content review */}
       </Route>
     </Routes>
