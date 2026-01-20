@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, collectiveApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi, agentTemplatesApi, collectiveApi } from '@/lib/api'
+import { useNavigate } from 'react-router-dom'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, AlertCircle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, Shield, Calendar, DollarSign, XCircle } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, Shield, Calendar, DollarSign, XCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -102,41 +103,7 @@ interface Dream {
   dreamed_at: string
 }
 
-// Session 695: Conversation interface for Conversation Thread Viewer
-interface ConversationMessage {
-  id: string
-  agent: string
-  agent_emoji: string
-  content: string
-  type: 'question' | 'answer' | 'synthesis' | 'opening' | 'response'
-  sequence: number
-  relevance: number
-  created_at: string
-}
-
-interface ConversationParticipant {
-  name: string
-  emoji: string
-}
-
-interface Conversation {
-  id: string
-  topic: string
-  type: string
-  type_display: string
-  trigger: string
-  status: 'active' | 'concluded' | 'abandoned'
-  initiator: string
-  initiator_emoji: string
-  participants: ConversationParticipant[]
-  message_count: number
-  quality_score: number
-  conclusion: string
-  insights: string[]
-  started_at: string
-  ended_at: string | null
-  messages: ConversationMessage[]
-}
+// Session 782: Conversation interfaces removed - consolidated to ConversationContractPage
 
 // Session 696: Decision interface for Decision Insights Panel
 interface Decision {
@@ -689,8 +656,8 @@ export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   // Session 695: Dream Gallery Modal state
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null)
-  // Session 695: Conversation Thread Viewer state
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+  // Session 782: Conversation viewer removed - consolidated to ConversationContractPage
+  const navigate = useNavigate()
   // Session 696: Decision Insights Panel state
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null)
   // Session 696: Experiment Modal state (for "pilot" activities)
@@ -770,13 +737,7 @@ export default function AgentsPage() {
     unreadCount: dreamsResponse?.data?.unread_count || 0,
   }
 
-  // Session 695: Conversations for Conversation Thread Viewer
-  const { data: conversationsResponse } = useQuery({
-    queryKey: ['agent-conversations'],
-    queryFn: () => conversationsApi.list({ limit: 50, timeRange: '7d' }),
-    refetchInterval: 60000,
-  })
-  const conversations: Conversation[] = conversationsResponse?.data?.conversations || []
+  // Session 782: Conversations query removed - consolidated to ConversationContractPage
 
   // Session 696: Decisions for Decision Insights Panel
   const { data: decisionsResponse } = useQuery({
@@ -1454,11 +1415,8 @@ export default function AgentsPage() {
                     : null
                   const isDreamClickable = activity.type === 'dream' && matchingDream
 
-                  // Session 695: Find matching conversation for click handler
-                  const matchingConversation = activity.type === 'conversation' && activity.id
-                    ? conversations.find(c => c.id === activity.id)
-                    : null
-                  const isConversationClickable = activity.type === 'conversation' && matchingConversation
+                  // Session 782: Conversations now link to unified Conversations page
+                  const isConversationClickable = activity.type === 'conversation'
 
                   // Session 696: Find matching decision for click handler
                   const matchingDecision = activity.type === 'decision' && activity.id
@@ -1477,7 +1435,7 @@ export default function AgentsPage() {
                     key={`activity-${activity.id || activity.timestamp}-${idx}`}
                     onClick={
                       isDreamClickable ? () => setSelectedDream(matchingDream) :
-                      isConversationClickable ? () => setSelectedConversation(matchingConversation) :
+                      isConversationClickable ? () => navigate('/conversation-contract') :
                       isDecisionClickable ? () => setSelectedDecision(matchingDecision) :
                       isPilotClickable ? () => setSelectedExperiment(matchingExperiment) :
                       // Session 761: Show generic activity modal for items without matching entities
@@ -1524,32 +1482,10 @@ export default function AgentsPage() {
                           </span>
                         )}
                         {isConversationClickable && (
-                          <>
-                            <span className="text-xs text-accent-cyan/60 flex items-center gap-1">
-                              <Eye size={10} />
-                              Click to view thread
-                            </span>
-                            {/* Session 746: Conversation status indicators */}
-                            {matchingConversation.status === 'concluded' ? (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green flex items-center gap-1">
-                                <CheckCircle size={10} />
-                                Concluded
-                              </span>
-                            ) : (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
-                                <AlertCircle size={10} />
-                                Incomplete
-                              </span>
-                            )}
-                            {matchingConversation.participants.length === 1 && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-pink/20 text-accent-pink flex items-center gap-1">
-                                Self-talk
-                              </span>
-                            )}
-                            <span className="text-xs text-gray-500">
-                              {matchingConversation.message_count || 0} msgs
-                            </span>
-                          </>
+                          <span className="text-xs text-accent-cyan/60 flex items-center gap-1">
+                            <Eye size={10} />
+                            View in Conversations
+                          </span>
                         )}
                         {isDecisionClickable && (
                           <span className="text-xs text-accent-amber/60 flex items-center gap-1">
@@ -3296,213 +3232,7 @@ export default function AgentsPage() {
         </div>
       )}
 
-      {/* Session 695: Conversation Thread Viewer Modal */}
-      {selectedConversation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
-            {/* Modal Header - Session 761: flex-shrink-0 */}
-            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10 flex-shrink-0">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">🗣️</span>
-                  <span className={cn(
-                    'text-xs px-2 py-0.5 rounded capitalize',
-                    selectedConversation.status === 'concluded' ? 'bg-accent-green/20 text-accent-green' :
-                    selectedConversation.status === 'active' ? 'bg-accent-cyan/20 text-accent-cyan' :
-                    'bg-gray-500/20 text-gray-400'
-                  )}>
-                    {selectedConversation.status}
-                  </span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-accent-blue/20 text-accent-blue capitalize">
-                    {selectedConversation.type_display || selectedConversation.type.replace('_', ' ')}
-                  </span>
-                  {selectedConversation.quality_score > 0 && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
-                      <Sparkles size={10} />
-                      {Math.round(selectedConversation.quality_score * 100)}% quality
-                    </span>
-                  )}
-                  {/* Session 746: Warning badges for incomplete/self-talk conversations */}
-                  {selectedConversation.participants.length === 1 && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-accent-pink/20 text-accent-pink flex items-center gap-1">
-                      <AlertTriangle size={10} />
-                      Self-talk (single agent)
-                    </span>
-                  )}
-                  {!selectedConversation.conclusion && selectedConversation.status !== 'active' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 flex items-center gap-1">
-                      <AlertCircle size={10} />
-                      No conclusion drawn
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-xl font-bold text-white">{selectedConversation.topic}</h2>
-                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
-                  <Users size={14} />
-                  <span>{selectedConversation.participants.length} participants</span>
-                  <span className="text-gray-600">•</span>
-                  <MessageSquare size={14} />
-                  <span>{selectedConversation.message_count} messages</span>
-                  <span className="text-gray-600">•</span>
-                  <Clock size={14} />
-                  <span>{formatTimestamp(selectedConversation.started_at, 'full')}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedConversation(null)}
-                className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-gray-400 hover:text-white"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Session 746: Scrollable content area - Session 761: flex-1 for proper scrolling */}
-            <div className="overflow-y-auto flex-1 min-h-0">
-              {/* Participants Strip */}
-              <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-500">Participants:</span>
-                {selectedConversation.participants.map((participant, idx) => (
-                  <span
-                    key={idx}
-                    className="text-xs px-2 py-1 rounded-full bg-dark-card text-gray-300 flex items-center gap-1"
-                  >
-                    <span>{participant.emoji || '🤖'}</span>
-                    {participant.name}
-                  </span>
-                ))}
-              </div>
-
-              {/* Message Thread */}
-              <div className="p-6 space-y-4">
-              {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
-                selectedConversation.messages.map((msg, idx) => (
-                  <div
-                    key={msg.id || idx}
-                    className={cn(
-                      "flex gap-3",
-                      msg.type === 'synthesis' && "bg-accent-green/5 rounded-lg p-3 border border-accent-green/20"
-                    )}
-                  >
-                    <div className={cn(
-                      "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 text-lg",
-                      msg.type === 'synthesis' ? "bg-accent-green/20" :
-                      msg.type === 'question' ? "bg-accent-cyan/20" :
-                      "bg-dark-hover"
-                    )}>
-                      {msg.agent_emoji || '🤖'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm">{msg.agent}</span>
-                        <span className={cn(
-                          "text-xs px-1.5 py-0.5 rounded",
-                          msg.type === 'synthesis' ? "bg-accent-green/20 text-accent-green" :
-                          msg.type === 'question' ? "bg-accent-cyan/20 text-accent-cyan" :
-                          msg.type === 'answer' ? "bg-accent-amber/20 text-accent-amber" :
-                          "bg-dark-card text-gray-400"
-                        )}>
-                          {msg.type}
-                        </span>
-                        {msg.relevance > 0 && (
-                          <span className="text-xs text-gray-500">
-                            {Math.round(msg.relevance * 100)}% relevance
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
-                        {msg.content}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {formatTimestamp(msg.created_at)}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
-                  <p>No messages available</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Message thread was not captured for this conversation
-                  </p>
-                </div>
-              )}
-              </div>
-
-              {/* Conclusion Section */}
-              {selectedConversation.conclusion ? (
-                <div className="px-6 py-4 border-t border-dark-border bg-accent-green/5">
-                  <h3 className="text-sm font-medium text-accent-green mb-2 flex items-center gap-2">
-                    <CheckCircle size={14} />
-                    Conclusion
-                  </h3>
-                  <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
-                    {selectedConversation.conclusion}
-                  </p>
-                </div>
-              ) : (
-                <div className="px-6 py-4 border-t border-dark-border bg-gray-500/5">
-                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                    <AlertCircle size={14} />
-                    No Conclusion
-                  </h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">
-                    {selectedConversation.status === 'active'
-                      ? 'This conversation is still in progress. A conclusion will be drawn when it completes.'
-                      : selectedConversation.participants.length === 1
-                      ? 'This was a single-agent reflection rather than a multi-agent discussion, so no conclusion was drawn.'
-                      : selectedConversation.message_count < 3
-                      ? 'This conversation did not have enough turns to reach a conclusion (minimum 6 turns required).'
-                      : 'This conversation ended before a conclusion could be synthesized.'}
-                  </p>
-                </div>
-              )}
-
-              {/* Insights Section */}
-              {selectedConversation.insights && selectedConversation.insights.length > 0 && (
-                <div className="px-6 py-4 border-t border-dark-border">
-                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                    <Lightbulb size={14} />
-                    Insights Generated
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedConversation.insights.map((insight, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-dark-hover text-gray-300 border border-dark-border"
-                      >
-                        {typeof insight === 'string' ? insight : 'Insight'}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            {/* End scrollable content area */}
-
-            {/* Modal Footer - Session 761: flex-shrink-0 to always show */}
-            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50 flex-shrink-0">
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                <span>ID: {selectedConversation.id.slice(0, 8)}...</span>
-                <span className="text-gray-600">•</span>
-                <span>Trigger: {selectedConversation.trigger}</span>
-                {selectedConversation.ended_at && (
-                  <>
-                    <span className="text-gray-600">•</span>
-                    <span>Ended: {formatTimestamp(selectedConversation.ended_at, 'full')}</span>
-                  </>
-                )}
-              </div>
-              <button
-                onClick={() => setSelectedConversation(null)}
-                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Session 782: Conversation Thread Viewer Modal removed - consolidated to ConversationContractPage */}
 
       {/* Session 696: Decision Insights Panel Modal */}
       {selectedDecision && (
