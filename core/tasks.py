@@ -26625,26 +26625,32 @@ def workspace_autopilot_tick(
                         system_user = User.objects.first()
 
                     agent = agent_class(user=system_user)
-                    result = agent.execute(task_prompt)
-
-                    execution = AgentExecution.objects.create(
-                        agent_name=agent_name,
-                        user=system_user,
-                        input_data={
-                            'task': task_prompt,
+                    result = agent.execute(
+                        task=task_prompt,
+                        context={
                             'trigger_id': str(trigger.id),
-                            'trigger_type': trigger.trigger_type
+                            'trigger_type': trigger.trigger_type,
+                            'spider_name': context.get('spider_name'),
+                            'matched_value': context.get('matched_value'),
+                            'output_format': 'markdown',
+                            'source': 'workspace_autopilot'
                         },
-                        output_data=result.data if hasattr(result, 'data') else str(result),
-                        success=result.success if hasattr(result, 'success') else True,
-                        execution_time_ms=int((time.time() - trigger_start_time) * 1000),
-                        source='workspace_autopilot'
+                        scifi_context={},
+                        spider_context=context.get('raw_item', {})
                     )
 
+                    # Agent's execute() creates its own AgentExecution record
+                    # Extract success and summary from result
+                    success = result.success if hasattr(result, 'success') else True
+                    summary = ''
+                    if hasattr(result, 'data') and isinstance(result.data, dict):
+                        summary = str(result.data.get('summary', result.data.get('content', '')))[:500]
+                    elif hasattr(result, 'data'):
+                        summary = str(result.data)[:500]
+
                     execution_result = {
-                        'success': True,
-                        'execution_id': execution.id,
-                        'summary': str(result.data.get('summary', '') if hasattr(result, 'data') and isinstance(result.data, dict) else str(result))[:500]
+                        'success': success,
+                        'summary': summary
                     }
 
                 except Exception as agent_error:
