@@ -346,6 +346,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/autonomous/',  # Autonomous system status
         '/api/reasoning/',  # Reasoning engine dashboard (non-v1)
         '/api/analytics/',  # Analytics overview and reports
+
+        # Session 782: Team Collaboration APIs (read-only for Collective Intelligence page)
+        '/api/teams/',  # Agent teams list and management
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
