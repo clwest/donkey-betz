@@ -447,8 +447,11 @@ export default function ReasoningEnginePage() {
                   {thoughts.slice(0, 5).map((thought) => (
                     <div
                       key={thought.id}
-                      className="p-3 rounded-lg bg-dark-bg cursor-pointer hover:bg-dark-bg/80"
-                      onClick={() => setSelectedThought(thought)}
+                      className="p-3 rounded-lg bg-dark-bg cursor-pointer hover:bg-dark-bg/80 hover:ring-1 hover:ring-primary-500/30 transition-all"
+                      onClick={() => {
+                        setSelectedThought(thought)
+                        setActiveTab('thoughts')
+                      }}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
@@ -463,6 +466,11 @@ export default function ReasoningEnginePage() {
                             {thought.confidence && (
                               <span className="text-xs text-gray-500">
                                 {(thought.confidence * 100).toFixed(0)}% confidence
+                              </span>
+                            )}
+                            {thought.actions_generated !== undefined && thought.actions_generated > 0 && (
+                              <span className="text-xs text-gray-500">
+                                {thought.actions_generated} actions
                               </span>
                             )}
                           </div>
