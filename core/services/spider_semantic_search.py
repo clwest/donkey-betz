@@ -430,10 +430,13 @@ class SpiderSemanticSearch:
         since = timezone.now() - timedelta(hours=hours)
 
         # Find entries without embeddings
-        # Session 394: Also exclude entries marked as empty (embedding=[])
+        # Session 394: Also exclude entries marked as empty
+        # Session 782: Exclude by embedding_text instead of embedding=[] (pgvector error)
         entries = SpiderData.objects.filter(
             created_at__gte=since,
             embedding__isnull=True  # Only NULL, not empty list
+        ).exclude(
+            embedding_text='[NO_ITEMS]'  # Skip already-marked empty entries
         ).order_by('-created_at')[:batch_size]
 
         stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'skipped': 0, 'marked_empty': 0}
@@ -459,9 +462,10 @@ class SpiderSemanticSearch:
             if not items:
                 stats['skipped'] += 1
                 # Session 394: Mark as empty so we don't reprocess
-                entry.embedding = []
+                # Session 782: Don't set embedding=[] - pgvector requires at least 1 dimension
+                # Just mark embedding_text and query excludes these entries
                 entry.embedding_text = "[NO_ITEMS]"
-                entry.save(update_fields=['embedding', 'embedding_text'])
+                entry.save(update_fields=['embedding_text'])
                 stats['marked_empty'] += 1
                 continue
 
