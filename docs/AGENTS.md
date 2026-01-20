@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 695 (January 6, 2026) - SKIN Layer enables all agents to write to real workspaces
+**Last Updated:** Session 781 (January 19, 2026) - Agent conversation voice fixes with 22 role-anchored styles
 
 ---
 
@@ -143,6 +143,34 @@ result = agent.execute(
 - Testing prompts without learning
 
 See: `docs/MEMORY_SAFETY_CLASSIFICATION.md` for full documentation.
+
+### Agent Conversation Voice (Session 781)
+
+When agents participate in multi-agent conversations, each has a **distinct disagreement style** to prevent repetitive, corporate-sounding language.
+
+**22 agents have role-anchored conversation roles** in `core/prompts/registry.py`:
+
+| Agent | Role | Disagreement Style |
+|-------|------|-------------------|
+| ResearchAgent | DATA REALIST | "The data contradicts that assumption." |
+| TrendAnalysisAgent | SIGNAL DETECTOR | "The trend data points elsewhere entirely." |
+| ContentStrategyAgent | NARRATIVE ARCHITECT | "That won't land with our audience." |
+| WorkflowAgent | ORCHESTRATION EXPERT | "That breaks down in the handoff between steps." |
+| ContrarianAgent | DEVIL'S ADVOCATE | "Everyone's already doing that - we'll get lost." |
+| CreativeDirectorAgent | VISION HOLDER | "That's playing it too safe." |
+| CTOAgent | TECHNICAL ARBITER | "The architecture doesn't support that at scale." |
+| COOAgent | OPERATIONS REALIST | "We don't have the resources for that timeline." |
+| DebateSkepticAgent | CRITICAL CHALLENGER | "But have we stress-tested that assumption?" |
+
+**Banned phrases (enforced in prompts):**
+- "I'd push back slightly"
+- "That's a great point, but..."
+- "I agree, however..."
+- "With all due respect..."
+
+**Discourse memory** tracks 50+ phrases across 5 categories and warns agents when phrases are overused.
+
+See: `docs/handoffs/SESSION_781_AGENT_VOICE_FIXES.md` for implementation details.
 
 ---
 

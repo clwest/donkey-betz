@@ -1,35 +1,54 @@
-# Session 780 - Ready for Next Task
+# Session 782 - Ready for Next Task
 
-**Previous Session:** 779 (PromptEngineeringAgent + File Content Viewing)
+**Previous Session:** 781 (Agent Conversation Voice Fixes)
 **Date:** January 19, 2026
-**Status:** 74/74 Agents Complete | File Content Viewing Enabled | Documentation Organized
+**Status:** 74/74 Agents Complete | 22 Role-Anchored Conversation Styles | Discourse Memory Active
 
 ---
 
-## Session 779 Accomplishments
+## Session 781 Accomplishments
 
-### 1. PromptEngineeringAgent Created
+### Agent Conversation Voice Fixes (3-Level Improvement)
 
-Completed the 74-agent ecosystem by creating the missing `PromptEngineeringAgent`:
-- **File:** `core/agents/prompt_engineering_agent.py` (710 lines)
-- **Tools:** 5 (design_prompt, optimize_prompt, create_prompt_library, analyze_prompt, generate_system_prompt)
-- **Status:** Import test passed, all methods verified
+Fixed repetitive agent conversation styles that made agents sound like corporate templates.
 
-### 2. File Content Viewing in Workspace
+**Problem:** "I'd push back slightly" repeated 12+ times per conversation across all agents.
 
-Added ability to view .md file content from the Workspace page:
-- **New Component:** `FileContentModal` with markdown rendering
-- **Feature:** Click "View Content" on any file operation
-- **Works in:** Overview, Operations, and Reviews tabs
-- **Includes:** Copy to clipboard, raw/rendered toggle
+**Solution - 3 Levels:**
 
-### 3. Documentation Audit
+#### Level 2: Role-Anchored Disagreement Styles
+- Expanded `CONVERSATION_ROLES` in `core/prompts/registry.py` from 3 to 22 entries
+- Each agent type has a distinct voice and disagreement style
+- Example: ResearchAgent says "The data contradicts that assumption" instead of "I'd push back slightly"
 
-Audited all 5,648 .md files across the project:
-- System docs centralized in `/docs/`
-- Agent outputs stay in workspace directories (SKIN Layer)
-- Old `NEXT_SESSION_HANDOFF.md` archived
-- Session handoff created: `docs/handoffs/SESSION_779_PROMPTENGINEERING_AND_FILE_VIEWING.md`
+**22 agents with custom voices:**
+| Category | Agents |
+|----------|--------|
+| Research | ResearchAgent, TrendAnalysisAgent, OpportunityScoringAgent |
+| Strategy | ContentStrategyAgent, SEOOptimizerAgent, BrandIdentityAgent |
+| Executive | CreativeDirectorAgent, CTOAgent, COOAgent |
+| Workflow | WorkflowAgent |
+| Content Studio | ContrarianAgent, TopicMinerAgent, PerformanceAnalystAgent |
+| Podcast | DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent |
+| Development | CodeGeneratorAgent, CodeReviewAgent |
+| Business | CompetitorAnalysisAgent, CustomerResearchAgent |
+
+#### Level 1: Opener De-duplication
+- Added `DISALLOWED_OPENERS` global ban list
+- `extract_opener()` function tracks opening phrases
+- `used_openers` tracking in ConversationState
+- Prompt injection warns agents about already-used openers
+
+#### Level 3: Discourse Memory
+- `DISCOURSE_MARKERS` dict with 50+ phrases across 5 categories
+- Categories: transitions, agreement, disagreement, fillers, hedges
+- Tracks phrase usage throughout conversation
+- Warns when phrases used 2+ times
+
+**Files Modified:**
+- `core/prompts/registry.py` (+611 lines)
+- `core/conversation_orchestrator.py` (+222 lines)
+- `core/tasks.py` (+91 lines)
 
 ---
 
@@ -43,72 +62,55 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. View Workspace page - all agent outputs visible + file content viewing
-open http://localhost:8000/ai-studio/workspace
-
-# 4. Test PromptEngineeringAgent
-.venv/bin/python manage.py shell -c "
-from core.tasks import universal_agent_workspace_output
-result = universal_agent_workspace_output('PromptEngineeringAgent', 'Design a prompt for code review')
-print(result)
-"
+# 3. Test multi-agent conversation (will use new voice styles)
+# Conversations are triggered automatically via Celery tasks
 ```
 
 ---
 
 ## What's Next?
 
-Suggested tasks for Session 780:
+The platform is feature-complete with:
+- 74 agents (all working)
+- 77 spiders (72 working)
+- 9 body systems
+- 14 sci-fi features
+- 43 frontend pages
+- 22 role-anchored conversation styles
 
-1. **Test File Content Viewing** - Click "View Content" on any operation in Workspace page
-2. **Test PromptEngineeringAgent** - Run it through the workspace system
-3. **Continue UI Audits** - See `docs/UI_COMPREHENSIVE_AUDIT.md`
-4. **Monitor Scheduled Rotations** - Celery Beat runs category rotations automatically
-
----
-
-## System Stats
-
-| Component | Count | Status |
-|-----------|-------|--------|
-| **Agents** | 74 | 100% working (verified) |
-| **Agent Categories** | 15 | All with scheduled tasks |
-| **Frontend Pages** | 43 | Audited |
-| **Spiders** | 77 | 72 working |
-| **APIs** | 55+ | All connected |
-| **Body Systems** | 9 | All operational |
-| **Sci-Fi Features** | 14/14 | 100% UI coverage |
-| **Integration Score** | 95% | Stable |
+Potential areas for future work:
+1. **Frontend visualization** of discourse memory stats
+2. **Expand role-anchored styles** to remaining agents
+3. **A/B test** conversation quality improvements
+4. **Content quality metrics** to measure voice diversity
 
 ---
 
-## Documentation Structure
+## Key Files
 
-| Location | Purpose |
-|----------|---------|
-| `00-START-NEXT-SESSION.md` | Current session entry point |
-| `CLAUDE.md` | Main system reference |
-| `docs/` | Centralized documentation |
-| `docs/handoffs/` | 443+ session handoff files |
-| `docs/audits/` | System audit reports |
-| `docs/designs/` | Design documents |
-| Workspace directories | Agent-generated outputs (SKIN Layer) |
+| File | Purpose |
+|------|---------|
+| `core/prompts/registry.py` | CONVERSATION_ROLES with 22 role-anchored styles |
+| `core/conversation_orchestrator.py` | Multi-agent conversation with voice de-duplication |
+| `docs/handoffs/SESSION_781_AGENT_VOICE_FIXES.md` | Full implementation details |
 
 ---
 
-## Recent Sessions
+## Verification
 
-| Session | Focus | Document |
-|---------|-------|----------|
-| **779** | PromptEngineeringAgent + File Content Viewing | `docs/handoffs/SESSION_779_PROMPTENGINEERING_AND_FILE_VIEWING.md` |
-| 778 | Full Agent Rotation Test (74/74) | See commits |
-| 777 | Universal Agent SKIN Layer Integration | See commits |
-| 776 | WorkspacePage Complete | `docs/WORKSPACE_PAGE_DEEP_DIVE.md` |
-| 773 | Deep Data Flow Audit | `docs/UI_COMPREHENSIVE_AUDIT.md` |
+Check conversation improvements:
+```python
+# In Django shell
+from core.conversation_orchestrator import DISCOURSE_MARKERS, DISALLOWED_OPENERS
 
----
+# See all tracked discourse markers (5 categories, 50+ phrases)
+for category, markers in DISCOURSE_MARKERS.items():
+    print(f"{category}: {len(markers)} markers")
 
-## Key Commits (Session 779)
+# See banned openers
+print(DISALLOWED_OPENERS)
+```
 
-1. `db497883` - feat(Session 779): Create PromptEngineeringAgent - 74/74 agents complete
-2. `24f8fc93` - feat(Session 779): File content viewing in Workspace operations
+Monitor Celery logs for:
+- `Tracked opener: '...'`
+- `Tracked N discourse markers`
