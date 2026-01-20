@@ -936,6 +936,8 @@ export default function WorkspacePage() {
   const [docsStatusFilter, setDocsStatusFilter] = useState<string>('')
   const [docsTypeFilter, setDocsTypeFilter] = useState<string>('')
   const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null)
+  // Session 785: Collapsible Directory Map
+  const [directoryMapExpanded, setDirectoryMapExpanded] = useState(false)
   const queryClient = useQueryClient()
 
   // Session 714: Real-time event handlers - refresh data when file events occur
@@ -1647,24 +1649,44 @@ export default function WorkspacePage() {
               )}
 
               {/* Session 780: Directory Purposes - What each folder is for */}
+              {/* Session 785: Made collapsible to reduce scrolling */}
               {activeWorkspace?.context?.directory_purposes && Object.keys(activeWorkspace.context.directory_purposes).length > 0 && (
                 <div className="card">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Map size={18} className="text-accent-red" />
-                    <h3 className="text-lg font-semibold">Directory Map</h3>
-                    <span className="text-xs text-gray-500">What each folder is for</span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {Object.entries(activeWorkspace.context.directory_purposes).map(([dir, purpose]) => (
-                      <div key={dir} className="flex items-start gap-2 p-2 bg-dark-bg rounded-lg">
-                        <Folder size={14} className="text-accent-amber flex-shrink-0 mt-1" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-mono text-gray-200 truncate" title={dir}>{dir}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{purpose}</p>
+                  <button
+                    onClick={() => setDirectoryMapExpanded(!directoryMapExpanded)}
+                    className="w-full flex items-center justify-between cursor-pointer hover:bg-dark-bg/50 -m-4 p-4 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Map size={18} className="text-accent-red" />
+                      <h3 className="text-lg font-semibold">Directory Map</h3>
+                      <span className="text-xs text-gray-500">
+                        {Object.keys(activeWorkspace.context.directory_purposes).length} folders
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!directoryMapExpanded && (
+                        <span className="text-xs text-gray-500">Click to expand</span>
+                      )}
+                      {directoryMapExpanded ? (
+                        <ChevronDown size={18} className="text-gray-400" />
+                      ) : (
+                        <ChevronRight size={18} className="text-gray-400" />
+                      )}
+                    </div>
+                  </button>
+                  {directoryMapExpanded && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
+                      {Object.entries(activeWorkspace.context.directory_purposes).map(([dir, purpose]) => (
+                        <div key={dir} className="flex items-start gap-2 p-2 bg-dark-bg rounded-lg">
+                          <Folder size={14} className="text-accent-amber flex-shrink-0 mt-1" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-mono text-gray-200 truncate" title={dir}>{dir}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{purpose}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
