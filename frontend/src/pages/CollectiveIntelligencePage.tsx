@@ -27,6 +27,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Crown,
+  UserCircle,
 } from 'lucide-react'
 
 // Types
@@ -51,12 +53,22 @@ interface Insight {
   knowledge_summary?: string
 }
 
+interface TeamMember {
+  agent_id: string
+  agent_name: string
+  role?: string
+  is_lead?: boolean
+}
+
 interface Team {
   id: string
   name: string
   description?: string
+  team_type?: string
   member_count?: number
   created_at?: string
+  lead_agent?: { id: string; name: string } | null
+  members?: TeamMember[]
   agents?: string[]
   active_projects?: number
 }
@@ -125,6 +137,7 @@ export default function CollectiveIntelligencePage() {
   const [showCreateTeam, setShowCreateTeam] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
   const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null)
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Queries
@@ -568,27 +581,104 @@ export default function CollectiveIntelligencePage() {
                 <p className="text-sm text-gray-500">Create a team to organize agent collaboration</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {teams.map((team) => (
-                  <div key={team.id} className="card p-4 hover:border-primary-500/50 cursor-pointer">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 rounded-lg bg-cyan-500/20">
-                        <Users className="h-5 w-5 text-cyan-400" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {teams.map((team) => {
+                  const isExpanded = expandedTeamId === team.id
+                  return (
+                    <div
+                      key={team.id}
+                      className={cn(
+                        "card p-4 cursor-pointer transition-all",
+                        isExpanded && "ring-1 ring-primary-500/50"
+                      )}
+                      onClick={() => setExpandedTeamId(isExpanded ? null : team.id)}
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-cyan-500/20">
+                            <Users className="h-5 w-5 text-cyan-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">{team.name}</h3>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span>{team.member_count || 0} members</span>
+                              {team.team_type && (
+                                <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded capitalize">
+                                  {team.team_type}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        )}
                       </div>
-                      <div>
-                        <h3 className="font-medium">{team.name}</h3>
-                        <p className="text-xs text-gray-500">{team.member_count || 0} members</p>
+
+                      {/* Description */}
+                      {team.description && (
+                        <p className={cn(
+                          "text-sm text-gray-400 mb-3",
+                          !isExpanded && "line-clamp-2"
+                        )}>{team.description}</p>
+                      )}
+
+                      {/* Lead Agent Badge */}
+                      {team.lead_agent && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <Crown className="h-4 w-4 text-yellow-400" />
+                          <span className="text-sm text-yellow-400">{team.lead_agent.name}</span>
+                          <span className="text-xs text-gray-500">Team Lead</span>
+                        </div>
+                      )}
+
+                      {/* Meta Info */}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Created {formatDate(team.created_at)}</span>
+                        <span>{team.active_projects || 0} active projects</span>
                       </div>
+
+                      {/* Expanded Content - Team Members */}
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-dark-border" onClick={(e) => e.stopPropagation()}>
+                          <h4 className="text-xs font-medium text-gray-400 mb-3">Team Members</h4>
+                          {team.members && team.members.length > 0 ? (
+                            <div className="space-y-2">
+                              {team.members.map((member) => (
+                                <div
+                                  key={member.agent_id}
+                                  className="flex items-center justify-between p-2 bg-dark-bg rounded-lg"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <UserCircle className="h-5 w-5 text-gray-500" />
+                                    <span className="text-sm">{member.agent_name}</span>
+                                    {member.is_lead && (
+                                      <Crown className="h-3 w-3 text-yellow-400" />
+                                    )}
+                                  </div>
+                                  {member.role && (
+                                    <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">
+                                      {member.role}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-gray-500">
+                              <UserCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No members assigned yet</p>
+                              <p className="text-xs">Add agents to this team to enable collaboration</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {team.description && (
-                      <p className="text-sm text-gray-400 mb-3 line-clamp-2">{team.description}</p>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{team.active_projects || 0} active projects</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
