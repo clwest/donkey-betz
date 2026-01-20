@@ -94,21 +94,35 @@ interface KnowledgeTopic {
 
 interface Collaboration {
   id: string
-  type: 'consultation' | 'delegation' | 'consensus' | 'knowledge_share'
+  type: 'consultation' | 'delegation' | 'consensus' | 'knowledge_share' | 'parallel' | string
   initiator?: string
+  requester?: string  // Session 782: API uses requester instead of initiator
   participants?: string[]
   topic?: string
-  status: 'pending' | 'active' | 'completed' | 'cancelled'
+  task?: string  // Session 782: API uses task instead of topic
+  status: 'pending' | 'active' | 'completed' | 'cancelled' | string
   created_at?: string
+  started_at?: string  // Session 782: API uses started_at
   outcome?: string
+  quality_score?: number  // Session 782: Quality metrics
+  execution_time_ms?: number
 }
 
 interface NetworkNode {
   id: string
-  name: string
-  type: 'agent' | 'team' | 'topic'
+  name?: string
+  label?: string
+  type?: 'agent' | 'team' | 'topic'
+  size?: number
+  color?: string
   connections?: number
   activity_score?: number
+  // Session 782: Match API response structure
+  metrics?: {
+    executions?: number
+    collaborations?: number
+    quality_score?: number
+  }
 }
 
 interface CollectiveStats {
@@ -219,6 +233,7 @@ export default function CollectiveIntelligencePage() {
   const totalKnowledgeContributors = topicsData?.data?.total_contributors || 0
   const rawNetwork = networkData?.data?.nodes || networkData?.data?.results || networkData?.data
   const networkNodes: NetworkNode[] = Array.isArray(rawNetwork) ? rawNetwork : []
+  const networkEdges = networkData?.data?.edges || []
   const rawHistory = historyData?.data?.collaborations || historyData?.data?.active_collaborations || historyData?.data?.results || historyData?.data
   const collaborations: Collaboration[] = Array.isArray(rawHistory) ? rawHistory : []
   const rawMessages = messagesData?.data?.messages || messagesData?.data?.results || messagesData?.data
@@ -268,21 +283,6 @@ export default function CollectiveIntelligencePage() {
         return 'text-gray-400 bg-gray-500/20'
       default:
         return 'text-gray-400 bg-gray-500/20'
-    }
-  }
-
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-accent-green'
-      case 'active':
-        return 'text-blue-400'
-      case 'pending':
-        return 'text-yellow-400'
-      case 'cancelled':
-        return 'text-red-400'
-      default:
-        return 'text-gray-400'
     }
   }
 
@@ -876,9 +876,30 @@ export default function CollectiveIntelligencePage() {
         {/* Network Tab */}
         {activeTab === 'network' && (
           <div className="space-y-6">
-            {/* Network Visualization Placeholder */}
+            {/* Network Stats Summary */}
+            {!loadingNetwork && networkNodes.length > 0 && (
+              <div className="grid grid-cols-3 gap-4">
+                <div className="card p-4 text-center">
+                  <div className="text-2xl font-bold text-cyan-400">{networkNodes.length}</div>
+                  <div className="text-xs text-gray-500">Active Agents</div>
+                </div>
+                <div className="card p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-400">{networkEdges.length}</div>
+                  <div className="text-xs text-gray-500">Connections</div>
+                </div>
+                <div className="card p-4 text-center">
+                  <div className="text-2xl font-bold text-green-400">{collaborations.length}</div>
+                  <div className="text-xs text-gray-500">Collaborations</div>
+                </div>
+              </div>
+            )}
+
+            {/* Network Visualization */}
             <div className="card p-6">
-              <h2 className="text-lg font-semibold mb-4">Collaboration Network</h2>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Network className="h-5 w-5 text-cyan-400" />
+                Collaboration Network
+              </h2>
               {loadingNetwork ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -890,32 +911,53 @@ export default function CollectiveIntelligencePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                  {networkNodes.slice(0, 12).map((node) => (
-                    <div
-                      key={node.id}
-                      className="p-3 rounded-lg bg-dark-bg text-center hover:bg-primary-500/10 cursor-pointer"
-                    >
-                      <div className={cn(
-                        'w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center',
-                        node.type === 'agent' ? 'bg-cyan-500/20' :
-                        node.type === 'team' ? 'bg-purple-500/20' :
-                        'bg-yellow-500/20'
-                      )}>
-                        {node.type === 'agent' ? <Bot className="h-5 w-5 text-cyan-400" /> :
-                         node.type === 'team' ? <Users className="h-5 w-5 text-purple-400" /> :
-                         <BookOpen className="h-5 w-5 text-yellow-400" />}
+                  {networkNodes.map((node) => {
+                    // Session 782: Use API response fields (label, metrics, color)
+                    const nodeName = node.label || node.name || node.id
+                    const connections = node.metrics?.collaborations || node.connections || 0
+                    const executions = node.metrics?.executions || 0
+                    const qualityScore = node.metrics?.quality_score || 0
+                    return (
+                      <div
+                        key={node.id}
+                        className="p-3 rounded-lg bg-dark-bg text-center hover:bg-primary-500/10 cursor-pointer transition-all"
+                        style={{ borderLeft: `3px solid ${node.color || '#22c55e'}` }}
+                      >
+                        <div className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center bg-cyan-500/20">
+                          <Bot className="h-5 w-5 text-cyan-400" />
+                        </div>
+                        <p className="text-sm font-medium truncate" title={nodeName}>
+                          {nodeName.replace('Agent', '')}
+                        </p>
+                        <div className="flex items-center justify-center gap-2 mt-1">
+                          <span className="text-xs text-gray-500">{executions} runs</span>
+                          <span className="text-xs text-gray-400">|</span>
+                          <span className="text-xs text-gray-500">{connections} collabs</span>
+                        </div>
+                        {qualityScore > 0 && (
+                          <div className="mt-2">
+                            <div className="h-1 bg-dark-border rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-green-500 rounded-full"
+                                style={{ width: `${qualityScore}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-500">{qualityScore}% quality</span>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm font-medium truncate">{node.name}</p>
-                      <p className="text-xs text-gray-500">{node.connections || 0} connections</p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
 
             {/* Collaboration History */}
             <div>
-              <h2 className="text-lg font-semibold mb-4">Recent Collaborations</h2>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-purple-400" />
+                Recent Collaborations
+              </h2>
               {loadingHistory ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -924,34 +966,57 @@ export default function CollectiveIntelligencePage() {
                 <div className="text-center py-8 text-gray-500">No collaboration history</div>
               ) : (
                 <div className="space-y-2">
-                  {collaborations.map((collab) => (
-                    <div key={collab.id} className="card p-4 flex items-center gap-4">
-                      <div className={cn(
-                        'p-2 rounded-lg',
-                        collab.type === 'consultation' ? 'bg-blue-500/20' :
-                        collab.type === 'consensus' ? 'bg-purple-500/20' :
-                        collab.type === 'delegation' ? 'bg-yellow-500/20' :
-                        'bg-cyan-500/20'
-                      )}>
-                        {collab.type === 'consultation' ? <MessageSquare className="h-4 w-4 text-blue-400" /> :
-                         collab.type === 'consensus' ? <Vote className="h-4 w-4 text-purple-400" /> :
-                         collab.type === 'delegation' ? <Share2 className="h-4 w-4 text-yellow-400" /> :
-                         <BookOpen className="h-4 w-4 text-cyan-400" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium capitalize">{collab.type.replace('_', ' ')}</span>
-                          <span className={cn('text-xs capitalize', getStatusColor(collab.status))}>
-                            {collab.status}
-                          </span>
+                  {collaborations.map((collab) => {
+                    // Session 782: Map API response fields
+                    const collabType = collab.type || 'parallel'
+                    const collabStatus = collab.status || 'unknown'
+                    const requester = collab.requester || collab.initiator || 'Unknown'
+                    const task = collab.task || collab.topic || 'Collaboration'
+                    const participants = collab.participants || []
+                    const qualityScore = collab.quality_score || 0
+                    const startedAt = collab.started_at || collab.created_at
+
+                    return (
+                      <div key={collab.id} className="card p-4 flex items-center gap-4">
+                        <div className={cn(
+                          'p-2 rounded-lg',
+                          collabType === 'consultation' ? 'bg-blue-500/20' :
+                          collabType === 'consensus' ? 'bg-purple-500/20' :
+                          collabType === 'parallel' ? 'bg-cyan-500/20' :
+                          'bg-yellow-500/20'
+                        )}>
+                          {collabType === 'consultation' ? <MessageSquare className="h-4 w-4 text-blue-400" /> :
+                           collabType === 'consensus' ? <Vote className="h-4 w-4 text-purple-400" /> :
+                           collabType === 'parallel' ? <Users className="h-4 w-4 text-cyan-400" /> :
+                           <Share2 className="h-4 w-4 text-yellow-400" />}
                         </div>
-                        <p className="text-sm text-gray-400">
-                          {collab.initiator} → {collab.participants?.join(', ') || 'Multiple agents'}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">{task}</span>
+                            <span className={cn(
+                              'px-2 py-0.5 text-xs rounded capitalize',
+                              collabStatus === 'completed' ? 'bg-green-500/20 text-green-400' :
+                              collabStatus === 'active' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            )}>
+                              {collabStatus}
+                            </span>
+                            {qualityScore > 0 && (
+                              <span className="px-2 py-0.5 text-xs rounded bg-purple-500/20 text-purple-400">
+                                {qualityScore}% quality
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-400 mt-1">
+                            <span className="text-cyan-400">{requester}</span>
+                            <ArrowRight className="h-3 w-3 inline mx-1" />
+                            {participants.length > 0 ? participants.join(', ') : 'Multiple agents'}
+                          </p>
+                        </div>
+                        <span className="text-xs text-gray-500">{formatDate(startedAt)}</span>
                       </div>
-                      <span className="text-xs text-gray-500">{formatDate(collab.created_at)}</span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

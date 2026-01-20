@@ -31,7 +31,7 @@ Utilities:
 
 import logging
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -184,10 +184,12 @@ def respond_to_collaboration(request, collaboration_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 782: Allow public access for Network tab
 def collaboration_history(request):
     """Get collaboration history."""
-    service = get_collaboration_service(request.user)
+    # Session 782: Use None for anonymous users
+    user = request.user if request.user.is_authenticated else None
+    service = get_collaboration_service(user)
 
     agent_name = request.query_params.get('agent')
     collab_type = request.query_params.get('type')
