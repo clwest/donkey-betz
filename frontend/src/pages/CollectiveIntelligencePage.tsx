@@ -16,14 +16,12 @@ import {
   Vote,
   Clock,
   Loader2,
-  ChevronRight,
   Share2,
   Bot,
   Zap,
   Target,
   ArrowRight,
   CheckCircle,
-  XCircle,
   ChevronDown,
   ChevronUp,
   FileText,
@@ -89,6 +87,9 @@ interface KnowledgeTopic {
   article_count?: number
   contributors?: number
   last_updated?: string
+  // Session 782: Additional fields from API
+  avg_confidence?: number
+  avg_relevance?: number
 }
 
 interface Collaboration {
@@ -138,6 +139,7 @@ export default function CollectiveIntelligencePage() {
   const [newTeamName, setNewTeamName] = useState('')
   const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null)
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null)
+  const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Queries
@@ -213,6 +215,8 @@ export default function CollectiveIntelligencePage() {
   const knowledgeGaps: KnowledgeGap[] = Array.isArray(rawGaps) ? rawGaps : []
   const rawTopics = topicsData?.data?.topics || topicsData?.data?.results || topicsData?.data
   const topics: KnowledgeTopic[] = Array.isArray(rawTopics) ? rawTopics : []
+  const totalKnowledgeArticles = topicsData?.data?.total_articles || 0
+  const totalKnowledgeContributors = topicsData?.data?.total_contributors || 0
   const rawNetwork = networkData?.data?.nodes || networkData?.data?.results || networkData?.data
   const networkNodes: NetworkNode[] = Array.isArray(rawNetwork) ? rawNetwork : []
   const rawHistory = historyData?.data?.collaborations || historyData?.data?.active_collaborations || historyData?.data?.results || historyData?.data
@@ -745,6 +749,25 @@ export default function CollectiveIntelligencePage() {
                   />
                 </div>
               </div>
+
+              {/* Summary Stats */}
+              {!loadingTopics && topics.length > 0 && (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="card p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-400">{topics.length}</div>
+                    <div className="text-xs text-gray-500">Knowledge Types</div>
+                  </div>
+                  <div className="card p-4 text-center">
+                    <div className="text-2xl font-bold text-green-400">{totalKnowledgeArticles.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">Total Articles</div>
+                  </div>
+                  <div className="card p-4 text-center">
+                    <div className="text-2xl font-bold text-purple-400">{totalKnowledgeContributors}</div>
+                    <div className="text-xs text-gray-500">Contributing Agents</div>
+                  </div>
+                </div>
+              )}
+
               {loadingTopics ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -753,18 +776,97 @@ export default function CollectiveIntelligencePage() {
                 <div className="text-center py-8 text-gray-500">No knowledge topics yet</div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {topics.map((topic) => (
-                    <div key={topic.id} className="card p-4 hover:border-primary-500/50 cursor-pointer">
-                      <h3 className="font-medium mb-2">{topic.name}</h3>
-                      {topic.description && (
-                        <p className="text-sm text-gray-400 mb-3 line-clamp-2">{topic.description}</p>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{topic.article_count || 0} articles</span>
-                        <span>{topic.contributors || 0} contributors</span>
+                  {topics.map((topic) => {
+                    const isExpanded = expandedTopicId === topic.id
+                    return (
+                      <div
+                        key={topic.id}
+                        className={cn(
+                          "card p-4 cursor-pointer transition-all",
+                          isExpanded ? "border-primary-500" : "hover:border-primary-500/50"
+                        )}
+                        onClick={() => setExpandedTopicId(isExpanded ? null : topic.id)}
+                      >
+                        {/* Header with expand indicator */}
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-medium">{topic.name}</h3>
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          )}
+                        </div>
+
+                        {/* Stats row */}
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          <span className="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400">
+                            {topic.article_count || 0} articles
+                          </span>
+                          <span className="px-2 py-0.5 text-xs rounded bg-green-500/20 text-green-400">
+                            {topic.contributors || 0} contributors
+                          </span>
+                        </div>
+
+                        {/* Confidence and Relevance bars */}
+                        {(topic.avg_confidence !== undefined || topic.avg_relevance !== undefined) && (
+                          <div className="space-y-2 mb-3">
+                            {topic.avg_confidence !== undefined && (
+                              <div>
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className="text-gray-400">Confidence</span>
+                                  <span className="text-gray-300">{Math.round((topic.avg_confidence || 0) * 100)}%</span>
+                                </div>
+                                <div className="h-1.5 bg-dark-border rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-500 rounded-full"
+                                    style={{ width: `${(topic.avg_confidence || 0) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {topic.avg_relevance !== undefined && (
+                              <div>
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className="text-gray-400">Relevance</span>
+                                  <span className="text-gray-300">{Math.round((topic.avg_relevance || 0) * 100)}%</span>
+                                </div>
+                                <div className="h-1.5 bg-dark-border rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-green-500 rounded-full"
+                                    style={{ width: `${(topic.avg_relevance || 0) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Expanded content */}
+                        {isExpanded && (
+                          <div className="pt-3 border-t border-dark-border space-y-3">
+                            {/* Description */}
+                            {topic.description && (
+                              <p className="text-sm text-gray-400">{topic.description}</p>
+                            )}
+
+                            {/* Last updated */}
+                            {topic.last_updated && (
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <Clock className="h-3 w-3" />
+                                <span>Last updated: {new Date(topic.last_updated).toLocaleDateString()}</span>
+                              </div>
+                            )}
+
+                            {/* Action button */}
+                            <button className="w-full btn-primary text-sm py-2 flex items-center justify-center gap-2">
+                              <Search className="h-4 w-4" />
+                              Explore Topic
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

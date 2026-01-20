@@ -200,6 +200,65 @@ def get_knowledge_gaps(request):
 
 
 # =============================================================================
+# KNOWLEDGE TOPICS (Session 782)
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_knowledge_topics(request):
+    """
+    GET /api/collective/knowledge-topics/
+
+    Get knowledge topics aggregated from AgentKnowledgeSource.
+    Returns topics grouped by knowledge_type with article counts.
+    """
+    try:
+        from core.models_unified_system import AgentKnowledgeSource
+        from django.db.models import Count, Avg, Max
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Get stats by knowledge type
+        type_stats = AgentKnowledgeSource.objects.values('knowledge_type').annotate(
+            article_count=Count('id'),
+            avg_confidence=Avg('confidence_score'),
+            avg_relevance=Avg('relevance_score'),
+            last_updated=Max('last_updated_at'),
+            contributors=Count('agent', distinct=True)
+        ).order_by('-article_count')
+
+        # Format as topics
+        topics = []
+        for stat in type_stats:
+            knowledge_type = stat['knowledge_type'] or 'uncategorized'
+            topics.append({
+                'id': knowledge_type,
+                'name': knowledge_type.replace('_', ' ').title(),
+                'description': f"Knowledge from {stat['article_count']} sources about {knowledge_type.replace('_', ' ')}",
+                'article_count': stat['article_count'],
+                'contributors': stat['contributors'],
+                'avg_confidence': round(stat['avg_confidence'] or 0, 2),
+                'avg_relevance': round(stat['avg_relevance'] or 0, 2),
+                'last_updated': stat['last_updated'].isoformat() if stat['last_updated'] else None,
+            })
+
+        # Get total stats
+        total_articles = AgentKnowledgeSource.objects.count()
+        total_contributors = AgentKnowledgeSource.objects.values('agent').distinct().count()
+
+        return Response({
+            'topics': topics,
+            'total': len(topics),
+            'total_articles': total_articles,
+            'total_contributors': total_contributors,
+        })
+
+    except Exception as e:
+        logger.warning(f"Error getting knowledge topics: {e}")
+        return Response({'topics': [], 'total': 0, 'error': str(e)})
+
+
+# =============================================================================
 # AGENT IMPROVEMENTS
 # =============================================================================
 
