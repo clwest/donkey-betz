@@ -3187,6 +3187,55 @@ class SpiderData(models.Model):
         ordering = ['-created_at']
 
 
+class SpiderDataAnnotation(models.Model):
+    """
+    Session 783: Agent annotations on spider data items.
+
+    Enables agents to flag spider data as useful, profitable, podcast-worthy, etc.
+    Powers the Spider News Feed for human consumption.
+    """
+    ANNOTATION_TYPES = [
+        ('useful', 'Useful'),
+        ('profitable', 'Profitable Opportunity'),
+        ('podcast_worthy', 'Podcast Worthy'),
+        ('breaking_news', 'Breaking News'),
+        ('investment_opportunity', 'Investment Opportunity'),
+        ('action_required', 'Action Required'),
+        ('warning', 'Warning/Risk'),
+        ('trending', 'Trending'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    spider_data = models.ForeignKey('SpiderData', on_delete=models.CASCADE, related_name='annotations')
+    annotation_type = models.CharField(max_length=50, choices=ANNOTATION_TYPES, db_index=True)
+    confidence_score = models.FloatField(default=0.5)  # 0.0-1.0
+    note = models.TextField(blank=True)
+    agent_name = models.CharField(max_length=100, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Engagement metrics
+    upvotes = models.IntegerField(default=0)
+    downvotes = models.IntegerField(default=0)
+    view_count = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = [['spider_data', 'agent_name', 'annotation_type']]
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['annotation_type', 'created_at']),
+            models.Index(fields=['agent_name', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.annotation_type} by {self.agent_name} on {self.spider_data_id}"
+
+    @property
+    def score(self) -> int:
+        """Net score (upvotes - downvotes)."""
+        return self.upvotes - self.downvotes
+
+
 class SpiderItemHash(models.Model):
     """
     Session 616: Tracks content hashes for spider item deduplication.
