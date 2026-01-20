@@ -1,23 +1,26 @@
 /**
- * Conversation Contract Page
+ * Unified Conversations Page
  *
- * Session 717: Visualizes conversation quality metrics and contract compliance.
+ * Session 717: Original conversation contract with quality metrics.
+ * Session 782: Consolidated into unified view with all conversation types.
  *
- * The Conversation Contract ensures agent conversations have:
- * 1. TENSION - Constructive disagreement (no empty agreement)
- * 2. GROUNDING - References to platform metrics/systems
- * 3. DECISION SUMMARY - Structured output with insights, features, next steps
+ * Features:
+ * - Merged view of HiveMind sessions + Legacy AgentConversations
+ * - Type filter tabs (All / HiveMind / Legacy)
+ * - Quality contract metrics and compliance rates
+ * - Message-level analysis on expansion
  */
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import {
-  FileCheck,
   AlertTriangle,
   CheckCircle2,
   Zap,
   Target,
   FileText,
+  FileCheck,
   ChevronDown,
   ChevronUp,
   Info,
@@ -27,9 +30,18 @@ import {
   Lightbulb,
   Wrench,
   ArrowRight,
+  Loader2,
+  MessageSquare,
+  User,
+  Plus,
+  Brain,
+  History,
 } from 'lucide-react'
 import { conversationContractApi } from '@/lib/api'
 import Breadcrumb from '@/components/Breadcrumb'
+
+// Session 782: Type filter for conversations
+type ConversationTypeFilter = 'all' | 'hivemind' | 'legacy'
 
 // Types
 interface ContractOverview {
@@ -73,6 +85,54 @@ interface Conversation {
   participant_count: number
   contract: ConversationContract
   decision_summary: DecisionSummary | null
+}
+
+// Session 782: Types for detail endpoint
+interface MessageAnalysis {
+  has_tension: boolean
+  has_grounding: boolean
+  has_empty_agreement: boolean
+  grounding_refs: string[]
+}
+
+interface ConversationMessage {
+  sequence: number
+  agent_name: string
+  content: string
+  analysis: MessageAnalysis
+}
+
+interface ContractAnalysis {
+  tension_count: number
+  tension_required: number
+  tension_met: boolean
+  grounding_count: number
+  grounding_required: number
+  grounding_met: boolean
+  empty_agreement_count: number
+  has_decision_summary: boolean
+  summary_validation: {
+    has_enough_insights: boolean
+    has_feature_name: boolean
+    has_enough_next_steps: boolean
+    is_valid: boolean
+  }
+  is_contract_valid: boolean
+}
+
+interface ConversationDetail {
+  conversation: {
+    id: string
+    topic: string
+    type: 'hivemind' | 'legacy'
+    status: string
+    created_at: string
+    participants: Array<{ id: string; name: string }>
+  }
+  contract_analysis: ContractAnalysis
+  decision_summary: DecisionSummary | null
+  messages: ConversationMessage[]
+  message_count: number
 }
 
 interface ContractRequirements {
@@ -171,14 +231,19 @@ function RequirementCard({
 }
 
 // Conversation Row Component
+// Session 782: Updated to show message-level analysis from detail endpoint
 function ConversationRow({
   conversation,
   onSelect,
   isSelected,
+  detail,
+  isLoadingDetail,
 }: {
   conversation: Conversation
   onSelect: () => void
   isSelected: boolean
+  detail: ConversationDetail | null
+  isLoadingDetail: boolean
 }) {
   const { contract } = conversation
 
@@ -256,21 +321,10 @@ function ConversationRow({
         </div>
       </div>
 
-      {/* Expanded details */}
-      {isSelected && conversation.decision_summary && (
-        <div className="mt-4 pt-4 border-t border-dark-border">
-          <DecisionSummaryView summary={conversation.decision_summary} />
-        </div>
-      )}
-
-      {isSelected && !conversation.decision_summary && (
-        <div className="mt-4 pt-4 border-t border-dark-border">
-          <div className="flex items-center gap-2 text-yellow-400">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm">
-              No decision summary found in this conversation
-            </span>
-          </div>
+      {/* Session 782: Expanded details with message-level analysis */}
+      {isSelected && (
+        <div className="mt-4 pt-4 border-t border-dark-border" onClick={(e) => e.stopPropagation()}>
+          <MessageAnalysisView detail={detail} isLoading={isLoadingDetail} />
         </div>
       )}
     </div>
@@ -351,11 +405,210 @@ function DecisionSummaryView({ summary }: { summary: DecisionSummary }) {
   )
 }
 
+// Session 782: Message Analysis View - shows message-by-message breakdown
+function MessageAnalysisView({
+  detail,
+  isLoading
+}: {
+  detail: ConversationDetail | null
+  isLoading: boolean
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-primary-400" />
+        <span className="ml-2 text-gray-400">Loading message analysis...</span>
+      </div>
+    )
+  }
+
+  if (!detail) {
+    return (
+      <div className="text-center py-4 text-gray-400">
+        Failed to load conversation details
+      </div>
+    )
+  }
+
+  const { contract_analysis, messages, decision_summary } = detail
+
+  return (
+    <div className="space-y-4">
+      {/* Contract Analysis Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className={`rounded-lg p-3 ${contract_analysis.tension_met ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <Zap className={`h-4 w-4 ${contract_analysis.tension_met ? 'text-green-400' : 'text-red-400'}`} />
+            <span className="text-sm font-medium text-white">Tension</span>
+          </div>
+          <div className="text-xs text-gray-400">
+            {contract_analysis.tension_count}/{contract_analysis.tension_required} required
+          </div>
+        </div>
+        <div className={`rounded-lg p-3 ${contract_analysis.grounding_met ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <Target className={`h-4 w-4 ${contract_analysis.grounding_met ? 'text-green-400' : 'text-red-400'}`} />
+            <span className="text-sm font-medium text-white">Grounding</span>
+          </div>
+          <div className="text-xs text-gray-400">
+            {contract_analysis.grounding_count}/{contract_analysis.grounding_required} required
+          </div>
+        </div>
+        <div className={`rounded-lg p-3 ${contract_analysis.empty_agreement_count === 0 ? 'bg-green-500/10 border border-green-500/30' : 'bg-yellow-500/10 border border-yellow-500/30'}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className={`h-4 w-4 ${contract_analysis.empty_agreement_count === 0 ? 'text-green-400' : 'text-yellow-400'}`} />
+            <span className="text-sm font-medium text-white">Empty Agreement</span>
+          </div>
+          <div className="text-xs text-gray-400">
+            {contract_analysis.empty_agreement_count} instances
+          </div>
+        </div>
+        <div className={`rounded-lg p-3 ${contract_analysis.summary_validation?.is_valid ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className={`h-4 w-4 ${contract_analysis.summary_validation?.is_valid ? 'text-green-400' : 'text-red-400'}`} />
+            <span className="text-sm font-medium text-white">Summary</span>
+          </div>
+          <div className="text-xs text-gray-400">
+            {contract_analysis.has_decision_summary ? (contract_analysis.summary_validation?.is_valid ? 'Valid' : 'Incomplete') : 'Missing'}
+          </div>
+        </div>
+      </div>
+
+      {/* Participants */}
+      {detail.conversation.participants && detail.conversation.participants.length > 0 && (
+        <div>
+          <h4 className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+            <Users className="h-4 w-4 text-primary-400" />
+            Participants ({detail.conversation.participants.length})
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {detail.conversation.participants.map((p, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 rounded bg-dark-bg px-2 py-1 text-xs text-gray-300"
+              >
+                <User className="h-3 w-3" />
+                {p.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Message-by-Message Analysis */}
+      {messages && messages.length > 0 && (
+        <div>
+          <h4 className="flex items-center gap-2 text-sm font-medium text-white mb-3">
+            <MessageSquare className="h-4 w-4 text-primary-400" />
+            Message Analysis ({messages.length} messages)
+          </h4>
+          <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className="rounded-lg bg-dark-bg p-3 border border-dark-border"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">#{msg.sequence}</span>
+                    <span className="font-medium text-primary-300">{msg.agent_name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {msg.analysis.has_tension && (
+                      <span className="px-1.5 py-0.5 rounded text-xs bg-purple-500/20 text-purple-300" title="Has tension">
+                        <Zap className="h-3 w-3 inline" /> Tension
+                      </span>
+                    )}
+                    {msg.analysis.has_grounding && (
+                      <span className="px-1.5 py-0.5 rounded text-xs bg-blue-500/20 text-blue-300" title="Has grounding">
+                        <Target className="h-3 w-3 inline" /> Grounded
+                      </span>
+                    )}
+                    {msg.analysis.has_empty_agreement && (
+                      <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-300" title="Empty agreement">
+                        <AlertTriangle className="h-3 w-3 inline" /> Empty
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-300 line-clamp-3">{msg.content}</p>
+                {msg.analysis.grounding_refs && msg.analysis.grounding_refs.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {msg.analysis.grounding_refs.map((ref, j) => (
+                      <span
+                        key={j}
+                        className="inline-block rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-300"
+                      >
+                        {ref}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Decision Summary */}
+      {decision_summary && (
+        <div className="border-t border-dark-border pt-4">
+          <DecisionSummaryView summary={decision_summary} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Session 782: Type Filter Tabs Component
+function TypeFilterTabs({
+  filter,
+  onChange,
+  counts,
+}: {
+  filter: ConversationTypeFilter
+  onChange: (filter: ConversationTypeFilter) => void
+  counts: { all: number; hivemind: number; legacy: number }
+}) {
+  const tabs: { key: ConversationTypeFilter; label: string; icon: React.ElementType }[] = [
+    { key: 'all', label: 'All', icon: MessageSquare },
+    { key: 'hivemind', label: 'Hive Mind', icon: Brain },
+    { key: 'legacy', label: 'Legacy', icon: History },
+  ]
+
+  return (
+    <div className="flex gap-1 p-1 bg-dark-bg rounded-lg">
+      {tabs.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          onClick={() => onChange(key)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            filter === key
+              ? 'bg-primary-500/20 text-primary-300'
+              : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+          {label}
+          <span className={`text-xs px-1.5 py-0.5 rounded ${
+            filter === key ? 'bg-primary-500/30' : 'bg-dark-border'
+          }`}>
+            {counts[key]}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // Main Page Component
 export default function ConversationContractPage() {
+  const navigate = useNavigate()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [days, setDays] = useState(30)
+  const [typeFilter, setTypeFilter] = useState<ConversationTypeFilter>('all')
 
+  // Overview query
   const { data, isLoading, error } = useQuery({
     queryKey: ['conversation-contract', days],
     queryFn: async () => {
@@ -365,9 +618,32 @@ export default function ConversationContractPage() {
     staleTime: 30000,
   })
 
+  // Session 782: Detail query - fetches message-level analysis when conversation is selected
+  const { data: detailData, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ['conversation-contract-detail', selectedId],
+    queryFn: async () => {
+      if (!selectedId) return null
+      const response = await conversationContractApi.detail(selectedId)
+      return response.data as ConversationDetail
+    },
+    enabled: !!selectedId, // Only fetch when a conversation is selected
+    staleTime: 60000, // Cache for 1 minute
+  })
+
   const overview: ContractOverview | undefined = data?.overview
   const requirements: ContractRequirements | undefined = data?.contract_requirements
-  const conversations: Conversation[] = data?.conversations || []
+  const allConversations: Conversation[] = data?.conversations || []
+
+  // Session 782: Filter conversations by type and compute counts
+  const typeCounts = {
+    all: allConversations.length,
+    hivemind: allConversations.filter(c => c.type === 'hivemind').length,
+    legacy: allConversations.filter(c => c.type === 'legacy').length,
+  }
+
+  const conversations = typeFilter === 'all'
+    ? allConversations
+    : allConversations.filter(c => c.type === typeFilter)
 
   if (isLoading) {
     return (
@@ -387,26 +663,42 @@ export default function ConversationContractPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <Breadcrumb currentPage="Conversation Contract" />
+      <Breadcrumb currentPage="Conversations" />
 
-      {/* Header */}
+      {/* Header - Session 782: Updated for unified view */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Conversation Contract</h1>
+          <h1 className="text-2xl font-bold text-white">Agent Conversations</h1>
           <p className="text-gray-400 mt-1">
-            Quality analytics ensuring productive agent conversations
+            Unified view of all agent conversations with quality analytics
           </p>
         </div>
-        <select
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="rounded-lg border border-dark-border bg-dark-card px-3 py-2 text-white"
-        >
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={90}>Last 90 days</option>
-        </select>
+        <div className="flex items-center gap-3">
+          <select
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className="rounded-lg border border-dark-border bg-dark-card px-3 py-2 text-white"
+          >
+            <option value={7}>Last 7 days</option>
+            <option value={30}>Last 30 days</option>
+            <option value={90}>Last 90 days</option>
+          </select>
+          <button
+            onClick={() => navigate('/hive-mind')}
+            className="flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-white hover:bg-primary-600 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            New Session
+          </button>
+        </div>
       </div>
+
+      {/* Session 782: Type Filter Tabs */}
+      <TypeFilterTabs
+        filter={typeFilter}
+        onChange={setTypeFilter}
+        counts={typeCounts}
+      />
 
       {/* Overview Stats */}
       {overview && (
@@ -492,8 +784,9 @@ export default function ConversationContractPage() {
       {/* Conversations List */}
       <div>
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary-400" />
-          Recent Conversations ({conversations.length})
+          <MessageSquare className="h-5 w-5 text-primary-400" />
+          {typeFilter === 'all' ? 'All Conversations' : typeFilter === 'hivemind' ? 'Hive Mind Sessions' : 'Legacy Conversations'}
+          <span className="text-gray-400 font-normal">({conversations.length})</span>
         </h2>
 
         {conversations.length === 0 ? (
@@ -511,6 +804,8 @@ export default function ConversationContractPage() {
                   setSelectedId(selectedId === conv.id ? null : conv.id)
                 }
                 isSelected={selectedId === conv.id}
+                detail={selectedId === conv.id ? detailData ?? null : null}
+                isLoadingDetail={selectedId === conv.id && isLoadingDetail}
               />
             ))}
           </div>
