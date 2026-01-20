@@ -820,6 +820,7 @@ from core.views_collaboration import (
     collaboration_history,
     send_message,
     get_messages,
+    get_all_messages,  # Session 782: All messages for Messages tab
     mark_message_processed,
     share_knowledge,
     search_knowledge,
@@ -2889,6 +2890,7 @@ urlpatterns = [
 
     # Session 219 Phase B: Agent Collaboration API
     path('api/agent-collab/message/', collab_send_message, name='collab-send-message'),
+    path('api/agent-collab/messages/', get_all_messages, name='collab-all-messages'),  # Session 782: All messages
     path('api/agent-collab/messages/<str:agent_name>/', collab_get_messages, name='collab-get-messages'),
     path('api/agent-collab/collaborate/', collab_initiate, name='collab-initiate'),
     path('api/agent-collab/consult/', collab_consult, name='collab-consult'),

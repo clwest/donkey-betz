@@ -311,6 +311,37 @@ def get_messages(request):
     })
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Session 782: Allow public access for Messages tab
+def get_all_messages(request):
+    """Get all recent inter-agent messages."""
+    from core.models_unified_system import InterAgentMessage
+
+    limit = int(request.query_params.get('limit', 50))
+
+    messages = InterAgentMessage.objects.order_by('-created_at')[:limit]
+
+    message_list = []
+    for msg in messages:
+        message_list.append({
+            'id': str(msg.id),
+            'from_agent': msg.sender_agent or 'Unknown',
+            'to_agent': msg.receiver_agent or 'Unknown',
+            'content': msg.content or '',
+            'priority': msg.priority or 'normal',
+            'message_type': msg.message_type or 'general',
+            'read': msg.is_read,
+            'processed': msg.is_processed,
+            'created_at': msg.created_at.isoformat() if msg.created_at else None,
+        })
+
+    return Response({
+        'success': True,
+        'count': len(message_list),
+        'messages': message_list
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_message_processed(request, message_id):
