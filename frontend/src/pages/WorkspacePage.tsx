@@ -219,11 +219,13 @@ function FileTree({ files, onSelect, selectedPath }: { files: FileNode[]; onSele
 }
 
 // Operation Row Component
-function OperationRow({ operation, onRollback, onReview, onViewContent }: {
+// Session 780: Added isReviewing prop for loading state
+function OperationRow({ operation, onRollback, onReview, onViewContent, isReviewing }: {
   operation: WorkspaceOperation
   onRollback?: () => void
   onReview?: (approved: boolean) => void
   onViewContent?: () => void  // Session 779: View file content callback
+  isReviewing?: boolean  // Session 780: Loading state for review buttons
 }) {
   const [showDiff, setShowDiff] = useState(false)
 
@@ -360,20 +362,33 @@ function OperationRow({ operation, onRollback, onReview, onViewContent }: {
           </button>
         )}
         {/* Session 780: Fix - API returns requires_review not pending_review */}
+        {/* Session 780: Added loading state and better button styling */}
         {onReview && (operation.requires_review || operation.pending_review) && !operation.reviewed_by_human && (
           <>
             <button
               onClick={() => onReview(true)}
-              className="text-xs text-accent-green hover:text-accent-green/80 flex items-center gap-1"
+              disabled={isReviewing}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-md flex items-center gap-1.5 font-medium transition-all",
+                isReviewing
+                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  : "bg-accent-green/20 text-accent-green hover:bg-accent-green/30 border border-accent-green/30"
+              )}
             >
-              <CheckCircle size={12} />
+              {isReviewing ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
               Approve
             </button>
             <button
               onClick={() => onReview(false)}
-              className="text-xs text-accent-red hover:text-accent-red/80 flex items-center gap-1"
+              disabled={isReviewing}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-md flex items-center gap-1.5 font-medium transition-all",
+                isReviewing
+                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  : "bg-accent-red/20 text-accent-red hover:bg-accent-red/30 border border-accent-red/30"
+              )}
             >
-              <XCircle size={12} />
+              {isReviewing ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
               Reject
             </button>
           </>
@@ -911,6 +926,8 @@ export default function WorkspacePage() {
   // Session 779: File content modal state
   const [showFileContent, setShowFileContent] = useState(false)
   const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null)
+  // Session 780: Track which operation is being reviewed for loading state
+  const [reviewingOperationId, setReviewingOperationId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Session 714: Real-time event handlers - refresh data when file events occur
@@ -1099,6 +1116,7 @@ export default function WorkspacePage() {
     },
   })
 
+  // Session 780: Updated to clear reviewingOperationId on success/error
   const reviewMutation = useMutation({
     mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
       workspaceOperationsApi.review(id, { approved }),
@@ -1106,9 +1124,11 @@ export default function WorkspacePage() {
       queryClient.invalidateQueries({ queryKey: ['workspace-pending-reviews'] })
       queryClient.invalidateQueries({ queryKey: ['workspace-operations'] })
       setActionResult({ type: 'success', message: 'Review submitted' })
+      setReviewingOperationId(null)  // Clear loading state
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to submit review' })
+      setReviewingOperationId(null)  // Clear loading state on error too
     },
   })
 
@@ -1982,15 +2002,20 @@ export default function WorkspacePage() {
               <h3 className="text-lg font-semibold">Pending Reviews ({pendingReviews.length})</h3>
               {pendingReviews.length > 0 ? (
                 <div className="space-y-3">
+                  {/* Session 780: Added isReviewing prop for button loading state */}
                   {pendingReviews.map(op => (
                     <OperationRow
                       key={op.id}
                       operation={op}
-                      onReview={(approved) => reviewMutation.mutate({ id: op.id, approved })}
+                      onReview={(approved) => {
+                        setReviewingOperationId(op.id)  // Track which operation is being reviewed
+                        reviewMutation.mutate({ id: op.id, approved })
+                      }}
                       onViewContent={() => {
                         setSelectedOperationId(op.id)
                         setShowFileContent(true)
                       }}
+                      isReviewing={reviewMutation.isPending && reviewingOperationId === op.id}
                     />
                   ))}
                 </div>
