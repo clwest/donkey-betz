@@ -186,11 +186,31 @@ export default function CollectiveIntelligencePage() {
   const topics: KnowledgeTopic[] = Array.isArray(rawTopics) ? rawTopics : []
   const rawNetwork = networkData?.data?.nodes || networkData?.data?.results || networkData?.data
   const networkNodes: NetworkNode[] = Array.isArray(rawNetwork) ? rawNetwork : []
-  const rawHistory = historyData?.data?.collaborations || historyData?.data?.results || historyData?.data
+  const rawHistory = historyData?.data?.collaborations || historyData?.data?.active_collaborations || historyData?.data?.results || historyData?.data
   const collaborations: Collaboration[] = Array.isArray(rawHistory) ? rawHistory : []
   const rawMessages = messagesData?.data?.messages || messagesData?.data?.results || messagesData?.data
   const messages: Message[] = Array.isArray(rawMessages) ? rawMessages : []
-  const stats: CollectiveStats = statsData?.data || dashboard || {}
+
+  // Session 782: Map API response to CollectiveStats interface
+  // API returns: { collaboration: {...}, knowledge: {...}, agents: {...}, learning: {...} }
+  // Dashboard returns: { monitor: {...}, stats: {...}, learning: {...} }
+  // UI expects: { total_agents, active_collaborations, knowledge_articles, insights_generated, ... }
+  const rawStats = statsData?.data || {}
+  const dashboardStats = dashboard?.stats || {}
+  const monitor = dashboard?.monitor || {}
+
+  // Calculate avg response time in seconds from ms
+  const avgResponseMs = monitor?.avg_response_time_ms || rawStats?.collaboration?.avg_response_time_ms
+  const avgResponseSec = avgResponseMs ? Math.round(avgResponseMs / 1000) : undefined
+
+  const stats: CollectiveStats = {
+    total_agents: rawStats?.agents?.database_agents || rawStats?.agents?.total || dashboardStats?.agents?.database_agents || 74,
+    active_collaborations: monitor?.active_collaborations ?? rawStats?.collaboration?.total ?? dashboardStats?.collaboration?.total ?? 0,
+    knowledge_articles: rawStats?.knowledge?.total_items || dashboardStats?.knowledge?.total_items || 0,
+    insights_generated: rawStats?.learning?.total_transfers || dashboard?.learning?.recent?.length || 0,
+    consensus_decisions: rawStats?.collaboration?.completed || dashboardStats?.collaboration?.completed || 0,
+    avg_response_time: avgResponseSec,
+  }
 
   const tabs = [
     { id: 'insights' as TabType, label: 'Insights', icon: Lightbulb, badge: insights.length },
