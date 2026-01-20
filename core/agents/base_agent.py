@@ -919,6 +919,52 @@ Use delegation when you need expertise outside your specialty. For example:
 
         return results[:limit]
 
+    def _get_relevant_docs_for_task(self, task: str, limit: int = 3) -> List[Dict[str, Any]]:
+        """
+        Session 786: Retrieve relevant documentation for the current task.
+
+        Uses the ScopedRetrievalService to search curated documentation
+        with smart defaults:
+        - Searches active curated docs first (scope=docs_index_active)
+        - Auto-expands to superseded docs if no results
+        - Ranks curated > uncurated, active > superseded
+
+        Args:
+            task: The current task to find relevant docs for
+            limit: Maximum docs to retrieve
+
+        Returns:
+            List of relevant doc dicts with title, path, snippet, scope
+        """
+        results = []
+
+        try:
+            from core.services.scoped_retrieval import get_scoped_retrieval_service
+
+            service = get_scoped_retrieval_service()
+            retrieval_results = service.search(
+                query=task,
+                limit=limit,
+                auto_expand=True  # Expand scope if no results in curated
+            )
+
+            for r in retrieval_results:
+                results.append({
+                    'source_agent': 'Documentation',
+                    'title': r.title[:60] if r.title else 'Documentation',
+                    'summary': r.content_snippet[:200] if r.content_snippet else '',
+                    'knowledge_type': 'documentation',
+                    'confidence': r.similarity_score,
+                    'doc_path': r.path,
+                    'doc_scope': r.scope,
+                    'is_curated': r.is_curated,
+                })
+
+        except Exception as e:
+            logger.debug(f"Doc retrieval not available: {e}")
+
+        return results
+
     def _build_knowledge_attribution(self, knowledge_items: List[Dict[str, Any]]) -> KnowledgeAttribution:
         """
         Session 400: Build a KnowledgeAttribution object from retrieved knowledge.
