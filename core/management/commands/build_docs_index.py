@@ -129,10 +129,15 @@ class Command(BaseCommand):
             self.stdout.write(f'\nCross-Reference Graph:')
             self.stdout.write(f'  - Total links: {graph.get("total_links", 0)}')
             self.stdout.write(f'  - Orphan docs: {len(graph.get("orphan_docs", []))}')
+            self.stdout.write(f'  - Broken links: {len(graph.get("broken_links", []))}')
             if graph.get('most_referenced'):
                 self.stdout.write(f'  - Most referenced:')
                 for ref in graph['most_referenced'][:5]:
                     self.stdout.write(f'      {ref["path"]} ({ref["count"]} refs)')
+            if graph.get('broken_links'):
+                self.stdout.write(f'  - Sample broken links:')
+                for broken in graph['broken_links'][:3]:
+                    self.stdout.write(f'      {broken["source"]} -> {broken["raw_ref"]}')
 
             self.stdout.write(f'\nSample JSON entry:')
             if doc_index['documents']:
@@ -167,7 +172,7 @@ class Command(BaseCommand):
         index = {
             'generated_at': datetime.now().isoformat(),
             'generator': 'build_docs_index',
-            'version': '2.1',  # Updated for cross-reference graph
+            'version': '2.2',  # Updated: code block filtering, link context, broken links
             'documents': [],
             'by_type': defaultdict(list),
             'by_status': defaultdict(list),
@@ -177,6 +182,7 @@ class Command(BaseCommand):
                 'total_links': 0,
                 'most_referenced': [],
                 'orphan_docs': [],
+                'broken_links': [],
             },
         }
 
@@ -205,20 +211,31 @@ class Command(BaseCommand):
             path_to_file[canonical] = filepath
 
         # Second pass: extract metadata and links
+        all_broken_links = []
         for filepath, is_root in all_files:
             doc_meta = self._extract_doc_metadata(filepath, docs_dir, base_dir, is_root=is_root)
 
-            # Extract outbound links
-            outbound = self._extract_links(filepath, all_doc_paths)
+            # Extract outbound links (now returns tuple)
+            outbound_links, broken_links = self._extract_links(filepath, all_doc_paths)
+
+            # Track broken links with source
+            for broken in broken_links:
+                broken['source'] = doc_meta['path']
+                all_broken_links.append(broken)
 
             # Add see_also from frontmatter
             if doc_meta.get('see_also'):
+                existing_targets = {link['target'] for link in outbound_links}
                 for see_also_ref in doc_meta['see_also']:
                     normalized = self._normalize_doc_path(see_also_ref, all_doc_paths)
-                    if normalized and normalized not in outbound:
-                        outbound.append(normalized)
+                    if normalized and normalized not in existing_targets:
+                        outbound_links.append({
+                            'target': normalized,
+                            'occurrences': 1,
+                            'snippets': ['(from see_also frontmatter)']
+                        })
 
-            doc_meta['outbound_links'] = outbound
+            doc_meta['outbound_links'] = outbound_links
             doc_meta['inbound_links_count'] = 0  # Will be calculated in third pass
 
             index['documents'].append(doc_meta)
@@ -242,8 +259,9 @@ class Command(BaseCommand):
         inbound_counts = defaultdict(int)
         total_links = 0
         for doc in index['documents']:
-            for outbound_link in doc.get('outbound_links', []):
-                inbound_counts[outbound_link] += 1
+            for link in doc.get('outbound_links', []):
+                target = link['target'] if isinstance(link, dict) else link
+                inbound_counts[target] += 1
                 total_links += 1
 
         # Update documents with inbound counts
@@ -272,6 +290,16 @@ class Command(BaseCommand):
             if doc['inbound_links_count'] == 0 and len(doc.get('outbound_links', [])) == 0
         ]
         index['graph']['orphan_docs'] = orphans[:50]  # Limit to 50
+
+        # Add broken links (deduplicated by raw_ref)
+        seen_broken = set()
+        unique_broken = []
+        for broken in all_broken_links:
+            key = f"{broken['source']}:{broken['raw_ref']}"
+            if key not in seen_broken:
+                seen_broken.add(key)
+                unique_broken.append(broken)
+        index['graph']['broken_links'] = unique_broken[:100]  # Limit to 100
 
         # Convert defaultdicts to regular dicts for JSON serialization
         index['by_type'] = dict(index['by_type'])
@@ -503,50 +531,104 @@ class Command(BaseCommand):
 
         return 'active'
 
-    def _extract_links(self, filepath: Path, all_doc_paths: set) -> list:
-        """Extract references to other documentation files."""
-        links = set()
+    def _extract_links(self, filepath: Path, all_doc_paths: set) -> tuple:
+        """
+        Extract references to other documentation files.
+
+        Returns:
+            tuple: (outbound_links, broken_links)
+                - outbound_links: list of dicts with target, occurrences, snippets
+                - broken_links: list of dicts with raw_ref, reason
+        """
+        link_data = {}  # target -> {occurrences, snippets}
+        broken_links = []
 
         try:
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
 
-            # Pattern 1: Markdown links - [text](path/to/file.md)
-            md_links = re.findall(r'\[([^\]]*)\]\(([^)]+\.md)\)', content)
-            for _, link_path in md_links:
-                # Normalize the path
-                normalized = self._normalize_doc_path(link_path, all_doc_paths)
+            # Strip fenced code blocks to avoid false positives
+            content_no_code = self._strip_code_blocks(content)
+
+            # Get own path for self-reference filtering
+            try:
+                own_path = str(filepath).split('unified-donkey-betz/')[-1]
+            except Exception:
+                own_path = filepath.name
+
+            def add_link(raw_ref: str, snippet: str):
+                """Helper to add a link with deduplication and snippet tracking."""
+                normalized = self._normalize_doc_path(raw_ref, all_doc_paths)
+
                 if normalized:
-                    links.add(normalized)
+                    # Skip self-references
+                    if normalized == own_path:
+                        return
+
+                    if normalized not in link_data:
+                        link_data[normalized] = {'occurrences': 0, 'snippets': []}
+                    link_data[normalized]['occurrences'] += 1
+                    # Keep up to 3 snippets per target
+                    if len(link_data[normalized]['snippets']) < 3 and snippet:
+                        # Clean and truncate snippet
+                        clean_snippet = snippet.strip()[:100]
+                        if clean_snippet and clean_snippet not in link_data[normalized]['snippets']:
+                            link_data[normalized]['snippets'].append(clean_snippet)
+                else:
+                    # Track as broken link if it looks like a real doc reference
+                    if raw_ref.endswith('.md') and not raw_ref.startswith('http'):
+                        broken_links.append({
+                            'raw_ref': raw_ref,
+                            'reason': 'not_found'
+                        })
+
+            # Pattern 1: Markdown links - [text](path/to/file.md)
+            for match in re.finditer(r'\[([^\]]*)\]\(([^)]+\.md)\)', content_no_code):
+                link_text, link_path = match.groups()
+                # Get context around the match
+                start = max(0, match.start() - 20)
+                end = min(len(content_no_code), match.end() + 30)
+                snippet = content_no_code[start:end].replace('\n', ' ')
+                add_link(link_path, snippet)
 
             # Pattern 2: File mentions - SESSION_123_FOO.md or ARCHITECTURE.md
-            # Match uppercase filenames that look like docs
-            file_mentions = re.findall(r'\b(SESSION_\d+[A-Z_]+\.md|[A-Z][A-Z0-9_]+\.md)\b', content)
-            for mention in file_mentions:
-                normalized = self._normalize_doc_path(mention, all_doc_paths)
-                if normalized:
-                    links.add(normalized)
+            for match in re.finditer(r'\b(SESSION_\d+[A-Z_]+\.md|[A-Z][A-Z0-9_]+\.md)\b', content_no_code):
+                mention = match.group(1)
+                start = max(0, match.start() - 20)
+                end = min(len(content_no_code), match.end() + 30)
+                snippet = content_no_code[start:end].replace('\n', ' ')
+                add_link(mention, snippet)
 
             # Pattern 3: Explicit doc paths - docs/handoffs/FILE.md
-            doc_paths = re.findall(r'(docs/[a-zA-Z0-9_/-]+\.md)', content)
-            for doc_path in doc_paths:
-                if doc_path in all_doc_paths:
-                    links.add(doc_path)
+            for match in re.finditer(r'(docs/[a-zA-Z0-9_/-]+\.md)', content_no_code):
+                doc_path = match.group(1)
+                start = max(0, match.start() - 20)
+                end = min(len(content_no_code), match.end() + 30)
+                snippet = content_no_code[start:end].replace('\n', ' ')
+                add_link(doc_path, snippet)
 
         except Exception:
             pass
 
-        # Remove self-references
-        own_path = str(filepath).replace(str(filepath.parent.parent) + '/', '')
-        if 'docs/' in str(filepath):
-            # Extract relative path from docs/
-            try:
-                own_relative = str(filepath).split('unified-donkey-betz/')[-1]
-                links.discard(own_relative)
-            except Exception:
-                pass
+        # Convert to list format
+        outbound_links = [
+            {
+                'target': target,
+                'occurrences': data['occurrences'],
+                'snippets': data['snippets']
+            }
+            for target, data in sorted(link_data.items())
+        ]
 
-        return list(links)
+        return outbound_links, broken_links
+
+    def _strip_code_blocks(self, content: str) -> str:
+        """Remove fenced code blocks from content to avoid false link detection."""
+        # Remove ```...``` blocks
+        content = re.sub(r'```[\s\S]*?```', '', content)
+        # Remove indented code blocks (4+ spaces at line start)
+        content = re.sub(r'^(    |\t).*$', '', content, flags=re.MULTILINE)
+        return content
 
     def _normalize_doc_path(self, link_path: str, all_doc_paths: set) -> Optional[str]:
         """Normalize a document reference to its canonical path."""
@@ -758,9 +840,15 @@ class Command(BaseCommand):
         # Cross-Reference Graph Summary
         graph = stats.get('graph', {})
         if graph.get('most_referenced'):
-            lines.append('## Most Referenced Documents')
+            lines.append('## Cross-Reference Graph')
             lines.append('')
-            lines.append(f'Total cross-references: **{graph.get("total_links", 0):,}**')
+            lines.append(f'| Metric | Count |')
+            lines.append(f'|--------|-------|')
+            lines.append(f'| Total cross-references | {graph.get("total_links", 0):,} |')
+            lines.append(f'| Orphan documents | {len(graph.get("orphan_docs", []))} |')
+            lines.append(f'| Broken links | {len(graph.get("broken_links", []))} |')
+            lines.append('')
+            lines.append('### Most Referenced Documents')
             lines.append('')
             lines.append('| Document | References | Title |')
             lines.append('|----------|------------|-------|')
@@ -770,6 +858,20 @@ class Command(BaseCommand):
                 title = ref.get('title', '')[:50]  # Truncate long titles
                 lines.append(f'| `{path}` | {count} | {title} |')
             lines.append('')
+
+            # Show broken links if any
+            if graph.get('broken_links'):
+                lines.append('### Broken Links (need fixing)')
+                lines.append('')
+                lines.append('| Source | Broken Reference |')
+                lines.append('|--------|------------------|')
+                for broken in graph['broken_links'][:10]:
+                    source = broken.get('source', 'unknown')
+                    raw_ref = broken.get('raw_ref', 'unknown')
+                    lines.append(f'| `{source}` | `{raw_ref}` |')
+                if len(graph['broken_links']) > 10:
+                    lines.append(f'| ... | *({len(graph["broken_links"]) - 10} more)* |')
+                lines.append('')
 
         # Core Entry Points
         lines.append('## Core Entry Points')
