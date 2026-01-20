@@ -17,6 +17,56 @@ import os
 logger = logging.getLogger(__name__)
 
 
+# Session 781: Import opener extraction for de-duplication
+def _extract_opener(text: str) -> str:
+    """Extract the opening phrase from a response (inline version for tasks.py)."""
+    if not text:
+        return ""
+    text = text.strip()
+    break_chars = ['.', '!', '?', '—', ' - ', ':']
+    first_break = len(text)
+    for char in break_chars:
+        pos = text.find(char)
+        if pos > 0 and pos < first_break:
+            first_break = pos
+    opener = text[:min(first_break, 60)].strip()
+    return opener if len(opener) >= 10 else ""
+
+
+# Session 781 Level 3: Discourse markers to track for repetition prevention
+_DISCOURSE_MARKERS = [
+    # Transitions
+    "however", "that said", "building on that", "additionally", "furthermore",
+    "moreover", "on the other hand", "nevertheless", "in contrast",
+    # Agreement
+    "i see your point", "that makes sense", "you're right", "i agree with",
+    "exactly", "precisely", "indeed",
+    # Disagreement
+    "i'd question", "the concern is", "but have we considered", "i'm not sure about",
+    "the risk here is", "my concern is",
+    # Fillers
+    "to be honest", "in my view", "from my perspective", "i think that",
+    "it seems to me", "in my opinion", "i believe that",
+    # Hedges
+    "sort of", "kind of", "a bit", "slightly", "somewhat", "perhaps", "maybe",
+]
+
+
+def _extract_discourse_markers(text: str) -> list:
+    """Extract discourse markers from text for repetition tracking."""
+    if not text:
+        return []
+    text_lower = text.lower()
+    return [m for m in _DISCOURSE_MARKERS if m in text_lower]
+
+
+def _get_overused_markers(markers: list, threshold: int = 2) -> list:
+    """Get markers that have been used more than threshold times."""
+    from collections import Counter
+    counts = Counter(markers)
+    return [m for m, c in counts.most_common(5) if c >= threshold]
+
+
 # ==================== SESSION 356: MYTHOLOGY VALIDATION FOR AGENT OUTPUTS ====================
 
 def validate_agent_output(agent_name: str, output: str) -> str:
@@ -6248,10 +6298,11 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                 'dynamic': 'Experts analyze the topic from their specialized angles',
                 'format': 'round_robin',
                 'intro': "Welcome to our expert panel on {topic}. Let's hear from each specialist.",
+                # Session 781: Updated prompts to use domain-specific language, no generic hedging
                 'prompts': {
                     'first': "From my expertise in {specialty}, the key insight about {topic} is...",
-                    'respond': "That's a great point, {prev_agent}. Adding the {specialty} perspective...",
-                    'challenge': "I'd push back on that slightly. In {specialty}, we see it as...",
+                    'respond': "Adding the {specialty} perspective on what {prev_agent} raised...",
+                    'challenge': "The {specialty} evidence tells a different story. We see...",
                     'synthesize': "Looking at {topic} holistically across our expertise areas..."
                 }
             },
@@ -6261,10 +6312,11 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                 'dynamic': 'Creative ideation where all ideas are welcome',
                 'format': 'round_robin',
                 'intro': "Let's brainstorm on {topic}. No idea is too wild - build on each other!",
+                # Session 781: Updated prompts to be constructive without empty praise
                 'prompts': {
                     'first': "Here's an initial idea from my {specialty} background: what if we...",
-                    'respond': "I love that, {prev_agent}! Building on it with {specialty} thinking...",
-                    'challenge': "Wild idea: what if we combined {prev_agent}'s point with...",
+                    'respond': "Building on {prev_agent}'s direction with {specialty} thinking...",
+                    'challenge': "What if we combined that with a different angle...",
                     'synthesize': "Synthesizing our brainstorm - the most promising directions are..."
                 }
             },
@@ -6387,6 +6439,8 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
 
             # Generate conversation messages using round-robin
             messages = []
+            used_openers = []  # Session 781: Track openers to prevent repetition
+            used_discourse_markers = []  # Session 781 Level 3: Track discourse markers
             tension = template.get('tension_level', 'medium')
             prompts = template.get('prompts', {})
 
@@ -6440,6 +6494,20 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                     except Exception as e:
                         logger.debug(f"Could not get mood context: {e}")
 
+                    # Session 781: Build de-duplication context
+                    opener_context = ""
+                    if used_openers:
+                        recent_openers = used_openers[-5:]  # Last 5 openers
+                        openers_list = ", ".join([f'"{op[:40]}..."' for op in recent_openers])
+                        opener_context = f"\n\nALREADY USED OPENERS (do NOT repeat): {openers_list}"
+
+                    # Session 781 Level 3: Build discourse memory context
+                    discourse_context = ""
+                    overused = _get_overused_markers(used_discourse_markers)
+                    if overused:
+                        markers_list = ", ".join([f'"{m}"' for m in overused])
+                        discourse_context = f"\n\nOVERUSED PHRASES (find alternatives): {markers_list}"
+
                     # Build system prompt
                     system_prompt = f"""You are {current_agent.name}, an AI agent specializing in {current_agent.specialization or 'general topics'}.
 
@@ -6461,6 +6529,11 @@ Guidelines:
 - Be natural and conversational
 - When citing data, mention the specific source (e.g., "from the Notion data" or "looking at the 11 HackerNews data points")
 - {"Challenge assumptions and push back" if tension == 'high' else "Build on others' ideas collaboratively" if tension == 'low' else "Balance agreement and constructive criticism"}
+
+VOICE RULES (Session 781):
+- NEVER say: "I'd push back slightly", "That's a great point", "Absolutely!", "I agree, but..."
+- Use YOUR distinct voice and expertise - don't hedge with corporate language
+- Start with a FRESH opening phrase, not a template{opener_context}{discourse_context}
 {mood_context}"""
 
                     # Session 364: Add diversity prompts to avoid repetitive agreement
@@ -6561,6 +6634,16 @@ Guidelines:
                             'type': msg_type,
                             'round': round_num + 1
                         })
+
+                        # Session 781: Track opener for de-duplication
+                        opener = _extract_opener(content)
+                        if opener:
+                            used_openers.append(opener)
+
+                        # Session 781 Level 3: Track discourse markers
+                        markers = _extract_discourse_markers(content)
+                        if markers:
+                            used_discourse_markers.extend(markers)
 
                         stats['messages_generated'] += 1
 
