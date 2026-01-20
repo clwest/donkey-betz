@@ -137,18 +137,144 @@ export default function ReasoningEnginePage() {
     },
   })
 
-  // Data extraction - ensure arrays are actually arrays
-  const dashboard: DashboardStats = dashboardData?.data || {}
-  const rawThoughts = thoughtsData?.data?.thoughts || thoughtsData?.data?.results || thoughtsData?.data
-  const thoughts: Thought[] = Array.isArray(rawThoughts) ? rawThoughts : []
-  const rawActions = actionsData?.data?.actions || actionsData?.data?.results || actionsData?.data
-  const actions: Action[] = Array.isArray(rawActions) ? rawActions : []
-  const rawPendingActions = pendingActionsData?.data?.actions || pendingActionsData?.data?.results || pendingActionsData?.data
-  const pendingActions: Action[] = Array.isArray(rawPendingActions) ? rawPendingActions : []
-  const rawConcerns = concernsData?.data?.concerns || concernsData?.data?.results || concernsData?.data
-  const concerns: Concern[] = Array.isArray(rawConcerns) ? rawConcerns : []
+  // Data extraction - map API response to expected interface
+  // Session 782: Handle actual API structure from views_autonomous_reasoning.py
+  const rawDashboard = dashboardData?.data || {}
+  const dashboard: DashboardStats = {
+    total_thoughts: rawDashboard.thought_stats?.total || 0,
+    active_thoughts: rawDashboard.thought_stats?.last_24h || 0,
+    total_actions: rawDashboard.action_stats?.total || 0,
+    pending_actions: rawDashboard.action_stats?.total - rawDashboard.action_stats?.completed || 0,
+    completed_actions: rawDashboard.action_stats?.completed || 0,
+    total_concerns: 0, // Will be set from concerns data
+    unresolved_concerns: 0,
+    avg_reasoning_time_ms: 0,
+    thoughts_today: rawDashboard.thought_stats?.last_24h || 0,
+    actions_today: rawDashboard.action_stats?.last_24h || 0,
+  }
+
+  // Map thoughts from API format to frontend format
+  const rawThoughts = thoughtsData?.data?.thoughts || thoughtsData?.data?.results || []
+  const thoughts: Thought[] = Array.isArray(rawThoughts) ? rawThoughts.map((t: Record<string, unknown>) => ({
+    id: t.id as string,
+    prompt: (t.context_summary as string) || `Thinking Cycle #${t.cycle_number}`,
+    context: t.context_summary as string,
+    status: mapThoughtStatus(t.execution_status as string),
+    reasoning_chain: t.insights as string[] || [],
+    conclusion: t.reflection as string,
+    confidence: t.priority_score ? (t.priority_score as number) / 10 : undefined,
+    created_at: t.started_at as string,
+    completed_at: t.completed_at as string,
+    duration_ms: t.thinking_duration_seconds ? (t.thinking_duration_seconds as number) * 1000 : undefined,
+    agent_name: 'ThinkingAgent',
+    actions_generated: t.actions_executed_count as number || 0,
+  })) : []
+
+  // Map actions from API format
+  const rawActions = actionsData?.data?.actions || actionsData?.data?.results || []
+  const actions: Action[] = Array.isArray(rawActions) ? rawActions.map((a: Record<string, unknown>) => ({
+    id: a.id as string,
+    thought_id: a.thought_record_id as string,
+    action_type: a.action_type as string,
+    description: (a.action_name as string) || (a.description as string) || 'Unknown action',
+    status: mapActionStatus(a.status as string),
+    priority: mapPriority(a.priority as string),
+    created_at: a.created_at as string,
+    executed_at: a.completed_at as string,
+    result: a.result_summary as string,
+    requires_approval: a.priority === 'critical' || a.priority === 'high',
+    agent_name: 'ThinkingAgent',
+  })) : []
+
+  // Map pending actions (different API structure - uses notifications)
+  const rawPendingActions = pendingActionsData?.data?.notifications || pendingActionsData?.data?.actions || []
+  const pendingActions: Action[] = Array.isArray(rawPendingActions) ? rawPendingActions.map((a: Record<string, unknown>) => ({
+    id: a.id as string,
+    thought_id: a.thought_record_id as string,
+    action_type: a.action_type as string || a.notification_type as string || 'action',
+    description: (a.message as string) || (a.action_name as string) || 'Pending action',
+    status: 'pending' as const,
+    priority: mapPriority(a.priority as string),
+    created_at: a.created_at as string,
+    requires_approval: true,
+    agent_name: 'ThinkingAgent',
+  })) : []
+
+  // Map concerns from API format
+  const rawConcerns = concernsData?.data?.recent || concernsData?.data?.concerns || []
+  const concerns: Concern[] = Array.isArray(rawConcerns) ? rawConcerns.map((c: Record<string, unknown>) => ({
+    id: c.id as string,
+    title: ((c.text as string) || (c.concern_text as string) || 'Unknown concern').slice(0, 100),
+    description: (c.text as string) || (c.concern_text as string) || '',
+    severity: mapSeverity(c.severity as string),
+    category: (c.category as string) || 'general',
+    status: mapConcernStatus(c.status as string),
+    created_at: c.created_at as string,
+    resolved_at: c.resolved_at as string,
+    resolution: c.resolution_notes as string,
+    source: 'ThinkingAgent',
+    affected_agents: [],
+  })) : []
 
   const unresolvedConcerns = concerns.filter(c => c.status === 'open' || c.status === 'investigating')
+
+  // Helper to map thought status
+  function mapThoughtStatus(status: string): 'pending' | 'processing' | 'completed' | 'failed' {
+    switch (status) {
+      case 'completed': return 'completed'
+      case 'failed': return 'failed'
+      case 'thinking':
+      case 'deciding':
+      case 'executing': return 'processing'
+      default: return 'pending'
+    }
+  }
+
+  // Helper to map action status
+  function mapActionStatus(status: string): 'pending' | 'approved' | 'rejected' | 'executed' | 'failed' {
+    switch (status) {
+      case 'completed':
+      case 'executed': return 'executed'
+      case 'approved':
+      case 'queued': return 'approved'
+      case 'rejected':
+      case 'cancelled': return 'rejected'
+      case 'failed': return 'failed'
+      default: return 'pending'
+    }
+  }
+
+  // Helper to map priority
+  function mapPriority(priority: string): 'low' | 'medium' | 'high' | 'critical' {
+    switch (priority) {
+      case 'critical': return 'critical'
+      case 'high': return 'high'
+      case 'low':
+      case 'background': return 'low'
+      default: return 'medium'
+    }
+  }
+
+  // Helper to map severity
+  function mapSeverity(severity: string): 'low' | 'medium' | 'high' | 'critical' {
+    switch (severity) {
+      case 'critical': return 'critical'
+      case 'high': return 'high'
+      case 'low': return 'low'
+      default: return 'medium'
+    }
+  }
+
+  // Helper to map concern status
+  function mapConcernStatus(status: string): 'open' | 'investigating' | 'resolved' | 'dismissed' {
+    switch (status) {
+      case 'resolved': return 'resolved'
+      case 'accepted': return 'dismissed'
+      case 'in_progress':
+      case 'monitoring': return 'investigating'
+      default: return 'open'
+    }
+  }
 
   const tabs = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: BarChart3 },
