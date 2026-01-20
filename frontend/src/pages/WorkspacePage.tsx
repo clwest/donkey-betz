@@ -9,7 +9,9 @@ import {
   GitCommit, CheckCircle, XCircle, AlertTriangle,
   Loader2, Search, RotateCcw, Eye, Clock, X,
   FolderTree, Activity, Trash2, Heart, ExternalLink,
-  FileEdit, Users, PieChart, Calendar, Wifi, WifiOff, FileText, Copy, Check
+  FileEdit, Users, PieChart, Calendar, Wifi, WifiOff, FileText, Copy, Check,
+  // Session 780: Icons for project context sections
+  Key, Puzzle, Package, Link2, Map
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
@@ -17,6 +19,22 @@ import EntityLink from '@/components/EntityLink'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
 type WorkspaceTab = 'overview' | 'files' | 'git' | 'operations' | 'reviews'
+
+// Session 780: WorkspaceContext interface for project understanding
+interface WorkspaceContext {
+  total_files: number
+  total_directories: number
+  total_lines_of_code: number
+  file_type_counts: Record<string, number>
+  file_tree: Record<string, string[]>
+  key_files: Record<string, string>  // main_entry, routes, api_client, models, urls, settings
+  coding_patterns: Record<string, string>  // component_pattern, hook_pattern, api_pattern, test_pattern
+  dependencies: Record<string, Record<string, string>>  // { frontend: {react: "18.2.0"}, backend: {...} }
+  import_aliases: Record<string, string>  // @/components → src/components
+  directory_purposes: Record<string, string>  // directory → purpose description
+  last_scanned_at: string
+  scan_duration_ms?: number
+}
 
 interface Workspace {
   id: string
@@ -36,6 +54,8 @@ interface Workspace {
   root_path?: string
   workspace_type?: string
   entry_points?: string[]
+  // Session 780: Full workspace context
+  context?: WorkspaceContext
 }
 
 interface WorkspaceOperation {
@@ -339,7 +359,8 @@ function OperationRow({ operation, onRollback, onReview, onViewContent }: {
             Rollback
           </button>
         )}
-        {onReview && operation.pending_review && !operation.reviewed_by_human && (
+        {/* Session 780: Fix - API returns requires_review not pending_review */}
+        {onReview && (operation.requires_review || operation.pending_review) && !operation.reviewed_by_human && (
           <>
             <button
               onClick={() => onReview(true)}
@@ -1102,7 +1123,8 @@ export default function WorkspacePage() {
   const stats = statsData?.data || {}
   const gitStatus = gitStatusData?.data || {}
   const operations = (operationsData?.data?.results || operationsData?.data || []) as WorkspaceOperation[]
-  const pendingReviews = (pendingReviewsData?.data?.results || pendingReviewsData?.data || []) as WorkspaceOperation[]
+  // Session 780: Fix - API returns { total, operations } not { results }
+  const pendingReviews = (pendingReviewsData?.data?.operations || pendingReviewsData?.data?.results || []) as WorkspaceOperation[]
   const dashboard = dashboardData?.data || {}
 
   // Session 712: Body health data
@@ -1453,6 +1475,126 @@ export default function WorkspacePage() {
                       <div key={category} className="bg-dark-bg rounded-lg p-3">
                         <p className="text-xs text-gray-400 capitalize mb-1">{category.replace('_', ' ')}</p>
                         <p className="text-sm font-medium text-accent-cyan">{technology}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session 780: Key Files - Important project files for agents */}
+              {activeWorkspace?.context?.key_files && Object.keys(activeWorkspace.context.key_files).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Key size={18} className="text-accent-green" />
+                    <h3 className="text-lg font-semibold">Key Files</h3>
+                    <span className="text-xs text-gray-500">Entry points agents use</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Object.entries(activeWorkspace.context.key_files).map(([role, filePath]) => (
+                      <div key={role} className="bg-dark-bg rounded-lg p-3 flex items-start gap-3">
+                        <FileCode size={16} className="text-accent-green flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-400 capitalize mb-1">{role.replace(/_/g, ' ')}</p>
+                          <p className="text-sm font-mono text-gray-200 truncate" title={filePath}>{filePath}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session 780: Coding Patterns - Detected conventions */}
+              {activeWorkspace?.context?.coding_patterns && Object.keys(activeWorkspace.context.coding_patterns).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Puzzle size={18} className="text-primary-400" />
+                    <h3 className="text-lg font-semibold">Coding Patterns</h3>
+                    <span className="text-xs text-gray-500">Detected conventions</span>
+                  </div>
+                  <div className="space-y-2">
+                    {Object.entries(activeWorkspace.context.coding_patterns).map(([pattern, description]) => (
+                      <div key={pattern} className="flex items-start gap-3 p-2 bg-dark-bg rounded-lg">
+                        <Code size={14} className="text-primary-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <span className="text-sm font-medium capitalize">{pattern.replace(/_/g, ' ')}</span>
+                          <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session 780: Dependencies - Project packages */}
+              {activeWorkspace?.context?.dependencies && Object.keys(activeWorkspace.context.dependencies).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Package size={18} className="text-accent-amber" />
+                    <h3 className="text-lg font-semibold">Dependencies</h3>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {Object.entries(activeWorkspace.context.dependencies).map(([category, packages]) => (
+                      <div key={category} className="bg-dark-bg rounded-lg p-4">
+                        <h4 className="text-sm font-medium capitalize mb-3 text-accent-amber">{category}</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(packages as Record<string, string>).slice(0, 15).map(([pkg, version]) => (
+                            <span
+                              key={pkg}
+                              className="px-2 py-1 bg-dark-border rounded text-xs"
+                              title={`${pkg}@${version}`}
+                            >
+                              <span className="text-gray-300">{pkg}</span>
+                              <span className="text-gray-500 ml-1">@{version}</span>
+                            </span>
+                          ))}
+                          {Object.keys(packages as Record<string, string>).length > 15 && (
+                            <span className="px-2 py-1 bg-dark-border rounded text-xs text-gray-500">
+                              +{Object.keys(packages as Record<string, string>).length - 15} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session 780: Import Aliases - Path shortcuts */}
+              {activeWorkspace?.context?.import_aliases && Object.keys(activeWorkspace.context.import_aliases).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Link2 size={18} className="text-accent-purple" />
+                    <h3 className="text-lg font-semibold">Import Aliases</h3>
+                    <span className="text-xs text-gray-500">Path shortcuts</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(activeWorkspace.context.import_aliases).map(([alias, realPath]) => (
+                      <div key={alias} className="flex items-center gap-2 px-3 py-2 bg-dark-bg rounded-lg">
+                        <span className="text-sm font-mono text-accent-purple">{alias}</span>
+                        <ChevronRight size={14} className="text-gray-500" />
+                        <span className="text-sm font-mono text-gray-400">{realPath}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session 780: Directory Purposes - What each folder is for */}
+              {activeWorkspace?.context?.directory_purposes && Object.keys(activeWorkspace.context.directory_purposes).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Map size={18} className="text-accent-red" />
+                    <h3 className="text-lg font-semibold">Directory Map</h3>
+                    <span className="text-xs text-gray-500">What each folder is for</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {Object.entries(activeWorkspace.context.directory_purposes).map(([dir, purpose]) => (
+                      <div key={dir} className="flex items-start gap-2 p-2 bg-dark-bg rounded-lg">
+                        <Folder size={14} className="text-accent-amber flex-shrink-0 mt-1" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-mono text-gray-200 truncate" title={dir}>{dir}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{purpose}</p>
+                        </div>
                       </div>
                     ))}
                   </div>

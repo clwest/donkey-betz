@@ -295,7 +295,8 @@ For older sessions, see `docs/handoffs/` directory.
 | `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md` | Integration report (now 95% after Session 744) |
 | `docs/ERROR_TRACKING.md` | Track errors discovered during sessions (Session 752) |
 | `docs/MEMORY_SAFETY_CLASSIFICATION.md` | Memory safety classification system (Session 768) |
-| `docs/UI_COMPREHENSIVE_AUDIT.md` | **NEW** Complete UI audit - 43 pages, 55+ APIs, stubs, duplicates (Session 772) |
+| `docs/UI_COMPREHENSIVE_AUDIT.md` | Complete UI audit - 43 pages, 55+ APIs, stubs, duplicates (Session 772) |
+| `docs/WORKSPACE_USER_GUIDE.md` | **NEW** SKIN Layer workspace guide - full feature docs (Session 780) |
 
 ---
 
