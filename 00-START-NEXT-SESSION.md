@@ -157,6 +157,38 @@ python manage.py shell -c "from core.tasks import workspace_autopilot_tick; work
 
 ---
 
+### Documentation Orphan Fixes
+
+Reduced documentation orphans by creating INDEX.md files for 8 directories and updating CLAUDE.md with proper markdown links.
+
+**New Index Files Created:**
+
+| Index | Documents Linked |
+|-------|------------------|
+| `docs/handoffs/INDEX.md` | 447 session handoffs |
+| `docs/audits/INDEX.md` | 61 system audits |
+| `docs/reports/INDEX.md` | 30 reports |
+| `docs/architecture/INDEX.md` | 22 architecture docs |
+| `docs/features/INDEX.md` | 17 feature docs |
+| `docs/guides/INDEX.md` | 35 guides |
+| `docs/plans/INDEX.md` | 9 plans |
+| `docs/apis/INDEX.md` | 7 API docs |
+
+**CLAUDE.md Updates:**
+- Reorganized Documentation section into Core/Indexes/References
+- Converted backtick paths to proper markdown links
+- Added links to all 8 new index files
+
+**Results:** Total graph links increased from 1,818 to 2,432 (+614)
+
+---
+
+### UI Improvements
+
+**Collapsible Directory Map** - The Directory Map on the Workspace page Overview tab is now collapsible to reduce scrolling. Shows folder count when collapsed with "Click to expand" hint.
+
+---
+
 ## What's Next?
 
 The Hybrid Workspace Autopilot is now active:
@@ -168,8 +200,8 @@ Potential areas for future work:
 1. **More trigger configs** - Add configs for market movements, content ideas, tech trends
 2. **Frontend trigger dashboard** - View/manage triggers in React UI
 3. **Trigger analytics** - Track effectiveness of different trigger types
-4. **Manual trigger creation** - UI to manually queue workspace tasks
-5. **Trigger notifications** - Alert when high-priority triggers fire
+4. **Fix broken doc links** - 100 broken internal doc references need fixing
+5. **Archive obsolete docs** - Review superseded docs for cleanup
 
 ---
 
@@ -181,6 +213,19 @@ Potential areas for future work:
 | `core/signals/trigger_signals.py` | Event-driven trigger evaluation |
 | `core/tasks.py` | workspace_autopilot_tick conductor task |
 | `core/management/commands/setup_workspace_autopilot.py` | Setup/configure autopilot |
+| `docs/handoffs/INDEX.md` | Master index of all session handoffs |
+| `frontend/src/pages/WorkspacePage.tsx` | Collapsible Directory Map |
+
+---
+
+## Session 785 Commits
+
+```
+55de6aee docs(Session 785): Create documentation indexes to reduce orphans
+933a4714 feat(Session 785): Make Directory Map collapsible on Workspace page
+20884dc9 fix(Session 785): Fix conductor agent.execute() call signature
+05dc38a0 feat(Session 785): Hybrid Workspace Autopilot System
+```
 
 ---
 
