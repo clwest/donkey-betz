@@ -1048,10 +1048,7 @@ from core.views_frontend_stubs import (
     stripe_resume_subscription, stripe_billing_portal,
     # Learning journey stubs (now replaced by real views in views_learning_journey_api.py)
     # Session 782: Autonomous stubs removed - using real views from views_autonomous_dashboard.py
-    # Reasoning stubs
-    reasoning_dashboard, reasoning_thoughts, reasoning_actions,
-    reasoning_pending_actions, reasoning_concerns, reasoning_approve_action,
-    reasoning_reject_action, reasoning_resolve_concern, reasoning_trigger,
+    # Session 782: Reasoning stubs removed - using real views from views_reasoning_engine.py
     # Analytics stubs (legacy - keeping for reference, now using real views)
     # analytics_overview, analytics_summary, analytics_reports_list,
     # analytics_reports_generate,
@@ -1062,6 +1059,9 @@ from core.views_analytics_real import (
     analytics_overview, analytics_summary, analytics_reports_list,
     analytics_reports_generate,
 )
+
+# Session 782: Reasoning engine - real views already exist in views_autonomous_reasoning.py
+# (imported at line 1322 and routed at lines 2750-2768)
 
 from core.views_analytics import (
     analytics_dashboard, track_usage, track_feature_usage, cost_breakdown,
@@ -3300,16 +3300,8 @@ urlpatterns = [
     # Session 782: Autonomous System stubs removed - real views in views_autonomous_dashboard.py
     # Real endpoints defined earlier at lines 3140-3153
 
-    # Session 745: Reasoning Engine stub endpoints
-    path('api/reasoning/dashboard/', reasoning_dashboard, name='reasoning-dashboard'),
-    path('api/reasoning/thoughts/', reasoning_thoughts, name='reasoning-thoughts'),
-    path('api/reasoning/actions/', reasoning_actions, name='reasoning-actions'),
-    path('api/reasoning/pending-actions/', reasoning_pending_actions, name='reasoning-pending-actions'),
-    path('api/reasoning/concerns/', reasoning_concerns, name='reasoning-concerns'),
-    path('api/reasoning/actions/<str:action_id>/approve/', reasoning_approve_action, name='reasoning-approve-action'),
-    path('api/reasoning/actions/<str:action_id>/reject/', reasoning_reject_action, name='reasoning-reject-action'),
-    path('api/reasoning/concerns/<str:concern_id>/resolve/', reasoning_resolve_concern, name='reasoning-resolve-concern'),
-    path('api/reasoning/trigger/', reasoning_trigger, name='reasoning-trigger'),
+    # Session 782: Reasoning Engine stubs removed
+    # Real reasoning views already exist at lines 2750-2768 using views_autonomous_reasoning.py
 
     # Session 745: Analytics stub endpoints
     path('api/analytics/overview/', analytics_overview, name='analytics-overview'),
