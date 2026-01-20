@@ -13603,6 +13603,14 @@ Make it conversational and engaging. Use natural speech patterns."""
 
         logger.info(f"🎥 [SESSION 466] Episode created: {episode.title}")
 
+        # Session 784: Queue voice critique scoring (async, non-blocking)
+        try:
+            from core.tasks import score_episode_voice
+            score_episode_voice.delay(str(episode.id))
+            logger.info(f"🎭 [SESSION 784] Queued voice critique for episode {episode.id}")
+        except Exception as voice_e:
+            logger.warning(f"🎭 [SESSION 784] Failed to queue voice critique: {voice_e}")
+
         # Step 4: Update channel stats and schedule next content (Property #5: Self-Renewal)
         logger.info(f"🎥 [SESSION 466] Step 4: Updating channel and scheduling next cycle...")
 
@@ -26239,3 +26247,466 @@ def full_agent_rotation():
         'failed': total_agents - total_successful,
         'categories': category_results
     }
+
+
+# =============================================================================
+# SESSION 784: VOICE CRITIQUE SYSTEM
+# =============================================================================
+
+@shared_task(name='content_studio.score_episode_voice')
+def score_episode_voice(episode_id: str) -> dict:
+    """
+    Session 784: Score an episode's voice quality using VoiceCriticAgent.
+
+    This is a post-generation step that scores content WITHOUT editing it.
+    Scores are stored as metadata for learning - the system learns taste over time.
+
+    Args:
+        episode_id: UUID of the ChannelEpisode to score
+
+    Returns:
+        dict: Voice scores (distinctiveness, specificity, opinion_strength, generic_flag)
+    """
+    from core.models_autonomous_studio import ChannelEpisode
+    from core.agents.content.voice_critic_agent import get_voice_critic_agent
+
+    logger.info(f"🎭 [VOICE CRITIC] Scoring episode: {episode_id}")
+
+    try:
+        episode = ChannelEpisode.objects.get(id=episode_id)
+
+        # Skip if already scored
+        if episode.voice_critique_completed:
+            logger.info(f"🎭 [VOICE CRITIC] Episode {episode_id} already scored, skipping")
+            return {
+                'success': True,
+                'already_scored': True,
+                'episode_id': episode_id
+            }
+
+        # Get content to score
+        content = episode.script or episode.description
+        if not content:
+            logger.warning(f"🎭 [VOICE CRITIC] Episode {episode_id} has no content to score")
+            return {
+                'success': False,
+                'error': 'No content to score',
+                'episode_id': episode_id
+            }
+
+        # Score with VoiceCriticAgent
+        agent = get_voice_critic_agent()
+        result = agent.execute(
+            task=f"Score voice quality for: {episode.title}",
+            context={
+                'content': content,
+                'title': episode.title,
+                'content_type': 'blog_post',
+            },
+            scifi_context={},
+            spider_context={}
+        )
+
+        if result.success:
+            scores = result.data.get('voice_scores', {})
+
+            # Update episode with scores
+            episode.distinctiveness_score = scores.get('distinctiveness_score', 0)
+            episode.specificity_score = scores.get('specificity_score', 0)
+            episode.opinion_strength_score = scores.get('opinion_strength_score', 0)
+            episode.generic_flag = scores.get('generic_flag', False)
+            episode.intent_type = scores.get('intent_type', '')
+            episode.voice_critique_completed = True
+            episode.save(update_fields=[
+                'distinctiveness_score', 'specificity_score',
+                'opinion_strength_score', 'generic_flag',
+                'intent_type', 'voice_critique_completed'
+            ])
+
+            logger.info(
+                f"🎭 [VOICE CRITIC] Scored episode {episode_id}: "
+                f"D={scores.get('distinctiveness_score')}, "
+                f"S={scores.get('specificity_score')}, "
+                f"O={scores.get('opinion_strength_score')}, "
+                f"Generic={scores.get('generic_flag')}, "
+                f"Intent={scores.get('intent_type')}"
+            )
+
+            return {
+                'success': True,
+                'episode_id': episode_id,
+                'title': episode.title,
+                'scores': scores
+            }
+        else:
+            logger.error(f"🎭 [VOICE CRITIC] Failed to score episode {episode_id}: {result.error}")
+            return {
+                'success': False,
+                'episode_id': episode_id,
+                'error': result.error
+            }
+
+    except ChannelEpisode.DoesNotExist:
+        logger.error(f"🎭 [VOICE CRITIC] Episode {episode_id} not found")
+        return {
+            'success': False,
+            'episode_id': episode_id,
+            'error': 'Episode not found'
+        }
+    except Exception as e:
+        logger.error(f"🎭 [VOICE CRITIC] Error scoring episode {episode_id}: {e}")
+        return {
+            'success': False,
+            'episode_id': episode_id,
+            'error': str(e)
+        }
+
+
+@shared_task(name='content_studio.backfill_voice_scores')
+def backfill_voice_scores(limit: int = 50, min_content_length: int = 100) -> dict:
+    """
+    Session 784: Backfill voice scores for existing episodes that haven't been scored.
+
+    Processes episodes in batches to avoid overwhelming the system.
+
+    Args:
+        limit: Maximum number of episodes to process in this batch
+        min_content_length: Minimum script length to consider for scoring
+
+    Returns:
+        dict: Summary of backfill results
+    """
+    from core.models_autonomous_studio import ChannelEpisode
+    from django.db.models import Q
+    from django.db.models.functions import Length
+
+    logger.info(f"🎭 [VOICE CRITIC BACKFILL] Starting backfill of up to {limit} episodes")
+
+    # Find unscored episodes with content
+    unscored_episodes = ChannelEpisode.objects.filter(
+        voice_critique_completed=False
+    ).exclude(
+        Q(script__isnull=True) | Q(script='')
+    ).annotate(
+        script_length=Length('script')
+    ).filter(
+        script_length__gte=min_content_length
+    ).order_by('-created_at')[:limit]
+
+    total = len(unscored_episodes)
+    logger.info(f"🎭 [VOICE CRITIC BACKFILL] Found {total} unscored episodes to process")
+
+    results = {
+        'total': total,
+        'scored': 0,
+        'failed': 0,
+        'errors': []
+    }
+
+    for episode in unscored_episodes:
+        try:
+            # Call the scoring task synchronously for backfill
+            score_result = score_episode_voice(str(episode.id))
+            if score_result.get('success'):
+                results['scored'] += 1
+            else:
+                results['failed'] += 1
+                results['errors'].append({
+                    'episode_id': str(episode.id),
+                    'error': score_result.get('error')
+                })
+        except Exception as e:
+            results['failed'] += 1
+            results['errors'].append({
+                'episode_id': str(episode.id),
+                'error': str(e)
+            })
+
+    logger.info(
+        f"🎭 [VOICE CRITIC BACKFILL] Complete: "
+        f"{results['scored']}/{total} scored, {results['failed']} failed"
+    )
+
+    return results
+
+
+# =============================================================================
+# Session 785: Workspace Autopilot Conductor Task
+# =============================================================================
+
+@shared_task(name='workspace.autopilot_tick')
+def workspace_autopilot_tick(
+    budget_per_tick: int = 5,
+    min_priority: int = None,
+    category: str = None,
+    dry_run: bool = False
+) -> dict:
+    """
+    Session 785: Hybrid Workspace Autopilot Conductor
+
+    This is the single conductor task that drains the WorkspaceTrigger queue.
+    Instead of 14+ individual scheduled tasks, this one task:
+
+    1. Gets pending workspace triggers (respecting TTL, priority)
+    2. Routes each trigger to the appropriate agent
+    3. Executes within budget constraints
+    4. Reports results
+
+    The event-driven triggers (from spider data) populate the queue,
+    and this conductor drains it on a schedule.
+
+    Args:
+        budget_per_tick: Maximum triggers to process per tick (default: 5)
+        min_priority: Minimum priority to process (None = all)
+        category: Only process triggers for this category (None = all)
+        dry_run: If True, log what would happen without executing
+
+    Returns:
+        dict: Summary of processing results
+    """
+    from core.models_skin_layer import WorkspaceTrigger, WorkspaceTriggerType
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import AgentExecution
+    from django.utils import timezone
+    from django.contrib.auth import get_user_model
+    import time
+
+    User = get_user_model()
+
+    logger.info(
+        f"🤖 [WORKSPACE AUTOPILOT] Tick starting | "
+        f"Budget: {budget_per_tick} | "
+        f"Category: {category or 'all'} | "
+        f"Min Priority: {min_priority or 'any'}"
+    )
+
+    results = {
+        'triggers_processed': 0,
+        'triggers_succeeded': 0,
+        'triggers_failed': 0,
+        'triggers_skipped': 0,
+        'expired_count': 0,
+        'executions': [],
+        'errors': [],
+        'dry_run': dry_run
+    }
+
+    try:
+        # Mark expired triggers
+        expired_count = WorkspaceTrigger.objects.filter(
+            status='pending',
+            expires_at__lt=timezone.now()
+        ).update(status='expired')
+        results['expired_count'] = expired_count
+
+        if expired_count > 0:
+            logger.info(f"🤖 [WORKSPACE AUTOPILOT] Expired {expired_count} stale triggers")
+
+        # Get pending triggers
+        pending_triggers = WorkspaceTrigger.get_pending_triggers(
+            limit=budget_per_tick,
+            category=category,
+            min_priority=min_priority
+        )
+
+        total_pending = len(pending_triggers)
+        logger.info(f"🤖 [WORKSPACE AUTOPILOT] Found {total_pending} pending triggers to process")
+
+        if total_pending == 0:
+            logger.info("🤖 [WORKSPACE AUTOPILOT] No triggers to process, tick complete")
+            return results
+
+        # Initialize router
+        router = AgentRouter()
+
+        # Category to agent mapping
+        CATEGORY_AGENTS = {
+            'development': 'CodeGeneratorAgent',
+            'security': 'CodeReviewAgent',
+            'research': 'ResearchAgent',
+            'content': 'ContentWriterAgent',
+            'analysis': 'TrendAnalysisAgent',
+        }
+
+        # Trigger type to agent mapping
+        TYPE_AGENTS = {
+            WorkspaceTriggerType.SPIDER_SECURITY_ALERT: 'CodeReviewAgent',
+            WorkspaceTriggerType.SPIDER_DEPENDENCY_UPDATE: 'ResearchAgent',
+            WorkspaceTriggerType.SPIDER_BUG_PATTERN: 'CodeReviewAgent',
+            WorkspaceTriggerType.SPIDER_BEST_PRACTICE: 'CodeReviewAgent',
+            WorkspaceTriggerType.SPIDER_CODE_INSIGHT: 'FullStackDeveloperAgent',
+            WorkspaceTriggerType.AGENT_REFACTOR_SUGGESTION: 'CodeReviewAgent',
+            WorkspaceTriggerType.AGENT_TEST_NEEDED: 'CodeGeneratorAgent',
+            WorkspaceTriggerType.AGENT_DOC_NEEDED: 'TechnicalDocumentAgent',
+            WorkspaceTriggerType.AGENT_OPTIMIZATION: 'CodeReviewAgent',
+        }
+
+        for trigger in pending_triggers:
+            results['triggers_processed'] += 1
+            trigger_start_time = time.time()
+
+            try:
+                if dry_run:
+                    logger.info(
+                        f"🤖 [WORKSPACE AUTOPILOT] [DRY RUN] Would process: "
+                        f"{trigger.title} → {trigger.target_agent or trigger.target_category or 'auto-route'}"
+                    )
+                    results['triggers_skipped'] += 1
+                    continue
+
+                # Mark as queued
+                trigger.status = 'queued'
+                trigger.queued_at = timezone.now()
+                trigger.save(update_fields=['status', 'queued_at'])
+
+                # Determine which agent to use
+                agent_name = trigger.target_agent
+                if not agent_name:
+                    # Try category mapping
+                    if trigger.target_category and trigger.target_category in CATEGORY_AGENTS:
+                        agent_name = CATEGORY_AGENTS[trigger.target_category]
+                    # Try trigger type mapping
+                    elif trigger.trigger_type in TYPE_AGENTS:
+                        agent_name = TYPE_AGENTS[trigger.trigger_type]
+                    # Default fallback
+                    else:
+                        agent_name = 'ResearchAgent'
+
+                if not agent_name:
+                    logger.warning(
+                        f"🤖 [WORKSPACE AUTOPILOT] Could not route trigger: {trigger.title}"
+                    )
+                    trigger.status = 'skipped'
+                    trigger.error_message = 'Could not determine agent for routing'
+                    trigger.save(update_fields=['status', 'error_message'])
+                    results['triggers_skipped'] += 1
+                    continue
+
+                # Mark as in progress
+                trigger.status = 'in_progress'
+                trigger.started_at = timezone.now()
+                trigger.save(update_fields=['status', 'started_at'])
+
+                # Execute via agent router
+                logger.info(
+                    f"🤖 [WORKSPACE AUTOPILOT] Executing: {trigger.title} → {agent_name}"
+                )
+
+                # Build task prompt
+                context = trigger.context_data or {}
+                prompt_parts = [
+                    f"## Task: {trigger.title}",
+                    "",
+                    trigger.description or "No additional description provided.",
+                    "",
+                    "## Context",
+                ]
+                if context.get('spider_name'):
+                    prompt_parts.append(f"- Source: Spider data from `{context['spider_name']}`")
+                if context.get('matched_value'):
+                    prompt_parts.append(f"- Matched content: {context['matched_value']}")
+
+                prompt_parts.extend([
+                    "",
+                    "## Instructions",
+                    "Analyze this information and take appropriate action based on the trigger type.",
+                    f"Trigger type: {trigger.get_trigger_type_display()}",
+                ])
+                task_prompt = "\n".join(prompt_parts)
+
+                # Execute the agent
+                try:
+                    agent_class = router.get_agent_class(agent_name)
+                    if not agent_class:
+                        raise ValueError(f'Agent class not found: {agent_name}')
+
+                    system_user = User.objects.filter(username='system').first()
+                    if not system_user:
+                        system_user = User.objects.first()
+
+                    agent = agent_class(user=system_user)
+                    result = agent.execute(task_prompt)
+
+                    execution = AgentExecution.objects.create(
+                        agent_name=agent_name,
+                        user=system_user,
+                        input_data={
+                            'task': task_prompt,
+                            'trigger_id': str(trigger.id),
+                            'trigger_type': trigger.trigger_type
+                        },
+                        output_data=result.data if hasattr(result, 'data') else str(result),
+                        success=result.success if hasattr(result, 'success') else True,
+                        execution_time_ms=int((time.time() - trigger_start_time) * 1000),
+                        source='workspace_autopilot'
+                    )
+
+                    execution_result = {
+                        'success': True,
+                        'execution_id': execution.id,
+                        'summary': str(result.data.get('summary', '') if hasattr(result, 'data') and isinstance(result.data, dict) else str(result))[:500]
+                    }
+
+                except Exception as agent_error:
+                    logger.error(f"🤖 [WORKSPACE AUTOPILOT] Agent execution failed: {agent_error}")
+                    execution_result = {
+                        'success': False,
+                        'error': str(agent_error)
+                    }
+
+                # Calculate execution time
+                execution_time_ms = int((time.time() - trigger_start_time) * 1000)
+
+                # Update trigger with results
+                trigger.status = 'completed' if execution_result.get('success') else 'failed'
+                trigger.completed_at = timezone.now()
+                trigger.execution_time_ms = execution_time_ms
+                trigger.result_summary = str(execution_result.get('summary', ''))[:1000]
+                trigger.execution_id = execution_result.get('execution_id')
+
+                if not execution_result.get('success'):
+                    trigger.error_message = str(execution_result.get('error', 'Unknown error'))[:1000]
+                    results['triggers_failed'] += 1
+                else:
+                    results['triggers_succeeded'] += 1
+
+                trigger.save(update_fields=[
+                    'status', 'completed_at', 'execution_time_ms',
+                    'result_summary', 'execution_id', 'error_message'
+                ])
+
+                results['executions'].append({
+                    'trigger_id': str(trigger.id),
+                    'title': trigger.title,
+                    'agent': agent_name,
+                    'success': execution_result.get('success'),
+                    'execution_time_ms': execution_time_ms
+                })
+
+            except Exception as e:
+                logger.error(f"🤖 [WORKSPACE AUTOPILOT] Error processing trigger {trigger.id}: {e}")
+                trigger.status = 'failed'
+                trigger.error_message = str(e)[:1000]
+                trigger.completed_at = timezone.now()
+                trigger.save(update_fields=['status', 'error_message', 'completed_at'])
+
+                results['triggers_failed'] += 1
+                results['errors'].append({
+                    'trigger_id': str(trigger.id),
+                    'error': str(e)
+                })
+
+        logger.info(
+            f"🤖 [WORKSPACE AUTOPILOT] Tick complete | "
+            f"Processed: {results['triggers_processed']} | "
+            f"Succeeded: {results['triggers_succeeded']} | "
+            f"Failed: {results['triggers_failed']} | "
+            f"Skipped: {results['triggers_skipped']}"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"🤖 [WORKSPACE AUTOPILOT] Fatal error in tick: {e}")
+        results['errors'].append({'fatal': str(e)})
+        return results

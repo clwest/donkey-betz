@@ -321,7 +321,11 @@ class CaseDocumentAdmin(admin.ModelAdmin):
 
 
 # ==================== SKIN Layer Models (Session 695) ====================
-from .models_skin_layer import ProjectWorkspace, WorkspaceOperation, WorkspaceContext
+# Updated Session 785: Added WorkspaceTrigger and WorkspaceTriggerConfig
+from .models_skin_layer import (
+    ProjectWorkspace, WorkspaceOperation, WorkspaceContext,
+    WorkspaceTrigger, WorkspaceTriggerConfig
+)
 
 
 @admin.register(ProjectWorkspace)
@@ -453,6 +457,136 @@ class WorkspaceContextAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# ==================== Session 785: Workspace Trigger System ====================
+
+@admin.register(WorkspaceTrigger)
+class WorkspaceTriggerAdmin(admin.ModelAdmin):
+    """Admin interface for workspace triggers (hybrid autopilot work queue)."""
+
+    list_display = (
+        'title_short', 'trigger_type', 'priority', 'status',
+        'target_agent_display', 'source_spider', 'expires_at', 'created_at'
+    )
+    list_filter = ('status', 'trigger_type', 'priority', 'target_category')
+    search_fields = ('title', 'description', 'target_agent', 'source_spider')
+    readonly_fields = (
+        'id', 'dedupe_hash', 'source_spider_data_id', 'execution_id',
+        'created_at', 'updated_at', 'queued_at', 'started_at', 'completed_at',
+        'execution_time_ms'
+    )
+
+    date_hierarchy = 'created_at'
+    ordering = ['-priority', '-created_at']
+
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'description', 'trigger_type', 'priority', 'status')
+        }),
+        ('Target', {
+            'fields': ('workspace', 'target_agent', 'target_category')
+        }),
+        ('Source', {
+            'fields': ('source_spider', 'source_spider_data_id', 'source_agent', 'source_user_id'),
+            'classes': ('collapse',)
+        }),
+        ('Context', {
+            'fields': ('context_data',),
+            'classes': ('collapse',)
+        }),
+        ('Timing', {
+            'fields': ('ttl_hours', 'expires_at', 'queued_at', 'started_at', 'completed_at', 'execution_time_ms')
+        }),
+        ('Execution', {
+            'fields': ('execution_id', 'result_summary', 'error_message'),
+            'classes': ('collapse',)
+        }),
+        ('System Info', {
+            'fields': ('id', 'dedupe_hash', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    actions = ['mark_expired', 'mark_pending', 'delete_completed']
+
+    def title_short(self, obj):
+        """Truncate title for display."""
+        if obj.title and len(obj.title) > 50:
+            return f"{obj.title[:47]}..."
+        return obj.title
+    title_short.short_description = 'Title'
+
+    def target_agent_display(self, obj):
+        """Show agent or category."""
+        return obj.target_agent or f"[{obj.target_category}]" or 'Auto'
+    target_agent_display.short_description = 'Agent/Category'
+
+    @admin.action(description='Mark selected as expired')
+    def mark_expired(self, request, queryset):
+        count = queryset.update(status='expired')
+        self.message_user(request, f"Marked {count} triggers as expired.")
+
+    @admin.action(description='Reset selected to pending')
+    def mark_pending(self, request, queryset):
+        count = queryset.update(status='pending')
+        self.message_user(request, f"Reset {count} triggers to pending.")
+
+    @admin.action(description='Delete completed triggers')
+    def delete_completed(self, request, queryset):
+        count = queryset.filter(status='completed').delete()[0]
+        self.message_user(request, f"Deleted {count} completed triggers.")
+
+
+@admin.register(WorkspaceTriggerConfig)
+class WorkspaceTriggerConfigAdmin(admin.ModelAdmin):
+    """Admin interface for workspace trigger configurations (rules)."""
+
+    list_display = (
+        'name', 'is_active', 'trigger_type', 'target_agent',
+        'target_category', 'priority', 'total_triggers_created', 'last_triggered_at'
+    )
+    list_filter = ('is_active', 'trigger_type', 'match_operator', 'priority')
+    search_fields = ('name', 'description', 'target_agent', 'match_value')
+    readonly_fields = ('total_triggers_created', 'last_triggered_at', 'created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'description', 'is_active')
+        }),
+        ('Spider Matching', {
+            'fields': ('target_spiders',)
+        }),
+        ('Content Matching', {
+            'fields': ('match_field', 'match_operator', 'match_value')
+        }),
+        ('Trigger Settings', {
+            'fields': ('trigger_type', 'trigger_title_template', 'target_agent', 'target_category', 'priority', 'ttl_hours')
+        }),
+        ('Rate Limiting', {
+            'fields': ('cooldown_minutes', 'last_triggered_at')
+        }),
+        ('Statistics', {
+            'fields': ('total_triggers_created',),
+            'classes': ('collapse',)
+        }),
+        ('System Info', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    actions = ['enable_configs', 'disable_configs']
+
+    @admin.action(description='Enable selected configs')
+    def enable_configs(self, request, queryset):
+        count = queryset.update(is_active=True)
+        self.message_user(request, f"Enabled {count} configs.")
+
+    @admin.action(description='Disable selected configs')
+    def disable_configs(self, request, queryset):
+        count = queryset.update(is_active=False)
+        self.message_user(request, f"Disabled {count} configs.")
 
 
 # =============================================================================
