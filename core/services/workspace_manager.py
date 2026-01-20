@@ -1275,23 +1275,23 @@ class WorkspaceManager:
         operation: WorkspaceOperation,
         feedback: str = ""
     ) -> WorkspaceOperation:
-        """Approve a pending operation and apply it."""
+        """
+        Approve a pending operation.
+
+        Note: The file is already written to disk when the operation was created.
+        This method just marks the operation as reviewed/approved.
+        We do NOT call write_file again as that would create a duplicate
+        pending operation in an infinite loop.
+        """
         if not operation.requires_review:
             raise ValueError("Operation does not require review")
 
         if operation.reviewed_by_human:
             raise ValueError("Operation already reviewed")
 
-        # Apply the operation
-        if operation.operation_type in ('file_create', 'file_modify'):
-            result = self.file_writer.write_file(
-                workspace=operation.workspace,
-                file_path=operation.file_path,
-                content=operation.file_content_after,
-                agent_name=operation.agent_name,
-                agent_task=operation.agent_task
-            )
-            operation.success = result.success
+        # Session 780 Fix: File is already written to disk when operation was created.
+        # We just mark it as approved - do NOT call write_file again or it creates
+        # a new pending operation in an infinite loop.
 
         operation.reviewed_by_human = True
         operation.human_approved = True
