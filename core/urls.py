@@ -1047,14 +1047,18 @@ from core.views_frontend_stubs import (
     stripe_usage, stripe_subscribe, stripe_cancel_subscription,
     stripe_resume_subscription, stripe_billing_portal,
     # Learning journey stubs (now replaced by real views in views_learning_journey_api.py)
-    # Autonomous stubs
-    autonomous_status, autonomous_situations, autonomous_triggers,
-    autonomous_start, autonomous_pause, autonomous_analytics_summary,
+    # Session 782: Autonomous stubs removed - using real views from views_autonomous_dashboard.py
     # Reasoning stubs
     reasoning_dashboard, reasoning_thoughts, reasoning_actions,
     reasoning_pending_actions, reasoning_concerns, reasoning_approve_action,
     reasoning_reject_action, reasoning_resolve_concern, reasoning_trigger,
-    # Analytics stubs
+    # Analytics stubs (legacy - keeping for reference, now using real views)
+    # analytics_overview, analytics_summary, analytics_reports_list,
+    # analytics_reports_generate,
+)
+
+# Session 780: Real analytics implementation replacing stubs
+from core.views_analytics_real import (
     analytics_overview, analytics_summary, analytics_reports_list,
     analytics_reports_generate,
 )
@@ -2720,6 +2724,8 @@ urlpatterns = [
     path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
     # Session 552: Self-blog API
     path('api/v1/research/self-blog/', views_research_demo.self_blog_api, name='research-self-blog'),
+    # Session 780: Paginated self-blog list
+    path('api/v1/research/self-blog/list/', views_research_demo.self_blog_list_api, name='research-self-blog-list'),
     # Session 570: Self-blog by ID endpoint
     path('api/v1/research/self-blog/<uuid:blog_id>/', views_research_demo.self_blog_by_id_api, name='research-self-blog-by-id'),
     # Session 643: Enabled self-blog generation endpoints
@@ -3291,13 +3297,8 @@ urlpatterns = [
     path('api/learning/templates/<str:template_id>/', learning_template_detail, name='learning-template-detail'),
     path('api/learning/achievements/', learning_achievements, name='learning-achievements'),
 
-    # Session 745: Autonomous System stub endpoints
-    path('api/autonomous/status/', autonomous_status, name='autonomous-status-stub'),
-    path('api/autonomous/situations/', autonomous_situations, name='autonomous-situations-stub'),
-    path('api/autonomous/triggers/', autonomous_triggers, name='autonomous-triggers'),
-    path('api/autonomous/start/', autonomous_start, name='autonomous-start-stub'),
-    path('api/autonomous/pause/', autonomous_pause, name='autonomous-pause-stub'),
-    path('api/autonomous/analytics/summary/', autonomous_analytics_summary, name='autonomous-analytics-summary'),
+    # Session 782: Autonomous System stubs removed - real views in views_autonomous_dashboard.py
+    # Real endpoints defined earlier at lines 3140-3153
 
     # Session 745: Reasoning Engine stub endpoints
     path('api/reasoning/dashboard/', reasoning_dashboard, name='reasoning-dashboard'),
