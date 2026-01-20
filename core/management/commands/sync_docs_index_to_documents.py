@@ -259,13 +259,14 @@ class Command(BaseCommand):
                             agent_name='docs_index_sync'
                         )
 
-                        if embedding:
+                        if embedding and embedding.embedding:
                             DocumentEmbedding.objects.create(
                                 document=doc,
                                 chunk_text=chunk,
                                 chunk_size=len(chunk),
                                 chunk_index=chunk_idx,
-                                embedding_vector=embedding,
+                                embedding_vector=embedding.embedding,  # Extract vector from EmbeddingResult
+                                embedding_dimension=len(embedding.embedding),  # 1536 for text-embedding-3-small
                                 embedding_model=EmbeddingModel.OPENAI_SMALL,
                             )
 
