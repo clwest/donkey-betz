@@ -349,6 +349,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 782: Team Collaboration APIs (read-only for Collective Intelligence page)
         '/api/teams/',  # Agent teams list and management
+        '/api/collaboration/history/',  # Collaboration history for Network tab
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

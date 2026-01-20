@@ -1671,9 +1671,9 @@ export const collectiveApi = {
 
   // Network & Collaboration
   network: () => api.get('/collective/network/'),
-  // Session 782: Use collective endpoints (don't require auth)
+  // Session 782: Use proper collaboration history endpoint
   collaborationHistory: (params?: { limit?: number; agent?: string }) =>
-    api.get('/collective/monitor/', { params }),
+    api.get('/collaboration/history/', { params }),
   collaborationStats: () => api.get('/collective/stats/'),
   collaborationMonitor: () => api.get('/collective/monitor/'),
   findCollaborator: (data: { task: string; skills?: string[] }) =>
