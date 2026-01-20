@@ -315,22 +315,38 @@ For older sessions, see `docs/handoffs/` directory.
 
 ## Documentation
 
+### Core Documentation
 | Doc | Purpose |
 |-----|---------|
-| `docs/ARCHITECTURE.md` | System architecture |
-| `docs/CAPABILITIES.md` | Full feature list |
-| `docs/AGENTS.md` | Agent documentation (74 agents) |
-| `docs/SPIDERS.md` | Spider network (77 spiders) |
-| `docs/SERVICES.md` | Services layer (93 services) |
-| `docs/SCIFI_FEATURES.md` | 14 Sci-Fi AI features |
-| `docs/DATABASE_MODEL_REFERENCE.md` | **IMPORTANT:** Which DB table for what (Session 737) |
-| `docs/roadmaps/INTEGRATION_ROADMAP_2026.md` | **NEW** 5-phase integration plan (Session 744) |
-| `docs/audits/SESSION_736_COMPREHENSIVE_SYSTEM_AUDIT.md` | Session 736 component audit (100% pass) |
-| `docs/audits/SESSION_736_INTEGRATION_REALITY_REPORT.md` | Integration report (now 95% after Session 744) |
-| `docs/ERROR_TRACKING.md` | Track errors discovered during sessions (Session 752) |
-| `docs/MEMORY_SAFETY_CLASSIFICATION.md` | Memory safety classification system (Session 768) |
-| `docs/UI_COMPREHENSIVE_AUDIT.md` | Complete UI audit - 43 pages, 55+ APIs, stubs, duplicates (Session 772) |
-| `docs/WORKSPACE_USER_GUIDE.md` | **NEW** SKIN Layer workspace guide - full feature docs (Session 780) |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
+| [CAPABILITIES.md](docs/CAPABILITIES.md) | Full feature list |
+| [AGENTS.md](docs/AGENTS.md) | Agent documentation (74 agents) |
+| [SPIDERS.md](docs/SPIDERS.md) | Spider network (77 spiders) |
+| [SERVICES.md](docs/SERVICES.md) | Services layer (93 services) |
+| [SCIFI_FEATURES.md](docs/SCIFI_FEATURES.md) | 14 Sci-Fi AI features |
+| [DATABASE_MODEL_REFERENCE.md](docs/DATABASE_MODEL_REFERENCE.md) | **IMPORTANT:** Which DB table for what |
+| [WORKSPACE_USER_GUIDE.md](docs/WORKSPACE_USER_GUIDE.md) | SKIN Layer workspace guide |
+
+### Documentation Indexes (Session 785)
+| Index | Contents |
+|-------|----------|
+| [Handoffs Index](docs/handoffs/INDEX.md) | 447 session handoffs (Sessions 197-785) |
+| [Audits Index](docs/audits/INDEX.md) | 61 system audits |
+| [Reports Index](docs/reports/INDEX.md) | 30 status reports |
+| [Architecture Index](docs/architecture/INDEX.md) | 22 architecture docs |
+| [Features Index](docs/features/INDEX.md) | 17 feature docs |
+| [Guides Index](docs/guides/INDEX.md) | 35 implementation guides |
+| [Plans Index](docs/plans/INDEX.md) | 9 planning docs |
+| [APIs Index](docs/apis/INDEX.md) | 7 API integration docs |
+
+### Key References
+| Doc | Purpose |
+|-----|---------|
+| [INTEGRATION_ROADMAP_2026.md](docs/roadmaps/INTEGRATION_ROADMAP_2026.md) | 5-phase integration plan |
+| [System Audit](docs/audits/SESSION_736_COMPREHENSIVE_SYSTEM_AUDIT.md) | Component audit (100% pass) |
+| [ERROR_TRACKING.md](docs/ERROR_TRACKING.md) | Track errors discovered during sessions |
+| [MEMORY_SAFETY_CLASSIFICATION.md](docs/MEMORY_SAFETY_CLASSIFICATION.md) | Memory safety classification |
+| [UI_COMPREHENSIVE_AUDIT.md](docs/UI_COMPREHENSIVE_AUDIT.md) | UI audit - 43 pages, 55+ APIs |
 
 ---
 
