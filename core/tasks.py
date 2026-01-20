@@ -18540,14 +18540,16 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
         # Run the thinking process
         thinking_result = agent.execute(lookback_hours=lookback_hours)
 
-        if not thinking_result.get('success'):
+        # Session 782: Fix - AgentResult is a dataclass, not a dict
+        # Access attributes directly instead of using .get()
+        if not thinking_result.success:
             thought.execution_status = 'failed'
-            thought.reflection = f"Thinking failed: {thinking_result.get('error', 'Unknown error')}"
+            thought.reflection = f"Thinking failed: {thinking_result.error or 'Unknown error'}"
             thought.save()
-            return {'success': False, 'error': thinking_result.get('error')}
+            return {'success': False, 'error': thinking_result.error}
 
-        # Extract thinking results
-        result = thinking_result.get('thinking_result', {})
+        # Extract thinking results from data dict
+        result = thinking_result.data.get('thinking_result', {})
 
         thought.reflection = result.get('reflection', '')
         thought.insights = result.get('insights', [])
@@ -18701,6 +18703,16 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
 
     except Exception as e:
         logger.error(f"🧠 [THINKING] Cycle failed: {e}", exc_info=True)
+        # Session 782: Mark thought as failed if it was created
+        try:
+            if 'thought' in locals() and thought:
+                thought.execution_status = 'failed'
+                thought.reflection = f"Error during thinking cycle: {str(e)}"
+                thought.completed_at = timezone.now()
+                thought.save()
+                logger.info(f"🧠 [THINKING] Cycle #{thought.cycle_number} marked as FAILED")
+        except Exception as cleanup_error:
+            logger.warning(f"Error cleaning up thought record: {cleanup_error}")
         return {
             'success': False,
             'error': str(e)
