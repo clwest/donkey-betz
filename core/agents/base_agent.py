@@ -2450,6 +2450,82 @@ Consider this current data when formulating your response."""
 
         return prompt + spider_section
 
+    def _annotate_spider_data(
+        self,
+        spider_data_id: str,
+        annotation_type: str,
+        confidence: float = 0.7,
+        note: str = ""
+    ) -> bool:
+        """
+        Session 783: Annotate a spider data item with intelligence insight.
+
+        Allows agents to flag interesting spider data items for the Spider News Feed.
+        Annotations help humans discover valuable information from the spider network.
+
+        Args:
+            spider_data_id: UUID of the SpiderData item to annotate
+            annotation_type: One of: useful, profitable, podcast_worthy, breaking_news,
+                           investment_opportunity, action_required, warning, trending
+            confidence: 0.0-1.0 confidence score (default: 0.7)
+            note: Optional note explaining why this item is noteworthy
+
+        Returns:
+            True if annotation was created/updated, False on failure
+
+        Example:
+            # During agent execution, flag an interesting item
+            spider_item_id = spider_context.get('source_item_id')
+            if spider_item_id and is_profitable:
+                self._annotate_spider_data(
+                    spider_item_id,
+                    'profitable',
+                    confidence=0.85,
+                    note='High ROI opportunity based on market analysis'
+                )
+        """
+        try:
+            from core.models_unified_system import SpiderData, SpiderDataAnnotation
+
+            # Validate annotation type
+            valid_types = [t[0] for t in SpiderDataAnnotation.ANNOTATION_TYPES]
+            if annotation_type not in valid_types:
+                logger.warning(
+                    f"[{self.name}] Invalid annotation_type '{annotation_type}'. "
+                    f"Must be one of: {valid_types}"
+                )
+                return False
+
+            # Get the spider data item
+            try:
+                spider_data = SpiderData.objects.get(id=spider_data_id)
+            except SpiderData.DoesNotExist:
+                logger.warning(f"[{self.name}] SpiderData {spider_data_id} not found")
+                return False
+
+            # Create or update the annotation
+            annotation, created = SpiderDataAnnotation.objects.update_or_create(
+                spider_data=spider_data,
+                agent_name=self.name,
+                annotation_type=annotation_type,
+                defaults={
+                    'confidence_score': max(0.0, min(1.0, confidence)),
+                    'note': note,
+                }
+            )
+
+            action = "Created" if created else "Updated"
+            logger.info(
+                f"[{self.name}] {action} {annotation_type} annotation on "
+                f"spider data {spider_data_id} (confidence: {confidence:.2f})"
+            )
+
+            return True
+
+        except Exception as e:
+            logger.exception(f"[{self.name}] Error annotating spider data: {e}")
+            return False
+
     def _build_prompt_with_project(
         self,
         task: str,

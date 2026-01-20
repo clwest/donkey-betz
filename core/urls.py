@@ -233,6 +233,16 @@ from core.views_spider_intelligence import (
     get_sports_odds,
 )
 
+# Session 783: Spider News Feed
+from core.views_spider_feed import (
+    spider_feed,
+    spider_feed_trending,
+    spider_feed_item_detail,
+    spider_feed_annotate,
+    spider_feed_vote,
+    spider_feed_stats,
+)
+
 # Session 219: Import agent intelligence views (Phase A)
 from core.views_agent_intelligence import (
     list_agents as ai_agents_list,
@@ -2858,6 +2868,14 @@ urlpatterns = [
     path('api/spider-intelligence/feed/', spider_data_feed, name='spider-intelligence-feed'),
     path('api/spider-intelligence/knowledge/', spider_knowledge, name='spider-intelligence-knowledge'),
     path('api/spider-intelligence/timeline/', spider_timeline, name='spider-intelligence-timeline'),
+
+    # Session 783: Spider News Feed
+    path('api/spider-feed/', spider_feed, name='spider-feed'),
+    path('api/spider-feed/trending/', spider_feed_trending, name='spider-feed-trending'),
+    path('api/spider-feed/item/<uuid:item_id>/', spider_feed_item_detail, name='spider-feed-item-detail'),
+    path('api/spider-feed/<uuid:item_id>/annotate/', spider_feed_annotate, name='spider-feed-annotate'),
+    path('api/spider-feed/<uuid:item_id>/vote/', spider_feed_vote, name='spider-feed-vote'),
+    path('api/spider-feed/stats/', spider_feed_stats, name='spider-feed-stats'),
 
     # Session 536: Cross-references for Intelligence Command Center
     path('api/intelligence/cross-references/', intelligence_cross_references, name='intelligence-cross-references'),

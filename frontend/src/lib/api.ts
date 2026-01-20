@@ -623,6 +623,35 @@ export const spiderIntegrationApi = {
     api.get('/spider-intelligence/search/', { params }),
 }
 
+// Session 783: Spider News Feed API - Human-facing feed with agent annotations
+export const spiderFeedApi = {
+  // Main feed with filters & pagination
+  list: (params?: {
+    page?: number
+    per_page?: number
+    source?: string
+    category?: string
+    annotation_type?: string
+    search?: string
+    sort?: 'newest' | 'popular' | 'trending'
+    hours?: number
+  }) => api.get('/spider-feed/', { params }),
+
+  // Trending items (most annotated in last 24h)
+  trending: (params?: { hours?: number; limit?: number }) =>
+    api.get('/spider-feed/trending/', { params }),
+
+  // Single item detail
+  detail: (itemId: string) => api.get(`/spider-feed/item/${itemId}/`),
+
+  // Vote on an annotation
+  vote: (itemId: string, annotationId: string, direction: 'up' | 'down') =>
+    api.post(`/spider-feed/${itemId}/vote/`, { annotation_id: annotationId, direction }),
+
+  // Feed statistics
+  stats: () => api.get('/spider-feed/stats/'),
+}
+
 export const pilotsApi = {
   dashboard: () => api.get('/pilots/dashboard/'),
   gates: () => api.get('/pilot-gates/'),  // List of gates, not dashboard
