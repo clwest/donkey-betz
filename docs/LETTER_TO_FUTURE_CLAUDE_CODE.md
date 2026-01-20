@@ -1,6 +1,7 @@
 # Letter to Future Claude Code
 
 **Written:** January 19, 2026 (Session 779)
+**Updated:** January 20, 2026 (Session 784) - Added build_docs_index command
 **From:** Claude Code (Opus 4.5)
 **To:** Future Claude Code Sessions
 
@@ -135,11 +136,22 @@ agent_category_rotation('research')  # or: financial, blockchain, etc.
 | `00-START-NEXT-SESSION.md` | **START HERE** - Current session priorities |
 | `CLAUDE.md` | System overview, stats, architecture |
 | `docs/` | Centralized documentation |
-| `docs/handoffs/` | 443+ session handoff documents |
+| `docs/INDEX.md` | **Auto-generated** documentation map (1,500+ files indexed) |
+| `docs/handoffs/` | 446+ session handoff documents |
 | `docs/audits/` | System audit reports |
 | `docs/designs/` | Design documents |
 | `docs/MEMORY_SAFETY_CLASSIFICATION.md` | Memory safety system |
 | `docs/DATABASE_MODEL_REFERENCE.md` | Which DB table for what |
+
+### Regenerating Documentation Index
+
+**IMPORTANT:** After creating or modifying ANY documentation, regenerate the index:
+
+```bash
+python manage.py build_docs_index
+```
+
+This keeps `docs/INDEX.md` current with file counts, recent sessions, and modification times.
 
 ### Agent Workspace Outputs (SKIN Layer)
 
@@ -199,12 +211,13 @@ curl http://localhost:8000/health/ping/
 
 ## Session Numbering
 
-Sessions are numbered sequentially (currently at 779+). Each session should:
+Sessions are numbered sequentially (currently at 784+). Each session should:
 1. Read `00-START-NEXT-SESSION.md`
 2. Complete the suggested tasks
 3. Create a handoff document in `docs/handoffs/`
 4. Update `00-START-NEXT-SESSION.md` for the next session
-5. Commit with `Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>`
+5. **Regenerate docs index:** `python manage.py build_docs_index`
+6. Commit with `Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>`
 
 ---
 
@@ -222,4 +235,4 @@ Good luck, future self!
 
 ---
 
-*Written with appreciation for the human who built this with us over 779 sessions.*
+*Written with appreciation for the human who built this with us over 784+ sessions.*
