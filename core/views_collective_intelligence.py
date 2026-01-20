@@ -53,27 +53,52 @@ def aggregate_insights(request):
     if not topic:
         try:
             # Return recent insights summary
-            from core.models import AgentCollaboration
+            from core.models_unified_system import KnowledgeTransfer
             from django.utils import timezone
             from datetime import timedelta
 
-            recent_date = timezone.now() - timedelta(days=30)
+            recent_date = timezone.now() - timedelta(days=7)
 
-            # Get recent collaborations as "insights"
-            recent_collabs = AgentCollaboration.objects.filter(
-                started_at__gte=recent_date
-            ).order_by('-started_at')[:limit]
+            # Session 782: Use KnowledgeTransfer for insights (203 recent records)
+            # More relevant than CollaborationSession (23 records from Dec 2025)
+            recent_transfers = KnowledgeTransfer.objects.filter(
+                created_at__gte=recent_date
+            ).select_related('connection', 'source_knowledge').order_by('-created_at')[:limit]
 
             insights = []
-            for collab in recent_collabs:
+            for transfer in recent_transfers:
+                # Get agent names from the connection (convert Agent objects to strings)
+                teacher_obj = getattr(transfer.connection, 'teacher_agent', None)
+                student_obj = getattr(transfer.connection, 'student_agent', None)
+                teacher = teacher_obj.name if hasattr(teacher_obj, 'name') else str(teacher_obj) if teacher_obj else 'Unknown Agent'
+                student = student_obj.name if hasattr(student_obj, 'name') else str(student_obj) if student_obj else 'Unknown Agent'
+
+                # Build title from transfer summary or source knowledge
+                knowledge_name = ''
+                if transfer.source_knowledge:
+                    knowledge_name = getattr(transfer.source_knowledge, 'title', '') or getattr(transfer.source_knowledge, 'content_type', '')
+
+                title = transfer.transfer_summary[:80] if transfer.transfer_summary else f"Knowledge shared: {knowledge_name}"
+                if len(title) > 80:
+                    title = title[:77] + "..."
+
+                # Build key points as description
+                key_points = transfer.key_points or []
+                if isinstance(key_points, list):
+                    description = "; ".join(key_points[:3]) if key_points else transfer.transfer_summary or ""
+                else:
+                    description = str(key_points)[:200]
+
                 insights.append({
-                    'id': str(collab.id),
-                    'title': f"Collaboration: {collab.task_description[:50]}..." if len(collab.task_description) > 50 else collab.task_description,
-                    'summary': collab.task_description,
-                    'agents': [collab.initiator_agent, collab.collaborator_agent] if collab.collaborator_agent else [collab.initiator_agent],
-                    'priority': 'high' if collab.success_rating and collab.success_rating >= 4 else 'medium',
-                    'timestamp': collab.started_at.isoformat(),
-                    'status': collab.status,
+                    'id': str(transfer.id),
+                    'title': title,
+                    'description': description[:200] if description else "Knowledge transfer between agents",
+                    'source_agent': teacher,
+                    'category': 'knowledge_transfer',
+                    'confidence': transfer.usefulness_score or 0.7,
+                    'created_at': transfer.created_at.isoformat() if transfer.created_at else None,
+                    'related_agents': [teacher, student],
+                    'actionable': transfer.was_applied or False,
                 })
 
             return Response({
