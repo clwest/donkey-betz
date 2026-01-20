@@ -594,6 +594,67 @@ def self_blog_api(request):
 
 
 @require_http_methods(["GET"])
+def self_blog_list_api(request):
+    """
+    Session 780: Get paginated list of all self-blog posts.
+    Supports pagination and search for the Content Channels page.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+
+        # Pagination params
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 20))
+        search = request.GET.get('search', '').strip()
+
+        # Build query
+        queryset = SelfBlog.objects.all().order_by('-created_at')
+
+        if search:
+            queryset = queryset.filter(
+                models.Q(title__icontains=search) |
+                models.Q(intro__icontains=search) |
+                models.Q(tags__icontains=search)
+            )
+
+        total = queryset.count()
+
+        # Paginate
+        start = (page - 1) * per_page
+        end = start + per_page
+        blogs = queryset[start:end]
+
+        return JsonResponse({
+            'success': True,
+            'blogs': [
+                {
+                    'id': str(b.id),
+                    'title': b.title,
+                    'meta_description': b.meta_description,
+                    'intro': b.intro[:200] + '...' if len(b.intro) > 200 else b.intro,
+                    'tags': b.tags or [],
+                    'tone': b.tone,
+                    'word_count': b.word_count,
+                    'created_at': b.created_at.isoformat(),
+                }
+                for b in blogs
+            ],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page,
+                'has_next': end < total,
+                'has_prev': page > 1,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in self_blog_list_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
 def self_blog_by_id_api(request, blog_id):
     """
     Session 570: Get a specific self-blog by ID.

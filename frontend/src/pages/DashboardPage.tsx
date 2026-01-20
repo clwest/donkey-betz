@@ -203,6 +203,25 @@ export default function DashboardPage() {
     staleTime: 300000, // Cache for 5 minutes
   })
 
+  // Session 780: Connect previously unused dashboard endpoints
+  const { data: dashboardStatsData } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => dashboardApi.stats(),
+    staleTime: 60000, // Cache for 1 minute
+  })
+
+  const { data: liveAgentData } = useQuery({
+    queryKey: ['dashboard-live-agents'],
+    queryFn: () => dashboardApi.liveAgentActivity(),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  })
+
+  const { data: advisorInsightsData } = useQuery({
+    queryKey: ['dashboard-advisor-insights'],
+    queryFn: () => dashboardApi.advisorInsights(),
+    staleTime: 120000, // Cache for 2 minutes
+  })
+
   // Initialize recentActivity with fetched data
   useEffect(() => {
     if (initialActivity?.data?.activities) {
@@ -267,6 +286,13 @@ export default function DashboardPage() {
   // Session 774: Personalized summary data
   const summary = summaryData?.data || {}
   const whileAway = summary.while_away || {}
+  // Session 780: Extended dashboard stats (previously unused endpoint)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dashboardStats = (dashboardStatsData as any)?.data || (dashboardStatsData as any) || {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const liveAgents = (liveAgentData as any)?.data?.agents || (liveAgentData as any)?.agents || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const advisorInsights = (advisorInsightsData as any)?.data?.insights || (advisorInsightsData as any)?.insights || []
   // Session 745: Revenue and velocity data
   const revenue = revenueData?.data?.dashboard || revenueData?.data || {}
   // Session 745: Transform velocity API response to expected format
@@ -541,6 +567,197 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Session 780: Extended Dashboard Stats - Previously Unused Data */}
+      {dashboardStats.total_revenue !== undefined && (
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="text-accent-gold" size={20} />
+            Performance Overview
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <MiniStat
+              title="Total Revenue"
+              value={`$${((dashboardStats.total_revenue || 0) / 1000).toFixed(1)}k`}
+              icon={DollarSign}
+              color="#22c55e"
+            />
+            <MiniStat
+              title="Active Opportunities"
+              value={dashboardStats.active_opportunities || 0}
+              icon={TrendingUp}
+              color="#f59e0b"
+            />
+            <MiniStat
+              title="Success Rate"
+              value={`${dashboardStats.success_rate || 0}%`}
+              icon={CheckCircle}
+              color="#8b5cf6"
+            />
+            <MiniStat
+              title="Executions (24h)"
+              value={dashboardStats.agent_executions_24h || 0}
+              icon={Zap}
+              color="#06b6d4"
+            />
+            <MiniStat
+              title="Spider Data (24h)"
+              value={(dashboardStats.spider_data_points || 0).toLocaleString()}
+              icon={Brain}
+              color="#22c55e"
+            />
+            <MiniStat
+              title="Collaborations (7d)"
+              value={dashboardStats.recent_collaborations || 0}
+              icon={Users}
+              color="#ec4899"
+            />
+          </div>
+          {/* AI Usage Stats */}
+          {(dashboardStats.token_usage_24h > 0 || dashboardStats.ai_cost_24h > 0) && (
+            <div className="mt-4 pt-4 border-t border-dark-border">
+              <h4 className="text-sm text-gray-400 mb-2">AI Usage (24h)</h4>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} className="text-accent-amber" />
+                  <span className="text-sm">{(dashboardStats.token_usage_24h || 0).toLocaleString()} tokens</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign size={14} className="text-accent-green" />
+                  <span className="text-sm">${(dashboardStats.ai_cost_24h || 0).toFixed(2)} cost</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Top Agents */}
+          {dashboardStats.top_agents?.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-dark-border">
+              <h4 className="text-sm text-gray-400 mb-2">Top Performing Agents</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {dashboardStats.top_agents.slice(0, 6).map((agent: { name: string; type: string; executions: number; success_rate: number }, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-dark-bg">
+                    <div className="flex items-center gap-2">
+                      <Bot size={14} className="text-primary-400" />
+                      <span className="text-sm truncate max-w-[120px]">{agent.name.replace('Agent', '')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-gray-400">{agent.executions}</span>
+                      <span className="text-accent-green">{agent.success_rate.toFixed(0)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session 780: Live Agent Activity - Previously Unused Endpoint */}
+      {liveAgents.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Activity className="text-accent-cyan" size={20} />
+              Live Agent Activity
+              <span className="h-2 w-2 rounded-full bg-accent-green animate-pulse" />
+            </h3>
+            <span className="text-xs text-gray-400">{liveAgents.length} agents</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {liveAgents.slice(0, 9).map((agent: { id: number; name: string; type: string; status: string; current_task?: string; collaborating_with?: string[]; metrics?: { tasks_completed?: number; success_rate?: number } }) => (
+              <div
+                key={agent.id}
+                className={cn(
+                  'p-3 rounded-lg border',
+                  agent.status === 'active'
+                    ? 'bg-accent-green/5 border-accent-green/30'
+                    : 'bg-dark-bg border-dark-border'
+                )}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Bot size={16} className={agent.status === 'active' ? 'text-accent-green' : 'text-gray-400'} />
+                    <span className="font-medium text-sm truncate max-w-[120px]">{agent.name.replace('Agent', '')}</span>
+                  </div>
+                  <span className={cn(
+                    'px-2 py-0.5 text-xs rounded-full',
+                    agent.status === 'active' ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+                  )}>
+                    {agent.status}
+                  </span>
+                </div>
+                {agent.current_task && (
+                  <p className="text-xs text-gray-400 truncate mb-1">{agent.current_task}</p>
+                )}
+                {agent.collaborating_with && agent.collaborating_with.length > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-accent-cyan">
+                    <Users size={10} />
+                    <span>with {agent.collaborating_with.join(', ')}</span>
+                  </div>
+                )}
+                {agent.metrics && (
+                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                    <span>{agent.metrics.tasks_completed || 0} tasks</span>
+                    <span>{(agent.metrics.success_rate || 0).toFixed(0)}% success</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Session 780: Advisor Insights - Previously Unused Endpoint */}
+      {advisorInsights.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Lightbulb className="text-accent-gold" size={20} />
+              Advisor Insights
+            </h3>
+            <button
+              className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
+              onClick={() => navigate('/advisors')}
+            >
+              View All <ArrowUpRight size={14} />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {advisorInsights.slice(0, 4).map((insight: { advisor: { name: string; title: string; expertise: string; avatar?: string }; insight: string; confidence: number; category: string; actionable: boolean; created_at: string }, idx: number) => (
+              <div key={idx} className="p-3 rounded-lg bg-dark-bg border-l-2 border-accent-gold/50">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {insight.advisor.avatar ? (
+                      <img src={insight.advisor.avatar} alt="" className="w-8 h-8 rounded-full" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-accent-gold/20 flex items-center justify-center">
+                        <Users size={14} className="text-accent-gold" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-sm">{insight.advisor.name}</p>
+                      <p className="text-xs text-gray-500">{insight.advisor.title}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {insight.actionable && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-accent-green/20 text-accent-green">
+                        Actionable
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-500">{(insight.confidence * 100).toFixed(0)}% conf</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-300">{insight.insight}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-dark-card text-gray-400">{insight.category}</span>
+                  <span className="text-xs text-gray-500">{new Date(insight.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Session 746: Enhanced Agent Network Widget with Mini Visualization */}
       <div className="card">

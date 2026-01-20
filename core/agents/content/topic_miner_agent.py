@@ -315,6 +315,14 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
                 return self._score_topic_potential(tool_input)
             elif tool_name == "detect_trending_gaps":
                 return self._detect_trending_gaps(tool_input)
+            elif tool_name == "delegate_to_specialist":
+                # Session 780: Handle delegation properly
+                return self._handle_delegate_to_specialist(
+                    specialist_agent=tool_input.get('specialist_agent', ''),
+                    task=tool_input.get('task', ''),
+                    context=tool_input.get('context', ''),
+                    delegation_context=getattr(self, '_current_delegation_context', {})
+                )
             else:
                 return {"error": f"Unknown tool: {tool_name}"}
         except Exception as e:
