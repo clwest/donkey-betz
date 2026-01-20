@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reasoningApi } from '@/lib/api'
 import {
   Brain, Lightbulb, Zap, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, ChevronRight, Play, BarChart3
+  Clock, RefreshCw, Loader2, ChevronRight, Play, BarChart3,
+  TrendingUp, Target, Eye, Activity, X
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -36,6 +37,49 @@ interface Thought {
   duration_ms?: number
   agent_name?: string
   actions_generated?: number
+}
+
+// Session 782: Full thought detail from API
+interface ThoughtDetail {
+  id: string
+  cycle_number: number
+  cycle_type: string
+  context_summary: string
+  context_data: Record<string, unknown>
+  reflection: string
+  insights: Array<{ insight: string; confidence: number; category: string }>
+  patterns: Array<{ pattern: string; evidence: string; strength: number }>
+  opportunities: Array<{ opportunity: string; potential_impact: string; urgency: string }>
+  concerns: Array<{ concern: string; severity: string; recommendation: string }>
+  decisions: Array<{
+    action_type: string
+    action_name: string
+    reasoning: string
+    params: Record<string, unknown>
+    priority: string
+    expected_outcome: string
+  }>
+  actions_planned: unknown[]
+  actions_executed: Array<{ action_id: string; type: string; name: string; success: boolean }>
+  priority_score: number
+  execution_status: string
+  thinking_duration_seconds: number
+  model_used: string
+  token_usage: Record<string, unknown>
+  started_at: string
+  completed_at: string | null
+}
+
+interface ThoughtAction {
+  id: string
+  action_type: string
+  action_name: string
+  reasoning: string
+  priority: string
+  status: string
+  result_summary: string
+  error_message: string
+  created_at: string
 }
 
 interface Action {
@@ -102,6 +146,16 @@ export default function ReasoningEnginePage() {
     queryFn: () => reasoningApi.concerns({ limit: 50 }),
     enabled: activeTab === 'dashboard' || activeTab === 'concerns',
   })
+
+  // Session 782: Fetch full thought detail when a thought is selected
+  const { data: thoughtDetailData, isLoading: loadingThoughtDetail } = useQuery({
+    queryKey: ['reasoning-thought-detail', selectedThought?.id],
+    queryFn: () => selectedThought ? reasoningApi.thoughtDetail(selectedThought.id) : null,
+    enabled: !!selectedThought?.id,
+  })
+
+  const thoughtDetail: ThoughtDetail | null = thoughtDetailData?.data?.thought || null
+  const thoughtActions: ThoughtAction[] = thoughtDetailData?.data?.actions || []
 
   // Mutations
   const triggerReasoning = useMutation({
@@ -627,37 +681,221 @@ export default function ReasoningEnginePage() {
                     </div>
                   </div>
 
-                  {/* Expanded View */}
+                  {/* Session 782: Rich Expanded Detail View */}
                   {selectedThought?.id === thought.id && (
                     <div className="mt-4 pt-4 border-t border-dark-border space-y-4">
-                      {thought.reasoning_chain && thought.reasoning_chain.length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-500 mb-2">Reasoning Chain</p>
-                          <div className="space-y-2">
-                            {thought.reasoning_chain.map((step, i) => (
-                              <div key={i} className="flex items-start gap-2">
-                                <span className="text-xs text-primary-400 font-mono">{i + 1}.</span>
-                                <p className="text-sm">{step}</p>
+                      {loadingThoughtDetail ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                        </div>
+                      ) : thoughtDetail ? (
+                        <>
+                          {/* Reflection */}
+                          {thoughtDetail.reflection && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <Brain className="h-3 w-3" /> Reflection
+                              </p>
+                              <p className="text-sm p-3 rounded-lg bg-dark-bg whitespace-pre-wrap">
+                                {thoughtDetail.reflection}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Insights */}
+                          {thoughtDetail.insights && thoughtDetail.insights.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <Lightbulb className="h-3 w-3" /> Insights ({thoughtDetail.insights.length})
+                              </p>
+                              <div className="space-y-2">
+                                {thoughtDetail.insights.map((insight, i) => (
+                                  <div key={i} className="p-2 rounded-lg bg-dark-bg flex items-start gap-2">
+                                    <span className={cn(
+                                      'px-1.5 py-0.5 rounded text-xs shrink-0',
+                                      insight.category === 'opportunity' ? 'bg-accent-green/20 text-accent-green' :
+                                      insight.category === 'concern' ? 'bg-accent-red/20 text-accent-red' :
+                                      insight.category === 'pattern' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                                      'bg-accent-amber/20 text-accent-amber'
+                                    )}>
+                                      {insight.category}
+                                    </span>
+                                    <p className="text-sm flex-1">{insight.insight}</p>
+                                    <span className="text-xs text-gray-500 shrink-0">
+                                      {(insight.confidence * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
+                          )}
+
+                          {/* Patterns */}
+                          {thoughtDetail.patterns && thoughtDetail.patterns.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <Activity className="h-3 w-3" /> Patterns ({thoughtDetail.patterns.length})
+                              </p>
+                              <div className="space-y-2">
+                                {thoughtDetail.patterns.map((pattern, i) => (
+                                  <div key={i} className="p-2 rounded-lg bg-dark-bg">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <p className="text-sm font-medium">{pattern.pattern}</p>
+                                      <span className="text-xs text-gray-500">
+                                        {(pattern.strength * 100).toFixed(0)}% strength
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-400">{pattern.evidence}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Opportunities */}
+                          {thoughtDetail.opportunities && thoughtDetail.opportunities.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" /> Opportunities ({thoughtDetail.opportunities.length})
+                              </p>
+                              <div className="space-y-2">
+                                {thoughtDetail.opportunities.map((opp, i) => (
+                                  <div key={i} className="p-2 rounded-lg bg-dark-bg flex items-start gap-2">
+                                    <Target className={cn(
+                                      'h-4 w-4 shrink-0 mt-0.5',
+                                      opp.potential_impact === 'high' ? 'text-accent-green' :
+                                      opp.potential_impact === 'medium' ? 'text-accent-amber' : 'text-gray-400'
+                                    )} />
+                                    <div className="flex-1">
+                                      <p className="text-sm">{opp.opportunity}</p>
+                                      <div className="flex gap-2 mt-1">
+                                        <span className="text-xs text-gray-500">Impact: {opp.potential_impact}</span>
+                                        <span className="text-xs text-gray-500">Urgency: {opp.urgency}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Concerns */}
+                          {thoughtDetail.concerns && thoughtDetail.concerns.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" /> Concerns ({thoughtDetail.concerns.length})
+                              </p>
+                              <div className="space-y-2">
+                                {thoughtDetail.concerns.map((concern, i) => (
+                                  <div key={i} className={cn(
+                                    'p-2 rounded-lg border',
+                                    concern.severity === 'high' ? 'bg-accent-red/10 border-accent-red/30' :
+                                    concern.severity === 'medium' ? 'bg-accent-amber/10 border-accent-amber/30' :
+                                    'bg-dark-bg border-dark-border'
+                                  )}>
+                                    <div className="flex items-start gap-2">
+                                      <span className={cn(
+                                        'text-xs uppercase font-medium shrink-0',
+                                        concern.severity === 'high' ? 'text-accent-red' :
+                                        concern.severity === 'medium' ? 'text-accent-amber' : 'text-gray-400'
+                                      )}>
+                                        {concern.severity}
+                                      </span>
+                                      <div className="flex-1">
+                                        <p className="text-sm">{concern.concern}</p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                          Recommendation: {concern.recommendation}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Decisions / Actions Planned */}
+                          {thoughtDetail.decisions && thoughtDetail.decisions.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <Zap className="h-3 w-3" /> Decisions ({thoughtDetail.decisions.length})
+                              </p>
+                              <div className="space-y-2">
+                                {thoughtDetail.decisions.map((decision, i) => (
+                                  <div key={i} className="p-2 rounded-lg bg-dark-bg border border-primary-500/20">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={cn(
+                                        'px-1.5 py-0.5 rounded text-xs',
+                                        decision.priority === 'critical' ? 'bg-accent-red/20 text-accent-red' :
+                                        decision.priority === 'high' ? 'bg-accent-amber/20 text-accent-amber' :
+                                        'bg-primary-500/20 text-primary-400'
+                                      )}>
+                                        {decision.priority}
+                                      </span>
+                                      <span className="text-xs text-gray-500">{decision.action_type}</span>
+                                    </div>
+                                    <p className="text-sm font-medium">{decision.action_name}</p>
+                                    <p className="text-xs text-gray-400 mt-1">{decision.reasoning}</p>
+                                    {decision.expected_outcome && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Expected: {decision.expected_outcome}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Actions Executed */}
+                          {thoughtActions.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" /> Actions Executed ({thoughtActions.length})
+                              </p>
+                              <div className="space-y-2">
+                                {thoughtActions.map((action) => (
+                                  <div key={action.id} className="p-2 rounded-lg bg-dark-bg flex items-start gap-2">
+                                    {action.status === 'completed' ? (
+                                      <CheckCircle className="h-4 w-4 text-accent-green shrink-0 mt-0.5" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4 text-accent-red shrink-0 mt-0.5" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium">{action.action_name}</p>
+                                      <p className="text-xs text-gray-400">{action.action_type}</p>
+                                      {action.result_summary && (
+                                        <p className="text-xs text-gray-500 mt-1 truncate">
+                                          Result: {action.result_summary}
+                                        </p>
+                                      )}
+                                      {action.error_message && (
+                                        <p className="text-xs text-accent-red mt-1">
+                                          Error: {action.error_message}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Metadata */}
+                          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 pt-2 border-t border-dark-border">
+                            <span>Cycle #{thoughtDetail.cycle_number}</span>
+                            <span>Started: {formatDate(thoughtDetail.started_at)}</span>
+                            {thoughtDetail.thinking_duration_seconds > 0 && (
+                              <span>Duration: {thoughtDetail.thinking_duration_seconds.toFixed(1)}s</span>
+                            )}
+                            {thoughtDetail.priority_score > 0 && (
+                              <span>Priority: {thoughtDetail.priority_score.toFixed(1)}/10</span>
+                            )}
                           </div>
-                        </div>
+                        </>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No details available</p>
                       )}
-                      {thought.conclusion && (
-                        <div>
-                          <p className="text-xs text-gray-500 mb-2">Conclusion</p>
-                          <p className="text-sm p-3 rounded-lg bg-dark-bg">{thought.conclusion}</p>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span>Created: {formatDate(thought.created_at)}</span>
-                        {thought.duration_ms && (
-                          <span>Duration: {thought.duration_ms}ms</span>
-                        )}
-                        {thought.actions_generated !== undefined && (
-                          <span>Actions: {thought.actions_generated}</span>
-                        )}
-                      </div>
                     </div>
                   )}
                 </div>
