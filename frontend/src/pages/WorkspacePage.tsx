@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { workspaceApi, workspaceOperationsApi, bodyApi } from '@/lib/api'
+import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
 // Session 714: Real-time system events
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import {
@@ -11,14 +11,16 @@ import {
   FolderTree, Activity, Trash2, Heart, ExternalLink,
   FileEdit, Users, PieChart, Calendar, Wifi, WifiOff, FileText, Copy, Check,
   // Session 780: Icons for project context sections
-  Key, Puzzle, Package, Link2, Map
+  Key, Puzzle, Package, Link2, Map,
+  // Session 784: Docs tab icon
+  Book, ArrowRight
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
 import EntityLink from '@/components/EntityLink'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
-type WorkspaceTab = 'overview' | 'files' | 'git' | 'operations' | 'reviews'
+type WorkspaceTab = 'overview' | 'files' | 'git' | 'operations' | 'reviews' | 'docs'
 
 // Session 780: WorkspaceContext interface for project understanding
 interface WorkspaceContext {
@@ -99,6 +101,7 @@ const tabs = [
   { id: 'git' as WorkspaceTab, label: 'Git', icon: GitBranch },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
   { id: 'reviews' as WorkspaceTab, label: 'Reviews', icon: CheckSquare },
+  { id: 'docs' as WorkspaceTab, label: 'Docs', icon: Book },
 ]
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
@@ -928,6 +931,11 @@ export default function WorkspacePage() {
   const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null)
   // Session 780: Track which operation is being reviewed for loading state
   const [reviewingOperationId, setReviewingOperationId] = useState<string | null>(null)
+  // Session 784: Docs tab state
+  const [docsSearch, setDocsSearch] = useState('')
+  const [docsStatusFilter, setDocsStatusFilter] = useState<string>('')
+  const [docsTypeFilter, setDocsTypeFilter] = useState<string>('')
+  const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Session 714: Real-time event handlers - refresh data when file events occur
@@ -1041,6 +1049,45 @@ export default function WorkspacePage() {
     queryKey: ['body-vitals'],
     queryFn: () => bodyApi.vitals(),
     refetchInterval: 60000, // Refresh every 60 seconds
+  })
+
+  // Session 784: Docs tab queries - auto-filter by workspace name/tech stack
+  const workspaceSearchTerms = activeWorkspace
+    ? [activeWorkspace.name, ...(activeWorkspace.path?.split('/').slice(-2) || [])].filter(Boolean).join(' ')
+    : ''
+
+  const { data: docsData, isLoading: loadingDocs } = useQuery({
+    queryKey: ['workspace-docs', docsSearch || workspaceSearchTerms, docsStatusFilter, docsTypeFilter],
+    queryFn: async () => {
+      const params: Record<string, string> = {}
+      // Use workspace-based search by default, or user's explicit search
+      const searchTerm = docsSearch || workspaceSearchTerms
+      if (searchTerm) params.search = searchTerm
+      if (docsStatusFilter) params.status = docsStatusFilter
+      if (docsTypeFilter) params.type = docsTypeFilter
+      params.limit = '50'
+      const res = await docsIndexApi.index(params)
+      return res.data
+    },
+    enabled: activeTab === 'docs',
+  })
+
+  const { data: docsStatsData } = useQuery({
+    queryKey: ['docs-stats'],
+    queryFn: async () => {
+      const res = await docsIndexApi.stats()
+      return res.data
+    },
+    enabled: activeTab === 'docs',
+  })
+
+  const { data: selectedDocData, isLoading: loadingDocDetail } = useQuery<DocsDetailResponse>({
+    queryKey: ['docs-detail', selectedDocPath],
+    queryFn: async () => {
+      const res = await docsIndexApi.detail(selectedDocPath!)
+      return res.data
+    },
+    enabled: !!selectedDocPath && activeTab === 'docs',
   })
 
   // Mutations
@@ -2025,6 +2072,246 @@ export default function WorkspacePage() {
                   <p className="text-gray-400">No pending reviews</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Session 784: Docs Tab - Documentation relevant to this workspace */}
+          {activeTab === 'docs' && (
+            <div className="space-y-4">
+              {/* Stats Row */}
+              {docsStatsData && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div className="text-xl font-bold text-cyan-400">{docsStatsData.total_documents}</div>
+                    <div className="text-xs text-gray-400">Total Docs</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div className="text-xl font-bold text-green-400">{docsStatsData.by_status?.active || 0}</div>
+                    <div className="text-xs text-gray-400">Active</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div className="text-xl font-bold text-purple-400">{docsStatsData.graph.total_links}</div>
+                    <div className="text-xs text-gray-400">Cross-Links</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div className="text-xl font-bold text-yellow-400">{docsData?.filtered_count || 0}</div>
+                    <div className="text-xs text-gray-400">Matching</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Filters */}
+              <div className="flex flex-wrap gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder={`Search docs (default: ${workspaceSearchTerms || 'all'})...`}
+                    value={docsSearch}
+                    onChange={(e) => setDocsSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <select
+                  value={docsStatusFilter}
+                  onChange={(e) => setDocsStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="">All Statuses</option>
+                  {docsData?.filters?.statuses?.map((status: string) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+                <select
+                  value={docsTypeFilter}
+                  onChange={(e) => setDocsTypeFilter(e.target.value)}
+                  className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="">All Types</option>
+                  {docsData?.filters?.types?.map((type: string) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <a
+                  href="/docs-index"
+                  className="px-3 py-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg text-sm hover:bg-cyan-500/30 flex items-center gap-1"
+                >
+                  <ExternalLink size={14} />
+                  Full Index
+                </a>
+              </div>
+
+              {/* Results */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Doc List */}
+                <div className="lg:col-span-2 space-y-2">
+                  {loadingDocs ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                    </div>
+                  ) : docsData?.documents?.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Book className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No matching documents</p>
+                    </div>
+                  ) : (
+                    docsData?.documents?.map((doc: DocsDocument) => {
+                      const isOrphan = doc.inbound_links_count === 0 && doc.outbound_links.length === 0
+                      return (
+                        <button
+                          key={doc.path}
+                          onClick={() => setSelectedDocPath(doc.path)}
+                          className={cn(
+                            'w-full text-left p-3 rounded-lg border transition-all',
+                            selectedDocPath === doc.path
+                              ? 'bg-cyan-500/10 border-cyan-500/50'
+                              : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className={cn(
+                                  'px-1.5 py-0.5 text-xs rounded border',
+                                  doc.status === 'active' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                  doc.status === 'superseded' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                                  doc.status === 'deprecated' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                  'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                                )}>
+                                  {doc.status}
+                                </span>
+                                {doc.type && <span className="text-xs text-purple-400">{doc.type}</span>}
+                                {isOrphan && (
+                                  <span className="text-xs text-yellow-500 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    orphan
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="font-medium text-sm truncate">{doc.title || doc.path.split('/').pop()}</h4>
+                              <p className="text-xs text-gray-500 truncate">{doc.path}</p>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-gray-400 flex-shrink-0">
+                              <span className="flex items-center gap-1" title="Outbound links">
+                                <ArrowRight className="w-3 h-3" />
+                                {doc.outbound_links.length}
+                              </span>
+                              <span className="flex items-center gap-1" title="Inbound links">
+                                <Link2 className="w-3 h-3" />
+                                {doc.inbound_links_count}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+
+                {/* Doc Detail Panel */}
+                <div className="card lg:col-span-1">
+                  {selectedDocPath ? (
+                    loadingDocDetail ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                      </div>
+                    ) : selectedDocData?.document ? (
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-sm truncate flex-1">
+                            {selectedDocData.document.title || selectedDocData.document.path.split('/').pop()}
+                          </h4>
+                          <button
+                            onClick={() => setSelectedDocPath(null)}
+                            className="p-1 hover:bg-gray-700 rounded"
+                          >
+                            <X className="w-4 h-4 text-gray-400" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 break-all">{selectedDocData.document.path}</p>
+
+                        {/* Status & Info */}
+                        <div className="flex flex-wrap gap-2">
+                          <span className={cn(
+                            'px-2 py-0.5 text-xs rounded border',
+                            selectedDocData.document.status === 'active' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                            selectedDocData.document.status === 'superseded' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                            'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                          )}>
+                            {selectedDocData.document.status}
+                          </span>
+                          <span className="px-2 py-0.5 text-xs rounded border border-gray-600 text-gray-400">
+                            {selectedDocData.document.lines} lines
+                          </span>
+                        </div>
+
+                        {/* Orphan Warning */}
+                        {selectedDocData.is_orphan && (
+                          <div className="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400 flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                            <span>Orphan: No inbound or outbound links</span>
+                          </div>
+                        )}
+
+                        {/* Outbound Links */}
+                        <div>
+                          <h5 className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-1">
+                            <ArrowRight className="w-3 h-3" />
+                            Outbound ({selectedDocData.document.outbound_links.length})
+                          </h5>
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {selectedDocData.document.outbound_links.slice(0, 5).map((link, i) => (
+                              <div key={i} className="text-xs p-1.5 bg-gray-800/50 rounded truncate">
+                                <span className="text-cyan-400">{link.target}</span>
+                                <span className="text-gray-500 ml-1">({link.occurrences}x)</span>
+                              </div>
+                            ))}
+                            {selectedDocData.document.outbound_links.length > 5 && (
+                              <p className="text-xs text-gray-500">+{selectedDocData.document.outbound_links.length - 5} more</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Inbound Links */}
+                        <div>
+                          <h5 className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-1">
+                            <Link2 className="w-3 h-3" />
+                            Inbound ({selectedDocData.inbound_count})
+                          </h5>
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {selectedDocData.inbound_links.slice(0, 5).map((link, i) => (
+                              <div key={i} className="text-xs p-1.5 bg-gray-800/50 rounded truncate">
+                                <span className="text-green-400">{link.title || link.source}</span>
+                                <span className="text-gray-500 ml-1">({link.occurrences}x)</span>
+                              </div>
+                            ))}
+                            {selectedDocData.inbound_count > 5 && (
+                              <p className="text-xs text-gray-500">+{selectedDocData.inbound_count - 5} more</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Open Full */}
+                        <a
+                          href={`/docs-index?search=${encodeURIComponent(selectedDocData.document.path)}`}
+                          className="block w-full text-center px-3 py-2 bg-cyan-500/20 text-cyan-400 rounded text-sm hover:bg-cyan-500/30"
+                        >
+                          View in Full Index
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Document not found</p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <Book className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Select a document to view details</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </>
