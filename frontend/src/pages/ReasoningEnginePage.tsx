@@ -82,6 +82,32 @@ interface ThoughtAction {
   created_at: string
 }
 
+// Session 782: Full concern detail from API
+interface ConcernDetail {
+  id: string
+  concern_text: string
+  category: string
+  severity: string
+  status: string
+  times_detected: number
+  days_active: number
+  first_seen_cycle: number | null
+  last_seen_cycle: number | null
+  actions_taken: Array<{
+    id: string
+    action_type: string
+    action_name: string
+    status: string
+    created_at: string
+  }>
+  verification_metric: string | null
+  last_verification: Record<string, unknown> | null
+  last_verified_at: string | null
+  resolution_notes: string | null
+  created_at: string
+  resolved_at: string | null
+}
+
 interface Action {
   id: string
   thought_id?: string
@@ -113,6 +139,7 @@ interface Concern {
 export default function ReasoningEnginePage() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null)
+  const [selectedConcern, setSelectedConcern] = useState<Concern | null>(null)
   const queryClient = useQueryClient()
 
   // Queries
@@ -156,6 +183,15 @@ export default function ReasoningEnginePage() {
 
   const thoughtDetail: ThoughtDetail | null = thoughtDetailData?.data?.thought || null
   const thoughtActions: ThoughtAction[] = thoughtDetailData?.data?.actions || []
+
+  // Session 782: Fetch full concern detail when a concern is selected
+  const { data: concernDetailData, isLoading: loadingConcernDetail } = useQuery({
+    queryKey: ['reasoning-concern-detail', selectedConcern?.id],
+    queryFn: () => selectedConcern ? reasoningApi.concernDetail(selectedConcern.id) : null,
+    enabled: !!selectedConcern?.id,
+  })
+
+  const concernDetail: ConcernDetail | null = concernDetailData?.data?.concern || null
 
   // Mutations
   const triggerReasoning = useMutation({
@@ -1063,14 +1099,15 @@ export default function ReasoningEnginePage() {
                 <div
                   key={concern.id}
                   className={cn(
-                    'card p-4 border',
+                    'card p-4 border cursor-pointer hover:border-primary-500/30 transition-all',
                     concern.status === 'resolved' || concern.status === 'dismissed'
                       ? 'opacity-60'
                       : getSeverityColor(concern.severity)
                   )}
+                  onClick={() => setSelectedConcern(selectedConcern?.id === concern.id ? null : concern)}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <AlertTriangle className={cn(
                           'h-4 w-4',
@@ -1089,6 +1126,10 @@ export default function ReasoningEnginePage() {
                       )}>
                         {concern.status}
                       </span>
+                      <ChevronRight className={cn(
+                        'h-4 w-4 text-gray-500 transition-transform',
+                        selectedConcern?.id === concern.id && 'rotate-90'
+                      )} />
                     </div>
                   </div>
 
@@ -1100,7 +1141,10 @@ export default function ReasoningEnginePage() {
                     </div>
                     {(concern.status === 'open' || concern.status === 'investigating') && (
                       <button
-                        onClick={() => resolveConcern.mutate({ id: concern.id })}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          resolveConcern.mutate({ id: concern.id })
+                        }}
                         disabled={resolveConcern.isPending}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent-green/20 text-accent-green hover:bg-accent-green/30"
                       >
@@ -1114,10 +1158,123 @@ export default function ReasoningEnginePage() {
                     )}
                   </div>
 
-                  {concern.resolution && (
-                    <div className="mt-3 pt-3 border-t border-dark-border">
-                      <p className="text-xs text-gray-500">Resolution:</p>
-                      <p className="text-sm mt-1">{concern.resolution}</p>
+                  {/* Session 782: Rich Expanded Concern Detail View */}
+                  {selectedConcern?.id === concern.id && (
+                    <div className="mt-4 pt-4 border-t border-dark-border space-y-4" onClick={(e) => e.stopPropagation()}>
+                      {loadingConcernDetail ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                        </div>
+                      ) : concernDetail ? (
+                        <>
+                          {/* Full Concern Text */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" /> Full Description
+                            </p>
+                            <p className="text-sm p-3 rounded-lg bg-dark-bg whitespace-pre-wrap">
+                              {concernDetail.concern_text}
+                            </p>
+                          </div>
+
+                          {/* Detection Info */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="p-2 rounded-lg bg-dark-bg">
+                              <p className="text-xs text-gray-500">Times Detected</p>
+                              <p className="text-lg font-semibold">{concernDetail.times_detected}</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-dark-bg">
+                              <p className="text-xs text-gray-500">Days Active</p>
+                              <p className="text-lg font-semibold">{concernDetail.days_active}</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-dark-bg">
+                              <p className="text-xs text-gray-500">First Seen</p>
+                              <p className="text-sm font-medium">
+                                {concernDetail.first_seen_cycle ? `Cycle #${concernDetail.first_seen_cycle}` : '—'}
+                              </p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-dark-bg">
+                              <p className="text-xs text-gray-500">Last Seen</p>
+                              <p className="text-sm font-medium">
+                                {concernDetail.last_seen_cycle ? `Cycle #${concernDetail.last_seen_cycle}` : '—'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Actions Taken */}
+                          {concernDetail.actions_taken && concernDetail.actions_taken.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <Zap className="h-3 w-3" /> Actions Taken ({concernDetail.actions_taken.length})
+                              </p>
+                              <div className="space-y-2">
+                                {concernDetail.actions_taken.map((action) => (
+                                  <div key={action.id} className="p-2 rounded-lg bg-dark-bg flex items-center gap-2">
+                                    {action.status === 'completed' ? (
+                                      <CheckCircle className="h-4 w-4 text-accent-green shrink-0" />
+                                    ) : action.status === 'failed' ? (
+                                      <XCircle className="h-4 w-4 text-accent-red shrink-0" />
+                                    ) : (
+                                      <Clock className="h-4 w-4 text-accent-amber shrink-0" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium truncate">{action.action_name}</p>
+                                      <p className="text-xs text-gray-500">{action.action_type}</p>
+                                    </div>
+                                    <span className={cn(
+                                      'px-2 py-0.5 rounded text-xs shrink-0',
+                                      getStatusColor(action.status)
+                                    )}>
+                                      {action.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Verification Info */}
+                          {concernDetail.verification_metric && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <Eye className="h-3 w-3" /> Verification
+                              </p>
+                              <div className="p-3 rounded-lg bg-dark-bg">
+                                <p className="text-sm mb-1">
+                                  <span className="text-gray-500">Metric:</span> {concernDetail.verification_metric}
+                                </p>
+                                {concernDetail.last_verified_at && (
+                                  <p className="text-xs text-gray-500">
+                                    Last verified: {formatDate(concernDetail.last_verified_at)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Resolution Notes */}
+                          {concernDetail.resolution_notes && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" /> Resolution Notes
+                              </p>
+                              <p className="text-sm p-3 rounded-lg bg-accent-green/10 border border-accent-green/20">
+                                {concernDetail.resolution_notes}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Metadata */}
+                          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 pt-2 border-t border-dark-border">
+                            <span>Created: {formatDate(concernDetail.created_at)}</span>
+                            {concernDetail.resolved_at && (
+                              <span>Resolved: {formatDate(concernDetail.resolved_at)}</span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No details available</p>
+                      )}
                     </div>
                   )}
                 </div>
