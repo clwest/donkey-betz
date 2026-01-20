@@ -1721,8 +1721,15 @@ export const reasoningApi = {
     api.get('/v1/reasoning/actions/', { params }),
   actionDetail: (id: string) => api.get(`/v1/reasoning/actions/${id}/`),
   pendingActions: () => api.get('/v1/reasoning/actions/pending/'),
-  approveAction: (id: string) => api.post(`/v1/reasoning/actions/${id}/approve/`),
-  rejectAction: (id: string) => api.post(`/v1/reasoning/actions/${id}/reject/`),
+  // Session 782: Fix - use /respond/ endpoint with action body
+  respondToAction: (id: string, action: string, notes?: string) =>
+    api.post(`/v1/reasoning/actions/${id}/respond/`, { action, notes: notes || '' }),
+  approveAction: (id: string, notes?: string) =>
+    api.post(`/v1/reasoning/actions/${id}/respond/`, { action: 'accept', notes: notes || '' }),
+  rejectAction: (id: string, notes?: string) =>
+    api.post(`/v1/reasoning/actions/${id}/respond/`, { action: 'reject', notes: notes || '' }),
+  deferAction: (id: string, notes?: string) =>
+    api.post(`/v1/reasoning/actions/${id}/respond/`, { action: 'defer', notes: notes || '' }),
 
   // Concerns (issues detected)
   concerns: (params?: { limit?: number; severity?: string }) =>

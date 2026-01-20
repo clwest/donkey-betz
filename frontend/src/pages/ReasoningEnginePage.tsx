@@ -82,6 +82,24 @@ interface ThoughtAction {
   created_at: string
 }
 
+// Session 782: Pending action notification from API
+interface PendingNotification {
+  id: string
+  title: string
+  message: string
+  priority: string
+  category: string
+  severity: string
+  concern_id: string | null
+  quick_actions: Array<{
+    label: string
+    style: string
+    action: string
+  }>
+  created_at: string
+  is_read: boolean
+}
+
 // Session 782: Full concern detail from API
 interface ConcernDetail {
   id: string
@@ -218,6 +236,14 @@ export default function ReasoningEnginePage() {
     },
   })
 
+  const deferAction = useMutation({
+    mutationFn: (id: string) => reasoningApi.deferAction(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reasoning-actions'] })
+      queryClient.invalidateQueries({ queryKey: ['reasoning-pending-actions'] })
+    },
+  })
+
   const resolveConcern = useMutation({
     mutationFn: ({ id, resolution }: { id: string; resolution?: string }) =>
       reasoningApi.resolveConcern(id, { resolution }),
@@ -331,18 +357,34 @@ export default function ReasoningEnginePage() {
   })) : []
 
   // Map pending actions (different API structure - uses notifications)
-  const rawPendingActions = pendingActionsData?.data?.notifications || pendingActionsData?.data?.actions || []
-  const pendingActions: Action[] = Array.isArray(rawPendingActions) ? rawPendingActions.map((a: Record<string, unknown>) => ({
-    id: a.id as string,
-    thought_id: a.thought_record_id as string,
-    action_type: a.action_type as string || a.notification_type as string || 'action',
-    description: (a.message as string) || (a.action_name as string) || 'Pending action',
+  // Session 782: Use full notification structure for better detail display
+  const rawPendingNotifications = pendingActionsData?.data?.notifications || []
+  const pendingNotifications: PendingNotification[] = Array.isArray(rawPendingNotifications)
+    ? rawPendingNotifications.map((n: Record<string, unknown>) => ({
+        id: n.id as string,
+        title: n.title as string || 'Action Required',
+        message: n.message as string || '',
+        priority: n.priority as string || 'medium',
+        category: n.category as string || 'general',
+        severity: n.severity as string || 'medium',
+        concern_id: n.concern_id as string | null,
+        quick_actions: (n.quick_actions as PendingNotification['quick_actions']) || [],
+        created_at: n.created_at as string,
+        is_read: n.is_read as boolean || false,
+      }))
+    : []
+
+  // Legacy format for backwards compatibility
+  const pendingActions: Action[] = pendingNotifications.map((n) => ({
+    id: n.id,
+    action_type: n.category,
+    description: n.message,
     status: 'pending' as const,
-    priority: mapPriority(a.priority as string),
-    created_at: a.created_at as string,
+    priority: mapPriority(n.priority),
+    created_at: n.created_at,
     requires_approval: true,
     agent_name: 'ThinkingAgent',
-  })) : []
+  }))
 
   // Map concerns from API format
   const rawConcerns = concernsData?.data?.recent || concernsData?.data?.concerns || []
@@ -944,58 +986,111 @@ export default function ReasoningEnginePage() {
       {/* Actions Tab */}
       {activeTab === 'actions' && (
         <div className="space-y-6">
-          {/* Pending Actions */}
-          {pendingActions.length > 0 && (
+          {/* Session 782: Enhanced Pending Actions with full notification details */}
+          {pendingNotifications.length > 0 && (
             <div className="card p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-accent-amber flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Pending Approval ({pendingActions.length})
+                  Pending Approval ({pendingNotifications.length})
                 </h3>
               </div>
-              <div className="space-y-3">
-                {pendingActions.map((action) => (
-                  <div key={action.id} className="p-4 rounded-lg bg-dark-bg border border-accent-amber/30">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={cn('text-sm font-medium', getPriorityColor(action.priority))}>
-                            [{action.priority.toUpperCase()}]
-                          </span>
-                          <span className="text-sm text-gray-400">{action.action_type}</span>
-                        </div>
-                        <p className="font-medium">{action.description}</p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Created: {formatDate(action.created_at)}
-                          {action.agent_name && ` • by ${action.agent_name}`}
-                        </p>
-                      </div>
+              <div className="space-y-4">
+                {pendingNotifications.map((notification) => (
+                  <div key={notification.id} className={cn(
+                    'p-4 rounded-lg border',
+                    notification.severity === 'high' ? 'bg-accent-red/10 border-accent-red/30' :
+                    notification.severity === 'medium' ? 'bg-accent-amber/10 border-accent-amber/30' :
+                    'bg-dark-bg border-dark-border'
+                  )}>
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => approveAction.mutate(action.id)}
-                          disabled={approveAction.isPending}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent-green/20 text-accent-green hover:bg-accent-green/30"
-                        >
-                          {approveAction.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4" />
-                          )}
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => rejectAction.mutate(action.id)}
-                          disabled={rejectAction.isPending}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent-red/20 text-accent-red hover:bg-accent-red/30"
-                        >
-                          {rejectAction.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <XCircle className="h-4 w-4" />
-                          )}
-                          Reject
-                        </button>
+                        <AlertTriangle className={cn(
+                          'h-5 w-5',
+                          notification.severity === 'high' ? 'text-accent-red' :
+                          notification.severity === 'medium' ? 'text-accent-amber' : 'text-gray-400'
+                        )} />
+                        <div>
+                          <h4 className="font-semibold">{notification.title}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={cn(
+                              'px-1.5 py-0.5 rounded text-xs',
+                              notification.severity === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                              notification.severity === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                              'bg-gray-500/20 text-gray-400'
+                            )}>
+                              {notification.severity}
+                            </span>
+                            <span className="text-xs text-gray-500">{notification.category}</span>
+                          </div>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Full Message */}
+                    <div className="mb-4">
+                      <p className="text-sm p-3 rounded-lg bg-dark-bg/50 whitespace-pre-wrap">
+                        {notification.message}
+                      </p>
+                    </div>
+
+                    {/* What happens section */}
+                    <div className="mb-4 p-3 rounded-lg bg-primary-500/10 border border-primary-500/20">
+                      <p className="text-xs text-primary-400 font-medium mb-1">What happens when you respond:</p>
+                      <ul className="text-xs text-gray-400 space-y-1">
+                        <li>• <span className="text-accent-green">Accept Risk</span>: Acknowledge the concern and continue with current approach</li>
+                        <li>• <span className="text-accent-red">Reject</span>: Flag this as a problem that needs immediate attention</li>
+                        <li>• <span className="text-gray-400">Defer</span>: Postpone the decision for later review</li>
+                      </ul>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                      <span>Created: {formatDate(notification.created_at)}</span>
+                      {notification.concern_id && (
+                        <span>Linked to concern</span>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 pt-3 border-t border-dark-border">
+                      <button
+                        onClick={() => approveAction.mutate(notification.id)}
+                        disabled={approveAction.isPending || rejectAction.isPending || deferAction.isPending}
+                        className="flex items-center gap-1 px-4 py-2 rounded-lg bg-accent-green/20 text-accent-green hover:bg-accent-green/30 transition-colors"
+                      >
+                        {approveAction.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                        Accept Risk
+                      </button>
+                      <button
+                        onClick={() => rejectAction.mutate(notification.id)}
+                        disabled={approveAction.isPending || rejectAction.isPending || deferAction.isPending}
+                        className="flex items-center gap-1 px-4 py-2 rounded-lg bg-accent-red/20 text-accent-red hover:bg-accent-red/30 transition-colors"
+                      >
+                        {rejectAction.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <XCircle className="h-4 w-4" />
+                        )}
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => deferAction.mutate(notification.id)}
+                        disabled={approveAction.isPending || rejectAction.isPending || deferAction.isPending}
+                        className="flex items-center gap-1 px-4 py-2 rounded-lg bg-gray-500/20 text-gray-400 hover:bg-gray-500/30 transition-colors"
+                      >
+                        {deferAction.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Clock className="h-4 w-4" />
+                        )}
+                        Defer
+                      </button>
                     </div>
                   </div>
                 ))}
