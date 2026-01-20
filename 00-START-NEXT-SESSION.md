@@ -1,75 +1,69 @@
-# Session 784 - Ready for Next Task
+# Session 785 - Ready for Next Task
 
-**Previous Session:** 783 (Spider News Feed)
+**Previous Session:** 784 (Documentation Index Browser)
 **Date:** January 20, 2026
-**Status:** 74/74 Agents Complete | 44 Frontend Pages | Spider News Feed Live
+**Status:** 74/74 Agents Complete | 45 Frontend Pages | Docs Index Browser Live
 
 ---
 
-## Session 783 Accomplishments
+## Session 784 Accomplishments
 
-### Spider News Feed - Human-Facing Feed for Spider Data with Agent Annotations
+### Documentation Index Browser - Cognitive Build Ledger UI
 
-Created a Reddit/Yahoo News-style feed that surfaces spider data annotated by agents. Humans can browse, filter, search, and vote on items that agents have flagged as useful, profitable, podcast-worthy, etc.
+Created a full-featured UI for browsing the documentation index (`docs/_index.json`). The index tracks 1,512 documents with status badges, cross-reference graph, broken link detection, and orphan warnings.
 
-**New Components:**
+**Session 784 Commits:**
+```
+9bc551bd feat(Session 784): Documentation Index Browser UI
+2e46f04d feat(Session 784): Documentation index v2.2 - context & broken links
+e74e5b7a feat(Session 784): Cross-reference graph for documentation index
+9d7832ef feat(Session 784): Auto-generated documentation index
+```
 
-#### 1. Database Model: `SpiderDataAnnotation`
-- 8 annotation types: useful, profitable, podcast_worthy, breaking_news, investment_opportunity, action_required, warning, trending
-- Tracks confidence_score, note, agent_name
-- Engagement metrics: upvotes, downvotes, view_count
+#### 1. Backend: `build_docs_index` v2.2
+Enhanced the management command with:
+- **Code block filtering** - Strips fenced/indented code before extracting links
+- **Link context** - Tracks occurrences count + context snippets per link
+- **Broken links detection** - 100 broken links found
+- **Cross-reference graph** - 1,816 total links mapped
 
-#### 2. Backend API: 6 Endpoints
+#### 2. Backend API: 4 Endpoints (`core/views_docs_index.py`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/spider-feed/` | Main feed with filters & pagination |
-| GET | `/api/spider-feed/trending/` | Most annotated items (24h) |
-| GET | `/api/spider-feed/item/<id>/` | Single item detail |
-| POST | `/api/spider-feed/<id>/annotate/` | Agent creates annotation |
-| POST | `/api/spider-feed/<id>/vote/` | Human upvote/downvote |
-| GET | `/api/spider-feed/stats/` | Feed statistics |
+| GET | `/api/docs/index/` | Full index with filtering (status, type, subsystem, search) |
+| GET | `/api/docs/stats/` | Stats for dashboard widgets |
+| GET | `/api/docs/graph/` | Cross-reference graph summary |
+| GET | `/api/docs/detail/<path>/` | Document detail with inbound/outbound links |
 
-#### 3. Agent Integration
-- Added `_annotate_spider_data()` method to `BaseAgent`
-- Any agent can now flag interesting spider data during execution
+#### 3. Frontend: DocsIndexPage (~400 lines)
+- **Stats Dashboard** - Total docs (1,512), active (384), cross-links (1,816), broken (100), orphans (50)
+- **Filterable List** - Search, status filter, type filter
+- **Document Cards** - Status badge, type, orphan warning, link counts
+- **DocDetailsPanel** - Slide-out panel showing:
+  - Status badge, lines, type, frontmatter indicator
+  - Orphan warning (yellow banner)
+  - Subsystems list
+  - Outbound links with occurrences and context snippets
+  - Inbound links with occurrences and context snippets
 
-#### 4. Frontend: SpiderFeedPage (588 lines)
-- Stats summary cards (annotated items, total annotations, 24h, 7d)
-- Trending items section (top 3 most annotated)
-- Filterable feed (source, category, annotation type, search, sort)
-- Colored annotation badges
-- Upvote/downvote functionality
-- Item detail modal
+**Status Badges:**
+- `active` - Green (384 docs)
+- `superseded` - Yellow (1,128 docs)
+- `deprecated` - Red
+- `draft` - Blue
+- `unknown` - Gray
 
-**Badge Colors:**
-- `breaking_news` - Red
-- `profitable` - Green
-- `podcast_worthy` - Purple
-- `warning` - Orange
-- `useful` - Blue
-- `trending` - Cyan
-- `investment_opportunity` - Emerald
-- `action_required` - Amber
-
-**Route:** `/spider-feed`
+**Route:** `/docs-index`
 
 **Files Created/Modified:**
-- `core/models_unified_system.py` (+SpiderDataAnnotation model)
-- `core/migrations/0177_spider_data_annotation.py` (new migration)
-- `core/views_spider_feed.py` (new, 500 lines)
-- `core/urls.py` (+6 routes)
+- `core/management/commands/build_docs_index.py` (v2.2 with code block filtering, snippets, broken links)
+- `core/views_docs_index.py` (new, ~210 lines)
+- `core/urls.py` (+4 routes)
 - `core/auth_middleware.py` (+PUBLIC_PATH)
-- `core/agents/base_agent.py` (+_annotate_spider_data method)
-- `frontend/src/pages/SpiderFeedPage.tsx` (new, 588 lines)
-- `frontend/src/lib/api.ts` (+spiderFeedApi)
+- `frontend/src/lib/api.ts` (+docsIndexApi with TypeScript interfaces)
+- `frontend/src/pages/DocsIndexPage.tsx` (new, ~400 lines)
 - `frontend/src/App.tsx` (+route)
-- `frontend/src/components/layout/Sidebar.tsx` (+nav item)
-
-**Commits:**
-```
-60c39ab3 feat(Session 783): Spider News Feed with agent annotations
-e2d23d0d feat(Session 783): Add Spider Feed to sidebar navigation
-```
+- `frontend/src/components/layout/Sidebar.tsx` (+nav item with Book icon)
 
 ---
 
@@ -83,9 +77,9 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Navigate to Spider Feed
-# Click "Spider Feed" in sidebar (Newspaper icon)
-# Or visit http://localhost:3001/spider-feed (dev server)
+# 3. Navigate to Docs Index
+# Click "Docs Index" in sidebar (Book icon)
+# Or visit http://localhost:3001/docs-index (dev server)
 ```
 
 ---
@@ -97,15 +91,15 @@ The platform is feature-complete with:
 - 77 spiders (72 working)
 - 9 body systems
 - 14 sci-fi features
-- 44 frontend pages
-- Spider News Feed for human-agent collaboration
+- 45 frontend pages
+- Documentation Index Browser for codebase navigation
 
 Potential areas for future work:
-1. **Auto-annotation by agents** - Have agents automatically call `_annotate_spider_data()` when they find interesting items during execution
-2. **Celery task for annotation cleanup** - Remove old/low-engagement annotations
-3. **User-specific feeds** - Filter by user's interests
-4. **Notification system** - Alert users to new breaking_news or action_required items
-5. **Analytics dashboard** - Track which annotations lead to user actions
+1. **Fix broken links** - 100 broken internal doc references need fixing
+2. **Reduce orphans** - 50 orphan docs need integration or removal
+3. **Add frontmatter** - 0 docs have frontmatter metadata
+4. **Visualize graph** - Force-directed graph of document relationships
+5. **Auto-fix suggestions** - Suggest fixes for broken links
 
 ---
 
@@ -113,49 +107,43 @@ Potential areas for future work:
 
 | File | Purpose |
 |------|---------|
-| `core/views_spider_feed.py` | Spider News Feed API (6 endpoints) |
-| `core/models_unified_system.py` | SpiderDataAnnotation model (~line 3190) |
-| `core/agents/base_agent.py` | _annotate_spider_data() method |
-| `frontend/src/pages/SpiderFeedPage.tsx` | Feed UI with filters, voting, trending |
-| `docs/handoffs/SESSION_783_SPIDER_NEWS_FEED.md` | Full implementation details |
+| `core/management/commands/build_docs_index.py` | Documentation indexer v2.2 |
+| `core/views_docs_index.py` | Docs Index API (4 endpoints) |
+| `docs/_index.json` | Generated documentation index |
+| `docs/INDEX.md` | Human-readable index summary |
+| `frontend/src/pages/DocsIndexPage.tsx` | Browser UI with filters & detail panel |
 
 ---
 
 ## Verification
 
-Test the Spider News Feed API:
+Test the Documentation Index API:
 ```bash
-# Get feed stats
-curl http://localhost:8000/api/spider-feed/stats/
+# Get stats
+curl http://localhost:8000/api/docs/stats/
 
-# Get main feed
-curl http://localhost:8000/api/spider-feed/
+# Get index with filter
+curl "http://localhost:8000/api/docs/index/?status=active&limit=5"
 
-# Get trending items
-curl http://localhost:8000/api/spider-feed/trending/
+# Get document detail
+curl "http://localhost:8000/api/docs/detail/CLAUDE.md/"
+
+# Get graph summary
+curl http://localhost:8000/api/docs/graph/
+```
+
+Rebuild the index after doc changes:
+```bash
+python manage.py build_docs_index
+
+# Or dry-run to preview
+python manage.py build_docs_index --dry-run
 ```
 
 Verify frontend:
 1. Start frontend: `cd frontend && npm run dev`
-2. Navigate to http://localhost:3001/spider-feed
-3. See stats cards at top
-4. See trending section (if items exist)
-5. Use filters (source, category, annotation type)
-6. Click items to see detail modal
-
-Test agent annotation (Django shell):
-```python
-from core.models_unified_system import SpiderData, SpiderDataAnnotation
-
-# Get a spider data item
-item = SpiderData.objects.first()
-
-# Create annotation
-SpiderDataAnnotation.objects.create(
-    spider_data=item,
-    annotation_type='profitable',
-    confidence_score=0.85,
-    note='High ROI opportunity based on market analysis',
-    agent_name='TestAgent'
-)
-```
+2. Navigate to http://localhost:3001/docs-index
+3. See stats cards at top (docs, links, broken, orphans)
+4. Use filters (status, type, search)
+5. Click document to see detail panel
+6. Check inbound/outbound links with snippets
