@@ -1,30 +1,103 @@
 """
-Management command to generate docs/INDEX.md automatically.
+Management command to generate docs/INDEX.md and docs/_index.json automatically.
 
-This ensures INDEX.md always reflects reality and never goes stale.
+This ensures documentation index always reflects reality and never goes stale.
 
 Usage:
     python manage.py build_docs_index
     python manage.py build_docs_index --dry-run  # Preview without writing
+    python manage.py build_docs_index --json-only  # Only generate _index.json
+
+Frontmatter Format (optional, for new docs):
+    ---
+    subsystems: [agents, spiders, body]
+    decision_types: [bug_fix, feature, refactor, design]
+    status: active|superseded|deprecated|draft
+    see_also: [SESSION_123_FOO.md, ARCHITECTURE.md]
+    supersedes: SESSION_100_OLD_FEATURE.md
+    ---
+
+Cross-Reference Graph:
+    The index automatically detects document references:
+    - Explicit links: [text](SESSION_123.md) or [text](docs/handoffs/FILE.md)
+    - File mentions: SESSION_123_FOO.md, ARCHITECTURE.md
+    - see_also frontmatter references
+
+    Each document includes:
+    - outbound_links: list of documents this file references
+    - inbound_links_count: number of documents that reference this file
 """
+import json
 import os
 import re
+import yaml
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
+from typing import Optional
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
 
 class Command(BaseCommand):
-    help = 'Generate docs/INDEX.md by scanning all documentation files'
+    help = 'Generate docs/INDEX.md and docs/_index.json by scanning all documentation files'
+
+    # Document type inference from folder/filename
+    DOC_TYPES = {
+        'handoffs': 'handoff',
+        'audits': 'audit',
+        'designs': 'design',
+        'roadmaps': 'roadmap',
+        'architecture': 'architecture',
+        'guides': 'guide',
+        'apis': 'api',
+        'features': 'feature',
+        'plans': 'plan',
+        'reports': 'report',
+        'body': 'body_system',
+        'current': 'guide',
+        'archive': 'archive',
+    }
+
+    # Valid frontmatter fields
+    FRONTMATTER_FIELDS = {
+        'subsystems': list,
+        'decision_types': list,
+        'status': str,
+        'see_also': list,
+        'supersedes': str,
+    }
+
+    # Valid status values
+    VALID_STATUSES = {'active', 'superseded', 'deprecated', 'draft'}
+
+    # Valid decision types
+    VALID_DECISION_TYPES = {
+        'bug_fix', 'feature', 'refactor', 'design', 'audit',
+        'documentation', 'performance', 'security', 'integration',
+        'ui', 'api', 'database', 'infrastructure', 'cleanup'
+    }
+
+    # Valid subsystems
+    VALID_SUBSYSTEMS = {
+        'agents', 'spiders', 'body', 'heart', 'lungs', 'brain', 'spine',
+        'circulatory', 'digestive', 'muscular', 'immune', 'skin',
+        'frontend', 'backend', 'celery', 'database', 'api', 'websocket',
+        'llm', 'memory', 'learning', 'scifi', 'discord', 'legal',
+        'podcast', 'content', 'workflow', 'orchestration', 'integration'
+    }
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--dry-run',
             action='store_true',
-            help='Preview the generated INDEX.md without writing to file',
+            help='Preview the generated files without writing',
+        )
+        parser.add_argument(
+            '--json-only',
+            action='store_true',
+            help='Only generate _index.json, not INDEX.md',
         )
 
     def handle(self, *args, **options):
@@ -35,106 +108,470 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR(f'docs/ directory not found at {docs_dir}'))
             return
 
-        # Gather all documentation statistics
-        stats = self._gather_stats(docs_dir, base_dir)
+        # Gather all documentation with metadata
+        doc_index = self._build_doc_index(docs_dir, base_dir)
 
-        # Generate the INDEX.md content
-        content = self._generate_index(stats, base_dir)
+        # Gather stats for INDEX.md
+        stats = self._gather_stats(docs_dir, base_dir, doc_index)
 
         if options['dry_run']:
-            self.stdout.write(self.style.WARNING('\n=== DRY RUN - Preview of INDEX.md ===\n'))
-            self.stdout.write(content)
-            self.stdout.write(self.style.WARNING('\n=== END PREVIEW ==='))
-        else:
-            index_path = docs_dir / 'INDEX.md'
-            with open(index_path, 'w') as f:
-                f.write(content)
-            self.stdout.write(self.style.SUCCESS(f'Generated {index_path}'))
-            self.stdout.write(f'  - Total docs: {stats["total_files"]}')
-            self.stdout.write(f'  - Total lines: {stats["total_lines"]:,}')
-            self.stdout.write(f'  - Handoffs: {stats["folder_counts"].get("handoffs", 0)}')
-            self.stdout.write(f'  - Audits: {stats["folder_counts"].get("audits", 0)}')
+            self.stdout.write(self.style.WARNING('\n=== DRY RUN ===\n'))
+            self.stdout.write(f'Would generate:')
+            self.stdout.write(f'  - docs/_index.json ({len(doc_index["documents"])} documents)')
+            if not options['json_only']:
+                self.stdout.write(f'  - docs/INDEX.md')
+            self.stdout.write(f'\nStatus summary:')
+            for status, count in stats['status_counts'].items():
+                self.stdout.write(f'  - {status}: {count}')
 
-    def _gather_stats(self, docs_dir: Path, base_dir: Path) -> dict:
-        """Scan docs directory and gather statistics."""
-        stats = {
-            'total_files': 0,
-            'total_lines': 0,
-            'folder_counts': {},
-            'recent_files': [],
-            'session_files': [],
-            'top_level_docs': [],
-            'subdirectories': [],
-            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            # Graph summary
+            graph = doc_index.get('graph', {})
+            self.stdout.write(f'\nCross-Reference Graph:')
+            self.stdout.write(f'  - Total links: {graph.get("total_links", 0)}')
+            self.stdout.write(f'  - Orphan docs: {len(graph.get("orphan_docs", []))}')
+            if graph.get('most_referenced'):
+                self.stdout.write(f'  - Most referenced:')
+                for ref in graph['most_referenced'][:5]:
+                    self.stdout.write(f'      {ref["path"]} ({ref["count"]} refs)')
+
+            self.stdout.write(f'\nSample JSON entry:')
+            if doc_index['documents']:
+                sample = doc_index['documents'][0]
+                self.stdout.write(json.dumps(sample, indent=2, default=str))
+        else:
+            # Write _index.json
+            json_path = docs_dir / '_index.json'
+            with open(json_path, 'w') as f:
+                json.dump(doc_index, f, indent=2, default=str)
+            self.stdout.write(self.style.SUCCESS(f'Generated {json_path}'))
+            self.stdout.write(f'  - Documents indexed: {len(doc_index["documents"])}')
+            self.stdout.write(f'  - With frontmatter: {stats["with_frontmatter"]}')
+
+            if not options['json_only']:
+                # Write INDEX.md
+                content = self._generate_index(stats, base_dir, doc_index)
+                index_path = docs_dir / 'INDEX.md'
+                with open(index_path, 'w') as f:
+                    f.write(content)
+                self.stdout.write(self.style.SUCCESS(f'Generated {index_path}'))
+                self.stdout.write(f'  - Total docs: {stats["total_files"]}')
+                self.stdout.write(f'  - Total lines: {stats["total_lines"]:,}')
+
+            # Print status summary
+            self.stdout.write(f'\nStatus Summary:')
+            for status, count in sorted(stats['status_counts'].items()):
+                self.stdout.write(f'  - {status}: {count}')
+
+    def _build_doc_index(self, docs_dir: Path, base_dir: Path) -> dict:
+        """Build comprehensive document index with metadata."""
+        index = {
+            'generated_at': datetime.now().isoformat(),
+            'generator': 'build_docs_index',
+            'version': '2.1',  # Updated for cross-reference graph
+            'documents': [],
+            'by_type': defaultdict(list),
+            'by_status': defaultdict(list),
+            'by_subsystem': defaultdict(list),
+            'by_session': {},
+            'graph': {
+                'total_links': 0,
+                'most_referenced': [],
+                'orphan_docs': [],
+            },
         }
 
-        # Scan docs directory
-        for item in docs_dir.iterdir():
-            if item.is_file() and item.suffix == '.md':
-                stats['top_level_docs'].append({
-                    'name': item.name,
-                    'path': str(item.relative_to(base_dir)),
-                    'size': item.stat().st_size,
-                    'mtime': datetime.fromtimestamp(item.stat().st_mtime),
-                    'lines': self._count_lines(item),
-                })
-                stats['total_files'] += 1
-                stats['total_lines'] += stats['top_level_docs'][-1]['lines']
-            elif item.is_dir() and not item.name.startswith('.'):
-                stats['subdirectories'].append(item.name)
-                folder_files = list(item.rglob('*.md'))
-                stats['folder_counts'][item.name] = len(folder_files)
-                stats['total_files'] += len(folder_files)
+        # First pass: collect all document paths
+        all_files = []
+        for md_file in docs_dir.rglob('*.md'):
+            if md_file.name.startswith('_'):
+                continue
+            all_files.append((md_file, False))
 
-                for f in folder_files:
-                    lines = self._count_lines(f)
-                    stats['total_lines'] += lines
+        # Add root-level docs
+        for root_doc in ['CLAUDE.md', '00-START-NEXT-SESSION.md']:
+            root_path = base_dir / root_doc
+            if root_path.exists():
+                all_files.append((root_path, True))
 
-                    # Track recent files
-                    mtime = datetime.fromtimestamp(f.stat().st_mtime)
-                    stats['recent_files'].append({
-                        'name': f.name,
-                        'path': str(f.relative_to(base_dir)),
-                        'folder': item.name,
-                        'mtime': mtime,
-                        'lines': lines,
-                    })
+        # Build set of all canonical doc paths for link resolution
+        all_doc_paths = set()
+        path_to_file = {}  # Map canonical path to actual file
+        for filepath, is_root in all_files:
+            if is_root:
+                canonical = filepath.name
+            else:
+                canonical = str(filepath.relative_to(base_dir))
+            all_doc_paths.add(canonical)
+            path_to_file[canonical] = filepath
 
-                    # Extract session number if present
-                    session_match = re.search(r'SESSION_(\d+)', f.name)
-                    if session_match:
-                        stats['session_files'].append({
-                            'session': int(session_match.group(1)),
-                            'name': f.name,
-                            'path': str(f.relative_to(base_dir)),
-                            'folder': item.name,
-                            'mtime': mtime,
-                        })
+        # Second pass: extract metadata and links
+        for filepath, is_root in all_files:
+            doc_meta = self._extract_doc_metadata(filepath, docs_dir, base_dir, is_root=is_root)
 
-        # Sort recent files by modification time
-        stats['recent_files'].sort(key=lambda x: x['mtime'], reverse=True)
+            # Extract outbound links
+            outbound = self._extract_links(filepath, all_doc_paths)
 
-        # Sort session files by session number
-        stats['session_files'].sort(key=lambda x: x['session'], reverse=True)
+            # Add see_also from frontmatter
+            if doc_meta.get('see_also'):
+                for see_also_ref in doc_meta['see_also']:
+                    normalized = self._normalize_doc_path(see_also_ref, all_doc_paths)
+                    if normalized and normalized not in outbound:
+                        outbound.append(normalized)
 
-        # Also check for key files outside docs/
-        key_files = ['CLAUDE.md', '00-START-NEXT-SESSION.md']
-        for kf in key_files:
-            kf_path = base_dir / kf
-            if kf_path.exists():
-                lines = self._count_lines(kf_path)
-                stats['top_level_docs'].insert(0, {
-                    'name': kf,
-                    'path': kf,
-                    'size': kf_path.stat().st_size,
-                    'mtime': datetime.fromtimestamp(kf_path.stat().st_mtime),
-                    'lines': lines,
-                    'root': True,
-                })
-                stats['total_files'] += 1
-                stats['total_lines'] += lines
+            doc_meta['outbound_links'] = outbound
+            doc_meta['inbound_links_count'] = 0  # Will be calculated in third pass
 
-        return stats
+            index['documents'].append(doc_meta)
+
+            # Index by type
+            index['by_type'][doc_meta['type']].append(doc_meta['path'])
+
+            # Index by status
+            if doc_meta.get('status'):
+                index['by_status'][doc_meta['status']].append(doc_meta['path'])
+
+            # Index by subsystems
+            for subsystem in doc_meta.get('subsystems', []):
+                index['by_subsystem'][subsystem].append(doc_meta['path'])
+
+            # Index by session
+            if doc_meta.get('session'):
+                index['by_session'][doc_meta['session']] = doc_meta['path']
+
+        # Third pass: calculate inbound link counts
+        inbound_counts = defaultdict(int)
+        total_links = 0
+        for doc in index['documents']:
+            for outbound_link in doc.get('outbound_links', []):
+                inbound_counts[outbound_link] += 1
+                total_links += 1
+
+        # Update documents with inbound counts
+        for doc in index['documents']:
+            doc['inbound_links_count'] = inbound_counts.get(doc['path'], 0)
+
+        # Build graph summary
+        index['graph']['total_links'] = total_links
+
+        # Find most referenced documents
+        docs_by_inbound = sorted(
+            [(doc['path'], doc['inbound_links_count'], doc.get('title', ''))
+             for doc in index['documents']],
+            key=lambda x: x[1],
+            reverse=True
+        )
+        index['graph']['most_referenced'] = [
+            {'path': path, 'count': count, 'title': title}
+            for path, count, title in docs_by_inbound[:20]
+            if count > 0
+        ]
+
+        # Find orphan docs (no inbound or outbound links)
+        orphans = [
+            doc['path'] for doc in index['documents']
+            if doc['inbound_links_count'] == 0 and len(doc.get('outbound_links', [])) == 0
+        ]
+        index['graph']['orphan_docs'] = orphans[:50]  # Limit to 50
+
+        # Convert defaultdicts to regular dicts for JSON serialization
+        index['by_type'] = dict(index['by_type'])
+        index['by_status'] = dict(index['by_status'])
+        index['by_subsystem'] = dict(index['by_subsystem'])
+
+        # Sort documents by path
+        index['documents'].sort(key=lambda x: x['path'])
+
+        return index
+
+    def _extract_doc_metadata(self, filepath: Path, docs_dir: Path, base_dir: Path, is_root: bool = False) -> dict:
+        """Extract metadata from a document file."""
+        stat = filepath.stat()
+
+        # Basic metadata
+        meta = {
+            'path': str(filepath.relative_to(base_dir)),
+            'filename': filepath.name,
+            'folder': str(filepath.parent.relative_to(base_dir)) if not is_root else '',
+            'lines': self._count_lines(filepath),
+            'size_bytes': stat.st_size,
+            'modified_at': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            'created_at': datetime.fromtimestamp(stat.st_ctime).isoformat(),
+        }
+
+        # Infer document type
+        meta['type'] = self._infer_doc_type(filepath, docs_dir, is_root)
+
+        # Extract session number if present
+        session_match = re.search(r'SESSION_(\d+)', filepath.name)
+        if session_match:
+            meta['session'] = int(session_match.group(1))
+
+        # Extract title from content
+        meta['title'] = self._extract_title(filepath)
+
+        # Parse frontmatter if present
+        frontmatter = self._parse_frontmatter(filepath)
+        if frontmatter:
+            meta['has_frontmatter'] = True
+            # Merge frontmatter fields
+            for field in self.FRONTMATTER_FIELDS:
+                if field in frontmatter:
+                    meta[field] = frontmatter[field]
+        else:
+            meta['has_frontmatter'] = False
+
+        # Infer subsystems from content if not in frontmatter
+        if 'subsystems' not in meta:
+            meta['subsystems'] = self._infer_subsystems(filepath, meta)
+
+        # Default status for docs without frontmatter
+        if 'status' not in meta:
+            meta['status'] = self._infer_status(meta)
+
+        return meta
+
+    def _infer_doc_type(self, filepath: Path, docs_dir: Path, is_root: bool) -> str:
+        """Infer document type from folder or filename."""
+        if is_root:
+            if 'CLAUDE' in filepath.name:
+                return 'system_config'
+            elif 'START' in filepath.name:
+                return 'session_start'
+            return 'root'
+
+        # Check folder-based type
+        try:
+            rel_path = filepath.relative_to(docs_dir)
+            parts = rel_path.parts
+            if parts:
+                folder = parts[0]
+                if folder in self.DOC_TYPES:
+                    return self.DOC_TYPES[folder]
+        except ValueError:
+            pass
+
+        # Infer from filename
+        name_lower = filepath.name.lower()
+        if 'audit' in name_lower:
+            return 'audit'
+        elif 'session' in name_lower:
+            return 'handoff'
+        elif 'roadmap' in name_lower:
+            return 'roadmap'
+        elif 'design' in name_lower:
+            return 'design'
+
+        return 'documentation'
+
+    def _extract_title(self, filepath: Path) -> str:
+        """Extract title from first H1 heading in file."""
+        try:
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                in_frontmatter = False
+                for line in f:
+                    # Skip frontmatter
+                    if line.strip() == '---':
+                        in_frontmatter = not in_frontmatter
+                        continue
+                    if in_frontmatter:
+                        continue
+
+                    # Look for H1
+                    if line.startswith('# '):
+                        return line[2:].strip()
+
+                    # Stop after first 50 lines
+                    if f.tell() > 5000:
+                        break
+        except Exception:
+            pass
+
+        # Fallback to filename
+        return filepath.stem.replace('_', ' ').replace('-', ' ')
+
+    def _parse_frontmatter(self, filepath: Path) -> Optional[dict]:
+        """Parse YAML frontmatter from document if present."""
+        try:
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read(2000)  # Only check first 2KB
+
+            if not content.startswith('---'):
+                return None
+
+            # Find end of frontmatter
+            end_match = re.search(r'\n---\s*\n', content[3:])
+            if not end_match:
+                return None
+
+            frontmatter_text = content[3:end_match.start() + 3]
+
+            try:
+                data = yaml.safe_load(frontmatter_text)
+                if not isinstance(data, dict):
+                    return None
+
+                # Validate and normalize fields
+                validated = {}
+                for field, expected_type in self.FRONTMATTER_FIELDS.items():
+                    if field in data:
+                        value = data[field]
+                        if expected_type == list and isinstance(value, str):
+                            value = [v.strip() for v in value.split(',')]
+                        if isinstance(value, expected_type):
+                            validated[field] = value
+
+                # Validate status
+                if 'status' in validated and validated['status'] not in self.VALID_STATUSES:
+                    del validated['status']
+
+                return validated if validated else None
+
+            except yaml.YAMLError:
+                return None
+
+        except Exception:
+            return None
+
+    def _infer_subsystems(self, filepath: Path, meta: dict) -> list:
+        """Infer subsystems from filename and content."""
+        subsystems = set()
+
+        name_lower = filepath.name.lower()
+        title_lower = meta.get('title', '').lower()
+        combined = f"{name_lower} {title_lower}"
+
+        # Check for subsystem mentions
+        subsystem_keywords = {
+            'agent': 'agents',
+            'spider': 'spiders',
+            'body': 'body',
+            'heart': 'heart',
+            'lung': 'lungs',
+            'brain': 'brain',
+            'spine': 'spine',
+            'circulat': 'circulatory',
+            'digest': 'digestive',
+            'muscul': 'muscular',
+            'immune': 'immune',
+            'skin': 'skin',
+            'frontend': 'frontend',
+            'ui': 'frontend',
+            'react': 'frontend',
+            'backend': 'backend',
+            'django': 'backend',
+            'celery': 'celery',
+            'database': 'database',
+            'model': 'database',
+            'api': 'api',
+            'websocket': 'websocket',
+            'llm': 'llm',
+            'gpt': 'llm',
+            'claude': 'llm',
+            'memory': 'memory',
+            'learning': 'learning',
+            'scifi': 'scifi',
+            'sci-fi': 'scifi',
+            'discord': 'discord',
+            'legal': 'legal',
+            'podcast': 'podcast',
+            'content': 'content',
+            'workflow': 'workflow',
+            'orchestrat': 'orchestration',
+            'integrat': 'integration',
+        }
+
+        for keyword, subsystem in subsystem_keywords.items():
+            if keyword in combined:
+                subsystems.add(subsystem)
+
+        return list(subsystems)
+
+    def _infer_status(self, meta: dict) -> str:
+        """Infer document status from metadata."""
+        folder = meta.get('folder', '')
+
+        # Archive folder = archived/superseded
+        if 'archive' in folder:
+            return 'superseded'
+
+        # Very old docs might be superseded
+        if meta.get('session'):
+            session = meta['session']
+            # Sessions older than 700 might be outdated (adjust threshold as needed)
+            if session < 650:
+                return 'superseded'
+
+        return 'active'
+
+    def _extract_links(self, filepath: Path, all_doc_paths: set) -> list:
+        """Extract references to other documentation files."""
+        links = set()
+
+        try:
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+
+            # Pattern 1: Markdown links - [text](path/to/file.md)
+            md_links = re.findall(r'\[([^\]]*)\]\(([^)]+\.md)\)', content)
+            for _, link_path in md_links:
+                # Normalize the path
+                normalized = self._normalize_doc_path(link_path, all_doc_paths)
+                if normalized:
+                    links.add(normalized)
+
+            # Pattern 2: File mentions - SESSION_123_FOO.md or ARCHITECTURE.md
+            # Match uppercase filenames that look like docs
+            file_mentions = re.findall(r'\b(SESSION_\d+[A-Z_]+\.md|[A-Z][A-Z0-9_]+\.md)\b', content)
+            for mention in file_mentions:
+                normalized = self._normalize_doc_path(mention, all_doc_paths)
+                if normalized:
+                    links.add(normalized)
+
+            # Pattern 3: Explicit doc paths - docs/handoffs/FILE.md
+            doc_paths = re.findall(r'(docs/[a-zA-Z0-9_/-]+\.md)', content)
+            for doc_path in doc_paths:
+                if doc_path in all_doc_paths:
+                    links.add(doc_path)
+
+        except Exception:
+            pass
+
+        # Remove self-references
+        own_path = str(filepath).replace(str(filepath.parent.parent) + '/', '')
+        if 'docs/' in str(filepath):
+            # Extract relative path from docs/
+            try:
+                own_relative = str(filepath).split('unified-donkey-betz/')[-1]
+                links.discard(own_relative)
+            except Exception:
+                pass
+
+        return list(links)
+
+    def _normalize_doc_path(self, link_path: str, all_doc_paths: set) -> Optional[str]:
+        """Normalize a document reference to its canonical path."""
+        # Clean up the path
+        link_path = link_path.strip()
+
+        # Remove leading ./ or ../
+        while link_path.startswith('./') or link_path.startswith('../'):
+            link_path = re.sub(r'^\.\.?/', '', link_path)
+
+        # Try direct match
+        if link_path in all_doc_paths:
+            return link_path
+
+        # Try with docs/ prefix
+        if f'docs/{link_path}' in all_doc_paths:
+            return f'docs/{link_path}'
+
+        # Try just the filename in common locations
+        filename = link_path.split('/')[-1]
+        for doc_path in all_doc_paths:
+            if doc_path.endswith(f'/{filename}') or doc_path == filename:
+                return doc_path
+
+        return None
 
     def _count_lines(self, filepath: Path) -> int:
         """Count lines in a file."""
@@ -143,6 +580,90 @@ class Command(BaseCommand):
                 return sum(1 for _ in f)
         except Exception:
             return 0
+
+    def _gather_stats(self, docs_dir: Path, base_dir: Path, doc_index: dict) -> dict:
+        """Gather statistics for INDEX.md generation."""
+        stats = {
+            'total_files': len(doc_index['documents']),
+            'total_lines': sum(d['lines'] for d in doc_index['documents']),
+            'folder_counts': defaultdict(int),
+            'recent_files': [],
+            'session_files': [],
+            'top_level_docs': [],
+            'subdirectories': [],
+            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            'status_counts': defaultdict(int),
+            'type_counts': defaultdict(int),
+            'subsystem_counts': defaultdict(int),
+            'with_frontmatter': 0,
+            # Graph stats
+            'graph': doc_index.get('graph', {}),
+        }
+
+        # Process documents from index
+        for doc in doc_index['documents']:
+            # Count by folder
+            folder = doc['folder'].replace('docs/', '').split('/')[0] if doc['folder'] else 'root'
+            stats['folder_counts'][folder] += 1
+
+            # Count by status
+            stats['status_counts'][doc.get('status', 'unknown')] += 1
+
+            # Count by type
+            stats['type_counts'][doc['type']] += 1
+
+            # Count by subsystem
+            for subsystem in doc.get('subsystems', []):
+                stats['subsystem_counts'][subsystem] += 1
+
+            # Count frontmatter
+            if doc.get('has_frontmatter'):
+                stats['with_frontmatter'] += 1
+
+            # Track recent files
+            if doc['folder'] and doc['folder'] != 'root':
+                stats['recent_files'].append({
+                    'name': doc['filename'],
+                    'path': doc['path'],
+                    'folder': folder,
+                    'mtime': datetime.fromisoformat(doc['modified_at']),
+                    'lines': doc['lines'],
+                })
+
+            # Track session files
+            if doc.get('session'):
+                stats['session_files'].append({
+                    'session': doc['session'],
+                    'name': doc['filename'],
+                    'path': doc['path'],
+                    'folder': folder,
+                    'mtime': datetime.fromisoformat(doc['modified_at']),
+                })
+
+            # Track top-level docs
+            if not doc['folder'] or doc['folder'] == 'docs':
+                stats['top_level_docs'].append({
+                    'name': doc['filename'],
+                    'path': doc['path'],
+                    'lines': doc['lines'],
+                    'mtime': datetime.fromisoformat(doc['modified_at']),
+                    'root': doc['folder'] == '',
+                })
+
+        # Get subdirectories
+        for item in docs_dir.iterdir():
+            if item.is_dir() and not item.name.startswith('.') and not item.name.startswith('_'):
+                stats['subdirectories'].append(item.name)
+
+        # Sort
+        stats['recent_files'].sort(key=lambda x: x['mtime'], reverse=True)
+        stats['session_files'].sort(key=lambda x: x['session'], reverse=True)
+        stats['folder_counts'] = dict(stats['folder_counts'])
+        stats['status_counts'] = dict(stats['status_counts'])
+        stats['type_counts'] = dict(stats['type_counts'])
+        stats['subsystem_counts'] = dict(stats['subsystem_counts'])
+
+        return stats
 
     def _extract_current_session(self, base_dir: Path) -> int:
         """Extract current session number from 00-START-NEXT-SESSION.md."""
@@ -155,7 +676,7 @@ class Command(BaseCommand):
                     return int(match.group(1))
             except Exception:
                 pass
-        return 784  # Default fallback
+        return 784
 
     def _extract_platform_stats(self, base_dir: Path) -> dict:
         """Extract platform statistics from CLAUDE.md."""
@@ -178,8 +699,6 @@ class Command(BaseCommand):
         if claude_file.exists():
             try:
                 content = claude_file.read_text()
-
-                # Extract numbers from CLAUDE.md
                 patterns = {
                     'agents': r'\*\*Agents\*\*\s*\|\s*(\d+)',
                     'spiders': r'\*\*Spiders\*\*\s*\|\s*(\d+)',
@@ -190,18 +709,16 @@ class Command(BaseCommand):
                     'scifi_features': r'\*\*Sci-Fi Features\*\*\s*\|\s*(\d+)',
                     'advisors': r'\*\*Advisors\*\*\s*\|\s*(\d+)',
                 }
-
                 for key, pattern in patterns.items():
                     match = re.search(pattern, content)
                     if match:
                         stats[key] = int(match.group(1))
-
             except Exception:
                 pass
 
         return stats
 
-    def _generate_index(self, stats: dict, base_dir: Path) -> str:
+    def _generate_index(self, stats: dict, base_dir: Path, doc_index: dict) -> str:
         """Generate the INDEX.md content."""
         current_session = self._extract_current_session(base_dir)
         platform_stats = self._extract_platform_stats(base_dir)
@@ -216,9 +733,43 @@ class Command(BaseCommand):
         lines.append(f'**Total Documentation:** {stats["total_files"]} files | {stats["total_lines"]:,} lines')
         lines.append('')
         lines.append('> This file is auto-generated by `python manage.py build_docs_index`')
+        lines.append('> Machine-readable index: `docs/_index.json`')
         lines.append('')
         lines.append('---')
         lines.append('')
+
+        # Document Status Summary (NEW)
+        lines.append('## Document Status')
+        lines.append('')
+        lines.append('| Status | Count | Description |')
+        lines.append('|--------|-------|-------------|')
+        status_descriptions = {
+            'active': 'Current, maintained documentation',
+            'superseded': 'Replaced by newer documents',
+            'deprecated': 'No longer recommended',
+            'draft': 'Work in progress',
+        }
+        for status in ['active', 'superseded', 'deprecated', 'draft']:
+            count = stats['status_counts'].get(status, 0)
+            desc = status_descriptions.get(status, '')
+            lines.append(f'| **{status}** | {count} | {desc} |')
+        lines.append('')
+
+        # Cross-Reference Graph Summary
+        graph = stats.get('graph', {})
+        if graph.get('most_referenced'):
+            lines.append('## Most Referenced Documents')
+            lines.append('')
+            lines.append(f'Total cross-references: **{graph.get("total_links", 0):,}**')
+            lines.append('')
+            lines.append('| Document | References | Title |')
+            lines.append('|----------|------------|-------|')
+            for ref in graph['most_referenced'][:10]:
+                path = ref['path']
+                count = ref['count']
+                title = ref.get('title', '')[:50]  # Truncate long titles
+                lines.append(f'| `{path}` | {count} | {title} |')
+            lines.append('')
 
         # Core Entry Points
         lines.append('## Core Entry Points')
@@ -228,6 +779,7 @@ class Command(BaseCommand):
         lines.append('| `00-START-NEXT-SESSION.md` | **START HERE** - Current session priorities | - |')
         lines.append('| `CLAUDE.md` | System overview for AI agents | - |')
         lines.append('| `docs/INDEX.md` | This file - documentation map | - |')
+        lines.append('| `docs/_index.json` | Machine-readable index with full metadata | - |')
         lines.append('')
 
         # Platform Statistics
@@ -301,7 +853,7 @@ class Command(BaseCommand):
         lines.append('| Session | Document | Folder | Modified |')
         lines.append('|---------|----------|--------|----------|')
 
-        for sf in stats['session_files'][:20]:  # Last 20 sessions
+        for sf in stats['session_files'][:20]:
             mtime_str = sf['mtime'].strftime('%Y-%m-%d')
             lines.append(f'| {sf["session"]} | {sf["name"]} | {sf["folder"]} | {mtime_str} |')
 
@@ -316,6 +868,32 @@ class Command(BaseCommand):
         for rf in stats['recent_files'][:10]:
             mtime_str = rf['mtime'].strftime('%Y-%m-%d %H:%M')
             lines.append(f'| {rf["name"]} | {rf["folder"]} | {rf["lines"]:,} | {mtime_str} |')
+
+        lines.append('')
+
+        # Subsystem Coverage (NEW)
+        lines.append('## Documentation by Subsystem')
+        lines.append('')
+        lines.append('| Subsystem | Docs | Description |')
+        lines.append('|-----------|------|-------------|')
+
+        subsystem_descriptions = {
+            'agents': 'Agent architecture and implementations',
+            'spiders': 'Data collection spiders',
+            'body': 'Body system metaphor',
+            'frontend': 'React UI components',
+            'backend': 'Django backend',
+            'database': 'Models and migrations',
+            'api': 'API endpoints',
+            'llm': 'LLM integrations',
+            'memory': 'Memory and learning systems',
+            'integration': 'Cross-system integration',
+        }
+
+        for subsystem in sorted(stats['subsystem_counts'].keys()):
+            count = stats['subsystem_counts'][subsystem]
+            desc = subsystem_descriptions.get(subsystem, '')
+            lines.append(f'| {subsystem} | {count} | {desc} |')
 
         lines.append('')
 
@@ -374,6 +952,24 @@ class Command(BaseCommand):
         lines.append('- Any AI agent can resume work without loss of context')
         lines.append('')
         lines.append('**Philosophy:** Document while thinking, not after building.')
+        lines.append('')
+
+        # Frontmatter Schema (NEW)
+        lines.append('## Frontmatter Schema (Optional)')
+        lines.append('')
+        lines.append('New documents can include YAML frontmatter for richer metadata:')
+        lines.append('')
+        lines.append('```yaml')
+        lines.append('---')
+        lines.append('subsystems: [agents, frontend, api]')
+        lines.append('decision_types: [feature, bug_fix]')
+        lines.append('status: active  # active|superseded|deprecated|draft')
+        lines.append('see_also: [SESSION_123_RELATED.md]')
+        lines.append('supersedes: SESSION_100_OLD.md')
+        lines.append('---')
+        lines.append('```')
+        lines.append('')
+        lines.append(f'Documents with frontmatter: **{stats["with_frontmatter"]}** / {stats["total_files"]}')
         lines.append('')
 
         # Quick Start
