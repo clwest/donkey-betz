@@ -89,16 +89,34 @@ def aggregate_insights(request):
                 else:
                     description = str(key_points)[:200]
 
+                # Get knowledge source details
+                knowledge_title = ''
+                knowledge_type = ''
+                knowledge_summary = ''
+                if transfer.source_knowledge:
+                    knowledge_title = getattr(transfer.source_knowledge, 'title', '') or ''
+                    knowledge_type = getattr(transfer.source_knowledge, 'knowledge_type', '') or ''
+                    knowledge_summary = getattr(transfer.source_knowledge, 'summary', '') or ''
+
                 insights.append({
                     'id': str(transfer.id),
                     'title': title,
                     'description': description[:200] if description else "Knowledge transfer between agents",
                     'source_agent': teacher,
+                    'target_agent': student,
                     'category': 'knowledge_transfer',
                     'confidence': transfer.usefulness_score or 0.7,
                     'created_at': transfer.created_at.isoformat() if transfer.created_at else None,
                     'related_agents': [teacher, student],
                     'actionable': transfer.was_applied or False,
+                    # Session 782: Additional detail fields
+                    'key_points': key_points if isinstance(key_points, list) else [],
+                    'full_summary': transfer.transfer_summary or '',
+                    'was_applied': transfer.was_applied or False,
+                    'was_useful': transfer.was_useful or False,
+                    'knowledge_title': knowledge_title,
+                    'knowledge_type': knowledge_type,
+                    'knowledge_summary': knowledge_summary[:300] if knowledge_summary else '',
                 })
 
             return Response({

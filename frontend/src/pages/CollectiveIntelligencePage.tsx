@@ -21,6 +21,12 @@ import {
   Bot,
   Zap,
   Target,
+  ArrowRight,
+  CheckCircle,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  FileText,
 } from 'lucide-react'
 
 // Types
@@ -29,11 +35,20 @@ interface Insight {
   title: string
   description?: string
   source_agent?: string
+  target_agent?: string
   category?: string
   confidence?: number
   created_at?: string
   related_agents?: string[]
   actionable?: boolean
+  // Session 782: Additional detail fields
+  key_points?: string[]
+  full_summary?: string
+  was_applied?: boolean
+  was_useful?: boolean
+  knowledge_title?: string
+  knowledge_type?: string
+  knowledge_summary?: string
 }
 
 interface Team {
@@ -109,6 +124,7 @@ export default function CollectiveIntelligencePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateTeam, setShowCreateTeam] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
+  const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Queries
@@ -357,38 +373,143 @@ export default function CollectiveIntelligencePage() {
                 <p className="text-sm text-gray-500">Insights are generated from agent collaborations</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {insights.map((insight) => (
-                  <div key={insight.id} className="card p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Lightbulb className={cn(
-                          'h-5 w-5',
-                          insight.actionable ? 'text-yellow-400' : 'text-gray-500'
-                        )} />
-                        <h3 className="font-medium">{insight.title}</h3>
+              <div className="grid grid-cols-1 gap-4">
+                {insights.map((insight) => {
+                  const isExpanded = expandedInsightId === insight.id
+                  return (
+                    <div
+                      key={insight.id}
+                      className={cn(
+                        "card p-4 cursor-pointer transition-all",
+                        isExpanded && "ring-1 ring-primary-500/50"
+                      )}
+                      onClick={() => setExpandedInsightId(isExpanded ? null : insight.id)}
+                    >
+                      {/* Header Row */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Lightbulb className={cn(
+                            'h-5 w-5 flex-shrink-0',
+                            insight.was_applied ? 'text-accent-green' :
+                            insight.was_useful ? 'text-yellow-400' : 'text-gray-500'
+                          )} />
+                          <h3 className="font-medium truncate">{insight.title}</h3>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          {insight.confidence && (
+                            <span className="text-xs text-gray-500">
+                              {Math.round(insight.confidence * 100)}%
+                            </span>
+                          )}
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
                       </div>
-                      {insight.confidence && (
-                        <span className="text-xs text-gray-500">
-                          {Math.round(insight.confidence * 100)}% confident
+
+                      {/* Knowledge Flow */}
+                      <div className="flex items-center gap-2 text-sm mb-3">
+                        <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded text-xs">
+                          {insight.source_agent}
                         </span>
+                        <ArrowRight className="h-4 w-4 text-gray-500" />
+                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs">
+                          {insight.target_agent}
+                        </span>
+                        <span className="text-gray-500 text-xs ml-auto">{formatDate(insight.created_at)}</span>
+                      </div>
+
+                      {/* Status Badges */}
+                      <div className="flex items-center gap-2 mb-3">
+                        {insight.was_applied && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                            <CheckCircle className="h-3 w-3" />
+                            Applied
+                          </span>
+                        )}
+                        {insight.was_useful && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs">
+                            <Target className="h-3 w-3" />
+                            Useful
+                          </span>
+                        )}
+                        {insight.knowledge_type && (
+                          <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs capitalize">
+                            {insight.knowledge_type}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-dark-border space-y-4" onClick={(e) => e.stopPropagation()}>
+                          {/* Full Summary */}
+                          {insight.full_summary && (
+                            <div>
+                              <h4 className="text-xs font-medium text-gray-400 mb-1">Transfer Summary</h4>
+                              <p className="text-sm text-gray-300">{insight.full_summary}</p>
+                            </div>
+                          )}
+
+                          {/* Key Points */}
+                          {insight.key_points && insight.key_points.length > 0 && (
+                            <div>
+                              <h4 className="text-xs font-medium text-gray-400 mb-2">Key Points</h4>
+                              <ul className="space-y-1">
+                                {insight.key_points.map((point, idx) => (
+                                  <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
+                                    <span className="text-primary-400">•</span>
+                                    {point}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Knowledge Source */}
+                          {insight.knowledge_title && (
+                            <div className="p-3 bg-dark-bg rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <FileText className="h-4 w-4 text-blue-400" />
+                                <h4 className="text-sm font-medium">{insight.knowledge_title}</h4>
+                              </div>
+                              {insight.knowledge_summary && (
+                                <p className="text-xs text-gray-400">{insight.knowledge_summary}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Confidence Score Bar */}
+                          {insight.confidence && (
+                            <div>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-gray-400">Usefulness Score</span>
+                                <span className={cn(
+                                  insight.confidence >= 0.8 ? 'text-green-400' :
+                                  insight.confidence >= 0.6 ? 'text-yellow-400' : 'text-red-400'
+                                )}>
+                                  {Math.round(insight.confidence * 100)}%
+                                </span>
+                              </div>
+                              <div className="w-full h-2 bg-dark-bg rounded-full overflow-hidden">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-full",
+                                    insight.confidence >= 0.8 ? 'bg-green-500' :
+                                    insight.confidence >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                                  )}
+                                  style={{ width: `${Math.round(insight.confidence * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-                    {insight.description && (
-                      <p className="text-sm text-gray-400 mb-3">{insight.description}</p>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>From: {insight.source_agent || 'Multiple agents'}</span>
-                      <span>{formatDate(insight.created_at)}</span>
-                    </div>
-                    {insight.actionable && (
-                      <button className="mt-3 w-full btn-primary text-sm flex items-center justify-center gap-2">
-                        <Target className="h-4 w-4" />
-                        Take Action
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
