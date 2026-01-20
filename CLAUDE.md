@@ -63,6 +63,30 @@ make celery
 open http://localhost:8000/ai-studio/
 ```
 
+## Documentation Maintenance
+
+**IMPORTANT:** After creating or modifying documentation, regenerate the index:
+
+```bash
+# Regenerate docs/INDEX.md after ANY documentation changes
+python manage.py build_docs_index
+
+# Preview without writing (dry run)
+python manage.py build_docs_index --dry-run
+```
+
+This command scans all `/docs/` folders and generates an up-to-date `INDEX.md` with:
+- File counts by folder (handoffs, audits, designs, etc.)
+- Recent session list (last 20)
+- Recently modified files (last 10)
+- Platform statistics pulled from this file (CLAUDE.md)
+
+**Run this command when you:**
+- Create a new session handoff document
+- Add or modify audit reports
+- Create new documentation files
+- Complete a session with documentation updates
+
 ---
 
 ## Project Structure
