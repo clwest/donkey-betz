@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reasoningApi } from '@/lib/api'
 import {
   Brain, Lightbulb, Zap, AlertTriangle, CheckCircle, XCircle,
   Clock, RefreshCw, Loader2, ChevronRight, Play, BarChart3,
-  TrendingUp, Target, Eye, Activity, X
+  TrendingUp, Target, Eye, Activity
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 

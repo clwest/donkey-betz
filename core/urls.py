@@ -838,6 +838,7 @@ from core.views_collective_intelligence import (
     aggregate_insights,
     generate_report,
     get_knowledge_gaps,
+    get_knowledge_topics,  # Session 782
     get_agent_improvements,
     get_collaboration_monitor,
     get_collaboration_network,
@@ -1886,6 +1887,7 @@ urlpatterns = [
     path('api/collective/insights/', aggregate_insights, name='collective-insights'),
     path('api/collective/report/', generate_report, name='collective-report'),
     path('api/collective/knowledge-gaps/', get_knowledge_gaps, name='collective-knowledge-gaps'),
+    path('api/collective/knowledge-topics/', get_knowledge_topics, name='collective-knowledge-topics'),  # Session 782
     path('api/collective/knowledge-gaps/resolve/', resolve_knowledge_gap, name='collective-resolve-gap'),  # Session 373
     path('api/collective/knowledge-gaps/resolve-all/', resolve_all_knowledge_gaps, name='collective-resolve-all-gaps'),  # Session 373
     path('api/collective/fix-collaboration/', fix_collaboration, name='collective-fix-collaboration'),  # Session 373

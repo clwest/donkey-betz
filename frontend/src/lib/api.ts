@@ -1667,7 +1667,7 @@ export const collectiveApi = {
   knowledgeQuery: (query: string) => api.get('/collective/knowledge/query/', { params: { q: query } }),
   knowledgeShare: (data: { topic: string; content: string; agents?: string[] }) =>
     api.post('/collective/knowledge/share/', data),
-  knowledgeTopics: () => api.get('/collective/knowledge/topics/'),
+  knowledgeTopics: () => api.get('/collective/knowledge-topics/'),  // Session 782: Fixed endpoint
 
   // Network & Collaboration
   network: () => api.get('/collective/network/'),
