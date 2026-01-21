@@ -215,7 +215,9 @@ monitoring_logs/
 *.model
 *.pkl
 *.joblib
-models/
+# ml/models/ - Only ML model weights, not Django models
+/ml/models/
+/ml_models/
 
 # BUT: Allow Flutter mobile test models
 !mobile/test/models/
