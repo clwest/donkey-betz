@@ -260,3 +260,29 @@ mobile/.env.local
 mobile/.env.production
 backups/database/
 income_builder_outputs/
+
+# Agent Generated Content (Session 787)
+# These are ephemeral outputs from agent executions
+analysis/
+blockchain/
+campaigns/
+content/articles/
+content/documentation/
+content/legal/
+development/
+diversity/
+execution/
+executive/
+financial/
+narrative/
+pipelines/opportunities/
+podcast/
+predictions/
+research/
+security/
+series/
+strategy/
+system/intelligence/
+system/thinking/
+workflows/definitions/
+workflows/orchestration/
