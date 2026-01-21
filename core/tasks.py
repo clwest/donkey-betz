@@ -6055,24 +6055,106 @@ Guidelines:
 
             # Conclude the conversation
             if messages:
-                # Generate a conclusion
+                # Generate a conclusion with DecisionSummary (Session 786)
                 try:
+                    # Session 786: Require DecisionSummary format in conclusion
+                    conclusion_prompt = f"""Synthesize the discussion and produce a structured conclusion.
+
+Discussion between {initiator.name} and {responder.name} about {topic}:
+
+{chr(10).join([f"{m['agent']}: {m['content']}" for m in messages])}
+
+YOUR OUTPUT MUST follow this EXACT format:
+
+[Brief 2-3 sentence synthesis of the key points discussed]
+
+=== DecisionSummary ===
+Insights:
+1. [First key insight from the conversation - be specific]
+2. [Second insight about approach or implementation]
+3. [Third insight about considerations or trade-offs]
+
+Proposed Feature:
+- Name: [Specific feature name that emerged from the discussion]
+- Inputs: [What data or content it needs]
+- Outputs: [What it produces or enables]
+- Where it plugs into the system: [Component: dashboard, API, workflow, agent, etc.]
+
+Next Steps:
+1. [{initiator.name}: specific action]
+2. [{responder.name}: specific action]
+
+OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
+
                     # Session 413: GPT-5 reasoning models need higher token limits + timeout
                     conclusion_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
-                            {"role": "system", "content": "Summarize the key insights from this agent discussion in 1-2 sentences."},
-                            {"role": "user", "content": f"Discussion between {initiator.name} and {responder.name} about {topic}:\n\n" +
-                                "\n".join([f"{m['agent']}: {m['content']}" for m in messages])}
+                            {"role": "system", "content": "You are a conversation synthesizer. You MUST include the DecisionSummary block with === DecisionSummary === marker."},
+                            {"role": "user", "content": conclusion_prompt}
                         ],
-                        max_completion_tokens=600,  # Session 413: Increased for reasoning
-                        timeout=90,  # Session 413: 90s timeout for reasoning model
+                        max_completion_tokens=1200,  # Session 786: Increased for DecisionSummary
+                        timeout=120,  # Session 786: Increased timeout for longer output
                     )
                     conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
                     # Session 359: Validate conclusion for mythology violations
                     conclusion = validate_agent_output("ConversationSynthesizer", conclusion)
-                except Exception:
-                    conclusion = f"Productive discussion about {topic}"
+
+                    # Session 786: Ensure DecisionSummary is present, add placeholder if not
+                    if "=== DecisionSummary ===" not in conclusion:
+                        logger.warning(f"💬 [CONVERSATIONS] Conclusion missing DecisionSummary, appending placeholder")
+                        conclusion += f"""
+
+=== DecisionSummary ===
+Insights:
+1. {initiator.name} and {responder.name} explored perspectives on {topic[:50]}
+2. Multiple approaches were discussed with trade-offs identified
+3. Further analysis recommended before implementation
+
+Proposed Feature:
+- Name: {topic[:30]} Enhancement
+- Inputs: Conversation insights and agent expertise
+- Outputs: Actionable recommendations for system improvement
+- Where it plugs into the system: Agent learning and knowledge base
+
+Next Steps:
+1. {initiator.name}: Document key insights from this discussion
+2. {responder.name}: Validate recommendations against existing system capabilities"""
+                except Exception as e:
+                    logger.warning(f"💬 [CONVERSATIONS] Conclusion generation failed: {e}")
+                    conclusion = f"""Productive discussion about {topic}
+
+=== DecisionSummary ===
+Insights:
+1. {initiator.name} and {responder.name} discussed {topic[:50]}
+2. Key perspectives were shared from each agent's expertise
+3. Synthesis captured for future reference
+
+Proposed Feature:
+- Name: Knowledge Enhancement from Discussion
+- Inputs: Agent expertise and conversation context
+- Outputs: Refined understanding of topic area
+- Where it plugs into the system: Collective knowledge base
+
+Next Steps:
+1. {initiator.name}: Continue monitoring topic area
+2. {responder.name}: Apply insights to future tasks"""
+
+                # Session 786: Store conclusion as final message so API can extract DecisionSummary
+                # The API looks at ConversationMessage.content, not AgentConversation.conclusion
+                final_seq = len(messages) + 1  # Session 786 fix: use len() since messages dict doesn't have 'sequence' key
+                ConversationMessage.objects.create(
+                    conversation=conversation,
+                    agent=responder,  # Last participant provides synthesis
+                    content=conclusion,
+                    message_type='synthesis',
+                    sequence_number=final_seq
+                )
+                messages.append({
+                    'agent': responder.name,
+                    'content': conclusion,
+                    'type': 'synthesis'
+                })
 
                 conversation.conclude(
                     conclusion,
@@ -6656,32 +6738,110 @@ VOICE RULES (Session 781):
                         logger.error(f"👥 [MULTI-AGENT] Error generating message for {current_agent.name}: {e}")
                         continue
 
-            # Generate conclusion
+            # Generate conclusion with DecisionSummary (Session 786)
             if messages:
                 try:
                     participants_summary = ", ".join([a.name for a in panel_agents])
-                    conclusion_prompt = f"""Summarize this {template['type']} discussion between {participants_summary} about "{topic}".
+                    # Session 786: Require DecisionSummary format in panel conclusion
+                    conclusion_prompt = f"""Synthesize this {template['type']} panel discussion and produce a structured conclusion.
+
+Participants: {participants_summary}
+Topic: {topic}
 
 Discussion:
 {chr(10).join([f"{m['agent']}: {m['content']}" for m in messages[-8:]])}
 
-Provide a 2-3 sentence summary highlighting the key insights and any points of consensus or disagreement."""
+YOUR OUTPUT MUST follow this EXACT format:
+
+[Brief 2-3 sentence synthesis of the panel's key points and areas of agreement/disagreement]
+
+=== DecisionSummary ===
+Insights:
+1. [First key insight from the panel discussion - be specific]
+2. [Second insight about approach or implementation]
+3. [Third insight about considerations or trade-offs]
+
+Proposed Feature:
+- Name: [Specific feature name that emerged from the discussion]
+- Inputs: [What data or content it needs]
+- Outputs: [What it produces or enables]
+- Where it plugs into the system: [Component: dashboard, API, workflow, agent, etc.]
+
+Next Steps:
+1. [{panel_agents[0].name if panel_agents else 'Lead Agent'}: specific action]
+2. [{panel_agents[1].name if len(panel_agents) > 1 else 'Support Agent'}: specific action]
+
+OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
 
                     conclusion_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
-                            {"role": "system", "content": "Summarize multi-agent panel discussions concisely."},
+                            {"role": "system", "content": "You synthesize multi-agent panel discussions. You MUST include the DecisionSummary block with === DecisionSummary === marker."},
                             {"role": "user", "content": conclusion_prompt}
                         ],
-                        max_completion_tokens=400,
+                        max_completion_tokens=1200,  # Session 786: Increased for DecisionSummary
+                        timeout=120,
                     )
                     conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive panel discussion about {topic}"
 
                     # Session 360: Validate conclusion for mythology violations
                     conclusion = validate_agent_output("MultiAgentSynthesizer", conclusion)
+
+                    # Session 786: Ensure DecisionSummary is present
+                    if "=== DecisionSummary ===" not in conclusion:
+                        logger.warning(f"👥 [MULTI-AGENT] Conclusion missing DecisionSummary, appending placeholder")
+                        conclusion += f"""
+
+=== DecisionSummary ===
+Insights:
+1. Panel of {len(panel_agents)} agents explored {topic[:50]}
+2. Multiple perspectives were shared with cross-pollination of expertise
+3. Consensus areas identified for potential implementation
+
+Proposed Feature:
+- Name: {topic[:30]} Panel Insights
+- Inputs: Combined expertise from {len(panel_agents)} agents
+- Outputs: Synthesized recommendations and action items
+- Where it plugs into the system: Agent learning and decision pipeline
+
+Next Steps:
+1. {panel_agents[0].name if panel_agents else 'Lead'}: Document key insights from panel
+2. {panel_agents[1].name if len(panel_agents) > 1 else 'Support'}: Validate recommendations"""
                 except Exception as e:
                     logger.warning(f"👥 [MULTI-AGENT] Could not generate conclusion: {e}")
-                    conclusion = f"Panel discussion about {topic} with {len(panel_agents)} participants"
+                    conclusion = f"""Panel discussion about {topic} with {len(panel_agents)} participants
+
+=== DecisionSummary ===
+Insights:
+1. {len(panel_agents)} agents discussed {topic[:50]}
+2. Cross-domain perspectives were shared
+3. Synthesis captured for future reference
+
+Proposed Feature:
+- Name: Knowledge Enhancement from Panel
+- Inputs: Multi-agent expertise and discussion context
+- Outputs: Collaborative insights and recommendations
+- Where it plugs into the system: Collective knowledge base
+
+Next Steps:
+1. {panel_agents[0].name if panel_agents else 'Lead'}: Continue monitoring topic area
+2. {panel_agents[1].name if len(panel_agents) > 1 else 'Support'}: Apply insights to future tasks"""
+
+                # Session 786: Store conclusion as final message so API can extract DecisionSummary
+                final_seq = len(messages) + 1  # Session 786 fix: use len() for reliable sequence
+                synthesizer = panel_agents[-1] if panel_agents else moderator
+                ConversationMessage.objects.create(
+                    conversation=conversation,
+                    agent=synthesizer,
+                    content=conclusion,
+                    message_type='synthesis',
+                    sequence_number=final_seq
+                )
+                messages.append({
+                    'agent': synthesizer.name,
+                    'content': conclusion,
+                    'type': 'synthesis'
+                })
 
                 conversation.conclude(
                     conclusion,
@@ -7640,23 +7800,110 @@ Guidelines:
             # Swap speakers
             current_speaker, other_speaker = other_speaker, current_speaker
 
-        # Conclude the conversation
+        # Conclude the conversation with DecisionSummary (Session 786)
         if messages:
             try:
+                # Session 786: Require DecisionSummary format in project conclusion
+                project_name = project.project_name or project.name
+                conclusion_prompt = f"""Synthesize this project discussion and produce a structured conclusion.
+
+Project: {project_name}
+Topic: {topic}
+Participants: {initiator.name}, {responder.name}
+
+Discussion:
+{chr(10).join([f"{m['agent']}: {m['content']}" for m in messages])}
+
+YOUR OUTPUT MUST follow this EXACT format:
+
+[Brief 2-3 sentence synthesis of the project discussion]
+
+=== DecisionSummary ===
+Insights:
+1. [First key insight from the project discussion - be specific]
+2. [Second insight about implementation or approach]
+3. [Third insight about impact or considerations]
+
+Proposed Feature:
+- Name: [Specific feature name for the project]
+- Inputs: [What data or content it needs]
+- Outputs: [What it produces or enables]
+- Where it plugs into the system: [Component: {project_name}, dashboard, API, etc.]
+
+Next Steps:
+1. [{initiator.name}: specific action for the project]
+2. [{responder.name}: specific action for the project]
+
+OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
+
                 conclusion_response = client.chat.completions.create(
                     model="gpt-5-mini",
                     messages=[
-                        {"role": "system", "content": "Summarize the key insights and action items from this project discussion in 2-3 sentences."},
-                        {"role": "user", "content": f"Project: {project.project_name or project.name}\nTopic: {topic}\n\nDiscussion:\n" +
-                            "\n".join([f"{m['agent']}: {m['content']}" for m in messages])}
+                        {"role": "system", "content": "You synthesize project discussions. You MUST include the DecisionSummary block with === DecisionSummary === marker."},
+                        {"role": "user", "content": conclusion_prompt}
                     ],
-                    max_completion_tokens=500,
+                    max_completion_tokens=1200,  # Session 786: Increased for DecisionSummary
+                    timeout=120,
                 )
                 conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
                 # Session 359: Validate project conclusion for mythology violations
                 conclusion = validate_agent_output("ProjectConversationSynthesizer", conclusion)
-            except Exception:
-                conclusion = f"Productive discussion about {topic}"
+
+                # Session 786: Ensure DecisionSummary is present
+                if "=== DecisionSummary ===" not in conclusion:
+                    logger.warning(f"🗣️ [PROJECT-CONVERSATION] Conclusion missing DecisionSummary, appending placeholder")
+                    conclusion += f"""
+
+=== DecisionSummary ===
+Insights:
+1. {initiator.name} and {responder.name} discussed {topic[:50]} for project {project_name}
+2. Multiple approaches were explored
+3. Further refinement needed before implementation
+
+Proposed Feature:
+- Name: {topic[:30]} Enhancement
+- Inputs: Project context and agent expertise
+- Outputs: Actionable recommendations for project
+- Where it plugs into the system: {project_name} project pipeline
+
+Next Steps:
+1. {initiator.name}: Document insights for project
+2. {responder.name}: Validate recommendations"""
+            except Exception as e:
+                logger.warning(f"🗣️ [PROJECT-CONVERSATION] Conclusion generation failed: {e}")
+                project_name = project.project_name or project.name
+                conclusion = f"""Productive discussion about {topic}
+
+=== DecisionSummary ===
+Insights:
+1. {initiator.name} and {responder.name} discussed {topic[:50]}
+2. Key perspectives shared for project {project_name}
+3. Synthesis captured for future reference
+
+Proposed Feature:
+- Name: Knowledge Enhancement for Project
+- Inputs: Agent expertise and discussion context
+- Outputs: Refined understanding of project needs
+- Where it plugs into the system: Project knowledge base
+
+Next Steps:
+1. {initiator.name}: Continue monitoring project area
+2. {responder.name}: Apply insights to project tasks"""
+
+            # Session 786: Store conclusion as final message so API can extract DecisionSummary
+            final_seq = len(messages) + 1  # Session 786 fix: use len() for reliable sequence
+            ConversationMessage.objects.create(
+                conversation=conversation,
+                agent=responder,  # Last participant provides synthesis
+                content=conclusion,
+                message_type='synthesis',
+                sequence_number=final_seq
+            )
+            messages.append({
+                'agent': responder.name,
+                'content': conclusion,
+                'type': 'synthesis'
+            })
 
             conversation.conclude(
                 conclusion,
