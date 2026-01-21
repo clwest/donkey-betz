@@ -1575,6 +1575,28 @@ Consider these trends when crafting the response to maximize relevance and engag
                 if summary:
                     prompt_parts.append(f"   {summary}")
 
+        # 8.5 Session 786: Add Relevant Documentation from Embedded Documents
+        # This connects agents to the 390+ curated documents (session handoffs,
+        # architecture docs, guides) that were previously isolated from agent context.
+        relevant_docs = self._get_relevant_docs_for_task(task, limit=3)
+        if relevant_docs:
+            prompt_parts.append(f"\n\n## Relevant Documentation (Session 786)")
+            prompt_parts.append("The following curated documentation may inform your response:")
+            for idx, doc in enumerate(relevant_docs, 1):
+                title = doc.get('title', 'Documentation')
+                summary = doc.get('summary', '')[:200]
+                doc_path = doc.get('doc_path', '')
+                confidence = doc.get('confidence', 0)
+                scope = doc.get('doc_scope', 'unknown')
+
+                prompt_parts.append(f"\n{idx}. **{title}** (relevance: {confidence:.0%})")
+                if summary:
+                    prompt_parts.append(f"   {summary}")
+                if doc_path:
+                    prompt_parts.append(f"   Source: {doc_path} [{scope}]")
+
+            prompt_parts.append("\nUse these documents to ground your response in established patterns and decisions.")
+
         # 9. Add Policy Context (from Boardroom Decisions)
         try:
             from core.services.policy_context import get_policy_context_service
@@ -1596,11 +1618,13 @@ Consider these trends when crafting the response to maximize relevance and engag
 {task}""")
 
         # Session 729: Track intelligent prompting metrics
+        # Session 786: Added included_documentation tracking
         self._track_intelligent_prompt_metrics(
             task=task,
             scifi_context=scifi_context,
             spider_context=spider_context,
             included_learned_knowledge=bool(relevant_knowledge),
+            included_documentation=bool(relevant_docs),  # Session 786
             prompt_parts=prompt_parts
         )
 
@@ -1612,10 +1636,12 @@ Consider these trends when crafting the response to maximize relevance and engag
         scifi_context: Dict[str, Any],
         spider_context: Dict[str, Any],
         included_learned_knowledge: bool,
+        included_documentation: bool,  # Session 786: Track doc retrieval
         prompt_parts: List[str]
     ) -> None:
         """
         Session 729: Track intelligent prompting usage metrics.
+        Session 786: Added included_documentation parameter.
 
         Records which context components were included in the prompt,
         token estimates, and task info. This enables analysis of:
@@ -1703,6 +1729,7 @@ Consider these trends when crafting the response to maximize relevance and engag
                 included_evolution=included_evolution,
                 included_policy=included_policy,
                 included_learned_knowledge=included_learned_knowledge,
+                included_documentation=included_documentation,  # Session 786
                 included_temporal=True,  # Always included
                 base_prompt_tokens=base_tokens,
                 context_tokens_added=context_tokens,
