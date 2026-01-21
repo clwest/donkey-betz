@@ -9806,27 +9806,82 @@ Create a comprehensive synthesis that:
 3. Notes any interesting tensions or different perspectives
 4. Provides actionable recommendations
 
-Structure your response with clear sections and end with:
-- A brief summary (2-3 sentences)
-- Top 5 unified recommendations
+Structure your response with clear sections and MUST end with the DecisionSummary block below.
 
-The synthesis should read as a cohesive document, not just a collection of separate ideas."""
+=== REQUIRED OUTPUT FORMAT ===
+Your synthesis MUST end with this EXACT structure:
 
-        # Generate synthesis
-        synthesis_response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are the Hive Mind Synthesizer, an AI that combines multiple agent perspectives into unified insights."
-                },
-                {"role": "user", "content": synthesis_prompt}
-            ],
-            max_completion_tokens=1500,
-            reasoning_effort="medium",
-        )
+=== DecisionSummary ===
+Insights:
+1. [First key insight with specific data or metric reference]
+2. [Second insight about user behavior or market dynamics]
+3. [Third insight about implementation approach or technical consideration]
 
-        synthesis = synthesis_response.choices[0].message.content.strip()
+Proposed Feature:
+- Name: [Creative, specific feature name based on the discussion]
+- Inputs: [What data or content it needs]
+- Outputs: [What it produces or enables]
+- Where it plugs into the system: [Specific component: dashboard, workflow, API, agent, etc.]
+
+Next Steps:
+1. [First concrete action with owner, e.g. "ResearchAgent: analyze X"]
+2. [Second concrete action with owner]
+
+The synthesis should read as a cohesive document, not just a collection of separate ideas.
+CRITICAL: The DecisionSummary block at the end is REQUIRED for this synthesis to be valid."""
+
+        # Generate synthesis with retry logic for DecisionSummary (Session 786)
+        max_retries = 2
+        synthesis = ""
+        current_prompt = synthesis_prompt
+
+        for attempt in range(max_retries + 1):
+            synthesis_response = client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are the Hive Mind Synthesizer, an AI that combines multiple agent perspectives into unified insights. You MUST include a DecisionSummary block at the end of your synthesis."
+                    },
+                    {"role": "user", "content": current_prompt}
+                ],
+                max_completion_tokens=2000,  # Session 786: Increased for DecisionSummary
+                reasoning_effort="medium",
+            )
+
+            synthesis = synthesis_response.choices[0].message.content.strip()
+
+            # Session 786: Check for DecisionSummary and retry if missing
+            if "=== DecisionSummary ===" in synthesis:
+                logger.info(f"🧠 [HIVE MIND] DecisionSummary found on attempt {attempt + 1}")
+                break
+            elif attempt < max_retries:
+                logger.warning(f"🧠 [HIVE MIND] DecisionSummary missing, retry {attempt + 1}/{max_retries}")
+                current_prompt = synthesis_prompt + """
+
+CRITICAL RETRY: Your previous response was MISSING the DecisionSummary block!
+
+You MUST include this EXACT structure at the END of your response:
+
+=== DecisionSummary ===
+Insights:
+1. [First insight]
+2. [Second insight]
+3. [Third insight]
+
+Proposed Feature:
+- Name: [Feature name]
+- Inputs: [What it needs]
+- Outputs: [What it produces]
+- Where it plugs into the system: [Integration point]
+
+Next Steps:
+1. [First action with owner]
+2. [Second action with owner]
+
+Include this DecisionSummary block NOW."""
+            else:
+                logger.warning(f"🧠 [HIVE MIND] DecisionSummary still missing after {max_retries} retries")
 
         # Session 359: Validate Hive Mind synthesis for mythology violations
         synthesis = validate_agent_output("HiveMindSynthesizer", synthesis)
