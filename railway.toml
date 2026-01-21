@@ -18,7 +18,8 @@ dockerTarget = "production"
 [deploy]
 # Start command for the web service (Daphne ASGI server)
 # Uses $PORT environment variable injected by Railway
-startCommand = "daphne -b 0.0.0.0 -p $PORT core.asgi:application"
+# Wrapped in sh -c to ensure variable expansion
+startCommand = "sh -c 'daphne -b 0.0.0.0 -p $PORT core.asgi:application'"
 
 # Health check configuration
 healthcheckPath = "/health/ping/"
