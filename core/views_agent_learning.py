@@ -5192,24 +5192,22 @@ def get_conversation_contract_overview(request):
                 if summary_valid.get('is_valid'):
                     valid_summaries += 1
 
-            # Use stored quality score if available, else calculate
-            if conv.quality_score:
-                quality_score = int(conv.quality_score * 100)
-            else:
-                quality_score = 0
-                if msg_tension:
-                    quality_score += 30
-                if msg_grounding:
-                    quality_score += 30
-                if summary_valid.get('has_insights'):
-                    quality_score += 15
-                if summary_valid.get('has_feature'):
-                    quality_score += 15
-                if summary_valid.get('has_next_steps'):
-                    quality_score += 10
-                if msg_empty:
-                    quality_score -= 10
-                quality_score = max(0, min(100, quality_score))
+            # Session 786: Always recalculate quality score to include DecisionSummary
+            # Previously used stored conv.quality_score which didn't include summary bonus
+            quality_score = 0
+            if msg_tension:
+                quality_score += 30
+            if msg_grounding:
+                quality_score += 30
+            if summary_valid.get('has_insights'):
+                quality_score += 15
+            if summary_valid.get('has_feature'):
+                quality_score += 15
+            if summary_valid.get('has_next_steps'):
+                quality_score += 10
+            if msg_empty:
+                quality_score -= 10
+            quality_score = max(0, min(100, quality_score))
 
             total_quality_score += quality_score
 
