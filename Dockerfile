@@ -93,7 +93,7 @@ RUN pip install \
 COPY . .
 
 # Collect static files (use dummy SECRET_KEY for build - real one used at runtime)
-RUN SECRET_KEY=build-time-dummy-key-not-used-in-production \
+RUN SECRET_KEY=build-time-dummy-key-not-used-in-production-needs-fifty-characters-minimum-for-django \
     DATABASE_URL=sqlite:///dummy.db \
     python manage.py collectstatic --noinput --settings=core.settings
 
