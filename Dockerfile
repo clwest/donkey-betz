@@ -105,7 +105,13 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     postgresql-client \
     redis-tools \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Railway/Production environment variables
+ENV PORT=8000 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
@@ -123,27 +129,53 @@ COPY --from=production-build --chown=appuser:appuser /app .
 # Switch to non-root user
 USER appuser
 
-# Expose port
+# Expose port (Railway uses $PORT, default 8000)
 EXPOSE 8000
 
-# Health check for production
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health/ || exit 1
+# Health check for production (using $PORT for Railway compatibility)
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health/ping/ || exit 1
 
 # Production command - use Daphne for WebSocket support
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
+# Uses shell form to expand $PORT environment variable (Railway injects this)
+CMD daphne -b 0.0.0.0 -p ${PORT:-8000} core.asgi:application
 
 # =============================================================================
-# STAGE 5: Celery Worker
+# STAGE 5: Celery Worker (Default Queue)
 # =============================================================================
 FROM production as celery-worker
 
 # Celery worker health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
     CMD celery -A core inspect ping || exit 1
 
-# Celery worker command
-CMD ["celery", "-A", "core", "worker", "-l", "info"]
+# Celery worker command (threads pool for macOS/Railway compatibility)
+# Queues: default, agents, sports, content, ml
+CMD ["celery", "-A", "core", "worker", "-l", "info", "--pool=threads", "-c", "4", "-Q", "default,agents,sports,content,ml"]
+
+# =============================================================================
+# STAGE 5b: Celery Worker (Long Running Queue)
+# =============================================================================
+FROM production as celery-long-running
+
+# Celery worker health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
+    CMD celery -A core inspect ping || exit 1
+
+# Long running tasks worker
+CMD ["celery", "-A", "core", "worker", "-l", "info", "--pool=threads", "-c", "2", "-Q", "long_running"]
+
+# =============================================================================
+# STAGE 5c: Celery Worker (Broadcast Queue)
+# =============================================================================
+FROM production as celery-broadcast
+
+# Celery worker health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
+    CMD celery -A core inspect ping || exit 1
+
+# Broadcast tasks worker
+CMD ["celery", "-A", "core", "worker", "-l", "info", "--pool=threads", "-c", "2", "-Q", "broadcast"]
 
 # =============================================================================
 # STAGE 6: Celery Beat
