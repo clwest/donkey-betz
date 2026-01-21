@@ -173,6 +173,7 @@ class IntelligentPromptMetric(models.Model):
     included_policy = models.BooleanField(default=False)
     included_learned_knowledge = models.BooleanField(default=False)
     included_temporal = models.BooleanField(default=True)  # Always included
+    included_documentation = models.BooleanField(default=False)  # Session 786: Embedded docs
 
     # Prompt metrics
     base_prompt_tokens = models.IntegerField(default=0)
