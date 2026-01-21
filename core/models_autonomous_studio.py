@@ -386,6 +386,46 @@ class ChannelEpisode(models.Model):
     )
 
     # =========================================================================
+    # VOICE CRITIQUE SCORES (Session 784)
+    # =========================================================================
+
+    # Intent classification - what type of content is this?
+    intent_type = models.CharField(
+        max_length=30,
+        blank=True,
+        default='',
+        help_text="Content intent: visionary, technical_deep_dive, operator_diary, contrarian_take, postmortem, behind_the_scenes"
+    )
+
+    # Voice quality scores (0-100)
+    distinctiveness_score = models.IntegerField(
+        default=0,
+        help_text="Voice distinctiveness score (0-100): Could this have been written by anyone?"
+    )
+
+    specificity_score = models.IntegerField(
+        default=0,
+        help_text="Specificity score (0-100): Does it use concrete examples vs. generic statements?"
+    )
+
+    opinion_strength_score = models.IntegerField(
+        default=0,
+        help_text="Opinion strength score (0-100): Does it take a real stance or hedge everything?"
+    )
+
+    # Generic detector flag
+    generic_flag = models.BooleanField(
+        default=False,
+        help_text="True if content reads like 'every other AI blog' - buzzwords, corporate speak, lack of personality"
+    )
+
+    # Has this episode been scored by VoiceCriticAgent?
+    voice_critique_completed = models.BooleanField(
+        default=False,
+        help_text="Whether VoiceCriticAgent has scored this episode"
+    )
+
+    # =========================================================================
     # METADATA
     # =========================================================================
 
@@ -399,6 +439,8 @@ class ChannelEpisode(models.Model):
             models.Index(fields=['channel', '-created_at']),
             models.Index(fields=['topic']),
             models.Index(fields=['contributed_to_learning']),
+            models.Index(fields=['intent_type']),  # Session 784: Voice critique
+            models.Index(fields=['voice_critique_completed']),  # Session 784: Voice critique
         ]
 
     def __str__(self):

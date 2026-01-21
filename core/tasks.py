@@ -27018,3 +27018,439 @@ def workspace_autopilot_tick(
         logger.error(f"🤖 [WORKSPACE AUTOPILOT] Fatal error in tick: {e}")
         results['errors'].append({'fatal': str(e)})
         return results
+
+
+# =============================================================================
+# Session 787: Comprehensive Agent Scheduling
+# =============================================================================
+# All 73 agents should run autonomously. These tasks organize agents into
+# logical groups with appropriate frequencies.
+# =============================================================================
+
+def _run_agent_group(group_name: str, agent_names: list, task_generator, emoji: str = "🤖"):
+    """
+    Helper function to run a group of agents with a task.
+
+    Session 787: Creates shared project ID for agent group to enable collaboration tracking.
+
+    Args:
+        group_name: Name of the agent group for logging
+        agent_names: List of agent names to execute
+        task_generator: Function that takes agent_name and returns a task string
+        emoji: Emoji for logging
+    """
+    import uuid
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import SpiderData
+    from django.utils import timezone
+    from datetime import timedelta
+
+    logger.info(f"{emoji} [{group_name}] Starting scheduled agent group...")
+
+    router = AgentRouter()
+    results = []
+
+    # Session 787: Create a shared project ID for this agent group run
+    # This enables collaboration tracking across all agents in the group
+    shared_project_id = f"{group_name.lower().replace(' ', '_')}_{timezone.now().strftime('%Y%m%d_%H%M')}"
+
+    # Get recent spider data for context
+    recent_data = SpiderData.objects.filter(
+        created_at__gte=timezone.now() - timedelta(hours=24)
+    ).order_by('-created_at')[:100]
+
+    context = {
+        'scheduled_run': True,
+        'group': group_name,
+        'project_id': shared_project_id,  # Session 787: Shared project for collaboration
+        'recent_spider_data_count': recent_data.count(),
+        'timestamp': timezone.now().isoformat(),
+    }
+
+    for agent_name in agent_names:
+        try:
+            task = task_generator(agent_name)
+
+            result = router.route(
+                agent_name=agent_name,
+                task=task,
+                context=context
+            )
+
+            success = result.success if result else False
+
+            # Session 787: Track contribution with shared project ID for collaboration
+            _track_group_contribution(agent_name, group_name, shared_project_id, success)
+
+            results.append({
+                'agent': agent_name,
+                'success': success,
+                'project_id': shared_project_id,
+            })
+
+            status = '✅' if success else '❌'
+            logger.info(f"{emoji} [{group_name}] {agent_name}: {status}")
+
+        except Exception as e:
+            logger.warning(f"{emoji} [{group_name}] {agent_name} failed: {e}")
+            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
+
+    succeeded = len([r for r in results if r.get('success')])
+    logger.info(f"{emoji} [{group_name}] Complete: {succeeded}/{len(results)} succeeded (project: {shared_project_id})")
+    return results
+
+
+def _track_group_contribution(agent_name: str, group_name: str, project_id: str, success: bool):
+    """
+    Session 787: Track agent contribution with shared project ID.
+    This creates proper collaboration records when multiple agents work together.
+    """
+    try:
+        from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate
+
+        # Get or create the agent template
+        agent_template, _ = UnifiedAgentTemplate.objects.get_or_create(
+            name=agent_name,
+            defaults={
+                'display_name': agent_name.replace('Agent', ' Agent'),
+                'description': f'{agent_name} scheduled execution',
+                'specialization': 'general',
+            }
+        )
+
+        # Create contribution with shared project for collaboration tracking
+        AgentContribution.objects.create(
+            agent=agent_template,
+            project=project_id,
+            contribution_type='orchestration',
+            contribution_role='Collaborator',
+            task_description=f'{agent_name} participating in {group_name} scheduled run',
+            contribution_percentage=100 if success else 0,
+        )
+
+        logger.debug(f"✓ Tracked collaboration: {agent_name} -> project {project_id}")
+
+    except Exception as e:
+        logger.warning(f"Could not track contribution for {agent_name}: {e}")
+
+
+@shared_task
+def run_content_creation_agents():
+    """
+    Session 787: Run content creation agents every 3 hours.
+
+    Agents: ImageAgent, VideoAgent, AudioAgent, ThreeDAgent,
+            ContentWriterAgent, ContentExecutorAgent,
+            ImageEditingAgent, VideoEditingAgent, ResolveAgent
+    """
+    agents = [
+        'ImageAgent', 'VideoAgent', 'AudioAgent', 'ThreeDAgent',
+        'ContentWriterAgent', 'ContentExecutorAgent',
+        'ImageEditingAgent', 'VideoEditingAgent', 'ResolveAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'ImageAgent': 'Analyze recent trends and generate a creative image based on current popular topics',
+            'VideoAgent': 'Create a short video concept based on trending content',
+            'AudioAgent': 'Generate audio content or music based on current themes',
+            'ThreeDAgent': 'Create a 3D model concept based on trending designs',
+            'ContentWriterAgent': 'Write an article about recent trending topics from spider data',
+            'ContentExecutorAgent': 'Review pending content tasks and execute the highest priority one',
+            'ImageEditingAgent': 'Review recent images and suggest improvements or variations',
+            'VideoEditingAgent': 'Analyze recent videos and propose editing enhancements',
+            'ResolveAgent': 'Check for pending video projects and process the next one',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('CONTENT CREATION', agents, task_gen, '🎨')
+
+
+@shared_task
+def run_strategy_marketing_agents():
+    """
+    Session 787: Run strategy and marketing agents every 4 hours.
+
+    Agents: ContentStrategyAgent, BrandIdentityAgent, SEOOptimizerAgent,
+            SocialMediaAgent, BrandStrategyAgent
+    """
+    agents = [
+        'ContentStrategyAgent', 'BrandIdentityAgent', 'SEOOptimizerAgent',
+        'SocialMediaAgent', 'BrandStrategyAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'ContentStrategyAgent': 'Analyze spider data and recommend content strategies for the next 24 hours',
+            'BrandIdentityAgent': 'Review brand consistency across recent content and suggest improvements',
+            'SEOOptimizerAgent': 'Analyze trending keywords and provide SEO recommendations',
+            'SocialMediaAgent': 'Identify social media opportunities from recent spider data',
+            'BrandStrategyAgent': 'Evaluate brand positioning based on competitor data',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('STRATEGY & MARKETING', agents, task_gen, '📈')
+
+
+@shared_task
+def run_research_analysis_agents():
+    """
+    Session 787: Run research and analysis agents every 2 hours.
+
+    Agents: ResearchAgent, CustomerResearchAgent
+    """
+    agents = ['ResearchAgent', 'CustomerResearchAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'ResearchAgent': 'Research the most significant trends from the last 6 hours of spider data',
+            'CustomerResearchAgent': 'Analyze customer behavior patterns from recent data',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('RESEARCH & ANALYSIS', agents, task_gen, '🔬')
+
+
+@shared_task
+def run_stock_financial_agents():
+    """
+    Session 787: Run stock and financial analysis agents every 3 hours.
+
+    Agents: StockAnalystAgent, StockAuditCoordinator, BullCaseAgent, BearCaseAgent,
+            MarketIntelligenceCoordinator
+    """
+    agents = [
+        'StockAnalystAgent', 'StockAuditCoordinator',
+        'BullCaseAgent', 'BearCaseAgent', 'MarketIntelligenceCoordinator'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'StockAnalystAgent': 'Analyze market conditions and identify notable stock movements',
+            'StockAuditCoordinator': 'Coordinate a brief market health check across all stock agents',
+            'BullCaseAgent': 'Identify the strongest bullish opportunities from current market data',
+            'BearCaseAgent': 'Identify key risks and bearish signals in current market data',
+            'MarketIntelligenceCoordinator': 'Synthesize market intelligence from all sources',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('STOCK & FINANCIAL', agents, task_gen, '📊')
+
+
+@shared_task
+def run_prediction_market_agents():
+    """
+    Session 787: Run prediction market agents every 2 hours.
+
+    Agents: PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
+    """
+    agents = ['PredictionMarketAnalyst', 'SportsOddsAnalyst', 'ArbitrageDetector']
+
+    def task_gen(agent):
+        tasks = {
+            'PredictionMarketAnalyst': 'Scan prediction markets for high-value opportunities',
+            'SportsOddsAnalyst': 'Analyze current sports odds and identify value bets',
+            'ArbitrageDetector': 'Scan for arbitrage opportunities across betting markets',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('PREDICTION MARKETS', agents, task_gen, '🎯')
+
+
+@shared_task
+def run_narrative_culture_agents():
+    """
+    Session 787: Run narrative and culture agents every 6 hours.
+
+    Agents: NarrativeDriftCoordinator, NarrativeHistorianAgent,
+            TrendBreakDetectorAgent, CulturalImpactAgent
+    """
+    agents = [
+        'NarrativeDriftCoordinator', 'NarrativeHistorianAgent',
+        'TrendBreakDetectorAgent', 'CulturalImpactAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'NarrativeDriftCoordinator': 'Analyze how narratives have shifted in recent news and social data',
+            'NarrativeHistorianAgent': 'Document significant narrative patterns from the past 24 hours',
+            'TrendBreakDetectorAgent': 'Identify any trend breaks or reversals in recent data',
+            'CulturalImpactAgent': 'Assess cultural impact of trending topics',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('NARRATIVE & CULTURE', agents, task_gen, '📖')
+
+
+@shared_task
+def run_development_tech_agents():
+    """
+    Session 787: Run development and tech agents every 4 hours.
+
+    Agents: CodeGeneratorAgent, CodeReviewAgent, FullStackDeveloperAgent,
+            DevOpsAgent, TechnicalDocumentAgent
+    """
+    agents = [
+        'CodeGeneratorAgent', 'CodeReviewAgent', 'FullStackDeveloperAgent',
+        'DevOpsAgent', 'TechnicalDocumentAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'CodeGeneratorAgent': 'Review tech trends and suggest code improvements for the platform',
+            'CodeReviewAgent': 'Analyze recent code patterns and identify potential improvements',
+            'FullStackDeveloperAgent': 'Identify development opportunities from spider tech data',
+            'DevOpsAgent': 'Check system health and suggest infrastructure improvements',
+            'TechnicalDocumentAgent': 'Review documentation gaps and suggest updates',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('DEVELOPMENT & TECH', agents, task_gen, '💻')
+
+
+@shared_task
+def run_executive_leadership_agents():
+    """
+    Session 787: Run executive and leadership agents every 6 hours.
+
+    Agents: CTOAgent, COOAgent, CreativeDirectorAgent, MeetingCoordinatorAgent
+    """
+    agents = ['CTOAgent', 'COOAgent', 'CreativeDirectorAgent', 'MeetingCoordinatorAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'CTOAgent': 'Review technology strategy and provide executive recommendations',
+            'COOAgent': 'Analyze operational efficiency and suggest improvements',
+            'CreativeDirectorAgent': 'Review creative output quality and provide direction',
+            'MeetingCoordinatorAgent': 'Summarize key activities and prepare coordination notes',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('EXECUTIVE & LEADERSHIP', agents, task_gen, '👔')
+
+
+@shared_task
+def run_podcast_debate_agents():
+    """
+    Session 787: Run podcast and debate agents every 8 hours.
+
+    Agents: PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent
+    """
+    agents = ['PodcastCoordinatorAgent', 'DebateAdvocateAgent', 'DebateSkepticAgent', 'ModeratorAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'PodcastCoordinatorAgent': 'Identify compelling podcast topics from recent trends',
+            'DebateAdvocateAgent': 'Prepare arguments for a trending controversial topic',
+            'DebateSkepticAgent': 'Prepare counter-arguments for a trending topic',
+            'ModeratorAgent': 'Analyze recent debates and summarize key discussion points',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('PODCAST & DEBATE', agents, task_gen, '🎙️')
+
+
+@shared_task
+def run_content_studio_agents():
+    """
+    Session 787: Run content studio agents every 4 hours.
+
+    Agents: TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent
+    Note: AutonomousContentStudioCoordinator runs separately
+    """
+    agents = ['TopicMinerAgent', 'ContrarianAgent', 'PerformanceAnalystAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'TopicMinerAgent': 'Mine spider data for high-potential content topics',
+            'ContrarianAgent': 'Identify contrarian perspectives on trending topics',
+            'PerformanceAnalystAgent': 'Analyze recent content performance metrics',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('CONTENT STUDIO', agents, task_gen, '🎬')
+
+
+@shared_task
+def run_campaign_series_agents():
+    """
+    Session 787: Run campaign and series agents every 6 hours.
+
+    Agents: CampaignOrchestratorAgent, AISeriesWorkflowAgent
+    """
+    agents = ['CampaignOrchestratorAgent', 'AISeriesWorkflowAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'CampaignOrchestratorAgent': 'Review active campaigns and suggest optimizations',
+            'AISeriesWorkflowAgent': 'Check AI series workflows and advance pending items',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('CAMPAIGN & SERIES', agents, task_gen, '🚀')
+
+
+@shared_task
+def run_system_orchestration_agents():
+    """
+    Session 787: Run system and orchestration agents every 2 hours.
+
+    Agents: SystemIntelligenceAgent, ThinkingAgent, WorkflowAgent,
+            WorkflowOrchestrationAgent, OpportunityPipelineAgent
+    """
+    agents = [
+        'SystemIntelligenceAgent', 'ThinkingAgent', 'WorkflowAgent',
+        'WorkflowOrchestrationAgent', 'OpportunityPipelineAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'SystemIntelligenceAgent': 'Generate a system health and intelligence report',
+            'ThinkingAgent': 'Reflect on recent system activities and generate insights',
+            'WorkflowAgent': 'Check pending workflows and advance ready items',
+            'WorkflowOrchestrationAgent': 'Orchestrate cross-agent workflow coordination',
+            'OpportunityPipelineAgent': 'Review opportunity pipeline and prioritize actions',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('SYSTEM & ORCHESTRATION', agents, task_gen, '⚙️')
+
+
+@shared_task
+def run_quality_audit_agents():
+    """
+    Session 787: Run quality and audit agents every 4 hours.
+
+    Agents: ContentAuditAgent, ContentDiversityOrchestrator
+    """
+    agents = ['ContentAuditAgent', 'ContentDiversityOrchestrator']
+
+    def task_gen(agent):
+        tasks = {
+            'ContentAuditAgent': 'Audit recent content for quality and compliance',
+            'ContentDiversityOrchestrator': 'Check content diversity and identify gaps',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('QUALITY & AUDIT', agents, task_gen, '✅')
+
+
+@shared_task
+def run_specialty_agents():
+    """
+    Session 787: Run specialty agents every 8 hours.
+
+    Agents: LegalDocDrafterAgent, CharacterTrainingAgent, TrainedCreationAgent, MemoryIsolationAgent
+    """
+    agents = ['LegalDocDrafterAgent', 'CharacterTrainingAgent', 'TrainedCreationAgent', 'MemoryIsolationAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'LegalDocDrafterAgent': 'Review legal updates and prepare relevant document templates',
+            'CharacterTrainingAgent': 'Analyze character training data and suggest improvements',
+            'TrainedCreationAgent': 'Generate content using trained character models',
+            'MemoryIsolationAgent': 'Perform memory isolation check and cleanup stale data',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('SPECIALTY', agents, task_gen, '🔧')
