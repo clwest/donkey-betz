@@ -67,7 +67,7 @@ class ScopedRetrievalService:
     def __init__(self):
         self.default_scope = DocumentScope.DOCS_INDEX_ACTIVE
         self.default_limit = 10
-        self.min_similarity = 0.7
+        self.min_similarity = 0.4  # Lowered from 0.7 - embedding similarity scores are typically 0.3-0.6
 
     def search(
         self,
@@ -174,12 +174,12 @@ class ScopedRetrievalService:
                 agent_name='scoped_retrieval'
             )
 
-            if not query_embedding:
+            if not query_embedding or not query_embedding.embedding:
                 return []
 
-            # Find similar documents
+            # Find similar documents - extract vector from EmbeddingResult
             results = DocumentEmbedding.cosine_similarity_search(
-                query_vector=query_embedding,
+                query_vector=query_embedding.embedding,
                 limit=limit,
                 min_similarity=self.min_similarity
             )
