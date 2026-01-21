@@ -23,7 +23,7 @@ startCommand = "sh -c 'daphne -b 0.0.0.0 -p $PORT core.asgi:application'"
 
 # Health check configuration
 healthcheckPath = "/health/ping/"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
 
 # Restart policy
 restartPolicyType = "ON_FAILURE"
