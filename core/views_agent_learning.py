@@ -5177,7 +5177,8 @@ def get_conversation_contract_overview(request):
             msg_empty = has_empty_agreement(combined_content)
 
             # Check final message for summary
-            final_message = messages.order_by('-created_at').first()
+            # Session 786: Use -sequence_number to match backfill command ordering
+            final_message = messages.order_by('-sequence_number').first()
             summary = extract_decision_summary(final_message.content if final_message else '')
             summary_valid = validate_decision_summary(summary)
 
