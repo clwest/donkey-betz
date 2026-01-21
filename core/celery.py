@@ -1780,6 +1780,125 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
+    # =========================================================================
+    # Session 787: Comprehensive Agent Scheduling
+    # All 73 agents run autonomously on appropriate schedules
+    # =========================================================================
+    'run-content-creation-agents': {
+        'task': 'core.tasks.run_content_creation_agents',
+        'schedule': crontab(minute=10, hour='*/3'),  # Every 3 hours at :10
+        'options': {
+            'expires': 10800,  # 3 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-strategy-marketing-agents': {
+        'task': 'core.tasks.run_strategy_marketing_agents',
+        'schedule': crontab(minute=20, hour='*/4'),  # Every 4 hours at :20
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-research-analysis-agents': {
+        'task': 'core.tasks.run_research_analysis_agents',
+        'schedule': crontab(minute=30, hour='*/2'),  # Every 2 hours at :30
+        'options': {
+            'expires': 7200,  # 2 hours
+            'queue': 'agents',
+        }
+    },
+    'run-stock-financial-agents': {
+        'task': 'core.tasks.run_stock_financial_agents',
+        'schedule': crontab(minute=40, hour='*/3'),  # Every 3 hours at :40
+        'options': {
+            'expires': 10800,  # 3 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-prediction-market-agents': {
+        'task': 'core.tasks.run_prediction_market_agents',
+        'schedule': crontab(minute=50, hour='*/2'),  # Every 2 hours at :50
+        'options': {
+            'expires': 7200,  # 2 hours
+            'queue': 'sports',
+        }
+    },
+    'run-narrative-culture-agents': {
+        'task': 'core.tasks.run_narrative_culture_agents',
+        'schedule': crontab(minute=15, hour='*/6'),  # Every 6 hours at :15
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-development-tech-agents': {
+        'task': 'core.tasks.run_development_tech_agents',
+        'schedule': crontab(minute=25, hour='*/4'),  # Every 4 hours at :25
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-executive-leadership-agents': {
+        'task': 'core.tasks.run_executive_leadership_agents',
+        'schedule': crontab(minute=35, hour='*/6'),  # Every 6 hours at :35
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-podcast-debate-agents': {
+        'task': 'core.tasks.run_podcast_debate_agents',
+        'schedule': crontab(minute=45, hour='*/8'),  # Every 8 hours at :45
+        'options': {
+            'expires': 28800,  # 8 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-content-studio-agents': {
+        'task': 'core.tasks.run_content_studio_agents',
+        'schedule': crontab(minute=55, hour='*/4'),  # Every 4 hours at :55
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'content',
+        }
+    },
+    'run-campaign-series-agents': {
+        'task': 'core.tasks.run_campaign_series_agents',
+        'schedule': crontab(minute=5, hour='*/6'),  # Every 6 hours at :05
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'long_running',
+        }
+    },
+    'run-system-orchestration-agents': {
+        'task': 'core.tasks.run_system_orchestration_agents',
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours at :00
+        'options': {
+            'expires': 7200,  # 2 hours
+            'queue': 'agents',
+        }
+    },
+    'run-quality-audit-agents': {
+        'task': 'core.tasks.run_quality_audit_agents',
+        'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'agents',
+        }
+    },
+    'run-specialty-agents': {
+        'task': 'core.tasks.run_specialty_agents',
+        'schedule': crontab(minute=30, hour='*/8'),  # Every 8 hours at :30
+        'options': {
+            'expires': 28800,  # 8 hours
+            'queue': 'long_running',
+        }
+    },
+    # =========================================================================
+    # End Session 787 Agent Scheduling
+    # =========================================================================
     'exercise-all-dormant-agents': {
         'task': 'core.tasks.exercise_all_dormant_agents',
         'schedule': crontab(day_of_week=0, hour=6, minute=0),  # Weekly on Sunday at 6 AM
