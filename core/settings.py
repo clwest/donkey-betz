@@ -76,11 +76,12 @@ if not DEBUG and '*' in ALLOWED_HOSTS:
 if not DEBUG:
     # Add default production hosts if not already present
     default_production_hosts = [
-        '.donkeybetz.com',  # Allow all subdomains
-        '.vercel.app',      # Allow Vercel deployments
-        '.netlify.app',     # Allow Netlify deployments
-        '.herokuapp.com',   # Allow Heroku deployments
-        '.railway.app',     # Allow Railway deployments
+        '.donkeybetz.com',    # Allow all subdomains
+        '.vercel.app',        # Allow Vercel deployments
+        '.netlify.app',       # Allow Netlify deployments
+        '.herokuapp.com',     # Allow Heroku deployments
+        '.railway.app',       # Allow Railway deployments
+        '.up.railway.app',    # Allow Railway auto-generated domains
     ]
     for host in default_production_hosts:
         if host not in ALLOWED_HOSTS:
@@ -449,9 +450,11 @@ else:
     CORS_ALLOW_ALL_ORIGINS = False  # Never allow all origins in production
     # Allow specific subdomains in production
     CORS_ALLOWED_ORIGIN_REGEXES = [
-        r"^https://.*\.donkeybetz\.com$",  # Allow all subdomains
-        r"^https://.*\.vercel\.app$",      # Allow Vercel deployments
-        r"^https://.*\.netlify\.app$",     # Allow Netlify deployments
+        r"^https://.*\.donkeybetz\.com$",     # Allow all subdomains
+        r"^https://.*\.vercel\.app$",         # Allow Vercel deployments
+        r"^https://.*\.netlify\.app$",        # Allow Netlify deployments
+        r"^https://.*\.railway\.app$",        # Allow Railway deployments
+        r"^https://.*\.up\.railway\.app$",    # Allow Railway auto-generated domains
     ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -479,8 +482,10 @@ else:
     # In production, trust HTTPS origins
     default_trusted = [
         'https://*.donkeybetz.com',
-        'https://*.vercel.app', 
-        'https://*.netlify.app'
+        'https://*.vercel.app',
+        'https://*.netlify.app',
+        'https://*.railway.app',
+        'https://*.up.railway.app',
     ]
     custom_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
     CSRF_TRUSTED_ORIGINS = default_trusted + custom_origins
