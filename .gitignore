@@ -61,6 +61,20 @@ dump.rdb
 # Celery
 celerybeat-schedule
 celerybeat.pid
+.celery*.pid
+.celery*.log
+
+# Process ID files
+*.pid
+.*.pid
+
+# Nohup output
+nohup.out
+nohup_*.out
+
+# Daphne
+.daphne.pid
+.daphne*.log
 
 # Redis
 *.rdb
