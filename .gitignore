@@ -107,6 +107,10 @@ yarn-error.log*
 build/
 dist/
 
+# BUT: Allow React frontend build for deployment
+!frontend/dist/
+!frontend/dist/**
+
 # React/Vite specific
 .vite/
 .turbo/
