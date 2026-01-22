@@ -16,6 +16,7 @@ Capabilities:
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, List, Any, Optional, Callable
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
@@ -120,8 +121,9 @@ class DataTransformationPipeline:
     async def initialize(self):
         """Initialize Redis connection and pipeline components"""
         try:
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
             self.redis_client = await redis.from_url(
-                'redis://localhost:6379/0',
+                redis_url,
                 encoding='utf-8',
                 decode_responses=True
             )

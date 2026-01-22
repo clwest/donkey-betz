@@ -17,6 +17,7 @@ Spider Data → Transform → Learning Signals → Agent Learning → Improvemen
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
@@ -108,8 +109,12 @@ class UnifiedLearningPipeline:
     async def _initialize_redis(self):
         """Initialize Redis connections"""
         try:
+            # Get base Redis URL and use DB 2 for pipeline coordination
+            base_redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            # Replace the database number with /2
+            redis_url = base_redis_url.rsplit('/', 1)[0] + '/2' if '/' in base_redis_url else base_redis_url + '/2'
             self.redis_client = await redis.from_url(
-                'redis://localhost:6379/2',  # Use DB 2 for pipeline coordination
+                redis_url,
                 encoding='utf-8',
                 decode_responses=True
             )

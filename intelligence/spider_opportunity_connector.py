@@ -16,6 +16,7 @@ Features:
 
 import json
 import logging
+import os
 import redis.asyncio as aioredis
 from typing import Dict, List, Optional
 from datetime import datetime, timezone, timedelta
@@ -69,8 +70,8 @@ class SpiderOpportunity:
 class SpiderOpportunityConnector:
     """Connects to spider network to fetch real-time income opportunities"""
 
-    def __init__(self, redis_url: str = "redis://localhost:6379"):
-        self.redis_url = redis_url
+    def __init__(self, redis_url: str = None):
+        self.redis_url = redis_url or os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
         self.redis = None
         self.cache_timeout = 300  # 5 minutes
         self.opportunity_cache = {}
