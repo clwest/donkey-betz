@@ -138,9 +138,12 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health/ping/ || exit 1
 
-# Production command - use Daphne for WebSocket support
-# Uses shell form to expand $PORT environment variable (Railway injects this)
-CMD daphne -b 0.0.0.0 -p ${PORT:-8000} core.asgi:application
+# Copy entrypoint script
+COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Production command - use entrypoint script to run migrations then start Daphne
+CMD ["/app/entrypoint.sh"]
 
 # =============================================================================
 # STAGE 5: Celery Worker (Default Queue)
