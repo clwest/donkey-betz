@@ -16,6 +16,7 @@ Features:
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, List, Any, Optional, Set
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict, field
@@ -129,9 +130,11 @@ class AgentLearningEngine:
     async def initialize(self):
         """Initialize the learning engine"""
         try:
-            # Setup Redis connection
+            # Setup Redis connection - use DB 1 for learning
+            base_redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            redis_url = base_redis_url.rsplit('/', 1)[0] + '/1' if '/' in base_redis_url else base_redis_url + '/1'
             self.redis_client = await redis.from_url(
-                'redis://localhost:6379/1',  # Use different DB for learning
+                redis_url,
                 encoding='utf-8',
                 decode_responses=True
             )

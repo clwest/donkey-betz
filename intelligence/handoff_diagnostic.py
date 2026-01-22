@@ -5,6 +5,7 @@ Identifies and validates all connection points between system components
 
 import json
 import logging
+import os
 from typing import Dict, List, Any, Tuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -265,7 +266,8 @@ class HandoffDiagnostic:
             app = Celery('core')
             # Check if broker is accessible
             from kombu import Connection
-            conn = Connection('redis://localhost:6379/0')
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            conn = Connection(redis_url)
             conn.ensure_connection(max_retries=1)
             return True, "Celery broker connected"
         except:

@@ -15,6 +15,7 @@ spider-to-learning pipeline, tracking:
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
@@ -130,9 +131,11 @@ class LearningMetricsDashboard:
     async def initialize(self):
         """Initialize the metrics dashboard"""
         try:
-            # Setup Redis connection
+            # Setup Redis connection - use DB 3 for metrics
+            base_redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            redis_url = base_redis_url.rsplit('/', 1)[0] + '/3' if '/' in base_redis_url else base_redis_url + '/3'
             self.redis_client = await redis.from_url(
-                'redis://localhost:6379/3',  # Use DB 3 for metrics
+                redis_url,
                 encoding='utf-8',
                 decode_responses=True
             )

@@ -25,6 +25,7 @@ continuously feeds learning data, enabling true AI learning at scale.
 
 import asyncio
 import logging
+import os
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
@@ -212,8 +213,9 @@ class SpiderLearningOrchestrator:
     async def initialize(self):
         """Initialize Redis connection and spider network"""
         try:
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
             self.redis_client = await redis.from_url(
-                'redis://localhost:6379',
+                redis_url,
                 encoding='utf-8',
                 decode_responses=True
             )
