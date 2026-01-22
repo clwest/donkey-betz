@@ -19,12 +19,9 @@ class AgentExecutionTracker:
     """
 
     def __init__(self):
-        self.redis_client = redis.Redis(
-            host=settings.REDIS_HOST if hasattr(settings, 'REDIS_HOST') else 'localhost',
-            port=settings.REDIS_PORT if hasattr(settings, 'REDIS_PORT') else 6379,
-            db=0,
-            decode_responses=True
-        )
+        import os
+        redis_url = os.environ.get('REDIS_URL', getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0'))
+        self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
         self.mst = pytz.timezone('America/Denver')
 
     def track_agent_execution(self, agent_name: str, execution_data: Dict[str, Any]) -> None:
