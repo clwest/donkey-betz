@@ -5,6 +5,7 @@ Persistent memory storage and pattern learning for AI Nexus
 
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import redis.asyncio as redis
@@ -28,7 +29,8 @@ class AIMemorySystem:
     async def initialize(self):
         """Initialize Redis connection"""
         try:
-            self.redis_client = await redis.from_url('redis://localhost:6379/0')
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            self.redis_client = await redis.from_url(redis_url)
             logger.info("AI Memory System initialized")
         except Exception as e:
             logger.error(f"Memory System Redis connection failed: {e}")
