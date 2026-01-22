@@ -12,6 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('core', '0143_session_686_human_interface_layer'),
+        ('core', '0130_session_590_pilot_readiness_gate'),  # Explicit dep: creates core_pilotexecution
     ]
 
     operations = [
