@@ -6025,13 +6025,15 @@ Guidelines:
                         msg_type = 'insight'
 
                     # Save the message
+                    # Session 789: Handle case where knowledge_item is None (agents without knowledge)
+                    knowledge_ids = [str(knowledge_item.id)] if knowledge_item else []
                     ConversationMessage.objects.create(
                         conversation=conversation,
                         agent=current_speaker,
                         content=content,
                         message_type=msg_type,
                         sequence_number=msg_num + 1,
-                        referenced_knowledge_ids=[str(knowledge_item.id)]
+                        referenced_knowledge_ids=knowledge_ids
                     )
 
                     messages.append({
