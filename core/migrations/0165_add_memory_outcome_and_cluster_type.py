@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0164_add_watch_verify_feature"),
+        ("core", "0162_fix_gamelinehistory_fields"),  # Skip deleted 0163-0164
     ]
 
     operations = [

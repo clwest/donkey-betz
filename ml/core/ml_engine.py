@@ -27,7 +27,8 @@ from transformers import pipeline
 @dataclass
 class MLConfig:
     """ML Engine Configuration"""
-    model_cache_dir: str = "models/cache"
+    # Use /tmp in production (Railway) for writable cache, local path for development
+    model_cache_dir: str = os.environ.get('ML_MODEL_CACHE_DIR', '/tmp/ml_models/cache' if os.environ.get('RAILWAY_ENVIRONMENT') else 'models/cache')
     use_mlx: bool = MLX_AVAILABLE
     max_memory_gb: float = 8.0  # Reserve 10GB for system
     inference_timeout: int = 5000  # 5 second timeout

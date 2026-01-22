@@ -183,11 +183,14 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            REACT_BUILD_DIR,  # Session 688: React build is the only UI
+            str(REACT_BUILD_DIR),
+            str(BASE_DIR / 'ai_core' / 'templates'),
+            str(BASE_DIR / 'core' / 'templates'),  # APP_DIRS backup
+            '/app/frontend/dist',  # Railway absolute path
         ],
-        'APP_DIRS': True,
+        'APP_DIRS': True,  # Also checks <app>/templates/ directories
         'OPTIONS': {
-            'debug': True,  # Disable template caching in development
+            'debug': DEBUG,
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -201,13 +204,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 ASGI_APPLICATION = 'core.asgi.application'
 
-# Production-Grade Channels Configuration - SIMPLIFIED
+# Production-Grade Channels Configuration
+# Use REDIS_URL for Railway, fallback to localhost for local dev
+_redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 try:
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                'hosts': [('localhost', 6379)],  # Simple configuration
+                'hosts': [_redis_url],
             },
         },
     }
