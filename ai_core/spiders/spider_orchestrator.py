@@ -20,7 +20,10 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'donkeybetz_spiders'))
 
 # Configure Redis for inter-spider communication
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis.from_url(
+    os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
+    decode_responses=True
+)
 
 # Configure logging
 logging.basicConfig(
@@ -1154,7 +1157,8 @@ class SpiderArmyOrchestrator:
     async def send_metrics_to_api(self, metrics: Dict[str, Any]):
         """Send metrics to Django API"""
         try:
-            api_url = "http://localhost:8000/api/spider-army/metrics/"
+            base_url = os.environ.get('BACKEND_URL', 'http://localhost:8000')
+            api_url = f"{base_url}/api/spider-army/metrics/"
             headers = {'Content-Type': 'application/json'}
 
             # Use aiohttp for async request

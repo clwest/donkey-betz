@@ -3,6 +3,7 @@ Simple Agent API for Frontend
 Provides basic agent data without complex model dependencies
 """
 import json
+import os
 import uuid
 from datetime import datetime
 from django.http import JsonResponse
@@ -13,7 +14,10 @@ import logging
 import redis
 
 logger = logging.getLogger(__name__)
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+redis_client = redis.Redis.from_url(
+    os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
+    decode_responses=True
+)
 
 
 @csrf_exempt
