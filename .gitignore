@@ -163,9 +163,10 @@ temp/
 # Docker
 docker-compose.override.yml
 
-# Migrations (Selective)
-**/migrations/0*.py
-!**/migrations/__init__.py
+# Migrations - NOW TRACKED for Railway deployment
+# Previously ignored, but needed for production migrations
+# **/migrations/0*.py
+# !**/migrations/__init__.py
 
 # Secrets & Keys
 *.pem
