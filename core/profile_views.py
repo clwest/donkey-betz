@@ -18,8 +18,18 @@ from .models import UserProfile
 
 
 # Create media directories if they don't exist
-AVATAR_DIR = os.path.join(settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else 'media', 'avatars')
-if not os.path.exists(AVATAR_DIR):
+# Use /tmp for Railway (non-writable filesystem), local path for development
+if os.environ.get('RAILWAY_ENVIRONMENT'):
+    AVATAR_DIR = '/tmp/media/avatars'
+else:
+    AVATAR_DIR = os.path.join(settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else 'media', 'avatars')
+
+try:
+    if not os.path.exists(AVATAR_DIR):
+        os.makedirs(AVATAR_DIR, exist_ok=True)
+except PermissionError:
+    # Fallback to /tmp if we can't create the directory
+    AVATAR_DIR = '/tmp/media/avatars'
     os.makedirs(AVATAR_DIR, exist_ok=True)
 
 

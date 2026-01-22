@@ -92,8 +92,10 @@ RUN pip install \
 # Copy application code
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --settings=core.settings
+# Collect static files (use dummy SECRET_KEY for build - real one used at runtime)
+RUN SECRET_KEY=build-time-dummy-key-not-used-in-production-needs-fifty-characters-minimum-for-django \
+    DATABASE_URL=sqlite:///dummy.db \
+    python manage.py collectstatic --noinput --settings=core.settings
 
 # =============================================================================
 # STAGE 4: Production Runtime
