@@ -179,21 +179,16 @@ ROOT_URLCONF = 'core.urls'
 # Django templates deprecated - React build served from frontend/dist
 REACT_BUILD_DIR = BASE_DIR / 'frontend' / 'dist'
 
-# Multiple template directories for compatibility
-TEMPLATE_DIRS = [
-    REACT_BUILD_DIR,  # Primary: React build
-    BASE_DIR / 'ai_core' / 'templates',  # Fallback: Django templates
-    '/app/frontend/dist',  # Railway: Absolute path fallback
-]
-
-# Filter to only existing directories
-TEMPLATE_DIRS = [str(d) for d in TEMPLATE_DIRS if Path(d).exists()] or [str(REACT_BUILD_DIR)]
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': TEMPLATE_DIRS,
-        'APP_DIRS': True,
+        'DIRS': [
+            str(REACT_BUILD_DIR),
+            str(BASE_DIR / 'ai_core' / 'templates'),
+            str(BASE_DIR / 'core' / 'templates'),  # APP_DIRS backup
+            '/app/frontend/dist',  # Railway absolute path
+        ],
+        'APP_DIRS': True,  # Also checks <app>/templates/ directories
         'OPTIONS': {
             'debug': DEBUG,
             'context_processors': [
