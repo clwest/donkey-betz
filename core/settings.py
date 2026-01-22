@@ -204,13 +204,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 ASGI_APPLICATION = 'core.asgi.application'
 
-# Production-Grade Channels Configuration - SIMPLIFIED
+# Production-Grade Channels Configuration
+# Use REDIS_URL for Railway, fallback to localhost for local dev
+_redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 try:
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                'hosts': [('localhost', 6379)],  # Simple configuration
+                'hosts': [_redis_url],
             },
         },
     }
