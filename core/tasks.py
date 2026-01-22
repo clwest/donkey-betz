@@ -5902,16 +5902,16 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
 
                 # Session 362: Build knowledge context with data source attribution
                 knowledge_context_parts = []
-                if knowledge_item.summary:
+                if knowledge_item and knowledge_item.summary:
                     knowledge_context_parts.append(f"Summary: {knowledge_item.summary[:500]}")
-                if knowledge_item.data_points_count:
+                if knowledge_item and knowledge_item.data_points_count:
                     knowledge_context_parts.append(f"Based on: {knowledge_item.data_points_count} data points")
-                if knowledge_item.source_spider_names:
+                if knowledge_item and knowledge_item.source_spider_names:
                     spider_sources = ', '.join(str(s) for s in knowledge_item.source_spider_names[:5])
                     knowledge_context_parts.append(f"Data sources: {spider_sources}")
-                if knowledge_item.spider_category:
+                if knowledge_item and knowledge_item.spider_category:
                     knowledge_context_parts.append(f"Category: {knowledge_item.spider_category.name}")
-                if knowledge_item.key_insights:
+                if knowledge_item and knowledge_item.key_insights:
                     insights = '; '.join(str(i) for i in knowledge_item.key_insights[:3])
                     knowledge_context_parts.append(f"Key insights: {insights}")
 
