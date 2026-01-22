@@ -2,6 +2,7 @@
 Agent Execution API Endpoints
 Handles agent execution requests from the frontend
 """
+import os
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,6 +12,9 @@ from ai_core.agents.execution_queue import execution_queue
 from ai_core.agents.execution_queue import Priority
 
 logger = logging.getLogger(__name__)
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 @csrf_exempt
@@ -95,7 +99,7 @@ async def get_task_status(request, task_id):
         else:
             # Check if still pending
             import redis
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
             if r.sismember('queue:pending', task_id):
                 return Response({
                     'success': True,

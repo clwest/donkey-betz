@@ -1,6 +1,7 @@
 """
 Freelance Pipeline API Endpoints
 """
+import os
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,6 +16,9 @@ import json
 import logging
 from datetime import datetime
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +29,7 @@ def get_freelance_opportunities(request):
     """Get all freelance opportunities"""
     try:
         import redis
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         # Get all opportunity keys
         opp_keys = r.keys('freelance:opportunity:*')
@@ -96,7 +100,7 @@ def analyze_opportunity(request, job_id):
 
         # Check for cached analysis first
         import redis
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         cache_key = f"freelance:analysis:{job_id}"
         cached_analysis = r.get(cache_key)
@@ -429,7 +433,7 @@ Should I take this job? Respond with: PURSUE, AVOID, or MAYBE and explain why in
 
         try:
             import redis
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
             cache_key = f"freelance:analysis:{job_id}"
             r.setex(cache_key, 86400 * 7, json.dumps(fallback_cache_data))  # Cache for 7 days
             logger.info(f"💾 Cached fallback analysis for {job_id}")
@@ -444,7 +448,7 @@ Should I take this job? Respond with: PURSUE, AVOID, or MAYBE and explain why in
         from ai_core.agents.freelance_pipeline import FreelancePipeline
         import redis
 
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         # Get opportunity data
         opportunity = request.data
@@ -492,7 +496,7 @@ def get_pending_approvals(request):
     """Get all pending approval requests"""
     try:
         import redis
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         approvals = []
         pending = r.lrange('freelance:approvals:pending', 0, -1)
@@ -528,7 +532,7 @@ def process_approval(request, approval_id):
         import uuid
         from datetime import datetime
 
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         pipeline = FreelancePipeline(redis_client=r)
 
         decision = request.data.get('decision', 'approve')
@@ -642,7 +646,7 @@ def get_active_projects(request):
     """Get all active freelance projects"""
     try:
         import redis
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         # Get all project keys
         project_keys = r.keys('freelance:project:*')
@@ -689,7 +693,7 @@ def project_decision(request):
 
         # Store decision in memory system for spider learning
         import redis
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         # Create memory entry for spider learning
         memory_key = f"user_decision:{opportunity.get('job_id', 'unknown')}"
@@ -810,7 +814,7 @@ async def start_freelance_spider(request):
         from ai_core.spiders.freelance_opportunity_spider import FreelanceOpportunitySpider
         import redis
 
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         spider = FreelanceOpportunitySpider(redis_client=r)
         await spider.initialize()
@@ -849,7 +853,7 @@ def deploy_deliverable(request):
 
         # Store deployment record in Redis
         import redis
-        r = redis.Redis(host="localhost", port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         deployment_record = {
             "deliverable_id": deliverable_id,
@@ -886,7 +890,7 @@ def completed_deliverables(request):
     """Get completed project deliverables for review"""
     try:
         import redis
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         project_keys = r.keys('freelance:project:*')
         deliverables = []
@@ -930,7 +934,7 @@ def deliverable_content(request, deliverable_id):
     try:
         import redis
         import os
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         # Find the project containing this deliverable
         project_keys = r.keys('freelance:project:*')
