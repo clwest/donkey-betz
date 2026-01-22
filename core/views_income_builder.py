@@ -9,8 +9,10 @@ def income_builder_view(request):
     """
     Render the Income Builder template with WebSocket connection
     """
-    # Use hardcoded localhost for development
+    # Build WebSocket URL dynamically from request
+    ws_scheme = 'wss' if request.is_secure() else 'ws'
+    ws_host = request.get_host()
     context = {
-        'websocket_url': "ws://localhost:8000/ws/income-builder/",
+        'websocket_url': f"{ws_scheme}://{ws_host}/ws/income-builder/",
     }
     return render(request, 'income_builder.html', context)
