@@ -23,7 +23,7 @@ startCommand = "sh -c 'python manage.py migrate --noinput && daphne -b 0.0.0.0 -
 
 # Health check configuration
 healthcheckPath = "/health/ping/"
-healthcheckTimeout = 120
+healthcheckTimeout = 300
 
 # Restart policy
 restartPolicyType = "ON_FAILURE"
