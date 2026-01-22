@@ -28,6 +28,9 @@ from .url_validator import (
 # Session 617: Title cleaning
 from .title_cleaner import clean_title, clean_titles_dict
 
+# Session 789: Redis helper
+from .redis_helper import get_redis_client, get_redis_url, get_async_redis_client
+
 __all__ = [
     # Temp files
     'temp_file',
@@ -51,4 +54,8 @@ __all__ = [
     # Title cleaning
     'clean_title',
     'clean_titles_dict',
+    # Redis helper
+    'get_redis_client',
+    'get_redis_url',
+    'get_async_redis_client',
 ]

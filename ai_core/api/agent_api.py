@@ -3,6 +3,7 @@ Agent Dashboard API Endpoints
 Provides agent data and status for the frontend dashboard
 """
 import json
+import os
 import redis
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -16,8 +17,11 @@ from core.models import Agent, SpiderCategory, AgentSpiderConnection, AgentKnowl
 
 logger = logging.getLogger(__name__)
 
-# Redis connection for real-time data
-redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+# Redis connection for real-time data - use REDIS_URL env var for production
+redis_client = redis.Redis.from_url(
+    os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
+    decode_responses=True
+)
 
 
 class AgentStatsAPI(View):

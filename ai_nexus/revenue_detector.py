@@ -5,6 +5,7 @@ Analyzes spider intelligence for money-making opportunities
 
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 import redis.asyncio as redis
@@ -64,7 +65,8 @@ class RevenueOpportunityDetector:
     async def initialize(self):
         """Initialize Redis connection"""
         try:
-            self.redis_client = await redis.from_url('redis://localhost:6379/0')
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            self.redis_client = await redis.from_url(redis_url)
             logger.info("Revenue Detector Redis connection established")
         except Exception as e:
             logger.error(f"Revenue Detector Redis connection failed: {e}")

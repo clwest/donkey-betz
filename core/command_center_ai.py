@@ -6,6 +6,7 @@ Connects all agents and OpenAI API for real chatbot functionality
 import json
 import logging
 import asyncio
+import os
 import redis.asyncio as redis
 from datetime import datetime
 from typing import Optional
@@ -56,7 +57,8 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
 
         # Initialize Redis connection
         try:
-            self.redis_client = await redis.from_url('redis://localhost:6379/0')
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            self.redis_client = await redis.from_url(redis_url)
             logger.info("Redis connection established for AI Nexus")
 
             # Initialize memory system
