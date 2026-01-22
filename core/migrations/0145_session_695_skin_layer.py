@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('core', '0144_session_690_implementation_pipeline'),
+        ('core', '0143_session_686_human_interface_layer'),  # Skip deleted 0144
     ]
 
     operations = [
