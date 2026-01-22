@@ -770,7 +770,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Rate Limiting Configuration
-RATE_LIMIT_ENABLED = env_bool('RATE_LIMIT_ENABLED', not DEBUG)
+# Session 789: Disabled for Railway - internal services share IPs causing false limits
+# Set RATE_LIMIT_ENABLED=True in Railway env vars to re-enable after fixing IP whitelisting
+RATE_LIMIT_ENABLED = env_bool('RATE_LIMIT_ENABLED', False)
 
 # Centralized rate limit configuration (requests per window in seconds)
 # Used by core/rate_limiter.py and core/decorators.py
