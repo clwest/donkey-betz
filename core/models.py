@@ -53,6 +53,11 @@ from .models_orchestration import *
 # Import learning journey models (Session 773 - Real learning journeys)
 from .models_learning_journey import *
 
+# Import body system models (Sessions 701-723)
+from .models_brain import *
+from .models_nervous import *
+from .models_skin import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
