@@ -156,9 +156,10 @@ USER appuser
 # Expose port (Railway uses $PORT, default 8000)
 EXPOSE 8000
 
-# Health check for production (using $PORT for Railway compatibility)
-HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health/ping/ || exit 1
+# Health check disabled in production stage - different services need different checks
+# Web services should configure health checks via Railway dashboard or railway.toml
+# Celery workers use 'celery inspect ping' in their specific stages
+HEALTHCHECK NONE
 
 # Copy entrypoint script
 COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
