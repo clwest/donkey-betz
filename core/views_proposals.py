@@ -4,12 +4,13 @@ Views for AI Proposal Management
 Handles approval, rejection, and execution of AI-generated proposals.
 """
 
+import json
+import logging
+import os
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from ai_core.intelligence.proposal_manager import ProposalManager
-import json
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def approve_proposal(request):
             # Trigger consciousness system to generate new proposals
             try:
                 import redis
-                redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+                redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
                 # Clear the consciousness cache to force regeneration of proposals
                 redis_client.delete('consciousness:ai_proposals')
                 redis_client.delete('consciousness:current_level')

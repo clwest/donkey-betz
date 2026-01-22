@@ -96,9 +96,9 @@ class Command(BaseCommand):
         # Redis
         try:
             import redis
-            r = redis.Redis(host='localhost', port=6379, db=0)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
             r.ping()
-            self._pass(results, 'services', 'Redis running on localhost:6379')
+            self._pass(results, 'services', 'Redis connected')
         except Exception as e:
             self._fail(results, 'services', 'Redis connection', str(e))
 

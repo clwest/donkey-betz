@@ -12,6 +12,7 @@ using the human body metaphor:
 """
 
 import logging
+import os
 import time
 from datetime import timedelta
 from typing import Dict, Optional
@@ -419,7 +420,7 @@ class HeartMonitorService:
         # Check Redis
         try:
             import redis
-            r = redis.Redis(host='localhost', port=6379)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
             r.ping()
             redis_ok = True
         except Exception as e:

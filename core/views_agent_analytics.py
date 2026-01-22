@@ -13,6 +13,8 @@ Provides endpoints for the Agent Performance Dashboard:
 
 import json
 import logging
+import os
+import redis
 from datetime import timedelta
 from decimal import Decimal
 
@@ -323,7 +325,7 @@ def system_health_check(request):
 
         # Redis check
         try:
-            r = redis.Redis(host='localhost', port=6379, db=0)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
             r.ping()
             health['checks']['redis'] = {'status': 'ok', 'message': 'Connected'}
         except Exception as e:
@@ -544,7 +546,7 @@ def celery_status(request):
 
         # Check Redis queue lengths
         try:
-            r = redis.Redis(host='localhost', port=6379, db=0)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
             for queue in ['celery', 'default', 'long_running', 'broadcast']:
                 length = r.llen(queue)
                 if length > 0:

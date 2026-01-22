@@ -4,16 +4,18 @@ Learning Dashboard API Views
 Serves real-time learning data for the AI-proof jobs learning dashboard
 """
 
-from django.http import JsonResponse
+import os
 import redis
 from datetime import datetime
+from django.http import JsonResponse
+
 
 def learning_dashboard_data(request):
     """
     API endpoint for real-time learning dashboard data
     """
     try:
-        r = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), db=4, decode_responses=True)
 
         # Get main status
         status = r.hgetall("learning:dashboard:status")
@@ -72,7 +74,7 @@ def learning_updates_stream(request):
     API endpoint for live update stream
     """
     try:
-        r = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), db=4, decode_responses=True)
 
         # Get recent updates (last 20)
         updates = []

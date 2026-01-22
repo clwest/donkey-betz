@@ -21,6 +21,7 @@ Usage:
 """
 
 import logging
+import os
 import time
 from datetime import timedelta
 from typing import Dict, Any, List, Optional
@@ -300,7 +301,7 @@ class CeleryHealthService:
         try:
             import redis
 
-            r = redis.Redis(host='localhost', port=6379, db=0)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
 
             queues = {}
             total_depth = 0
