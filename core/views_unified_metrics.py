@@ -6,6 +6,7 @@ Aggregates real-time data from all platform components for the unified dashboard
 """
 
 import json
+import os
 import redis
 from datetime import datetime, timedelta
 from django.http import JsonResponse
@@ -22,9 +23,10 @@ def unified_platform_metrics(request):
     """
     try:
         # Connect to different Redis databases
-        r0 = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)  # Main
-        r2 = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)  # Learning
-        r3 = redis.Redis(host='localhost', port=6379, db=3, decode_responses=True)  # Revenue
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        r0 = redis.Redis.from_url(redis_url, db=0, decode_responses=True)  # Main
+        r2 = redis.Redis.from_url(redis_url, db=2, decode_responses=True)  # Learning
+        r3 = redis.Redis.from_url(redis_url, db=3, decode_responses=True)  # Revenue
 
         # Collect Learning Metrics
         solutions = r2.keys('solution:*')

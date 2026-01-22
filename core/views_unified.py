@@ -10,6 +10,10 @@ These classes remain for reference but are no longer used.
 URLs now redirect to React routes (see core/urls_unified.py).
 API views (QuickApplyAPIView, etc.) are still active.
 """
+import json
+import logging
+import os
+
 from django.shortcuts import render, redirect
 from django.views import View
 from django.views.generic import TemplateView
@@ -21,8 +25,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import UserCreationForm
-import json
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ class UnifiedDashboardView(LoginRequiredMixin, TemplateView):
         # Get real spider count from Redis
         import redis
         try:
-            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
             # Count spider instances that are running (in deployment log we saw 63 deployed)
             spider_keys = r.keys('spider:*:status')
             spiders_active = len(spider_keys) if spider_keys else 63  # Fallback to known deployed count
@@ -477,7 +479,7 @@ class SystemHealthAPIView(View):
 
             # Get real spider count
             try:
-                r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
                 spider_keys = r.keys('spider:*:status')
                 spiders_active = len(spider_keys) if spider_keys else 63
             except Exception:

@@ -3,14 +3,16 @@ Intelligent Personal Assistant with Agent Integration
 Routes through Intelligent Prompting System and specialized agents for optimal responses.
 """
 
+import os
+import uuid
+import logging
+from datetime import datetime
+from typing import Dict, Any, Optional
+
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from datetime import datetime
-import uuid
-import logging
-from typing import Dict, Any, Optional
 
 from .agent_integration import AgentRouter, IntelligentPromptOptimizer
 from .views_assistant_rag_enhanced import RAGAssistant, _get_knowledge_base_size, _get_total_embeddings
@@ -54,7 +56,7 @@ def assistant_chat_intelligent(request):
             logger.info(f"Intelligent Assistant - Project context: {project_id}")
             # Store project_id in Redis for this conversation so image generation can access it
             import redis
-            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
             r.setex(f"user:{user.id}:current_project", 300, project_id)  # 5 min expiry
             logger.info(f"Stored project context in Redis: user:{user.id}:current_project = {project_id}")
 

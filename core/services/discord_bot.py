@@ -9725,7 +9725,7 @@ def track_content_message(message_id: int, content_info: Dict[str, Any]):
     try:
         import redis
         import json
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
         key = f"discord:content:{message_id}"
         r.setex(key, 86400, json.dumps(content_info))  # Expire after 24h
     except Exception:
@@ -9742,7 +9742,7 @@ def get_content_for_message(message_id: int) -> Optional[Dict[str, Any]]:
     try:
         import redis
         import json
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
         key = f"discord:content:{message_id}"
         data = r.get(key)
         if data:
