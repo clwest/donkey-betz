@@ -430,14 +430,13 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
-    # Session 543: Increased rates to support real-time polling (1/sec = 3600/hour)
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
-    ],
+    # Session 789: Disabled throttling for Railway deployment
+    # All internal services share IPs, causing false rate limits
+    # TODO: Implement IP whitelist for internal services instead
+    'DEFAULT_THROTTLE_CLASSES': [],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '10000/hour',   # Support real-time polling
-        'user': '50000/hour'   # Authenticated users get higher limit
+        'anon': '100000/hour',
+        'user': '500000/hour'
     }
 }
 
