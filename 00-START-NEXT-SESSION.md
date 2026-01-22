@@ -1,7 +1,7 @@
-# Session 788 - Ready for Next Task
+# Session 790 - Ready for Next Task
 
-**Previous Session:** 787 (First Railway Deployment)
-**Date:** January 21, 2026
+**Previous Session:** 789 (Redis Production URLs)
+**Date:** January 22, 2026
 **Status:** 74/74 Agents Complete | 45 Frontend Pages | DEPLOYED TO RAILWAY
 
 ---
@@ -27,25 +27,37 @@ Railway Project: donkey-betz-platform
 
 ---
 
-## Session 787: First Railway Deployment
+## Session 789: Redis Production URL Migration
 
-Successfully deployed the platform to Railway after fixing 11 deployment issues:
+Fixed ALL hardcoded `redis.Redis(host='localhost', port=6379)` connections across the codebase for Railway production compatibility.
 
-| Issue | Fix |
-|-------|-----|
-| DATABASE_URL empty | Use `${{pgvector.DATABASE_PRIVATE_URL}}` |
-| $PORT not expanding | Wrap in `sh -c '...'` |
-| Redis auth required | Use `${{Redis.REDIS_URL}}` |
-| SSL redirect blocking healthcheck | Set `SECURE_SSL_REDIRECT=False` |
-| OpenAI API key invalid | Corrected in dashboard |
-| Healthcheck timeout (30s) | Increased to 120s |
-| Avatar dir permission error | Use /tmp on Railway |
-| ML model cache permission | Use /tmp on Railway |
-| Migrations couldn't run locally | Added to startCommand |
-| TemplateDoesNotExist | Added index.html to multiple paths |
-| GitHub workflow failures | Disabled workflows |
+### Pattern Applied
+```python
+# Before
+r = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
 
-**Full Details:** `docs/handoffs/SESSION_787_RAILWAY_DEPLOYMENT.md`
+# After
+import os
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2'
+r = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
+```
+
+### Files Updated (27 total)
+
+| Module | Files | Connections Fixed |
+|--------|-------|-------------------|
+| `ai_platform/` | views.py | 3 (DB2, DB4) |
+| `agents/` | views_deployment_execute_improved.py | 2 |
+| `ai_core/intelligence/` | consumers.py, proposal_manager.py | 9 (DB4) |
+| `intelligence/` | 11 files (spider_agent_router, collaboration_tracker, etc.) | 15+ |
+| `ai_core/spiders/` | 6 files (tasks.py, command_center.py, etc.) | 6 |
+| `ai_core/agents/` | 4 files (sync_project_executor, etc.) | 5 |
+| `ai_core/utils/` | agent_notifier.py | 1 |
+
+### Remaining Localhost References
+- 36 files remain with hardcoded localhost, but ALL are in `tests/`, `scripts/`, or `archive/` directories
+- No production code has hardcoded localhost Redis
 
 ---
 
@@ -88,31 +100,19 @@ railway status
 
 ---
 
-## Key Files Modified (Session 787)
-
-| File | Change |
-|------|--------|
-| `railway.toml` | sh -c wrapper, healthcheck 120s |
-| `ml/core/ml_engine.py` | Use /tmp for model cache |
-| `core/profile_views.py` | Use /tmp for avatar directory |
-| `.gitignore` | Exception for frontend/dist |
-| `core/templates/index.html` | Created for APP_DIRS fallback |
-| `.github/workflows-disabled/` | Moved workflows here |
-
----
-
 ## What's Next?
 
-1. **Verify Frontend Loads** - Check Railway deployment
-2. **Create Superuser** - `railway run python manage.py createsuperuser`
-3. **Test WebSocket Connections** - Verify ASGI is working
-4. **Phase 2: Add Celery Worker** - Enable background tasks
+1. **Phase 2: Add Celery Worker** - Enable background tasks on Railway
+2. **Test WebSocket Connections** - Verify ASGI is working with Redis
+3. **Test Agent Execution** - Verify agents work with production Redis
+4. **Phase 3: Full Celery Stack** - All workers + Beat scheduler
 
 ---
 
 ## Previous Sessions
 
-- **Session 787:** First Railway Deployment - 11 issues fixed, healthcheck passing
+- **Session 789:** Redis Production URL Migration - 27 files, all production Redis connections now use REDIS_URL env var
+- **Session 787-788:** First Railway Deployment - 11 issues fixed, healthcheck passing
 - **Session 786:** DecisionSummary Fix + Curated Documentation Embedding
 - **Session 785:** Hybrid Workspace Autopilot System
 - **Session 784:** Documentation Index Browser UI
