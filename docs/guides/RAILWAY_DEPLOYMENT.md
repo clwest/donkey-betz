@@ -1,9 +1,27 @@
 # Railway Deployment Guide
 
-**Last Updated:** January 2026
-**Status:** Phase 1 Ready
+**Last Updated:** January 22, 2026
+**Status:** ALL PHASES COMPLETE - Fully Deployed
 
 Deploy the Unified Donkey Betz platform to Railway using a phased approach. This guide is designed for first-time Railway users.
+
+---
+
+## Current Production Status (January 22, 2026)
+
+| Service | Status | Details |
+|---------|--------|---------|
+| **PostgreSQL (pgvector)** | ✅ Running | 364+ models, pgvector enabled |
+| **Redis** | ✅ Running | Cache, sessions, Celery broker |
+| **Web (Daphne)** | ✅ Running | donkeybetz.com |
+| **celery-default** | ✅ Running | default, agents, sports, content, ml queues |
+| **celery-long-running** | ✅ Running | long_running queue |
+| **celery-broadcast** | ✅ Running | broadcast queue |
+| **celery-beat** | ✅ Running | 238 scheduled tasks |
+
+**Production URLs:**
+- Custom Domain: `https://donkeybetz.com`
+- Railway URL: `https://donkey-betz-platform-production.up.railway.app/`
 
 ---
 
@@ -421,6 +439,32 @@ Verify `DATABASE_URL` is using Railway reference:
 ```bash
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 ```
+
+#### 7. Redis Connection Refused (localhost:6379)
+
+If you see "Error 111 connecting to localhost:6379. Connection refused", some code is using hardcoded localhost instead of `REDIS_URL`.
+
+**Solution:** Ensure all Redis connections use the `REDIS_URL` environment variable:
+```python
+import os
+redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
+```
+
+#### 8. Celery Worker Stuck at "Connected to redis" (No "ready")
+
+If worker connects but never shows "ready":
+1. Check `PROCESS_TYPE` isn't set to "web" (copied from web service)
+2. Set explicit Start Command in Railway dashboard instead of relying on entrypoint.sh
+3. Verify all required environment variables are set
+
+#### 9. entrypoint.sh Not Running Expected Command
+
+Railway may not always execute entrypoint.sh as expected.
+
+**Solution:** Set explicit Start Command in Railway dashboard:
+- **Web:** `daphne -b 0.0.0.0 -p $PORT core.asgi:application`
+- **Celery:** `celery -A core worker -l info --pool=threads -c 4 -Q default,agents,sports,content,ml`
 
 ### Viewing Logs
 
