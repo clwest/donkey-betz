@@ -9,6 +9,7 @@ to agent execution, progress tracking, and deliverable generation.
 import json
 import asyncio
 import logging
+import os
 import redis
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
@@ -83,7 +84,8 @@ class RealtimeProjectExecutor:
 
     def __init__(self):
         """Initialize the Real-Time Project Executor"""
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
         self.channel_layer = get_channel_layer()
 
         # Initialize core components

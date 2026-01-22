@@ -20,9 +20,13 @@ from datetime import datetime
 import uuid
 from channels.layers import get_channel_layer
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+
 class ProjectProgressSimulator:
     def __init__(self):
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         self.channel_layer = get_channel_layer()
         self.running = False
 

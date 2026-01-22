@@ -28,6 +28,11 @@ except ImportError:
     get_openai_client = None
     estimate_cost = None
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2' if '/' in _REDIS_URL else _REDIS_URL + '/2'
+
+
 class EnhancedProblemSolver:
     """
     Enhanced agent that uses real APIs for actual intelligence
@@ -35,7 +40,7 @@ class EnhancedProblemSolver:
 
     def __init__(self, agent_id: str):
         self.agent_id = agent_id
-        self.redis = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
 
         # Load API keys
         self.apis = {

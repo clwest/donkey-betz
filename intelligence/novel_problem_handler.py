@@ -6,11 +6,16 @@ Enables agents to solve completely new problems they've never seen before
 by analyzing the problem, generating hypotheses, and creating solutions.
 """
 
+import os
 import redis
 import json
 from datetime import datetime
 from typing import Dict, Optional
 from intelligence.problem_solver import AgentProblemSolver
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2' if '/' in _REDIS_URL else _REDIS_URL + '/2'
 
 
 class NovelProblemHandler(AgentProblemSolver):
@@ -427,7 +432,7 @@ class NovelProblemListener:
     """
 
     def __init__(self):
-        self.redis = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
         self.handlers = {}
 
     def register_handler(self, agent: NovelProblemHandler):

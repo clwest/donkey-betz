@@ -22,6 +22,9 @@ from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
 
 class RealJobExecutor:
     """
@@ -30,7 +33,7 @@ class RealJobExecutor:
 
     def __init__(self):
         self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
     async def execute_job(self, opportunity: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -440,7 +443,7 @@ class RealJobExecutor:
 def execute_freelance_jobs():
     """Execute all available freelance jobs"""
     executor = RealJobExecutor()
-    r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+    r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
     # Get opportunities from Redis
     opp_keys = r.keys('freelance:opportunity:*')

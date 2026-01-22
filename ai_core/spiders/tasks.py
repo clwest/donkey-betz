@@ -1,6 +1,7 @@
 """
 Spider Celery Tasks for Deploying and Managing Spider Army
 """
+import os
 from celery import shared_task
 import redis
 import json
@@ -11,8 +12,11 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
 # Redis client
-r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.Redis.from_url(_REDIS_URL)
 
 @shared_task(name='ai_core.spiders.tasks.deploy_spider_batch')
 def deploy_spider_batch(spider_type: str, platform: str, count: int) -> Dict[str, Any]:

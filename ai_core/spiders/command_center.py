@@ -16,6 +16,7 @@ Features:
 - Command and control interface
 """
 
+import os
 import asyncio
 import json
 import logging
@@ -29,6 +30,9 @@ import threading
 from .spider_army_orchestrator import SpiderArmyOrchestrator
 
 logger = logging.getLogger(__name__)
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 @dataclass
@@ -80,7 +84,7 @@ class SpiderCommandCenter:
         self.port = port
 
         # Redis for real-time data
-        self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        self.redis_client = redis.Redis.from_url(_REDIS_URL)
 
         # Flask app for web interface
         self.app = Flask(__name__, template_folder='templates', static_folder='static')

@@ -6,6 +6,7 @@ Agents that ACTUALLY SOLVE PROBLEMS by generating real code solutions.
 Not simulations, not descriptions - actual executable solutions.
 """
 
+import os
 import redis
 import json
 import hashlib
@@ -16,6 +17,10 @@ from typing import Dict
 from intelligence.solution_storage import SolutionStorage
 from intelligence.reallearning.solution import Solution
 
+# Redis URL for production - use DB 2 for problem solving
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2' if '/' in _REDIS_URL else _REDIS_URL + '/2'
+
 
 class AgentProblemSolver:
     """
@@ -24,7 +29,7 @@ class AgentProblemSolver:
 
     def __init__(self, agent_id: str):
         self.agent_id = agent_id
-        self.redis = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
         self.solution_storage = SolutionStorage()
         self.solutions_created = 0
         self.problems_solved = 0

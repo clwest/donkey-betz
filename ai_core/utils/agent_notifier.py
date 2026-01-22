@@ -2,6 +2,7 @@
 Agent Notifier Utility
 Notifies the Agent Monitor when agents start/complete tasks
 """
+import os
 import redis
 import json
 from datetime import datetime
@@ -12,7 +13,8 @@ class AgentNotifier:
     """Utility for notifying agent monitor of agent activity"""
 
     def __init__(self):
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
         self._channel_layer = None
 
     @property

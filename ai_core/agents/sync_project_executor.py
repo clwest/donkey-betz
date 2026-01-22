@@ -6,6 +6,7 @@ Django-compatible synchronous version of the project executor that
 handles agent execution without async/sync conflicts.
 """
 
+import os
 import json
 import time
 import logging
@@ -16,6 +17,9 @@ from channels.layers import get_channel_layer
 import asyncio
 
 logger = logging.getLogger(__name__)
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 def execute_project_sync(project_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -33,7 +37,7 @@ def execute_project_sync(project_data: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"🚀 Starting synchronous execution for project {project_id}")
 
         # Initialize Redis connection
-        redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
         # Phase 1: Agent Matching and Assignment (0-20%)
         logger.info("Phase 1: Agent Matching and Assignment")

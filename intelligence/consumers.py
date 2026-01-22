@@ -1,6 +1,7 @@
 """
 WebSocket consumers for Intelligence module
 """
+import os
 import json
 import logging
 from datetime import datetime, date
@@ -10,6 +11,9 @@ from channels.db import database_sync_to_async
 from .profile_context_service import profile_context_service, AgentContextMixin
 
 logger = logging.getLogger(__name__)
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 def json_serial(obj):
@@ -835,7 +839,7 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
             import redis
             import asyncio
 
-            redis_client = redis.Redis(host='localhost', port=6379, db=0)
+            redis_client = redis.Redis.from_url(_REDIS_URL)
             pubsub = redis_client.pubsub()
 
             # Subscribe to relevant channels

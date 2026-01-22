@@ -6,6 +6,7 @@ Connects real spider job data to Decision Command for live opportunity analysis 
 """
 
 import asyncio
+import os
 import redis
 import json
 import logging
@@ -18,6 +19,10 @@ from ai_core.spiders.real_job_spider import RealJobSpider
 from intelligence.income_builder import income_builder
 
 logger = logging.getLogger(__name__)
+
+# Redis URL for production - use DB 4 for decision bridge
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB4 = _REDIS_URL.rsplit('/', 1)[0] + '/4' if '/' in _REDIS_URL else _REDIS_URL + '/4'
 
 @dataclass
 class OpportunityDecision:
@@ -47,7 +52,7 @@ class SpiderDecisionBridge:
     """
 
     def __init__(self):
-        self.redis = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB4, decode_responses=True)
         self.spider = RealJobSpider()
         self.income_builder = income_builder
         self.active_opportunities = {}

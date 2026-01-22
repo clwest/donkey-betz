@@ -4,6 +4,7 @@ AI Proposal Management System
 Manages AI-generated proposals for system improvements with human approval workflow.
 """
 
+import os
 import json
 import hashlib
 from datetime import datetime
@@ -14,6 +15,9 @@ import redis
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 class ProposalStatus(Enum):
     PENDING = "pending"
@@ -75,8 +79,8 @@ class ProposalManager:
     """
 
     def __init__(self, redis_client: Optional[redis.Redis] = None):
-        self.redis_client = redis_client or redis.Redis(
-            host='localhost', port=6379, decode_responses=True
+        self.redis_client = redis_client or redis.Redis.from_url(
+            _REDIS_URL, decode_responses=True
         )
         self.proposals: Dict[str, AIProposal] = {}
         self.approval_queue: List[str] = []
@@ -465,7 +469,7 @@ class ProposalManager:
 
         try:
             # Connect to Redis and optimize WebSocket settings
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
             # Optimize connection pool settings
             r.config_set('timeout', '0')  # Disable timeout for persistent connections
@@ -506,7 +510,7 @@ class ProposalManager:
         import redis
 
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
             # Get current memory usage
             info = r.info('memory')

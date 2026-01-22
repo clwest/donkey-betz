@@ -6,12 +6,17 @@ Real-time sharing of discoveries between agents.
 When one agent solves a problem, ALL agents learn from it.
 """
 
+import os
 import redis
 import json
 import hashlib
 import threading
 from datetime import datetime
 from typing import Dict, List, Optional
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2' if '/' in _REDIS_URL else _REDIS_URL + '/2'
 
 
 class KnowledgeSharing:
@@ -20,12 +25,7 @@ class KnowledgeSharing:
     """
 
     def __init__(self):
-        self.redis = redis.Redis(
-            host='localhost',
-            port=6379,
-            db=2,
-            decode_responses=True
-        )
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
         self.pubsub = self.redis.pubsub()
 
     def share_discovery(self, agent_id: str, problem: str, solution: str, performance: Dict):
@@ -146,7 +146,7 @@ class LearningAgent:
         self.agent_id = agent_id
         self.knowledge_sharing = KnowledgeSharing()
         self.learned_solutions = {}
-        self.redis = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
         self.learning_thread = None
         self.stop_learning = False
 

@@ -6,6 +6,7 @@ This module provides both demo mode (fast, pre-generated) and real mode
 (actual agent execution with LLM calls).
 """
 
+import os
 import json
 from typing import Dict, Any
 from django.http import JsonResponse
@@ -14,6 +15,9 @@ from django.views.decorators.http import require_http_methods
 
 from core.models import GeneratedProject, GeneratedCode
 import redis
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -249,7 +253,7 @@ def track_real_learning(agent_name: str, result: Dict[str, Any]):
         }
 
         # Store in Redis
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         r.hincrby(f'agent:{agent_name}:stats', 'real_executions', 1)
         r.hset(f'agent:{agent_name}:stats', 'last_real_task', result.get('task', ''))
         r.hset(f'agent:{agent_name}:stats', 'last_quality_score', 85)
@@ -285,7 +289,7 @@ def track_demo_learning(agent_name: str, code_content: str):
         )
 
         # Store in Redis
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         r.hincrby(f'agent:{agent_name}:stats', 'demo_executions', 1)
         r.hincrby(f'agent:{agent_name}:stats', 'total_lines', len(code_content.splitlines()))
 
