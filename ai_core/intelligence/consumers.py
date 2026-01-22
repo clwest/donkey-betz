@@ -4,6 +4,7 @@ WebSocket consumers for the Intelligence System
 Handles real-time communication for Decision Command, Neural Orchestra, and Control Center
 """
 
+import os
 import json
 import asyncio
 import math
@@ -14,6 +15,10 @@ from channels.db import database_sync_to_async
 from django.db.models import Count, Avg, Sum, Q
 from django.utils import timezone
 import logging
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB4 = _REDIS_URL.rsplit('/', 1)[0] + '/4' if '/' in _REDIS_URL else _REDIS_URL + '/4'
 
 try:
     from .income_builder import income_builder, UserProfile, SkillLevel
@@ -589,7 +594,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
 
             # Connect to Redis where learning data is stored
             try:
-                redis_client = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+                redis_client = redis.Redis.from_url(_REDIS_URL_DB4, decode_responses=True)
                 # Test connection
                 redis_client.ping()
                 learning_system_active = True
@@ -827,7 +832,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
 
             # Connect to Redis for learning system workflows
             try:
-                redis_client = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+                redis_client = redis.Redis.from_url(_REDIS_URL_DB4, decode_responses=True)
                 redis_client.ping()
                 learning_workflows = self._get_learning_workflows(redis_client)
             except:
@@ -1044,7 +1049,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
 
             # Connect to Redis where spider data is stored
             try:
-                redis_client = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+                redis_client = redis.Redis.from_url(_REDIS_URL_DB4, decode_responses=True)
                 redis_client.ping()
                 spider_system_active = True
             except:
@@ -1218,7 +1223,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
 
             # Connect to Redis for learning system metrics
             try:
-                redis_client = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+                redis_client = redis.Redis.from_url(_REDIS_URL_DB4, decode_responses=True)
                 redis_client.ping()
                 learning_metrics = redis_client.hgetall("learning:system:metrics")
                 final_metrics = redis_client.hgetall("learning:system:final")
@@ -1821,7 +1826,7 @@ class SpiderIntelligenceConsumer(AsyncWebsocketConsumer):
         import redis.asyncio as aioredis
 
         try:
-            redis_client = aioredis.Redis(host='localhost', port=6379, db=0)
+            redis_client = aioredis.from_url(_REDIS_URL)
             pubsub = redis_client.pubsub()
             await pubsub.subscribe('spider:completion')
 

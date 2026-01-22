@@ -3,18 +3,22 @@ Dynamic Consciousness Insights Tracker
 Generates new insights periodically and tracks which ones have been addressed
 """
 
+import os
 import json
 import redis
 import random
 from datetime import datetime
 from typing import Dict, List, Any
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
 
 class DynamicInsightsTracker:
     """Tracks and rotates consciousness insights to keep them fresh and actionable"""
 
     def __init__(self):
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         self.insight_templates = [
             # Performance insights
             {

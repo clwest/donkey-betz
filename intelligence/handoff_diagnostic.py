@@ -253,7 +253,8 @@ class HandoffDiagnostic:
         """Test Redis connections"""
         try:
             import redis
-            r = redis.Redis(host='localhost', port=6379, db=0)
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            r = redis.Redis.from_url(redis_url)
             r.ping()
             return True, "Redis connected"
         except:

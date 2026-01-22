@@ -1,6 +1,7 @@
 """
 Management command to deploy spider army
 """
+import os
 from django.core.management.base import BaseCommand
 import redis
 from ai_core.spiders.tasks import (
@@ -9,6 +10,9 @@ from ai_core.spiders.tasks import (
     activate_spider_wave,
     clean_inactive_spiders
 )
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 class Command(BaseCommand):
     help = 'Deploy the spider army (1,770 spiders)'
@@ -36,7 +40,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        r = redis.Redis(host='localhost', port=6379, db=0)
+        r = redis.Redis.from_url(_REDIS_URL)
 
         # Clean inactive spiders if requested
         if options['clean']:

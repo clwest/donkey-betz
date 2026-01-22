@@ -5,6 +5,7 @@ This module provides comprehensive tracking and proof of agent teamwork,
 including handoffs, parallel execution, consensus building, and measurable outcomes.
 """
 
+import os
 import json
 import uuid
 from datetime import datetime
@@ -17,6 +18,9 @@ import logging
 from intelligence.shared_memory import SharedMemorySystem
 
 logger = logging.getLogger(__name__)
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 class CollaborationType(Enum):
@@ -158,7 +162,7 @@ class CollaborationTracker:
     """Main tracker for agent collaboration"""
 
     def __init__(self):
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         self.active_chains: Dict[str, CollaborationChain] = {}
         self.memory_system = SharedMemorySystem()  # Integrated shared memory
 

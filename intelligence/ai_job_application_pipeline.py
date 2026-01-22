@@ -5,6 +5,7 @@ Connects spiders → job matcher → resume generator → application system
 """
 
 import asyncio
+import os
 import redis
 import json
 import logging
@@ -17,6 +18,9 @@ from .ai_resume_generator import AIResumeGenerator
 
 logger = logging.getLogger(__name__)
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
 
 class AIJobApplicationPipeline:
     """
@@ -24,7 +28,7 @@ class AIJobApplicationPipeline:
     """
 
     def __init__(self):
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         self.job_matcher = AIJobMatcher()
         self.resume_generator = AIResumeGenerator()
         self.pubsub = self.redis_client.pubsub()

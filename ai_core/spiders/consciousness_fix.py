@@ -1,12 +1,16 @@
 """
 Fix for ConsciousnessBridge to show real spider/agent counts
 """
+import os
 import redis
 import json
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
 def get_real_metrics():
     """Get actual metrics from Redis instead of mock data"""
-    r = redis.Redis(host='localhost', port=6379, db=0)
+    r = redis.Redis.from_url(_REDIS_URL)
 
     try:
         # Get real spider count from Redis

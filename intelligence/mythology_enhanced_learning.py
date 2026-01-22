@@ -31,6 +31,11 @@ from intelligence.enhanced_problem_solver import EnhancedProblemSolver
 from intelligence.hallucination_publisher import hallucination_publisher
 
 
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2' if '/' in _REDIS_URL else _REDIS_URL + '/2'
+
+
 class MythologyEnhancedLearning:
     """
     Core learning system with integrated mythology prevention.
@@ -39,7 +44,7 @@ class MythologyEnhancedLearning:
 
     def __init__(self):
         """Initialize mythology-enhanced learning system"""
-        self.redis = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
 
         # Initialize mythology components
         self.mythology_validator = MythologyValidator()
@@ -317,7 +322,7 @@ class MythologyAwareLearningCoordinator:
 
     def __init__(self):
         self.learning_system = MythologyEnhancedLearning()
-        self.redis = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
 
     def coordinate_agent_learning(self, agent_ids: List[str],
                                  learning_tasks: List[str]) -> Dict[str, Any]:

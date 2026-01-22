@@ -1,8 +1,14 @@
+import os
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 from datetime import datetime
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2' if '/' in _REDIS_URL else _REDIS_URL + '/2'
+_REDIS_URL_DB4 = _REDIS_URL.rsplit('/', 1)[0] + '/4' if '/' in _REDIS_URL else _REDIS_URL + '/4'
 
 # Import our verification systems
 from intelligence.user_value_impact_tracker import UserValueImpactTracker, UserSuccessVerifier
@@ -166,7 +172,7 @@ def get_learning_status(request):
     try:
         import redis
         import json
-        r = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
 
         # Try to get dashboard stats
         stats_json = r.get('learning:dashboard:stats')
@@ -199,7 +205,7 @@ def verify_system_activity(request):
     """Verify system activity without needing users"""
     try:
         import redis
-        r = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL_DB4, decode_responses=True)
 
         # Check if we have fresh data in Redis
         cached_status = r.get('system:current:status')
@@ -225,7 +231,7 @@ def get_learning_details(request):
         import json
         from datetime import datetime
 
-        r = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
+        r = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
 
         # Get recent solutions (last 20) - simplified version
         solution_keys = list(r.keys('solution:*'))[:20]

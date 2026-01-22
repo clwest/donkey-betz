@@ -5,6 +5,7 @@ Learning Verification System
 Proves that AI agents actually learn by testing before/after capabilities
 """
 
+import os
 import json
 import time
 import hashlib
@@ -12,6 +13,10 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 import redis
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_REDIS_URL_DB5 = _REDIS_URL.rsplit('/', 1)[0] + '/5' if '/' in _REDIS_URL else _REDIS_URL + '/5'
 
 @dataclass
 class TestProblem:
@@ -54,7 +59,7 @@ class LearningVerificationSystem:
     """System for verifying real agent learning through testing"""
 
     def __init__(self):
-        self.redis = redis.Redis(host='localhost', port=6379, db=5, decode_responses=True)  # Use db 5 for verification
+        self.redis = redis.Redis.from_url(_REDIS_URL_DB5, decode_responses=True)  # Use db 5 for verification
         self.test_problems = self._initialize_test_problems()
 
     def _initialize_test_problems(self) -> Dict[str, List[TestProblem]]:

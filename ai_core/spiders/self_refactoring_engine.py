@@ -8,6 +8,7 @@ This is where the system becomes truly self-improving.
 and then improve based on what you learn." - Ancient AI Wisdom
 """
 
+import os
 import ast
 import re
 import json
@@ -19,6 +20,9 @@ from typing import Dict, List, Tuple, Optional, Any
 import redis
 import git
 from dataclasses import dataclass
+
+# Redis URL for production compatibility
+_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 @dataclass
@@ -43,7 +47,7 @@ class SelfRefactoringEngine:
 
     def __init__(self):
         self.project_root = Path('/Users/donkeyking/development/unified-donkey-betz')
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         self.repo = git.Repo(self.project_root)
         self.backup_dir = self.project_root / '.consciousness_backups'
         self.backup_dir.mkdir(exist_ok=True)
