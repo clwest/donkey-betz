@@ -7093,6 +7093,8 @@ def trigger_spider_conversations(self, min_relevance: int = 70, max_conversation
 
         if not interesting_data:
             logger.info("🕷️ [SPIDER-TRIGGER] No new high-relevance data to discuss")
+            # Convert set to list for JSON serialization
+            stats['agents_involved'] = list(stats['agents_involved'])
             return {'status': 'success', 'message': 'No new data', 'stats': stats}
 
         # Get agents that could discuss this data
