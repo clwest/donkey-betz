@@ -30,6 +30,25 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
+# STAGE 1.5: Frontend Build (Node.js)
+# =============================================================================
+FROM node:20-slim as frontend-build
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Build the frontend
+RUN npm run build
+
+# =============================================================================
 # STAGE 2: Development Dependencies
 # =============================================================================
 FROM python-base as development
@@ -91,6 +110,9 @@ RUN pip install \
 
 # Copy application code
 COPY . .
+
+# Copy frontend build from frontend-build stage
+COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
 
 # Collect static files (use dummy SECRET_KEY for build - real one used at runtime)
 RUN SECRET_KEY=build-time-dummy-key-not-used-in-production-needs-fifty-characters-minimum-for-django \
