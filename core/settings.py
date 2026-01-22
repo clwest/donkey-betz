@@ -162,8 +162,9 @@ MIDDLEWARE = [
     'core.auth_middleware.UnifiedTokenAuthenticationMiddleware',  # Unified API auth with dev bypass
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.rate_limiter.RateLimitMiddleware',  # Global rate limiting
-    'core.auth_middleware.RateLimitingMiddleware',  # Enhanced rate limiting
+    # Session 789: Disabled for Railway - internal services share IPs causing false rate limits
+    # 'core.rate_limiter.RateLimitMiddleware',  # Global rate limiting
+    # 'core.auth_middleware.RateLimitingMiddleware',  # Enhanced rate limiting
     'core.auth_middleware.APILoggingMiddleware',  # API request/response logging
     'core.middleware.RangeRequestMiddleware',  # Session 111: HTTP range requests for video streaming
 
