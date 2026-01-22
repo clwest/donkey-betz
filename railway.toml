@@ -2,8 +2,8 @@
 # RAILWAY DEPLOYMENT CONFIGURATION
 # Unified Donkey Betz Platform
 # =============================================================================
-# This file configures the main web service deployment on Railway.
-# Additional services (Celery workers, Beat) are configured in Railway dashboard.
+# This file configures the BUILD settings shared by all services.
+# Deploy settings are configured per-service in Railway dashboard.
 # =============================================================================
 
 [build]
@@ -15,18 +15,14 @@ dockerfilePath = "Dockerfile"
 # Railway will use: docker build --target production
 dockerTarget = "production"
 
-[deploy]
-# Start command for the web service (Daphne ASGI server)
-# Uses $PORT environment variable injected by Railway
-startCommand = "daphne -b 0.0.0.0 -p $PORT core.asgi:application"
-
-# Health check configuration
-healthcheckPath = "/health/ping/"
-healthcheckTimeout = 30
-
-# Restart policy
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
-
-# Number of replicas (scale up as needed)
-numReplicas = 1
+# =============================================================================
+# DEPLOY SETTINGS CONFIGURED PER-SERVICE IN RAILWAY DASHBOARD
+# =============================================================================
+# We don't set deploy options here because we have multiple services:
+# - web: Daphne ASGI server (needs healthcheck)
+# - celery-worker: Celery worker (no healthcheck)
+# - celery-beat: Celery scheduler (no healthcheck) [Phase 3]
+#
+# Configure each service's start command and healthcheck in the Railway
+# dashboard under Settings → Deploy.
+# =============================================================================
