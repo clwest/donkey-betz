@@ -600,7 +600,7 @@ def gallery_generate(request):
         if not project:
             try:
                 import redis
-                r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
                 stored_project_id = r.get(f"user:{user.id}:current_project")
                 if stored_project_id:
                     from content.models import CreativeProject

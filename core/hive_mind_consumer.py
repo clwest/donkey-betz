@@ -6,6 +6,7 @@ Real-time updates for Hive Mind sessions as agents contribute.
 import json
 import asyncio
 import logging
+import os
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 import redis.asyncio as redis
@@ -107,7 +108,7 @@ class HiveMindConsumer(AsyncWebsocketConsumer):
     async def subscribe_to_redis(self):
         """Subscribe to Redis pub/sub for real-time updates."""
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
             pubsub = r.pubsub()
             await pubsub.subscribe('hive_mind')
 

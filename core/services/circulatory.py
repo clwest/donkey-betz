@@ -17,6 +17,7 @@ Human Body Metaphor:
 """
 
 import logging
+import os
 import time
 from datetime import timedelta
 from typing import Dict, List, Optional, Tuple
@@ -69,11 +70,12 @@ class CirculatorySystemService:
 
         # Initialize Redis clients for each database
         try:
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
             self._redis_clients = {
-                'cache': redis.Redis(host='localhost', port=6379, db=1, decode_responses=True),
-                'broker': redis.Redis(host='localhost', port=6379, db=2, decode_responses=True),
-                'results': redis.Redis(host='localhost', port=6379, db=3, decode_responses=True),
-                'channels': redis.Redis(host='localhost', port=6379, db=0, decode_responses=True),
+                'cache': redis.Redis.from_url(redis_url, db=1, decode_responses=True),
+                'broker': redis.Redis.from_url(redis_url, db=2, decode_responses=True),
+                'results': redis.Redis.from_url(redis_url, db=3, decode_responses=True),
+                'channels': redis.Redis.from_url(redis_url, db=0, decode_responses=True),
             }
         except Exception as e:
             logger.warning(f"🩸 Redis connection setup warning: {e}")

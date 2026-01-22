@@ -11,12 +11,13 @@ Session 727: Migrated from agents/live_learning_orchestrator.py to core/services
 import asyncio
 import json
 import logging
+import os
+import random
 import redis
 from datetime import datetime
 from typing import Dict, List, Any
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-import random
 
 # Import our existing modules
 from agents.real_code_generator import RealCodeGenerator
@@ -221,7 +222,7 @@ class LiveLearningOrchestrator(LiveLearningLearningMixin):
     """
 
     def __init__(self):
-        self.redis = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        self.redis = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
         self.learning_system = LearningVerificationSystem()
         self.domain_learning = MultiDomainLearning()
         self.shared_memory = SharedMemorySystem()

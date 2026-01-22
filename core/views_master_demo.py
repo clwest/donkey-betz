@@ -2,17 +2,19 @@
 Master Demo View - Unified AI Learning System Showcase
 """
 
+import os
+import redis
 from django.shortcuts import render
 from django.http import JsonResponse
 from core.models.agents_registry import UnifiedAgentTemplate
 from core.models import GeneratedProject
-import redis
+
 
 def master_ai_demo(request):
     """Master demo combining all AI capabilities"""
 
     # Get agent stats from Redis
-    r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+    r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
 
     # Get learning metrics
     learning_stats = {

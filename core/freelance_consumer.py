@@ -2,6 +2,7 @@
 WebSocket consumer for freelance opportunities real-time updates
 """
 import json
+import os
 import redis
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -72,7 +73,7 @@ class FreelanceConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_opportunities_from_redis(self):
         """Get opportunities from Redis"""
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
         opp_keys = r.keys('freelance:opportunity:*')
         opportunities = []
 
@@ -88,7 +89,7 @@ class FreelanceConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_projects_from_redis(self):
         """Get projects from Redis"""
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
         project_keys = r.keys('freelance:project:*')
         projects = []
 

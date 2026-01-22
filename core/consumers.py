@@ -4,6 +4,7 @@ Migrated from DBAO tools-manifest WebSocket capabilities and ai-content-studio.
 """
 
 import json
+import os
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -2311,7 +2312,7 @@ Try asking something specific or type /help for commands!"""
                     # Check Redis
                     redis_status = "OFFLINE"
                     try:
-                        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+                        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
                         r.ping()
                         redis_status = "ONLINE"
                     except Exception:
@@ -2768,7 +2769,7 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         """Send initial data from Redis"""
         try:
             import redis
-            r = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), db=4, decode_responses=True)
 
             # Get learning metrics
             learning_metrics = r.hgetall("learning:system:metrics")
@@ -2817,7 +2818,7 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         """Send current workflow data"""
         try:
             import redis
-            r = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), db=4, decode_responses=True)
 
             # Compile current state
             current_data = {
