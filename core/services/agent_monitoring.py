@@ -4,14 +4,15 @@ Agent Execution Monitoring and Performance Tracking
 Provides detailed metrics and logging for agent performance analysis
 """
 
-import time
 import logging
+import os
+import time
+import traceback
 from datetime import datetime, timedelta
 from functools import wraps
 from django.core.cache import cache
 from django.db import models, connection
 from django.utils import timezone
-import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -387,7 +388,7 @@ class PerformanceAnalyzer:
         # Get cache statistics from Redis
         try:
             import redis
-            redis_conn = redis.Redis(host='localhost', port=6379, db=0)
+            redis_conn = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
             info = redis_conn.info()
 
             # Calculate hit rate

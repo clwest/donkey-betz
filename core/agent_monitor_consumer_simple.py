@@ -5,6 +5,7 @@ Shows actual status of agents and active projects
 import json
 import asyncio
 import logging
+import os
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 import redis
@@ -24,7 +25,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         # Initialize Redis connection
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
 
         # Send initial status
         await self.send_initial_data()

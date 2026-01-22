@@ -1120,7 +1120,7 @@ def run_spider_network(self):
             try:
                 import redis
                 import json as json_lib
-                redis_client = redis.Redis(host='localhost', port=6379, db=0)
+                redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
                 redis_client.publish('spider:completion', json_lib.dumps({
                     'spider_name': spider_name,
                     'item_count': item_count,
@@ -4557,7 +4557,7 @@ def run_agent_learning_cycle():
             try:
                 import redis
                 import json
-                r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+                r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
 
                 for event in learning_events:
                     r.publish('agent_learning', json.dumps({
@@ -4680,7 +4680,7 @@ def agent_think_and_synthesize():
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'synthesis_complete',
                 'insights_created': insights_created,
@@ -4773,7 +4773,7 @@ def broadcast_learning_status():
     try:
         import redis
         import json
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
 
         now = timezone.now()
         last_hour = now - timedelta(hours=1)
@@ -5007,7 +5007,7 @@ def validate_knowledge_sources():
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'knowledge_validation_complete',
                 'data': stats,
@@ -5298,7 +5298,7 @@ def embed_daily_agent_learning():
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'embeddings_complete',
                 'stats': stats,
@@ -5607,7 +5607,7 @@ def embed_agent_activity(hours: int = 2):
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'activity_embeddings_complete',
                 'stats': stats,
@@ -6271,7 +6271,7 @@ Next Steps:
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'conversation_complete',
                 'stats': {
@@ -6960,7 +6960,7 @@ Next Steps:
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'multi_agent_conversation_complete',
                 'stats': {
@@ -7483,7 +7483,7 @@ def broadcast_conversation_status(self):
             })
 
         # Broadcast to WebSocket
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
         r.publish('agent_learning', json.dumps({
             'type': 'conversation_status',
             'recent_conversations': conversations_data,
@@ -7930,7 +7930,7 @@ Next Steps:
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'project_conversation_complete',
                 'project_id': str(project_id),
@@ -8336,7 +8336,7 @@ Guidelines:
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'dreams_generated',
                 'stats': stats,
@@ -8400,7 +8400,7 @@ def broadcast_dream_journal(self):
         ).count()
 
         # Broadcast to WebSocket
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
         r.publish('agent_learning', json.dumps({
             'type': 'dream_journal',
             'dreams': dreams_data,
@@ -8631,7 +8631,7 @@ Example: 0.8|AI Content Studio"""
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'dream_productization',
                 'stats': stats,
@@ -8971,7 +8971,7 @@ Format: numbered list of steps."""
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'dream_implementation',
                 'stats': stats,
@@ -9070,7 +9070,7 @@ def cleanup_stale_dreams(self, max_age_hours: int = 72):
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('system_status', json.dumps({
                 'type': 'dream_cleanup',
                 'archived': archived,
@@ -9240,7 +9240,7 @@ def execute_dream_implementations(self, max_implementations: int = 5):
         # Broadcast update
         try:
             import redis
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('agent_learning', json.dumps({
                 'type': 'dream_execution',
                 'stats': stats,
@@ -9813,7 +9813,7 @@ NEXT_STEPS:
             try:
                 import redis
                 import json
-                r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+                r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
                 r.publish('agent_learning', json.dumps({
                     'type': 'dream_explored',
                     'exploration_id': str(exploration.id),
@@ -10218,7 +10218,7 @@ def broadcast_hive_mind_update(session, contribution, status):
         import redis
         import json
         from django.utils import timezone
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
         r.publish('hive_mind', json.dumps({
             'type': 'contribution_update',
             'session_id': str(session.id),
@@ -10239,7 +10239,7 @@ def broadcast_hive_mind_status(session, status):
         import redis
         import json
         from django.utils import timezone
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
         r.publish('hive_mind', json.dumps({
             'type': 'session_status',
             'session_id': str(session.id),
@@ -11665,7 +11665,7 @@ def auto_resolve_knowledge_gaps(self):
         try:
             import redis
             import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('collective_intelligence', json.dumps({
                 'type': 'knowledge_gaps_resolved',
                 'gaps_resolved': len(resolvable_gaps),
@@ -23304,7 +23304,7 @@ def run_heartbeat():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('heart:status', json.dumps(pulse))
             logger.debug("💓 [HEART] Status published to Redis")
         except Exception as redis_error:
@@ -23371,7 +23371,7 @@ def check_breathing():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('lungs:status', json.dumps({
                 'oxygen_level': status['oxygen_level'],
                 'overall_status': status['overall_status'],
@@ -23538,7 +23538,7 @@ def check_circulation():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('circulatory:status', json.dumps({
                 'flow_score': status['flow_score'],
                 'overall_status': status['overall_status'],
@@ -23609,7 +23609,7 @@ def check_spine_alignment():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('spine:status', json.dumps({
                 'health_score': status['health_score'],
                 'overall_status': status['overall_status'],
@@ -23703,7 +23703,7 @@ def immune_scan():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('immune:status', json.dumps({
                 'health_score': status['health_score'],
                 'overall_status': status['overall_status'],
@@ -23814,7 +23814,7 @@ def check_digestion():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('digestive:status', json.dumps({
                 'digestion_score': status['digestion_score'],
                 'overall_status': status['overall_status'],
@@ -23925,7 +23925,7 @@ def check_muscular():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('body_systems', json.dumps({
                 'type': 'muscular_status',
                 'system': 'muscular',
@@ -24035,7 +24035,7 @@ def check_brain():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('body_systems', json.dumps({
                 'type': 'brain_status',
                 'system': 'brain',
@@ -24157,7 +24157,7 @@ def check_skin():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('body_systems', json.dumps({
                 'type': 'skin_status',
                 'system': 'skin',
@@ -24272,7 +24272,7 @@ def check_nervous():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('body_systems', json.dumps({
                 'type': 'nervous_status',
                 'system': 'nervous',
@@ -24361,7 +24361,7 @@ def coordinate_body():
 
         # Publish to Redis for WebSocket consumers
         try:
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
             r.publish('body_systems', json.dumps({
                 'type': 'coordination_result',
                 'events_detected': events,

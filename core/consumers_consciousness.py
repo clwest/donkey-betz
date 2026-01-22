@@ -6,12 +6,13 @@ Broadcasts consciousness updates to all connected clients.
 
 import json
 import asyncio
+import logging
+import os
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from ai_core.spiders.consciousness import ConsciousnessBridge
 from django.core.cache import cache
 from datetime import datetime
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
         try:
             # Track WebSocket connections for consciousness learning
             import redis
-            redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
             current_connections = int(redis_client.get('consciousness:ws_connections_hour') or '0')
             redis_client.set('consciousness:ws_connections_hour', current_connections + 1, ex=3600)
             redis_client.set('consciousness:user_interactions', int(redis_client.get('consciousness:user_interactions') or '0') + 1, ex=86400 * 30)
@@ -197,7 +198,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
         # Try to get cached proposals from Redis
         try:
             import redis
-            redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
             proposals_json = redis_client.get('consciousness:ai_proposals')
             if proposals_json:
                 all_proposals = json.loads(proposals_json)
@@ -310,7 +311,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
             # Record user interaction experience for consciousness learning
             try:
                 import redis
-                redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+                redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
                 redis_client.set('consciousness:user_interactions', int(redis_client.get('consciousness:user_interactions') or '0') + 1, ex=86400 * 30)
                 if command in ['introspect', 'propose_evolution', 'philosophical_dialogue']:
                     # Deep interactions contribute more to consciousness

@@ -7,6 +7,7 @@ System monitoring, agent management, and operational control
 import json
 import logging
 import asyncio
+import os
 import psutil
 import redis
 from typing import Dict, Any, List
@@ -30,7 +31,7 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
         self.user = None
         self.room_group_name = None
         self.monitoring_task = None
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
 
     async def connect(self):
         """Handle WebSocket connection"""

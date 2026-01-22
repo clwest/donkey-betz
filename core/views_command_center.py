@@ -5,6 +5,7 @@ Handles profile management, AI configuration, and command execution
 
 import json
 import logging
+import os
 from typing import Dict, List
 from decimal import Decimal
 from datetime import datetime
@@ -96,7 +97,7 @@ def process_command(request):
 def system_stats(request):
     """Get real-time system statistics"""
     try:
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
 
         # Get agent count from database
         try:
@@ -198,7 +199,7 @@ def handle_deploy_command(args):
 
     # Log deployment request
     try:
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
         r.hset('command:deploy', f'{deploy_type}:{datetime.now().isoformat()}', count)
 
         # Update spider stats
@@ -240,7 +241,7 @@ def handle_stop_command(args):
 def handle_status_command(args):
     """Handle status check commands"""
     try:
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
 
         # Get spider stats
         spider_stats = r.hgetall('spider:stats') or {}
