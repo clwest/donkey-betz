@@ -35,6 +35,10 @@ MANIFEST
 !mobile/lib/
 !mobile/lib/**
 
+# BUT: Allow frontend React lib directory
+!frontend/src/lib/
+!frontend/src/lib/**
+
 # Virtual Environments
 .venv/
 venv/
