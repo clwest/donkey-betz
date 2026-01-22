@@ -5,8 +5,8 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Use '/' for dev, '/static/' only for production builds served through Django
-  base: '/',
+  // Use '/static/' for production builds served through Django
+  base: '/static/',
   build: {
     // Output assets to 'assets' subfolder
     assetsDir: 'assets',
