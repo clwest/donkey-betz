@@ -96,10 +96,13 @@ def download_generated_file(request, project_id, filename):
 
 def get_live_output_stream(request):
     """Get live output stream for real-time updates"""
+    # Build WebSocket URL dynamically from request
+    ws_scheme = 'wss' if request.is_secure() else 'ws'
+    ws_host = request.get_host()
     return JsonResponse({
         'success': True,
         'message': 'Use WebSocket connection for live updates',
-        'ws_url': 'ws://localhost:8000/ws/ai-training/'
+        'ws_url': f'{ws_scheme}://{ws_host}/ws/ai-training/'
     })
 
 
