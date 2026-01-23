@@ -925,35 +925,51 @@ class NeuralOrchestraRealityBridge:
                 })
 
             # Add recent AgentLearning records as learning events
+            # Session 793: Fixed field names (agent → teacher_agent, insight → feedback/solution)
             try:
                 from core.models_unified_system import AgentLearning, KnowledgeTransfer
                 last_7d = timezone.now() - timedelta(days=7)
 
-                recent_learning = AgentLearning.objects.select_related('agent').filter(
+                recent_learning = AgentLearning.objects.select_related('teacher_agent').filter(
                     created_at__gte=last_7d
                 ).order_by('-created_at')[:10]
 
                 for learning in recent_learning:
+                    # Session 793: Use feedback or solution.description for content
+                    # Note: solution is FK to AgentSolution, use its description field
+                    if learning.feedback:
+                        content = learning.feedback
+                    elif learning.solution:
+                        content = learning.solution.description or str(learning.solution)
+                    else:
+                        content = f'{learning.learning_type or "Agent"} learning recorded'
+
                     learning_feed.append({
                         'id': str(learning.id),
                         'timestamp': learning.created_at.isoformat(),
                         'type': learning.learning_type or 'Learning Event',
-                        'content': learning.insight or 'Agent learning recorded',
-                        'source': learning.agent.name if learning.agent else 'System'
+                        'content': str(content)[:200] if content else 'Agent learning recorded',
+                        'source': learning.teacher_agent.name if learning.teacher_agent else 'System'
                     })
 
                 # Add recent knowledge transfers
+                # Session 793: Fixed field names (via connection FK to AgentLearningConnection)
                 recent_transfers = KnowledgeTransfer.objects.select_related(
-                    'source_agent', 'target_agent'
+                    'connection__teacher_agent', 'connection__student_agent'
                 ).filter(created_at__gte=last_7d).order_by('-created_at')[:5]
 
                 for transfer in recent_transfers:
+                    # Get agent names via connection
+                    source_name = transfer.connection.teacher_agent.name if transfer.connection and transfer.connection.teacher_agent else 'Unknown'
+                    target_name = transfer.connection.student_agent.name if transfer.connection and transfer.connection.student_agent else 'Unknown'
+                    # Use transfer_summary or source_knowledge for content
+                    content = transfer.transfer_summary or transfer.source_knowledge or 'Knowledge transfer'
                     learning_feed.append({
                         'id': str(transfer.id),
                         'timestamp': transfer.created_at.isoformat(),
                         'type': 'Knowledge Transfer',
-                        'content': f"Knowledge shared: {transfer.knowledge_type or 'insight'}",
-                        'source': f"{transfer.source_agent.name if transfer.source_agent else 'Unknown'} → {transfer.target_agent.name if transfer.target_agent else 'Unknown'}"
+                        'content': content[:200] if content else 'Knowledge shared between agents',
+                        'source': f"{source_name} → {target_name}"
                     })
 
             except Exception as e:
