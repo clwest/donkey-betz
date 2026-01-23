@@ -1017,9 +1017,23 @@ export const humanApi = {
     if (params?.status) params.status.forEach(s => searchParams.append('status', s))
     return api.get(`/human/attention/?${searchParams.toString()}`)
   },
+  // Session 796: Alias for consistency with frontend usage
+  attentionStream: (params?: { limit?: number; urgency?: string[]; status?: string[] }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.limit) searchParams.set('limit', params.limit.toString())
+    if (params?.urgency) params.urgency.forEach(u => searchParams.append('urgency', u))
+    if (params?.status) params.status.forEach(s => searchParams.append('status', s))
+    return api.get(`/human/attention/?${searchParams.toString()}`)
+  },
   attentionStats: () => api.get('/human/attention/stats/'),
   decide: (itemId: string, decision: string, feedback?: string, confidence?: number) =>
     api.post(`/human/attention/${itemId}/decide/`, { decision, feedback, confidence }),
+  // Session 796: Batch decision support
+  batchDecide: (decision: string, filters?: { urgency?: string; item_type?: string }, feedback?: string) =>
+    api.post('/human/attention/batch-decide/', { decision, ...filters, feedback }),
+  // Session 796: Get consultations awaiting response
+  pendingConsultations: () =>
+    api.get('/human/attention/?source_type=assistant&status=pending'),
   defer: (itemId: string, remindAt: string) =>
     api.post(`/human/attention/${itemId}/defer/`, { remind_at: remindAt }),
   verify: (itemId: string, outcome: string, profit?: number, notes?: string) =>
