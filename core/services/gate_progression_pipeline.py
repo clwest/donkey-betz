@@ -196,6 +196,8 @@ class GateProgressionPipeline:
                         try:
                             gate.waive(reason="Auto-waived by GateProgressionPipeline (low-risk, exceeded age threshold)")
                             self.stats['gates_waived'] += 1
+                            # Session 794: Start pilot for waived gates too
+                            self._start_pilot_for_gate(gate, dry_run=dry_run)
                             return
                         except Exception as e:
                             self.stats['errors'].append(f"Failed to waive gate {gate.id}: {e}")
@@ -207,6 +209,8 @@ class GateProgressionPipeline:
                 try:
                     gate.waive(reason="Auto-waived by GateProgressionPipeline (low-risk)")
                     self.stats['gates_waived'] += 1
+                    # Session 794: Start pilot for waived gates too
+                    self._start_pilot_for_gate(gate, dry_run=dry_run)
                     return
                 except Exception as e:
                     self.stats['errors'].append(f"Failed to waive gate {gate.id}: {e}")
@@ -396,14 +400,14 @@ class GateProgressionPipeline:
             logger.error(f"Failed to create attention item: {e}")
 
     def _start_pilot_for_gate(self, gate, dry_run: bool = False) -> None:
-        """Start a pilot execution for an approved gate."""
+        """Start a pilot execution for an approved/waived gate."""
         if dry_run:
             self.stats['pilots_started'] += 1
             return
 
         try:
             # Check if pilot already exists and is running
-            from core.models_pilot_readiness import PilotExecution
+            from core.models_pilot_readiness import PilotExecution, Experiment
 
             existing_pilot = PilotExecution.objects.filter(
                 gate=gate,
@@ -414,18 +418,36 @@ class GateProgressionPipeline:
                 logger.debug(f"Pilot already exists for gate {gate.id}")
                 return
 
-            # Use the gate's start_pilot method (returns True/False)
-            started = gate.start_pilot()
+            # Session 794: Actually CREATE a PilotExecution (gate.start_pilot only sets timestamp)
+            decision_topic = getattr(gate.decision, 'title', 'Unknown Decision')[:100]
+            pilot = PilotExecution.objects.create(
+                gate=gate,
+                name=f"Auto-pilot: {decision_topic}",
+                description=f"Auto-deployed from {gate.status} gate by GateProgressionPipeline",
+                status='running',
+            )
+            logger.info(f"✅ Created PilotExecution {pilot.id} for gate {gate.id}")
 
-            if started:
-                self.stats['pilots_started'] += 1
-                logger.info(f"Started pilot for gate {gate.id}")
+            # Session 794: Also create an Experiment for learning tracking
+            try:
+                experiment = Experiment.objects.create(
+                    name=f"Experiment: {decision_topic}",
+                    hypothesis=f"Testing decision: {decision_topic}",
+                    pilot=pilot,
+                    status='running',
+                )
+                logger.info(f"✅ Created Experiment {experiment.id} for pilot {pilot.id}")
+            except Exception as exp_error:
+                logger.warning(f"Could not create Experiment: {exp_error}")
 
-                # Get the pilot execution for orchestration connection
-                pilot = PilotExecution.objects.filter(gate=gate).first()
-                if pilot:
-                    # Connect to Orchestration Layer if available
-                    self._connect_to_orchestration(gate, pilot)
+            # Use the gate's start_pilot method to set timestamp
+            gate.start_pilot()
+
+            self.stats['pilots_started'] += 1
+            logger.info(f"Started pilot for gate {gate.id}")
+
+            # Connect to Orchestration Layer if available
+            self._connect_to_orchestration(gate, pilot)
 
         except Exception as e:
             self.stats['errors'].append(f"Failed to start pilot for gate {gate.id}: {e}")
