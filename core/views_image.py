@@ -45,6 +45,41 @@ logger = logging.getLogger(__name__)
 
 
 # ========================================
+# SESSION 794: SYSTEM USER FOR AUTONOMOUS OPERATIONS
+# ========================================
+
+def get_system_user():
+    """
+    Get or create a system user for autonomous/Celery operations.
+
+    Session 794: When agents execute autonomously (via Celery tasks),
+    there's no authenticated user. This function provides a system user
+    so that generated content (images, videos, etc.) can still be saved
+    to history and tracked properly.
+
+    Returns:
+        User: The system user for autonomous operations
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    system_user, created = User.objects.get_or_create(
+        username='system_autonomous',
+        defaults={
+            'email': 'system@autonomous.internal',
+            'is_active': True,
+            'first_name': 'System',
+            'last_name': 'Autonomous',
+        }
+    )
+
+    if created:
+        logger.info("🤖 Created system_autonomous user for autonomous operations")
+
+    return system_user
+
+
+# ========================================
 # SESSION MANAGEMENT HELPERS (Session 96: Weekend Project)
 # ========================================
 
@@ -8424,22 +8459,30 @@ def _execute_generate_image(user, parameters, session=None):
                 # Session 96 Weekend Project: Link to AI conversation session
                 # Session 182: Link to project for Social Media Kit workflow
                 # Session 272: Only save to history if user is authenticated
-                history_record = None
-                if user:
-                    history_record = save_to_history(
-                        user=user,
-                        file_path=file_path,
-                        image_type='generated',
-                        prompt=prompt,
-                        parameters={'model': model, 'style': style, 'quality': quality, 'batch_index': i + 1},
-                        model_used=model,
-                        style=style,
-                        parent_image=None,
-                        session=session,  # Session 96: Link to AI conversation
-                        project=project   # Session 182: Link to project
-                    )
-                else:
-                    logger.info(f"📷 Image generated for anonymous user (no history record)")
+                # Session 794: Use system user for autonomous operations (Celery tasks)
+                history_user = user
+                if not history_user:
+                    history_user = get_system_user()
+                    logger.info(f"🤖 Using system_autonomous user for image history")
+
+                history_record = save_to_history(
+                    user=history_user,
+                    file_path=file_path,
+                    image_type='generated',
+                    prompt=prompt,
+                    parameters={
+                        'model': model,
+                        'style': style,
+                        'quality': quality,
+                        'batch_index': i + 1,
+                        'autonomous': user is None  # Session 794: Track autonomous generation
+                    },
+                    model_used=model,
+                    style=style,
+                    parent_image=None,
+                    session=session,  # Session 96: Link to AI conversation
+                    project=project   # Session 182: Link to project
+                )
 
                 generated_images.append({
                     'image_url': saved_url,
@@ -8622,6 +8665,7 @@ def _execute_generate_video(user, parameters, session=None):
     Session 65: Phase 2.2 - Autonomous video generation
     Session 96: Weekend Project - Link generated videos to AI session
     Session 183: Support both direct params and operation-based params from GPT
+    Session 794: Use system user for autonomous operations (Celery tasks)
 
     Parameters:
         prompt (str): Video description
@@ -8642,6 +8686,11 @@ def _execute_generate_video(user, parameters, session=None):
         }
     """
     try:
+        # Session 794: Use system user for autonomous operations
+        is_autonomous = user is None
+        if is_autonomous:
+            user = get_system_user()
+            logger.info(f"🤖 Using system_autonomous user for video generation")
         # Session 183: Handle operation-based format from GPT
         operation = parameters.get('operation')
         if operation:
@@ -8789,7 +8838,8 @@ def _execute_generate_video(user, parameters, session=None):
                 'ratio': '1280:720' if source_image else '1920:1080',
                 'enhance_prompt': True,
                 'enhancement_level': 'advanced',
-                'source_image_id': str(source_image.id) if source_image else None  # Session 119: Track source
+                'source_image_id': str(source_image.id) if source_image else None,  # Session 119: Track source
+                'autonomous': is_autonomous  # Session 794: Track autonomous generation
             },
             model_used='gen4_turbo' if source_image else 'veo3.1_fast',
             duration=duration,
@@ -14618,6 +14668,8 @@ def _execute_generate_voice(user, parameters, session=None):
     Internal function for text-to-speech generation.
     Called by AudioAgent.
 
+    Session 794: Use system user for autonomous operations (Celery tasks)
+
     Args:
         user: Django user object
         parameters: Dict with text, voice, stability, similarity_boost
@@ -14627,6 +14679,12 @@ def _execute_generate_voice(user, parameters, session=None):
         Dict with success, audio_url
     """
     try:
+        # Session 794: Use system user for autonomous operations
+        is_autonomous = user is None
+        if is_autonomous:
+            user = get_system_user()
+            logger.info(f"🤖 Using system_autonomous user for voice generation")
+
         text = parameters.get('text')
         voice = parameters.get('voice', 'Rachel')
         stability = parameters.get('stability', 0.5)
@@ -14695,28 +14753,29 @@ def _execute_generate_voice(user, parameters, session=None):
         logger.info(f"✅ Agent generated voice: {saved_path}")
 
         # Session 305: Save to AudioHistory (only if user is provided)
+        # Session 794: Always save - use system user for autonomous operations
         audio_id = None
-        if user:
-            from content.models import AudioHistory
-            audio_record = AudioHistory.objects.create(
-                user=user,
-                session=session,
-                filename=filename,
-                file_path=saved_path,
-                audio_type='tts',
-                prompt=text,
-                parameters={
-                    'stability': stability,
-                    'similarity_boost': similarity_boost,
-                    'model_id': 'eleven_monolingual_v1'
-                },
-                voice_id=voice_id,
-                voice_name=voice,
-                model_used='eleven_monolingual_v1',
-                file_size_bytes=len(audio_data),
-                status='completed'
-            )
-            audio_id = audio_record.id
+        from content.models import AudioHistory
+        audio_record = AudioHistory.objects.create(
+            user=user,
+            session=session,
+            filename=filename,
+            file_path=saved_path,
+            audio_type='tts',
+            prompt=text,
+            parameters={
+                'stability': stability,
+                'similarity_boost': similarity_boost,
+                'model_id': 'eleven_monolingual_v1',
+                'autonomous': is_autonomous  # Session 794: Track autonomous generation
+            },
+            voice_id=voice_id,
+            voice_name=voice,
+            model_used='eleven_monolingual_v1',
+            file_size_bytes=len(audio_data),
+            status='completed'
+        )
+        audio_id = audio_record.id
 
         return {
             'success': True,
