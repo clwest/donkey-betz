@@ -287,6 +287,27 @@ class WorkspaceRegisterSerializer(serializers.Serializer):
         help_text="Set as active workspace"
     )
 
+    def validate_github_url(self, value):
+        """Session 798: Validate GitHub URL format"""
+        import re
+        if value:
+            # Normalize common mistakes
+            value = value.strip()
+
+            # Add https:// if missing but looks like github.com
+            if value.startswith('github.com/'):
+                value = 'https://' + value
+
+            # Check for valid GitHub URL pattern
+            pattern = r'^https?://github\.com/[^/]+/[^/]+'
+            if not re.match(pattern, value):
+                display_value = value[:50] + '...' if len(value) > 50 else value
+                raise serializers.ValidationError(
+                    f"Invalid GitHub URL. Expected format: https://github.com/username/repository "
+                    f"(received: '{display_value}')"
+                )
+        return value
+
     def validate(self, data):
         """Ensure either path or github_url is provided"""
         if not data.get('path') and not data.get('github_url'):
