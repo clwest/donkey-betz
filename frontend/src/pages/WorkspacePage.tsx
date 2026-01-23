@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
+import { useAuthStore } from '@/stores/authStore'
 import EntityLink from '@/components/EntityLink'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
@@ -1073,23 +1074,29 @@ export default function WorkspacePage() {
   // Session 713: Body Governance - Check file write permissions
   const { canWriteFile } = useBodyGovernance()
 
+  // Session 797: Auth gating for API queries
+  const { isAuthenticated } = useAuthStore()
+
   // Queries
   const { data: workspacesData, isLoading: loadingWorkspaces, error: workspacesError } = useQuery({
     queryKey: ['workspaces'],
     queryFn: () => workspaceApi.list(),
     retry: false, // Don't retry on auth errors
+    enabled: isAuthenticated, // Session 797: Gate on auth
   })
 
   const { data: activeWorkspaceData } = useQuery({
     queryKey: ['workspace-active'],
     queryFn: () => workspaceApi.getActive(),
     retry: false,
+    enabled: isAuthenticated, // Session 797: Gate on auth
   })
 
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
     queryKey: ['workspace-dashboard'],
     queryFn: () => workspaceApi.dashboard(),
     retry: false,
+    enabled: isAuthenticated, // Session 797: Gate on auth
   })
 
   const activeWorkspace = activeWorkspaceData?.data as Workspace | undefined
