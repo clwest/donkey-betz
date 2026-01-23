@@ -235,12 +235,17 @@ class Command(BaseCommand):
 
             # 3. Mark some data as processed to update digestive metrics
             if unprocessed > 0:
-                to_process = SpiderData.objects.filter(is_processed=False)[:50]
-                updated = to_process.update(
-                    is_processed=True,
-                    processed_at=timezone.now()
+                # Get IDs first (can't update a sliced queryset directly)
+                ids_to_process = list(
+                    SpiderData.objects.filter(is_processed=False)
+                    .values_list('id', flat=True)[:50]
                 )
-                self.stdout.write(f"  ✅ Marked {updated} items as processed")
+                if ids_to_process:
+                    updated = SpiderData.objects.filter(id__in=ids_to_process).update(
+                        is_processed=True,
+                        processed_at=timezone.now()
+                    )
+                    self.stdout.write(f"  ✅ Marked {updated} items as processed")
 
             return {
                 'success': processed > 0,
