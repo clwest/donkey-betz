@@ -12784,6 +12784,47 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     return service.execute_pilot(pilot_id)
                 return {'success': False, 'message': 'No pilot_id specified'}
 
+            elif intended_action == 'approve_gate':
+                # Session 797: Approve a gate and start pilot via consultation
+                from core.services.gate_progression_pipeline import gate_progression_pipeline
+                gate_id = action_params.get('gate_id')
+                if not gate_id:
+                    return {'success': False, 'message': 'No gate_id specified'}
+
+                # Use the pipeline's approval method (creates pilot automatically)
+                result = gate_progression_pipeline.approve_gate_from_attention(consultation.id)
+                if result.get('success'):
+                    decision_title = action_params.get('decision_title', 'Unknown')
+                    return {
+                        'success': True,
+                        'message': f"Gate approved for '{decision_title}'! Pilot has been started.",
+                        'gate_id': result.get('gate_id'),
+                        'pilot_id': result.get('pilot_id'),
+                    }
+                return result
+
+            elif intended_action == 'waive_gate':
+                # Session 797: Waive a stuck gate via consultation
+                from core.services.gate_progression_pipeline import gate_progression_pipeline
+                gate_id = action_params.get('gate_id')
+                if not gate_id:
+                    return {'success': False, 'message': 'No gate_id specified'}
+
+                # Use the pipeline's waive method
+                result = gate_progression_pipeline.waive_gate_from_attention(
+                    consultation.id,
+                    reason="Waived via PA consultation"
+                )
+                if result.get('success'):
+                    decision_title = action_params.get('decision_title', 'Unknown')
+                    return {
+                        'success': True,
+                        'message': f"Gate waived for '{decision_title}'! Pilot has been started.",
+                        'gate_id': result.get('gate_id'),
+                        'pilot_id': result.get('pilot_id'),
+                    }
+                return result
+
             elif intended_action == 'process_opportunity':
                 # Process an opportunity
                 from core.services.opportunity_service import OpportunityService
