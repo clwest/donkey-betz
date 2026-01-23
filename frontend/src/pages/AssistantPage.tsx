@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { assistantApi, userLearningApi, bodyApi } from '@/lib/api'
+import { assistantApi, userLearningApi, bodyApi, humanApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
   ChevronRight, CheckCircle, XCircle, Zap, MessageSquare,
-  Heart, TrendingUp, Lightbulb, Palette, Settings2, ExternalLink
+  Heart, TrendingUp, Lightbulb, Palette, Settings2, ExternalLink,
+  Bell, ClipboardList
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -57,9 +58,23 @@ interface LearningInsight {
   actionable: boolean
 }
 
+// Session 796: Pending Decision interface
+interface PendingDecision {
+  id: string
+  title: string
+  summary: string
+  urgency: 'critical' | 'high' | 'medium' | 'low'
+  item_type: string
+  source_agent: string
+  ml_recommendation?: string
+  ml_confidence?: number
+  created_at: string
+}
+
 type SidebarTab = 'context' | 'learning'
 
-const quickActions = [
+// Session 796: Quick actions now include pending decisions
+const baseQuickActions = [
   { label: 'Generate an image', prompt: 'Generate an image of a futuristic city at sunset' },
   { label: 'Check system status', prompt: 'What is the current system status?' },
   { label: 'Run agent cycle', prompt: 'Run an agent cycle now' },
@@ -144,6 +159,15 @@ export default function AssistantPage() {
     queryKey: ['body-vitals'],
     queryFn: () => bodyApi.vitals(),
     refetchInterval: 60000, // Refresh every 60 seconds
+  })
+
+  // Session 796: Pending decisions - Bridge Human Interface with PA
+  const { data: pendingDecisionsData } = useQuery({
+    queryKey: ['pending-decisions'],
+    queryFn: () => humanApi.attentionStream({ limit: 10 }),
+    enabled: isAuthenticated,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    retry: false,
   })
 
   // Generate insights mutation
@@ -235,6 +259,10 @@ export default function AssistantPage() {
   const bodyVitals = bodyVitalsResponse?.data || null
   const bodyHealthScore = bodyVitals?.health_score || 0
   const bodySystems = bodyVitals?.systems || {}
+
+  // Session 796: Pending decisions data
+  const pendingDecisions: PendingDecision[] = pendingDecisionsData?.data?.items || []
+  const pendingCount = pendingDecisions.length
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -360,11 +388,30 @@ export default function AssistantPage() {
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <Bot size={48} className="mb-4 opacity-50" />
               <p className="text-xl mb-2">How can I help you today?</p>
-              <p className="text-sm mb-6">Ask me anything about your platform...</p>
+              {/* Session 796: Show pending decisions count in greeting */}
+              {pendingCount > 0 ? (
+                <p className="text-sm mb-6">
+                  You have <span className="text-accent-amber font-medium">{pendingCount} item{pendingCount > 1 ? 's' : ''}</span> that need{pendingCount === 1 ? 's' : ''} your attention.
+                </p>
+              ) : (
+                <p className="text-sm mb-6">Ask me anything about your platform...</p>
+              )}
 
-              {/* Quick Actions */}
+              {/* Session 796: Quick Actions with dynamic pending decisions */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-w-2xl">
-                {quickActions.map((action) => (
+                {/* Show Review Decisions first if there are pending items */}
+                {pendingCount > 0 && (
+                  <button
+                    onClick={() => sendMessage('What needs my attention?')}
+                    className="p-3 rounded-lg border border-accent-amber/50 bg-accent-amber/10 hover:border-accent-amber hover:bg-accent-amber/20 transition-colors text-left col-span-2 md:col-span-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Bell size={16} className="text-accent-amber" />
+                      <p className="text-sm text-white">Review {pendingCount} pending decision{pendingCount > 1 ? 's' : ''}</p>
+                    </div>
+                  </button>
+                )}
+                {baseQuickActions.map((action) => (
                   <button
                     key={action.label}
                     onClick={() => sendMessage(action.prompt)}
@@ -630,6 +677,53 @@ export default function AssistantPage() {
                   </div>
                 )}
 
+                {/* Session 796: Pending Decisions - Human Interface Bridge */}
+                {pendingDecisions.length > 0 && (
+                  <div className="card border-l-2 border-accent-amber">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ClipboardList size={18} className="text-accent-amber" />
+                      <h3 className="font-semibold">Pending Decisions</h3>
+                      <span className="ml-auto px-2 py-0.5 text-xs rounded-full bg-accent-amber/20 text-accent-amber">
+                        {pendingDecisions.length}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {pendingDecisions.slice(0, 3).map((item, idx) => {
+                        const urgencyEmoji = {
+                          critical: '🚨',
+                          high: '⚠️',
+                          medium: '📋',
+                          low: 'ℹ️'
+                        }[item.urgency] || '📋'
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between p-2 rounded-lg bg-dark-bg hover:bg-dark-border cursor-pointer transition-colors group"
+                            onClick={() => sendMessage(`Tell me more about decision ${idx + 1}: ${item.title}`)}
+                            title={item.summary}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm">{urgencyEmoji}</span>
+                              <div className="min-w-0">
+                                <span className="text-sm truncate block">{item.title.slice(0, 40)}{item.title.length > 40 ? '...' : ''}</span>
+                                <span className="text-xs text-gray-500">{item.item_type} • {item.urgency}</span>
+                              </div>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-500 flex-shrink-0 group-hover:text-primary-400" />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <button
+                      onClick={() => sendMessage('What needs my attention?')}
+                      className="w-full mt-2 text-xs text-primary-400 hover:text-primary-300 py-1"
+                    >
+                      Review all decisions →
+                    </button>
+                  </div>
+                )}
+
                 {/* Attention Items */}
                 <div className="card">
                   <div className="flex items-center gap-2 mb-3">
@@ -679,7 +773,7 @@ export default function AssistantPage() {
                     <h3 className="font-semibold">Suggestions</h3>
                   </div>
                   <div className="space-y-2">
-                    {quickActions.slice(0, 4).map((action) => (
+                    {baseQuickActions.slice(0, 4).map((action) => (
                       <button
                         key={action.label}
                         onClick={() => sendMessage(action.prompt)}
