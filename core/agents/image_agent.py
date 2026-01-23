@@ -149,15 +149,19 @@ SPECIAL STYLES (use only when explicitly requested or matching brand):
 
 You CANNOT create videos, audio, 3D models, or search the web directly. Just images.
 
-DELEGATION (Session 744):
-If you need something outside your expertise, use the delegate_to_specialist tool:
-- Need research/inspiration? Delegate to ResearchAgent
-- Need written content? Delegate to ContentWriterAgent
-- Need video from your images? Delegate to VideoAgent
+DELEGATION (Session 744, Updated Session 793):
+You can delegate ONLY when you genuinely need another agent's output capability:
+- Need VIDEO from your images? Delegate to VideoAgent
 - Need 3D models? Delegate to ThreeDAgent
-- Need trend analysis? Delegate to TrendAnalysisAgent
+- Need written descriptions/copy? Delegate to ContentWriterAgent
 
-Always delegate tasks you cannot perform yourself rather than refusing."""
+DO NOT DELEGATE for research, trends, or inspiration - you ALREADY receive:
+- spider_context: Current trends, news, and market data
+- scifi_context: Creative inspiration and mood data
+Use the data in your context directly to inform your image generation.
+
+When asked to "analyze trends and create an image", use the spider_context trends
+you already have, then call generate_image immediately. Do not delegate first."""
 
     tools = [
         {
