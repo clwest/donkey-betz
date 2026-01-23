@@ -595,6 +595,7 @@ class AgentRouter:
         advisor_context = self._get_advisor_context(agent_name, task)
         feedback_context = self._get_feedback_context(agent_name, task)
         knowledge_context = self._get_knowledge_context(agent_name, task)
+        workspace_context = self._get_workspace_context(agent_name, task)  # Session 798
 
         # Merge contexts (same logic as in route())
         if learning_context and learning_context.get('has_patterns'):
@@ -625,6 +626,14 @@ class AgentRouter:
             spider_context['relevant_knowledge'] = knowledge_context.get('relevant_knowledge', [])
             spider_context['use_cached_knowledge'] = knowledge_context.get('use_cached_knowledge', False)
 
+        # Session 798: Merge workspace context into spider context
+        if workspace_context and workspace_context.get('has_workspace'):
+            spider_context['workspace'] = workspace_context
+            spider_context['workspace_name'] = workspace_context.get('workspace_name')
+            spider_context['workspace_tech_stack'] = workspace_context.get('tech_stack', {})
+            spider_context['workspace_key_files'] = workspace_context.get('key_files', {})
+            spider_context['workspace_directories'] = workspace_context.get('directory_purposes', {})
+
         return {
             'scifi_context': scifi_context,
             'spider_context': spider_context,
@@ -632,6 +641,7 @@ class AgentRouter:
             'advisor_context': advisor_context,
             'feedback_context': feedback_context,
             'knowledge_context': knowledge_context,
+            'workspace_context': workspace_context,  # Session 798
             'gathered': True,
         }
 
@@ -687,6 +697,7 @@ class AgentRouter:
             advisor_context = pre_gathered_context.get('advisor_context', {})
             feedback_context = pre_gathered_context.get('feedback_context', {})
             knowledge_context = pre_gathered_context.get('knowledge_context', {})
+            workspace_context = pre_gathered_context.get('workspace_context', {})  # Session 798
             logger.info(f"Using pre-gathered context for {agent_name} (context gathering done outside timeout)")
         else:
             # Gather context (original behavior)
@@ -701,6 +712,8 @@ class AgentRouter:
             feedback_context = self._get_feedback_context(agent_name, task)
             # Session 744: Get knowledge-first routing context (checks existing knowledge BEFORE external queries)
             knowledge_context = self._get_knowledge_context(agent_name, task)
+            # Session 798: Get workspace context for file operations
+            workspace_context = self._get_workspace_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -821,6 +834,19 @@ class AgentRouter:
                 f"decision={knowledge_context.get('knowledge_decision')}"
             )
 
+        # Session 798: Merge workspace context into spider context
+        # This gives agents awareness of the project structure for file operations
+        if workspace_context and workspace_context.get('has_workspace'):
+            spider_context['workspace'] = workspace_context
+            spider_context['workspace_name'] = workspace_context.get('workspace_name')
+            spider_context['workspace_tech_stack'] = workspace_context.get('tech_stack', {})
+            spider_context['workspace_key_files'] = workspace_context.get('key_files', {})
+            spider_context['workspace_directories'] = workspace_context.get('directory_purposes', {})
+            logger.debug(
+                f"📁 [Session 798] Injected workspace context into spider_context for {agent_name}: "
+                f"workspace={workspace_context.get('workspace_name')}"
+            )
+
         # Execute the agent with tracking
         start_time = timezone.now()
         execution_record = None
@@ -834,6 +860,7 @@ class AgentRouter:
             'advisor_insights': bool(spider_context.get('advisor_insights')),
             'performance_feedback': bool(spider_context.get('performance_feedback')),
             'knowledge_state': bool(spider_context.get('knowledge_state')),
+            'workspace': bool(spider_context.get('workspace')),  # Session 798
             'scifi_context': bool(scifi_context),
         }
         logger.info(
@@ -842,6 +869,7 @@ class AgentRouter:
             f"learning={context_summary['learning_patterns']}, "
             f"advisor={context_summary['advisor_insights']}, "
             f"feedback={context_summary['performance_feedback']}, "
+            f"workspace={context_summary['workspace']}, "  # Session 798
             f"scifi={context_summary['scifi_context']}"
         )
 
@@ -1151,6 +1179,63 @@ class AgentRouter:
             return knowledge_context
         except Exception as e:
             logger.warning(f"Failed to get knowledge context: {e}")
+            return {}
+
+    def _get_workspace_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 798: Get workspace context for an agent.
+
+        This provides agents with information about the active workspace:
+        - Project structure (directories, key files)
+        - Tech stack (React, Django, etc.)
+        - Coding patterns and conventions
+        - Where to put generated files
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Dict with workspace structure info, or empty dict if no workspace
+        """
+        try:
+            from core.services.workspace_manager import get_workspace_manager
+
+            manager = get_workspace_manager(self.user)
+            workspace = manager.get_active_workspace()
+
+            if not workspace:
+                logger.debug(f"📁 [Session 798] No active workspace for {agent_name}")
+                return {}
+
+            # Get workspace context for this agent
+            context = manager.get_workspace_context_for_agent(
+                workspace=workspace,
+                agent_name=agent_name,
+                task=task
+            )
+
+            workspace_context = {
+                'has_workspace': True,
+                'workspace_name': context.get('workspace_name'),
+                'root_path': context.get('root_path'),
+                'tech_stack': context.get('tech_stack', {}),
+                'key_files': context.get('key_files', {}),
+                'directory_purposes': context.get('directory_purposes', {}),
+                'coding_patterns': context.get('coding_patterns', {}),
+                'import_aliases': context.get('import_aliases', {}),
+                'protected_paths': context.get('protected_paths', []),
+                'total_files': context.get('total_files', 0),
+            }
+
+            logger.debug(
+                f"📁 [Session 798] Workspace context for {agent_name}: "
+                f"workspace={workspace.name}, tech={context.get('tech_stack', {}).get('frontend', 'unknown')}"
+            )
+
+            return workspace_context
+        except Exception as e:
+            logger.warning(f"Failed to get workspace context: {e}")
             return {}
 
     def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None):
