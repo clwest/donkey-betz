@@ -1,80 +1,96 @@
-# Session 797 - Next Steps
+# Session 798 - Next Steps
 
-**Previous Session:** 796 (Human-AI Assistant Connection Overhaul)
+**Previous Session:** 797 (Integration Deepening - Consultation Triggers)
 **Date:** January 23, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
 
 ---
 
-## SESSION 796 COMPLETED ✅
+## SESSION 797 COMPLETED
 
-### The Problem (SOLVED)
-Human and AI Assistant were disconnected:
-- PA chat existed but didn't surface Human decisions
-- Human Page showed decisions but no natural language interaction
-- PA didn't consult human before autonomous actions
-- 373 waived gates = system bypassing human entirely
+### Overview
+Completed frontend enhancements and integration deepening for Human-AI connection.
 
-### Solution: Option A - Enhanced Assistant Page
+### PRs Merged This Session
 
-**Phase 1: PA Surfaces Pending Decisions** ✅ (PR #14 MERGED)
-- Added `human_decisions_tool` with actions: list, get, decide, stats
-- Frontend shows pending decision count in greeting
-- "Review pending decisions" quick action highlighted
-- Pending Decisions sidebar card with urgency emojis
+| PR | Title | Description |
+|----|-------|-------------|
+| #15 | Phase 2 - Smart Decisions | batch_decide, auto_execute, consult actions |
+| #16 | Phase 3 - Consultation Loop | _check_consultation_response, _execute_consultation_action |
+| #17 | PA Pending Decisions Injection | Fixed QuerySet slice bug, inject pending decisions into system prompt |
+| #18 | PA Full System Scope | Updated PERSONAL_ASSISTANT_PROMPT with full capabilities |
+| #19 | Enhanced Pending Decisions UI | Batch action buttons, quick actions, ML indicators |
+| #20 | Gate Consultation Triggers | consultation fields in gate attention items, approve_gate/waive_gate handlers |
+| #21 | Opportunity Consultation | $1000+ opportunities require approval, execute_opportunity handler |
 
-**Phase 2: Smart Decision Handling** ✅ (PR #15)
-- `batch_decide` - Apply decision to multiple items by urgency/type filter
-- `auto_execute` - Auto-approve low-risk items with ML confidence ≥ 85%
-- `consult` - PA creates consultation item awaiting human response
+### Key Changes
 
-**Phase 3: Consultation Response Loop** ✅ (PR #16)
-- `_check_consultation_response()` - Detects user responses to consultations
-- `_execute_consultation_action()` - Executes approved workflow/pilot/opportunity
-- Integrated into `process_message()` flow
+**Frontend Enhancements (PR #19)**
+- Added batch action buttons: Auto-Execute, Batch Low Priority, Defer Medium
+- Added quick action buttons on each decision card (Approve, Reject, Defer, Info)
+- ML recommendation indicator with confidence percentage
+- Shows 5 items instead of 3
 
-### Key Files Modified
+**PA System Awareness (PR #17, #18)**
+- Fixed QuerySet slice bug in _build_pending_decisions_section
+- Updated PERSONAL_ASSISTANT_PROMPT with full system scope:
+  - 74 agents, 86 tools, 77 spiders, 9 body systems
+  - Human Interface Layer section with decision tool actions
+  - "What Can You Do?" starts with system scope, not creative tools
+
+**Integration Deepening (PR #20, #21)**
+- Gate attention items now have consultation fields:
+  - `consultation: True`
+  - `intended_action: 'approve_gate'` or `'waive_gate'`
+  - `action_params: {gate_id, decision_title}`
+- Opportunity pipeline consultation for high-value items:
+  - $1000+ revenue triggers consultation
+  - 90+ score triggers consultation
+  - `_create_opportunity_consultation()` method
+  - `execute_opportunity` PA action handler
+
+### Files Modified
+
 | File | Changes |
 |------|---------|
-| `core/assistant/tool_definitions.py` | +`human_decisions_tool` with 7 actions |
-| `core/personal_ai_assistant_enhanced.py` | +handler, +consultation response detection |
-| `frontend/src/pages/AssistantPage.tsx` | +pending decisions UI, +greeting |
+| `core/personal_ai_assistant_enhanced.py` | +_build_pending_decisions_section, +approve_gate, +waive_gate, +execute_opportunity handlers |
+| `core/prompts/registry.py` | Updated PERSONAL_ASSISTANT_PROMPT with full system scope |
+| `core/services/gate_progression_pipeline.py` | +consultation fields in payload |
+| `core/services/opportunity_execution_pipeline.py` | +HIGH_VALUE thresholds, +_create_opportunity_consultation |
+| `frontend/src/lib/api.ts` | +attentionStream, +batchDecide, +pendingConsultations |
+| `frontend/src/pages/AssistantPage.tsx` | +batch action buttons, +quick actions, +ML indicators |
 
 ---
 
-## WHAT'S NEXT FOR SESSION 797
-
-### PRs to Merge
-- **PR #15**: Phase 2 - batch_decide, auto_execute, consult actions
-- **PR #16**: Phase 3 - consultation response loop
+## WHAT'S NEXT FOR SESSION 798
 
 ### Potential Focus Areas
 
-1. **Frontend Enhancements**
-   - Add batch action buttons to Assistant Page
-   - Add auto-execute toggle in settings
-   - Show consultation status in chat
+1. **Testing & Validation**
+   - End-to-end test of gate consultation flow
+   - Test opportunity consultation with real high-value opportunities
+   - Verify Railway deployment of all changes
 
-2. **Testing & Validation**
-   - End-to-end test of consultation flow
-   - Test batch_decide with real data
-   - Verify Railway deployment
-
-3. **Integration Deepening**
-   - Connect consultation triggers to more actions
-   - Add consultation prompts before pilot execution
-   - Add consultation prompts before high-value workflows
-
-4. **Analytics & Monitoring**
+2. **Analytics & Monitoring**
    - Track consultation approval/rejection rates
    - Monitor auto-execute effectiveness
    - Dashboard for decision statistics
+
+3. **Additional Consultation Triggers**
+   - Workflow execution consultation
+   - High-cost LLM operation approval
+   - Agent team deployment approval
+
+4. **UI Refinements**
+   - Consultation status in chat messages
+   - Auto-execute toggle in settings
+   - Decision history view
 
 ---
 
 ## QUICK REFERENCE
 
-### Test Human Decisions Tool
+### Test Consultation Flow
 ```bash
 .venv/bin/python manage.py shell -c "
 from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
@@ -86,44 +102,17 @@ pa = EnhancedPersonalAIAssistant(user=user)
 # List pending decisions
 result = pa._handle_human_decisions_tool({'action': 'list'})
 print(f'Pending: {result.get(\"count\", 0)} items')
-
-# Create consultation
-result = pa._handle_human_decisions_tool({
-    'action': 'consult',
-    'consultation_context': 'Test consultation'
-})
-print(f'Consultation created: {result.get(\"consultation_id\")}')"
+"
 ```
 
-### Railway Deployment
+### Check High-Value Threshold
 ```bash
-# Merge PRs and deploy
-git checkout main && git pull
-# PRs should auto-deploy on merge
-
-# Check production
-curl https://donkey-betz-platform-production.up.railway.app/health/ping/
+.venv/bin/python manage.py shell -c "
+from core.services.opportunity_execution_pipeline import opportunity_execution_pipeline
+print(f'Revenue threshold: \${opportunity_execution_pipeline.HIGH_VALUE_REVENUE_THRESHOLD}')
+print(f'Score threshold: {opportunity_execution_pipeline.HIGH_RISK_SCORE_THRESHOLD}')
+"
 ```
-
----
-
-## SESSION 796 SUCCESS CRITERIA ✅
-
-- [x] Human can have a conversation with PA that feels connected
-  - PA greets with pending decision count
-  - User can say "show pending decisions" and see them
-- [x] PA consults human before significant autonomous actions
-  - `consult` action creates consultation items
-  - Response detection interprets yes/no/more info
-- [x] Human can set priorities that PA follows
-  - Natural language decision making (approve/reject/defer)
-  - Batch operations by urgency/type
-- [x] Unified view of "what's happening" in the system
-  - Pending Decisions sidebar card
-  - Decision stats available
-- [x] User no longer feels disconnected from their own platform
-  - Full chat-based interaction with decisions
-  - PA is now truly the human's assistant
 
 ---
 
@@ -131,6 +120,7 @@ curl https://donkey-betz-platform-production.up.railway.app/health/ping/
 
 | Session | Focus |
 |---------|-------|
+| **797** | Integration Deepening - Gate & Opportunity consultation triggers |
 | **796** | Human-AI Assistant Connection - 3 phases complete |
 | **795** | Reasoning Engine explained, Gate system clarity |
 | **794** | Learning Velocity fix - PilotExecution/Experiment creation |
