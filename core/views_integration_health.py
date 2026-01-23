@@ -424,10 +424,12 @@ class IntegrationAlertView(View):
                 'message': f'{untracked_count} executions from before tracking was added (Session 758)',
             })
 
-        # Check for failed executions
+        # Check for failed executions (exclude seeded test failures from bootstrap)
         failed_execs = AgentExecution.objects.filter(
             created_at__gte=last_24h,
             status='failed'
+        ).exclude(
+            error_message='Simulated failure for testing'
         ).count()
 
         if failed_execs > 0:
