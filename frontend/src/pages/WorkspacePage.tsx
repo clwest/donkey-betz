@@ -1714,7 +1714,7 @@ export default function WorkspacePage() {
                       <div>
                         <p className="text-sm text-gray-400">Body Health</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-2xl font-bold">{bodyHealthScore.toFixed(0)}%</span>
+                          <span className="text-2xl font-bold">{(bodyHealthScore ?? 0).toFixed(0)}%</span>
                           <span className={cn(
                             'text-xs px-2 py-0.5 rounded capitalize',
                             bodyOverallStatus === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
@@ -1847,7 +1847,7 @@ export default function WorkspacePage() {
                         {fileContentData?.data && (
                           <div className="flex items-center gap-3 text-xs text-gray-500">
                             {fileContentData.data.size !== undefined && (
-                              <span>{(fileContentData.data.size / 1024).toFixed(1)} KB</span>
+                              <span>{((fileContentData.data?.size ?? 0) / 1024).toFixed(1)} KB</span>
                             )}
                             {fileContentData.data.truncated && (
                               <span className="px-2 py-0.5 bg-accent-amber/20 text-accent-amber rounded">

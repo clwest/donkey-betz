@@ -170,7 +170,7 @@ export function checkAdvancedGovernance(
   if (state.healthScore < minScore) {
     return {
       allowed: false,
-      reason: `Health score (${state.healthScore.toFixed(0)}%) is below minimum required (${minScore}%) for ${operationType}`,
+      reason: `Health score (${(state.healthScore ?? 0).toFixed(0)}%) is below minimum required (${minScore}%) for ${operationType}`,
       severity: 'error',
     }
   }

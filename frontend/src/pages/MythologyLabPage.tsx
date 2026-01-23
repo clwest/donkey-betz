@@ -285,7 +285,7 @@ function RiskBadge({ level }: { level: number }) {
 
   return (
     <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${color}`}>
-      {label} ({(level * 100).toFixed(0)}%)
+      {label} ({((level ?? 0) * 100).toFixed(0)}%)
     </span>
   )
 }
@@ -457,7 +457,7 @@ function EventRow({
           <div className="flex items-center gap-4 text-xs text-gray-500">
             <span className="flex items-center gap-1">
               <Target className="h-3 w-3" />
-              Confidence: {(event.confidence_score * 100).toFixed(0)}%
+              Confidence: {((event.confidence_score ?? 0) * 100).toFixed(0)}%
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -478,11 +478,11 @@ function EventRow({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <div className="text-xs text-gray-500 mb-1">Risk Level</div>
-              <div className="text-white font-medium">{(event.risk_level * 100).toFixed(1)}%</div>
+              <div className="text-white font-medium">{((event.risk_level ?? 0) * 100).toFixed(1)}%</div>
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Confidence</div>
-              <div className="text-white font-medium">{(event.confidence_score * 100).toFixed(1)}%</div>
+              <div className="text-white font-medium">{((event.confidence_score ?? 0) * 100).toFixed(1)}%</div>
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Prevention</div>

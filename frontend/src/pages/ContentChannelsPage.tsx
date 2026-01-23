@@ -326,7 +326,7 @@ function ChannelCard({ channel }: { channel: Channel }) {
             </div>
             <div className="p-3 rounded-lg bg-dark-bg text-center">
               <p className="text-xs text-gray-500">Avg Retention</p>
-              <p className="text-lg font-bold">{channel.avg_retention.toFixed(0)}%</p>
+              <p className="text-lg font-bold">{(channel.avg_retention ?? 0).toFixed(0)}%</p>
             </div>
             <div className="p-3 rounded-lg bg-dark-bg text-center">
               <p className="text-xs text-gray-500">Audience</p>

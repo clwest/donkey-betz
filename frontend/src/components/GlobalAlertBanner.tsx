@@ -82,7 +82,7 @@ export default function GlobalAlertBanner({ className }: GlobalAlertBannerProps)
 
             <div className="flex flex-col">
               <span className="font-semibold text-sm">
-                Body Health: {status.charAt(0).toUpperCase() + status.slice(1)} ({score.toFixed(0)}%)
+                Body Health: {status.charAt(0).toUpperCase() + status.slice(1)} ({(score ?? 0).toFixed(0)}%)
               </span>
               {criticalSystems.length > 0 && (
                 <span className="text-xs opacity-80">
@@ -192,7 +192,7 @@ export function CompactHealthIndicator({ className }: { className?: string }) {
         statusColor,
         className
       )}
-      title={`Body Health: ${status} (${score.toFixed(0)}%)${
+      title={`Body Health: ${status} (${(score ?? 0).toFixed(0)}%)${
         criticalSystems.length > 0 ? ` - Critical: ${criticalSystems.join(', ')}` : ''
       }`}
     >
@@ -203,7 +203,7 @@ export function CompactHealthIndicator({ className }: { className?: string }) {
           status === 'degraded' && 'animate-pulse'
         )}
       />
-      <span className="text-xs font-medium">{score.toFixed(0)}%</span>
+      <span className="text-xs font-medium">{(score ?? 0).toFixed(0)}%</span>
     </Link>
   )
 }

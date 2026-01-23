@@ -393,7 +393,7 @@ export default function OrchestrationPage() {
         <StatCard
           icon={DollarSign}
           label="Total Cost"
-          value={`$${analytics.totalCost.toFixed(4)}`}
+          value={`$${(analytics.totalCost ?? 0).toFixed(4)}`}
           color="text-yellow-400"
         />
       </div>
@@ -733,7 +733,7 @@ function ExecutionList({
                     <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
                       <span>Step {execution.current_step}/{execution.total_steps}</span>
                       <span>•</span>
-                      <span>${parseFloat(execution.total_cost).toFixed(4)}</span>
+                      <span>${(parseFloat(execution.total_cost) || 0).toFixed(4)}</span>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-500" />
@@ -844,15 +844,15 @@ function ExecutionDetail({
         {/* Quick stats - Session 769: Show external costs */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
           <div className="text-center bg-black/20 rounded-lg p-2">
-            <p className="text-lg font-semibold text-green-400">${parseFloat(execution.total_combined_cost || execution.total_cost).toFixed(4)}</p>
+            <p className="text-lg font-semibold text-green-400">${(parseFloat(execution.total_combined_cost || execution.total_cost) || 0).toFixed(4)}</p>
             <p className="text-xs text-gray-500">Total Cost</p>
           </div>
           <div className="text-center bg-black/20 rounded-lg p-2">
-            <p className="text-sm font-medium text-gray-300">${parseFloat(execution.total_cost).toFixed(4)}</p>
+            <p className="text-sm font-medium text-gray-300">${(parseFloat(execution.total_cost) || 0).toFixed(4)}</p>
             <p className="text-xs text-gray-500">LLM Cost</p>
           </div>
           <div className="text-center bg-black/20 rounded-lg p-2">
-            <p className="text-sm font-medium text-purple-400">${parseFloat(execution.total_external_cost || '0').toFixed(4)}</p>
+            <p className="text-sm font-medium text-purple-400">${(parseFloat(execution.total_external_cost || '0') || 0).toFixed(4)}</p>
             <p className="text-xs text-gray-500">External APIs</p>
           </div>
           <div className="text-center bg-black/20 rounded-lg p-2">
@@ -876,7 +876,7 @@ function ExecutionDetail({
             <div className="flex flex-wrap gap-2">
               {Object.entries(execution.external_cost_breakdown).map(([api, cost]) => (
                 <span key={api} className="text-xs bg-purple-500/10 px-2 py-0.5 rounded text-purple-300">
-                  {api.replace('_', ' ')}: ${cost.toFixed(4)}
+                  {api.replace('_', ' ')}: ${(cost ?? 0).toFixed(4)}
                 </span>
               ))}
             </div>
@@ -931,7 +931,7 @@ function ExecutionDetail({
                         </p>
                       )}
                       <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                        <span>${parseFloat(step.cost).toFixed(4)}</span>
+                        <span>${(parseFloat(step.cost) || 0).toFixed(4)}</span>
                         <span>{step.tokens.toLocaleString()} tokens</span>
                         {step.retry_count > 0 && (
                           <span className="text-yellow-500">{step.retry_count} retries</span>
@@ -1170,7 +1170,7 @@ function FormattedFinalOutput({
             <p className="text-xs text-gray-500 mb-1">Grand Total</p>
             <p className="text-lg font-semibold text-green-400 flex items-center gap-1">
               <DollarSign className="w-4 h-4" />
-              {grandTotalCost.toFixed(4)}
+              {(grandTotalCost ?? 0).toFixed(4)}
             </p>
           </div>
         )}
@@ -1178,7 +1178,7 @@ function FormattedFinalOutput({
           <div className="bg-black/30 rounded-lg p-3 border border-white/5">
             <p className="text-xs text-gray-500 mb-1">LLM Cost</p>
             <p className="text-sm font-medium text-gray-300">
-              ${totalCost.toFixed(4)}
+              ${(totalCost ?? 0).toFixed(4)}
             </p>
           </div>
         )}
@@ -1186,7 +1186,7 @@ function FormattedFinalOutput({
           <div className="bg-black/30 rounded-lg p-3 border border-purple-500/20">
             <p className="text-xs text-purple-400 mb-1">External APIs</p>
             <p className="text-sm font-medium text-purple-300">
-              ${totalExternalCost.toFixed(4)}
+              ${(totalExternalCost ?? 0).toFixed(4)}
             </p>
           </div>
         )}
@@ -1195,7 +1195,7 @@ function FormattedFinalOutput({
           <div className="bg-black/30 rounded-lg p-3 border border-yellow-500/20">
             <p className="text-xs text-yellow-400 mb-1">ElevenLabs TTS</p>
             <p className="text-sm font-medium text-yellow-300">
-              ${ttsCost.toFixed(4)}
+              ${(ttsCost ?? 0).toFixed(4)}
             </p>
           </div>
         )}
@@ -1218,7 +1218,7 @@ function FormattedFinalOutput({
             {Object.entries(externalBreakdown).map(([api, cost]) => (
               <div key={api} className="bg-black/20 rounded p-2">
                 <p className="text-xs text-gray-400 capitalize">{api.replace(/_/g, ' ')}</p>
-                <p className="text-sm font-medium text-purple-300">${cost.toFixed(4)}</p>
+                <p className="text-sm font-medium text-purple-300">${(cost ?? 0).toFixed(4)}</p>
               </div>
             ))}
           </div>
@@ -1245,7 +1245,7 @@ function FormattedFinalOutput({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <div className="bg-black/20 rounded p-2">
               <p className="text-xs text-gray-400">TTS Cost</p>
-              <p className="text-sm font-medium text-yellow-300">${parseFloat(podcastInfo.tts_cost).toFixed(4)}</p>
+              <p className="text-sm font-medium text-yellow-300">${(parseFloat(podcastInfo.tts_cost) || 0).toFixed(4)}</p>
             </div>
             {podcastInfo.audio_duration_seconds && (
               <div className="bg-black/20 rounded p-2">
@@ -1300,7 +1300,7 @@ function FormattedFinalOutput({
                       <Bot className="w-4 h-4 text-purple-400" />
                       <span className="text-sm font-medium text-white">{agentName}</span>
                       {agentCost !== undefined && (
-                        <span className="text-xs text-gray-500">${agentCost.toFixed(4)}</span>
+                        <span className="text-xs text-gray-500">${(agentCost ?? 0).toFixed(4)}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -1378,7 +1378,7 @@ function FormattedOutputData({ data, agentName }: { data: Record<string, unknown
         {cost !== undefined && (
           <span className="flex items-center gap-1">
             <DollarSign className="w-3 h-3" />
-            ${cost.toFixed(4)}
+            ${(cost ?? 0).toFixed(4)}
           </span>
         )}
         {tokensUsed !== undefined && (
@@ -1390,7 +1390,7 @@ function FormattedOutputData({ data, agentName }: { data: Record<string, unknown
         {executionTimeMs !== undefined && (
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {(executionTimeMs / 1000).toFixed(1)}s
+            {((executionTimeMs ?? 0) / 1000).toFixed(1)}s
           </span>
         )}
       </div>
@@ -1875,7 +1875,7 @@ function StepIntelligencePanel({ intelligence }: { intelligence: StepIntelligenc
                     memory.importance_score >= 0.4 ? 'bg-blue-500/20 text-blue-400' :
                     'bg-gray-500/20 text-gray-400'
                   )}>
-                    {(memory.importance_score * 100).toFixed(0)}% importance
+                    {((memory.importance_score ?? 0) * 100).toFixed(0)}% importance
                   </span>
                 </div>
               </div>
@@ -1960,7 +1960,7 @@ function AnalyticsSidebar({
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-sm text-gray-400">Total Cost</span>
-            <span className="text-sm text-white">${analytics.totalCost.toFixed(4)}</span>
+            <span className="text-sm text-white">${(analytics.totalCost ?? 0).toFixed(4)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-400">Total Tokens</span>
@@ -1970,7 +1970,7 @@ function AnalyticsSidebar({
             <span className="text-sm text-gray-400">Avg. Cost/Execution</span>
             <span className="text-sm text-white">
               ${analytics.totalExecutions > 0
-                ? (analytics.totalCost / analytics.totalExecutions).toFixed(4)
+                ? ((analytics.totalCost ?? 0) / (analytics.totalExecutions || 1)).toFixed(4)
                 : '0.0000'}
             </span>
           </div>
@@ -2034,7 +2034,7 @@ function AnalyticsDashboard({
         {/* Cost Analysis */}
         <div className="bg-white/5 rounded-xl p-4">
           <h4 className="text-sm text-gray-400 mb-2">Cost Analysis</h4>
-          <div className="text-4xl font-bold text-yellow-400">${analytics.totalCost.toFixed(2)}</div>
+          <div className="text-4xl font-bold text-yellow-400">${(analytics.totalCost ?? 0).toFixed(2)}</div>
           <p className="text-sm text-gray-500 mt-1">
             {analytics.totalTokens.toLocaleString()} tokens used
           </p>
@@ -2085,7 +2085,7 @@ function AnalyticsDashboard({
                     {ex.started_at && new Date(ex.started_at).toLocaleString()}
                   </p>
                 </div>
-                <span className="text-xs text-gray-400">${parseFloat(ex.total_cost).toFixed(4)}</span>
+                <span className="text-xs text-gray-400">${(parseFloat(ex.total_cost) || 0).toFixed(4)}</span>
               </div>
             )
           })}

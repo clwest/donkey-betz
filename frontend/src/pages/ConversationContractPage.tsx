@@ -212,7 +212,7 @@ function RequirementCard({
                 : 'text-red-400'
           }`}
         >
-          {complianceRate.toFixed(0)}% compliant
+          {(complianceRate ?? 0).toFixed(0)}% compliant
         </span>
       </div>
       <p className="text-sm text-gray-400 mb-3">{description}</p>
@@ -721,14 +721,14 @@ export default function ConversationContractPage() {
                 }`}
               />
               <span className="text-2xl font-bold text-white">
-                {overview.avg_quality_score.toFixed(0)}%
+                {(overview.avg_quality_score ?? 0).toFixed(0)}%
               </span>
             </div>
             <div className="text-sm text-gray-400">Average Quality</div>
           </div>
           <div className="rounded-lg border border-dark-border bg-dark-card p-4">
             <div className="text-2xl font-bold text-white">
-              {overview.valid_summary_rate.toFixed(0)}%
+              {(overview.valid_summary_rate ?? 0).toFixed(0)}%
             </div>
             <div className="text-sm text-gray-400">Valid Summaries</div>
           </div>

@@ -377,7 +377,7 @@ export default function VoiceMarketplacePage() {
                       {voice.rating && (
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                          <span className="text-xs">{voice.rating.toFixed(1)}</span>
+                          <span className="text-xs">{(voice.rating ?? 0).toFixed(1)}</span>
                         </div>
                       )}
                     </div>
@@ -499,7 +499,7 @@ export default function VoiceMarketplacePage() {
                       {voice.rating && (
                         <div className="flex items-center gap-1 px-2 py-1 rounded bg-dark-bg">
                           <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                          <span className="text-sm">{voice.rating.toFixed(1)}</span>
+                          <span className="text-sm">{(voice.rating ?? 0).toFixed(1)}</span>
                         </div>
                       )}
                     </div>

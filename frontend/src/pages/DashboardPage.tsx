@@ -94,7 +94,7 @@ function GaugeStat({ title, value, icon: Icon, color }: GaugeStatProps) {
           <Icon size={16} style={{ color }} />
           <span className="text-sm text-gray-400">{title}</span>
         </div>
-        <span className="text-lg font-bold" style={{ color }}>{value.toFixed(1)}%</span>
+        <span className="text-lg font-bold" style={{ color }}>{(value ?? 0).toFixed(1)}%</span>
       </div>
       <div className="h-2 rounded-full bg-dark-card overflow-hidden">
         <div
@@ -642,7 +642,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-gray-400">{agent.executions}</span>
-                      <span className="text-accent-green">{agent.success_rate.toFixed(0)}%</span>
+                      <span className="text-accent-green">{(agent.success_rate ?? 0).toFixed(0)}%</span>
                     </div>
                   </div>
                 ))}
@@ -745,7 +745,7 @@ export default function DashboardPage() {
                         Actionable
                       </span>
                     )}
-                    <span className="text-xs text-gray-500">{(insight.confidence * 100).toFixed(0)}% conf</span>
+                    <span className="text-xs text-gray-500">{((insight.confidence ?? 0) * 100).toFixed(0)}% conf</span>
                   </div>
                 </div>
                 <p className="text-sm text-gray-300">{insight.insight}</p>

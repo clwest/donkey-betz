@@ -560,7 +560,7 @@ function SearchInterface({
                               : 'bg-gray-500/20 text-gray-400'
                         }`}
                       >
-                        {(result.similarity_score * 100).toFixed(1)}% match
+                        {((result.similarity_score ?? 0) * 100).toFixed(1)}% match
                       </span>
                       {expandedResult === result.chunk_id ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />

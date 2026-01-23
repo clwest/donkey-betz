@@ -240,7 +240,7 @@ export const useBodyStore = create<BodyState>((set, get) => ({
         if (overallStatus === 'critical') {
           return {
             allowed: false,
-            reason: `Body health is critical (${vitals.health_score.toFixed(0)}%). Cannot start new pilots until system recovers.`,
+            reason: `Body health is critical (${(vitals.health_score ?? 0).toFixed(0)}%). Cannot start new pilots until system recovers.`,
           }
         }
         if (criticalSystems.length >= 3) {
@@ -252,7 +252,7 @@ export const useBodyStore = create<BodyState>((set, get) => ({
         if (overallStatus === 'degraded') {
           return {
             allowed: true,
-            reason: `Body health is degraded (${vitals.health_score.toFixed(0)}%). Proceed with caution.`,
+            reason: `Body health is degraded (${(vitals.health_score ?? 0).toFixed(0)}%). Proceed with caution.`,
           }
         }
         return { allowed: true }

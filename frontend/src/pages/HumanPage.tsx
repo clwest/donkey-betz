@@ -179,7 +179,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             <DollarSign className="text-accent-green" size={16} />
             <div>
               <p className="text-xs text-gray-500">Profit</p>
-              <p className="font-bold text-accent-green">{Number(payload.profit_pct).toFixed(2)}%</p>
+              <p className="font-bold text-accent-green">{(Number(payload.profit_pct) || 0).toFixed(2)}%</p>
             </div>
           </div>
         )}
@@ -188,7 +188,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
             <DollarSign className="text-accent-green" size={16} />
             <div>
               <p className="text-xs text-gray-500">Profit</p>
-              <p className="font-bold text-accent-green">{Number(payload.profit_percentage).toFixed(2)}%</p>
+              <p className="font-bold text-accent-green">{(Number(payload.profit_percentage) || 0).toFixed(2)}%</p>
             </div>
           </div>
         )}
@@ -238,11 +238,11 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
           <div className="col-span-2 grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dark-border">
             <div>
               <p className="text-xs text-gray-500">Stake Away</p>
-              <p className="font-medium">${Number(payload.stake_away).toFixed(2)}</p>
+              <p className="font-medium">${(Number(payload.stake_away) || 0).toFixed(2)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Stake Home</p>
-              <p className="font-medium">${Number(payload.stake_home).toFixed(2)}</p>
+              <p className="font-medium">${(Number(payload.stake_home) || 0).toFixed(2)}</p>
             </div>
           </div>
         )}
@@ -295,7 +295,7 @@ function PayloadDisplay({ item }: { item: AttentionItem }) {
         {payload.accuracy !== undefined && (
           <div>
             <p className="text-xs text-gray-500">Accuracy</p>
-            <p className="font-bold text-accent-green">{Number(payload.accuracy).toFixed(1)}%</p>
+            <p className="font-bold text-accent-green">{(Number(payload.accuracy) || 0).toFixed(1)}%</p>
           </div>
         )}
         {payload.improvement !== undefined && (
@@ -601,7 +601,7 @@ function DecisionModal({
           <div className="flex items-center gap-1">
             <BarChart3 size={12} className="text-gray-500" />
             <span className="text-gray-400">Priority:</span>
-            <span className="font-medium">{item.priority_score.toFixed(1)}</span>
+            <span className="font-medium">{(item.priority_score ?? 0).toFixed(1)}</span>
           </div>
           {item.expires_at && (
             <div className="flex items-center gap-1">
@@ -1558,7 +1558,7 @@ export default function HumanPage() {
                                   {/* Session 742: Show profit % for arbitrage items */}
                                   {item.item_type === 'arbitrage' && !!item.payload?.profit_pct && (
                                     <span className="px-2 py-0.5 rounded bg-accent-green/20 text-accent-green text-xs font-bold">
-                                      +{Number(item.payload.profit_pct).toFixed(2)}%
+                                      +{(Number(item.payload.profit_pct) || 0).toFixed(2)}%
                                     </span>
                                   )}
                                   {item.item_type === 'arbitrage' && item.payload?.rating === 'HOT' && (

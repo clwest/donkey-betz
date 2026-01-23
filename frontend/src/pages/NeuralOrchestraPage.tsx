@@ -288,7 +288,7 @@ export default function NeuralOrchestraPage() {
 
           <div className="text-right">
             <div className={cn('text-5xl font-bold', getConsciousnessColor(consciousnessLevel))}>
-              {consciousnessLevel.toFixed(1)}%
+              {(consciousnessLevel ?? 0).toFixed(1)}%
             </div>
             <div className="text-sm text-gray-400">Consciousness Level</div>
           </div>
@@ -406,7 +406,7 @@ export default function NeuralOrchestraPage() {
                           </div>
                           <div className="flex items-center gap-3 text-xs">
                             <span className="text-green-400">
-                              {(performer.efficiency * 100).toFixed(0)}% eff
+                              {((performer.efficiency ?? 0) * 100).toFixed(0)}% eff
                             </span>
                             <span className="text-blue-400">
                               {performer.collaborations} collabs
@@ -700,11 +700,11 @@ export default function NeuralOrchestraPage() {
                           <div className="flex items-center gap-3 text-xs">
                             <span className="text-gray-500 flex items-center gap-1" title="Confidence score">
                               <CheckCircle size={12} className={item.confidence >= 0.8 ? 'text-green-400' : 'text-gray-500'} />
-                              {(item.confidence * 100).toFixed(0)}%
+                              {((item.confidence ?? 0) * 100).toFixed(0)}%
                             </span>
                             <span className="text-gray-500 flex items-center gap-1" title="Impact score">
                               <Zap size={12} className={item.impact >= 0.8 ? 'text-yellow-400' : 'text-gray-500'} />
-                              {(item.impact * 100).toFixed(0)}%
+                              {((item.impact ?? 0) * 100).toFixed(0)}%
                             </span>
                           </div>
                         </div>
@@ -1082,7 +1082,7 @@ export default function NeuralOrchestraPage() {
                       "text-lg font-semibold",
                       selectedFeedItem.confidence >= 0.8 ? "text-green-400" : "text-yellow-400"
                     )}>
-                      {(selectedFeedItem.confidence * 100).toFixed(0)}%
+                      {((selectedFeedItem.confidence ?? 0) * 100).toFixed(0)}%
                     </span>
                   </div>
                   <div>
@@ -1091,7 +1091,7 @@ export default function NeuralOrchestraPage() {
                       "text-lg font-semibold",
                       selectedFeedItem.impact >= 0.8 ? "text-green-400" : "text-yellow-400"
                     )}>
-                      {(selectedFeedItem.impact * 100).toFixed(0)}%
+                      {((selectedFeedItem.impact ?? 0) * 100).toFixed(0)}%
                     </span>
                   </div>
                   {selectedFeedItem.contribution_percentage && (

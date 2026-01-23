@@ -175,10 +175,10 @@ function WagerRow({ wager, onExpand, isExpanded }: WagerRowProps) {
         <td className="py-3 px-4">
           {profitLoss !== undefined && profitLoss !== null ? (
             <span className={cn('font-medium', profitLoss >= 0 ? 'text-accent-green' : 'text-accent-red')}>
-              {profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}
+              {profitLoss >= 0 ? '+' : ''}${(profitLoss ?? 0).toFixed(2)}
             </span>
           ) : wager.potential_payout ? (
-            <span className="text-gray-400 text-sm">→ ${wager.potential_payout.toFixed(2)}</span>
+            <span className="text-gray-400 text-sm">→ ${(wager.potential_payout ?? 0).toFixed(2)}</span>
           ) : (
             <span className="text-gray-500">-</span>
           )}
@@ -287,7 +287,7 @@ function ArbitrageCard({ arb }: ArbitrageCardProps) {
         </div>
         <div className="text-right">
           <p className={cn('text-xl font-bold', isHot ? 'text-accent-red' : 'text-accent-amber')}>
-            +{profitPercent.toFixed(2)}%
+            +{(profitPercent ?? 0).toFixed(2)}%
           </p>
           <p className="text-xs text-gray-500">guaranteed profit</p>
         </div>
@@ -384,7 +384,7 @@ function WatchedItemCard({ item, onVerify, isVerifying }: WatchedItemCardProps) 
         <div className="text-right">
           {profitPercent > 0 && (
             <>
-              <p className="text-xl font-bold text-cyan-400">+{profitPercent.toFixed(2)}%</p>
+              <p className="text-xl font-bold text-cyan-400">+{(profitPercent ?? 0).toFixed(2)}%</p>
               <p className="text-xs text-gray-500">expected profit</p>
             </>
           )}
@@ -527,7 +527,7 @@ function WatchedItemCard({ item, onVerify, isVerifying }: WatchedItemCardProps) 
               'text-lg font-bold',
               item.verification_profit >= 0 ? 'text-accent-green' : 'text-accent-red'
             )}>
-              {item.verification_profit >= 0 ? '+' : ''}${item.verification_profit.toFixed(2)}
+              {item.verification_profit >= 0 ? '+' : ''}${(item.verification_profit ?? 0).toFixed(2)}
             </span>
           )}
         </div>
@@ -769,7 +769,7 @@ export default function BettingPage() {
                         'font-bold',
                         singlesRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
                       )}>
-                        {singlesRecord.profit >= 0 ? '+' : ''}${singlesRecord.profit.toFixed(2)}
+                        {singlesRecord.profit >= 0 ? '+' : ''}${(singlesRecord.profit ?? 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
@@ -791,7 +791,7 @@ export default function BettingPage() {
                         'font-bold',
                         parlaysRecord.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
                       )}>
-                        {parlaysRecord.profit >= 0 ? '+' : ''}${parlaysRecord.profit.toFixed(2)}
+                        {parlaysRecord.profit >= 0 ? '+' : ''}${(parlaysRecord.profit ?? 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
@@ -829,7 +829,7 @@ export default function BettingPage() {
                               'font-bold text-sm',
                               sportStats.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
                             )}>
-                              {sportStats.profit >= 0 ? '+' : ''}${sportStats.profit.toFixed(2)}
+                              {sportStats.profit >= 0 ? '+' : ''}${(sportStats.profit ?? 0).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex items-center gap-3 text-xs">
@@ -839,7 +839,7 @@ export default function BettingPage() {
                               <span className="text-gray-400">{sportStats.pushes}P</span>
                             )}
                             <span className="text-gray-500">|</span>
-                            <span className="text-gray-400">{winRate.toFixed(1)}% win rate</span>
+                            <span className="text-gray-400">{(winRate ?? 0).toFixed(1)}% win rate</span>
                             {sportStats.wagers && (
                               <span className="text-gray-500">{sportStats.wagers} wagers</span>
                             )}
@@ -1272,7 +1272,7 @@ export default function BettingPage() {
                         </span>
                         {game.spread_movement !== 0 && (
                           <span className={cn('ml-2', game.spread_movement > 0 ? 'text-accent-green' : 'text-accent-red')}>
-                            ({game.spread_movement > 0 ? '+' : ''}{game.spread_movement.toFixed(1)})
+                            ({game.spread_movement > 0 ? '+' : ''}{(game.spread_movement ?? 0).toFixed(1)})
                           </span>
                         )}
                       </div>
@@ -1283,7 +1283,7 @@ export default function BettingPage() {
                         </span>
                         {game.total_movement !== 0 && (
                           <span className={cn('ml-2', game.total_movement > 0 ? 'text-accent-green' : 'text-accent-red')}>
-                            ({game.total_movement > 0 ? '+' : ''}{game.total_movement.toFixed(1)})
+                            ({game.total_movement > 0 ? '+' : ''}{(game.total_movement ?? 0).toFixed(1)})
                           </span>
                         )}
                       </div>
