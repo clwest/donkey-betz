@@ -177,6 +177,9 @@ from core.views_agent_dashboard import (
     all_agents_list
 )
 
+# Session 794: Import Production Agent Collaboration API views
+from core import views_agent_collaboration_api
+
 # Import spider dashboard views
 from core.views_spider_dashboard import (
     spider_network_data,
@@ -2933,6 +2936,14 @@ urlpatterns = [
     path('api/agent-collab/knowledge/query/', collab_query_knowledge, name='collab-query-knowledge'),
     path('api/agent-collab/stats/', collab_stats, name='collab-stats'),
     path('api/agent-collab/activity/<str:agent_name>/', collab_agent_activity, name='collab-agent-activity'),
+
+    # Session 794: Production Agent Collaboration API (for 213 agents + 25 advisors)
+    path('api/agent-collab/agents/', views_agent_collaboration_api.agents_list, name='agent-collab-agents'),
+    path('api/agent-collab/active/', views_agent_collaboration_api.active_collaborations, name='agent-collab-active'),
+    path('api/agent-collab/stats-v2/', views_agent_collaboration_api.collaboration_stats, name='agent-collab-stats-v2'),
+    path('api/agent-collab/recent-messages/', views_agent_collaboration_api.recent_messages, name='agent-collab-recent-messages'),
+    path('api/agent-collab/detail/<str:collaboration_id>/', views_agent_collaboration_api.collaboration_detail, name='agent-collab-detail'),
+    path('api/agent-collab/initiate/', views_agent_collaboration_api.initiate_collaboration, name='agent-collab-initiate'),
 
     # Session 219 Phase C: Agent Learning API
     path('api/agent-learning/interaction/', learning_record, name='learning-record'),

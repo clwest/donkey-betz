@@ -2381,3 +2381,112 @@ export const docsIndexApi = {
   // Get details for a specific document
   detail: (docPath: string) => api.get<DocsDetailResponse>(`/docs/detail/${docPath}/`),
 }
+
+// ============ Session 794: Agent Collaboration API ============
+
+export interface AgentInfo {
+  id: string
+  name: string
+  type: 'core' | 'persona' | 'advisor'
+  category: string
+  description: string
+  status: 'idle' | 'active' | 'collaborating'
+  effectiveness_score: number
+  last_active: string | null
+}
+
+export interface CollaborationSession {
+  id: string
+  requester_agent: string
+  collaboration_type: string
+  participating_agents: string[]
+  status: 'pending' | 'active' | 'completed' | 'failed' | 'cancelled'
+  task_description: string
+  started_at: string
+  completed_at: string | null
+  quality_score?: number
+  execution_time_ms?: number
+}
+
+export interface InterAgentMessage {
+  id: string
+  from_agent: string  // Maps to sender_agent from API
+  to_agent: string    // Maps to receiver_agent from API
+  message_type: string
+  content_preview: string
+  priority: number
+  is_read: boolean
+  created_at: string
+}
+
+export interface CollaborationStats {
+  total_collaborations: number
+  completed: number
+  failed: number
+  active: number
+  success_rate: number
+  average_quality_score: number
+  by_type: Record<string, number>
+  total_messages: number
+  most_active_agents: Array<{ name: string; count: number }>
+}
+
+export interface AgentCounts {
+  total: number
+  core: number
+  persona: number
+  advisors: number
+}
+
+export const agentCollaborationApi = {
+  // Get all agents with status
+  agents: (params?: { include_persona?: boolean; include_advisors?: boolean }) =>
+    api.get<{
+      agents: AgentInfo[]
+      counts: AgentCounts
+      timestamp: string
+    }>('/agent-collab/agents/', { params }),
+
+  // Get active collaborations
+  activeCollaborations: () =>
+    api.get<{
+      collaborations: CollaborationSession[]
+      count: number
+      timestamp: string
+    }>('/agent-collab/active/'),
+
+  // Get collaboration statistics (uses stats-v2 endpoint)
+  stats: (hours?: number) =>
+    api.get<{
+      stats: CollaborationStats
+      period_hours: number
+      timestamp: string
+    }>('/agent-collab/stats-v2/', { params: { hours } }),
+
+  // Get recent messages
+  recentMessages: (limit?: number) =>
+    api.get<{
+      messages: InterAgentMessage[]
+      count: number
+      timestamp: string
+    }>('/agent-collab/recent-messages/', { params: { limit } }),
+
+  // Get collaboration detail
+  detail: (collaborationId: string) =>
+    api.get<{
+      collaboration: CollaborationSession & {
+        input_data: Record<string, unknown>
+        output_data: Record<string, unknown>
+        messages: InterAgentMessage[]
+      }
+      timestamp: string
+    }>(`/agent-collab/detail/${collaborationId}/`),
+
+  // Initiate collaboration (for testing)
+  initiate: (data: {
+    requester_agent: string
+    collaboration_type: string
+    task_description: string
+    participating_agents: string[]
+  }) => api.post('/agent-collab/initiate/', data),
+}
