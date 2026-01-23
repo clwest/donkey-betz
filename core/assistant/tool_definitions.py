@@ -80,6 +80,8 @@ def get_tool_definitions() -> List[Dict]:
         _get_predictions_tool_definition(),           # Query agent predictions
         _get_gates_tool_definition(),                 # Query pilot readiness gates
         _get_pilots_tool_definition(),                # Query pilot executions
+        # Session 796: Human Interface Layer - Connect PA to human decisions
+        _get_human_decisions_tool_definition(),       # Manage pending human decisions
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -1508,6 +1510,66 @@ def _get_pilots_tool_definition() -> Dict:
                     "type": "integer",
                     "default": 20,
                     "description": "Maximum results to return"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+# Session 796: Human Decisions Tool - Connect PA to Human Interface Layer
+# =============================================================================
+
+def _get_human_decisions_tool_definition() -> Dict:
+    """
+    Session 796: Tool for PA to interact with pending human decisions.
+    Bridges the Human Interface Layer with the AI Assistant.
+
+    This tool allows the PA to:
+    - List pending decisions that need human attention
+    - Get details about specific decisions
+    - Execute decisions (approve, reject, defer) on behalf of the human
+    - Check decision stats
+    """
+    return {
+        "type": "function",
+        "name": "human_decisions_tool",
+        "description": (
+            "Access and manage items that need human attention. Use this when the user asks about "
+            "pending decisions, things that need their attention, items to review, or wants to "
+            "approve/reject/defer something. Actions: 'list' shows pending items, 'get' shows details, "
+            "'decide' executes a decision (approve/reject/defer), 'stats' shows decision statistics."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "get", "decide", "stats"],
+                    "description": "Action: 'list' (pending decisions), 'get' (details by ID), 'decide' (execute approve/reject/defer), 'stats' (decision statistics)"
+                },
+                "item_id": {
+                    "type": "string",
+                    "description": "Decision item ID (required for 'get' and 'decide' actions)"
+                },
+                "decision": {
+                    "type": "string",
+                    "enum": ["approve", "reject", "defer", "watch"],
+                    "description": "Decision to execute (required for 'decide' action)"
+                },
+                "feedback": {
+                    "type": "string",
+                    "description": "Optional feedback or reason for the decision"
+                },
+                "urgency_filter": {
+                    "type": "string",
+                    "enum": ["critical", "high", "medium", "low"],
+                    "description": "Filter by urgency level (for 'list' action)"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Maximum results to return (for 'list' action)"
                 }
             },
             "required": ["action"]
