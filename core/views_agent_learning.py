@@ -3549,8 +3549,13 @@ def get_pilot_executions_dashboard(request):
         running = PilotExecution.objects.filter(status='running').select_related('gate', 'gate__decision').order_by('-started_at')
         running_pilots = []
         for p in running:
-            hours_running = (now - p.started_at).total_seconds() / 3600
-            auto_complete_in = max(0, 24 - hours_running)
+            # Session 794: Handle pilots with missing started_at (backfilled pilots)
+            if p.started_at:
+                hours_running = (now - p.started_at).total_seconds() / 3600
+                auto_complete_in = max(0, 24 - hours_running)
+            else:
+                hours_running = 0
+                auto_complete_in = 24
 
             # Get ThinkingAgent evaluation if available
             thinking_eval = None
@@ -3563,7 +3568,7 @@ def get_pilot_executions_dashboard(request):
                 'decision_topic': p.gate.decision.topic if p.gate.decision else 'Unknown',
                 'decision_type': p.gate.decision.decision_type if p.gate.decision else 'unknown',
                 'risk_level': p.gate.risk_level,
-                'started_at': p.started_at.isoformat(),
+                'started_at': p.started_at.isoformat() if p.started_at else None,
                 'hours_running': round(hours_running, 1),
                 'auto_complete_in_hours': round(auto_complete_in, 1),
                 'kill_switch_triggered': p.kill_switch_triggered,
