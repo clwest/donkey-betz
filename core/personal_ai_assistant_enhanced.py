@@ -12396,6 +12396,158 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                                f"Average decision time: {stats.get('avg_decision_time_ms', 0):.0f}ms."
                 }
 
+            # Session 796 Phase 2: Batch decide - apply same decision to multiple items
+            elif action == 'batch_decide':
+                decision = arguments.get('decision')
+                feedback = arguments.get('feedback', '')
+                urgency_filter = arguments.get('urgency_filter')
+                type_filter = arguments.get('type_filter')
+
+                if not decision:
+                    return {'success': False, 'error': 'decision required for batch_decide action'}
+
+                # Build filter for items to decide
+                filters = {'status__in': ['pending', 'viewed'], 'user': self.user}
+                if urgency_filter:
+                    filters['urgency'] = urgency_filter
+                if type_filter:
+                    filters['item_type'] = type_filter
+
+                items = HumanAttentionItem.objects.filter(**filters)
+                count = items.count()
+
+                if count == 0:
+                    filter_desc = []
+                    if urgency_filter:
+                        filter_desc.append(f"urgency={urgency_filter}")
+                    if type_filter:
+                        filter_desc.append(f"type={type_filter}")
+                    filter_str = f" matching {', '.join(filter_desc)}" if filter_desc else ""
+                    return {
+                        'success': True,
+                        'tool': 'human_decisions_tool',
+                        'action': 'batch_decide',
+                        'count': 0,
+                        'message': f'No pending items found{filter_str}.'
+                    }
+
+                # Execute decisions
+                success_count = 0
+                for item in items:
+                    result = service.record_decision(
+                        item_id=str(item.id),
+                        decision=decision,
+                        feedback=feedback or f"Batch {decision} via PA",
+                        confidence=0.85  # Batch decisions have slightly lower confidence
+                    )
+                    if result.get('success'):
+                        success_count += 1
+
+                decision_verb = {
+                    'approve': 'approved',
+                    'reject': 'rejected',
+                    'defer': 'deferred',
+                    'watch': 'marked for watching'
+                }.get(decision, decision)
+
+                return {
+                    'success': True,
+                    'tool': 'human_decisions_tool',
+                    'action': 'batch_decide',
+                    'count': success_count,
+                    'total': count,
+                    'decision': decision,
+                    'message': f'Done! {decision_verb.capitalize()} {success_count} of {count} items.'
+                }
+
+            # Session 796 Phase 2: Auto-execute low-risk decisions with high ML confidence
+            elif action == 'auto_execute':
+                confidence_threshold = arguments.get('confidence_threshold', 0.85)
+
+                # Find low-risk items with high ML confidence
+                candidates = HumanAttentionItem.objects.filter(
+                    user=self.user,
+                    status__in=['pending', 'viewed'],
+                    urgency__in=['low', 'medium'],  # Not critical/high
+                    ml_confidence__gte=confidence_threshold,
+                    ml_recommendation__isnull=False
+                ).exclude(
+                    item_type='policy'  # Never auto-execute policy decisions
+                )
+
+                count = candidates.count()
+                if count == 0:
+                    return {
+                        'success': True,
+                        'tool': 'human_decisions_tool',
+                        'action': 'auto_execute',
+                        'count': 0,
+                        'message': f'No low-risk items with ML confidence >= {confidence_threshold:.0%} found.'
+                    }
+
+                # Execute ML-recommended decisions
+                executed = []
+                for item in candidates:
+                    ml_decision = item.ml_recommendation  # 'approve', 'reject', etc.
+                    result = service.record_decision(
+                        item_id=str(item.id),
+                        decision=ml_decision,
+                        feedback=f"Auto-executed (ML confidence: {item.ml_confidence:.0%})",
+                        confidence=item.ml_confidence
+                    )
+                    if result.get('success'):
+                        executed.append({
+                            'id': str(item.id),
+                            'title': item.title[:50],
+                            'decision': ml_decision,
+                            'confidence': item.ml_confidence
+                        })
+
+                return {
+                    'success': True,
+                    'tool': 'human_decisions_tool',
+                    'action': 'auto_execute',
+                    'count': len(executed),
+                    'threshold': confidence_threshold,
+                    'executed': executed,
+                    'message': f'Auto-executed {len(executed)} low-risk decisions (ML confidence >= {confidence_threshold:.0%}).'
+                }
+
+            # Session 796 Phase 2: Consultation prompt - PA asks before autonomous action
+            elif action == 'consult':
+                consultation_context = arguments.get('consultation_context', '')
+
+                if not consultation_context:
+                    return {'success': False, 'error': 'consultation_context required for consult action'}
+
+                # Create a consultation item in the human attention queue
+                consultation_item = HumanAttentionItem.objects.create(
+                    user=self.user,
+                    source_type='assistant',
+                    source_id='personal_assistant',
+                    source_agent='PersonalAssistant',
+                    item_type='approval',
+                    title='PA Consultation Request',
+                    summary=consultation_context,
+                    urgency='high',  # Consultations are high priority
+                    priority_score=80,
+                    status='pending',
+                    payload={
+                        'consultation': True,
+                        'context': consultation_context,
+                        'awaiting_response': True
+                    }
+                )
+
+                return {
+                    'success': True,
+                    'tool': 'human_decisions_tool',
+                    'action': 'consult',
+                    'consultation_id': str(consultation_item.id),
+                    'message': f"I'd like your input before proceeding: {consultation_context}\n\nPlease respond with 'yes', 'no', or provide guidance.",
+                    'awaiting_response': True
+                }
+
             else:
                 return {'success': False, 'error': f'Unknown action: {action}'}
 
