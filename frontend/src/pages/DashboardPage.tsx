@@ -554,7 +554,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
                 <span>Trend</span>
                 <span className={velocity.trend >= 0 ? 'text-accent-green' : 'text-accent-red'}>
-                  {velocity.trend >= 0 ? '+' : ''}{velocity.trend}%
+                  {velocity.trend >= 0 ? '+' : ''}{velocity.trend.toFixed(2)}/day
                 </span>
               </div>
               <div className="h-1.5 bg-dark-bg rounded-full overflow-hidden">
@@ -824,7 +824,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-400">{node.total_executions || 0} runs</span>
                           {(node.effectiveness || 0) > 0 && (
-                            <span className="text-accent-green">{((node.effectiveness || 0) * 100).toFixed(0)}%</span>
+                            <span className="text-accent-green">{(node.effectiveness || 0).toFixed(0)}%</span>
                           )}
                         </div>
                       </div>
