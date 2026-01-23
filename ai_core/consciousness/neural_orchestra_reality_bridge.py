@@ -788,37 +788,120 @@ class NeuralOrchestraRealityBridge:
             }
 
     def get_learning_feed_api_data(self) -> Dict[str, Any]:
-        """Generate data for /api/learning/feed/ endpoint"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        """
+        Generate data for /api/learning/feed/ endpoint.
+        Session 792: Rewritten to use synchronous DB queries to avoid
+        asyncio threading conflicts with Django ASGI.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
 
         try:
-            neural_data = loop.run_until_complete(self.get_real_neural_data())
-
+            # Get learning feed from DB-based collaborations and recent learning events
             learning_feed = []
-            for collab in neural_data.agent_collaborations[:5]:
+
+            # Add collaborative project data as learning events
+            collaborations = self.get_real_agent_collaborations(limit=5)
+            for collab in collaborations:
+                timestamp = collab.get('timestamp')
+                if hasattr(timestamp, 'isoformat'):
+                    timestamp = timestamp.isoformat()
                 learning_feed.append({
-                    'timestamp': collab['timestamp'].isoformat(),
+                    'id': collab.get('id', 'unknown'),
+                    'timestamp': timestamp,
                     'type': 'Agent Collaboration',
-                    'agents': collab['agents_involved'],
-                    'outcome': collab['outcome'],
-                    'learning_value': collab['confidence'] * collab['impact_score']
+                    'content': collab.get('outcome', 'Collaborative learning'),
+                    'source': f"{collab.get('agent_count', 0)} agents on {collab.get('project_name', 'project')}"
                 })
 
-            # Session 145: Focus on content creation learning, not monetization!
+            # Add recent AgentLearning records as learning events
+            try:
+                from core.models_unified_system import AgentLearning, KnowledgeTransfer
+                last_7d = timezone.now() - timedelta(days=7)
+
+                recent_learning = AgentLearning.objects.select_related('agent').filter(
+                    created_at__gte=last_7d
+                ).order_by('-created_at')[:10]
+
+                for learning in recent_learning:
+                    learning_feed.append({
+                        'id': str(learning.id),
+                        'timestamp': learning.created_at.isoformat(),
+                        'type': learning.learning_type or 'Learning Event',
+                        'content': learning.insight or 'Agent learning recorded',
+                        'source': learning.agent.name if learning.agent else 'System'
+                    })
+
+                # Add recent knowledge transfers
+                recent_transfers = KnowledgeTransfer.objects.select_related(
+                    'source_agent', 'target_agent'
+                ).filter(created_at__gte=last_7d).order_by('-created_at')[:5]
+
+                for transfer in recent_transfers:
+                    learning_feed.append({
+                        'id': str(transfer.id),
+                        'timestamp': transfer.created_at.isoformat(),
+                        'type': 'Knowledge Transfer',
+                        'content': f"Knowledge shared: {transfer.knowledge_type or 'insight'}",
+                        'source': f"{transfer.source_agent.name if transfer.source_agent else 'Unknown'} → {transfer.target_agent.name if transfer.target_agent else 'Unknown'}"
+                    })
+
+            except Exception as e:
+                # If models don't exist, continue with collaboration data only
+                pass
+
+            # Sort by timestamp descending
+            learning_feed.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+            # Get learning metrics synchronously
+            learning_metrics = {}
+            try:
+                from core.models_unified_system import AgentExecution
+                last_7d = timezone.now() - timedelta(days=7)
+                total_execs = AgentExecution.objects.filter(created_at__gte=last_7d).count()
+                successful_execs = AgentExecution.objects.filter(
+                    created_at__gte=last_7d, status='completed'
+                ).count()
+                success_rate = (successful_execs / total_execs) if total_execs > 0 else 0
+
+                learning_metrics = {
+                    'accuracy': round(success_rate, 2),
+                    'total_executions': total_execs,
+                    'successful_executions': successful_execs
+                }
+            except Exception:
+                pass
+
+            # Content creation counts
+            images_count = ImageHistory.objects.count()
+            videos_count = VideoHistory.objects.count()
+            models_count = MiniFigAsset.objects.count()
+
             return {
-                'feed': learning_feed,
-                'learning_metrics': neural_data.ml_metrics,
+                'feed': learning_feed[:15],  # Limit to 15 items
+                'learning_metrics': learning_metrics,
                 'content_creation_learning': {
-                    'images_created': ImageHistory.objects.count(),
-                    'videos_created': VideoHistory.objects.count(),
-                    'models_created': MiniFigAsset.objects.count(),
-                    'total_content': ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count(),
+                    'images_created': images_count,
+                    'videos_created': videos_count,
+                    'models_created': models_count,
+                    'total_content': images_count + videos_count + models_count,
                     'agents_learning': 'Agents learning from content creation patterns'
                 }
             }
-        finally:
-            loop.close()
+
+        except Exception as e:
+            return {
+                'feed': [],
+                'learning_metrics': {},
+                'content_creation_learning': {
+                    'images_created': 0,
+                    'videos_created': 0,
+                    'models_created': 0,
+                    'total_content': 0,
+                    'agents_learning': 'Learning system initializing'
+                },
+                'error': str(e)
+            }
 
     def get_bridge_status(self) -> Dict[str, Any]:
         """Get bridge status and health"""
