@@ -8517,6 +8517,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             except Exception as e:
                 logger.warning(f"⚠️ TaskMemory error: {e}")
 
+        # Session 796 Phase 3: Check for pending consultation responses
+        consultation_response = self._check_consultation_response(message)
+        if consultation_response:
+            return consultation_response
+
         # Session 126: Store context for tool execution (so tools can access project_id)
         self._current_context = full_context
 
@@ -12554,3 +12559,186 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"Error in human_decisions_tool: {e}", exc_info=True)
             return {'success': False, 'error': str(e), 'tool': 'human_decisions_tool'}
+
+    # Session 796 Phase 3: Consultation Response Detection
+    def _check_consultation_response(self, message: str) -> Optional[Dict[str, Any]]:
+        """
+        Check if user's message is a response to a pending consultation.
+
+        When PA creates a consultation via the 'consult' action, it awaits user response.
+        This method detects if the user is responding to that consultation and interprets
+        their intent (yes/no/proceed/abort/more info).
+
+        Returns:
+            Response dict if this is a consultation response, None otherwise
+        """
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from core.services.human_interface_service import get_human_interface_service
+
+            # Find pending consultations from PA
+            pending_consultations = HumanAttentionItem.objects.filter(
+                user=self.user,
+                source_type='assistant',
+                status__in=['pending', 'viewed'],
+                payload__consultation=True
+            ).order_by('-created_at')
+
+            if not pending_consultations.exists():
+                return None  # No pending consultations
+
+            # Get most recent consultation
+            consultation = pending_consultations.first()
+
+            # Check if message looks like a response
+            message_lower = message.lower().strip()
+
+            # Affirmative responses
+            affirmative_patterns = [
+                'yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'proceed',
+                'go ahead', 'do it', 'approved', 'approve', 'confirm',
+                'sounds good', 'let\'s do it', 'go for it', 'execute',
+                'start', 'begin', 'launch', 'initiate'
+            ]
+
+            # Negative responses
+            negative_patterns = [
+                'no', 'nope', 'don\'t', 'stop', 'cancel', 'abort',
+                'reject', 'decline', 'not now', 'hold off', 'wait',
+                'later', 'never', 'negative', 'skip', 'pass'
+            ]
+
+            # Info request responses
+            info_patterns = [
+                'tell me more', 'more info', 'details', 'explain',
+                'what do you mean', 'clarify', 'elaborate', 'why',
+                'how', 'what', 'which'
+            ]
+
+            # Check for affirmative
+            is_affirmative = any(p in message_lower for p in affirmative_patterns)
+            is_negative = any(p in message_lower for p in negative_patterns)
+            is_info_request = any(p in message_lower for p in info_patterns)
+
+            # Only treat as consultation response if it clearly matches one of these
+            if not (is_affirmative or is_negative or is_info_request):
+                # Not clearly a consultation response - check if it's very short
+                # Short messages after a consultation are likely responses
+                if len(message_lower) > 50:
+                    return None  # Probably a new topic
+
+            service = get_human_interface_service(self.user)
+            consultation_context = consultation.payload.get('context', consultation.summary)
+
+            if is_negative:
+                # User rejected - mark consultation as rejected
+                service.record_decision(
+                    item_id=str(consultation.id),
+                    decision='reject',
+                    feedback=f"User declined: {message}",
+                    confidence=0.95
+                )
+
+                return {
+                    'status': 'success',
+                    'response': f"Understood. I won't proceed with: {consultation_context[:100]}...\n\nIs there something else I can help you with?",
+                    'consultation_resolved': True,
+                    'decision': 'rejected',
+                    'format': 'text'
+                }
+
+            elif is_info_request:
+                # User wants more info - keep consultation open
+                consultation.status = 'viewed'
+                consultation.save()
+
+                return {
+                    'status': 'success',
+                    'response': f"Here's more context about what I was planning:\n\n**{consultation.title}**\n{consultation_context}\n\nWould you like me to proceed? (yes/no)",
+                    'consultation_resolved': False,
+                    'decision': 'info_requested',
+                    'format': 'text'
+                }
+
+            elif is_affirmative:
+                # User approved - mark consultation as approved and proceed
+                service.record_decision(
+                    item_id=str(consultation.id),
+                    decision='approve',
+                    feedback=f"User approved: {message}",
+                    confidence=0.95
+                )
+
+                # Execute the intended action based on consultation payload
+                action_result = self._execute_consultation_action(consultation)
+
+                return {
+                    'status': 'success',
+                    'response': f"Great! Proceeding with: {consultation_context[:100]}...\n\n{action_result.get('message', 'Action initiated.')}",
+                    'consultation_resolved': True,
+                    'decision': 'approved',
+                    'action_result': action_result,
+                    'format': 'text'
+                }
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error checking consultation response: {e}", exc_info=True)
+            return None
+
+    def _execute_consultation_action(self, consultation) -> Dict[str, Any]:
+        """
+        Execute the action that was waiting for consultation approval.
+
+        The consultation payload may contain:
+        - 'intended_action': The action to execute (e.g., 'start_workflow', 'execute_pilot')
+        - 'action_params': Parameters for the action
+
+        Returns:
+            Result dictionary from the executed action
+        """
+        try:
+            payload = consultation.payload or {}
+            intended_action = payload.get('intended_action', 'generic_approval')
+            action_params = payload.get('action_params', {})
+
+            logger.info(f"Executing consultation action: {intended_action} with params: {action_params}")
+
+            if intended_action == 'start_workflow':
+                # Trigger workflow orchestration
+                from core.agents import get_workflow_orchestration_agent
+                agent = get_workflow_orchestration_agent(user=self.user)
+                return agent.execute(
+                    task=action_params.get('task', 'Execute approved workflow'),
+                    context={'consultation_approved': True}
+                )
+
+            elif intended_action == 'execute_pilot':
+                # Execute a pilot
+                from core.services.pilot_execution_service import PilotExecutionService
+                service = PilotExecutionService(self.user)
+                pilot_id = action_params.get('pilot_id')
+                if pilot_id:
+                    return service.execute_pilot(pilot_id)
+                return {'success': False, 'message': 'No pilot_id specified'}
+
+            elif intended_action == 'process_opportunity':
+                # Process an opportunity
+                from core.services.opportunity_service import OpportunityService
+                service = OpportunityService(self.user)
+                opp_id = action_params.get('opportunity_id')
+                if opp_id:
+                    return service.process_opportunity(opp_id)
+                return {'success': False, 'message': 'No opportunity_id specified'}
+
+            else:
+                # Generic approval - just acknowledge
+                return {
+                    'success': True,
+                    'message': f"Approval recorded for: {consultation.summary[:100]}"
+                }
+
+        except Exception as e:
+            logger.error(f"Error executing consultation action: {e}", exc_info=True)
+            return {'success': False, 'message': f'Error executing action: {str(e)}'}
