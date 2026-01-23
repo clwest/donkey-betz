@@ -161,6 +161,26 @@ class Command(BaseCommand):
             success = random.random() > 0.1
             status = 'completed' if success else 'failed'
 
+            # Session 792: Add context_injected for Integration Health tracking
+            spider_data_count = random.randint(0, 10)
+            has_patterns = random.random() > 0.3  # 70% have patterns
+            has_advisor = random.random() > 0.5   # 50% have advisor insights
+
+            context_injected = {
+                'spider_data': [
+                    {'source': f'spider_{j}', 'relevance': random.uniform(0.6, 0.95)}
+                    for j in range(spider_data_count)
+                ] if spider_data_count > 0 else [],
+                'learning_patterns': [
+                    {'pattern': f'pattern_{j}', 'confidence': random.uniform(0.7, 0.9)}
+                    for j in range(random.randint(1, 3))
+                ] if has_patterns else [],
+                'advisor_insights': [
+                    {'advisor': 'Warren Buffett', 'insight': 'Value investing principle'}
+                ] if has_advisor else [],
+                'seeded': True,
+            }
+
             execution = AgentExecution.objects.create(
                 id=uuid.uuid4(),
                 agent=agent,
@@ -170,8 +190,9 @@ class Command(BaseCommand):
                 tokens_used=random.randint(100, 2000),
                 cost=random.uniform(0.001, 0.05),
                 input_data={
-                    'spider_data_used': random.randint(0, 10),
-                    'advisor_consulted': random.choice([True, False]),
+                    'spider_data_used': spider_data_count,
+                    'advisor_consulted': has_advisor,
+                    'context_injected': context_injected,
                     'seeded': True,
                 },
                 output_data={
