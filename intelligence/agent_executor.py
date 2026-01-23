@@ -424,6 +424,15 @@ class AgentExecutor:
         logger.info(f"Executing agent: {agent.name}")
         logger.info(f"Task: {task}")
 
+        # Session 791: Build context tracking for Integration Health observability
+        # This enables persona agents to be tracked the same as core agents
+        try:
+            from core.services.context_tracking import build_context_tracking
+            context_tracking = build_context_tracking(agent.name, task)
+        except Exception as e:
+            logger.debug(f"Context tracking unavailable: {e}")
+            context_tracking = {}
+
         # Create execution record
         execution = AgentExecution.objects.create(
             template=agent,
@@ -431,7 +440,10 @@ class AgentExecutor:
             task_description=task,
             task_type='agent_execution',
             context=context,
-            input_data={},
+            input_data={
+                'task': task[:500] if task else '',
+                'context_injected': context_tracking,
+            },
             status=AgentStatus.INITIALIZING,
             user=user
         )

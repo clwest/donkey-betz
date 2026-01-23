@@ -564,6 +564,13 @@ Base recommendations on the concrete data collected, not generic advice."""
                         if agent_template:
                             plan.add_log(f"Selected agent: {agent_template.name} ({agent_template.specialization})", level='info')
 
+                            # Session 791: Build context tracking for Integration Health observability
+                            try:
+                                from core.services.context_tracking import build_context_tracking
+                                context_tracking = build_context_tracking(agent_template.name, step)
+                            except Exception as e:
+                                context_tracking = {}
+
                             # Create agent execution
                             execution = AgentExecution.objects.create(
                                 template=agent_template,
@@ -574,7 +581,8 @@ Base recommendations on the concrete data collected, not generic advice."""
                                     'step': step,
                                     'step_number': i,
                                     'market_data': step_results,
-                                    'real_data_context': real_data_context
+                                    'real_data_context': real_data_context,
+                                    'context_injected': context_tracking,
                                 },
                                 context={'total_steps': len(steps)},
                                 status=AgentStatus.PENDING
