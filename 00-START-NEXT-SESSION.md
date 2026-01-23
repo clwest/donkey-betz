@@ -20,6 +20,8 @@ Fixing production issues with Workspace UI and adding automatic workspace contex
 | #27 | Documentation Update | Updated session start file |
 | #28 | Workspace Context Injection | Auto-inject workspace context into agent execution via AgentRouter |
 | #30 | Docs Context Injection + Agent Docs Tools | Auto-inject docs context + BaseAgent read/write tools |
+| #32 | Git in Production Docker | Added git to production runtime dependencies for workspace cloning |
+| #33 | PA Workspace Awareness | Personal Assistant now receives workspace context in system prompt |
 
 ### Key Changes
 
@@ -68,6 +70,19 @@ Fixing production issues with Workspace UI and adding automatic workspace contex
 | `core/agent_router.py` | +_get_workspace_context(), +_get_docs_context(), context merging, logging |
 | `core/services/docs_context_builder.py` | **NEW** - DocsContextBuilder service (510 lines) |
 | `core/agents/base_agent.py` | +6 docs tools (_read_doc, _write_doc, etc.) |
+| `core/personal_ai_assistant_enhanced.py` | +_build_workspace_context_section() for PA awareness |
+| `Dockerfile` | +git in production runtime dependencies |
+
+**PA Workspace Awareness (PR #33)**
+- Added `_build_workspace_context_section()` method to `EnhancedPersonalAIAssistant`
+- Personal Assistant now automatically receives active workspace context in system prompt:
+  - Workspace name and path
+  - Tech stack (frontend, backend, database, languages, frameworks)
+  - Key files (routes, models, components, etc.)
+  - Directory structure purposes
+  - Import aliases and coding patterns
+- Injected after pending decisions in system prompt building
+- PA can now provide contextual assistance based on workspace structure
 
 ---
 
