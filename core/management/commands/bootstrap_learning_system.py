@@ -298,15 +298,17 @@ class Command(BaseCommand):
         for conn in connections:
             try:
                 # Get or create a knowledge source for the teacher
+                # AgentKnowledgeSource actual fields: knowledge_type, title, summary, key_insights, etc.
                 knowledge_source, _ = AgentKnowledgeSource.objects.get_or_create(
                     agent=conn.teacher_agent,
-                    source_type='seeded_bootstrap',
+                    knowledge_type='trend',  # Valid choice from model
+                    title=f"Bootstrap knowledge from {conn.teacher_agent.name}",
                     defaults={
-                        'source_name': f"Bootstrap knowledge from {conn.teacher_agent.name}",
-                        'description': f"Seeded knowledge for learning system bootstrap",
-                        'relevance_score': random.uniform(0.7, 0.95),
-                        'freshness_score': random.uniform(0.8, 1.0),
-                        'is_active': True,
+                        'summary': f"Seeded knowledge for learning system bootstrap from {conn.teacher_agent.name}",
+                        'key_insights': ['Bootstrap data for pattern mining', 'Learning system initialization'],
+                        'data_points_count': random.randint(5, 20),
+                        'confidence_score': random.uniform(0.7, 0.95),
+                        'source_spider_names': [],
                     }
                 )
 
