@@ -123,7 +123,7 @@ class PersonalAssistantInterviewer:
                 context="Test prompt",
                 agent_name="InterviewAssistant",
                 task_type="test",
-                max_tokens=20,
+                max_tokens=50,  # Session 790: Increased to avoid truncation warning
                 temperature=0.5
             )
 
