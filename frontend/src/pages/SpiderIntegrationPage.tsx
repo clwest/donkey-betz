@@ -415,7 +415,7 @@ export default function SpiderIntegrationPage() {
               <div>
                 <div className="text-sm text-gray-400">Success Rate</div>
                 <div className={`text-xl font-bold ${healthData.summary.success_rate_24h >= 80 ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {healthData.summary.success_rate_24h.toFixed(0)}%
+                  {(healthData.summary.success_rate_24h ?? 0).toFixed(0)}%
                 </div>
               </div>
             </div>
@@ -425,7 +425,7 @@ export default function SpiderIntegrationPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-400">Embedding Coverage</span>
                 <span className="text-sm font-medium text-white">
-                  {healthData.summary.embedding_coverage.toFixed(0)}%
+                  {(healthData.summary.embedding_coverage ?? 0).toFixed(0)}%
                 </span>
               </div>
               <div className="h-2 bg-dark-bg rounded-full overflow-hidden">

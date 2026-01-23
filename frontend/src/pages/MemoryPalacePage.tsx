@@ -763,7 +763,7 @@ export default function MemoryPalacePage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="text-xs text-purple-400 bg-purple-500/20 px-2 py-1 rounded">
-                            {agent.avg_importance.toFixed(1)}
+                            {(agent.avg_importance ?? 0).toFixed(1)}
                           </div>
                           <ChevronRight className="h-4 w-4 text-gray-500" />
                         </div>
@@ -1239,14 +1239,14 @@ function ClustersTabContent({
             <div className="flex items-center gap-6">
               <div className="text-right">
                 <div className="text-2xl font-bold text-purple-400">
-                  {(cluster.coherence_score * 100).toFixed(0)}%
+                  {((cluster.coherence_score ?? 0) * 100).toFixed(0)}%
                 </div>
                 <div className="text-xs text-gray-400">Coherence</div>
               </div>
               {cluster.stability_score > 0 && (
                 <div className="text-right">
                   <div className="text-2xl font-bold text-blue-400">
-                    {(cluster.stability_score * 100).toFixed(0)}%
+                    {((cluster.stability_score ?? 0) * 100).toFixed(0)}%
                   </div>
                   <div className="text-xs text-gray-400">Stability</div>
                 </div>
@@ -1430,8 +1430,8 @@ function ClustersTabContent({
                       <p className="text-sm text-gray-400 mt-1 line-clamp-2">{memory.content}</p>
                       <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                         <span className="capitalize">{memory.memory_type}</span>
-                        <span>Similarity: {(memory.similarity_to_centroid * 100).toFixed(0)}%</span>
-                        <span>Importance: {(memory.importance_score * 100).toFixed(0)}%</span>
+                        <span>Similarity: {((memory.similarity_to_centroid ?? 0) * 100).toFixed(0)}%</span>
+                        <span>Importance: {((memory.importance_score ?? 0) * 100).toFixed(0)}%</span>
                       </div>
                     </div>
                   </div>
@@ -1601,11 +1601,11 @@ function ClustersTabContent({
                   <span className="text-sm text-gray-400">{cluster.memory_count} memories</span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-purple-400">
-                      {(cluster.coherence_score * 100).toFixed(0)}% coherent
+                      {((cluster.coherence_score ?? 0) * 100).toFixed(0)}% coherent
                     </span>
                     {cluster.stability_score > 0 && (
                       <span className="text-sm text-blue-400">
-                        {(cluster.stability_score * 100).toFixed(0)}% stable
+                        {((cluster.stability_score ?? 0) * 100).toFixed(0)}% stable
                       </span>
                     )}
                   </div>
@@ -1813,7 +1813,7 @@ function MemoryCard({ memory, onClick, onTagClick }: { memory: Memory; onClick: 
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-xs text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded">
-                {(memory.importance_score * 100).toFixed(0)}%
+                {((memory.importance_score ?? 0) * 100).toFixed(0)}%
               </span>
             </div>
           </div>
@@ -1971,7 +1971,7 @@ function ExecutionContentDisplay({ executionData }: { executionData: ExecutionDa
             <span>{executionData.tokens_used.toLocaleString()} tokens</span>
           )}
           {executionData.cost && (
-            <span>${executionData.cost.toFixed(4)}</span>
+            <span>${(executionData.cost ?? 0).toFixed(4)}</span>
           )}
           <ChevronRight className={cn('h-5 w-5 transition-transform', isExpanded && 'rotate-90')} />
         </div>
@@ -2077,7 +2077,7 @@ function MemoryDetailCard({
             <div>
               <div className="text-xs text-gray-500 uppercase">Importance</div>
               <div className="text-lg font-semibold text-purple-400">
-                {(memory.importance_score * 100).toFixed(0)}%
+                {((memory.importance_score ?? 0) * 100).toFixed(0)}%
               </div>
             </div>
             <div>
@@ -2447,10 +2447,10 @@ function EvolutionTimeline({
                             )}
                           </span>
                           <span className="text-gray-400">
-                            Coherence: {(event.coherence_before * 100).toFixed(0)}% → {(event.coherence_after * 100).toFixed(0)}%
+                            Coherence: {((event.coherence_before ?? 0) * 100).toFixed(0)}% → {((event.coherence_after ?? 0) * 100).toFixed(0)}%
                             {coherenceDiff !== 0 && (
                               <span className={coherenceDiff > 0 ? 'text-green-400 ml-1' : 'text-red-400 ml-1'}>
-                                ({coherenceDiff > 0 ? '+' : ''}{(coherenceDiff * 100).toFixed(0)}%)
+                                ({coherenceDiff > 0 ? '+' : ''}{((coherenceDiff ?? 0) * 100).toFixed(0)}%)
                               </span>
                             )}
                           </span>
@@ -2690,13 +2690,13 @@ function ClusterVisualizationGraph({
             <div className="text-xs text-gray-400 space-y-1">
               <p>Type: {hoveredNodeInfo.type}</p>
               {hoveredNodeInfo.coherence !== undefined && (
-                <p>Coherence: {(hoveredNodeInfo.coherence * 100).toFixed(0)}%</p>
+                <p>Coherence: {((hoveredNodeInfo.coherence ?? 0) * 100).toFixed(0)}%</p>
               )}
               {hoveredNodeInfo.memory_type && (
                 <p>Memory Type: {hoveredNodeInfo.memory_type}</p>
               )}
               {hoveredNodeInfo.similarity !== undefined && (
-                <p>Similarity: {(hoveredNodeInfo.similarity * 100).toFixed(0)}%</p>
+                <p>Similarity: {((hoveredNodeInfo.similarity ?? 0) * 100).toFixed(0)}%</p>
               )}
               {hoveredNodeInfo.is_core && (
                 <p className="text-purple-400">Core Member</p>
@@ -2814,7 +2814,7 @@ function FindSimilarClusters({
                               : 'bg-gray-500/20 text-gray-400'
                         )}
                       >
-                        {(result.similarity * 100).toFixed(0)}% match
+                        {((result.similarity ?? 0) * 100).toFixed(0)}% match
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1 line-clamp-2">{result.description}</p>

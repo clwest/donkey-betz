@@ -592,7 +592,7 @@ export default function AssistantPage() {
                         bodyHealthScore >= 80 ? 'text-accent-green' :
                         bodyHealthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
                       )}>
-                        {bodyHealthScore.toFixed(0)}%
+                        {(bodyHealthScore ?? 0).toFixed(0)}%
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

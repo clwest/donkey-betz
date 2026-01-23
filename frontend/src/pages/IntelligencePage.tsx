@@ -860,7 +860,7 @@ export default function IntelligencePage() {
                 <TrendingUp className="text-accent-green" size={24} />
                 <div>
                   <p className="text-sm text-gray-400">Success Rate</p>
-                  <p className="text-2xl font-bold">{pilotMetrics.success_rate.toFixed(0)}%</p>
+                  <p className="text-2xl font-bold">{(pilotMetrics.success_rate ?? 0).toFixed(0)}%</p>
                 </div>
               </div>
             </div>
@@ -869,7 +869,7 @@ export default function IntelligencePage() {
                 <Clock className="text-primary-400" size={24} />
                 <div>
                   <p className="text-sm text-gray-400">Avg Duration</p>
-                  <p className="text-2xl font-bold">{pilotMetrics.avg_duration_hours.toFixed(1)}h</p>
+                  <p className="text-2xl font-bold">{(pilotMetrics.avg_duration_hours ?? 0).toFixed(1)}h</p>
                 </div>
               </div>
             </div>
@@ -938,7 +938,7 @@ export default function IntelligencePage() {
                           <div className="mt-3">
                             <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                               <span>Started {pilot.started_at ? new Date(pilot.started_at).toLocaleString() : 'Unknown'}</span>
-                              <span>{progressPercent.toFixed(0)}% complete</span>
+                              <span>{(progressPercent ?? 0).toFixed(0)}% complete</span>
                             </div>
                             <div className="h-2 bg-dark-bg rounded-full overflow-hidden">
                               <div
@@ -994,7 +994,7 @@ export default function IntelligencePage() {
                                 </span>
                                 {confidence !== undefined && (
                                   <span className="text-xs px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan">
-                                    {(confidence * 100).toFixed(0)}% confidence
+                                    {((confidence ?? 0) * 100).toFixed(0)}% confidence
                                   </span>
                                 )}
                                 {/* Session 690/691: Implementation status badge - clickable for review */}
@@ -1908,7 +1908,7 @@ export default function IntelligencePage() {
                           {gate.latency.total_hours !== undefined && (
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span className="text-gray-400">Total time:</span>
-                              <span className="text-gray-300">{gate.latency.total_hours.toFixed(1)} hours</span>
+                              <span className="text-gray-300">{(gate.latency?.total_hours ?? 0).toFixed(1)} hours</span>
                             </div>
                           )}
                           {gate.latency.by_stage && Object.keys(gate.latency.by_stage).length > 0 && (
@@ -1916,7 +1916,7 @@ export default function IntelligencePage() {
                               {Object.entries(gate.latency.by_stage).map(([stage, hours]) => (
                                 <div key={stage} className="flex items-center justify-between">
                                   <span className="text-gray-500">{stage.replace('_', ' ')}:</span>
-                                  <span className="text-gray-400">{(hours as number).toFixed(1)}h</span>
+                                  <span className="text-gray-400">{((hours as number) ?? 0).toFixed(1)}h</span>
                                 </div>
                               ))}
                             </div>
@@ -2645,7 +2645,7 @@ export default function IntelligencePage() {
                                 {learning.outcome}
                               </span>
                               <span className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan">
-                                {(learning.confidence * 100).toFixed(0)}% confidence
+                                {((learning.confidence ?? 0) * 100).toFixed(0)}% confidence
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -2662,7 +2662,7 @@ export default function IntelligencePage() {
                             <div className="mt-3">
                               <div className="flex justify-between text-xs text-gray-500 mb-1">
                                 <span>Confidence Score</span>
-                                <span>{(learning.confidence * 100).toFixed(0)}%</span>
+                                <span>{((learning.confidence ?? 0) * 100).toFixed(0)}%</span>
                               </div>
                               <div className="h-2 bg-dark-border rounded-full overflow-hidden">
                                 <div
@@ -3268,7 +3268,7 @@ export default function IntelligencePage() {
                     <p className="text-gray-300">{new Date(selectedPrediction.verified_at).toLocaleDateString()}</p>
                     {selectedPrediction.accuracy_score !== null && (
                       <p className="text-sm text-gray-400 mt-1">
-                        Accuracy: {(selectedPrediction.accuracy_score * 100).toFixed(0)}%
+                        Accuracy: {((selectedPrediction.accuracy_score ?? 0) * 100).toFixed(0)}%
                       </p>
                     )}
                   </div>

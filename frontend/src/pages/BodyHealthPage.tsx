@@ -243,7 +243,7 @@ function BodySystemCard({
           />
         </div>
         <span className="text-xs text-zinc-500 w-8 text-right">
-          {vitals.score.toFixed(0)}%
+          {(vitals.score ?? 0).toFixed(0)}%
         </span>
       </div>
 
@@ -361,7 +361,7 @@ function HealthScoreGauge({ score, status }: { score: number; status: string }) 
         {/* Score text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className={cn('text-3xl font-bold', getScoreColor(score))}>
-            {score.toFixed(0)}
+            {(score ?? 0).toFixed(0)}
           </span>
           <span className="text-xs text-zinc-500">/ 100</span>
         </div>
@@ -630,7 +630,7 @@ function LungsDetailView() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-zinc-300">{budget.name}</span>
                   <span className="text-xs text-zinc-500">
-                    ${used.toFixed(2)} / ${limit.toFixed(2)}
+                    ${(used ?? 0).toFixed(2)} / ${(limit ?? 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="w-24 h-2 bg-zinc-700 rounded-full overflow-hidden">
@@ -1196,7 +1196,7 @@ function DigestiveDetailView() {
             <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
               <div className="text-xl font-bold text-blue-400">
                 {typeof status.metabolism.intake_rate === 'number'
-                  ? status.metabolism.intake_rate.toFixed(1)
+                  ? (status.metabolism?.intake_rate ?? 0).toFixed(1)
                   : 0}/min
               </div>
               <div className="text-xs text-zinc-500">Intake</div>
@@ -1204,7 +1204,7 @@ function DigestiveDetailView() {
             <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
               <div className="text-xl font-bold text-orange-400">
                 {typeof status.metabolism.processing_rate === 'number'
-                  ? status.metabolism.processing_rate.toFixed(1)
+                  ? (status.metabolism?.processing_rate ?? 0).toFixed(1)
                   : 0}/min
               </div>
               <div className="text-xs text-zinc-500">Processing</div>
@@ -1212,7 +1212,7 @@ function DigestiveDetailView() {
             <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
               <div className="text-xl font-bold text-green-400">
                 {typeof status.metabolism.output_rate === 'number'
-                  ? status.metabolism.output_rate.toFixed(1)
+                  ? (status.metabolism?.output_rate ?? 0).toFixed(1)
                   : 0}/min
               </div>
               <div className="text-xs text-zinc-500">Output</div>

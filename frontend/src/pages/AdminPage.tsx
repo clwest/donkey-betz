@@ -393,7 +393,7 @@ export default function AdminPage() {
                                 {systemStatus}
                               </span>
                               <span className={cn('text-sm font-bold', getStatusColor(systemStatus))}>
-                                {score.toFixed(0)}%
+                                {(score ?? 0).toFixed(0)}%
                               </span>
                             </div>
                           </div>
@@ -420,7 +420,7 @@ export default function AdminPage() {
                           </div>
                           <div>
                             <p className="font-medium text-sm">
-                              {beat.health_score.toFixed(0)}% - {beat.components_healthy}/{beat.components_checked} healthy
+                              {(beat.health_score ?? 0).toFixed(0)}% - {beat.components_healthy}/{beat.components_checked} healthy
                             </p>
                             <p className="text-xs text-gray-500">
                               {new Date(beat.recorded_at).toLocaleString()}
@@ -901,7 +901,7 @@ export default function AdminPage() {
                           <div className="text-right">
                             <p className="text-sm font-medium">{exec.items_collected || 0} items</p>
                             {exec.duration_seconds && (
-                              <p className="text-xs text-gray-500">{exec.duration_seconds.toFixed(1)}s</p>
+                              <p className="text-xs text-gray-500">{(exec.duration_seconds ?? 0).toFixed(1)}s</p>
                             )}
                           </div>
                           <span className={cn(
@@ -1108,7 +1108,7 @@ export default function AdminPage() {
                           )}>
                             {activity.success !== false ? 'Success' : 'Failed'}
                           </span>
-                          {activity.duration && <span className="text-gray-500">{activity.duration.toFixed(1)}s</span>}
+                          {activity.duration && <span className="text-gray-500">{(activity.duration ?? 0).toFixed(1)}s</span>}
                           {activity.completed && <span className="text-gray-500">{new Date(activity.completed).toLocaleTimeString()}</span>}
                         </div>
                       </div>

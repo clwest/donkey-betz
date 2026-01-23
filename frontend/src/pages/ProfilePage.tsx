@@ -433,7 +433,7 @@ export default function ProfilePage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-gray-400">Tokens Used</span>
-                <span className="font-medium">{(statistics.total_tokens_used / 1000).toFixed(1)}K</span>
+                <span className="font-medium">{((statistics.total_tokens_used ?? 0) / 1000).toFixed(1)}K</span>
               </div>
               <div className="h-2 bg-dark-border rounded-full overflow-hidden">
                 <div
@@ -468,7 +468,7 @@ export default function ProfilePage() {
               <TrendingUp size={20} className="text-accent-amber" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{profile.storage_used_mb.toFixed(1)} MB</p>
+              <p className="text-2xl font-bold">{(profile.storage_used_mb ?? 0).toFixed(1)} MB</p>
               <p className="text-sm text-gray-400">Storage Used</p>
             </div>
           </div>

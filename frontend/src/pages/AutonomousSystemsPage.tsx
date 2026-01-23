@@ -461,7 +461,7 @@ export default function AutonomousSystemsPage() {
                         {situation.success_rate !== undefined && (
                           <span className="flex items-center gap-1">
                             <TrendingUp className="h-3 w-3" />
-                            {situation.success_rate.toFixed(1)}% success
+                            {(situation.success_rate ?? 0).toFixed(1)}% success
                           </span>
                         )}
                         {situation.last_run && (

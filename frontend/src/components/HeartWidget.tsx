@@ -144,7 +144,7 @@ function HealthGauge({ score, status }: { score: number; status: string }) {
       </div>
       <div>
         <p className="text-2xl font-bold" style={{ color }}>
-          {score.toFixed(0)}%
+          {(score ?? 0).toFixed(0)}%
         </p>
         <p className="text-xs text-gray-400 capitalize">{status}</p>
       </div>
@@ -175,7 +175,7 @@ function BodySystemIndicator({
           'flex flex-col items-center gap-1 p-2 rounded-lg transition-colors',
           getStatusBg(systemStatus, isHealthy)
         )}
-        title={`${label}: ${systemStatus} (${score.toFixed(0)}%)`}
+        title={`${label}: ${systemStatus} (${(score ?? 0).toFixed(0)}%)`}
       >
         <span className="text-lg">{emoji}</span>
         <span className="text-[10px] text-gray-400">{label}</span>
@@ -211,7 +211,7 @@ function BodySystemIndicator({
         'text-sm font-medium',
         getStatusColor(systemStatus, isHealthy)
       )}>
-        {score.toFixed(0)}%
+        {(score ?? 0).toFixed(0)}%
       </span>
     </div>
   )
@@ -324,7 +324,7 @@ export default function HeartWidget({ compact = false, showRefresh = true, onRef
                 getStatusColor(vitals.overall_health)
               )}
             >
-              {vitals.health_score.toFixed(0)}%
+              {(vitals.health_score ?? 0).toFixed(0)}%
             </span>
             {showRefresh && (
               <button

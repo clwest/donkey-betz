@@ -1593,14 +1593,14 @@ export default function AgentsPage() {
                         {execution.execution_time_ms && execution.execution_time_ms > 0 && (
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
-                            {(execution.execution_time_ms / 1000).toFixed(1)}s
+                            {((execution.execution_time_ms ?? 0) / 1000).toFixed(1)}s
                           </span>
                         )}
                         {execution.tokens_used && execution.tokens_used > 0 && (
                           <span>{execution.tokens_used.toLocaleString()} tokens</span>
                         )}
                         {execution.cost && execution.cost > 0 && (
-                          <span>${execution.cost.toFixed(4)}</span>
+                          <span>${(execution.cost ?? 0).toFixed(4)}</span>
                         )}
                       </div>
                     </div>
@@ -1866,13 +1866,13 @@ export default function AgentsPage() {
                             {confidence !== undefined && (
                               <span className="flex items-center gap-1">
                                 <TrendingUp size={12} className="text-accent-amber" />
-                                {(confidence * 100).toFixed(0)}% confidence
+                                {((confidence ?? 0) * 100).toFixed(0)}% confidence
                               </span>
                             )}
                             {transfer.usefulness_score !== undefined && (
                               <span className="flex items-center gap-1">
                                 <ThumbsUp size={12} />
-                                {(transfer.usefulness_score * 100).toFixed(0)}% score
+                                {((transfer.usefulness_score ?? 0) * 100).toFixed(0)}% score
                               </span>
                             )}
                             <span className="flex items-center gap-1">
@@ -2279,7 +2279,7 @@ export default function AgentsPage() {
                                   successRate >= 90 ? "text-accent-green" :
                                   successRate >= 70 ? "text-accent-amber" : "text-accent-red"
                                 )}>
-                                  {successRate.toFixed(1)}%
+                                  {(successRate ?? 0).toFixed(1)}%
                                 </span>
                               </td>
                               <td className="py-3 text-gray-300">
@@ -2393,7 +2393,7 @@ export default function AgentsPage() {
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="text-gray-400">
-                            {exec.execution_time_ms ? `${(exec.execution_time_ms / 1000).toFixed(2)}s` : '—'}
+                            {exec.execution_time_ms ? `${((exec.execution_time_ms ?? 0) / 1000).toFixed(2)}s` : '—'}
                           </span>
                           <span className="text-gray-400">
                             {exec.tokens_used?.toLocaleString() || '0'} tokens
@@ -2569,12 +2569,12 @@ export default function AgentsPage() {
                         tool.success_rate >= 0.9 ? 'text-accent-green' :
                         tool.success_rate >= 0.7 ? 'text-accent-amber' : 'text-accent-red'
                       )}>
-                        {(tool.success_rate * 100).toFixed(0)}%
+                        {((tool.success_rate ?? 0) * 100).toFixed(0)}%
                       </p>
                       <p className="text-xs text-gray-500">Success</p>
                     </div>
                     <div>
-                      <p className="text-lg font-semibold text-white">{tool.avg_response_time_ms.toFixed(0)}ms</p>
+                      <p className="text-lg font-semibold text-white">{(tool.avg_response_time_ms ?? 0).toFixed(0)}ms</p>
                       <p className="text-xs text-gray-500">Avg Time</p>
                     </div>
                   </div>
@@ -2782,7 +2782,7 @@ export default function AgentsPage() {
                         template.success_rate >= 0.9 ? 'text-accent-green' :
                         template.success_rate >= 0.7 ? 'text-accent-amber' : 'text-accent-red'
                       )}>
-                        {(template.success_rate * 100).toFixed(0)}%
+                        {((template.success_rate ?? 0) * 100).toFixed(0)}%
                       </p>
                       <p className="text-xs text-gray-500">Success</p>
                     </div>
@@ -3613,7 +3613,7 @@ export default function AgentsPage() {
                   {selectedTransfer.effectiveness_gain !== undefined && selectedTransfer.effectiveness_gain > 0 && (
                     <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
                       <TrendingUp size={10} />
-                      +{(selectedTransfer.effectiveness_gain * 100).toFixed(1)}% effectiveness
+                      +{((selectedTransfer.effectiveness_gain ?? 0) * 100).toFixed(1)}% effectiveness
                     </span>
                   )}
                 </div>
@@ -3664,7 +3664,7 @@ export default function AgentsPage() {
                   <div className="text-xs text-gray-500 mb-1">Confidence</div>
                   <div className="text-lg font-bold text-accent-amber">
                     {selectedTransfer.knowledge_full?.confidence
-                      ? `${(selectedTransfer.knowledge_full.confidence * 100).toFixed(0)}%`
+                      ? `${((selectedTransfer.knowledge_full?.confidence ?? 0) * 100).toFixed(0)}%`
                       : '-'}
                   </div>
                 </div>
@@ -3672,7 +3672,7 @@ export default function AgentsPage() {
                   <div className="text-xs text-gray-500 mb-1">Usefulness Score</div>
                   <div className="text-lg font-bold text-accent-cyan">
                     {selectedTransfer.usefulness_score !== undefined
-                      ? `${(selectedTransfer.usefulness_score * 100).toFixed(0)}%`
+                      ? `${((selectedTransfer.usefulness_score ?? 0) * 100).toFixed(0)}%`
                       : '-'}
                   </div>
                 </div>
@@ -3686,7 +3686,7 @@ export default function AgentsPage() {
                   )}>
                     {selectedTransfer.effectiveness_gain !== undefined
                       ? selectedTransfer.effectiveness_gain > 0
-                        ? `+${(selectedTransfer.effectiveness_gain * 100).toFixed(1)}%`
+                        ? `+${((selectedTransfer.effectiveness_gain ?? 0) * 100).toFixed(1)}%`
                         : '0%'
                       : '-'}
                   </div>
@@ -3799,13 +3799,13 @@ export default function AgentsPage() {
                     {formatTimestamp(selectedExecution.created_at, 'full')}
                   </span>
                   {selectedExecution.execution_time_ms && selectedExecution.execution_time_ms > 0 && (
-                    <span>Duration: {(selectedExecution.execution_time_ms / 1000).toFixed(2)}s</span>
+                    <span>Duration: {((selectedExecution.execution_time_ms ?? 0) / 1000).toFixed(2)}s</span>
                   )}
                   {selectedExecution.tokens_used && selectedExecution.tokens_used > 0 && (
                     <span>{selectedExecution.tokens_used.toLocaleString()} tokens</span>
                   )}
                   {selectedExecution.cost && selectedExecution.cost > 0 && (
-                    <span className="text-accent-amber">Cost: ${selectedExecution.cost.toFixed(4)}</span>
+                    <span className="text-accent-amber">Cost: ${(selectedExecution.cost ?? 0).toFixed(4)}</span>
                   )}
                 </div>
               </div>
@@ -4033,7 +4033,7 @@ export default function AgentsPage() {
                                     }`}>{signal.strength}</span>
                                   )}
                                   {signal.confidence !== undefined && (
-                                    <span className="text-xs text-gray-500">{(signal.confidence * 100).toFixed(0)}% confidence</span>
+                                    <span className="text-xs text-gray-500">{((signal.confidence ?? 0) * 100).toFixed(0)}% confidence</span>
                                   )}
                                 </div>
                                 {signal.description && (
@@ -4186,7 +4186,7 @@ export default function AgentsPage() {
                           </div>
                           {selectedExecution.output_data.data.execution_time !== undefined && (
                             <p className="text-xs text-gray-500 mt-2 text-right">
-                              Execution time: {selectedExecution.output_data.data.execution_time.toFixed(2)}s
+                              Execution time: {(selectedExecution.output_data?.data?.execution_time ?? 0).toFixed(2)}s
                             </p>
                           )}
                         </div>
@@ -4272,7 +4272,7 @@ export default function AgentsPage() {
                     <p className="text-sm text-gray-300 whitespace-pre-wrap">{relatedMemory.content}</p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                       <span>Type: {relatedMemory.memory_type}</span>
-                      <span>Importance: {(relatedMemory.importance_score * 100).toFixed(0)}%</span>
+                      <span>Importance: {((relatedMemory.importance_score ?? 0) * 100).toFixed(0)}%</span>
                     </div>
                   </div>
                 </div>
@@ -4528,12 +4528,12 @@ export default function AgentsPage() {
                     selectedTool.success_rate >= 0.9 ? 'text-accent-green' :
                     selectedTool.success_rate >= 0.7 ? 'text-accent-amber' : 'text-accent-red'
                   )}>
-                    {(selectedTool.success_rate * 100).toFixed(1)}%
+                    {((selectedTool.success_rate ?? 0) * 100).toFixed(1)}%
                   </p>
                   <p className="text-xs text-gray-500">Success Rate</p>
                 </div>
                 <div className="bg-dark-hover rounded-lg p-4 text-center">
-                  <p className="text-2xl font-bold text-white">{selectedTool.avg_response_time_ms.toFixed(0)}ms</p>
+                  <p className="text-2xl font-bold text-white">{(selectedTool.avg_response_time_ms ?? 0).toFixed(0)}ms</p>
                   <p className="text-xs text-gray-500">Avg Response Time</p>
                 </div>
               </div>

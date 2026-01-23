@@ -593,7 +593,7 @@ export default function ReasoningEnginePage() {
                             </span>
                             {thought.confidence && (
                               <span className="text-xs text-gray-500">
-                                {(thought.confidence * 100).toFixed(0)}% confidence
+                                {((thought.confidence ?? 0) * 100).toFixed(0)}% confidence
                               </span>
                             )}
                             {thought.actions_generated !== undefined && thought.actions_generated > 0 && (
@@ -753,7 +753,7 @@ export default function ReasoningEnginePage() {
                       </span>
                       {thought.confidence && (
                         <span className="text-xs text-gray-400">
-                          {(thought.confidence * 100).toFixed(0)}%
+                          {((thought.confidence ?? 0) * 100).toFixed(0)}%
                         </span>
                       )}
                     </div>
@@ -800,7 +800,7 @@ export default function ReasoningEnginePage() {
                                     </span>
                                     <p className="text-sm flex-1">{insight.insight}</p>
                                     <span className="text-xs text-gray-500 shrink-0">
-                                      {(insight.confidence * 100).toFixed(0)}%
+                                      {((insight.confidence ?? 0) * 100).toFixed(0)}%
                                     </span>
                                   </div>
                                 ))}
@@ -820,7 +820,7 @@ export default function ReasoningEnginePage() {
                                     <div className="flex items-center justify-between mb-1">
                                       <p className="text-sm font-medium">{pattern.pattern}</p>
                                       <span className="text-xs text-gray-500">
-                                        {(pattern.strength * 100).toFixed(0)}% strength
+                                        {((pattern.strength ?? 0) * 100).toFixed(0)}% strength
                                       </span>
                                     </div>
                                     <p className="text-xs text-gray-400">{pattern.evidence}</p>
@@ -964,10 +964,10 @@ export default function ReasoningEnginePage() {
                             <span>Cycle #{thoughtDetail.cycle_number}</span>
                             <span>Started: {formatDate(thoughtDetail.started_at)}</span>
                             {thoughtDetail.thinking_duration_seconds > 0 && (
-                              <span>Duration: {thoughtDetail.thinking_duration_seconds.toFixed(1)}s</span>
+                              <span>Duration: {(thoughtDetail.thinking_duration_seconds ?? 0).toFixed(1)}s</span>
                             )}
                             {thoughtDetail.priority_score > 0 && (
-                              <span>Priority: {thoughtDetail.priority_score.toFixed(1)}/10</span>
+                              <span>Priority: {(thoughtDetail.priority_score ?? 0).toFixed(1)}/10</span>
                             )}
                           </div>
                         </>
