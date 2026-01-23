@@ -7,7 +7,7 @@ import {
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
   ChevronRight, CheckCircle, XCircle, Zap, MessageSquare,
   Heart, TrendingUp, Lightbulb, Palette, Settings2, ExternalLink,
-  Bell, ClipboardList
+  Bell, ClipboardList, Play, Check, X, Clock, HelpCircle
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -687,8 +687,37 @@ export default function AssistantPage() {
                         {pendingDecisions.length}
                       </span>
                     </div>
+
+                    {/* Session 796: Batch Action Buttons */}
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        onClick={() => sendMessage('Auto-execute all low-risk decisions with high confidence')}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-lg bg-accent-green/20 text-accent-green hover:bg-accent-green/30 transition-colors"
+                        title="Auto-approve low-risk items with ML confidence ≥85%"
+                      >
+                        <Play size={12} />
+                        Auto-Execute
+                      </button>
+                      <button
+                        onClick={() => sendMessage('Approve all low priority items')}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-lg bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors"
+                        title="Batch approve all low priority items"
+                      >
+                        <Check size={12} />
+                        Batch Low
+                      </button>
+                      <button
+                        onClick={() => sendMessage('Defer all medium priority items until tomorrow')}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-lg bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30 transition-colors"
+                        title="Defer medium priority items"
+                      >
+                        <Clock size={12} />
+                        Defer Med
+                      </button>
+                    </div>
+
                     <div className="space-y-2">
-                      {pendingDecisions.slice(0, 3).map((item, idx) => {
+                      {pendingDecisions.slice(0, 5).map((item, idx) => {
                         const urgencyEmoji = {
                           critical: '🚨',
                           high: '⚠️',
@@ -696,21 +725,67 @@ export default function AssistantPage() {
                           low: 'ℹ️'
                         }[item.urgency] || '📋'
 
+                        const hasMLRecommendation = item.ml_recommendation && item.ml_confidence && item.ml_confidence > 0.7
+
                         return (
                           <div
                             key={item.id}
-                            className="flex items-center justify-between p-2 rounded-lg bg-dark-bg hover:bg-dark-border cursor-pointer transition-colors group"
-                            onClick={() => sendMessage(`Tell me more about decision ${idx + 1}: ${item.title}`)}
-                            title={item.summary}
+                            className={cn(
+                              "p-2 rounded-lg bg-dark-bg transition-colors",
+                              hasMLRecommendation && "border border-accent-green/30"
+                            )}
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-sm">{urgencyEmoji}</span>
-                              <div className="min-w-0">
-                                <span className="text-sm truncate block">{item.title.slice(0, 40)}{item.title.length > 40 ? '...' : ''}</span>
-                                <span className="text-xs text-gray-500">{item.item_type} • {item.urgency}</span>
+                            <div className="flex items-start justify-between gap-2">
+                              <div
+                                className="flex items-start gap-2 min-w-0 flex-1 cursor-pointer hover:opacity-80"
+                                onClick={() => sendMessage(`Tell me more about decision ${idx + 1}: ${item.title}`)}
+                              >
+                                <span className="text-sm mt-0.5">{urgencyEmoji}</span>
+                                <div className="min-w-0">
+                                  <span className="text-sm block">{item.title.slice(0, 50)}{item.title.length > 50 ? '...' : ''}</span>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-xs text-gray-500">{item.item_type}</span>
+                                    {hasMLRecommendation && (
+                                      <span className="text-xs text-accent-green flex items-center gap-1">
+                                        <Sparkles size={10} />
+                                        ML: {item.ml_recommendation} ({Math.round((item.ml_confidence || 0) * 100)}%)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              {/* Quick Action Buttons */}
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); sendMessage(`Approve decision ${idx + 1}: ${item.title}`) }}
+                                  className="p-1 rounded hover:bg-accent-green/20 text-gray-400 hover:text-accent-green transition-colors"
+                                  title="Approve"
+                                >
+                                  <Check size={14} />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); sendMessage(`Reject decision ${idx + 1}: ${item.title}`) }}
+                                  className="p-1 rounded hover:bg-accent-red/20 text-gray-400 hover:text-accent-red transition-colors"
+                                  title="Reject"
+                                >
+                                  <X size={14} />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); sendMessage(`Defer decision ${idx + 1}: ${item.title}`) }}
+                                  className="p-1 rounded hover:bg-accent-amber/20 text-gray-400 hover:text-accent-amber transition-colors"
+                                  title="Defer"
+                                >
+                                  <Clock size={14} />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); sendMessage(`Tell me more about decision ${idx + 1}: ${item.title}`) }}
+                                  className="p-1 rounded hover:bg-primary-500/20 text-gray-400 hover:text-primary-400 transition-colors"
+                                  title="More Info"
+                                >
+                                  <HelpCircle size={14} />
+                                </button>
                               </div>
                             </div>
-                            <ChevronRight size={14} className="text-gray-500 flex-shrink-0 group-hover:text-primary-400" />
                           </div>
                         )
                       })}
@@ -719,7 +794,7 @@ export default function AssistantPage() {
                       onClick={() => sendMessage('What needs my attention?')}
                       className="w-full mt-2 text-xs text-primary-400 hover:text-primary-300 py-1"
                     >
-                      Review all decisions →
+                      Review all {pendingDecisions.length} decisions →
                     </button>
                   </div>
                 )}
