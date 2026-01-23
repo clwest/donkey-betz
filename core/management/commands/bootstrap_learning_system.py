@@ -1,12 +1,14 @@
 """
-Session 790: Bootstrap Learning System
+Session 790/791: Bootstrap Learning System
 
 Seeds the learning system with initial data for fresh deployments:
 1. Creates sample AgentExecution records
-2. Triggers the learning cycle to generate AgentLearning records
-3. Creates initial KnowledgeTransfer records
-4. Mines patterns from the seeded data
-5. Updates agent effectiveness scores
+2. Checks current learning system state
+3. Creates AgentLearning records (critical for pattern mining!)
+4. Runs the learning cycle (creates KnowledgeTransfer records)
+5. Creates additional KnowledgeTransfer records
+6. Mines patterns from the seeded data
+7. Updates agent effectiveness scores
 
 Run with: python manage.py bootstrap_learning_system
 
@@ -68,26 +70,31 @@ class Command(BaseCommand):
         executions_created = self._seed_executions(num_executions, dry_run)
         self.stdout.write(f"  Created: {executions_created} executions")
 
-        # Step 3: Run learning cycle
-        self.stdout.write(self.style.NOTICE("\n🧠 Step 3: Running learning cycle..."))
+        # Step 3: Seed AgentLearning records (critical for pattern mining!)
+        self.stdout.write(self.style.NOTICE("\n🎓 Step 3: Seeding AgentLearning records..."))
+        learning_created = self._seed_agent_learning(dry_run)
+        self.stdout.write(f"  Created: {learning_created} AgentLearning records")
+
+        # Step 4: Run learning cycle
+        self.stdout.write(self.style.NOTICE("\n🧠 Step 4: Running learning cycle..."))
         learning_result = self._run_learning_cycle(dry_run)
         self.stdout.write(f"  Result: {learning_result}")
 
-        # Step 4: Create knowledge transfers
-        self.stdout.write(self.style.NOTICE("\n📚 Step 4: Creating knowledge transfers..."))
+        # Step 5: Create knowledge transfers
+        self.stdout.write(self.style.NOTICE("\n📚 Step 5: Creating knowledge transfers..."))
         transfers_created = self._seed_knowledge_transfers(dry_run)
         self.stdout.write(f"  Created: {transfers_created} transfers")
 
-        # Step 5: Mine patterns
+        # Step 6: Mine patterns
         if not skip_mining:
-            self.stdout.write(self.style.NOTICE("\n🔍 Step 5: Mining learning patterns..."))
+            self.stdout.write(self.style.NOTICE("\n🔍 Step 6: Mining learning patterns..."))
             patterns_result = self._mine_patterns(dry_run)
             self.stdout.write(f"  Result: {patterns_result}")
         else:
-            self.stdout.write(self.style.WARNING("\n⏭️ Step 5: Skipping pattern mining"))
+            self.stdout.write(self.style.WARNING("\n⏭️ Step 6: Skipping pattern mining"))
 
-        # Step 6: Update effectiveness scores
-        self.stdout.write(self.style.NOTICE("\n📈 Step 6: Updating agent effectiveness..."))
+        # Step 7: Update effectiveness scores
+        self.stdout.write(self.style.NOTICE("\n📈 Step 7: Updating agent effectiveness..."))
         effectiveness_result = self._update_effectiveness(dry_run)
         self.stdout.write(f"  Result: {effectiveness_result}")
 
@@ -177,6 +184,84 @@ class Command(BaseCommand):
                 completed_at=now if success else None,
             )
             created += 1
+
+        return created
+
+    def _seed_agent_learning(self, dry_run: bool) -> int:
+        """
+        Seed AgentLearning records - critical for pattern mining!
+
+        The mine_learning_patterns task queries AgentLearning records to discover
+        patterns. Without these records, no patterns can be mined.
+        """
+        if dry_run:
+            return 30
+
+        from core.models_unified_system import AgentLearning, AgentSolution, AgentLearningConnection
+
+        # Get agents that have learning connections
+        connections = list(AgentLearningConnection.objects.filter(
+            is_active=True
+        ).select_related('teacher_agent', 'student_agent')[:50])
+
+        if not connections:
+            self.stdout.write(self.style.WARNING("  No learning connections found!"))
+            return 0
+
+        created = 0
+        now = timezone.now()
+
+        # Learning types to simulate
+        learning_types = [
+            'cross_agent_delegation',
+            'collaborative',
+            'knowledge_transfer',
+            'pattern_sharing',
+            'skill_acquisition',
+        ]
+
+        for conn in connections:
+            try:
+                # Create or get a solution for this learning
+                solution, _ = AgentSolution.objects.get_or_create(
+                    agent=conn.teacher_agent,
+                    title=f"Learning: {conn.teacher_agent.name} → {conn.student_agent.name}",
+                    solution_type='learning_transfer',
+                    defaults={
+                        'description': f"Knowledge shared from {conn.teacher_agent.name} to {conn.student_agent.name}",
+                        'metrics': {
+                            'category': 'learning',
+                            'seeded': True,
+                        },
+                        'tags': ['learning', 'seeded', conn.teacher_agent.name, conn.student_agent.name],
+                        'success_rate': random.uniform(0.7, 0.95),
+                    }
+                )
+
+                # Create AgentLearning record
+                effectiveness_before = random.uniform(0.5, 0.7)
+                improvement = random.uniform(0.05, 0.25)
+
+                AgentLearning.objects.create(
+                    teacher_agent=conn.teacher_agent,
+                    student_agent=conn.student_agent,
+                    solution=solution,
+                    learning_type=random.choice(learning_types),
+                    implementation_success=random.random() > 0.1,  # 90% success rate
+                    effectiveness_before=effectiveness_before,
+                    effectiveness_after=effectiveness_before + improvement,
+                    metadata={
+                        'seeded': True,
+                        'session': 790,
+                        'connection_type': conn.learning_type or 'collaborative',
+                        'created_for': 'bootstrap',
+                    }
+                )
+                created += 1
+
+            except Exception as e:
+                self.stdout.write(f"  Skip: {str(e)[:50]}")
+                continue
 
         return created
 
