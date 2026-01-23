@@ -1,6 +1,6 @@
-# Session 791 - Ready for Next Task
+# Session 792 - Ready for Next Task
 
-**Previous Session:** 790 (Persona Agent Enhancement & Railway Fixes)
+**Previous Session:** 791 (Learning System Bootstrap & Persona Agent Context Tracking)
 **Date:** January 22, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | DEPLOYED TO RAILWAY
 
@@ -8,7 +8,7 @@
 
 ## RAILWAY DEPLOYMENT ACTIVE
 
-The platform is now deployed to Railway!
+The platform is deployed to Railway!
 
 **Production URL:** `https://donkey-betz-platform-production.up.railway.app/`
 
@@ -17,76 +17,58 @@ The platform is now deployed to Railway!
 Railway Project: donkey-betz-platform
 ├── PostgreSQL (pgvector)
 ├── Redis
-└── Web Service (Daphne ASGI)
+├── Web Service (Daphne ASGI)
+└── Celery Worker + Beat (default queue)
 ```
 
-### Spider Embedding Coverage
-- **Railway:** 58%+ (backfill was running at session end - may be higher now)
-- **Local:** 91.4% (20,307 of 22,219 records)
+### Integration Health Status
+- **Learning Patterns:** 100 (was 0 before Session 791!)
+- **Spider Embedding Coverage:** 58%+ (backfill may have completed)
+- **Body Systems:** 7/7 healthy
 
 ---
 
-## Session 790 Highlights
+## Session 791 Highlights
 
-### New Commands for Railway Deployment
+### Learning System Bootstrap Fixed
+
+The `bootstrap_learning_system` command had multiple bugs with wrong model field names:
 
 ```bash
-# Populate 74 core agents (required for fresh deployment)
-railway run python manage.py populate_agents
-
-# Sync 139 persona agents with learning system
-railway run python manage.py sync_persona_learning
-
-# Backfill spider embeddings (run until complete)
-railway run python manage.py shell -c "
-from core.tasks import backfill_spider_embeddings
-while True:
-    result = backfill_spider_embeddings(batch_size=500)
-    print(result)
-    if result.get('processed', 0) == 0:
-        break
-"
-
-# Warm up body systems
-railway run python manage.py warmup_body_systems --all
+# Now works correctly:
+railway run python manage.py bootstrap_learning_system
 ```
 
-### Two Agent Systems Discovered
+**Fixes applied:**
+1. Added `_seed_agent_learning()` - creates AgentLearning records for pattern mining
+2. Fixed KnowledgeTransfer fields - `connection`, `source_knowledge`, `transfer_summary`
+3. Fixed AgentKnowledgeSource fields - `knowledge_type`, `title`, `summary`
+4. Added 'teaching' learning type - required for "Teaching agents" dashboard metric
 
-| System | Count | How They Work |
-|--------|-------|---------------|
-| **Core Agents** | 74 | Python classes in `core/agents/*.py` |
-| **Persona Agents** | 139 | LLM-roleplayed from database records |
+### Persona Agent Context Tracking
 
-**New Service:** `core/services/persona_agent_context.py`
-- Injects domain-specific spider data into persona agent prompts
-- Maps 21 agent types to relevant spiders
-- Enables persona agents to discuss real-world data
+Persona agents (139 LLM-roleplayed agents) now have Session 758 context tracking:
+- `intelligence/agent_executor.py` - Added context tracking
+- `intelligence/tasks.py` - Added context_injected to Income Builder
 
-### Bug Fixes
-- Agent not found on Railway → `populate_agents` command
-- Frontend .toFixed() null errors → ~95 fixes across 26 files
-- Django queryset slice error in warmup
-- Truncation warning spam → increased test max_tokens
+**Result:** New persona agent executions will show context injection on Integration Health page.
 
 ---
 
 ## What's Next?
 
-### Immediate
-1. **Check Railway embedding coverage** - Should be 90%+ if backfill completed
-2. **Check body system health** - Run `warmup_body_systems` if still unhealthy
-3. **Test persona agent conversations** - Verify spider data injection works
+### Immediate (After Deploy)
+1. **Run bootstrap again** - Now with fixed model fields
+   ```bash
+   railway run python manage.py bootstrap_learning_system
+   ```
+2. **Verify Teaching agents metric** - Should be >0 after bootstrap
+3. **Monitor Context Rate** - New executions should show tracking
 
 ### Deployment Phases
-- **Phase 2:** Add Celery default worker (enable background tasks)
-- **Phase 3:** Add long_running + broadcast workers + Beat scheduler
-- **Phase 4:** Monitoring + custom domain
-
-### Known Issues
-- **TrendAnalysisAgent stuck** - Got stuck during warmup (>5 min). May need investigation.
-- **Body vitals show "unknown"** - Need server running + activity data
-- **SPINE warmup needs server** - API calls fail without local server
+- **Phase 1:** ✓ Web + DB + Redis + Celery (CURRENT)
+- **Phase 2:** Add long_running + broadcast workers
+- **Phase 3:** Monitoring + custom domain
 
 ---
 
@@ -117,8 +99,16 @@ open http://localhost:8000/ai-studio/
 # View logs
 railway logs
 
-# Run Django shell in Railway
+# Run Django shell
 railway run python manage.py shell
+
+# Check agent counts
+railway run python manage.py shell -c "
+from core.models_unified_system import Agent, AgentLearning, LearningPattern
+print(f'Agents: {Agent.objects.filter(is_active=True).count()}')
+print(f'AgentLearning: {AgentLearning.objects.count()}')
+print(f'LearningPatterns: {LearningPattern.objects.filter(is_active=True).count()}')
+"
 
 # Check embedding coverage
 railway run python manage.py shell -c "
@@ -127,19 +117,23 @@ total = SpiderData.objects.count()
 with_emb = SpiderData.objects.filter(embedding__isnull=False).count()
 print(f'Coverage: {with_emb}/{total} ({with_emb/total*100:.1f}%)')
 "
-
-# Check agent counts
-railway run python manage.py shell -c "
-from core.models_unified_system import Agent
-print(f'Total agents: {Agent.objects.count()}')
-print(f'Active: {Agent.objects.filter(is_active=True).count()}')
-"
 ```
+
+---
+
+## Key Files Modified in Session 791
+
+| File | Change |
+|------|--------|
+| `core/management/commands/bootstrap_learning_system.py` | Fixed model fields, added AgentLearning seeding |
+| `intelligence/agent_executor.py` | Added context tracking for persona agents |
+| `intelligence/tasks.py` | Added context_injected to executions |
 
 ---
 
 ## Previous Sessions
 
+- **Session 791:** Learning System Bootstrap - Fixed model fields, added persona agent context tracking, 100 patterns now created
 - **Session 790:** Persona Agent Enhancement - 139 persona agents get spider data, new commands (populate_agents, sync_persona_learning, warmup_body_systems)
 - **Session 789:** Redis Production URL Migration - 27 files, all production Redis connections now use REDIS_URL env var
 - **Session 787-788:** First Railway Deployment - 11 issues fixed, healthcheck passing
@@ -147,3 +141,22 @@ print(f'Active: {Agent.objects.filter(is_active=True).count()}')
 - **Session 785:** Hybrid Workspace Autopilot System
 - **Session 784:** Documentation Index Browser UI
 - **Session 783:** Spider News Feed
+
+---
+
+## Model Field Reference (From Session 791 Debugging)
+
+### AgentLearning
+- `teacher_agent`, `student_agent` (FK to Agent)
+- `solution` (FK to AgentSolution)
+- `learning_type` ('teaching', 'collaborative', etc.)
+- `implementation_success`, `effectiveness_before`, `effectiveness_after`, `metadata`
+
+### KnowledgeTransfer
+- `connection` (FK to AgentLearningConnection)
+- `source_knowledge` (FK to AgentKnowledgeSource)
+- `transfer_summary`, `key_points`, `was_useful`, `usefulness_score`, `was_applied`, `application_result`
+
+### AgentKnowledgeSource
+- `agent` (FK), `knowledge_type` (choices), `title`, `summary`
+- `key_insights`, `data_points_count`, `confidence_score`, `source_spider_names`
