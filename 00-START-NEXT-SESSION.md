@@ -1,4 +1,4 @@
-# Session 798 - Next Steps
+# Session 798 - Workspace UI Fixes
 
 **Previous Session:** 797 (Integration Deepening - Consultation Triggers)
 **Date:** January 23, 2026
@@ -6,89 +6,67 @@
 
 ---
 
-## SESSION 797 COMPLETED
+## SESSION 798 IN PROGRESS
 
 ### Overview
-Completed frontend enhancements and integration deepening for Human-AI connection.
+Fixing production issues with the Workspace UI page.
 
 ### PRs Merged This Session
 
 | PR | Title | Description |
 |----|-------|-------------|
-| #15 | Phase 2 - Smart Decisions | batch_decide, auto_execute, consult actions |
-| #16 | Phase 3 - Consultation Loop | _check_consultation_response, _execute_consultation_action |
-| #17 | PA Pending Decisions Injection | Fixed QuerySet slice bug, inject pending decisions into system prompt |
-| #18 | PA Full System Scope | Updated PERSONAL_ASSISTANT_PROMPT with full capabilities |
-| #19 | Enhanced Pending Decisions UI | Batch action buttons, quick actions, ML indicators |
-| #20 | Gate Consultation Triggers | consultation fields in gate attention items, approve_gate/waive_gate handlers |
-| #21 | Opportunity Consultation | $1000+ opportunities require approval, execute_opportunity handler |
+| #25 | Auth Gating for WorkspacePage | Added `enabled: isAuthenticated` to React Query hooks to prevent 404 errors |
+| #26 | GitHub URL Validation | Added `validate_github_url()` to prevent Internal Server Error on invalid URLs |
 
 ### Key Changes
 
-**Frontend Enhancements (PR #19)**
-- Added batch action buttons: Auto-Execute, Batch Low Priority, Defer Medium
-- Added quick action buttons on each decision card (Approve, Reject, Defer, Info)
-- ML recommendation indicator with confidence percentage
-- Shows 5 items instead of 3
+**Auth Gating (PR #25)**
+- Fixed 404 errors on `/api/workspaces/active/` in production
+- Added `useAuthStore` import and auth check
+- Added `enabled: isAuthenticated` to all 3 workspace queries
 
-**PA System Awareness (PR #17, #18)**
-- Fixed QuerySet slice bug in _build_pending_decisions_section
-- Updated PERSONAL_ASSISTANT_PROMPT with full system scope:
-  - 74 agents, 86 tools, 77 spiders, 9 body systems
-  - Human Interface Layer section with decision tool actions
-  - "What Can You Do?" starts with system scope, not creative tools
-
-**Integration Deepening (PR #20, #21)**
-- Gate attention items now have consultation fields:
-  - `consultation: True`
-  - `intended_action: 'approve_gate'` or `'waive_gate'`
-  - `action_params: {gate_id, decision_title}`
-- Opportunity pipeline consultation for high-value items:
-  - $1000+ revenue triggers consultation
-  - 90+ score triggers consultation
-  - `_create_opportunity_consultation()` method
-  - `execute_opportunity` PA action handler
+**GitHub URL Validation (PR #26)**
+- Added `validate_github_url()` method to `WorkspaceRegisterSerializer`
+- Validates URL matches `https://github.com/username/repository` pattern
+- Auto-prepends `https://` when user enters `github.com/...`
+- Returns clear error message instead of Internal Server Error
 
 ### Files Modified
 
 | File | Changes |
 |------|---------|
-| `core/personal_ai_assistant_enhanced.py` | +_build_pending_decisions_section, +approve_gate, +waive_gate, +execute_opportunity handlers |
-| `core/prompts/registry.py` | Updated PERSONAL_ASSISTANT_PROMPT with full system scope |
-| `core/services/gate_progression_pipeline.py` | +consultation fields in payload |
-| `core/services/opportunity_execution_pipeline.py` | +HIGH_VALUE thresholds, +_create_opportunity_consultation |
-| `frontend/src/lib/api.ts` | +attentionStream, +batchDecide, +pendingConsultations |
-| `frontend/src/pages/AssistantPage.tsx` | +batch action buttons, +quick actions, +ML indicators |
+| `frontend/src/pages/WorkspacePage.tsx` | +auth gating for API queries |
+| `core/views_workspace_api.py` | +validate_github_url() method |
 
 ---
 
-## WHAT'S NEXT FOR SESSION 798
+## WHAT'S NEXT
 
-### Potential Focus Areas
+### Remaining for Session 798
 
-1. **Testing & Validation**
-   - End-to-end test of gate consultation flow
-   - Test opportunity consultation with real high-value opportunities
-   - Verify Railway deployment of all changes
+1. **Test Workspace Page in Production**
+   - Verify 404 fix deployed
+   - Test GitHub URL validation error message
+   - Test successful GitHub repo clone
 
-2. **Analytics & Monitoring**
-   - Track consultation approval/rejection rates
-   - Monitor auto-execute effectiveness
-   - Dashboard for decision statistics
-
-3. **Additional Consultation Triggers**
-   - Workflow execution consultation
-   - High-cost LLM operation approval
-   - Agent team deployment approval
-
-4. **UI Refinements**
-   - Consultation status in chat messages
-   - Auto-execute toggle in settings
-   - Decision history view
+2. **Potential Enhancements**
+   - Better error display in UI for clone failures
+   - Progress indicator during clone operation
+   - Token validation (test if token has required scopes)
 
 ---
 
 ## QUICK REFERENCE
+
+### Test Workspace Registration (Local)
+```bash
+# Test GitHub URL validation locally
+curl -X POST http://localhost:8000/api/workspaces/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Token YOUR_TOKEN" \
+  -d '{"github_url": "invalid-url"}'
+# Should return: {"github_url": ["Invalid GitHub URL..."]}
+```
 
 ### Test Consultation Flow
 ```bash
@@ -105,21 +83,13 @@ print(f'Pending: {result.get(\"count\", 0)} items')
 "
 ```
 
-### Check High-Value Threshold
-```bash
-.venv/bin/python manage.py shell -c "
-from core.services.opportunity_execution_pipeline import opportunity_execution_pipeline
-print(f'Revenue threshold: \${opportunity_execution_pipeline.HIGH_VALUE_REVENUE_THRESHOLD}')
-print(f'Score threshold: {opportunity_execution_pipeline.HIGH_RISK_SCORE_THRESHOLD}')
-"
-```
-
 ---
 
 ## Previous Sessions Reference
 
 | Session | Focus |
 |---------|-------|
+| **798** | Workspace UI Fixes - Auth gating, GitHub URL validation |
 | **797** | Integration Deepening - Gate & Opportunity consultation triggers |
 | **796** | Human-AI Assistant Connection - 3 phases complete |
 | **795** | Reasoning Engine explained, Gate system clarity |
