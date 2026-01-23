@@ -11,7 +11,6 @@ from django.core.paginator import Paginator
 from datetime import datetime
 import json
 import uuid
-from core.models.agents_registry import UnifiedAgentTemplate
 
 User = get_user_model()
 
@@ -19,66 +18,58 @@ User = get_user_model()
 @permission_classes([AllowAny])  # Session 693: Allow public access for Intelligence Command Center
 def list_agents(request):
     """
-    List all available AI agent templates from the database
+    Session 792: Fixed to query from Agent (unified system) which has all 214 agents
+    instead of UnifiedAgentTemplate which was empty.
     """
+    from core.models_unified_system import Agent
+
     page = int(request.GET.get('page', 1))
-    page_size = int(request.GET.get('page_size', 100))  # Increased default to 100
+    page_size = int(request.GET.get('page_size', 250))  # Increased to show all 214
     specialization = request.GET.get('specialization', None)
-    
-    # Get all agents from database
-    queryset = UnifiedAgentTemplate.objects.all()
-    
+
+    # Session 792: Query from Agent model (has 214 agents) instead of UnifiedAgentTemplate (was empty)
+    queryset = Agent.objects.filter(is_active=True)
+
     # Filter by specialization if provided
     if specialization:
-        queryset = queryset.filter(specialization=specialization)
-    
+        queryset = queryset.filter(specialization__icontains=specialization)
+
     # Order by name for consistency
     queryset = queryset.order_by('name')
-    
+
     # Apply pagination
     paginator = Paginator(queryset, page_size)
     page_obj = paginator.get_page(page)
-    
-    # Session 693: Get execution stats for agents
-    from core.models_unified_system import Agent as UnifiedAgent
-    from django.utils import timezone
-    from datetime import timedelta
-
-    today = timezone.now().date()
-
-    # Build a map of agent execution stats
-    agent_stats = {}
-    try:
-        unified_agents = UnifiedAgent.objects.filter(is_active=True)
-        for ua in unified_agents:
-            agent_stats[ua.name] = {
-                'total_executions': ua.total_executions or 0,
-                'last_active': ua.last_active.isoformat() if ua.last_active else None,
-            }
-    except Exception:
-        pass  # If model doesn't exist, skip
 
     # Serialize the agents
     agents_data = []
     for agent in page_obj:
-        stats = agent_stats.get(agent.name, {})
+        # Calculate success rate from execution counts
+        success_rate = 0.9  # Default
+        if agent.total_executions and agent.total_executions > 0:
+            success_rate = (agent.successful_executions or 0) / agent.total_executions
+
         agent_dict = {
             'id': str(agent.id),
             'name': agent.name,
             'description': agent.description or '',
             'specialization': agent.specialization or 'general',
             'capabilities': agent.capabilities or [],
-            'routing_keywords': agent.routing_keywords or [],
-            'success_rate': 0.9,  # Default values for now
+            'routing_keywords': [],  # Not in this model
+            'success_rate': round(success_rate, 2),
             'avg_completion_time': 100.0,
             'created_at': agent.created_at.isoformat() if agent.created_at else datetime.now().isoformat(),
-            'system_prompt': agent.system_prompt or '',
-            'required_tools': agent.required_tools or [],
+            'system_prompt': '',  # Not in this model
+            'required_tools': [],  # Not in this model
             'is_active': agent.is_active,
             # Session 693: Fields for Intelligence Command Center
             'isActive': agent.is_active,
-            'totalExecutions': stats.get('total_executions', 0),
-            'lastActive': stats.get('last_active', None),
+            'totalExecutions': agent.total_executions or 0,
+            'lastActive': agent.last_active.isoformat() if agent.last_active else None,
+            # Session 792: Additional fields
+            'agent_type': agent.agent_type or 'unknown',
+            'effectiveness_score': agent.effectiveness_score or 0,
+            'successful_executions': agent.successful_executions or 0,
         }
         agents_data.append(agent_dict)
 
