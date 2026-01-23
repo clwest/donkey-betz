@@ -246,11 +246,58 @@ class WorkspaceOperationDetailSerializer(serializers.ModelSerializer):
 
 
 class WorkspaceRegisterSerializer(serializers.Serializer):
-    """Serializer for registering new workspace"""
+    """
+    Session 792: Enhanced serializer for registering workspaces.
+    Supports local paths OR GitHub URLs (including private repos with token).
+    """
 
-    path = serializers.CharField(max_length=500, help_text="Absolute path to project root")
-    name = serializers.CharField(max_length=200, required=False, help_text="Display name (auto-detected if not provided)")
-    set_active = serializers.BooleanField(default=True, help_text="Set as active workspace")
+    # Option 1: Local path
+    path = serializers.CharField(
+        max_length=500,
+        required=False,
+        help_text="Absolute path to local project root"
+    )
+
+    # Option 2: GitHub URL
+    github_url = serializers.CharField(
+        max_length=500,
+        required=False,
+        help_text="GitHub URL to clone (e.g., https://github.com/user/repo.git)"
+    )
+    github_token = serializers.CharField(
+        max_length=200,
+        required=False,
+        write_only=True,
+        help_text="GitHub Personal Access Token for private repos (optional)"
+    )
+
+    # Common fields
+    name = serializers.CharField(
+        max_length=200,
+        required=False,
+        help_text="Display name (auto-detected if not provided)"
+    )
+    description = serializers.CharField(
+        max_length=1000,
+        required=False,
+        help_text="Project description"
+    )
+    set_active = serializers.BooleanField(
+        default=True,
+        help_text="Set as active workspace"
+    )
+
+    def validate(self, data):
+        """Ensure either path or github_url is provided"""
+        if not data.get('path') and not data.get('github_url'):
+            raise serializers.ValidationError(
+                "Either 'path' (local) or 'github_url' (GitHub) must be provided"
+            )
+        if data.get('path') and data.get('github_url'):
+            raise serializers.ValidationError(
+                "Provide either 'path' or 'github_url', not both"
+            )
+        return data
 
 
 class WorkspaceUpdateSerializer(serializers.ModelSerializer):
@@ -354,22 +401,117 @@ class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
         return ProjectWorkspaceDetailSerializer
 
     def create(self, request):
-        """Register a new workspace"""
+        """
+        Session 792: Register a new workspace - local path or GitHub URL.
+        Supports private GitHub repos with Personal Access Token.
+        """
+        import subprocess
+        import os
+        import re
+
         serializer = WorkspaceRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        data = serializer.validated_data
         manager = get_workspace_manager(request.user)
 
         try:
-            workspace = manager.register_workspace(
-                root_path=serializer.validated_data['path'],
-                name=serializer.validated_data.get('name'),
-                set_active=serializer.validated_data.get('set_active', True),
-            )
+            # Determine if this is a local path or GitHub clone
+            if data.get('github_url'):
+                github_url = data['github_url']
+                github_token = data.get('github_token')
+
+                # Determine workspace name from URL if not provided
+                name = data.get('name')
+                if not name:
+                    # Extract repo name from URL
+                    match = re.search(r'/([^/]+?)(?:\.git)?$', github_url)
+                    name = match.group(1) if match else 'github-project'
+
+                # Determine clone directory
+                base_dir = os.environ.get('WORKSPACE_BASE_DIR', '/app/workspaces')
+                if not os.path.exists(base_dir):
+                    try:
+                        os.makedirs(base_dir, exist_ok=True)
+                    except Exception:
+                        base_dir = '/tmp/workspaces'
+                        os.makedirs(base_dir, exist_ok=True)
+
+                root_path = os.path.join(base_dir, name)
+
+                # Check if already exists
+                if os.path.exists(root_path):
+                    return Response(
+                        {'error': f'Directory already exists: {root_path}. Choose a different name.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Build clone URL (with token for private repos)
+                clone_url = github_url
+                if github_token:
+                    # Build authenticated URL for git clone
+                    # Token is used transiently, never stored in database
+                    clone_url = self._build_authenticated_clone_url(github_url, github_token)
+
+                # Clone the repository
+                logger.info(f"Cloning {github_url} to {root_path}")
+                result = subprocess.run(
+                    ['git', 'clone', clone_url, root_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=300
+                )
+
+                if result.returncode != 0:
+                    error_msg = result.stderr
+                    # Don't expose the token in error messages
+                    if github_token:
+                        error_msg = error_msg.replace(github_token, '***TOKEN***')
+                    return Response(
+                        {'error': f'Git clone failed: {error_msg}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                logger.info(f"Successfully cloned to {root_path}")
+
+                # Register the workspace with git_remote type
+                workspace = manager.register_workspace(
+                    root_path=root_path,
+                    name=name,
+                    set_active=data.get('set_active', True),
+                )
+
+                # Update with GitHub-specific fields
+                workspace.workspace_type = 'git_remote'
+                workspace.git_remote_url = github_url  # Store original URL (without token)
+                workspace.description = data.get('description', f'Cloned from {github_url}')
+                workspace.save()
+
+            else:
+                # Local path registration
+                workspace = manager.register_workspace(
+                    root_path=data['path'],
+                    name=data.get('name'),
+                    set_active=data.get('set_active', True),
+                )
+                if data.get('description'):
+                    workspace.description = data['description']
+                    workspace.save()
 
             return Response(
                 ProjectWorkspaceDetailSerializer(workspace).data,
                 status=status.HTTP_201_CREATED
+            )
+
+        except subprocess.TimeoutExpired:
+            return Response(
+                {'error': 'Git clone timed out. The repository may be too large.'},
+                status=status.HTTP_408_REQUEST_TIMEOUT
+            )
+        except FileNotFoundError:
+            return Response(
+                {'error': 'Git is not installed on the server.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         except ValueError as e:
             return Response(
@@ -382,6 +524,28 @@ class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
                 {'error': f'Failed to register workspace: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    def _build_authenticated_clone_url(self, github_url: str, token: str) -> str:
+        """
+        Session 792: Build authenticated GitHub clone URL with token.
+
+        For private repos, git clone requires authentication. We insert the token
+        into the URL temporarily for the clone operation only - it's never stored.
+
+        Input: https://github.com/user/repo.git
+        Output: https://TOKEN@github.com/user/repo.git
+        """
+        import re
+        # Match https://github.com/... pattern
+        pattern = r'^(https?://)(github\.com/.+)$'
+        match = re.match(pattern, github_url)
+        if match:
+            protocol = match.group(1)  # "https://"
+            rest = match.group(2)       # "github.com/user/repo.git"
+            # Insert token after protocol
+            return f"{protocol}{token}@{rest}"
+        # If pattern doesn't match, return original (clone will fail with auth error)
+        return github_url
 
     @action(detail=False, methods=['get'])
     def active(self, request):
