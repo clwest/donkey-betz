@@ -233,6 +233,9 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **797** | **Integration Deepening** - Frontend batch actions + consultation triggers. Gate/opportunity consultations for human approval via PA chat. PR #17-21: QuerySet fix, full system scope prompt, batch UI, approve_gate/waive_gate/execute_opportunity handlers. | `SESSION_797_INTEGRATION_DEEPENING.md` |
+| **796** | **Human-AI Assistant Connection** - 3 phases complete. PA surfaces pending decisions, batch_decide/auto_execute/consult actions, consultation response loop with pattern matching. | `SESSION_796_CONTEXT_PRESERVATION.md` |
+| **795** | **Reasoning Engine Explained** - Gate system clarity, reasoning documentation | `SESSION_795_REASONING_ENGINE_EXPLAINED.md` |
 | **784** | **Documentation Index Browser** - Cognitive Build Ledger UI. `build_docs_index` v2.2 with code block filtering, link context (occurrences + snippets), broken links detection. Backend API (4 endpoints), DocsIndexPage with stats dashboard, filterable list, DocDetailsPanel showing cross-references. 1,512 docs, 1,816 links, 100 broken, 50 orphans. | See commits |
 | **783** | **Spider News Feed** - Reddit/Yahoo-style human-facing feed for spider data with agent annotations. New SpiderDataAnnotation model (8 annotation types), 6 API endpoints, BaseAgent._annotate_spider_data() method, SpiderFeedPage frontend (588 lines) with filters, voting, trending section. Agents can flag items as useful/profitable/podcast_worthy/breaking_news/etc. | `SESSION_783_SPIDER_NEWS_FEED.md` |
 | **781** | **Agent Conversation Voice Fixes** - 3-level improvement for repetitive styles. Level 2: 22 role-anchored disagreement styles in CONVERSATION_ROLES. Level 1: Opener de-duplication with tracking. Level 3: Discourse memory tracking 50+ phrases across 5 categories. Eliminates "I'd push back slightly" repetition. | `SESSION_781_AGENT_VOICE_FIXES.md` |
