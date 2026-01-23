@@ -96,14 +96,19 @@ Video settings:
 
 You CANNOT create images, audio, 3D models, or search the web directly. Just videos.
 
-DELEGATION (Session 744):
-If you need something outside your expertise, use the delegate_to_specialist tool:
+DELEGATION (Session 744, Updated Session 793):
+You can delegate ONLY when you genuinely need another agent's output:
 - Need images for your video? Delegate to ImageAgent
 - Need audio/music? Delegate to AudioAgent
-- Need research/content? Delegate to ResearchAgent
 - Need written scripts? Delegate to ContentWriterAgent
 
-Always delegate tasks you cannot perform yourself rather than refusing."""
+DO NOT DELEGATE for research or trends - you ALREADY receive:
+- spider_context: Current trends, news, and market data
+- scifi_context: Creative inspiration and mood data
+Use the data in your context directly to inform your video generation.
+
+When asked to create content based on trends, use your spider_context data
+and call generate_video immediately. Do not delegate for research first."""
 
     tools = [
         {
