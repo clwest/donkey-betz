@@ -451,6 +451,14 @@ class AgentRouter:
         return self._feedback_loop_engine
 
     @property
+    def docs_context_builder(self):
+        """Session 798: Lazy-load Docs context builder for documentation awareness."""
+        if not hasattr(self, '_docs_context_builder') or self._docs_context_builder is None:
+            from core.services.docs_context_builder import get_docs_context_builder
+            self._docs_context_builder = get_docs_context_builder()
+        return self._docs_context_builder
+
+    @property
     def semantic_router(self):
         """Session 488: Lazy-load Semantic routing service."""
         if self._semantic_router is None:
@@ -596,6 +604,7 @@ class AgentRouter:
         feedback_context = self._get_feedback_context(agent_name, task)
         knowledge_context = self._get_knowledge_context(agent_name, task)
         workspace_context = self._get_workspace_context(agent_name, task)  # Session 798
+        docs_context = self._get_docs_context(agent_name, task)  # Session 798
 
         # Merge contexts (same logic as in route())
         if learning_context and learning_context.get('has_patterns'):
@@ -634,6 +643,13 @@ class AgentRouter:
             spider_context['workspace_key_files'] = workspace_context.get('key_files', {})
             spider_context['workspace_directories'] = workspace_context.get('directory_purposes', {})
 
+        # Session 798: Merge docs context into spider context
+        if docs_context and docs_context.get('has_docs'):
+            spider_context['docs'] = docs_context
+            spider_context['docs_summary'] = docs_context.get('summary', '')
+            spider_context['relevant_docs'] = docs_context.get('relevant_docs', [])
+            spider_context['recent_sessions'] = docs_context.get('recent_sessions', [])
+
         return {
             'scifi_context': scifi_context,
             'spider_context': spider_context,
@@ -642,6 +658,7 @@ class AgentRouter:
             'feedback_context': feedback_context,
             'knowledge_context': knowledge_context,
             'workspace_context': workspace_context,  # Session 798
+            'docs_context': docs_context,  # Session 798
             'gathered': True,
         }
 
@@ -698,6 +715,7 @@ class AgentRouter:
             feedback_context = pre_gathered_context.get('feedback_context', {})
             knowledge_context = pre_gathered_context.get('knowledge_context', {})
             workspace_context = pre_gathered_context.get('workspace_context', {})  # Session 798
+            docs_context = pre_gathered_context.get('docs_context', {})  # Session 798
             logger.info(f"Using pre-gathered context for {agent_name} (context gathering done outside timeout)")
         else:
             # Gather context (original behavior)
@@ -714,6 +732,8 @@ class AgentRouter:
             knowledge_context = self._get_knowledge_context(agent_name, task)
             # Session 798: Get workspace context for file operations
             workspace_context = self._get_workspace_context(agent_name, task)
+            # Session 798: Get documentation context for system awareness
+            docs_context = self._get_docs_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -847,6 +867,18 @@ class AgentRouter:
                 f"workspace={workspace_context.get('workspace_name')}"
             )
 
+        # Session 798: Merge docs context into spider context
+        # This gives agents awareness of system documentation and recent sessions
+        if docs_context and docs_context.get('has_docs'):
+            spider_context['docs'] = docs_context
+            spider_context['docs_summary'] = docs_context.get('summary', '')
+            spider_context['relevant_docs'] = docs_context.get('relevant_docs', [])
+            spider_context['recent_sessions'] = docs_context.get('recent_sessions', [])
+            logger.debug(
+                f"📚 [Session 798] Injected docs context into spider_context for {agent_name}: "
+                f"{len(docs_context.get('relevant_docs', []))} docs"
+            )
+
         # Execute the agent with tracking
         start_time = timezone.now()
         execution_record = None
@@ -861,6 +893,7 @@ class AgentRouter:
             'performance_feedback': bool(spider_context.get('performance_feedback')),
             'knowledge_state': bool(spider_context.get('knowledge_state')),
             'workspace': bool(spider_context.get('workspace')),  # Session 798
+            'docs': bool(spider_context.get('docs')),  # Session 798
             'scifi_context': bool(scifi_context),
         }
         logger.info(
@@ -870,6 +903,7 @@ class AgentRouter:
             f"advisor={context_summary['advisor_insights']}, "
             f"feedback={context_summary['performance_feedback']}, "
             f"workspace={context_summary['workspace']}, "  # Session 798
+            f"docs={context_summary['docs']}, "  # Session 798
             f"scifi={context_summary['scifi_context']}"
         )
 
@@ -1236,6 +1270,46 @@ class AgentRouter:
             return workspace_context
         except Exception as e:
             logger.warning(f"Failed to get workspace context: {e}")
+            return {}
+
+    def _get_docs_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 798: Get documentation context for an agent.
+
+        This provides agents with awareness of system documentation:
+        - Relevant architecture docs
+        - Recent session handoffs
+        - Agent capabilities docs
+        - Database model references
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Dict with documentation context, or empty dict if unavailable
+        """
+        try:
+            docs_context = self.docs_context_builder.build_context_for_agent(
+                agent_name=agent_name,
+                task=task,
+                max_docs=10,
+                include_recent_sessions=True,
+                include_content_snippets=False  # Keep context size manageable
+            )
+
+            if docs_context.get('has_docs'):
+                logger.debug(
+                    f"📚 [Session 798] Docs context for {agent_name}: "
+                    f"{len(docs_context.get('relevant_docs', []))} relevant docs, "
+                    f"{len(docs_context.get('recent_sessions', []))} recent sessions"
+                )
+            else:
+                logger.debug(f"📚 [Session 798] No docs context for {agent_name}")
+
+            return docs_context
+        except Exception as e:
+            logger.warning(f"Failed to get docs context: {e}")
             return {}
 
     def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None):

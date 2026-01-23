@@ -3470,6 +3470,354 @@ Consider this current data when formulating your response."""
 
         return result
 
+    # =========================================================================
+    # Documentation Tools (Session 798)
+    # =========================================================================
+    # These methods allow agents to read, write, and maintain the /docs/ system.
+    # Agents can create session handoffs, update documentation, and regenerate
+    # the docs index to keep the system's knowledge base current.
+
+    def _read_doc(self, doc_path: str) -> Dict[str, Any]:
+        """
+        Session 798: Read a documentation file from the docs directory.
+
+        Args:
+            doc_path: Path relative to project root (e.g., 'docs/ARCHITECTURE.md')
+
+        Returns:
+            Dict with 'success', 'content', and 'metadata'
+        """
+        from pathlib import Path
+        from django.conf import settings
+
+        try:
+            full_path = Path(settings.BASE_DIR) / doc_path
+
+            if not full_path.exists():
+                return {
+                    'success': False,
+                    'error': f"Document not found: {doc_path}",
+                    'content': None,
+                }
+
+            # Security check: ensure path is within docs directory
+            docs_root = Path(settings.BASE_DIR) / 'docs'
+            if not str(full_path.resolve()).startswith(str(docs_root.resolve())):
+                # Allow CLAUDE.md and 00-START-NEXT-SESSION.md at root
+                allowed_root_files = ['CLAUDE.md', '00-START-NEXT-SESSION.md']
+                if full_path.name not in allowed_root_files:
+                    return {
+                        'success': False,
+                        'error': f"Access denied: {doc_path} is outside docs directory",
+                        'content': None,
+                    }
+
+            content = full_path.read_text(encoding='utf-8')
+
+            logger.info(f"📖 [Session 798] {self.name} read doc: {doc_path}")
+
+            return {
+                'success': True,
+                'content': content,
+                'path': doc_path,
+                'size': len(content),
+                'lines': content.count('\n') + 1,
+            }
+
+        except Exception as e:
+            logger.error(f"📖 [Session 798] {self.name} failed to read doc {doc_path}: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'content': None,
+            }
+
+    def _write_doc(self, doc_path: str, content: str, create_backup: bool = True) -> Dict[str, Any]:
+        """
+        Session 798: Write or update a documentation file.
+
+        Args:
+            doc_path: Path relative to project root (e.g., 'docs/handoffs/SESSION_798_EXAMPLE.md')
+            content: The markdown content to write
+            create_backup: If True, backup existing file before overwriting
+
+        Returns:
+            Dict with 'success', 'path', and operation details
+        """
+        from pathlib import Path
+        from datetime import datetime
+        from django.conf import settings
+
+        try:
+            full_path = Path(settings.BASE_DIR) / doc_path
+
+            # Security check: only allow writing to docs/ directory
+            docs_root = Path(settings.BASE_DIR) / 'docs'
+            if not str(full_path.resolve()).startswith(str(docs_root.resolve())):
+                # Allow updating 00-START-NEXT-SESSION.md at root
+                if full_path.name != '00-START-NEXT-SESSION.md':
+                    return {
+                        'success': False,
+                        'error': f"Access denied: Can only write to docs/ directory",
+                        'path': doc_path,
+                    }
+
+            # Ensure parent directory exists
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Backup existing file if requested
+            backup_path = None
+            if create_backup and full_path.exists():
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                backup_path = full_path.with_suffix(f'.backup_{timestamp}.md')
+                backup_path.write_text(full_path.read_text(encoding='utf-8'), encoding='utf-8')
+
+            # Write the new content
+            full_path.write_text(content, encoding='utf-8')
+
+            logger.info(f"📝 [Session 798] {self.name} wrote doc: {doc_path}")
+
+            return {
+                'success': True,
+                'path': doc_path,
+                'size': len(content),
+                'lines': content.count('\n') + 1,
+                'backup_created': backup_path is not None,
+                'backup_path': str(backup_path) if backup_path else None,
+            }
+
+        except Exception as e:
+            logger.error(f"📝 [Session 798] {self.name} failed to write doc {doc_path}: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'path': doc_path,
+            }
+
+    def _create_session_handoff(
+        self,
+        session_num: int,
+        title: str,
+        content: str,
+        update_start_file: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Session 798: Create a session handoff document.
+
+        This is a convenience method for creating standardized session handoff files.
+
+        Args:
+            session_num: The session number (e.g., 798)
+            title: Short title for the session (e.g., "Docs Integration")
+            content: The markdown content for the handoff
+            update_start_file: If True, also update 00-START-NEXT-SESSION.md
+
+        Returns:
+            Dict with 'success' and created file paths
+        """
+        from datetime import datetime
+
+        try:
+            # Create handoff filename
+            safe_title = title.upper().replace(' ', '_').replace('-', '_')
+            filename = f"SESSION_{session_num}_{safe_title}.md"
+            doc_path = f"docs/handoffs/{filename}"
+
+            # Add standard header if not present
+            if not content.startswith('# Session'):
+                header = f"""# Session {session_num} - {title}
+
+**Date:** {datetime.now().strftime('%B %d, %Y')}
+**Focus:** {title}
+**Status:** IN PROGRESS
+
+---
+
+"""
+                content = header + content
+
+            # Write the handoff document
+            write_result = self._write_doc(doc_path, content, create_backup=False)
+
+            if not write_result['success']:
+                return write_result
+
+            result = {
+                'success': True,
+                'handoff_path': doc_path,
+                'session': session_num,
+                'title': title,
+            }
+
+            # Optionally update the start file
+            if update_start_file:
+                start_update = self._update_start_next_session(session_num, title)
+                result['start_file_updated'] = start_update.get('success', False)
+
+            logger.info(f"📋 [Session 798] {self.name} created handoff: {doc_path}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"📋 [Session 798] {self.name} failed to create handoff: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+            }
+
+    def _update_start_next_session(self, session_num: int, focus: str) -> Dict[str, Any]:
+        """
+        Session 798: Update 00-START-NEXT-SESSION.md with current session info.
+
+        Args:
+            session_num: Current session number
+            focus: Short description of session focus
+
+        Returns:
+            Dict with 'success' and update details
+        """
+        from datetime import datetime
+        from pathlib import Path
+        from django.conf import settings
+
+        try:
+            start_file = Path(settings.BASE_DIR) / '00-START-NEXT-SESSION.md'
+
+            if not start_file.exists():
+                return {
+                    'success': False,
+                    'error': '00-START-NEXT-SESSION.md not found',
+                }
+
+            content = start_file.read_text(encoding='utf-8')
+
+            # Update the session number in the header
+            import re
+
+            # Update "# Session XXX" pattern
+            content = re.sub(
+                r'# Session \d+',
+                f'# Session {session_num}',
+                content,
+                count=1
+            )
+
+            # Update date if present
+            today = datetime.now().strftime('%B %d, %Y')
+            content = re.sub(
+                r'\*\*Date:\*\* .+',
+                f'**Date:** {today}',
+                content,
+                count=1
+            )
+
+            start_file.write_text(content, encoding='utf-8')
+
+            logger.info(f"📄 [Session 798] Updated 00-START-NEXT-SESSION.md for Session {session_num}")
+
+            return {
+                'success': True,
+                'session': session_num,
+                'focus': focus,
+            }
+
+        except Exception as e:
+            logger.error(f"📄 [Session 798] Failed to update start file: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+            }
+
+    def _regenerate_docs_index(self) -> Dict[str, Any]:
+        """
+        Session 798: Regenerate the docs index by running the build_docs_index command.
+
+        This should be called after creating or modifying documentation to keep
+        the index current.
+
+        Returns:
+            Dict with 'success' and command output
+        """
+        import subprocess
+        from pathlib import Path
+        from django.conf import settings
+
+        try:
+            # Run the management command
+            result = subprocess.run(
+                ['.venv/bin/python', 'manage.py', 'build_docs_index'],
+                cwd=str(Path(settings.BASE_DIR)),
+                capture_output=True,
+                text=True,
+                timeout=120,  # 2 minute timeout
+            )
+
+            success = result.returncode == 0
+
+            if success:
+                logger.info(f"🔄 [Session 798] {self.name} regenerated docs index")
+            else:
+                logger.warning(f"🔄 [Session 798] {self.name} docs index regeneration had issues: {result.stderr}")
+
+            return {
+                'success': success,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'return_code': result.returncode,
+            }
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"🔄 [Session 798] Docs index regeneration timed out")
+            return {
+                'success': False,
+                'error': 'Command timed out after 120 seconds',
+            }
+        except Exception as e:
+            logger.error(f"🔄 [Session 798] Failed to regenerate docs index: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+            }
+
+    def _get_docs_for_task(self, task: str, max_docs: int = 5) -> Dict[str, Any]:
+        """
+        Session 798: Get relevant documentation for the current task.
+
+        This method uses the DocsContextBuilder to find relevant docs
+        based on the agent's type and the task at hand.
+
+        Args:
+            task: Description of the current task
+            max_docs: Maximum number of docs to return
+
+        Returns:
+            Dict with relevant documentation context
+        """
+        try:
+            from core.services.docs_context_builder import get_docs_context_builder
+
+            builder = get_docs_context_builder()
+            context = builder.build_context_for_agent(
+                agent_name=self.name,
+                task=task,
+                max_docs=max_docs,
+                include_recent_sessions=True,
+                include_content_snippets=True,
+            )
+
+            logger.debug(f"📚 [Session 798] {self.name} retrieved {len(context.get('relevant_docs', []))} docs for task")
+
+            return context
+
+        except Exception as e:
+            logger.warning(f"📚 [Session 798] {self.name} failed to get docs context: {e}")
+            return {
+                'has_docs': False,
+                'relevant_docs': [],
+                'recent_sessions': [],
+                'summary': f'Documentation context unavailable: {str(e)}',
+            }
+
 
 class _NullProgressTracker:
     """
