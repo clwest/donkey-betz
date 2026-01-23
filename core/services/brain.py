@@ -212,9 +212,10 @@ class BrainService:
         return vitals
 
     def get_history(self, hours: int = 24, limit: int = 100) -> List[Dict]:
-        """Get brain pulse history."""
+        """Get brain pulse history (returns empty if table doesn't exist)."""
         try:
             from core.models_brain import BrainPulse
+            from django.db.utils import ProgrammingError, OperationalError
 
             since = timezone.now() - timedelta(hours=hours)
             pulses = BrainPulse.objects.filter(
@@ -236,6 +237,9 @@ class BrainService:
                 }
                 for p in pulses
             ]
+        except (ProgrammingError, OperationalError):
+            # Table doesn't exist - return empty history
+            return []
         except Exception as e:
             logger.error(f"Failed to get brain history: {e}")
             return []
@@ -594,9 +598,10 @@ class BrainService:
             return 'disconnected'
 
     def _save_pulse(self, result: Dict) -> None:
-        """Save brain pulse record to database."""
+        """Save brain pulse record to database (optional - fails silently if table missing)."""
         try:
             from core.models_brain import BrainPulse
+            from django.db.utils import ProgrammingError, OperationalError
 
             pulse = BrainPulse.objects.create(
                 overall_status=result.get('overall_status', 'unknown'),
@@ -644,5 +649,11 @@ class BrainService:
 
             self._last_pulse_id = pulse.id
 
+        except (ProgrammingError, OperationalError) as e:
+            # Table doesn't exist - this is expected if migrations haven't run
+            # Log once at debug level to avoid log spam
+            if not getattr(self, '_pulse_table_warning_logged', False):
+                logger.debug(f"BrainPulse table not available (skipping pulse save): {e}")
+                self._pulse_table_warning_logged = True
         except Exception as e:
             logger.error(f"Failed to save brain pulse: {e}")
