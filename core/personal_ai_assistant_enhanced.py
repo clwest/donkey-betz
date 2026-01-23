@@ -7337,6 +7337,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         if proactive_intelligence_section:
             system_prompt = system_prompt + proactive_intelligence_section
 
+        # Session 796: Inject Pending Human Decisions context
+        pending_decisions_section = self._build_pending_decisions_section()
+        if pending_decisions_section:
+            system_prompt = system_prompt + pending_decisions_section
+
         # Call the LLM Enforcer for real AI response with tool calling support
         try:
             logger.debug(f"Starting LLM call for message: {message[:50]}...")
@@ -7686,6 +7691,62 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         except Exception as e:
             logger.warning(f"⚠️ Proactive intelligence injection failed: {e}")
+            return ""
+
+    def _build_pending_decisions_section(self) -> str:
+        """
+        Session 796: Build pending human decisions section for system prompt.
+
+        This injects pending decisions that need human attention into the GPT prompt,
+        making the PA aware of items requiring approval, review, or action.
+
+        Returns:
+            Formatted string section to append to system prompt
+        """
+        try:
+            from core.models_human_interface import HumanAttentionItem
+
+            # Get base queryset for counting (before slicing to avoid Django error)
+            base_query = HumanAttentionItem.objects.filter(
+                user=self.user,
+                status__in=['pending', 'viewed']
+            )
+
+            count = base_query.count()
+            if count == 0:
+                return ""
+
+            critical = base_query.filter(urgency='critical').count()
+            high = base_query.filter(urgency='high').count()
+
+            # Now get the sliced list for display
+            pending_items = base_query.order_by('-priority_score', '-created_at')[:10]
+
+            sections = ["\n\n--- PENDING HUMAN DECISIONS (Session 796) ---"]
+            sections.append(f"⚠️ {count} item(s) need the user's attention")
+            if critical > 0:
+                sections.append(f"  🚨 {critical} CRITICAL priority")
+            if high > 0:
+                sections.append(f"  ⚠️ {high} HIGH priority")
+
+            sections.append("\nTop items requiring action:")
+            for i, item in enumerate(pending_items[:5], 1):
+                urgency_emoji = {
+                    'critical': '🚨',
+                    'high': '⚠️',
+                    'medium': '📋',
+                    'low': 'ℹ️'
+                }.get(item.urgency, '📋')
+                sections.append(f"  {i}. {urgency_emoji} [{item.item_type}] {item.title[:60]}")
+
+            sections.append("\n💡 IMPORTANT: When greeting or asked about system status, PROACTIVELY mention these pending items.")
+            sections.append("   Use the human_decisions_tool to show details or help the user decide.")
+
+            logger.info(f"📋 Session 796: Injected {count} pending decisions into prompt")
+            return "\n".join(sections)
+
+        except Exception as e:
+            logger.warning(f"⚠️ Pending decisions injection failed: {e}")
             return ""
 
     def _build_spider_intelligence_section(self, aggregated_context, classification) -> str:
