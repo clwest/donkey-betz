@@ -154,6 +154,15 @@ app.conf.beat_schedule = {
             'expires': 21600,
         }
     },
+    # Session 794: Self-Blog Generation - was in settings.py but overwritten by celery.py
+    # Generates AI blog posts about the platform using ContentWriterAgent
+    'generate-self-blog': {
+        'task': 'core.tasks.generate_self_blog_task',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours at :00
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system
     'evaluate-completed-predictions': {
