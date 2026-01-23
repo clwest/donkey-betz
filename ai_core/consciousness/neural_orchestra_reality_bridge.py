@@ -93,6 +93,7 @@ class NeuralOrchestraRealityBridge:
         """
         Session 145: Get REAL agent statistics from AgentContribution database.
         This replaces mock data with actual tracking from Session 144!
+        Session 792: Falls back to AgentExecution when AgentContribution is empty.
         """
         now = timezone.now()
         last_24h = now - timedelta(hours=24)
@@ -103,7 +104,6 @@ class NeuralOrchestraRealityBridge:
         total_agents = Agent.objects.filter(is_active=True).count()
 
         # Session 719: Use AgentExecution for active counts (has recent data)
-        # AgentContribution has no recent data, AgentExecution has 30 executions in 24h
         active_agents_24h = AgentExecution.objects.filter(
             created_at__gte=last_24h
         ).values('agent').distinct().count()
@@ -113,26 +113,50 @@ class NeuralOrchestraRealityBridge:
             created_at__gte=last_hour
         ).values('agent').distinct().count()
 
-        # Total contributions
+        # Total contributions from AgentContribution
         total_contributions = AgentContribution.objects.count()
         contributions_24h = AgentContribution.objects.filter(created_at__gte=last_24h).count()
 
-        # Contribution types breakdown
-        contribution_breakdown = AgentContribution.objects.values('contribution_type').annotate(
-            count=Count('id')
-        ).order_by('-count')
+        # Session 792: If no AgentContribution data, use AgentExecution as fallback
+        if total_contributions == 0:
+            total_contributions = AgentExecution.objects.count()
+            contributions_24h = AgentExecution.objects.filter(created_at__gte=last_24h).count()
 
-        # Top performing agents (by contribution count)
-        top_agents = AgentContribution.objects.values(
-            'agent__name', 'agent__display_name'
-        ).annotate(
-            contribution_count=Count('id')
-        ).order_by('-contribution_count')[:10]
+            # Contribution types breakdown from executions
+            contribution_breakdown = AgentExecution.objects.values('status').annotate(
+                count=Count('id')
+            ).order_by('-count')
 
-        # Agent collaborations (projects with multiple agent contributions)
-        collaborations = AgentContribution.objects.values('project').annotate(
-            agent_count=Count('agent', distinct=True)
-        ).filter(agent_count__gte=2).count()
+            # Top performing agents (by execution count)
+            top_agents = AgentExecution.objects.values(
+                'agent__name'
+            ).annotate(
+                contribution_count=Count('id')
+            ).order_by('-contribution_count')[:10]
+
+            # Format top_agents to match expected structure
+            top_agents = [
+                {'agent__name': a['agent__name'], 'agent__display_name': a['agent__name'], 'contribution_count': a['contribution_count']}
+                for a in top_agents
+            ]
+
+            # No collaboration data from executions
+            collaborations = 0
+        else:
+            # Use AgentContribution data
+            contribution_breakdown = AgentContribution.objects.values('contribution_type').annotate(
+                count=Count('id')
+            ).order_by('-count')
+
+            top_agents = AgentContribution.objects.values(
+                'agent__name', 'agent__display_name'
+            ).annotate(
+                contribution_count=Count('id')
+            ).order_by('-contribution_count')[:10]
+
+            collaborations = AgentContribution.objects.values('project').annotate(
+                agent_count=Count('agent', distinct=True)
+            ).filter(agent_count__gte=2).count()
 
         return {
             'total_agents': total_agents,
@@ -141,7 +165,7 @@ class NeuralOrchestraRealityBridge:
             'total_contributions': total_contributions,
             'contributions_24h': contributions_24h,
             'contribution_breakdown': list(contribution_breakdown),
-            'top_agents': list(top_agents),
+            'top_agents': list(top_agents) if not isinstance(top_agents, list) else top_agents,
             'collaborations': collaborations,
             'tracking_rate': f"{(total_contributions / max(ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count(), 1) * 100):.1f}%"
         }
@@ -162,65 +186,117 @@ class NeuralOrchestraRealityBridge:
         Session 145: Get real-time agent activity feed from AgentContribution records.
         Shows actual recent agent work!
         Session 752: Added image_url for thumbnails
+        Session 792: Falls back to AgentExecution when AgentContribution is empty
         """
+        activity_feed = []
+
+        # Try AgentContribution first (more detailed)
         recent_contributions = AgentContribution.objects.select_related(
             'agent', 'project', 'image', 'video', 'minifig_asset'
         ).order_by('-created_at')[:limit]
 
-        activity_feed = []
-        for contrib in recent_contributions:
-            # Determine content type and get thumbnail URL
-            content_type = None
-            content_id = None
-            image_url = None
-            thumbnail_url = None
+        if recent_contributions.exists():
+            for contrib in recent_contributions:
+                # Determine content type and get thumbnail URL
+                content_type = None
+                content_id = None
+                image_url = None
+                thumbnail_url = None
 
-            if contrib.image:
-                content_type = 'Image'
-                content_id = contrib.image.id
-                # Session 752: Get image URL for thumbnail display
-                image_url = self._get_media_url(contrib.image.file_path)
-                if contrib.image.thumbnail:
-                    thumbnail_url = self._get_media_url(contrib.image.thumbnail)
-            elif contrib.video:
-                content_type = 'Video'
-                content_id = contrib.video.id
-                # Videos may have thumbnail
-                if hasattr(contrib.video, 'thumbnail') and contrib.video.thumbnail:
-                    thumbnail_url = self._get_media_url(str(contrib.video.thumbnail))
-            elif contrib.minifig_asset:
-                content_type = '3D Model'
-                content_id = contrib.minifig_asset.id
-            else:
-                # Session 758: Infer content type from agent name for non-visual contributions
-                agent_name = (contrib.agent.display_name or contrib.agent.name or '').lower()
-                if any(kw in agent_name for kw in ['research', 'analysis', 'analyst']):
-                    content_type = 'Research'
-                elif any(kw in agent_name for kw in ['strategy', 'brand', 'marketing']):
-                    content_type = 'Strategy'
-                elif any(kw in agent_name for kw in ['code', 'developer', 'devops']):
-                    content_type = 'Code'
-                elif any(kw in agent_name for kw in ['content', 'writer', 'writing']):
-                    content_type = 'Content'
-                elif any(kw in agent_name for kw in ['audio', 'voice', 'podcast']):
-                    content_type = 'Audio'
+                if contrib.image:
+                    content_type = 'Image'
+                    content_id = contrib.image.id
+                    # Session 752: Get image URL for thumbnail display
+                    image_url = self._get_media_url(contrib.image.file_path)
+                    if contrib.image.thumbnail:
+                        thumbnail_url = self._get_media_url(contrib.image.thumbnail)
+                elif contrib.video:
+                    content_type = 'Video'
+                    content_id = contrib.video.id
+                    # Videos may have thumbnail
+                    if hasattr(contrib.video, 'thumbnail') and contrib.video.thumbnail:
+                        thumbnail_url = self._get_media_url(str(contrib.video.thumbnail))
+                elif contrib.minifig_asset:
+                    content_type = '3D Model'
+                    content_id = contrib.minifig_asset.id
                 else:
-                    content_type = 'Task'  # Generic fallback
+                    # Session 758: Infer content type from agent name for non-visual contributions
+                    agent_name = (contrib.agent.display_name or contrib.agent.name or '').lower()
+                    if any(kw in agent_name for kw in ['research', 'analysis', 'analyst']):
+                        content_type = 'Research'
+                    elif any(kw in agent_name for kw in ['strategy', 'brand', 'marketing']):
+                        content_type = 'Strategy'
+                    elif any(kw in agent_name for kw in ['code', 'developer', 'devops']):
+                        content_type = 'Code'
+                    elif any(kw in agent_name for kw in ['content', 'writer', 'writing']):
+                        content_type = 'Content'
+                    elif any(kw in agent_name for kw in ['audio', 'voice', 'podcast']):
+                        content_type = 'Audio'
+                    else:
+                        content_type = 'Task'  # Generic fallback
 
-            activity_feed.append({
-                'id': str(contrib.id),
-                'timestamp': contrib.created_at,
-                'agent_name': contrib.agent.display_name or contrib.agent.name,
-                'agent_id': contrib.agent.id,
-                'contribution_type': contrib.contribution_type,
-                'content_type': content_type,
-                'content_id': content_id,
-                'image_url': image_url,  # Session 752: Full image URL
-                'thumbnail_url': thumbnail_url or image_url,  # Session 752: Thumbnail or fallback to full
-                'project_name': contrib.project.name if contrib.project else 'General',  # Session 758: Better fallback
-                'task_description': contrib.task_description,
-                'confidence': contrib.contribution_percentage / 100.0
-            })
+                activity_feed.append({
+                    'id': str(contrib.id),
+                    'timestamp': contrib.created_at,
+                    'agent_name': contrib.agent.display_name or contrib.agent.name,
+                    'agent_id': contrib.agent.id,
+                    'contribution_type': contrib.contribution_type,
+                    'content_type': content_type,
+                    'content_id': content_id,
+                    'image_url': image_url,  # Session 752: Full image URL
+                    'thumbnail_url': thumbnail_url or image_url,  # Session 752: Thumbnail or fallback to full
+                    'project_name': contrib.project.name if contrib.project else 'General',  # Session 758: Better fallback
+                    'task_description': contrib.task_description,
+                    'confidence': contrib.contribution_percentage / 100.0
+                })
+        else:
+            # Session 792: Fallback to AgentExecution when no AgentContribution data
+            try:
+                from core.models_unified_system import AgentExecution
+                recent_executions = AgentExecution.objects.select_related('agent').order_by('-created_at')[:limit]
+
+                for exec in recent_executions:
+                    # Infer content type from agent name
+                    agent_name = (exec.agent.name or '').lower() if exec.agent else ''
+                    if any(kw in agent_name for kw in ['image', 'visual', 'design']):
+                        content_type = 'Image'
+                    elif any(kw in agent_name for kw in ['video', 'media']):
+                        content_type = 'Video'
+                    elif any(kw in agent_name for kw in ['research', 'analysis', 'analyst']):
+                        content_type = 'Research'
+                    elif any(kw in agent_name for kw in ['strategy', 'brand', 'marketing']):
+                        content_type = 'Strategy'
+                    elif any(kw in agent_name for kw in ['code', 'developer', 'devops']):
+                        content_type = 'Code'
+                    elif any(kw in agent_name for kw in ['content', 'writer', 'writing']):
+                        content_type = 'Content'
+                    else:
+                        content_type = 'Task'
+
+                    # Determine contribution type from status
+                    if exec.status == 'completed':
+                        contribution_type = 'execution'
+                    elif exec.status == 'failed':
+                        contribution_type = 'error'
+                    else:
+                        contribution_type = 'processing'
+
+                    activity_feed.append({
+                        'id': str(exec.id),
+                        'timestamp': exec.created_at,
+                        'agent_name': exec.agent.name if exec.agent else 'Unknown Agent',
+                        'agent_id': str(exec.agent.id) if exec.agent else None,
+                        'contribution_type': contribution_type,
+                        'content_type': content_type,
+                        'content_id': None,
+                        'image_url': None,
+                        'thumbnail_url': None,
+                        'project_name': 'System Execution',
+                        'task_description': exec.task or f"Agent execution ({exec.status})",
+                        'confidence': 1.0 if exec.status == 'completed' else 0.5
+                    })
+            except Exception:
+                pass  # Return empty if fallback also fails
 
         return activity_feed
 
