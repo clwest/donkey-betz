@@ -458,3 +458,15 @@ system_events_patterns = [
 ]
 
 websocket_urlpatterns.extend(system_events_patterns)
+
+# Session 794: Agent Collaboration Monitor WebSocket - Real-time collaboration tracking
+from .consumers_agent_collaboration import AgentCollaborationMonitorConsumer
+
+agent_collaboration_patterns = [
+    # Agent collaboration monitor WebSocket - live collaboration updates for all 213 agents
+    re_path(r'^ws/agent-collaboration/$', AgentCollaborationMonitorConsumer.as_asgi()),
+    re_path(r'^ws/agent-collab-monitor/$', AgentCollaborationMonitorConsumer.as_asgi()),
+    re_path(r'^ws/collaboration-monitor/$', AgentCollaborationMonitorConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(agent_collaboration_patterns)
