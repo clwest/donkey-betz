@@ -1,4 +1,4 @@
-# Session 798 - Workspace UI Fixes
+# Session 798 - Workspace System Enhancements
 
 **Previous Session:** 797 (Integration Deepening - Consultation Triggers)
 **Date:** January 23, 2026
@@ -9,7 +9,7 @@
 ## SESSION 798 IN PROGRESS
 
 ### Overview
-Fixing production issues with the Workspace UI page.
+Fixing production issues with Workspace UI and adding automatic workspace context injection to agents.
 
 ### PRs Merged This Session
 
@@ -17,6 +17,8 @@ Fixing production issues with the Workspace UI page.
 |----|-------|-------------|
 | #25 | Auth Gating for WorkspacePage | Added `enabled: isAuthenticated` to React Query hooks to prevent 404 errors |
 | #26 | GitHub URL Validation | Added `validate_github_url()` to prevent Internal Server Error on invalid URLs |
+| #27 | Documentation Update | Updated session start file |
+| #28 | Workspace Context Injection | Auto-inject workspace context into agent execution via AgentRouter |
 
 ### Key Changes
 
@@ -31,12 +33,48 @@ Fixing production issues with the Workspace UI page.
 - Auto-prepends `https://` when user enters `github.com/...`
 - Returns clear error message instead of Internal Server Error
 
+**Workspace Context Injection (PR #28)**
+- Added `_get_workspace_context()` method to `AgentRouter`
+- Workspace context now auto-injected into `spider_context` for all agents
+- Agents automatically receive:
+  - `workspace_name`, `workspace_tech_stack`, `workspace_key_files`
+  - `workspace_directories`, `coding_patterns`, `import_aliases`
+- Updated context_summary logging to track workspace injection
+
 ### Files Modified
 
 | File | Changes |
 |------|---------|
 | `frontend/src/pages/WorkspacePage.tsx` | +auth gating for API queries |
 | `core/views_workspace_api.py` | +validate_github_url() method |
+| `core/agent_router.py` | +_get_workspace_context(), context merging, logging |
+
+---
+
+## WORKSPACE CONTEXT INJECTION FLOW
+
+```
+User registers workspace → WorkspaceScanner detects structure
+        ↓
+Agent execution triggered → AgentRouter.route()
+        ↓
+_get_workspace_context() called → WorkspaceManager.get_workspace_context_for_agent()
+        ↓
+Context merged into spider_context → Agent receives workspace info
+        ↓
+Agent knows where to put generated files (tech stack, key files, directories)
+```
+
+**What agents now receive via spider_context:**
+```python
+spider_context['workspace'] = {
+    'has_workspace': True,
+    'workspace_name': 'my-project',
+    'tech_stack': {'frontend': 'react', 'backend': 'django'},
+    'key_files': {'routes': 'src/routes.tsx', 'models': 'core/models.py'},
+    'directory_purposes': {'components': 'UI components', 'pages': 'Route pages'},
+}
+```
 
 ---
 
@@ -49,10 +87,9 @@ Fixing production issues with the Workspace UI page.
    - Test GitHub URL validation error message
    - Test successful GitHub repo clone
 
-2. **Potential Enhancements**
-   - Better error display in UI for clone failures
-   - Progress indicator during clone operation
-   - Token validation (test if token has required scopes)
+2. **Test Workspace Context Injection**
+   - Execute agent with active workspace
+   - Verify context appears in logs
 
 ---
 
@@ -68,19 +105,10 @@ curl -X POST http://localhost:8000/api/workspaces/ \
 # Should return: {"github_url": ["Invalid GitHub URL..."]}
 ```
 
-### Test Consultation Flow
+### Test Workspace Context Injection
 ```bash
-.venv/bin/python manage.py shell -c "
-from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-from django.contrib.auth import get_user_model
-User = get_user_model()
-user = User.objects.first()
-pa = EnhancedPersonalAIAssistant(user=user)
-
-# List pending decisions
-result = pa._handle_human_decisions_tool({'action': 'list'})
-print(f'Pending: {result.get(\"count\", 0)} items')
-"
+# Check agent logs for workspace context
+# Look for: "📁 [Session 798] Workspace context for AgentName: workspace=..."
 ```
 
 ---
@@ -89,7 +117,7 @@ print(f'Pending: {result.get(\"count\", 0)} items')
 
 | Session | Focus |
 |---------|-------|
-| **798** | Workspace UI Fixes - Auth gating, GitHub URL validation |
+| **798** | Workspace Enhancements - Auth gating, URL validation, context injection |
 | **797** | Integration Deepening - Gate & Opportunity consultation triggers |
 | **796** | Human-AI Assistant Connection - 3 phases complete |
 | **795** | Reasoning Engine explained, Gate system clarity |
