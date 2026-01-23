@@ -282,34 +282,54 @@ class Command(BaseCommand):
         if dry_run:
             return 20
 
-        from core.models_unified_system import Agent, KnowledgeTransfer, AgentLearningConnection
+        from core.models_unified_system import KnowledgeTransfer, AgentLearningConnection, AgentKnowledgeSource
 
-        # Get existing learning connections
-        connections = AgentLearningConnection.objects.filter(is_active=True)[:30]
+        # Get existing learning connections that have knowledge sources
+        connections = AgentLearningConnection.objects.filter(
+            is_active=True
+        ).select_related('teacher_agent', 'student_agent')[:30]
 
         if not connections:
             self.stdout.write(self.style.WARNING("  No learning connections found!"))
             return 0
 
         created = 0
-        now = timezone.now()
 
         for conn in connections:
-            # Create a transfer record
             try:
-                transfer, was_created = KnowledgeTransfer.objects.get_or_create(
-                    teacher_agent=conn.teacher_agent,
-                    student_agent=conn.student_agent,
-                    knowledge_type=conn.learning_type or 'collaborative',
+                # Get or create a knowledge source for the teacher
+                knowledge_source, _ = AgentKnowledgeSource.objects.get_or_create(
+                    agent=conn.teacher_agent,
+                    source_type='seeded_bootstrap',
                     defaults={
-                        'content': f"Knowledge transfer from {conn.teacher_agent.name} to {conn.student_agent.name}",
-                        'effectiveness_score': random.uniform(0.6, 0.95),
-                        'transfer_date': now - timedelta(days=random.randint(0, 7)),
-                        'is_applied': True,
+                        'source_name': f"Bootstrap knowledge from {conn.teacher_agent.name}",
+                        'description': f"Seeded knowledge for learning system bootstrap",
+                        'relevance_score': random.uniform(0.7, 0.95),
+                        'freshness_score': random.uniform(0.8, 1.0),
+                        'is_active': True,
                     }
                 )
-                if was_created:
-                    created += 1
+
+                # Create a transfer record using actual model fields
+                transfer = KnowledgeTransfer.objects.create(
+                    connection=conn,
+                    source_knowledge=knowledge_source,
+                    transfer_summary=f"Knowledge transfer from {conn.teacher_agent.name} to {conn.student_agent.name}",
+                    key_points=[
+                        f"Learned {conn.learning_type or 'collaborative'} techniques",
+                        "Shared best practices",
+                        "Pattern recognition improvements",
+                    ],
+                    was_useful=True,
+                    usefulness_score=random.uniform(0.6, 0.95),
+                    was_applied=True,
+                    application_result={
+                        'seeded': True,
+                        'session': 791,
+                    }
+                )
+                created += 1
+
             except Exception as e:
                 self.stdout.write(f"  Skip: {str(e)[:50]}")
                 continue
