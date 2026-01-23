@@ -7342,6 +7342,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         if pending_decisions_section:
             system_prompt = system_prompt + pending_decisions_section
 
+        # Session 798: Inject Active Workspace context
+        workspace_context_section = self._build_workspace_context_section()
+        if workspace_context_section:
+            system_prompt = system_prompt + workspace_context_section
+
         # Call the LLM Enforcer for real AI response with tool calling support
         try:
             logger.debug(f"Starting LLM call for message: {message[:50]}...")
@@ -7747,6 +7752,93 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         except Exception as e:
             logger.warning(f"⚠️ Pending decisions injection failed: {e}")
+            return ""
+
+    def _build_workspace_context_section(self) -> str:
+        """
+        Session 798: Build workspace context section for system prompt.
+
+        This injects the user's active workspace information into the GPT prompt,
+        making the PA aware of the project structure, tech stack, key files,
+        and directory purposes so it can provide contextual assistance.
+
+        Returns:
+            Formatted string section to append to system prompt
+        """
+        try:
+            from core.services.workspace_manager import WorkspaceManager
+            from core.models_skin_layer import ProjectWorkspace
+
+            manager = WorkspaceManager(self.user)
+            workspace = manager.get_active_workspace()
+
+            if not workspace:
+                return ""
+
+            sections = ["\n\n--- ACTIVE WORKSPACE CONTEXT (Session 798) ---"]
+            sections.append(f"📁 **Workspace:** {workspace.name}")
+            sections.append(f"   Path: {workspace.root_path}")
+
+            # Tech stack
+            if workspace.tech_stack:
+                tech_parts = []
+                if workspace.tech_stack.get('frontend'):
+                    tech_parts.append(f"Frontend: {workspace.tech_stack['frontend']}")
+                if workspace.tech_stack.get('backend'):
+                    tech_parts.append(f"Backend: {workspace.tech_stack['backend']}")
+                if workspace.tech_stack.get('database'):
+                    tech_parts.append(f"Database: {workspace.tech_stack['database']}")
+                if workspace.tech_stack.get('languages'):
+                    langs = workspace.tech_stack['languages']
+                    if isinstance(langs, list):
+                        tech_parts.append(f"Languages: {', '.join(langs[:5])}")
+                if workspace.tech_stack.get('frameworks'):
+                    frameworks = workspace.tech_stack['frameworks']
+                    if isinstance(frameworks, list):
+                        tech_parts.append(f"Frameworks: {', '.join(frameworks[:5])}")
+                if tech_parts:
+                    sections.append(f"\n   **Tech Stack:** {' | '.join(tech_parts)}")
+
+            # Key files
+            if workspace.key_files:
+                key_files_display = []
+                for purpose, path in list(workspace.key_files.items())[:5]:
+                    key_files_display.append(f"{purpose}: {path}")
+                if key_files_display:
+                    sections.append(f"\n   **Key Files:**")
+                    for kf in key_files_display:
+                        sections.append(f"     - {kf}")
+
+            # Directory purposes
+            if workspace.directory_purposes:
+                dir_display = []
+                for dir_name, purpose in list(workspace.directory_purposes.items())[:5]:
+                    dir_display.append(f"{dir_name}: {purpose}")
+                if dir_display:
+                    sections.append(f"\n   **Directory Structure:**")
+                    for dd in dir_display:
+                        sections.append(f"     - {dd}")
+
+            # Import aliases and patterns
+            if workspace.import_aliases:
+                sections.append(f"\n   **Import Aliases:** {', '.join(list(workspace.import_aliases.keys())[:5])}")
+
+            if workspace.coding_patterns:
+                patterns = list(workspace.coding_patterns.keys())[:3]
+                sections.append(f"\n   **Coding Patterns:** {', '.join(patterns)}")
+
+            # Stats
+            if workspace.total_files_written > 0 or workspace.total_operations > 0:
+                sections.append(f"\n   **Stats:** {workspace.total_files_written} files written, {workspace.total_operations} operations")
+
+            sections.append("\n💡 WORKSPACE AWARENESS: You know this project's structure. When asked about code, files, or development tasks, use this context to provide specific guidance.")
+            sections.append("   Use the workspace_tool to read/write files, check git status, or create commits in this workspace.")
+
+            logger.info(f"📁 Session 798: Injected workspace context for '{workspace.name}' into prompt")
+            return "\n".join(sections)
+
+        except Exception as e:
+            logger.warning(f"⚠️ Workspace context injection failed: {e}")
             return ""
 
     def _build_spider_intelligence_section(self, aggregated_context, classification) -> str:
