@@ -42,7 +42,6 @@ import {
   Stethoscope,
   GitBranch,
   Book,
-  Link2,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -61,7 +60,7 @@ const navItems = [
   { path: '/body-health', label: 'Body Health', icon: Activity },
   { path: '/integration-health', label: 'Integration', icon: Stethoscope },
   { path: '/orchestration', label: 'Orchestration', icon: GitBranch },
-  { path: '/agent-collaboration', label: 'Collaboration', icon: Link2 },
+  { path: '/agent-monitor', label: 'Agent Monitor', icon: Activity },
   { path: '/hive-mind', label: 'Hive Mind', icon: Users },
   { path: '/memory-palace', label: 'Memory Palace', icon: Castle },
   { path: '/evolution', label: 'Evolution', icon: Trophy },
