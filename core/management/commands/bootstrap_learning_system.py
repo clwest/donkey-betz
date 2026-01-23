@@ -150,37 +150,31 @@ class Command(BaseCommand):
             agent = random.choice(agents)
             task = random.choice(sample_tasks)
 
-            # Vary the timing over the past 7 days
-            started_at = now - timedelta(
-                days=random.randint(0, 7),
-                hours=random.randint(0, 23),
-                minutes=random.randint(0, 59)
-            )
-
             # Most executions succeed
             success = random.random() > 0.1
+            status = 'completed' if success else 'failed'
 
             execution = AgentExecution.objects.create(
                 id=uuid.uuid4(),
                 agent=agent,
                 task=task[:500],
-                status='completed' if success else 'failed',
-                success=success,
-                started_at=started_at,
-                completed_at=started_at + timedelta(seconds=random.randint(1, 30)),
+                status=status,
                 execution_time_ms=random.randint(500, 15000),
                 tokens_used=random.randint(100, 2000),
                 cost=random.uniform(0.001, 0.05),
-                output_data={
-                    'result': f'Completed analysis for {task[:50]}',
-                    'confidence': random.uniform(0.7, 0.95),
-                    'seeded': True,
-                },
-                context_data={
+                input_data={
                     'spider_data_used': random.randint(0, 10),
                     'advisor_consulted': random.choice([True, False]),
                     'seeded': True,
-                }
+                },
+                output_data={
+                    'result': f'Completed analysis for {task[:50]}',
+                    'confidence': random.uniform(0.7, 0.95),
+                    'success': success,
+                    'seeded': True,
+                },
+                error_message='' if success else 'Simulated failure for testing',
+                completed_at=now if success else None,
             )
             created += 1
 
