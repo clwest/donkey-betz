@@ -1413,6 +1413,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_gates_tool(arguments)
             elif function_name == 'pilots_tool':
                 result = self._handle_pilots_tool(arguments)
+            # Session 796: Human Interface Layer - Connect PA to human decisions
+            elif function_name == 'human_decisions_tool':
+                result = self._handle_human_decisions_tool(arguments)
             else:
                 result = {
                     'success': False,
@@ -12242,3 +12245,160 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"Error in pilots_tool: {e}", exc_info=True)
             return {'success': False, 'error': str(e), 'tool': 'pilots_tool'}
+
+    # Session 796: Human Decisions Tool - Connect PA to Human Interface Layer
+    def _handle_human_decisions_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle human_decisions_tool - Manage items that need human attention.
+
+        This bridges the Human Interface Layer with the AI Assistant, allowing
+        users to review and act on pending decisions via natural language.
+
+        Actions: list, get, decide, stats
+        """
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from core.services.human_interface_service import get_human_interface_service
+            from django.db.models import Count
+
+            action = arguments.get('action', 'list')
+            limit = arguments.get('limit', 10)
+
+            # Get the human interface service for this user
+            service = get_human_interface_service(self.user)
+
+            if action == 'list':
+                # Get pending items
+                urgency_filter = [arguments['urgency_filter']] if arguments.get('urgency_filter') else None
+                items = service.get_attention_stream(
+                    limit=limit,
+                    urgency_filter=urgency_filter,
+                    status_filter=['pending', 'viewed']
+                )
+
+                # Format for natural language response
+                if not items:
+                    return {
+                        'success': True,
+                        'tool': 'human_decisions_tool',
+                        'action': 'list',
+                        'count': 0,
+                        'message': 'No pending items need your attention right now.',
+                        'items': []
+                    }
+
+                formatted_items = []
+                for i, item in enumerate(items, 1):
+                    urgency_emoji = {
+                        'critical': '🚨',
+                        'high': '⚠️',
+                        'medium': '📋',
+                        'low': 'ℹ️'
+                    }.get(item.get('urgency', 'low'), '📋')
+
+                    formatted_items.append({
+                        'number': i,
+                        'id': item['id'],
+                        'emoji': urgency_emoji,
+                        'urgency': item.get('urgency', 'medium'),
+                        'type': item.get('item_type', 'review'),
+                        'title': item.get('title', 'Untitled'),
+                        'summary': item.get('summary', '')[:150],
+                        'source_agent': item.get('source_agent', ''),
+                        'ml_recommendation': item.get('ml_recommendation', ''),
+                        'ml_confidence': item.get('ml_confidence', 0),
+                    })
+
+                return {
+                    'success': True,
+                    'tool': 'human_decisions_tool',
+                    'action': 'list',
+                    'count': len(formatted_items),
+                    'message': f'You have {len(formatted_items)} item(s) that need your attention:',
+                    'items': formatted_items
+                }
+
+            elif action == 'get':
+                item_id = arguments.get('item_id')
+                if not item_id:
+                    return {'success': False, 'error': 'item_id required for get action'}
+
+                try:
+                    item = HumanAttentionItem.objects.get(id=item_id, user=self.user)
+                    return {
+                        'success': True,
+                        'tool': 'human_decisions_tool',
+                        'action': 'get',
+                        'item': {
+                            'id': str(item.id),
+                            'title': item.title,
+                            'summary': item.summary,
+                            'urgency': item.urgency,
+                            'item_type': item.item_type,
+                            'source_type': item.source_type,
+                            'source_agent': item.source_agent,
+                            'status': item.status,
+                            'payload': item.payload,
+                            'ml_prediction': item.ml_prediction,
+                            'ml_confidence': item.ml_confidence,
+                            'ml_recommendation': item.ml_recommendation,
+                            'created_at': item.created_at.isoformat(),
+                        }
+                    }
+                except HumanAttentionItem.DoesNotExist:
+                    return {'success': False, 'error': f'Item {item_id} not found'}
+
+            elif action == 'decide':
+                item_id = arguments.get('item_id')
+                decision = arguments.get('decision')
+                feedback = arguments.get('feedback', '')
+
+                if not item_id:
+                    return {'success': False, 'error': 'item_id required for decide action'}
+                if not decision:
+                    return {'success': False, 'error': 'decision required (approve, reject, defer, watch)'}
+
+                # Use the service to record the decision
+                result = service.record_decision(
+                    item_id=item_id,
+                    decision=decision,
+                    feedback=feedback,
+                    confidence=0.9  # High confidence when user explicitly decides
+                )
+
+                if result.get('success'):
+                    decision_verb = {
+                        'approve': 'approved',
+                        'reject': 'rejected',
+                        'defer': 'deferred',
+                        'watch': 'marked for watching'
+                    }.get(decision, decision)
+
+                    return {
+                        'success': True,
+                        'tool': 'human_decisions_tool',
+                        'action': 'decide',
+                        'message': f'Done! Item has been {decision_verb}.',
+                        'decision': decision,
+                        'item_id': item_id,
+                    }
+                else:
+                    return {'success': False, 'error': result.get('error', 'Failed to record decision')}
+
+            elif action == 'stats':
+                stats = service.get_attention_stats()
+                return {
+                    'success': True,
+                    'tool': 'human_decisions_tool',
+                    'action': 'stats',
+                    'stats': stats,
+                    'message': f"You have {stats.get('pending', 0)} pending items. "
+                               f"Average decision time: {stats.get('avg_decision_time_ms', 0):.0f}ms."
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in human_decisions_tool: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'tool': 'human_decisions_tool'}
