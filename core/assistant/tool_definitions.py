@@ -1530,6 +1530,7 @@ def _get_human_decisions_tool_definition() -> Dict:
     - Get details about specific decisions
     - Execute decisions (approve, reject, defer) on behalf of the human
     - Check decision stats
+    - Phase 2: Batch decide, auto-execute low-risk, consultation prompts
     """
     return {
         "type": "function",
@@ -1538,15 +1539,23 @@ def _get_human_decisions_tool_definition() -> Dict:
             "Access and manage items that need human attention. Use this when the user asks about "
             "pending decisions, things that need their attention, items to review, or wants to "
             "approve/reject/defer something. Actions: 'list' shows pending items, 'get' shows details, "
-            "'decide' executes a decision (approve/reject/defer), 'stats' shows decision statistics."
+            "'decide' executes a decision (approve/reject/defer), 'stats' shows decision statistics, "
+            "'batch_decide' applies decision to multiple items by filter, 'auto_execute' runs low-risk "
+            "decisions automatically, 'consult' asks user before autonomous action."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "get", "decide", "stats"],
-                    "description": "Action: 'list' (pending decisions), 'get' (details by ID), 'decide' (execute approve/reject/defer), 'stats' (decision statistics)"
+                    "enum": ["list", "get", "decide", "stats", "batch_decide", "auto_execute", "consult"],
+                    "description": (
+                        "Action: 'list' (pending decisions), 'get' (details by ID), "
+                        "'decide' (execute approve/reject/defer), 'stats' (decision statistics), "
+                        "'batch_decide' (apply decision to multiple items by filter), "
+                        "'auto_execute' (auto-approve low-risk items with high ML confidence), "
+                        "'consult' (ask user permission before autonomous action)"
+                    )
                 },
                 "item_id": {
                     "type": "string",
@@ -1555,7 +1564,7 @@ def _get_human_decisions_tool_definition() -> Dict:
                 "decision": {
                     "type": "string",
                     "enum": ["approve", "reject", "defer", "watch"],
-                    "description": "Decision to execute (required for 'decide' action)"
+                    "description": "Decision to execute (required for 'decide' and 'batch_decide' actions)"
                 },
                 "feedback": {
                     "type": "string",
@@ -1564,7 +1573,21 @@ def _get_human_decisions_tool_definition() -> Dict:
                 "urgency_filter": {
                     "type": "string",
                     "enum": ["critical", "high", "medium", "low"],
-                    "description": "Filter by urgency level (for 'list' action)"
+                    "description": "Filter by urgency level (for 'list' and 'batch_decide' actions)"
+                },
+                "type_filter": {
+                    "type": "string",
+                    "enum": ["approval", "verification", "review", "policy", "information"],
+                    "description": "Filter by item type (for 'list' and 'batch_decide' actions)"
+                },
+                "confidence_threshold": {
+                    "type": "number",
+                    "default": 0.85,
+                    "description": "ML confidence threshold for auto_execute (0.0-1.0, default 0.85)"
+                },
+                "consultation_context": {
+                    "type": "string",
+                    "description": "Context for consultation - what action PA wants to take (for 'consult' action)"
                 },
                 "limit": {
                     "type": "integer",
