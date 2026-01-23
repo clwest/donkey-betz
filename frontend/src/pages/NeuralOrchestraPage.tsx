@@ -294,13 +294,18 @@ export default function NeuralOrchestraPage() {
           </div>
         </div>
 
-        {/* Mini stats */}
+        {/* Mini stats - Session 792: Show total agents + active count for clarity */}
         <div className="relative mt-6 grid grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-400">
-              {systemStatus?.active_agents ?? 0}
+              {agentStats?.total_agents ?? systemStatus?.total_agents ?? 0}
             </div>
-            <div className="text-xs text-gray-400">Active Agents</div>
+            <div className="text-xs text-gray-400">
+              Total Agents
+              {(systemStatus?.active_agents ?? 0) > 0 && (
+                <span className="text-green-400 ml-1">({systemStatus?.active_agents} active)</span>
+              )}
+            </div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-400">
@@ -310,7 +315,7 @@ export default function NeuralOrchestraPage() {
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-400">
-              {agentStats?.collaborations ?? 0}
+              {agentStats?.collaborations ?? systemStatus?.collaborations ?? 0}
             </div>
             <div className="text-xs text-gray-400">Collaborations</div>
           </div>
