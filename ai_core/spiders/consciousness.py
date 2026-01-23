@@ -66,9 +66,12 @@ class ConsciousnessBridge:
     """
 
     def __init__(self, redis_client: Optional[redis.Redis] = None):
-        self.redis_client = redis_client or redis.Redis(
-            host='localhost', port=6379, decode_responses=True
-        )
+        # Session 792: Use REDIS_URL environment variable instead of hardcoded localhost
+        if redis_client:
+            self.redis_client = redis_client
+        else:
+            redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+            self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
         self.project_root = Path('/Users/donkeyking/development/unified-donkey-betz')
         self.capabilities: Dict[str, Capability] = {}
         self.insights: List[SystemInsight] = []
