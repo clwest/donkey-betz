@@ -7779,7 +7779,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             sections.append(f"📁 **Workspace:** {workspace.name}")
             sections.append(f"   Path: {workspace.root_path}")
 
-            # Tech stack
+            # Tech stack (on ProjectWorkspace)
             if workspace.tech_stack:
                 tech_parts = []
                 if workspace.tech_stack.get('frontend'):
@@ -7799,35 +7799,39 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 if tech_parts:
                     sections.append(f"\n   **Tech Stack:** {' | '.join(tech_parts)}")
 
-            # Key files
-            if workspace.key_files:
-                key_files_display = []
-                for purpose, path in list(workspace.key_files.items())[:5]:
-                    key_files_display.append(f"{purpose}: {path}")
-                if key_files_display:
-                    sections.append(f"\n   **Key Files:**")
-                    for kf in key_files_display:
-                        sections.append(f"     - {kf}")
+            # Get WorkspaceContext if it exists (key_files, directory_purposes, etc. are on this model)
+            ws_context = getattr(workspace, 'context', None)
 
-            # Directory purposes
-            if workspace.directory_purposes:
-                dir_display = []
-                for dir_name, purpose in list(workspace.directory_purposes.items())[:5]:
-                    dir_display.append(f"{dir_name}: {purpose}")
-                if dir_display:
-                    sections.append(f"\n   **Directory Structure:**")
-                    for dd in dir_display:
-                        sections.append(f"     - {dd}")
+            if ws_context:
+                # Key files (on WorkspaceContext)
+                if ws_context.key_files:
+                    key_files_display = []
+                    for purpose, path in list(ws_context.key_files.items())[:5]:
+                        key_files_display.append(f"{purpose}: {path}")
+                    if key_files_display:
+                        sections.append(f"\n   **Key Files:**")
+                        for kf in key_files_display:
+                            sections.append(f"     - {kf}")
 
-            # Import aliases and patterns
-            if workspace.import_aliases:
-                sections.append(f"\n   **Import Aliases:** {', '.join(list(workspace.import_aliases.keys())[:5])}")
+                # Directory purposes (on WorkspaceContext)
+                if ws_context.directory_purposes:
+                    dir_display = []
+                    for dir_name, purpose in list(ws_context.directory_purposes.items())[:5]:
+                        dir_display.append(f"{dir_name}: {purpose}")
+                    if dir_display:
+                        sections.append(f"\n   **Directory Structure:**")
+                        for dd in dir_display:
+                            sections.append(f"     - {dd}")
 
-            if workspace.coding_patterns:
-                patterns = list(workspace.coding_patterns.keys())[:3]
-                sections.append(f"\n   **Coding Patterns:** {', '.join(patterns)}")
+                # Import aliases and patterns (on WorkspaceContext)
+                if ws_context.import_aliases:
+                    sections.append(f"\n   **Import Aliases:** {', '.join(list(ws_context.import_aliases.keys())[:5])}")
 
-            # Stats
+                if ws_context.coding_patterns:
+                    patterns = list(ws_context.coding_patterns.keys())[:3]
+                    sections.append(f"\n   **Coding Patterns:** {', '.join(patterns)}")
+
+            # Stats (on ProjectWorkspace)
             if workspace.total_files_written > 0 or workspace.total_operations > 0:
                 sections.append(f"\n   **Stats:** {workspace.total_files_written} files written, {workspace.total_operations} operations")
 
