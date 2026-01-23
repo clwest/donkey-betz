@@ -212,7 +212,9 @@ class Command(BaseCommand):
         now = timezone.now()
 
         # Learning types to simulate
+        # NOTE: 'teaching' is required for Integration Health "Teaching agents" metric
         learning_types = [
+            'teaching',  # Required for Integration Health dashboard
             'cross_agent_delegation',
             'collaborative',
             'knowledge_transfer',
