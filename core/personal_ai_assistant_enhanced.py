@@ -12834,6 +12834,50 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     return service.process_opportunity(opp_id)
                 return {'success': False, 'message': 'No opportunity_id specified'}
 
+            elif intended_action == 'execute_opportunity':
+                # Session 797: Execute a high-value opportunity via consultation
+                from core.services.opportunity_execution_pipeline import opportunity_execution_pipeline
+                from core.models_unified_system import Opportunity
+
+                opp_id = action_params.get('opportunity_id')
+                if not opp_id:
+                    return {'success': False, 'message': 'No opportunity_id specified'}
+
+                try:
+                    opportunity = Opportunity.objects.get(id=opp_id)
+
+                    # Mark consultation as completed
+                    consultation.status = 'decided'
+                    consultation.decision = 'approve'
+                    consultation.save(update_fields=['status', 'decision'])
+
+                    # Execute the opportunity directly (bypass consultation check)
+                    original_threshold = opportunity_execution_pipeline.HIGH_VALUE_REVENUE_THRESHOLD
+                    opportunity_execution_pipeline.HIGH_VALUE_REVENUE_THRESHOLD = 999999999
+                    try:
+                        result = opportunity_execution_pipeline.execute_opportunity(
+                            opportunity,
+                            user=self.user
+                        )
+                    finally:
+                        opportunity_execution_pipeline.HIGH_VALUE_REVENUE_THRESHOLD = original_threshold
+
+                    if result.get('success'):
+                        title = action_params.get('title', 'Opportunity')
+                        return {
+                            'success': True,
+                            'message': f"Executing opportunity: '{title}'. Workflow started!",
+                            'execution_id': result.get('execution_id'),
+                            'project_id': result.get('project_id'),
+                        }
+                    return result
+
+                except Opportunity.DoesNotExist:
+                    return {'success': False, 'message': f'Opportunity {opp_id} not found'}
+                except Exception as e:
+                    logger.error(f"Error executing opportunity: {e}")
+                    return {'success': False, 'message': f'Error: {str(e)}'}
+
             else:
                 # Generic approval - just acknowledge
                 return {

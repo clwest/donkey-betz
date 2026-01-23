@@ -42,6 +42,10 @@ class OpportunityExecutionPipeline:
     # Minimum score threshold for auto-execution
     MIN_SCORE_THRESHOLD = 70  # Only execute opportunities scoring >= 70
 
+    # Session 797: High-value threshold for human consultation
+    HIGH_VALUE_REVENUE_THRESHOLD = 1000  # Opportunities >= $1000 require consultation
+    HIGH_RISK_SCORE_THRESHOLD = 90  # Very high scores may indicate risk, consult first
+
     # Map opportunity types to workflow templates
     OPPORTUNITY_TYPE_WORKFLOWS = {
         'job': [
@@ -147,6 +151,24 @@ class OpportunityExecutionPipeline:
                 }
 
         logger.info(f"Executing opportunity: {opportunity.id} - {opportunity.title[:50]}")
+
+        # Session 797: Check if this is a high-value opportunity requiring consultation
+        revenue = float(opportunity.potential_revenue or 0)
+        is_high_value = revenue >= self.HIGH_VALUE_REVENUE_THRESHOLD
+        is_very_high_score = score >= self.HIGH_RISK_SCORE_THRESHOLD
+
+        if is_high_value or is_very_high_score:
+            # Create consultation item for human approval
+            consultation_result = self._create_opportunity_consultation(opportunity, user)
+            if consultation_result.get('success'):
+                return {
+                    'success': True,
+                    'opportunity_id': str(opportunity.id),
+                    'consultation_created': True,
+                    'attention_item_id': consultation_result.get('attention_item_id'),
+                    'message': f"High-value opportunity (${revenue:.0f}) requires your approval. Check pending decisions.",
+                    'reason': 'high_revenue' if is_high_value else 'high_score',
+                }
 
         try:
             with transaction.atomic():
@@ -341,6 +363,93 @@ Context from Opportunity:
             workflow_used=workflow.slug,
             notes=f"Automatically executed via Opportunity Execution Pipeline. Project: {project.id}",
         )
+
+    def _create_opportunity_consultation(self, opportunity, user) -> Dict[str, Any]:
+        """
+        Session 797: Create a HumanAttentionItem for high-value opportunity consultation.
+
+        This allows the user to approve/reject high-value opportunities via PA chat
+        before they are executed.
+        """
+        from core.models_human_interface import HumanAttentionItem
+
+        try:
+            revenue = float(opportunity.potential_revenue or 0)
+            score = opportunity.match_score or opportunity.overall_score or 0
+
+            summary = (
+                f"High-value opportunity discovered: '{opportunity.title[:100]}'\n\n"
+                f"• Potential Revenue: ${revenue:,.0f}\n"
+                f"• Match Score: {score}/100\n"
+                f"• Type: {opportunity.opportunity_type or 'Unknown'}\n"
+                f"• Source: {opportunity.source or 'Unknown'}\n\n"
+                f"Say 'yes' to proceed with execution, or 'no' to skip."
+            )
+
+            attention_item = HumanAttentionItem.objects.create(
+                user=user,
+                title=f"[Opportunity] {opportunity.title[:80]}",
+                summary=summary,
+                item_type='opportunity_approval',
+                urgency='high' if revenue >= 5000 else 'medium',
+                status='pending',
+                source_type='opportunity_execution_pipeline',
+                source_id=str(opportunity.id),
+                source_agent='OpportunityExecutionPipeline',
+                payload={
+                    'opportunity_id': str(opportunity.id),
+                    'title': opportunity.title,
+                    'potential_revenue': str(opportunity.potential_revenue),
+                    'match_score': opportunity.match_score,
+                    'overall_score': opportunity.overall_score,
+                    'opportunity_type': opportunity.opportunity_type,
+                    'source': opportunity.source,
+                    # Session 797: Enable PA consultation flow
+                    'consultation': True,
+                    'intended_action': 'execute_opportunity',
+                    'action_params': {
+                        'opportunity_id': str(opportunity.id),
+                        'title': opportunity.title[:100],
+                    },
+                    'action_options': [
+                        {
+                            'id': 'execute_opportunity',
+                            'label': 'Execute',
+                            'action': 'execute',
+                            'style': 'success',
+                        },
+                        {
+                            'id': 'skip_opportunity',
+                            'label': 'Skip',
+                            'action': 'skip',
+                            'style': 'warning',
+                        },
+                        {
+                            'id': 'archive_opportunity',
+                            'label': 'Archive',
+                            'action': 'archive',
+                            'style': 'danger',
+                        },
+                    ],
+                }
+            )
+
+            logger.info(
+                f"Created opportunity consultation item {attention_item.id} "
+                f"for opportunity {opportunity.id}"
+            )
+
+            return {
+                'success': True,
+                'attention_item_id': attention_item.id,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to create opportunity consultation: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+            }
 
     def process_high_scoring_opportunities(
         self,
