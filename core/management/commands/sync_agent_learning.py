@@ -515,7 +515,7 @@ class Command(BaseCommand):
             ('CreativeDirectorAgent', 'ImageAgent', 'specialization', ['content_idea', 'trend']),
             ('CreativeDirectorAgent', 'VideoAgent', 'specialization', ['content_idea', 'trend']),
             ('CreativeDirectorAgent', 'AudioAgent', 'specialization', ['content_idea']),
-            ('CreativeDirectorAgent', '3DGenerationAgent', 'specialization', ['content_idea']),
+            ('CreativeDirectorAgent', 'ThreeDAgent', 'specialization', ['content_idea']),
             ('CreativeDirectorAgent', 'BrandIdentityAgent', 'specialization', ['content_idea']),
 
             # Content Strategy orchestrates content creation
@@ -552,16 +552,14 @@ class Command(BaseCommand):
             # Prompt Engineering teaches everyone
             ('PromptEngineeringAgent', 'ImageAgent', 'specialization', ['tool_discovery']),
             ('PromptEngineeringAgent', 'VideoAgent', 'specialization', ['tool_discovery']),
-            ('PromptEngineeringAgent', '3DGenerationAgent', 'specialization', ['tool_discovery']),
+            ('PromptEngineeringAgent', 'ThreeDAgent', 'specialization', ['tool_discovery']),
 
             # Executive agents collaborate
             ('CTOAgent', 'COOAgent', 'collaborative', ['market', 'trend']),
             ('COOAgent', 'OpportunityScoringAgent', 'pipeline', ['opportunity', 'pricing']),
             ('CTOAgent', 'ResearchAgent', 'complementary', ['trend', 'tool_discovery']),
 
-            # Creation agent learns from specialists
-            ('CreationAgent', 'ImageAgent', 'complementary', ['content_idea']),
-            ('CreationAgent', 'ContentStrategyAgent', 'complementary', ['content_idea']),
+            # Session 790: Removed CreationAgent (doesn't exist - use TrainedCreationAgent instead)
         ]
 
         connections_created = 0

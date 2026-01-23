@@ -130,6 +130,9 @@ from core.agents.security import (
     MemoryIsolationAgent,
 )
 
+# Session 779/790: Prompt Engineering Agent
+from core.agents.prompt_engineering_agent import PromptEngineeringAgent
+
 # Session 293: Business Research Agents (+ Session 637)
 from core.agents.business import (
     CompetitorAnalysisAgent,
@@ -293,6 +296,9 @@ class AgentRouter:
 
         # Security Agents (Session 280 Phase 3)
         "MemoryIsolationAgent": MemoryIsolationAgent,
+
+        # Prompt Engineering (Session 779/790)
+        "PromptEngineeringAgent": PromptEngineeringAgent,
 
         # Business Research Agents (Session 293 + 637)
         "CompetitorAnalysisAgent": CompetitorAnalysisAgent,
