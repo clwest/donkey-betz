@@ -655,26 +655,25 @@ class SpineRouterService:
             from core.services.heart import get_heart_monitor
             heart = get_heart_monitor()
             vitals = heart.get_vitals()
-            # vitals is a dict keyed by component name, calculate overall status
+
+            # Session 792: vitals has top-level status fields, not component dicts
+            # Use the pre-calculated values from HEART service
             if not vitals:
                 return {'status': 'unknown', 'health_score': 0, 'is_healthy': False}
 
-            healthy_count = sum(1 for c in vitals.values() if c.get('is_healthy', False))
-            total_count = len(vitals)
-            health_score = (healthy_count / total_count * 100) if total_count > 0 else 0
+            # Get status directly from HEART's response
+            status = vitals.get('overall_status', 'unknown')
+            health_score = vitals.get('health_score', 0)
+            components_healthy = vitals.get('components_healthy', 0)
+            components_checked = vitals.get('components_checked', 0)
 
-            # Determine overall status
-            if healthy_count == total_count:
-                status = 'healthy'
-            elif healthy_count > total_count / 2:
-                status = 'degraded'
-            else:
-                status = 'critical'
+            is_healthy = (status == 'healthy' or
+                         (components_checked > 0 and components_healthy == components_checked))
 
             return {
                 'status': status,
                 'health_score': round(health_score),
-                'is_healthy': healthy_count == total_count,
+                'is_healthy': is_healthy,
             }
         except Exception as e:
             logger.warning(f"Failed to check HEART status: {e}")
