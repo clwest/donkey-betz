@@ -285,7 +285,7 @@ class AgentCollaborationMonitorConsumer(AsyncWebsocketConsumer):
 
         active = CollaborationSession.objects.filter(
             status__in=['pending', 'active']
-        ).order_by('-created_at')[:50]
+        ).order_by('-started_at')[:50]
 
         return [{
             'id': str(c.id),
@@ -394,7 +394,7 @@ class AgentCollaborationMonitorConsumer(AsyncWebsocketConsumer):
         since = timezone.now() - timedelta(hours=hours)
 
         # Collaboration stats
-        collabs = CollaborationSession.objects.filter(created_at__gte=since)
+        collabs = CollaborationSession.objects.filter(started_at__gte=since)
 
         total = collabs.count()
         completed = collabs.filter(status='completed').count()
