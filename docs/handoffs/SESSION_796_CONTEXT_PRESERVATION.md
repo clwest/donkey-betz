@@ -14,35 +14,57 @@ Human and AI Assistant are disconnected:
 
 ---
 
+## PROGRESS TRACKER
+
+| Phase | Status | PR |
+|-------|--------|-----|
+| Phase 1: PA Surfaces Decisions | ✅ MERGED | #14 |
+| Phase 2: Smart Decisions | ✅ PR CREATED | #15 |
+| Phase 3: Consultation Loop | 🔄 IN PROGRESS | - |
+
+---
+
 ## OPTION A IMPLEMENTATION PLAN
 
 ### Goal: Enhance Assistant Page so PA surfaces decisions in chat
 
-### Phase 1: PA Surfaces Pending Decisions
+### Phase 1: PA Surfaces Pending Decisions ✅ COMPLETE
 
-**Backend Changes:**
-1. Add `get_pending_human_items()` to PersonalAIAssistant that fetches HumanAttentionItems
-2. Add PA tool `review_pending_decisions` that returns pending items formatted for chat
-3. Add PA tool `handle_decision` that interprets "approve", "reject", "defer" commands
+**Backend Changes:** (PR #14)
+- Added `human_decisions_tool` to tool_definitions.py
+- Added `_handle_human_decisions_tool()` handler with actions: list, get, decide, stats
+- Integrated with HumanInterfaceService for decision recording
 
-**Frontend Changes:**
-1. On load, PA proactively shows pending decisions count
-2. Add quick action "Review pending decisions"
-3. Decision cards can be clicked to act via chat
+**Frontend Changes:** (PR #14)
+- Added pending decisions query (30s refresh)
+- PA greeting shows pending count
+- "Review pending decisions" quick action highlighted
+- Pending Decisions sidebar card with urgency emojis
 
-### Phase 2: Chat-Based Decision Making
+### Phase 2: Chat-Based Decision Making ✅ COMPLETE
 
-User can say:
-- "Approve the first one" → PA calls `handle_decision(item_id, 'approve')`
-- "Tell me more about the arbitrage opportunity" → PA provides details
+**Backend Changes:** (PR #15)
+- Added `batch_decide` action - apply decision to multiple items by filter
+- Added `auto_execute` action - auto-approve low-risk with ML confidence ≥ 85%
+- Added `consult` action - creates consultation item for human approval
+- Added parameters: type_filter, confidence_threshold, consultation_context
+
+User can now say:
+- "Approve all low priority items" → PA batch approves
+- "Auto-execute high confidence decisions" → PA auto-executes
 - "Defer all policy decisions" → PA batch defers
 
-### Phase 3: Human Consultation Loop
+### Phase 3: Human Consultation Loop 🔄 IN PROGRESS
 
-Before significant actions, PA asks:
-- "I found a podcast opportunity. Should I start the workflow? [Yes/No/Details]"
-- User responds in natural language
-- PA interprets and acts
+**Goal:** PA automatically consults human before significant autonomous actions.
+
+**Implementation Plan:**
+1. **Consultation triggers** - Inject consultation checks before:
+   - Workflow orchestration starts
+   - Pilot execution begins
+   - High-value opportunity processing
+2. **Response interpretation** - Detect when user responds to consultation
+3. **Action execution** - PA proceeds or aborts based on user response
 
 ---
 
