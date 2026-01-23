@@ -332,12 +332,22 @@ class Command(BaseCommand):
                     month_of_year=args['month_of_year'],
                 )
 
-            PeriodicTask.objects.create(
+            # Session 792: Use get_or_create to avoid duplicate errors
+            task, created = PeriodicTask.objects.get_or_create(
                 name=name,
-                task=config['task'],
-                crontab=cron,
-                enabled=True,
+                defaults={
+                    'task': config['task'],
+                    'crontab': cron,
+                    'enabled': True,
+                }
             )
+            if not created:
+                # Update existing task
+                task.task = config['task']
+                task.crontab = cron
+                task.interval = None
+                task.enabled = True
+                task.save()
         else:
             args = schedule['args']
             total_seconds = args.get('seconds', 0) + args.get('minutes', 0) * 60 + args.get('hours', 0) * 3600
@@ -364,12 +374,22 @@ class Command(BaseCommand):
                     period=period,
                 )
 
-            PeriodicTask.objects.create(
+            # Session 792: Use get_or_create to avoid duplicate errors
+            task, created = PeriodicTask.objects.get_or_create(
                 name=name,
-                task=config['task'],
-                interval=interval,
-                enabled=True,
+                defaults={
+                    'task': config['task'],
+                    'interval': interval,
+                    'enabled': True,
+                }
             )
+            if not created:
+                # Update existing task
+                task.task = config['task']
+                task.interval = interval
+                task.crontab = None
+                task.enabled = True
+                task.save()
 
     def update_task(self, pt, config):
         """Update an existing periodic task's schedule."""
