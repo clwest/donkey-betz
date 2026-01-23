@@ -140,8 +140,12 @@ class NeuralOrchestraRealityBridge:
                 for a in top_agents
             ]
 
-            # No collaboration data from executions
-            collaborations = 0
+            # Session 793: Use KnowledgeTransfer as collaboration proxy when AgentContribution is empty
+            try:
+                from core.models_unified_system import KnowledgeTransfer
+                collaborations = KnowledgeTransfer.objects.count()
+            except Exception:
+                collaborations = 0
         else:
             # Use AgentContribution data
             contribution_breakdown = AgentContribution.objects.values('contribution_type').annotate(
@@ -391,8 +395,12 @@ class NeuralOrchestraRealityBridge:
         @sync_to_async
         def get_memory_crystal_count():
             try:
-                from core.models_unified_system import MemoryCluster
-                return MemoryCluster.objects.count()
+                from core.models_unified_system import MemoryCluster, AgentLearning
+                count = MemoryCluster.objects.count()
+                # Session 793: Use AgentLearning as fallback when MemoryCluster is empty
+                if count == 0:
+                    count = AgentLearning.objects.count()
+                return count if count > 0 else 1
             except:
                 return 1
 
@@ -826,6 +834,10 @@ class NeuralOrchestraRealityBridge:
             ).count()
 
             memory_crystals = MemoryCluster.objects.count()
+
+            # Session 793: Use AgentLearning as fallback for memory crystals when MemoryCluster is empty
+            if memory_crystals == 0:
+                memory_crystals = AgentLearning.objects.count()
 
             # Get consciousness level from consciousness API
             consciousness_level = self.consciousness_api._calculate_consciousness_level()
