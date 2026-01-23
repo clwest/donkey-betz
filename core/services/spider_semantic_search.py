@@ -387,7 +387,7 @@ class SpiderSemanticSearch:
     # Database Embedding Methods (Session 293)
     # =========================================================================
 
-    def generate_entry_embedding(self, spider_data) -> bool:
+    def generate_entry_embedding(self, spider_data, mark_empty: bool = True) -> str:
         """
         Generate and store embedding for a SpiderData entry.
 
@@ -395,22 +395,29 @@ class SpiderSemanticSearch:
 
         Args:
             spider_data: SpiderData model instance
+            mark_empty: If True, mark entries with no text as [NO_ITEMS]
 
         Returns:
-            True if embedding was generated and saved
+            'success' if embedding was generated
+            'no_text' if no searchable text (marked as [NO_ITEMS] if mark_empty=True)
+            'failed' if embedding generation failed
         """
         text = spider_data.get_searchable_text()
         if not text:
-            return False
+            # Session 792: Mark as empty so we don't retry forever
+            if mark_empty:
+                spider_data.embedding_text = "[NO_ITEMS]"
+                spider_data.save(update_fields=['embedding_text'])
+            return 'no_text'
 
         embedding = self._generate_embedding(text)
         if embedding:
             spider_data.embedding = embedding
             spider_data.embedding_text = text[:1000]  # Store truncated for debugging
             spider_data.save(update_fields=['embedding', 'embedding_text'])
-            return True
+            return 'success'
 
-        return False
+        return 'failed'
 
     def backfill_embeddings(self, batch_size: int = 100, hours: int = 168) -> Dict[str, int]:
         """
@@ -469,8 +476,14 @@ class SpiderSemanticSearch:
                 stats['marked_empty'] += 1
                 continue
 
-            if self.generate_entry_embedding(entry):
+            # Session 792: Use new return value format
+            result = self.generate_entry_embedding(entry, mark_empty=True)
+            if result == 'success':
                 stats['succeeded'] += 1
+            elif result == 'no_text':
+                # Entry had items but no searchable text - now marked as [NO_ITEMS]
+                stats['skipped'] += 1
+                stats['marked_empty'] += 1
             else:
                 stats['failed'] += 1
 
