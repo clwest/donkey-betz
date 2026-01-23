@@ -125,11 +125,13 @@ RUN SECRET_KEY=build-time-dummy-key-not-used-in-production-needs-fifty-character
 FROM python:3.11-slim as production
 
 # Install only runtime dependencies
+# Session 798: Added git for workspace cloning feature
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     postgresql-client \
     redis-tools \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Railway/Production environment variables
