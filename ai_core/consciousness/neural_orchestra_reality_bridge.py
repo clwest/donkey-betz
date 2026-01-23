@@ -162,6 +162,15 @@ class NeuralOrchestraRealityBridge:
                 agent_count=Count('agent', distinct=True)
             ).filter(agent_count__gte=2).count()
 
+            # Session 793: If AgentContribution-based collaboration count is 0,
+            # fall back to KnowledgeTransfer (represents knowledge sharing between agents)
+            if collaborations == 0:
+                try:
+                    from core.models_unified_system import KnowledgeTransfer
+                    collaborations = KnowledgeTransfer.objects.count()
+                except Exception:
+                    pass  # Keep collaborations as 0
+
         return {
             'total_agents': total_agents,
             'active_agents_24h': active_agents_24h,
