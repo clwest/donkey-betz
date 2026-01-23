@@ -5854,35 +5854,52 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                     logger.debug(f"Could not get policy context: {e}")
 
                 # Session 324: Get spider intelligence for real-world context
+                # Session 790: Enhanced to support persona agents with domain-specific data
                 spider_context = ""
                 try:
-                    from core.services.spider_intelligence import SpiderIntelligenceService
-                    spider_service = SpiderIntelligenceService()
-                    spider_insights = spider_service.get_insights_for_prompt(topic)
+                    # First check if this is a persona agent (Session 790)
+                    from core.services.persona_agent_context import get_persona_context_builder
+                    persona_builder = get_persona_context_builder()
 
-                    if spider_insights:
-                        spider_parts = ["\n\n== REAL-WORLD INTELLIGENCE (from Spider Network) =="]
+                    if persona_builder.is_persona_agent(current_speaker):
+                        # Persona agent - get domain-specific context
+                        spider_context = persona_builder.build_context_for_agent(
+                            current_speaker,
+                            topic=topic,
+                            hours=48,
+                            limit=5
+                        )
+                        if spider_context:
+                            logger.info(f"🎭 [CONVERSATIONS] Injected persona context for {current_speaker.name}")
+                    else:
+                        # Core agent - use topic-based spider intelligence
+                        from core.services.spider_intelligence import SpiderIntelligenceService
+                        spider_service = SpiderIntelligenceService()
+                        spider_insights = spider_service.get_insights_for_prompt(topic)
 
-                        if spider_insights.get('relevant_trends'):
-                            trends = spider_insights['relevant_trends'][:3]
-                            spider_parts.append(f"Trending Topics: {', '.join(trends)}")
+                        if spider_insights:
+                            spider_parts = ["\n\n== REAL-WORLD INTELLIGENCE (from Spider Network) =="]
 
-                        if spider_insights.get('related_discussions'):
-                            discussions = spider_insights['related_discussions'][:2]
-                            for disc in discussions:
-                                if isinstance(disc, dict):
-                                    spider_parts.append(f"- {disc.get('title', '')[:80]}")
-                                else:
-                                    spider_parts.append(f"- {str(disc)[:80]}")
+                            if spider_insights.get('relevant_trends'):
+                                trends = spider_insights['relevant_trends'][:3]
+                                spider_parts.append(f"Trending Topics: {', '.join(trends)}")
 
-                        if spider_insights.get('market_data'):
-                            market = spider_insights['market_data']
-                            if market.get('summary'):
-                                spider_parts.append(f"Market: {market['summary'][:100]}")
+                            if spider_insights.get('related_discussions'):
+                                discussions = spider_insights['related_discussions'][:2]
+                                for disc in discussions:
+                                    if isinstance(disc, dict):
+                                        spider_parts.append(f"- {disc.get('title', '')[:80]}")
+                                    else:
+                                        spider_parts.append(f"- {str(disc)[:80]}")
 
-                        if len(spider_parts) > 1:
-                            spider_context = '\n'.join(spider_parts)
-                            logger.info(f"🕷️ [CONVERSATIONS] Injected spider intelligence for {topic[:30]}")
+                            if spider_insights.get('market_data'):
+                                market = spider_insights['market_data']
+                                if market.get('summary'):
+                                    spider_parts.append(f"Market: {market['summary'][:100]}")
+
+                            if len(spider_parts) > 1:
+                                spider_context = '\n'.join(spider_parts)
+                                logger.info(f"🕷️ [CONVERSATIONS] Injected spider intelligence for {topic[:30]}")
                 except Exception as e:
                     logger.debug(f"Could not get spider intelligence: {e}")
 
