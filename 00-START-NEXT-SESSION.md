@@ -1,8 +1,8 @@
-# Session 790 - Ready for Next Task
+# Session 791 - Ready for Next Task
 
-**Previous Session:** 789 (Redis Production URLs)
+**Previous Session:** 790 (Persona Agent Enhancement & Railway Fixes)
 **Date:** January 22, 2026
-**Status:** 74/74 Agents Complete | 45 Frontend Pages | DEPLOYED TO RAILWAY
+**Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | DEPLOYED TO RAILWAY
 
 ---
 
@@ -20,44 +20,73 @@ Railway Project: donkey-betz-platform
 └── Web Service (Daphne ASGI)
 ```
 
-### Remaining Deployment Phases
+### Spider Embedding Coverage
+- **Railway:** 58%+ (backfill was running at session end - may be higher now)
+- **Local:** 91.4% (20,307 of 22,219 records)
+
+---
+
+## Session 790 Highlights
+
+### New Commands for Railway Deployment
+
+```bash
+# Populate 74 core agents (required for fresh deployment)
+railway run python manage.py populate_agents
+
+# Sync 139 persona agents with learning system
+railway run python manage.py sync_persona_learning
+
+# Backfill spider embeddings (run until complete)
+railway run python manage.py shell -c "
+from core.tasks import backfill_spider_embeddings
+while True:
+    result = backfill_spider_embeddings(batch_size=500)
+    print(result)
+    if result.get('processed', 0) == 0:
+        break
+"
+
+# Warm up body systems
+railway run python manage.py warmup_body_systems --all
+```
+
+### Two Agent Systems Discovered
+
+| System | Count | How They Work |
+|--------|-------|---------------|
+| **Core Agents** | 74 | Python classes in `core/agents/*.py` |
+| **Persona Agents** | 139 | LLM-roleplayed from database records |
+
+**New Service:** `core/services/persona_agent_context.py`
+- Injects domain-specific spider data into persona agent prompts
+- Maps 21 agent types to relevant spiders
+- Enables persona agents to discuss real-world data
+
+### Bug Fixes
+- Agent not found on Railway → `populate_agents` command
+- Frontend .toFixed() null errors → ~95 fixes across 26 files
+- Django queryset slice error in warmup
+- Truncation warning spam → increased test max_tokens
+
+---
+
+## What's Next?
+
+### Immediate
+1. **Check Railway embedding coverage** - Should be 90%+ if backfill completed
+2. **Check body system health** - Run `warmup_body_systems` if still unhealthy
+3. **Test persona agent conversations** - Verify spider data injection works
+
+### Deployment Phases
 - **Phase 2:** Add Celery default worker (enable background tasks)
 - **Phase 3:** Add long_running + broadcast workers + Beat scheduler
 - **Phase 4:** Monitoring + custom domain
 
----
-
-## Session 789: Redis Production URL Migration
-
-Fixed ALL hardcoded `redis.Redis(host='localhost', port=6379)` connections across the codebase for Railway production compatibility.
-
-### Pattern Applied
-```python
-# Before
-r = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
-
-# After
-import os
-_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-_REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2'
-r = redis.Redis.from_url(_REDIS_URL_DB2, decode_responses=True)
-```
-
-### Files Updated (27 total)
-
-| Module | Files | Connections Fixed |
-|--------|-------|-------------------|
-| `ai_platform/` | views.py | 3 (DB2, DB4) |
-| `agents/` | views_deployment_execute_improved.py | 2 |
-| `ai_core/intelligence/` | consumers.py, proposal_manager.py | 9 (DB4) |
-| `intelligence/` | 11 files (spider_agent_router, collaboration_tracker, etc.) | 15+ |
-| `ai_core/spiders/` | 6 files (tasks.py, command_center.py, etc.) | 6 |
-| `ai_core/agents/` | 4 files (sync_project_executor, etc.) | 5 |
-| `ai_core/utils/` | agent_notifier.py | 1 |
-
-### Remaining Localhost References
-- 36 files remain with hardcoded localhost, but ALL are in `tests/`, `scripts/`, or `archive/` directories
-- No production code has hardcoded localhost Redis
+### Known Issues
+- **TrendAnalysisAgent stuck** - Got stuck during warmup (>5 min). May need investigation.
+- **Body vitals show "unknown"** - Need server running + activity data
+- **SPINE warmup needs server** - API calls fail without local server
 
 ---
 
@@ -91,26 +120,27 @@ railway logs
 # Run Django shell in Railway
 railway run python manage.py shell
 
-# Create superuser (after deployment stable)
-railway run python manage.py createsuperuser
+# Check embedding coverage
+railway run python manage.py shell -c "
+from core.models_unified_system import SpiderData
+total = SpiderData.objects.count()
+with_emb = SpiderData.objects.filter(embedding__isnull=False).count()
+print(f'Coverage: {with_emb}/{total} ({with_emb/total*100:.1f}%)')
+"
 
-# Check service status
-railway status
+# Check agent counts
+railway run python manage.py shell -c "
+from core.models_unified_system import Agent
+print(f'Total agents: {Agent.objects.count()}')
+print(f'Active: {Agent.objects.filter(is_active=True).count()}')
+"
 ```
-
----
-
-## What's Next?
-
-1. **Phase 2: Add Celery Worker** - Enable background tasks on Railway
-2. **Test WebSocket Connections** - Verify ASGI is working with Redis
-3. **Test Agent Execution** - Verify agents work with production Redis
-4. **Phase 3: Full Celery Stack** - All workers + Beat scheduler
 
 ---
 
 ## Previous Sessions
 
+- **Session 790:** Persona Agent Enhancement - 139 persona agents get spider data, new commands (populate_agents, sync_persona_learning, warmup_body_systems)
 - **Session 789:** Redis Production URL Migration - 27 files, all production Redis connections now use REDIS_URL env var
 - **Session 787-788:** First Railway Deployment - 11 issues fixed, healthcheck passing
 - **Session 786:** DecisionSummary Fix + Curated Documentation Embedding
