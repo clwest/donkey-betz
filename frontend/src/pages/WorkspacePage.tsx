@@ -460,43 +460,142 @@ function WorkspaceSelectorModal({ workspaces, onSelect, onClose, onCreateNew }: 
   )
 }
 
-// Register Workspace Modal
+// Session 792: Enhanced Register Workspace Modal with GitHub support
 function RegisterWorkspaceModal({ onClose, onSubmit, isLoading }: {
   onClose: () => void
-  onSubmit: (data: { path: string; name?: string; description?: string }) => void
+  onSubmit: (data: { path?: string; github_url?: string; github_token?: string; name?: string; description?: string }) => void
   isLoading: boolean
 }) {
+  const [sourceType, setSourceType] = useState<'local' | 'github'>('local')
   const [path, setPath] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
+  const [githubToken, setGithubToken] = useState('')
+  const [showToken, setShowToken] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
 
+  const isValid = sourceType === 'local' ? !!path : !!githubUrl
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!path) return
-    onSubmit({ path, name: name || undefined, description: description || undefined })
+    if (!isValid) return
+
+    if (sourceType === 'local') {
+      onSubmit({ path, name: name || undefined, description: description || undefined })
+    } else {
+      onSubmit({
+        github_url: githubUrl,
+        github_token: githubToken || undefined,
+        name: name || undefined,
+        description: description || undefined
+      })
+    }
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-md mx-4 p-6" onClick={e => e.stopPropagation()}>
+      <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-lg mx-4 p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Register Workspace</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>
+
+        {/* Source Type Toggle */}
+        <div className="flex gap-2 mb-4 p-1 bg-dark-bg rounded-lg">
+          <button
+            type="button"
+            onClick={() => setSourceType('local')}
+            className={cn(
+              'flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2',
+              sourceType === 'local'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-400 hover:text-white'
+            )}
+          >
+            <Folder size={16} />
+            Local Path
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceType('github')}
+            className={cn(
+              'flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2',
+              sourceType === 'github'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-400 hover:text-white'
+            )}
+          >
+            <GitBranch size={16} />
+            GitHub
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Project Path *</label>
-            <input
-              type="text"
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
-              placeholder="/path/to/project"
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
-              required
-            />
-          </div>
+          {sourceType === 'local' ? (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Project Path *</label>
+              <input
+                type="text"
+                value={path}
+                onChange={(e) => setPath(e.target.value)}
+                placeholder="/path/to/project"
+                className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
+                required={sourceType === 'local'}
+              />
+              <p className="text-xs text-gray-500 mt-1">Absolute path to the project directory</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">GitHub URL *</label>
+                <input
+                  type="text"
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value)}
+                  placeholder="https://github.com/username/repo.git"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
+                  required={sourceType === 'github'}
+                />
+                <p className="text-xs text-gray-500 mt-1">Public or private repository URL</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Personal Access Token
+                  <span className="text-gray-500 ml-1">(for private repos)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    value={githubToken}
+                    onChange={(e) => setGithubToken(e.target.value)}
+                    placeholder="ghp_xxxxxxxxxxxx"
+                    className="w-full px-3 py-2 pr-10 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowToken(!showToken)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    {showToken ? <Eye size={16} /> : <Eye size={16} className="opacity-50" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Required for private repos.{' '}
+                  <a
+                    href="https://github.com/settings/tokens/new?scopes=repo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-400 hover:underline"
+                  >
+                    Create a token
+                  </a>
+                </p>
+              </div>
+            </>
+          )}
+
           <div>
             <label className="block text-sm text-gray-400 mb-1">Name (optional)</label>
             <input
@@ -506,24 +605,31 @@ function RegisterWorkspaceModal({ onClose, onSubmit, isLoading }: {
               placeholder="My Project"
               className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
             />
+            <p className="text-xs text-gray-500 mt-1">Display name (auto-detected from path/URL if empty)</p>
           </div>
+
           <div>
             <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description..."
+              placeholder="Brief description of the project..."
               rows={2}
               className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none resize-none"
             />
           </div>
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
               Cancel
             </button>
-            <button type="submit" disabled={isLoading || !path} className="btn btn-primary flex-1 flex items-center justify-center gap-2">
+            <button
+              type="submit"
+              disabled={isLoading || !isValid}
+              className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+            >
               {isLoading && <Loader2 size={16} className="animate-spin" />}
-              Register
+              {sourceType === 'github' ? 'Clone & Register' : 'Register'}
             </button>
           </div>
         </form>
@@ -1105,15 +1211,23 @@ export default function WorkspacePage() {
     },
   })
 
+  // Session 792: Enhanced mutation to support GitHub URLs
   const registerMutation = useMutation({
-    mutationFn: (data: { path: string; name?: string; description?: string }) => workspaceApi.create(data),
+    mutationFn: (data: {
+      path?: string
+      github_url?: string
+      github_token?: string
+      name?: string
+      description?: string
+    }) => workspaceApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspaces'] })
       setShowRegisterModal(false)
-      setActionResult({ type: 'success', message: 'Workspace registered' })
+      setActionResult({ type: 'success', message: 'Workspace registered successfully!' })
     },
-    onError: () => {
-      setActionResult({ type: 'error', message: 'Failed to register workspace' })
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || 'Failed to register workspace'
+      setActionResult({ type: 'error', message })
     },
   })
 
