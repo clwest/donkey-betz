@@ -830,9 +830,10 @@ export const settingsApi = {
 }
 
 export const assistantApi = {
-  // Chat
+  // Chat - Session 798: Use /assistant/chat/ endpoint (EnhancedPersonalAIAssistant with workspace awareness)
+  // instead of /v1/assistant/chat/ (old hardcoded prompt from views_image.py)
   chat: (message: string, options?: { use_personal_assistant?: boolean }) =>
-    api.post('/v1/assistant/chat/', { message, ...options }),
+    api.post('/assistant/chat/', { message, ...options }),
 
   // Voice
   transcribe: (audioBlob: Blob) => {
