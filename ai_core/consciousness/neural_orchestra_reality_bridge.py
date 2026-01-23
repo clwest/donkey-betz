@@ -171,8 +171,30 @@ class NeuralOrchestraRealityBridge:
             'contribution_breakdown': list(contribution_breakdown),
             'top_agents': list(top_agents) if not isinstance(top_agents, list) else top_agents,
             'collaborations': collaborations,
-            'tracking_rate': f"{(total_contributions / max(ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count(), 1) * 100):.1f}%"
+            # Session 793: Fix tracking rate calculation - cap at 100% and handle zero content
+            'tracking_rate': self._calculate_tracking_rate_string(total_contributions)
         }
+
+    def _calculate_tracking_rate_string(self, total_contributions: int) -> str:
+        """
+        Session 793: Calculate tracking rate as a formatted string.
+        Returns 'N/A' if no content exists, otherwise capped at 100%.
+        """
+        total_content = ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count()
+        if total_content == 0:
+            return "N/A" if total_contributions == 0 else "N/A (no content)"
+        rate = min((total_contributions / total_content) * 100, 100.0)
+        return f"{rate:.1f}%"
+
+    def _calculate_tracking_rate_decimal(self, total_contributions: int) -> float:
+        """
+        Session 793: Calculate tracking rate as a decimal (0.0 to 1.0).
+        Returns 0 if no content exists, otherwise capped at 1.0.
+        """
+        total_content = ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count()
+        if total_content == 0:
+            return 0.0
+        return min(total_contributions / total_content, 1.0)
 
     def _get_media_url(self, file_path: str) -> str:
         """Session 752: Convert absolute file path to media URL"""
@@ -686,8 +708,8 @@ class NeuralOrchestraRealityBridge:
             })
 
         # System status from real data
-        total_content = ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count()
-        tracking_rate = (stats['total_contributions'] / max(total_content, 1))
+        # Session 793: Use helper method for tracking rate calculation
+        tracking_rate_str = self._calculate_tracking_rate_string(stats['total_contributions'])
 
         # Session 719: Add missing fields for Neural Orchestra header
         try:
@@ -741,7 +763,7 @@ class NeuralOrchestraRealityBridge:
                 'active_now': stats['active_agents_1h'],
                 'total_contributions': stats['total_contributions'],
                 'contributions_24h': stats['contributions_24h'],
-                'tracking_rate': f"{tracking_rate * 100:.1f}%",
+                'tracking_rate': tracking_rate_str,  # Session 793: Use pre-calculated string
                 'collaborations': stats['collaborations'],
                 # Session 719: Added missing fields for Neural Orchestra header
                 'consciousness_level': consciousness_level,
@@ -770,8 +792,8 @@ class NeuralOrchestraRealityBridge:
         db_collaborations = stats['collaborations']
 
         # Calculate real performance metrics
-        total_content = ImageHistory.objects.count() + VideoHistory.objects.count() + MiniFigAsset.objects.count()
-        tracking_rate = (stats['total_contributions'] / max(total_content, 1))
+        # Session 793: Use helper method for tracking rate calculation (capped at 1.0)
+        tracking_rate = self._calculate_tracking_rate_decimal(stats['total_contributions'])
 
         # Top performers from real data
         top_performers = [
