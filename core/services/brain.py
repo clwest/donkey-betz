@@ -241,6 +241,10 @@ class BrainService:
             # Table doesn't exist - return empty history
             return []
         except Exception as e:
+            # Also catch by error message for psycopg2 exceptions
+            error_str = str(e).lower()
+            if 'does not exist' in error_str or 'relation' in error_str:
+                return []
             logger.error(f"Failed to get brain history: {e}")
             return []
 
@@ -656,4 +660,11 @@ class BrainService:
                 logger.debug(f"BrainPulse table not available (skipping pulse save): {e}")
                 self._pulse_table_warning_logged = True
         except Exception as e:
-            logger.error(f"Failed to save brain pulse: {e}")
+            # Also catch by error message for psycopg2 exceptions
+            error_str = str(e).lower()
+            if 'does not exist' in error_str or 'relation' in error_str:
+                if not getattr(self, '_pulse_table_warning_logged', False):
+                    logger.debug(f"BrainPulse table not available (skipping pulse save): {e}")
+                    self._pulse_table_warning_logged = True
+            else:
+                logger.error(f"Failed to save brain pulse: {e}")
