@@ -1,9 +1,9 @@
 /**
- * AgentCollaborationPage - Production Agent Collaboration Monitor
- * ================================================================
+ * AgentMonitorPage - Live Agent Operations Monitor
+ * =================================================
  *
- * Session 794: Real-time monitoring of agent collaborations for all 213 agents
- * (74 core Python + 139 persona) + 25 advisors.
+ * Session 794: Real-time operational monitoring of all 237 agents
+ * (73 core Python + 139 persona + 25 advisors).
  *
  * Features:
  * - Live collaboration feed (WebSocket)
@@ -11,7 +11,7 @@
  * - Active collaboration cards with progress
  * - Message flow visualization
  * - Statistics dashboard
- * - Agent roster with filtering
+ * - Full agent roster with filtering
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -51,7 +51,7 @@ const agentTypeConfig: Record<string, { icon: typeof Bot; color: string }> = {
   advisor: { icon: Crown, color: 'text-yellow-400' },
 }
 
-export default function AgentCollaborationPage() {
+export default function AgentMonitorPage() {
   const [activeTab, setActiveTab] = useState<TabType>('monitor')
   const [wsConnected, setWsConnected] = useState(false)
   const [agentFilter, setAgentFilter] = useState('')
@@ -185,11 +185,11 @@ export default function AgentCollaborationPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Users className="w-7 h-7 text-blue-400" />
-              Production Agent Collaboration
+              <Activity className="w-7 h-7 text-green-400" />
+              Agent Monitor
             </h1>
             <p className="text-gray-400 mt-1">
-              Real-time monitoring of {counts.total} agents + {counts.advisors} advisors
+              Live operations dashboard for {counts.total} agents + {counts.advisors} advisors
             </p>
           </div>
           <div className="flex items-center gap-4">
