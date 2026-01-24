@@ -20,6 +20,7 @@ Fixed stale metrics on Neural Orchestra page where Active Agents was stuck at 90
 | #60 | Documentation update |
 | #61 | **Celery Beat args fix** - Fixed missing category argument in scheduled tasks |
 | #63 | **AI Assistant timeout fix** - 60s OpenAI + 90s axios timeout |
+| #64 | **Channels page episodes view** - All Episodes tab with search, preview, copy |
 
 ---
 
@@ -84,6 +85,23 @@ TypeError: agent_category_rotation() missing 1 required positional argument: 'ca
 **Files Changed:**
 - `core/llm_enforcer.py` - Added 60s timeout to OpenAI client
 - `frontend/src/lib/api.ts` - Added 90s timeout to axios
+
+#### 5. Channels Page Episodes View (Session 802)
+
+**Problem:** AI Podcast Studio showed 28 episodes but:
+- Episodes hidden behind channel expand → click workflow
+- No way to browse all episodes across channels
+- No easy way to copy scripts
+
+**Solution:**
+- Added "All Episodes" tab as default view with search/filter
+- Each episode card shows: channel, title, topic, metrics
+- Inline expandable script preview
+- "Copy Script" button for quick clipboard copy
+- "View Full Episode" button opens detail modal
+
+**Files Changed:**
+- `frontend/src/pages/ContentChannelsPage.tsx` - Added AllEpisodes component
 
 ---
 
