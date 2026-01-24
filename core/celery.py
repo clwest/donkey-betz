@@ -215,9 +215,9 @@ app.conf.beat_schedule = {
         'args': (30,)  # Days before expiring
     },
     # Session 727: Missing Intelligence Tasks (found in deep system audit)
-    # These tasks were defined but never scheduled, causing 0 records in ActionPlan, RevenueMetrics, etc.
+    # Session 799: Changed to process_pending_action_plans which finds and executes pending plans
     'execute-action-plans': {
-        'task': 'intelligence.tasks.execute_action_plan',
+        'task': 'intelligence.tasks.process_pending_action_plans',
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,  # 30 minutes
