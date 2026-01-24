@@ -27126,6 +27126,9 @@ def _track_group_contribution(agent_name: str, group_name: str, project_id: str,
     """
     Session 787: Track agent contribution with shared project ID.
     This creates proper collaboration records when multiple agents work together.
+
+    Session 800 fix: project field requires PartnershipProject instance, not string.
+    Since scheduled runs don't have real projects, we create contributions without project.
     """
     try:
         from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate
@@ -27140,17 +27143,18 @@ def _track_group_contribution(agent_name: str, group_name: str, project_id: str,
             }
         )
 
-        # Create contribution with shared project for collaboration tracking
+        # Session 800: Create contribution without project (project is nullable since Session 752)
+        # Scheduled agent runs don't have real PartnershipProject instances
         AgentContribution.objects.create(
             agent=agent_template,
-            project=project_id,
+            project=None,  # Session 800: Was passing string, but field requires PartnershipProject instance
             contribution_type='orchestration',
             contribution_role='Collaborator',
-            task_description=f'{agent_name} participating in {group_name} scheduled run',
+            task_description=f'{agent_name} participating in {group_name} scheduled run (project: {project_id})',
             contribution_percentage=100 if success else 0,
         )
 
-        logger.debug(f"✓ Tracked collaboration: {agent_name} -> project {project_id}")
+        logger.debug(f"✓ Tracked collaboration: {agent_name} -> group {group_name}")
 
     except Exception as e:
         logger.warning(f"Could not track contribution for {agent_name}: {e}")

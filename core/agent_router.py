@@ -1233,6 +1233,11 @@ class AgentRouter:
             Dict with workspace structure info, or empty dict if no workspace
         """
         try:
+            # Session 800: Skip workspace context for system/scheduled tasks (no user)
+            if self.user is None:
+                logger.debug(f"📁 [Session 800] Skipping workspace context for {agent_name} (system task, no user)")
+                return {}
+
             from core.services.workspace_manager import get_workspace_manager
 
             manager = get_workspace_manager(self.user)

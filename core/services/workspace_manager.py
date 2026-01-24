@@ -1453,6 +1453,21 @@ _workspace_manager_instances: Dict[int, WorkspaceManager] = {}
 
 def get_workspace_manager(user: User) -> WorkspaceManager:
     """Get or create a WorkspaceManager for a user."""
+    # Session 800: Handle None user (system/scheduled tasks have no user context)
+    if user is None:
+        # Return a manager with no workspaces for system tasks
+        if 0 not in _workspace_manager_instances:
+            # Create a dummy manager - will have no active workspace
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            system_user = User.objects.filter(is_superuser=True).first()
+            if system_user:
+                _workspace_manager_instances[0] = WorkspaceManager(system_user)
+            else:
+                # No superuser exists, raise a more helpful error
+                raise ValueError("No user provided and no superuser exists for system workspace")
+        return _workspace_manager_instances[0]
+
     user_id = user.id
     if user_id not in _workspace_manager_instances:
         _workspace_manager_instances[user_id] = WorkspaceManager(user)
