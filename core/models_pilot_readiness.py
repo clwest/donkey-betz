@@ -873,6 +873,7 @@ class Experiment(models.Model):
     def halt(self, reason: str, halted_by: str = 'auto', trigger_rollback: bool = True):
         """
         Session 599/600: Halt the experiment immediately.
+        Session 805: Now also extracts learnings from halted experiments.
 
         Args:
             reason: Why the experiment was halted
@@ -899,7 +900,74 @@ class Experiment(models.Model):
                     f"[Session 600] Failed to trigger rollback for {self.id}: {e}"
                 )
 
+        # Session 805: Extract learning from halted experiment
+        # Halted experiments contain valuable learnings about what went wrong
+        self._extract_halt_learning(reason, halted_by)
+
         return self
+
+    def _extract_halt_learning(self, halt_reason: str, halted_by: str):
+        """
+        Session 805: Extract learning from a halted experiment.
+
+        Halted experiments contain valuable information about:
+        - What conditions triggered the halt
+        - What went wrong during the experiment
+        - How to avoid similar failures in the future
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            # Check if learning already exists
+            if hasattr(self, 'learning') and self.learning:
+                logger.debug(f"[Session 805] Learning already exists for experiment {self.id}")
+                return
+
+            # Get decision context
+            decision = None
+            decision_type = 'unknown'
+            decision_topic = 'Unknown'
+            if self.pilot and self.pilot.gate:
+                decision = self.pilot.gate.decision
+                if decision:
+                    decision_type = decision.decision_type or 'general'
+                    decision_topic = decision.topic or 'Unknown topic'
+
+            # Build analysis dict for halt learning
+            analysis = {
+                'decision_type': decision_type,
+                'what_worked': '',  # Halted experiments typically don't have "what worked"
+                'what_failed': f"Experiment halted: {halt_reason}",
+                'key_insight': (
+                    f"The {decision_type} experiment was halted due to: {halt_reason}. "
+                    f"Review halt conditions and monitoring thresholds for future experiments."
+                ),
+                'future_recommendation': (
+                    "Do not proceed with current approach. "
+                    "Address the halt condition before retrying."
+                ),
+            }
+
+            # Create the learning record
+            learning = ExperimentLearning.create_from_experiment(self, analysis)
+
+            if learning:
+                # Update with halt-specific fields
+                learning.what_failed = analysis['what_failed']
+                learning.key_insight = analysis['key_insight']
+                learning.future_recommendation = analysis['future_recommendation']
+                learning.save()
+
+                logger.info(
+                    f"[Session 805] Created learning from halted experiment {self.id}: "
+                    f"{halt_reason[:50]}..."
+                )
+
+        except Exception as e:
+            logger.warning(
+                f"[Session 805] Failed to extract learning from halted experiment {self.id}: {e}"
+            )
 
     def check_halt_conditions(self, metrics: dict) -> tuple[bool, str]:
         """
