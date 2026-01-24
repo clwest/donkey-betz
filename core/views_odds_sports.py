@@ -2149,10 +2149,11 @@ def get_game_spider_insights(request, game_id):
         away_team_name = game.away_team.name
 
         # Query spider data for team mentions (case-insensitive)
+        # Session 807: Defer embedding fields to reduce egress costs
         spider_data = SpiderData.objects.filter(
             Q(spider_name__in=['social_sentiment', 'horse_racing', 'combat_sports']) &
             (Q(data__icontains=home_team_name) | Q(data__icontains=away_team_name))
-        ).order_by('-created_at')[:50]
+        ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:50]
 
         # Aggregate insights
         total_mentions = spider_data.count()
@@ -2464,10 +2465,11 @@ def get_futures_odds(request):
         if not all_futures:
             from persistence.models import SpiderData
 
+            # Session 807: Defer embedding fields to reduce egress costs
             cached = SpiderData.objects.filter(
                 spider_name='theodds',
                 category='futures'
-            ).order_by('-created_at')[:limit * 4]
+            ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:limit * 4]
 
             for item in cached:
                 data = item.data if isinstance(item.data, dict) else {}

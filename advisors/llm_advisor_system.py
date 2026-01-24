@@ -115,10 +115,11 @@ class LLMAdvisor(AIEnforcedAgent):
             logger.info(f"   Sources: {spider_sources[:5]}...")
 
             # Query SpiderData for domain-relevant content
+            # Session 807: Defer embedding fields to reduce egress costs
             query = SpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=spider_sources
-            )
+            ).defer('embedding', 'item_embeddings', 'embedding_text')
 
             # If topic provided, try to filter by relevance
             if topic:

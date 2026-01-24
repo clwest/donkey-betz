@@ -303,10 +303,11 @@ class ProactiveIntelligenceService:
         try:
             from core.models_unified_system import SpiderData
             # Get trending content topics - use correct field names
+            # Session 807: Defer embedding fields to reduce egress costs
             content_data = SpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['techcrunch', 'hackernews', 'theverge', 'wired', 'reddit']
-            ).order_by('-created_at')[:10]
+            ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
 
             for item in content_data[:5]:
                 # Extract title from raw_data
@@ -333,10 +334,11 @@ class ProactiveIntelligenceService:
 
         try:
             from core.models_unified_system import SpiderData
+            # Session 807: Defer embedding fields to reduce egress costs
             design_data = SpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['behance', 'dribbble', 'awwwards', 'unsplash']
-            ).order_by('-created_at')[:5]
+            ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]
 
             for item in design_data:
                 # Extract title from raw_data
@@ -362,10 +364,11 @@ class ProactiveIntelligenceService:
 
         try:
             from core.models_unified_system import SpiderData
+            # Session 807: Defer embedding fields to reduce egress costs
             tech_data = SpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['techcrunch', 'hackernews', 'theverge', 'wired', 'mit_tech_review', 'arstechnica']
-            ).order_by('-created_at')[:10]
+            ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
 
             # Filter for AI/ML content
             ai_keywords = ['ai', 'gpt', 'llm', 'claude', 'openai', 'anthropic', 'machine learning']
@@ -397,10 +400,11 @@ class ProactiveIntelligenceService:
 
         try:
             from core.models_unified_system import SpiderData
+            # Session 807: Defer embedding fields to reduce egress costs
             legal_data = SpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['courtlistener', 'legal_news', 'findlaw', 'colorado_family_law']
-            ).order_by('-created_at')[:5]
+            ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]
 
             for item in legal_data:
                 # Extract title from raw_data

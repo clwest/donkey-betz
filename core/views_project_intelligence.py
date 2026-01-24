@@ -576,7 +576,8 @@ def get_project_spiders(request, project_id):
                 query |= Q(spider_name__icontains=topic)
                 query |= Q(raw_data__icontains=topic)
 
-            recent_data = SpiderData.objects.filter(query).order_by('-created_at')[:20]
+            # Session 807: Defer embedding fields to reduce egress costs
+            recent_data = SpiderData.objects.filter(query).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
             for sd in recent_data:
                 spider_data.append({
                     'id': str(sd.id),
