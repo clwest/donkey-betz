@@ -175,7 +175,8 @@ class SpiderIntelligenceService:
         tag_articles = defaultdict(list)  # tag -> list of articles
         keyword_articles = defaultdict(list)  # keyword -> list of articles
 
-        for entry in queryset:
+        # Session 814: Limit entries scanned to prevent slow queries
+        for entry in queryset[:self.MAX_ENTRIES_TO_SCAN]:
             if not entry.raw_data:
                 continue
 
@@ -346,8 +347,9 @@ class SpiderIntelligenceService:
         }
 
         # Process crypto data
+        # Session 814: Limit entries to prevent slow queries
         seen_crypto = set()
-        for entry in crypto_data:
+        for entry in crypto_data[:self.MAX_ENTRIES_TO_SCAN]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -368,8 +370,9 @@ class SpiderIntelligenceService:
                 insights['last_updated'] = entry.created_at.isoformat()
 
         # Process stock data
+        # Session 814: Limit entries to prevent slow queries
         seen_stocks = set()
-        for entry in stock_data:
+        for entry in stock_data[:self.MAX_ENTRIES_TO_SCAN]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -460,7 +463,8 @@ class SpiderIntelligenceService:
         topic_counts = Counter()
         seen_titles = set()  # Session 222: Deduplicate discussions
 
-        for entry in tech_data:
+        # Session 814: Limit entries scanned to prevent slow queries
+        for entry in tech_data[:self.MAX_ENTRIES_TO_SCAN]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -599,7 +603,8 @@ class SpiderIntelligenceService:
 
         seen_jobs = set()
 
-        for entry in job_data:
+        # Session 814: Limit entries to prevent slow queries
+        for entry in job_data[:self.MAX_ENTRIES_TO_SCAN]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -688,6 +693,10 @@ class SpiderIntelligenceService:
 
         return summary
 
+    # Session 814: Performance limit - max SpiderData entries to scan per search
+    # Prevents timeouts when searching through thousands of entries
+    MAX_ENTRIES_TO_SCAN = 300
+
     def search_spider_data(self, query: str, category: str = None,
                            hours: int = 72, limit: int = 50) -> list:
         """
@@ -698,6 +707,9 @@ class SpiderIntelligenceService:
         - Splits query into individual terms
         - Matches if ANY term is found (OR logic)
         - Scores by number of matching terms
+
+        Session 814: Performance optimization - limits entries scanned to MAX_ENTRIES_TO_SCAN
+        to prevent 10+ minute query times when spider data volume is high.
 
         Args:
             query: Search query
@@ -763,7 +775,9 @@ class SpiderIntelligenceService:
         results = []
         seen = set()
 
-        for entry in queryset.order_by('-created_at'):
+        # Session 814: Limit entries scanned to prevent timeouts
+        # Most relevant data is in recent entries anyway (ordered by -created_at)
+        for entry in queryset.order_by('-created_at')[:self.MAX_ENTRIES_TO_SCAN]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
@@ -1009,7 +1023,8 @@ class SpiderIntelligenceService:
         keywords = []
         sources_found = set()
 
-        for entry in creative_data:
+        # Session 814: Limit entries to prevent slow queries
+        for entry in creative_data[:self.MAX_ENTRIES_TO_SCAN]:
             raw_data = self._parse_raw_data(entry.raw_data)
             if raw_data is None:
                 continue
