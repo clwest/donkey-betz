@@ -65,6 +65,38 @@ def trigger_market_scan():
         return {"status": "error", "error": str(e)}
 
 
+@shared_task
+def process_pending_action_plans():
+    """
+    Session 799: Process all pending action plans.
+
+    This is the scheduled task that finds ActionPlans with status='created'
+    and triggers execution for each one.
+    """
+    from .models import ActionPlan
+
+    try:
+        # Find all action plans ready to execute
+        pending_plans = ActionPlan.objects.filter(status='created').order_by('created_at')[:5]
+
+        processed = 0
+        for plan in pending_plans:
+            logger.info(f"📋 Processing action plan: {plan.id} - {plan.opportunity_title}")
+            # Trigger the execution task
+            execute_action_plan.delay(str(plan.id))
+            processed += 1
+
+        logger.info(f"📋 Queued {processed} action plans for execution")
+        return {
+            "status": "success",
+            "plans_queued": processed,
+            "total_pending": pending_plans.count()
+        }
+    except Exception as e:
+        logger.error(f"Error processing pending action plans: {e}")
+        return {"status": "error", "error": str(e)}
+
+
 @shared_task(bind=True)
 def execute_action_plan(self, action_plan_id):
     """Execute an action plan using real agents"""
