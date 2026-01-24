@@ -8938,17 +8938,30 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 return response_data
 
         # Check if this is a system command
-        system_keywords = ['database', 'embedding', 'system', 'status', 'websocket', 'query']
+        # Session 799: Only trigger for actual command patterns, not questions containing keywords
+        system_command_patterns = [
+            'check database',
+            'database status',
+            'search embedding',
+            'list agents',
+            'execute agent',
+            'run agent',
+            'websocket status',
+            'embeddings count',
+        ]
+        message_lower = message.lower()
+        is_system_command = any(pattern in message_lower for pattern in system_command_patterns)
 
-        if any(keyword in message.lower() for keyword in system_keywords):
+        if is_system_command:
             # Process as system command
             system_result = self.process_system_command(message)
 
             # Use AI generation instead of parent's template response
             response_data = self._generate_response(message, full_context)
 
-            # Enhanced response with system data
-            response_data['response'] = system_result.get('response', response_data['response'])
+            # Enhanced response with system data - only use system response if it's not the fallback
+            if system_result.get('type') != 'unknown_command':
+                response_data['response'] = system_result.get('response', response_data['response'])
             response_data['system_data'] = system_result
             response_data['confidence'] = 0.9  # High confidence for system queries
 
