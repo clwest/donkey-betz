@@ -1416,6 +1416,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Session 796: Human Interface Layer - Connect PA to human decisions
             elif function_name == 'human_decisions_tool':
                 result = self._handle_human_decisions_tool(arguments)
+            # Session 800: Reasoning Engine - Connect PA to ThinkingAgent
+            elif function_name == 'reasoning_engine_tool':
+                result = self._handle_reasoning_engine_tool(arguments)
             else:
                 result = {
                     'success': False,
@@ -12913,6 +12916,229 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"Error in human_decisions_tool: {e}", exc_info=True)
             return {'success': False, 'error': str(e), 'tool': 'human_decisions_tool'}
+
+    # =========================================================================
+    # SESSION 800: REASONING ENGINE TOOL - CONNECT PA TO THINKINGAGENT
+    # =========================================================================
+
+    def _handle_reasoning_engine_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle reasoning_engine_tool - Access the Autonomous Reasoning Engine (ThinkingAgent).
+
+        This connects the PA to the system's autonomous thinking layer, allowing
+        users to see what the system has been thinking about and what actions
+        it has taken autonomously.
+
+        Actions: thoughts, insights, actions, status, trigger
+        """
+        try:
+            from core.models_unified_system import ThoughtRecord, AutonomousAction
+            from django.utils import timezone
+            from datetime import timedelta
+
+            action = arguments.get('action', 'thoughts')
+            limit = arguments.get('limit', 10)
+            include_context = arguments.get('include_context', False)
+
+            if action == 'thoughts':
+                # Get recent thought records
+                thoughts = ThoughtRecord.objects.order_by('-started_at')[:limit]
+
+                if not thoughts.exists():
+                    return {
+                        'success': True,
+                        'tool': 'reasoning_engine_tool',
+                        'action': 'thoughts',
+                        'count': 0,
+                        'message': 'No thinking cycles have been recorded yet. The reasoning engine runs automatically on a schedule.',
+                        'thoughts': []
+                    }
+
+                thought_list = []
+                for thought in thoughts:
+                    thought_data = {
+                        'id': str(thought.id),
+                        'cycle_number': thought.cycle_number,
+                        'cycle_type': thought.cycle_type,
+                        'reflection_preview': thought.reflection[:300] + '...' if thought.reflection and len(thought.reflection) > 300 else thought.reflection,
+                        'insights_count': len(thought.insights) if thought.insights else 0,
+                        'patterns_count': len(thought.patterns) if thought.patterns else 0,
+                        'decisions_count': len(thought.decisions) if thought.decisions else 0,
+                        'actions_executed_count': len(thought.actions_executed) if thought.actions_executed else 0,
+                        'priority_score': thought.priority_score,
+                        'execution_status': thought.execution_status,
+                        'started_at': thought.started_at.isoformat() if thought.started_at else None,
+                    }
+
+                    if include_context:
+                        thought_data['context_summary'] = thought.context_summary
+                        thought_data['insights'] = thought.insights
+                        thought_data['patterns'] = thought.patterns
+
+                    thought_list.append(thought_data)
+
+                return {
+                    'success': True,
+                    'tool': 'reasoning_engine_tool',
+                    'action': 'thoughts',
+                    'count': len(thought_list),
+                    'message': f'Found {len(thought_list)} recent thinking cycle(s):',
+                    'thoughts': thought_list
+                }
+
+            elif action == 'insights':
+                # Get just insights from recent thoughts
+                thoughts = ThoughtRecord.objects.filter(
+                    insights__isnull=False
+                ).exclude(insights=[]).order_by('-started_at')[:limit]
+
+                all_insights = []
+                for thought in thoughts:
+                    if thought.insights:
+                        for insight in thought.insights:
+                            all_insights.append({
+                                'insight': insight.get('insight', ''),
+                                'confidence': insight.get('confidence', 0),
+                                'category': insight.get('category', 'general'),
+                                'from_cycle': thought.cycle_number,
+                                'date': thought.started_at.isoformat() if thought.started_at else None,
+                            })
+
+                return {
+                    'success': True,
+                    'tool': 'reasoning_engine_tool',
+                    'action': 'insights',
+                    'count': len(all_insights),
+                    'message': f'Found {len(all_insights)} insight(s) from the reasoning engine:',
+                    'insights': all_insights[:limit * 3]  # More insights per thought
+                }
+
+            elif action == 'actions':
+                # Get recent autonomous actions
+                actions = AutonomousAction.objects.select_related('thought_record').order_by('-created_at')[:limit]
+
+                action_list = []
+                for a in actions:
+                    action_list.append({
+                        'id': str(a.id),
+                        'action_type': a.action_type,
+                        'action_name': a.action_name,
+                        'reasoning': a.reasoning[:200] if a.reasoning else '',
+                        'priority': a.priority,
+                        'status': a.status,
+                        'result_summary': a.result_summary[:200] if a.result_summary else '',
+                        'created_at': a.created_at.isoformat() if a.created_at else None,
+                        'from_cycle': a.thought_record.cycle_number if a.thought_record else None,
+                    })
+
+                return {
+                    'success': True,
+                    'tool': 'reasoning_engine_tool',
+                    'action': 'actions',
+                    'count': len(action_list),
+                    'message': f'Found {len(action_list)} autonomous action(s) taken by the system:',
+                    'actions': action_list
+                }
+
+            elif action == 'status':
+                # Get reasoning engine status
+                total_thoughts = ThoughtRecord.objects.count()
+                completed_thoughts = ThoughtRecord.objects.filter(execution_status='completed').count()
+                last_thought = ThoughtRecord.objects.order_by('-started_at').first()
+
+                # Count total insights and actions
+                total_insights = sum(
+                    len(t.insights) if t.insights else 0
+                    for t in ThoughtRecord.objects.all()[:100]  # Limit for performance
+                )
+                total_actions = AutonomousAction.objects.count()
+                successful_actions = AutonomousAction.objects.filter(status='completed').count()
+
+                status_data = {
+                    'total_thinking_cycles': total_thoughts,
+                    'completed_cycles': completed_thoughts,
+                    'total_insights_generated': total_insights,
+                    'total_autonomous_actions': total_actions,
+                    'successful_actions': successful_actions,
+                    'last_cycle': {
+                        'cycle_number': last_thought.cycle_number if last_thought else None,
+                        'started_at': last_thought.started_at.isoformat() if last_thought and last_thought.started_at else None,
+                        'status': last_thought.execution_status if last_thought else None,
+                    } if last_thought else None,
+                }
+
+                return {
+                    'success': True,
+                    'tool': 'reasoning_engine_tool',
+                    'action': 'status',
+                    'status': status_data,
+                    'message': f'Reasoning Engine has run {total_thoughts} thinking cycles, generated {total_insights} insights, and taken {total_actions} autonomous actions.'
+                }
+
+            elif action == 'trigger':
+                # Queue a new thinking cycle
+                from core.tasks import run_thinking_cycle
+
+                # Queue the task
+                result = run_thinking_cycle.delay()
+
+                return {
+                    'success': True,
+                    'tool': 'reasoning_engine_tool',
+                    'action': 'trigger',
+                    'task_id': str(result.id) if result else None,
+                    'message': 'A new thinking cycle has been queued. The reasoning engine will gather context, reflect, and generate insights shortly.'
+                }
+
+            elif action == 'get':
+                # Get specific thought by ID
+                thought_id = arguments.get('thought_id')
+                if not thought_id:
+                    return {'success': False, 'error': 'thought_id required for get action'}
+
+                try:
+                    thought = ThoughtRecord.objects.get(id=thought_id)
+                    actions = AutonomousAction.objects.filter(thought_record=thought).order_by('created_at')
+
+                    return {
+                        'success': True,
+                        'tool': 'reasoning_engine_tool',
+                        'action': 'get',
+                        'thought': {
+                            'id': str(thought.id),
+                            'cycle_number': thought.cycle_number,
+                            'cycle_type': thought.cycle_type,
+                            'context_summary': thought.context_summary,
+                            'reflection': thought.reflection,
+                            'insights': thought.insights,
+                            'patterns': thought.patterns,
+                            'opportunities': thought.opportunities,
+                            'concerns': thought.concerns,
+                            'decisions': thought.decisions,
+                            'priority_score': thought.priority_score,
+                            'execution_status': thought.execution_status,
+                            'started_at': thought.started_at.isoformat() if thought.started_at else None,
+                            'completed_at': thought.completed_at.isoformat() if thought.completed_at else None,
+                        },
+                        'actions': [
+                            {
+                                'action_type': a.action_type,
+                                'action_name': a.action_name,
+                                'status': a.status,
+                                'result_summary': a.result_summary,
+                            }
+                            for a in actions
+                        ]
+                    }
+                except ThoughtRecord.DoesNotExist:
+                    return {'success': False, 'error': f'Thought record {thought_id} not found'}
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}. Valid actions: thoughts, insights, actions, status, trigger'}
+
+        except Exception as e:
+            logger.error(f"Error in reasoning_engine_tool: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'tool': 'reasoning_engine_tool'}
 
     # Session 796 Phase 3: Consultation Response Detection
     def _check_consultation_response(self, message: str) -> Optional[Dict[str, Any]]:
