@@ -337,14 +337,16 @@ function OperationRow({ operation, onRollback, onReview, onViewContent, isReview
       )}
 
       <div className="flex items-center gap-2">
-        {/* Session 779: View Content button for file operations */}
-        {onViewContent && operation.success && ['file_create', 'file_update', 'file_modify'].includes(operation.operation_type) && (
+        {/* Session 799: View Content/Output button for all operations with content */}
+        {onViewContent && operation.success && (
           <button
             onClick={onViewContent}
             className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
           >
             <FileText size={12} />
-            View Content
+            {['file_create', 'file_update', 'file_modify', 'file_delete', 'file_rename'].includes(operation.operation_type)
+              ? 'View Content'
+              : 'View Output'}
           </button>
         )}
         {operation.diff && (
@@ -881,9 +883,18 @@ interface OperationDetail {
   file_content_before?: string
   operation_type: string
   agent_name: string
+  agent_task?: string
   created_at: string
   diff?: string
   success: boolean
+  // Session 799: Command operation fields
+  command?: string
+  command_output?: string
+  command_error?: string
+  exit_code?: number
+  execution_time_ms?: number
+  error_message?: string
+  lines_changed?: number
 }
 
 function FileContentModal({ operation, isLoading, onClose }: {
@@ -893,10 +904,36 @@ function FileContentModal({ operation, isLoading, onClose }: {
 }) {
   const [copied, setCopied] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
+  const [activeView, setActiveView] = useState<'content' | 'diff' | 'output'>('content')
 
-  const content = operation?.file_content_after || ''
+  // Session 799: Determine what content to show based on operation type
+  const isFileOperation = ['file_create', 'file_modify', 'file_update', 'file_delete', 'file_rename'].includes(operation?.operation_type || '')
+  const isCommandOperation = ['command_exec', 'build_run', 'test_run', 'lint_run', 'deploy'].includes(operation?.operation_type || '')
+  const isGitOperation = ['git_commit', 'git_branch', 'git_checkout', 'git_merge'].includes(operation?.operation_type || '')
+
+  // Get the primary content to display
+  const getContent = () => {
+    if (!operation) return ''
+
+    if (isFileOperation) {
+      if (activeView === 'diff' && operation.diff) return operation.diff
+      return operation.file_content_after || ''
+    }
+
+    if (isCommandOperation || isGitOperation) {
+      if (activeView === 'output') return operation.command_output || ''
+      if (operation.command_error) return `Command: ${operation.command || 'N/A'}\n\nOutput:\n${operation.command_output || '(no output)'}\n\nError:\n${operation.command_error}`
+      return `Command: ${operation.command || 'N/A'}\n\nOutput:\n${operation.command_output || '(no output)'}`
+    }
+
+    return operation.file_content_after || operation.command_output || ''
+  }
+
+  const content = getContent()
   const isMarkdown = operation?.file_path?.endsWith('.md') || operation?.file_path?.endsWith('.markdown')
-  const fileName = operation?.file_path?.split('/').pop() || 'Unknown'
+  const fileName = operation?.file_path?.split('/').pop() || operation?.operation_type || 'Unknown'
+  const hasDiff = isFileOperation && operation?.diff
+  const hasCommandOutput = (isCommandOperation || isGitOperation) && operation?.command_output
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content)
@@ -906,30 +943,43 @@ function FileContentModal({ operation, isLoading, onClose }: {
 
   // Simple markdown to HTML conversion for display
   const renderMarkdown = (text: string) => {
-    // Convert headers
     let html = text
       .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2 text-white">$1</h3>')
       .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-white">$1</h2>')
       .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-4 text-white">$1</h1>')
-      // Convert bold and italic
       .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Convert inline code
       .replace(/`([^`]+)`/g, '<code class="bg-dark-bg px-1.5 py-0.5 rounded text-primary-400 text-sm">$1</code>')
-      // Convert code blocks
       .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-dark-bg p-3 rounded-lg my-3 overflow-x-auto text-sm"><code>$2</code></pre>')
-      // Convert unordered lists
       .replace(/^\s*[-*]\s+(.*)$/gim, '<li class="ml-4 list-disc">$1</li>')
-      // Convert horizontal rules
       .replace(/^---+$/gim, '<hr class="border-dark-border my-4" />')
-      // Convert links
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-400 hover:underline" target="_blank" rel="noopener">$1</a>')
-      // Convert line breaks
       .replace(/\n\n/g, '</p><p class="my-2">')
       .replace(/\n/g, '<br />')
 
     return `<p class="my-2">${html}</p>`
+  }
+
+  // Get operation type label
+  const getOperationLabel = () => {
+    const labels: Record<string, string> = {
+      'file_create': 'File Created',
+      'file_modify': 'File Modified',
+      'file_update': 'File Updated',
+      'file_delete': 'File Deleted',
+      'file_rename': 'File Renamed',
+      'command_exec': 'Command Executed',
+      'git_commit': 'Git Commit',
+      'git_branch': 'Git Branch',
+      'git_checkout': 'Git Checkout',
+      'git_merge': 'Git Merge',
+      'build_run': 'Build Run',
+      'test_run': 'Test Run',
+      'lint_run': 'Lint Run',
+      'deploy': 'Deploy',
+    }
+    return labels[operation?.operation_type || ''] || operation?.operation_type || 'Operation'
   }
 
   return (
@@ -941,7 +991,14 @@ function FileContentModal({ operation, isLoading, onClose }: {
             <FileText size={20} className="text-primary-400" />
             <div>
               <h3 className="text-lg font-semibold">{fileName}</h3>
-              <p className="text-xs text-gray-400 font-mono">{operation?.file_path}</p>
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="font-mono">{operation?.file_path || getOperationLabel()}</span>
+                {operation?.lines_changed !== undefined && operation.lines_changed > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber">
+                    {operation.lines_changed} lines changed
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -950,17 +1007,56 @@ function FileContentModal({ operation, isLoading, onClose }: {
                 {operation.agent_name}
               </span>
             )}
+            {operation?.execution_time_ms !== undefined && (
+              <span className="text-xs px-2 py-1 rounded bg-dark-border text-gray-400">
+                {operation.execution_time_ms}ms
+              </span>
+            )}
             <button onClick={onClose} className="text-gray-400 hover:text-white">
               <X size={20} />
             </button>
           </div>
         </div>
 
+        {/* Agent Task (if available) */}
+        {operation?.agent_task && (
+          <div className="px-4 py-2 border-b border-dark-border bg-dark-bg/30">
+            <p className="text-xs text-gray-400">
+              <span className="text-gray-500">Task:</span> {operation.agent_task}
+            </p>
+          </div>
+        )}
+
         {/* Toolbar */}
-        {!isLoading && content && (
+        {!isLoading && (
           <div className="flex items-center justify-between p-2 border-b border-dark-border bg-dark-bg/50 flex-shrink-0">
             <div className="flex items-center gap-2">
-              {isMarkdown && (
+              {/* View toggle buttons */}
+              {isFileOperation && (
+                <>
+                  <button
+                    onClick={() => setActiveView('content')}
+                    className={cn(
+                      "text-xs px-2 py-1 rounded transition-colors",
+                      activeView === 'content' ? "bg-primary-500/20 text-primary-400" : "bg-dark-border text-gray-400 hover:text-white"
+                    )}
+                  >
+                    Content
+                  </button>
+                  {hasDiff && (
+                    <button
+                      onClick={() => setActiveView('diff')}
+                      className={cn(
+                        "text-xs px-2 py-1 rounded transition-colors",
+                        activeView === 'diff' ? "bg-primary-500/20 text-primary-400" : "bg-dark-border text-gray-400 hover:text-white"
+                      )}
+                    >
+                      Diff
+                    </button>
+                  )}
+                </>
+              )}
+              {isMarkdown && activeView === 'content' && (
                 <button
                   onClick={() => setShowRaw(!showRaw)}
                   className={cn(
@@ -971,17 +1067,21 @@ function FileContentModal({ operation, isLoading, onClose }: {
                   {showRaw ? 'Rendered' : 'Raw'}
                 </button>
               )}
-              <span className="text-xs text-gray-500">
-                {content.length.toLocaleString()} characters • {content.split('\n').length} lines
-              </span>
+              {content && (
+                <span className="text-xs text-gray-500">
+                  {content.length.toLocaleString()} characters • {content.split('\n').length} lines
+                </span>
+              )}
             </div>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-dark-border text-gray-400 hover:text-white transition-colors"
-            >
-              {copied ? <Check size={12} className="text-accent-green" /> : <Copy size={12} />}
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
+            {content && (
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-dark-border text-gray-400 hover:text-white transition-colors"
+              >
+                {copied ? <Check size={12} className="text-accent-green" /> : <Copy size={12} />}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            )}
           </div>
         )}
 
@@ -995,8 +1095,31 @@ function FileContentModal({ operation, isLoading, onClose }: {
             <div className="flex flex-col items-center justify-center h-64 text-gray-400">
               <FileText size={48} className="mb-4 opacity-50" />
               <p>No content available</p>
-              <p className="text-xs mt-1">The file content was not stored for this operation</p>
+              <p className="text-xs mt-1">
+                {isFileOperation
+                  ? 'The file content was not stored for this operation'
+                  : isCommandOperation || isGitOperation
+                    ? 'No command output was captured'
+                    : 'No details available for this operation'}
+              </p>
             </div>
+          ) : activeView === 'diff' ? (
+            <pre className="text-sm font-mono whitespace-pre-wrap break-words leading-relaxed">
+              {content.split('\n').map((line, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "px-2 -mx-2",
+                    line.startsWith('+') && !line.startsWith('+++') ? 'bg-accent-green/10 text-accent-green' :
+                    line.startsWith('-') && !line.startsWith('---') ? 'bg-accent-red/10 text-accent-red' :
+                    line.startsWith('@@') ? 'bg-primary-500/10 text-primary-400' :
+                    'text-gray-300'
+                  )}
+                >
+                  {line}
+                </div>
+              ))}
+            </pre>
           ) : isMarkdown && !showRaw ? (
             <div
               className="prose prose-invert prose-sm max-w-none text-gray-300"
@@ -1009,11 +1132,32 @@ function FileContentModal({ operation, isLoading, onClose }: {
           )}
         </div>
 
+        {/* Error section (for failed operations) */}
+        {operation?.error_message && (
+          <div className="mx-4 mb-4 p-3 bg-accent-red/10 border border-accent-red/20 rounded-lg">
+            <div className="flex items-start gap-2 text-sm text-accent-red">
+              <XCircle size={16} className="flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Error</p>
+                <p className="text-xs mt-1 opacity-80">{operation.error_message}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="p-4 border-t border-dark-border flex justify-between items-center flex-shrink-0">
-          <div className="text-xs text-gray-400">
+          <div className="flex items-center gap-4 text-xs text-gray-400">
             {operation?.created_at && (
               <span>Created: {new Date(operation.created_at).toLocaleString()}</span>
+            )}
+            {operation?.exit_code !== undefined && (
+              <span className={cn(
+                "px-1.5 py-0.5 rounded",
+                operation.exit_code === 0 ? "bg-accent-green/20 text-accent-green" : "bg-accent-red/20 text-accent-red"
+              )}>
+                Exit code: {operation.exit_code}
+              </span>
             )}
           </div>
           <button onClick={onClose} className="btn btn-secondary">Close</button>
