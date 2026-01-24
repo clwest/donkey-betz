@@ -84,23 +84,31 @@ class Command(BaseCommand):
         return user
 
     def _sync_agents(self):
-        """Sync all agents to database."""
+        """Check agents exist in database."""
         self.stdout.write('')
-        self.stdout.write('🤖 Syncing agents...')
+        self.stdout.write('🤖 Checking agents...')
 
         if self.dry_run:
-            self.stdout.write('  Would sync all agents from registry')
+            self.stdout.write('  Would check agents in database')
             return
 
         try:
-            from django.core.management import call_command
-            call_command('sync_agents', verbosity=0)
-
             from core.models_unified_system import Agent
             count = Agent.objects.count()
-            self.stdout.write(self.style.SUCCESS(f'  ✓ {count} agents synced'))
+
+            if count == 0:
+                # Try to populate agents if none exist
+                from django.core.management import call_command
+                try:
+                    call_command('populate_agents', verbosity=0)
+                    count = Agent.objects.count()
+                    self.stdout.write(self.style.SUCCESS(f'  ✓ {count} agents populated'))
+                except Exception:
+                    self.stdout.write(self.style.WARNING('  ⚠ No populate_agents command - agents must be added manually'))
+            else:
+                self.stdout.write(self.style.SUCCESS(f'  ✓ {count} agents already exist'))
         except Exception as e:
-            self.stdout.write(self.style.WARNING(f'  ⚠ Agent sync failed: {e}'))
+            self.stdout.write(self.style.WARNING(f'  ⚠ Agent check failed: {e}'))
 
     def _create_content_channels(self, user):
         """Create essential content channels for autonomous content generation."""
