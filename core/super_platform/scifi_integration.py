@@ -477,18 +477,16 @@ class SciFiIntegrationService:
         try:
             from core.models_unified_system import AgentMemory
 
-            # Get recent memories for this agent and user
-            # Try multiple field patterns since model might use FK or direct field
+            # Get recent memories for this agent
+            # Session 799: AgentMemory doesn't have user field - memories are per-agent
             memories = AgentMemory.objects.filter(
-                agent__name=agent_name,
-                user=user
+                agent__name=agent_name
             ).select_related('agent').order_by('-created_at')[:10]
 
-            # Fallback if no results
+            # Fallback if no results - try partial name match
             if not memories.exists():
                 memories = AgentMemory.objects.filter(
-                    agent__name__icontains=agent_name.replace('Agent', ''),
-                    user=user
+                    agent__name__icontains=agent_name.replace('Agent', '')
                 ).select_related('agent').order_by('-created_at')[:10]
 
             relevant_memories = []
