@@ -988,6 +988,74 @@ class LearningPatternEngine:
                 'promoted_from_transfers': promoted_from_transfers,
             }
 
+    def get_summary(
+        self,
+        agent_name: str,
+        task: str = '',
+        max_chars: int = 150
+    ) -> str:
+        """
+        Session 806: Build a compact summary of learning patterns.
+
+        This method returns a single-line summary suitable for prompt injection
+        with minimal token usage (~40 tokens vs ~200 for full context).
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+            max_chars: Maximum characters for the summary
+
+        Returns:
+            Compact summary string like:
+            "Effectiveness: +15% as teacher | Best collaborators: ResearchAgent"
+        """
+        try:
+            patterns = self.get_patterns_for_agent(agent_name, task)
+
+            if not patterns.get('has_patterns'):
+                return ""
+
+            # Use the built-in summary if available and short enough
+            summary = patterns.get('summary', '')
+            if summary and len(summary) <= max_chars:
+                return summary
+
+            # Build more compact summary
+            parts = []
+
+            # Effectiveness improvement (most important)
+            improvement = patterns.get('effectiveness_improvement', {})
+            if improvement:
+                if improvement.get('as_teacher'):
+                    parts.append(f"+{improvement['as_teacher']}% teaching")
+                if improvement.get('as_student'):
+                    parts.append(f"+{improvement['as_student']}% learning")
+
+            # Best collaborator (just one)
+            collabs = patterns.get('collaboration_insights', [])
+            if collabs and 'Works well with' in collabs[0]:
+                name = collabs[0].split('Works well with ')[1].split(' (')[0]
+                parts.append(f"Works with {name}")
+
+            # Success area (just one)
+            success = patterns.get('success_patterns', [])
+            if success:
+                task_type = success[0].get('task_type', '')
+                if task_type:
+                    parts.append(f"Excels: {task_type}")
+
+            result = " | ".join(parts)
+
+            if len(result) > max_chars:
+                result = result[:max_chars - 3] + "..."
+
+            logger.debug(f"📚 [Session 806] Learning summary: {len(result)} chars")
+            return result
+
+        except Exception as e:
+            logger.warning(f"Failed to build learning summary: {e}")
+            return ""
+
     def get_global_learning_stats(self) -> Dict[str, Any]:
         """Get overall learning system statistics."""
         try:
