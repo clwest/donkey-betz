@@ -7347,6 +7347,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         if workspace_context_section:
             system_prompt = system_prompt + workspace_context_section
 
+        # Session 800: Inject Operator Mode context (current state, not capabilities)
+        operator_mode_section = self._build_operator_mode_section()
+        if operator_mode_section:
+            system_prompt = system_prompt + operator_mode_section
+
         # Call the LLM Enforcer for real AI response with tool calling support
         try:
             logger.debug(f"Starting LLM call for message: {message[:50]}...")
@@ -7843,6 +7848,185 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         except Exception as e:
             logger.warning(f"⚠️ Workspace context injection failed: {e}")
+            return ""
+
+    def _build_operator_mode_section(self) -> str:
+        """
+        Session 800: Build Operator Mode section for system prompt.
+
+        This addresses the critical feedback that the PA describes capabilities
+        instead of current state. This section injects:
+        1. What changed since last interaction (learning updates)
+        2. What's currently happening (active agents, running tasks)
+        3. What's blocked or needs decisions
+        4. Specific actions needed from the user
+
+        This transforms the PA from "tour guide" mode to "control plane" mode.
+
+        Returns:
+            Formatted string section to append to system prompt
+        """
+        sections = ["\n\n--- OPERATOR MODE: CURRENT STATE (Session 800) ---"]
+        sections.append("**CRITICAL: Lead with state, not capabilities. You are a control plane, not a tour guide.**\n")
+
+        try:
+            from django.utils import timezone
+            from datetime import timedelta
+
+            now = timezone.now()
+            last_hour = now - timedelta(hours=1)
+            last_24h = now - timedelta(hours=24)
+
+            # ============================================
+            # 1. WHAT CHANGED: Recent Learning Updates
+            # ============================================
+            learning_section = []
+            try:
+                from core.models_unified_system import AgentMemory, KnowledgeTransfer
+
+                # Recent knowledge transfers (agent-to-agent learning)
+                recent_transfers = KnowledgeTransfer.objects.filter(
+                    created_at__gte=last_24h
+                ).order_by('-created_at')[:5]
+
+                if recent_transfers.exists():
+                    learning_section.append("📚 **Recent Learning (last 24h):**")
+                    for kt in recent_transfers:
+                        source = kt.source_agent.name if kt.source_agent else "System"
+                        target = kt.target_agent.name if kt.target_agent else "All"
+                        learning_section.append(f"  • {source} → {target}: {kt.knowledge_type}")
+
+                # Recent agent memories created (insights learned)
+                recent_insights = AgentMemory.objects.filter(
+                    created_at__gte=last_24h,
+                    memory_type__in=['insight', 'learning', 'realization']
+                ).order_by('-created_at')[:3]
+
+                if recent_insights.exists():
+                    if not learning_section:
+                        learning_section.append("📚 **Recent Learning (last 24h):**")
+                    for mem in recent_insights:
+                        agent_name = mem.agent.name if mem.agent else "System"
+                        content_preview = mem.content[:80] + "..." if len(mem.content) > 80 else mem.content
+                        learning_section.append(f"  • {agent_name} learned: {content_preview}")
+
+            except Exception as e:
+                logger.debug(f"Learning section error: {e}")
+
+            if learning_section:
+                sections.extend(learning_section)
+            else:
+                sections.append("📚 **Learning:** No new insights in the last 24 hours.")
+
+            # ============================================
+            # 2. WHAT'S HAPPENING: Active/Recent Executions
+            # ============================================
+            activity_section = []
+            try:
+                from core.models_unified_system import AgentExecution
+
+                # Currently running or recent executions
+                recent_executions = AgentExecution.objects.filter(
+                    created_at__gte=last_hour
+                ).order_by('-created_at')[:5]
+
+                if recent_executions.exists():
+                    activity_section.append("\n⚡ **Recent Agent Activity (last hour):**")
+                    for exec in recent_executions:
+                        status_emoji = "✅" if exec.success else "❌"
+                        agent_name = exec.agent.name if exec.agent else "Unknown"
+                        activity_section.append(f"  {status_emoji} {agent_name}: {exec.task_type or 'task'}")
+                else:
+                    # Check 24h if nothing in last hour
+                    day_executions = AgentExecution.objects.filter(
+                        created_at__gte=last_24h
+                    ).count()
+                    if day_executions > 0:
+                        activity_section.append(f"\n⚡ **Activity:** {day_executions} agent executions in last 24h (none in last hour)")
+                    else:
+                        activity_section.append("\n⚡ **Activity:** No agent executions in the last 24 hours.")
+
+            except Exception as e:
+                logger.debug(f"Activity section error: {e}")
+
+            sections.extend(activity_section)
+
+            # ============================================
+            # 3. WHAT'S BLOCKED: Gates, Consultations
+            # ============================================
+            blocked_section = []
+            try:
+                from core.models_unified_system import PilotReadinessGate
+                from core.models_human_interface import HumanConsultation
+
+                # Pending gates
+                pending_gates = PilotReadinessGate.objects.filter(
+                    status='pending'
+                ).count()
+
+                if pending_gates > 0:
+                    blocked_section.append(f"\n🚧 **Blocked:** {pending_gates} pilot gate(s) awaiting review")
+
+                # Pending consultations
+                pending_consultations = HumanConsultation.objects.filter(
+                    status='pending'
+                ).count()
+
+                if pending_consultations > 0:
+                    blocked_section.append(f"🔔 **Consultations:** {pending_consultations} agent(s) waiting for human input")
+
+            except Exception as e:
+                logger.debug(f"Blocked section error: {e}")
+
+            if blocked_section:
+                sections.extend(blocked_section)
+
+            # ============================================
+            # 4. PRODUCTION STATUS: Content & Spiders
+            # ============================================
+            production_section = []
+            try:
+                from core.models_autonomous_studio import ContentChannel, ChannelEpisode
+                from ai_core.models import SpiderData
+
+                # Content channel status
+                active_channels = ContentChannel.objects.filter(status='active').count()
+                recent_episodes = ChannelEpisode.objects.filter(
+                    created_at__gte=last_24h
+                ).count()
+
+                if active_channels > 0:
+                    production_section.append(f"\n📺 **Content:** {active_channels} active channels, {recent_episodes} episodes created (24h)")
+
+                # Spider data freshness
+                recent_spider_data = SpiderData.objects.filter(
+                    created_at__gte=last_hour
+                ).count()
+
+                if recent_spider_data > 0:
+                    production_section.append(f"🕷️ **Spider Network:** {recent_spider_data} new data items (last hour)")
+
+            except Exception as e:
+                logger.debug(f"Production section error: {e}")
+
+            if production_section:
+                sections.extend(production_section)
+
+            # ============================================
+            # OPERATOR INSTRUCTIONS
+            # ============================================
+            sections.append("\n---")
+            sections.append("**OPERATOR MODE INSTRUCTIONS:**")
+            sections.append("1. When greeting the user, START with current state: \"Here's what's happening...\"")
+            sections.append("2. If asked about the system, show WHAT CHANGED, not capabilities")
+            sections.append("3. End with SPECIFIC decisions needed, not open-ended questions")
+            sections.append("4. For system owner/builder, skip the tour - they know the system")
+
+            logger.info("📊 Session 800: Injected Operator Mode context into prompt")
+            return "\n".join(sections)
+
+        except Exception as e:
+            logger.warning(f"⚠️ Operator mode injection failed: {e}")
             return ""
 
     def _build_spider_intelligence_section(self, aggregated_context, classification) -> str:
