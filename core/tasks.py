@@ -11151,12 +11151,13 @@ def broadcast_evolution_status():
             level_distribution[str(i)] = evolutions.filter(current_level=i).count()
 
         # Recent XP gains
-        recent_xp = XPHistory.objects.select_related('evolution__agent').order_by('-created_at')[:5]
+        # Session 799: Fixed select_related and field names to match XPHistory model
+        recent_xp = XPHistory.objects.select_related('agent').order_by('-created_at')[:5]
         recent_gains = []
         for xp in recent_xp:
             recent_gains.append({
-                'agent_name': xp.evolution.agent.name,
-                'amount': xp.amount,
+                'agent_name': xp.agent.name,
+                'amount': xp.xp_amount,
                 'source': xp.source,
                 'created_at': xp.created_at.isoformat()
             })
