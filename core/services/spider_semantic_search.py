@@ -207,7 +207,10 @@ class SpiderSemanticSearch:
         results = []
         seen = set()
 
-        for entry in queryset.order_by('-created_at'):
+        # Session 814: Limit entries scanned to prevent slow queries
+        # This prevents 10+ minute query times when generating embeddings on-the-fly
+        MAX_ENTRIES_TO_SCAN = 200
+        for entry in queryset.order_by('-created_at')[:MAX_ENTRIES_TO_SCAN]:
             if not entry.raw_data:
                 continue
 
