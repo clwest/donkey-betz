@@ -1,6 +1,6 @@
 # Session 808 - Ready for Next Steps
 
-**Previous Session:** 807 (Body System Tables Fix + ImageAgent Error Reporting)
+**Previous Session:** 807 (Production Fixes - 5 PRs)
 **Date:** January 24, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
 
@@ -8,16 +8,34 @@
 
 ## SESSION 807 COMPLETED
 
-### Focus: Production Fixes
+### Focus: Production Fixes (5 Issues)
 
-Two production issues fixed:
+| PR | Issue | Fix |
+|----|-------|-----|
+| #84 | ImageAgent generic errors | Fixed SDXL returning `success=True` with empty images |
+| #85 | Missing body system tables | Migration 0184 to restore tables deleted by 0183 |
+| #86 | Migration partial failure | Migration 0185 with `IF NOT EXISTS` for safe creation |
+| #87 | PA follow-up timeouts | Added `--http-timeout 120` to Daphne in Procfile |
+| #88 | **$334/month egress costs** | Added `.defer()` to 25 SpiderData queries across 13 files |
 
-### PR Merged
+---
 
-| PR | Feature |
-|----|---------|
-| #84 | **ImageAgent Error Reporting** - Fixed SDXL returning `success=True` with empty images |
-| #85 | **Body System Tables Restoration** - Migration 0184 restores tables deleted by erroneous 0183 |
+### Issue 5: Railway Egress Costs ($334.58/month)
+
+**Problem:** Railway bill showed $352.66 with 95% ($334.58) from pgvector egress - 6,691 GB data transfer.
+
+**Root Cause:** SpiderData queries fetching embedding columns (1536-dimension vectors, ~6KB each) unnecessarily when only non-embedding fields were needed.
+
+**Fix:** Added `.defer('embedding', 'item_embeddings', 'embedding_text')` to 25 SpiderData queries across 13 files:
+- `core/services/proactive_intelligence.py` (4 queries)
+- `core/views_spider_intelligence.py` (7 queries)
+- `core/views_autonomous_monitoring.py` (2 queries)
+- `core/views_odds_sports.py` (2 queries)
+- `core/views_solution_explorer.py` (2 queries)
+- `core/views_integration_health.py` (2 queries)
+- Plus 5 other files (1 query each)
+
+**Expected Savings:** 70-80% reduction in SpiderData query egress (~$200-270/month)
 
 ---
 
