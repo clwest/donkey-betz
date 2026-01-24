@@ -596,6 +596,79 @@ class SpiderContextBuilder:
             max_discussions=3
         )
 
+    def build_summary(
+        self,
+        agent_name: str,
+        task: str,
+        max_trends: int = 5,
+        max_chars: int = 200
+    ) -> str:
+        """
+        Session 806: Build a compact summary of spider intelligence.
+
+        This method returns a single-line summary suitable for prompt injection
+        with minimal token usage (~50 tokens vs ~500 for full context).
+
+        Args:
+            agent_name: Name of the agent
+            task: The task being performed
+            max_trends: Maximum trending topics to include
+            max_chars: Maximum characters for the summary
+
+        Returns:
+            Compact summary string like:
+            "Trending: AI agents, quantum | Market: BTC +2.3% | Hot: OpenAI announces..."
+        """
+        try:
+            # Get full context first
+            context = self.build_context_for_agent(
+                agent_name=agent_name,
+                task=task,
+                hours=24,
+                max_trends=max_trends,
+                max_discussions=2
+            )
+
+            if not context.get('has_data'):
+                return ""
+
+            # Use the built-in summary or compress further
+            summary = context.get('summary', '')
+            if summary and len(summary) <= max_chars:
+                return summary
+
+            # Build a more compact summary
+            parts = []
+
+            # Trending topics (most important)
+            trends = context.get('relevant_trends', [])
+            if trends:
+                topic_names = [t.get('topic', '')[:20] for t in trends[:3] if t.get('topic')]
+                if topic_names:
+                    parts.append(f"Trending: {', '.join(topic_names)}")
+
+            # Market snapshot
+            market = context.get('market_data', {})
+            if market:
+                crypto = market.get('crypto', [])
+                if crypto:
+                    top = crypto[0]
+                    change = top.get('change_24h', 0)
+                    parts.append(f"{top.get('symbol', 'BTC')} {'+' if change >= 0 else ''}{change:.1f}%")
+
+            result = " | ".join(parts)
+
+            # Truncate if still too long
+            if len(result) > max_chars:
+                result = result[:max_chars - 3] + "..."
+
+            logger.debug(f"🕷️ [Session 806] Spider summary: {len(result)} chars")
+            return result
+
+        except Exception as e:
+            logger.warning(f"Failed to build spider summary: {e}")
+            return ""
+
 
 # Singleton instance
 _spider_context_builder: Optional[SpiderContextBuilder] = None
