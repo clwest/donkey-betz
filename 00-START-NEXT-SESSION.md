@@ -12,11 +12,13 @@
 
 Fixed stale metrics on Neural Orchestra page where Active Agents was stuck at 90 and Collaborations showed only 1.
 
-### PR Merged
+### PRs Merged
 
 | PR | Feature |
 |----|---------|
 | #59 | **Neural Orchestra metrics fix** - Active Now + improved Collaborations |
+| #60 | Documentation update |
+| #61 | **Celery Beat args fix** - Fixed missing category argument in scheduled tasks |
 
 ---
 
@@ -50,6 +52,19 @@ Fixed stale metrics on Neural Orchestra page where Active Agents was stuck at 90
 
 - `ai_core/consciousness/neural_orchestra_reality_bridge.py` - Improved collaborations calculation
 - `frontend/src/pages/NeuralOrchestraPage.tsx` - Show active_now as primary, 24h as secondary
+
+#### 3. Celery Beat Args Fix
+
+**Problem:** 15 `agent_category_rotation` tasks failing with:
+```
+TypeError: agent_category_rotation() missing 1 required positional argument: 'category'
+```
+
+**Root Cause:** `sync_celery_schedules.py` was creating PeriodicTask entries without the `args` parameter from `celery.py`.
+
+**Solution:**
+- Fixed 15 production tasks via railway shell command
+- Updated sync script to parse and include `args` parameter
 
 ---
 
