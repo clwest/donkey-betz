@@ -28,6 +28,10 @@ import {
   X,
   BookOpen,
   Search,
+  Copy,
+  Check,
+  Mic,
+  ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -117,6 +121,16 @@ const statusColors: Record<string, string> = {
   archived: 'bg-gray-500/20 text-gray-400',
 }
 
+// Copy to clipboard helper
+const copyToClipboard = async (text: string, onSuccess?: () => void) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    onSuccess?.()
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
+}
+
 // Episode Detail Modal
 function EpisodeModal({
   episode,
@@ -127,6 +141,8 @@ function EpisodeModal({
   channelName: string
   onClose: () => void
 }) {
+  const [copied, setCopied] = useState(false)
+
   const { data: detailData, isLoading } = useQuery({
     queryKey: ['episode-detail', episode.id],
     queryFn: () => contentApi.episodeDetail(episode.id),
@@ -134,6 +150,15 @@ function EpisodeModal({
 
   const fullEpisode = detailData?.data?.episode || episode
   const debate = detailData?.data?.debate
+
+  const handleCopyScript = async () => {
+    if (fullEpisode.script) {
+      await copyToClipboard(fullEpisode.script, () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -226,15 +251,35 @@ function EpisodeModal({
 
               {/* Script */}
               <div>
-                <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                  <FileText size={16} />
-                  Script
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                    <FileText size={16} />
+                    Script
+                    {fullEpisode.script && (
+                      <span className="text-xs text-gray-500">
+                        ({fullEpisode.script.length.toLocaleString()} chars)
+                      </span>
+                    )}
+                  </h4>
                   {fullEpisode.script && (
-                    <span className="text-xs text-gray-500">
-                      ({fullEpisode.script.length.toLocaleString()} chars)
-                    </span>
+                    <button
+                      onClick={handleCopyScript}
+                      className="btn btn-sm btn-secondary flex items-center gap-1"
+                    >
+                      {copied ? (
+                        <>
+                          <Check size={14} className="text-accent-green" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          Copy Script
+                        </>
+                      )}
+                    </button>
                   )}
-                </h4>
+                </div>
                 <div className="bg-dark-bg rounded-lg p-4 max-h-[400px] overflow-auto">
                   <pre className="whitespace-pre-wrap text-sm text-gray-300 font-mono">
                     {fullEpisode.script || 'No script available'}
@@ -389,6 +434,180 @@ function ChannelCard({ channel }: { channel: Channel }) {
         <EpisodeModal
           episode={selectedEpisode}
           channelName={channel.name}
+          onClose={() => setSelectedEpisode(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// All Episodes Component - Session 802
+// Flat view of all episodes across all channels
+function AllEpisodes({ channels }: { channels: Channel[] }) {
+  const [selectedEpisode, setSelectedEpisode] = useState<{ episode: Episode; channelName: string } | null>(null)
+  const [search, setSearch] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [expandedScript, setExpandedScript] = useState<string | null>(null)
+
+  // Flatten all episodes from all channels
+  const allEpisodes = channels.flatMap(channel =>
+    channel.episodes.map(episode => ({
+      ...episode,
+      channelName: channel.name,
+      channelId: channel.id,
+    }))
+  ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  // Filter episodes by search
+  const filteredEpisodes = search
+    ? allEpisodes.filter(ep =>
+        ep.title.toLowerCase().includes(search.toLowerCase()) ||
+        ep.topic.toLowerCase().includes(search.toLowerCase()) ||
+        ep.channelName.toLowerCase().includes(search.toLowerCase())
+      )
+    : allEpisodes
+
+  const handleCopyScript = async (episode: Episode) => {
+    if (episode.script_preview) {
+      await copyToClipboard(episode.script_preview, () => {
+        setCopiedId(episode.id)
+        setTimeout(() => setCopiedId(null), 2000)
+      })
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <input
+          type="text"
+          placeholder="Search episodes by title, topic, or channel..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
+        />
+      </div>
+
+      {/* Stats */}
+      <div className="flex items-center justify-between text-sm text-gray-400">
+        <span>{filteredEpisodes.length} episodes {search && `matching "${search}"`}</span>
+        <span>{channels.length} channels</span>
+      </div>
+
+      {/* Episodes List */}
+      {filteredEpisodes.length > 0 ? (
+        <div className="space-y-3">
+          {filteredEpisodes.map((episode) => (
+            <div
+              key={episode.id}
+              className="card hover:border-primary-500/30 transition-colors"
+            >
+              {/* Episode Header */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mic size={16} className="text-primary-400 flex-shrink-0" />
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                      {episode.channelName}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-lg">{episode.title}</h3>
+                  <p className="text-sm text-gray-400 mt-1">{episode.topic}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs text-gray-500">
+                    {new Date(episode.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Metrics Row */}
+              <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Eye size={12} />
+                  {episode.metrics.views} views
+                </span>
+                <span className="flex items-center gap-1">
+                  <ThumbsUp size={12} />
+                  {episode.metrics.engagement} engagement
+                </span>
+                {episode.script_length && episode.script_length > 0 && (
+                  <span className="flex items-center gap-1 text-primary-400">
+                    <FileText size={12} />
+                    {episode.script_length.toLocaleString()} chars
+                  </span>
+                )}
+              </div>
+
+              {/* Script Preview (expandable) */}
+              {episode.script_preview && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => setExpandedScript(expandedScript === episode.id ? null : episode.id)}
+                    className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                  >
+                    <FileText size={12} />
+                    {expandedScript === episode.id ? 'Hide Script Preview' : 'Show Script Preview'}
+                    {expandedScript === episode.id ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  </button>
+                  {expandedScript === episode.id && (
+                    <div className="mt-2 p-3 bg-dark-bg rounded-lg">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-300 font-mono max-h-48 overflow-auto">
+                        {episode.script_preview}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-dark-border">
+                <button
+                  onClick={() => setSelectedEpisode({ episode, channelName: episode.channelName })}
+                  className="btn btn-sm btn-primary flex items-center gap-1"
+                >
+                  <ExternalLink size={14} />
+                  View Full Episode
+                </button>
+                {episode.script_preview && (
+                  <button
+                    onClick={() => handleCopyScript(episode)}
+                    className="btn btn-sm btn-secondary flex items-center gap-1"
+                  >
+                    {copiedId === episode.id ? (
+                      <>
+                        <Check size={14} className="text-accent-green" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        Copy Script
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card text-center py-12">
+          <Mic className="mx-auto mb-4 text-gray-500" size={48} />
+          <h3 className="text-lg font-semibold mb-2">No Episodes Found</h3>
+          <p className="text-gray-400">
+            {search ? `No episodes match "${search}"` : 'No episodes created yet.'}
+          </p>
+        </div>
+      )}
+
+      {/* Episode Modal */}
+      {selectedEpisode && (
+        <EpisodeModal
+          episode={selectedEpisode.episode}
+          channelName={selectedEpisode.channelName}
           onClose={() => setSelectedEpisode(null)}
         />
       )}
@@ -564,7 +783,7 @@ function BlogLibrary() {
 }
 
 export default function ContentChannelsPage() {
-  const [activeTab, setActiveTab] = useState<'channels' | 'blogs'>('channels')
+  const [activeTab, setActiveTab] = useState<'episodes' | 'channels' | 'blogs'>('episodes')
 
   const { data: channelsData, isLoading, error } = useQuery({
     queryKey: ['content-channels'],
@@ -617,6 +836,18 @@ export default function ContentChannelsPage() {
       {/* Tabs */}
       <div className="flex gap-2 border-b border-dark-border pb-2">
         <button
+          onClick={() => setActiveTab('episodes')}
+          className={cn(
+            'px-4 py-2 rounded-t-lg font-medium transition-colors flex items-center gap-2',
+            activeTab === 'episodes'
+              ? 'bg-primary-500/20 text-primary-400 border-b-2 border-primary-500'
+              : 'text-gray-400 hover:text-white'
+          )}
+        >
+          <Mic size={18} />
+          All Episodes ({stats.total_episodes})
+        </button>
+        <button
           onClick={() => setActiveTab('channels')}
           className={cn(
             'px-4 py-2 rounded-t-lg font-medium transition-colors flex items-center gap-2',
@@ -645,6 +876,8 @@ export default function ContentChannelsPage() {
       {/* Tab Content */}
       {activeTab === 'blogs' ? (
         <BlogLibrary />
+      ) : activeTab === 'episodes' ? (
+        <AllEpisodes channels={channels} />
       ) : (
         <>
           {/* Stats Cards */}
