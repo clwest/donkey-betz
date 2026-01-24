@@ -19,6 +19,8 @@ Addressing critical feedback that the PA was "describing the system, not inhabit
 | #49 | **Operator Mode for PA** - Real-time state injection |
 | #50 | Documentation update |
 | #51 | **reasoning_engine_tool** - Connect PA to ThinkingAgent |
+| #52 | Documentation update |
+| #53 | **Production Celery warnings fix** - AgentContribution.project + workspace context None user |
 
 ### Key Changes
 
@@ -42,6 +44,18 @@ New PA tool `reasoning_engine_tool` to access ThinkingAgent:
 - `trigger` - Queue new thinking cycle
 
 User can now ask: "What has the system been thinking about?"
+
+#### 3. Production Celery Warnings Fix (PR #53)
+
+Fixed two warnings discovered in deploy logs:
+
+1. **AgentContribution.project type error**
+   - Error: String passed to project field (requires PartnershipProject instance)
+   - Fix: Set `project=None` for scheduled runs (field is nullable since Session 752)
+
+2. **Workspace context NoneType error**
+   - Error: `'NoneType' object has no attribute 'id'` in agent_router.py
+   - Fix: Added early return for None user + handle None in workspace_manager
 
 ---
 
