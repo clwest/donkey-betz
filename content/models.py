@@ -1952,6 +1952,10 @@ class ImageHistory(UnifiedBaseModel):
         # Session 64: If file_path is already a data URI, return it directly
         if self.file_path.startswith('data:'):
             return self.file_path
+        # Session 800: If file_path is already a Cloudinary/external URL, return directly
+        # This eliminates egress costs by serving from CDN instead of through Railway
+        if self.file_path.startswith('http'):
+            return self.file_path
         return default_storage.url(self.file_path)
     
     def get_thumbnail_url(self):
@@ -1959,6 +1963,9 @@ class ImageHistory(UnifiedBaseModel):
         if self.thumbnail:
             # Session 64: If thumbnail is a data URI, return it directly
             if self.thumbnail.startswith('data:'):
+                return self.thumbnail
+            # Session 800: If thumbnail is already a Cloudinary/external URL, return directly
+            if self.thumbnail.startswith('http'):
                 return self.thumbnail
             return default_storage.url(self.thumbnail)
         return self.get_full_url()
