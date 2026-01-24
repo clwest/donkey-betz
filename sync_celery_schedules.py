@@ -1,9 +1,12 @@
 """
 Sync celery.py beat_schedule to database scheduler.
 Run with: python manage.py shell < sync_celery_schedules.py
+
+Session 801: Updated to include args parameter for tasks that need it.
 """
 from django_celery_beat.models import PeriodicTask, CrontabSchedule, IntervalSchedule
 import re
+import json
 
 # Read celery.py
 with open('core/celery.py', 'r') as f:
@@ -44,6 +47,16 @@ for i in range(1, len(blocks), 2):
         continue
     schedule_str = schedule_match.group(1).strip()
 
+    # Session 801: Extract args parameter if present
+    args_match = re.search(r"'args':\s*\(([^)]+)\)", block)
+    args_json = '[]'
+    if args_match:
+        # Parse tuple like ('media',) -> ["media"]
+        args_str = args_match.group(1).strip()
+        # Remove quotes and trailing comma, convert to list
+        args_list = [a.strip().strip("'\"") for a in args_str.split(',') if a.strip() and a.strip() != ',']
+        args_json = json.dumps(args_list)
+
     try:
         if 'crontab' in schedule_str:
             # Parse crontab parameters
@@ -78,10 +91,12 @@ for i in range(1, len(blocks), 2):
                 name=name,
                 task=task,
                 crontab=schedule,
+                args=args_json,  # Session 801: Include args
                 enabled=True
             )
             added += 1
-            print(f"  + {name} (crontab: {minute} {hour} * * {dow})")
+            args_info = f" args={args_json}" if args_json != '[]' else ""
+            print(f"  + {name} (crontab: {minute} {hour} * * {dow}){args_info}")
 
         elif re.match(r'^\d+\.?\d*$', schedule_str):
             # Interval in seconds
@@ -95,10 +110,12 @@ for i in range(1, len(blocks), 2):
                 name=name,
                 task=task,
                 interval=schedule,
+                args=args_json,  # Session 801: Include args
                 enabled=True
             )
             added += 1
-            print(f"  + {name} (every {seconds}s)")
+            args_info = f" args={args_json}" if args_json != '[]' else ""
+            print(f"  + {name} (every {seconds}s){args_info}")
 
     except Exception as e:
         errors.append(f"{name}: {str(e)[:80]}")
