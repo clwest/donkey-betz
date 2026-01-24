@@ -17,20 +17,31 @@ Addressing critical feedback that the PA was "describing the system, not inhabit
 | PR | Feature |
 |----|---------|
 | #49 | **Operator Mode for PA** - Real-time state injection |
+| #50 | Documentation update |
+| #51 | **reasoning_engine_tool** - Connect PA to ThinkingAgent |
 
-### Key Change: `_build_operator_mode_section()`
+### Key Changes
 
-New method in `personal_ai_assistant_enhanced.py` that injects:
+#### 1. Operator Mode (`_build_operator_mode_section()`)
 
-1. **What Changed** - Recent KnowledgeTransfer, AgentMemory insights
-2. **What's Happening** - Active/recent agent executions
-3. **What's Blocked** - Pending gates, consultations
-4. **Production Status** - Content channels, spider activity
+Injects real-time state into PA prompt:
+- **What Changed** - Recent KnowledgeTransfer, AgentMemory insights
+- **What's Happening** - Active/recent agent executions
+- **What's Blocked** - Pending gates, consultations
+- **Production Status** - Content channels, spider activity
 
-Plus explicit operator instructions to:
-- Lead with state, not capabilities
-- Show what changed since last interaction
-- End with specific decisions needed
+Plus explicit operator instructions to lead with state, not capabilities.
+
+#### 2. Reasoning Engine Tool
+
+New PA tool `reasoning_engine_tool` to access ThinkingAgent:
+- `thoughts` - Get recent thinking cycles
+- `insights` - Get insights from reasoning
+- `actions` - Get autonomous actions taken
+- `status` - Get reasoning engine stats
+- `trigger` - Queue new thinking cycle
+
+User can now ask: "What has the system been thinking about?"
 
 ---
 
