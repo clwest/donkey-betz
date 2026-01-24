@@ -128,20 +128,30 @@ def save_watermarked_image(
     image_bytes: bytes,
     filename: str,
     user,
-    generation_params: Optional[Dict[str, Any]] = None
+    generation_params: Optional[Dict[str, Any]] = None,
+    upload_to_cloud: bool = True
 ) -> str:
     """
     Apply watermark and save image to storage in one step.
+
+    Session 800: Added Cloudinary upload for production persistence.
+    Images are uploaded to Cloudinary when CLOUDINARY_API_KEY is set,
+    ensuring they survive Railway's ephemeral filesystem.
 
     Args:
         image_bytes: Raw image bytes
         filename: Desired filename (e.g., 'generated_abc123.png')
         user: Django User object
         generation_params: Dict of generation parameters
+        upload_to_cloud: Whether to upload to Cloudinary (default True)
 
     Returns:
-        file_path: Path where the watermarked image was saved
+        file_path: Path or URL where the watermarked image was saved
+                  Returns Cloudinary URL if cloud upload succeeds,
+                  otherwise returns local file path.
     """
+    import os
+
     # Apply watermark
     watermarked_bytes, provenance_id = watermark_image_bytes(
         image_bytes=image_bytes,
@@ -149,7 +159,7 @@ def save_watermarked_image(
         generation_params=generation_params
     )
 
-    # Save to storage
+    # Save to local storage first (for immediate access and backup)
     file_path = default_storage.save(filename, ContentFile(watermarked_bytes))
 
     if provenance_id:
@@ -157,6 +167,36 @@ def save_watermarked_image(
     else:
         logger.info(f"Saved image (no watermark): {file_path}")
 
+    # Session 800: Upload to Cloudinary for production persistence
+    # This ensures images survive Railway's ephemeral filesystem
+    cloudinary_api_key = os.environ.get('CLOUDINARY_API_KEY')
+    if upload_to_cloud and cloudinary_api_key:
+        try:
+            import cloudinary
+            import cloudinary.uploader
+
+            # Get the full path to the saved file
+            full_path = default_storage.path(file_path)
+
+            # Upload to Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                full_path,
+                folder="ai-content-studio/generated",
+                public_id=filename.replace('/', '_').replace('.png', ''),
+                resource_type="image",
+                overwrite=True
+            )
+
+            cloud_url = upload_result.get('secure_url')
+            if cloud_url:
+                logger.info(f"☁️ Uploaded to Cloudinary: {cloud_url[:60]}...")
+                return cloud_url
+
+        except Exception as cloud_error:
+            logger.warning(f"⚠️ Cloudinary upload failed (using local): {cloud_error}")
+            # Fall through to return local path
+
+    # Return local path if cloud upload not enabled or failed
     return file_path
 
 
