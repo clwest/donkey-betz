@@ -10066,9 +10066,12 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         from datetime import timedelta
 
         now = timezone.now()
+        seven_days_ago = now - timedelta(days=7)
+        # Session 802: Fix offset-naive vs offset-aware comparison
+        # Compare created_at directly (both are timezone-aware in Django)
         recent_conversations = [
             conv for conv in conversations
-            if (now - conv.created_at.replace(tzinfo=None)) <= timedelta(days=7)
+            if conv.created_at >= seven_days_ago
         ]
 
         weekly_count = len(recent_conversations)
