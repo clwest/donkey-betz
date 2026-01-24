@@ -2142,6 +2142,32 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours at :00
         'options': {'expires': 28800, 'queue': 'agents'}
     },
+
+    # ==================== SESSION 808: ORPHANED TASKS FIX ====================
+    # Workflow scheduling - Every 5 minutes to sync schedules with Celery Beat
+    'sync-workflow-schedules': {
+        'task': 'core.tasks.sync_workflow_schedules',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {'expires': 300, 'queue': 'default'}
+    },
+    # Workflow check fallback - Every minute to catch missed scheduled workflows
+    'check-workflow-schedules': {
+        'task': 'core.tasks.check_workflow_schedules',
+        'schedule': crontab(minute='*'),  # Every minute
+        'options': {'expires': 60, 'queue': 'default'}
+    },
+    # Autonomy engine - Every 30 minutes to run autonomous actions
+    'run-autonomy-cycle': {
+        'task': 'core.tasks.run_autonomy_cycle',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {'expires': 1800, 'queue': 'long_running'}
+    },
+    # Autonomous content studio - Every 4 hours to generate content for due channels
+    'run-autonomous-content-studio': {
+        'task': 'autonomous_studio.run_main_loop',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'options': {'expires': 14400, 'queue': 'content'}
+    },
 }
 
 # Task routing configuration
