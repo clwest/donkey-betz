@@ -15,6 +15,7 @@ Features:
 import os
 import logging
 import hashlib
+import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from functools import wraps
@@ -131,6 +132,9 @@ class LLMEnforcer:
         call_id = hashlib.md5(f"{agent_name}_{datetime.now()}".encode()).hexdigest()[:8]
 
         try:
+            # Session 803: Track latency for analytics
+            start_time = time.time()
+
             if use_claude and self.anthropic_client:
                 # Use Claude
                 response = self._call_claude(full_prompt, max_tokens, temperature)
@@ -146,6 +150,9 @@ class LLMEnforcer:
             else:
                 raise Exception("No LLM client available")
 
+            # Session 803: Calculate latency in milliseconds
+            latency_ms = int((time.time() - start_time) * 1000)
+
             # Log the successful call
             self.total_calls += 1
             self.total_tokens += response.get('tokens', 0)
@@ -160,11 +167,26 @@ class LLMEnforcer:
                 'model': model,
                 'tokens': response.get('tokens', 0),
                 'cost': response.get('cost', 0),
+                'latency_ms': latency_ms,  # Session 803: Track latency
                 'success': True
             }
             self.call_log.append(log_entry)
 
-            logger.info(f"✅ REAL AI RESPONSE generated - {provider}/{model} - {response.get('tokens', 0)} tokens")
+            logger.info(f"✅ REAL AI RESPONSE generated - {provider}/{model} - {response.get('tokens', 0)} tokens ({latency_ms}ms)")
+
+            # Session 802/803: Persist to CostTracking and LLMCallLog databases
+            self._save_cost_tracking(
+                provider=provider,
+                model=model,
+                agent_name=agent_name,
+                task_type=task_type,
+                input_tokens=response.get('input_tokens', 0),
+                output_tokens=response.get('output_tokens', 0),
+                total_tokens=response.get('tokens', 0),
+                cost=response.get('cost', 0),
+                latency_ms=latency_ms,
+                success=True,
+            )
 
             result = {
                 'success': True,
@@ -346,6 +368,10 @@ class LLMEnforcer:
             'tokens': total_tokens,
             'cost': cost,
             'truncated': truncated,  # Session 266: Flag for continuation handling
+            # Session 802: Add detailed token breakdown for CostTracking
+            'input_tokens': input_tokens if usage else 0,
+            'output_tokens': output_tokens if usage else 0,
+            'reasoning_tokens': reasoning_tokens if usage else 0,
         }
 
         # Add response_id for chain of thought passing
@@ -396,7 +422,11 @@ class LLMEnforcer:
         )
 
         content = response.content[0].text if response.content else ""
-        tokens = response.usage.input_tokens + response.usage.output_tokens if hasattr(response, 'usage') else 0
+
+        # Session 802: Extract detailed token usage for CostTracking
+        input_tokens = response.usage.input_tokens if hasattr(response, 'usage') else 0
+        output_tokens = response.usage.output_tokens if hasattr(response, 'usage') else 0
+        tokens = input_tokens + output_tokens
 
         # Estimate cost (Claude Haiku pricing)
         cost = tokens * 0.00025 / 1000
@@ -404,7 +434,10 @@ class LLMEnforcer:
         return {
             'content': content,
             'tokens': tokens,
-            'cost': cost
+            'cost': cost,
+            # Session 802: Add detailed token breakdown for CostTracking
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
         }
 
 
@@ -445,6 +478,68 @@ class LLMEnforcer:
             return result['response']
         else:
             return result.get('response', f"Error: {result.get('error', 'Unknown error')}")
+
+    def _save_cost_tracking(
+        self,
+        provider: str,
+        model: str,
+        agent_name: str,
+        task_type: str,
+        input_tokens: int,
+        output_tokens: int,
+        total_tokens: int,
+        cost: float,
+        latency_ms: int = 0,
+        success: bool = True,
+        error_message: str = "",
+    ) -> None:
+        """
+        Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
+
+        Session 803: Added LLMCallLog for analytics UI display.
+        This enables the LLM Routing page to show actual API costs over time.
+        """
+        # Save to LLMCallLog (used by LLM Routing analytics UI)
+        try:
+            from core.models_llm_routing import LLMCallLog
+
+            LLMCallLog.objects.create(
+                agent_name=agent_name,
+                provider=provider,
+                model_id=model,
+                task_type=task_type,
+                prompt_tokens=input_tokens,
+                completion_tokens=output_tokens,
+                total_tokens=total_tokens,
+                cost=cost,
+                latency_ms=latency_ms,
+                success=success,
+                error_message=error_message,
+            )
+            logger.debug(f"💾 Saved LLM call log: {provider}/{model} - ${cost:.6f}")
+        except Exception as e:
+            # Don't fail the LLM call if logging fails
+            logger.warning(f"⚠️ Failed to save LLM call log: {e}")
+
+        # Also save to CostTracking (for broader cost analysis)
+        try:
+            from core.models_unified_system import CostTracking
+
+            CostTracking.objects.create(
+                provider=provider,
+                service=model,
+                operation=task_type,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=total_tokens,
+                estimated_cost_usd=cost,
+                metadata={
+                    'agent_name': agent_name,
+                    'model': model,
+                },
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to save cost tracking: {e}")
 
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get usage statistics"""
