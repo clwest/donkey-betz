@@ -1,127 +1,143 @@
-# Session 804 - Ready for Next Steps
+# Session 805 - Ready for Next Steps
 
-**Previous Session:** 803 (LLM Cost Tracking + Performance Fixes)
+**Previous Session:** 804 (Auto-Generated Blog Visibility Fix)
 **Date:** January 23, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
 
 ---
 
-## SESSION 803 COMPLETED
+## SESSION 804 COMPLETED
 
-### Focus: LLM Cost Tracking + AI Assistant Performance
+### Focus: Surface Auto-Generated Blogs in Human Interface
 
-Implemented persistent cost tracking and fixed critical performance issues in the AI Assistant.
+Fixed critical bug where 26+ auto-generated blogs were invisible in the Human Interface.
 
-### PRs Merged
+### PR Merged
 
 | PR | Feature |
 |----|---------|
-| #68 | **LLM Cost Tracking** - Persist every API call to LLMCallLog + CostTracking |
-| #69 | **Documentation update** |
-| #70 | **Daphne timeout fix** - Increased application-close-timeout from 10s to 120s |
-| #71 | **Meta question spider skip** - Skip spider data for platform questions + fix proactive_intelligence error |
+| #73 | **Blog Attention Items** - Surface auto-generated blogs in Human Interface |
 
 ---
 
 ### Key Changes
 
-#### 1. LLM Cost Tracking (PR #68)
+#### Blog Visibility Fix (PR #73)
 
-**Problem:** $20+ spent on OpenAI but no UI tracking API calls and costs
+**Problem:** Autonomous reasoning engine creates 32 blogs/day but they were invisible in UI
 
-**Root Cause:**
-- `LLMEnforcer.enforce_real_ai()` wasn't persisting usage to the database
-- The in-memory `call_log` list was ephemeral (lost on restart)
-- Analytics UI at `/llm-routing` was querying `LLMCallLog` but no data was being written
-
-**Solution:**
-- Added `_save_cost_tracking()` method to persist every LLM call to:
-  - `LLMCallLog` (used by LLM Routing analytics UI)
-  - `CostTracking` (for broader cost analysis)
-- Added detailed token breakdown: `input_tokens`, `output_tokens`, `reasoning_tokens`
-- Added latency tracking (in milliseconds) around API calls
-
-**Files Changed:**
-- `core/llm_enforcer.py` - Added `_save_cost_tracking()`, latency tracking, token breakdown
-
-**Result:** LLM Routing page at `/llm-routing` now shows:
-- 7-day cost summary with total calls, cost, tokens, latency
-- Cost breakdown by provider and agent
-- Call logs with individual costs
-- Real-time 24h activity stats
-
-#### 2. Daphne Timeout Fix (PR #70)
-
-**Problem:** "Application took too long to shut down and was killed" warnings
-
-**Root Cause:** Daphne default `--application-close-timeout` is 10 seconds, too short for LLM calls
-
-**Solution:** Updated `Procfile` to add `--application-close-timeout 120`
-
-**Files Changed:**
-- `Procfile`
-
-#### 3. Meta Question Spider Skip (PR #71)
-
-**Problem:** "Tell me about this system" took 88 seconds before LLM call
+**Discovery Process:**
+1. User asked about blog-writing agent running every 30 min/hour
+2. Found `generate-self-blog` task runs every 6 hours (not 30 min)
+3. Checked production: 34 total blogs, 32 in last 24h - task IS running!
+4. Local had 1,012 old blogs, 0 in 48h - different databases
+5. Blogs mentioning "system wasn't learning" identified real issues:
+   - 89% experiment failure rate (85/116)
+   - Net negative learning weight (-6.014)
+   - 118 gates waived, only 6 approved
+6. But only 6 "review" attention items for 32 blogs - **that's the bug!**
 
 **Root Cause:**
-- ALL questions were marked as `requires_spider_data=True`
-- Spider data fetching took 60+ seconds
-- Meta questions about the platform don't need external intelligence
+- `generate_self_blog_task` (tasks.py) → Creates SelfBlog + HumanAttentionItem ✅
+- `autonomous_action_executor.py` → Creates SelfBlog but NO HumanAttentionItem ❌
+
+The autonomous action executor creates 4 types of blogs:
+1. `[Report]` - from `_execute_create_report`
+2. `[Research]` - from `_execute_request_research`
+3. `[Stage X]` - from `_synthesize_single_deliverable`
+4. `[Stage X]` (fallback) - from `_synthesize_with_fallback`
+
+None of these were creating attention items!
 
 **Solution:**
-- Added `meta_question_patterns` list to detect platform-related questions
-- Skip spider data for meta questions (they don't need external intelligence)
-- Fixed proactive_intelligence error when intelligence is a string
-
-**Meta question patterns include:**
-- "tell me about this system", "what is this system"
-- "what can you do", "who are you"
-- "what agents", "list agents"
-- "how does this work"
+- Added `_create_blog_attention_item()` helper method
+- Added calls after all 4 `SelfBlog.objects.create()` locations
+- All auto-generated blogs now surface as "review" items in Human Interface
 
 **Files Changed:**
-- `core/super_platform/query_classifier.py` - Added meta question detection
-- `core/personal_ai_assistant_enhanced.py` - Fixed proactive_intelligence type check
+- `core/services/autonomous_action_executor.py` - Added helper + 4 call sites
+
+**Result:** New auto-generated blogs will now appear in Human Interface for review.
 
 ---
 
-## WHAT'S READY FOR SESSION 804
+## WHAT'S READY FOR SESSION 805
 
 ### System State
-- Production deployed with LLM cost tracking
-- Every LLM API call now persisted to database
-- LLM Routing page shows real analytics
-- Meta questions respond quickly (skip spider data)
-- Daphne timeout increased to 120s
+- Production deployed with blog visibility fix
 - All body systems green
+- 32 blogs generated in last 24h (now visible in UI)
+- LLM cost tracking active
+- Meta questions skip spider data
 
 ### Production Metrics (Current)
 - Total Agents: 214
 - Active Now: 44
 - Active 24h: 90
 - Collaborations: 131
+- Experiments: 116 (85 failed = 73% failure rate)
+- Gates: 129 (118 waived, 6 approved)
+
+### Issues Identified by Self-Blog System
+The auto-generated blogs identified real system concerns:
+1. **High experiment failure rate** (73%) - needs investigation
+2. **Net negative learning weight** (-6.014) - learning isn't working
+3. **Gate approval imbalance** - 118 waived vs 6 approved
+4. **Missing extracted learnings** - experiments not generating learnings
 
 ### Potential Next Steps
 
-1. **Verify Fixes in Production**
-   - Test "Tell me about this system" - should respond in ~10s
-   - Check LLM Routing page after agents execute
-   - Verify no more "took too long to shut down" warnings
+1. **Verify Blog Visibility in Production**
+   - Wait for next autonomous reasoning cycle
+   - Check Human Interface for new "review" items
+   - Verify clicking items links to `/blog/{id}` correctly
 
-2. **Cost Optimization Analysis**
-   - Identify highest-cost agents
-   - Look for opportunities to reduce token usage
-   - Consider caching for repeated queries
+2. **Investigate High Experiment Failure Rate**
+   - Why are 73% of experiments failing?
+   - Are monitoring thresholds too aggressive?
+   - Review failure reasons
 
-3. **Continue Session 800 Items**
-   - Monitor Railway egress costs (Cloudinary migration)
-   - Test image generation in production
+3. **Fix Learning System**
+   - Why is learning weight negative?
+   - Why aren't experiments generating learnings?
+   - Review learning extraction process
+
+4. **Gate Approval Review**
+   - 118 waived vs 6 approved seems unbalanced
+   - Are gates being auto-waived too aggressively?
+   - Review gate criteria
 
 ---
 
 ## QUICK REFERENCE
+
+### Check Blog Visibility
+```bash
+# Check recent blogs in production
+railway run python manage.py shell -c "
+from core.models_unified_system import SelfBlog
+from django.utils import timezone
+from datetime import timedelta
+blogs = SelfBlog.objects.filter(created_at__gte=timezone.now()-timedelta(hours=1))
+print(f'Blogs in last hour: {blogs.count()}')
+for b in blogs:
+    print(f'  {b.title[:60]}')
+"
+
+# Check attention items
+railway run python manage.py shell -c "
+from core.models_human_interface import HumanAttentionItem
+from django.utils import timezone
+from datetime import timedelta
+items = HumanAttentionItem.objects.filter(
+    item_type='review',
+    created_at__gte=timezone.now()-timedelta(hours=1)
+)
+print(f'Review items in last hour: {items.count()}')
+for i in items:
+    print(f'  {i.title[:60]}')
+"
+```
 
 ### Production Commands
 ```bash
@@ -135,22 +151,14 @@ print(f'Calls: {logs.count()}')
 print(f'Cost: \${sum(float(l.cost) for l in logs):.4f}')
 "
 
-# Check Neural Orchestra API
-curl https://donkey-betz-platform-production.up.railway.app/api/neural-orchestra/agents/stats/
-
-# Check agent activity
+# Check experiment status
 railway run python manage.py shell -c "
-from core.models_unified_system import AgentExecution
-from django.utils import timezone
-from datetime import timedelta
-print(AgentExecution.objects.filter(created_at__gte=timezone.now()-timedelta(hours=1)).count())
+from core.models_pilot_readiness import Experiment
+from django.db.models import Count
+statuses = Experiment.objects.values('status').annotate(count=Count('id'))
+for s in statuses:
+    print(f\"{s['status']}: {s['count']}\")
 "
-```
-
-### Cloudinary Commands (from Session 800)
-```bash
-railway run python manage.py check_cloudinary_status
-railway run python manage.py migrate_images_to_cloudinary
 ```
 
 ---
@@ -159,6 +167,7 @@ railway run python manage.py migrate_images_to_cloudinary
 
 | Session | Focus |
 |---------|-------|
+| **804** | Auto-Generated Blog Visibility Fix (1 PR) |
 | **803** | LLM Cost Tracking + AI Assistant Performance (4 PRs) |
 | **802** | AI Assistant Timeout Fix + Neural Orchestra Metrics |
 | **801** | Neural Orchestra Metrics Fix - Active Now + Collaborations |
