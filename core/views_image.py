@@ -8413,7 +8413,9 @@ def _execute_generate_image(user, parameters, session=None):
         service = ImageGenerationService()
 
         # Session 184: Generate multiple images in a loop
+        # Session 806: Track last error for better error reporting
         generated_images = []
+        last_error = None
         for i in range(count):
             logger.info(f"🎨 Generating image {i + 1}/{count}...")
 
@@ -8428,7 +8430,8 @@ def _execute_generate_image(user, parameters, session=None):
             )
 
             if not result.success:
-                logger.error(f"❌ Image {i + 1} generation failed: {result.error if hasattr(result, 'error') else 'Unknown error'}")
+                last_error = result.error_message or 'Unknown error'
+                logger.error(f"❌ Image {i + 1} generation failed: {last_error}")
                 continue  # Try to generate remaining images
 
             # Get the generated image
@@ -8510,8 +8513,10 @@ def _execute_generate_image(user, parameters, session=None):
                 continue
 
         # Check if we generated any images
+        # Session 806: Include the actual error message for better debugging
         if not generated_images:
-            raise Exception("No images were generated successfully")
+            error_detail = last_error or "No images were generated"
+            raise Exception(f"Image generation failed: {error_detail}")
 
         # Use the first image for backwards compatibility
         saved_url = generated_images[0]['image_url']
