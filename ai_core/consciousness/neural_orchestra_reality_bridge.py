@@ -140,10 +140,13 @@ class NeuralOrchestraRealityBridge:
                 for a in top_agents
             ]
 
-            # Session 793: Use KnowledgeTransfer as collaboration proxy when AgentContribution is empty
+            # Session 801: Use KnowledgeTransfer as collaboration indicator when AgentContribution is empty
+            # Use 24h window for recent collaboration activity
             try:
                 from core.models_unified_system import KnowledgeTransfer
-                collaborations = KnowledgeTransfer.objects.count()
+                collaborations = KnowledgeTransfer.objects.filter(
+                    created_at__gte=last_24h
+                ).count()
             except Exception:
                 collaborations = 0
         else:
@@ -158,18 +161,24 @@ class NeuralOrchestraRealityBridge:
                 contribution_count=Count('id')
             ).order_by('-contribution_count')[:10]
 
-            collaborations = AgentContribution.objects.values('project').annotate(
+            # Session 801: Improved collaboration metric
+            # Count multi-agent projects from AgentContribution
+            multi_agent_projects = AgentContribution.objects.exclude(project=None).values('project').annotate(
                 agent_count=Count('agent', distinct=True)
             ).filter(agent_count__gte=2).count()
 
-            # Session 793: If AgentContribution-based collaboration count is 0,
-            # fall back to KnowledgeTransfer (represents knowledge sharing between agents)
-            if collaborations == 0:
-                try:
-                    from core.models_unified_system import KnowledgeTransfer
-                    collaborations = KnowledgeTransfer.objects.count()
-                except Exception:
-                    pass  # Keep collaborations as 0
+            # Session 801: Always include KnowledgeTransfer as collaboration indicator
+            # KnowledgeTransfer represents knowledge sharing between agents (real collaboration)
+            try:
+                from core.models_unified_system import KnowledgeTransfer
+                knowledge_transfers = KnowledgeTransfer.objects.filter(
+                    created_at__gte=last_24h
+                ).count()
+            except Exception:
+                knowledge_transfers = 0
+
+            # Combine: multi-agent projects + recent knowledge sharing
+            collaborations = multi_agent_projects + knowledge_transfers
 
         return {
             'total_agents': total_agents,
