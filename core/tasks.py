@@ -11107,7 +11107,7 @@ def check_level_milestones():
                 LevelMilestone.objects.create(
                     evolution=evo,
                     level=evo.current_level,
-                    title=evo.level_title,
+                    title=evo.get_title(),  # Session 799: Use method not attribute
                     xp_at_milestone=evo.total_xp,
                     bonus_awarded='milestone_check'
                 )
@@ -11168,7 +11168,7 @@ def broadcast_evolution_status():
             top_agents.append({
                 'agent_name': evo.agent.name,
                 'level': evo.current_level,
-                'level_title': evo.level_title,
+                'level_title': evo.get_title(),  # Session 799: Use method not attribute
                 'total_xp': evo.total_xp
             })
 
