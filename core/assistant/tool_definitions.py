@@ -82,6 +82,8 @@ def get_tool_definitions() -> List[Dict]:
         _get_pilots_tool_definition(),                # Query pilot executions
         # Session 796: Human Interface Layer - Connect PA to human decisions
         _get_human_decisions_tool_definition(),       # Manage pending human decisions
+        # Session 800: Reasoning Engine - Connect PA to ThinkingAgent
+        _get_reasoning_engine_tool_definition(),      # Access autonomous reasoning system
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -1593,6 +1595,51 @@ def _get_human_decisions_tool_definition() -> Dict:
                     "type": "integer",
                     "default": 10,
                     "description": "Maximum results to return (for 'list' action)"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+# Session 800: Reasoning Engine Tool - Connect PA to ThinkingAgent
+# =============================================================================
+
+def _get_reasoning_engine_tool_definition() -> Dict:
+    """
+    Session 800: Tool for PA to access the Autonomous Reasoning Engine (ThinkingAgent).
+
+    This tool connects the PA to the system's autonomous thinking layer, allowing:
+    - View recent thoughts, insights, patterns from ThinkingAgent
+    - See what autonomous actions the system has taken
+    - Check reasoning engine status
+    - Trigger new thinking cycles
+    """
+    return {
+        "type": "function",
+        "name": "reasoning_engine_tool",
+        "description": get_tool_description("reasoning_engine_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["thoughts", "insights", "actions", "status", "trigger"],
+                    "description": "Action: 'thoughts' (recent thinking cycles), 'insights' (extracted insights), 'actions' (autonomous actions taken), 'status' (engine status), 'trigger' (request new cycle)"
+                },
+                "thought_id": {
+                    "type": "string",
+                    "description": "Thought ID (for getting details of a specific thought)"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Maximum results to return"
+                },
+                "include_context": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Include full context data in response (can be large)"
                 }
             },
             "required": ["action"]

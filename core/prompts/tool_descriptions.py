@@ -974,6 +974,34 @@ Returns pilot data from PilotExecution table including:
 - metrics collected and learnings
 - whether kill switch was triggered""",
 
+    # Session 800: Reasoning Engine Tool - Connect PA to ThinkingAgent
+    "reasoning_engine_tool": """Access the Autonomous Reasoning Engine (ThinkingAgent) - the system's self-aware thinking layer.
+
+ALWAYS USE THIS TOOL when user asks about:
+- "what has the system been thinking"
+- "show me recent insights"
+- "what patterns have you noticed"
+- "reasoning engine status"
+- "autonomous thinking"
+- "system insights"
+- "what actions has the system taken autonomously"
+
+Actions:
+- 'thoughts': Get recent thought records (insights, patterns, decisions) - DEFAULT
+- 'insights': Get just the insights from recent thinking cycles
+- 'actions': Get autonomous actions taken by the system
+- 'status': Get reasoning engine status (last cycle, next scheduled)
+- 'trigger': Request a new thinking cycle (queues task)
+
+The ThinkingAgent runs autonomously and:
+1. GATHERS context from learning, memories, spiders
+2. REFLECTS on patterns and trends
+3. GENERATES insights and opportunities
+4. DECIDES what actions to take
+5. EXECUTES actions using other agents
+
+This tool connects you to what the system has been THINKING about autonomously.""",
+
 }
 
 
