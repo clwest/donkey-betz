@@ -15,6 +15,7 @@ Features:
 import os
 import logging
 import hashlib
+import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from functools import wraps
@@ -131,6 +132,9 @@ class LLMEnforcer:
         call_id = hashlib.md5(f"{agent_name}_{datetime.now()}".encode()).hexdigest()[:8]
 
         try:
+            # Session 803: Track latency for analytics
+            start_time = time.time()
+
             if use_claude and self.anthropic_client:
                 # Use Claude
                 response = self._call_claude(full_prompt, max_tokens, temperature)
@@ -146,6 +150,9 @@ class LLMEnforcer:
             else:
                 raise Exception("No LLM client available")
 
+            # Session 803: Calculate latency in milliseconds
+            latency_ms = int((time.time() - start_time) * 1000)
+
             # Log the successful call
             self.total_calls += 1
             self.total_tokens += response.get('tokens', 0)
@@ -160,13 +167,14 @@ class LLMEnforcer:
                 'model': model,
                 'tokens': response.get('tokens', 0),
                 'cost': response.get('cost', 0),
+                'latency_ms': latency_ms,  # Session 803: Track latency
                 'success': True
             }
             self.call_log.append(log_entry)
 
-            logger.info(f"✅ REAL AI RESPONSE generated - {provider}/{model} - {response.get('tokens', 0)} tokens")
+            logger.info(f"✅ REAL AI RESPONSE generated - {provider}/{model} - {response.get('tokens', 0)} tokens ({latency_ms}ms)")
 
-            # Session 802: Persist to CostTracking database
+            # Session 802/803: Persist to CostTracking and LLMCallLog databases
             self._save_cost_tracking(
                 provider=provider,
                 model=model,
@@ -176,6 +184,8 @@ class LLMEnforcer:
                 output_tokens=response.get('output_tokens', 0),
                 total_tokens=response.get('tokens', 0),
                 cost=response.get('cost', 0),
+                latency_ms=latency_ms,
+                success=True,
             )
 
             result = {
@@ -479,12 +489,39 @@ class LLMEnforcer:
         output_tokens: int,
         total_tokens: int,
         cost: float,
+        latency_ms: int = 0,
+        success: bool = True,
+        error_message: str = "",
     ) -> None:
         """
-        Session 802: Persist LLM usage to CostTracking database.
+        Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
 
-        This enables the UI to show actual API costs over time.
+        Session 803: Added LLMCallLog for analytics UI display.
+        This enables the LLM Routing page to show actual API costs over time.
         """
+        # Save to LLMCallLog (used by LLM Routing analytics UI)
+        try:
+            from core.models_llm_routing import LLMCallLog
+
+            LLMCallLog.objects.create(
+                agent_name=agent_name,
+                provider=provider,
+                model_id=model,
+                task_type=task_type,
+                prompt_tokens=input_tokens,
+                completion_tokens=output_tokens,
+                total_tokens=total_tokens,
+                cost=cost,
+                latency_ms=latency_ms,
+                success=success,
+                error_message=error_message,
+            )
+            logger.debug(f"💾 Saved LLM call log: {provider}/{model} - ${cost:.6f}")
+        except Exception as e:
+            # Don't fail the LLM call if logging fails
+            logger.warning(f"⚠️ Failed to save LLM call log: {e}")
+
+        # Also save to CostTracking (for broader cost analysis)
         try:
             from core.models_unified_system import CostTracking
 
@@ -501,9 +538,7 @@ class LLMEnforcer:
                     'model': model,
                 },
             )
-            logger.debug(f"💾 Saved cost tracking: {provider}/{model} - ${cost:.6f}")
         except Exception as e:
-            # Don't fail the LLM call if cost tracking fails
             logger.warning(f"⚠️ Failed to save cost tracking: {e}")
 
     def get_usage_stats(self) -> Dict[str, Any]:
