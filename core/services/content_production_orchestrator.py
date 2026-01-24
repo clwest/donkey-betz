@@ -73,6 +73,8 @@ class AssetRequirement:
     depends_on: List[str] = field(default_factory=list)  # Asset types this depends on
     optional: bool = False  # If True, production continues even if this fails
     parallel_group: int = 0  # Assets with same group can run in parallel
+    is_persona_agent: bool = False  # If True, this is a persona agent (advisory via LLM)
+    advice_type: str = 'content_strategy'  # Type of advice for persona agents
 
 
 @dataclass
@@ -128,25 +130,36 @@ class ProductionResult:
 PRODUCTION_TEAMS = {
     ContentType.BLOG_POST: {
         'name': 'Blog Production Team',
-        'description': 'Creates complete blog posts with images and SEO optimization',
+        'description': 'Creates complete blog posts with images, SEO, and persona advisory input',
         'assets': [
+            # Phase 0: Strategy Advisory (Persona Agents)
+            AssetRequirement(
+                asset_type='strategy_advice',
+                agent_name='Content Strategy Planner',
+                task_template='Provide strategic advice for a blog post about: {topic}',
+                depends_on=[],
+                optional=True,
+                parallel_group=0,
+                is_persona_agent=True,
+                advice_type='content_strategy'
+            ),
             # Phase 1: Research (if needed)
             AssetRequirement(
                 asset_type='research',
                 agent_name='ResearchAgent',
-                task_template='Research the topic: {topic}. Focus on recent trends, statistics, and expert opinions.',
-                depends_on=[],
+                task_template='Research the topic: {topic}. Focus on recent trends, statistics, and expert opinions. {strategy_advice_summary}',
+                depends_on=['strategy_advice'],
                 optional=True,
-                parallel_group=0
+                parallel_group=1
             ),
             # Phase 2: Content creation
             AssetRequirement(
                 asset_type='blog_content',
                 agent_name='ContentWriterAgent',
-                task_template='Write a {tone} blog post about: {topic}. Target audience: {target_audience}.',
+                task_template='Write a {tone} blog post about: {topic}. Target audience: {target_audience}. {strategy_advice_summary}',
                 depends_on=['research'],
                 optional=False,
-                parallel_group=1
+                parallel_group=2
             ),
             # Phase 3: Visual assets (can run in parallel)
             AssetRequirement(
@@ -155,7 +168,7 @@ PRODUCTION_TEAMS = {
                 task_template='Create a hero image for a blog post titled: "{blog_title}". The blog is about {topic}. Style: professional, modern, relevant to the content.',
                 depends_on=['blog_content'],
                 optional=False,
-                parallel_group=2
+                parallel_group=3
             ),
             AssetRequirement(
                 asset_type='thumbnail_image',
@@ -163,7 +176,7 @@ PRODUCTION_TEAMS = {
                 task_template='Create a social media thumbnail (1200x630px) for a blog post titled: "{blog_title}". Make it eye-catching and shareable.',
                 depends_on=['blog_content'],
                 optional=True,
-                parallel_group=2
+                parallel_group=3
             ),
             AssetRequirement(
                 asset_type='inline_graphics',
@@ -171,7 +184,7 @@ PRODUCTION_TEAMS = {
                 task_template='Create 2-3 inline graphics/diagrams for a blog post about: {topic}. These should illustrate key concepts mentioned in the post.',
                 depends_on=['blog_content'],
                 optional=True,
-                parallel_group=2
+                parallel_group=3
             ),
             # Phase 4: Optimization
             AssetRequirement(
@@ -180,16 +193,27 @@ PRODUCTION_TEAMS = {
                 task_template='Optimize SEO for a blog post titled: "{blog_title}". Topic: {topic}. Generate meta description, keywords, schema markup.',
                 depends_on=['blog_content'],
                 optional=True,
-                parallel_group=3
+                parallel_group=4
             ),
-            # Phase 5: Promotion
+            # Phase 5: Marketing Advisory (Persona Agent)
+            AssetRequirement(
+                asset_type='marketing_advice',
+                agent_name='Digital Marketing Strategist',
+                task_template='Provide marketing advice for promoting blog: "{blog_title}"',
+                depends_on=['blog_content'],
+                optional=True,
+                parallel_group=4,
+                is_persona_agent=True,
+                advice_type='marketing_angle'
+            ),
+            # Phase 6: Promotion (informed by marketing advice)
             AssetRequirement(
                 asset_type='social_posts',
                 agent_name='SocialMediaAgent',
-                task_template='Create social media posts to promote a blog titled: "{blog_title}". Create versions for Twitter, LinkedIn, and Facebook.',
-                depends_on=['blog_content', 'thumbnail_image'],
+                task_template='Create social media posts to promote a blog titled: "{blog_title}". Create versions for Twitter, LinkedIn, and Facebook. {marketing_advice_summary}',
+                depends_on=['blog_content', 'thumbnail_image', 'marketing_advice'],
                 optional=True,
-                parallel_group=4
+                parallel_group=5
             ),
         ]
     },
@@ -618,10 +642,11 @@ class ContentProductionOrchestrator:
         production_context: Dict[str, Any],
         completed_assets: Dict[str, AssetResult]
     ) -> AssetResult:
-        """Create a single asset using the designated agent."""
+        """Create a single asset using the designated agent or persona advisor."""
         import time
 
-        logger.info(f"   🔧 Creating {asset.asset_type} via {asset.agent_name}")
+        agent_type = "persona" if asset.is_persona_agent else "core"
+        logger.info(f"   🔧 Creating {asset.asset_type} via {asset.agent_name} ({agent_type})")
 
         start_time = time.time()
 
@@ -633,14 +658,23 @@ class ContentProductionOrchestrator:
                 completed_assets=completed_assets
             )
 
-            # Get context for the agent
+            # Handle persona agents differently - use PersonaAdvisorService
+            if asset.is_persona_agent:
+                return self._create_persona_advisory_asset(
+                    asset=asset,
+                    task=task,
+                    production_context=production_context,
+                    start_time=start_time
+                )
+
+            # Get context for the core agent
             agent_context = self._build_agent_context(
                 asset=asset,
                 production_context=production_context,
                 completed_assets=completed_assets
             )
 
-            # Route to the agent
+            # Route to the core agent
             agent_result = self.router.route(
                 agent_name=asset.agent_name,
                 task=task,
@@ -671,6 +705,78 @@ class ContentProductionOrchestrator:
         except Exception as e:
             execution_time = int((time.time() - start_time) * 1000)
             logger.error(f"   ❌ {asset.asset_type} error: {e}")
+            return AssetResult(
+                asset_type=asset.asset_type,
+                agent_name=asset.agent_name,
+                status=AssetStatus.FAILED,
+                error=str(e),
+                execution_time_ms=execution_time
+            )
+
+    def _create_persona_advisory_asset(
+        self,
+        asset: AssetRequirement,
+        task: str,
+        production_context: Dict[str, Any],
+        start_time: float
+    ) -> AssetResult:
+        """
+        Create an advisory asset from a persona agent.
+
+        Uses PersonaAdvisorService to get LLM-generated advice enriched
+        with spider data from the persona's domain.
+        """
+        import time
+
+        try:
+            from core.services.persona_advisor_service import get_persona_advisor_service
+
+            advisor_service = get_persona_advisor_service()
+
+            # Get advice from persona agent
+            advice_result = advisor_service.get_advice(
+                persona_name=asset.agent_name,
+                topic=production_context.get('topic', ''),
+                advice_type=asset.advice_type,
+                context={
+                    'content_type': production_context.get('content_type', 'content'),
+                    'tone': production_context.get('tone', 'professional'),
+                    'target_audience': production_context.get('target_audience', 'general'),
+                }
+            )
+
+            execution_time = int((time.time() - start_time) * 1000)
+
+            if advice_result.success:
+                logger.info(
+                    f"   ✅ {asset.asset_type} completed ({execution_time}ms) "
+                    f"[{advice_result.spider_data_used} spider items used]"
+                )
+                return AssetResult(
+                    asset_type=asset.asset_type,
+                    agent_name=asset.agent_name,
+                    status=AssetStatus.COMPLETED,
+                    data={
+                        'advice': advice_result.advice,
+                        'structured_advice': advice_result.structured_advice,
+                        'spider_data_used': advice_result.spider_data_used,
+                        'advice_type': asset.advice_type,
+                    },
+                    execution_time_ms=execution_time
+                )
+            else:
+                logger.warning(f"   ❌ {asset.asset_type} failed: {advice_result.error}")
+                return AssetResult(
+                    asset_type=asset.asset_type,
+                    agent_name=asset.agent_name,
+                    status=AssetStatus.FAILED,
+                    error=advice_result.error,
+                    execution_time_ms=execution_time
+                )
+
+        except Exception as e:
+            execution_time = int((time.time() - start_time) * 1000)
+            logger.error(f"   ❌ Persona advisory error for {asset.agent_name}: {e}")
             return AssetResult(
                 asset_type=asset.asset_type,
                 agent_name=asset.agent_name,
@@ -795,7 +901,43 @@ class ContentProductionOrchestrator:
         data = asset_result.data
         content = data.get('content', {})
 
-        # Extract and store titles
+        # Handle advisory assets - extract summary for subsequent phases
+        if asset_result.asset_type.endswith('_advice'):
+            advice_text = data.get('advice', '')
+            structured = data.get('structured_advice', {})
+
+            # Create a summary for injection into subsequent tasks
+            summary_key = f"{asset_result.asset_type}_summary"
+
+            if structured:
+                # Extract key points from structured advice
+                key_points = []
+                for section, content_text in structured.items():
+                    if content_text and len(str(content_text)) > 10:
+                        # Take first line or first 100 chars
+                        first_line = str(content_text).split('\n')[0][:100]
+                        key_points.append(f"- {section.replace('_', ' ').title()}: {first_line}")
+
+                if key_points:
+                    production_context[summary_key] = (
+                        f"\n\n[Advisory from {asset_result.agent_name}]\n" +
+                        "\n".join(key_points[:5])
+                    )
+                else:
+                    production_context[summary_key] = ""
+            elif advice_text:
+                # Just use first 200 chars of advice
+                truncated = advice_text[:200] + "..." if len(advice_text) > 200 else advice_text
+                production_context[summary_key] = (
+                    f"\n\n[Advisory from {asset_result.agent_name}]: {truncated}"
+                )
+            else:
+                production_context[summary_key] = ""
+
+            logger.debug(f"   📋 Added {summary_key} to production context")
+            return
+
+        # Extract and store titles from content assets
         if asset_result.asset_type == 'blog_content':
             production_context['blog_title'] = content.get('title', production_context.get('topic'))
         elif asset_result.asset_type == 'podcast_script':
