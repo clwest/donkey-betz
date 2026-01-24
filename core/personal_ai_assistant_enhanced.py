@@ -7695,10 +7695,14 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Format for prompt injection
             formatted = self.proactive_intelligence.format_for_prompt(intelligence)
 
+            # Session 803: Handle case where intelligence is a string instead of dict
             if formatted:
-                logger.info(f"📡 Session 482: Injected proactive intelligence "
-                           f"({len(intelligence.get('alerts', []))} alerts, "
-                           f"{len(intelligence.get('suggestions', []))} suggestions)")
+                if isinstance(intelligence, dict):
+                    logger.info(f"📡 Session 482: Injected proactive intelligence "
+                               f"({len(intelligence.get('alerts', []))} alerts, "
+                               f"{len(intelligence.get('suggestions', []))} suggestions)")
+                else:
+                    logger.info(f"📡 Session 482: Injected proactive intelligence (formatted string)")
 
             return formatted
 

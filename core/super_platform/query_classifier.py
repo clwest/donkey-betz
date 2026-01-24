@@ -429,11 +429,27 @@ class QueryClassifier:
         # Check urgency
         is_urgent = any(kw in query_lower for kw in self.URGENCY_KEYWORDS)
 
-        # Determine data requirements
-        requires_spider_data = primary_type in [
-            QueryType.QUESTION, QueryType.ANALYSIS,
-            QueryType.OPPORTUNITY, QueryType.WORKFLOW
+        # Session 803: Detect meta/system questions that don't need external data
+        # These are questions about the platform itself, not requiring spider intelligence
+        meta_question_patterns = [
+            'tell me about this system', 'what is this system', 'what can you do',
+            'who are you', 'what are you', 'how do you work', 'what is this platform',
+            'explain yourself', 'introduce yourself', 'your capabilities',
+            'what agents', 'list agents', 'show agents', 'available agents',
+            'what tools', 'list tools', 'available tools', 'help me understand',
+            'how does this work', 'what is donkey', 'about donkey betz',
         ]
+        is_meta_question = any(pattern in query_lower for pattern in meta_question_patterns)
+
+        # Determine data requirements
+        # Session 803: Skip spider data for meta questions (they don't need external intelligence)
+        requires_spider_data = (
+            primary_type in [
+                QueryType.QUESTION, QueryType.ANALYSIS,
+                QueryType.OPPORTUNITY, QueryType.WORKFLOW
+            ]
+            and not is_meta_question  # Session 803: Meta questions skip spider data
+        )
         requires_memory = primary_type == QueryType.MEMORY or 'remember' in query_lower
         requires_mood_check = primary_type in [
             QueryType.CREATION, QueryType.COLLABORATION, QueryType.WORKFLOW
