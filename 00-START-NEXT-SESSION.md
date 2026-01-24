@@ -1,27 +1,73 @@
 # Session 809 - Ready for Next Steps
 
-**Previous Session:** 808 (Task Audit & Orphaned Tasks Fix - 3 PRs)
+**Previous Session:** 808 (Task Audit & Agent Flow Analysis - 4 PRs)
 **Date:** January 24, 2026
-**Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN | 245 Celery Beat Tasks
+**Status:** 75 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN | 74 Active Celery Beat Tasks
 
 ---
 
 ## SESSION 808 COMPLETED
 
-### Focus: Task Audit & Celery Beat Completeness
+### Focus: Task Audit, Celery Beat Completeness & Agent Flow Analysis
 
 | PR | Issue | Fix |
 |----|-------|-----|
 | #88 | $334/month pgvector egress | Added `.defer()` to 25 SpiderData queries across 13 files |
 | #89 | 5 weak muscles (dormant agents) | Added 4 Celery Beat schedules for agent exercise |
 | #90 | 4 orphaned critical tasks | Registered workflow sync, autonomy engine, content studio |
+| #92 | 51 dormant agents | Added 18 agent exercise schedules to settings.py |
+
+---
+
+### Critical Discovery: settings.py Overrides celery.py
+
+**Problem Found:** `CELERY_BEAT_SCHEDULE` in Django settings.py (56 entries) was **completely overriding** `app.conf.beat_schedule` in celery.py (245 entries). Agent exercise tasks added to celery.py were never running!
+
+**Fix (PR #92):** Added 18 agent exercise schedules directly to settings.py:
+- `run-market-monitoring-agents` - Every 4 hours
+- `run-blockchain-monitoring-agents` - Every 6 hours
+- `run-stock-financial-agents` - Every 3 hours
+- `run-content-creation-agents` - Every 4 hours
+- `run-narrative-tracking-agents` - Every 6 hours
+- `run-executive-agents` - Every 8 hours
+- `run-podcast-agents` - Every 12 hours
+- `run-legal-agents` - Every 12 hours
+- `run-strategy-agents` - Every 6 hours
+- `run-development-agents` - Every 8 hours
+- `run-training-agents` - Every 8 hours
+- `run-security-agents` - Every 4 hours
+- `run-analysis-agents` - Every 3 hours
+- `run-orchestration-agents` - Every 4 hours
+- `run-workflow-agents` - Every 2 hours
+- `run-rendering-agents` - Every 6 hours
+- `run-documentation-agents` - Every 12 hours
+- `exercise-all-dormant-agents` - Weekly Sunday 4 AM
+
+**Active Schedule:** 74 tasks in settings.py (was 56)
+
+---
+
+### Agent Architecture Clarification
+
+| Type | Count | Description |
+|------|-------|-------------|
+| **Core Agents** | 75 | Real Python code in `AGENT_MAP`, execute tasks |
+| **Persona Agents** | 139 | Database-only records, influence via conversations |
+| **Total** | 214 | Combined agent ecosystem |
+
+**Agent Status (7-day window):**
+- 24 of 75 core agents active (179 executions)
+- 51 dormant agents (now scheduled for exercise)
+- 290 Human Attention Items created
+- Only 1 acted upon (human approval bottleneck)
 
 ---
 
 ### Task Audit Results
 
 **Total @shared_task definitions:** 318
-**Beat schedule entries:** 245 (was 241)
+**Active Beat schedule entries:** 74 (in settings.py)
+**celery.py entries (inactive):** 245 (overridden by settings.py)
 **Orphaned tasks:** ~73 (intentionally on-demand)
 
 ### 4 Critical Missing Tasks Fixed (PR #90)
@@ -32,14 +78,6 @@
 | `check_workflow_schedules` | Every 1 min | Fallback to catch missed scheduled workflows |
 | `run_autonomy_cycle` | Every 30 min | Autonomy Engine - executes approved autonomous actions |
 | `run_autonomous_content_studio` | Every 4 hours | Generates content for ContentChannels when due |
-
-### Weak Muscles Fixed (PR #89)
-
-Added exercise schedules for 5 dormant agents:
-- `run_research_analysis_agents` - Every 2 hours (CustomerResearchAgent, ResearchAgent)
-- `run_content_studio_agents` - Every 4 hours (TopicMinerAgent, ContrarianAgent)
-- `run_campaign_series_agents` - Every 6 hours (AISeriesWorkflowAgent, CampaignOrchestratorAgent)
-- `run_business_strategy_agents` - Every 8 hours (CompetitorAnalysisAgent + 4 more)
 
 ### Egress Cost Reduction (PR #88)
 
@@ -85,56 +123,68 @@ Added exercise schedules for 5 dormant agents:
 
 ### System State
 - All body systems green
-- 245 Celery Beat tasks (complete coverage)
-- Weak muscles will strengthen as new schedules run
+- 74 active Celery Beat tasks (settings.py)
+- 18 new agent exercise schedules will activate dormant agents
 - Egress costs expected to drop 70-80%
 - Context optimization components deployed
 
 ### Next Steps to Consider
 
-1. **Monitor New Schedules**
-   - Verify autonomy cycle running for enabled users
-   - Check content studio generating for due channels
-   - Confirm workflow scheduling works end-to-end
+1. **Consolidate Celery Schedules**
+   - celery.py has 245 entries being ignored
+   - Consider migrating important entries to settings.py
+   - Or switch to using only celery.py (remove CELERY_BEAT_SCHEDULE from settings)
 
-2. **Enable Budget Enforcement**
+2. **Address Human Approval Bottleneck**
+   - 289 of 290 Human Attention Items pending
+   - Consider: auto-approval thresholds, batch review UI, or notification system
+
+3. **Monitor Agent Exercise**
+   - Verify 51 dormant agents now executing
+   - Check MUSCULAR system for strain/fatigue
+
+4. **Persona Agent Expansion**
+   - User noted: "they are having some influence on the system"
+   - Consider adding execution capability to high-value personas
+
+5. **Enable Budget Enforcement**
    - Currently observability-only (logging but not truncating)
    - Enable `ENABLE_ENFORCEMENT = True` to actually truncate/skip sections
    - Monitor response quality for regressions
-
-3. **Review Railway Bill Next Week**
-   - Verify egress reduction from `.defer()` changes
-   - Adjust queries further if needed
-
-4. **Explore System Capabilities**
-   - Now that production is stable, explore what the full system can do
-   - Test agent workflows end-to-end
-   - Review Human Interface for decision-making
 
 ---
 
 ## QUICK REFERENCE
 
-### Check Celery Beat Tasks
+### Check Active Celery Beat Tasks (settings.py)
 ```bash
-# Count scheduled tasks
+# Count active scheduled tasks
 python manage.py shell -c "
-from core.celery import app
-print(f'Beat schedule entries: {len(app.conf.beat_schedule)}')
-"
+from django.conf import settings
+print(f'Active Beat tasks: {len(settings.CELERY_BEAT_SCHEDULE)}')"
+```
 
-# List new Session 808 tasks
-grep -A4 "SESSION 808" core/celery.py
+### Check Agent Execution Stats
+```bash
+python manage.py shell -c "
+from core.models_unified_system import AgentExecution
+from django.utils import timezone
+from datetime import timedelta
+week_ago = timezone.now() - timedelta(days=7)
+print(f'Executions (7d): {AgentExecution.objects.filter(created_at__gte=week_ago).count()}')"
+```
+
+### Check Human Attention Items
+```bash
+python manage.py shell -c "
+from core.models_unified_system import HumanAttentionItem
+print(f'Total: {HumanAttentionItem.objects.count()}')
+print(f'Pending: {HumanAttentionItem.objects.filter(status=\"pending\").count()}')"
 ```
 
 ### Check MUSCULAR System (Weak Agents)
 ```bash
 curl http://localhost:8000/api/body/muscular/weak/ | python -m json.tool
-```
-
-### Check Body Systems Health
-```bash
-curl http://localhost:8000/api/body/heart/pulse/ | python -m json.tool
 ```
 
 ---
@@ -143,7 +193,7 @@ curl http://localhost:8000/api/body/heart/pulse/ | python -m json.tool
 
 | Session | Focus |
 |---------|-------|
-| **808** | Task Audit & Orphaned Tasks Fix - 3 PRs (egress, weak muscles, orphaned tasks) |
+| **808** | Task Audit & Agent Flow Analysis - 4 PRs (egress, weak muscles, orphaned tasks, dormant agent schedules) |
 | **807** | Production Fixes - 5 PRs (ImageAgent, migrations, timeouts) |
 | **806** | Personal Assistant Context Optimization - 4 new services (1 PR) |
 | **805** | Learning System Fix - Anomaly detection + learning extraction (3 PRs) |
