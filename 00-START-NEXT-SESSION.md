@@ -1,73 +1,78 @@
-# Session 809 - Production vs Local Investigation
+# Session 810 - Continue Platform Operations
 
-**Previous Session:** 808 (Task Audit, Agent Flow Analysis, Persona Agent Discovery)
+**Previous Session:** 809 (Production vs Local Investigation - ROOT CAUSE FOUND)
 **Date:** January 24, 2026
-**Status:** 75 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN | 74 Active Celery Beat Tasks
+**Status:** 75 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN | 74 Active Celery Beat Tasks | **ALL 212 AGENTS NOW ACTIVE**
 
 ---
 
-## CRITICAL: START WITH FRESH TERMINAL
+## SESSION 809 COMPLETED ✅
 
-Start this session with a brand new terminal for 100% context. The goal is to investigate what's running on PRODUCTION vs what we've been testing locally.
+### ROOT CAUSE FOUND: Missing `sync_persona_learning` Command
 
----
+**The Problem:** Persona agents (139) were dormant locally but active on production.
 
-## SESSION 809 PRIORITY: Production vs Local Investigation
+**The Investigation:**
+1. ✅ Traced panel discussion selection: `run_multi_agent_conversation` (tasks.py:6363) selects agents with `knowledge_sources__isnull=False`
+2. ✅ Found persona agents had 0 knowledge sources locally vs production
+3. ✅ Discovered `sync_persona_learning` command (Session 790) was run on production but never locally
 
-### The Discovery
+**The Fix:** Ran `python manage.py sync_persona_learning`
 
-On production, we observed **persona agents actively participating in panel discussions**:
+| Metric | Before | After |
+|--------|--------|-------|
+| AgentKnowledgeSource | 4,424 | 4,563 (+139) |
+| AgentLearningConnection | 222 | 345 (+123) |
+| Agents eligible for panels | 74 | **212 (all!)** |
 
-```
-Panel: [Learned] Openmeteo - Weather Intelligence
-Participants: Resume Optimizer AI, Hidden Job Market Explorer, BrandStrategyAgent, SEO Content Optimizer
-Date: 1/24/2026 (today)
-13 discussion turns with Tension/Grounded tags
-Quality: 100% (Excellent)
-```
-
-But locally:
-- Persona agents have **0 executions**
-- Persona agents have **0 knowledge sources**
-- Persona agents have **0 memories**
-- **0 learnings in last 24 hours**
-
-### Hypothesis
-
-When we deployed to production, we activated dormant parts of the system that haven't run locally in months. Production is running Celery Beat tasks that:
-1. Create `AgentKnowledgeSource` records for ALL agents (including persona)
-2. Run `run_multi_agent_conversation` which selects agents with knowledge sources
-3. Generate panel discussions using GPT with persona agent metadata
-4. Store results in `AgentLearning` with `panel_agents` and `discussion_summary`
-
-### Investigation Tasks
-
-1. **Compare Celery Beat schedules** - What's running on prod vs local?
-2. **Check AgentKnowledgeSource counts** - Prod has many, local has only 73 (core agents only)
-3. **Check AgentLearning counts** - Prod has 103,245+ in 7 days, local has 0 in 24h
-4. **Trace the learning pipeline** - How do persona agents get knowledge sources?
-5. **Verify multi-agent conversation task** - Is it running on prod? What agents does it select?
-
-### Key Files to Examine
+### Key Files Discovered
 
 | File | Purpose |
 |------|---------|
-| `core/tasks.py:6335` | `run_multi_agent_conversation` - Panel discussion generator |
-| `core/tasks.py:6363` | Agent selection query (requires knowledge_sources) |
-| `core/conversation_orchestrator.py` | Tension/Grounded validation |
-| `core/services/persona_agent_context.py` | PersonaAgentContextBuilder |
-| `core/management/commands/load_all_agents_advisors.py` | Persona agent definitions |
+| `core/management/commands/sync_persona_learning.py` | Creates knowledge sources + learning connections for persona agents |
+| `core/services/persona_agent_context.py` | `PersonaAgentContextBuilder` + `PERSONA_SPIDER_MAPPINGS` |
+| `core/tasks.py:6335` | `run_multi_agent_conversation` - requires agents with knowledge_sources |
+| `intelligence/spider_agent_connector.py` | Routes spider data to agents (creates solutions, NOT knowledge sources) |
 
-### Production Data Points (from UI screenshot)
+### Why Production Worked But Local Didn't
 
-- Panel title: `[Learned] Openmeteo - Weather Intelligence`
-- Topic origin: `learned_from_Job Application Automator`
-- 4 agents participated (1 core, 3 persona):
-  - `Resume Optimizer AI` (PERSONA - career)
-  - `Hidden Job Market Explorer` (PERSONA - job_search)
-  - `BrandStrategyAgent` (CORE)
-  - `SEO Content Optimizer` (PERSONA - content)
-- Discussion tags: `system:pipeline`, `system:agent`, `metric:conversion`, `system:rag`, `system:a/b test`
+1. **On production:** `sync_persona_learning` was run after deployment, creating:
+   - 139 AgentKnowledgeSource entries for persona agents
+   - 123 AgentLearningConnection entries between persona agents
+   - This enabled persona agents to be selected for panel discussions
+
+2. **Locally:** The command was never run, so:
+   - Persona agents had 0 knowledge sources
+   - They couldn't be selected for `run_multi_agent_conversation` panels
+   - Only core agents (with knowledge sources from spider processing) participated
+
+### How Panel Discussions Work
+
+```
+run_multi_agent_conversation (tasks.py:6335)
+    │
+    ├── Select agents with knowledge_sources (line 6363)
+    │   └── Agent.objects.filter(knowledge_sources__isnull=False)
+    │
+    ├── Pick diverse agents by specialization
+    │
+    ├── Get knowledge item from moderator's knowledge (line 6493)
+    │
+    └── Generate panel discussion via GPT (round-robin)
+```
+
+### Learning Connection Propagation
+
+```
+sync_persona_learning creates PERSONA_LEARNING_RELATIONSHIPS:
+    income → career (complementary)
+    income → job_search (complementary)
+    income → finance (pipeline)
+    finance → investment (specialization)
+    content → marketing (pipeline)
+    ai_ml → development (complementary)
+    ... (24 total relationship types)
+```
 
 ---
 
@@ -88,50 +93,44 @@ When we deployed to production, we activated dormant parts of the system that ha
 
 `CELERY_BEAT_SCHEDULE` in Django settings.py (56→74 entries) **completely overrides** `app.conf.beat_schedule` in celery.py (245 entries).
 
-### Agent Architecture Clarified
+---
+
+## Agent Architecture Summary
 
 | Type | Count | Description |
 |------|-------|-------------|
 | **Core Agents** | 75 | Python code in `AGENT_MAP`, execute via AgentRouter |
 | **Persona Agents** | 139 | Database records, participate via LLM context injection |
-| **Total** | 214 | Combined ecosystem |
+| **Total** | 214 | Combined ecosystem (212 active, 2 inactive) |
 
-### Local Stats (may differ significantly from prod!)
+### How Persona Agents Participate
 
-- 904 total AgentExecution records
-- 73 agents with knowledge sources (all core, 0 persona)
-- 7,815 AgentConversation records
-- 23 CollaborationSession records (last one Dec 6, 2025)
-- 0 AgentLearning in last 24h
+1. **Knowledge Sources:** Created by `sync_persona_learning` from spider data mappings
+2. **Learning Connections:** Created between complementary agent types
+3. **Panel Discussions:** Selected by `run_multi_agent_conversation` task
+4. **Context Injection:** `PersonaAgentContextBuilder` provides spider data context
 
 ---
 
 ## QUICK REFERENCE
 
-### Check Production Database (via Railway)
+### Sync Persona Agents (if needed)
 ```bash
-# If Railway CLI available
-railway run python manage.py shell -c "
-from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearning
-print(f'Knowledge Sources: {AgentKnowledgeSource.objects.count()}')
-print(f'Learnings: {AgentLearning.objects.count()}')
-"
+# Run if persona agents are dormant
+python manage.py sync_persona_learning
+
+# Dry run to see what would be created
+python manage.py sync_persona_learning --dry-run
 ```
 
 ### Check Local Database
 ```bash
 python manage.py shell -c "
-from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearning
+from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearningConnection
 print(f'Knowledge Sources: {AgentKnowledgeSource.objects.count()}')
-print(f'Learnings: {AgentLearning.objects.count()}')
+print(f'Learning Connections: {AgentLearningConnection.objects.count()}')
+print(f'Agents with knowledge: {Agent.objects.filter(knowledge_sources__isnull=False).distinct().count()}')
 "
-```
-
-### Find Multi-Agent Conversation Task
-```bash
-grep -n "run_multi_agent_conversation" core/tasks.py
-# Line 6335 - generates panel discussions
-# Line 6363 - agent selection (requires knowledge_sources)
 ```
 
 ---
@@ -140,6 +139,7 @@ grep -n "run_multi_agent_conversation" core/tasks.py
 
 | Session | Focus |
 |---------|-------|
+| **809** | Production vs Local Investigation - ROOT CAUSE FOUND + FIXED |
 | **808** | Task Audit & Agent Flow Analysis - 6 PRs |
 | **807** | Production Fixes - 5 PRs (ImageAgent, migrations, timeouts) |
 | **806** | Personal Assistant Context Optimization - 4 new services |
