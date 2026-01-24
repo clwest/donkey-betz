@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 20, 2026 - Session 784
+**Last Updated:** January 23, 2026 - Session 805
 **Status:** Component Health: 100% | Integration Score: 95% | Data Display: 85% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 45 Frontend Pages
 
 ## System Stats (Session 746)
@@ -47,6 +47,7 @@
 **Agent Conversation Voice (Session 781):** 3-level fix for repetitive conversation styles. Level 2: 22 role-anchored disagreement styles. Level 1: Opener de-duplication tracking. Level 3: Discourse memory with 50+ phrase tracking across 5 categories.
 **Spider News Feed (Session 783):** Reddit/Yahoo-style human-facing feed for spider data with agent annotations. Agents flag items as useful/profitable/podcast_worthy/breaking_news. Humans browse, filter, search, vote.
 **Documentation Index Browser (Session 784):** Cognitive Build Ledger UI - browse 1,512 docs with status badges (active/superseded/deprecated/draft), cross-reference graph (1,816 links), broken link detection (100), orphan detection (50). DocsIndexPage with filters, search, DocDetailsPanel showing inbound/outbound links with context snippets.
+**Learning System Fix (Session 805):** Fixed 3 critical issues: (1) Anomaly detection false positives - 84 experiments incorrectly halted due to comparing to zero baseline, fixed with minimum 3/hour baseline. (2) Missing learnings - 87% of experiments had no learnings extracted, added `_extract_halt_learning()` to Experiment.halt(). (3) Negative learning weight - operational monitoring terms in safety keywords caused -1.0 signal for normal failures, fixed with v1.2 classification. Net weight improved from -3.169 to -0.944 (70% improvement).
 
 ---
 
@@ -233,6 +234,9 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **805** | **Learning System Fix** - Fixed 3 critical issues identified by auto-generated blogs. (1) Anomaly detection false positives - added minimum baseline. (2) Missing learnings - added `_extract_halt_learning()` + backfilled 85 learnings. (3) Negative learning weight - fixed safety keyword classification v1.2. Learning coverage: 13%→100%, Net weight: -3.169→-0.944. Gate imbalance confirmed as by-design. 4 PRs merged. | See `00-START-NEXT-SESSION.md` |
+| **804** | **Auto-Generated Blog Visibility Fix** - Fixed bug where 32 auto-generated blogs were invisible in Human Interface. Added `_create_blog_attention_item()` to autonomous_action_executor.py at all 4 SelfBlog creation sites. | See `00-START-NEXT-SESSION.md` |
+| **803** | **LLM Cost Tracking + AI Assistant Performance** - Added cost tracking to LLMCallLog, meta question detection to skip spider data (88s→10s for "tell me about this system"), Daphne timeout increase to 120s. 4 PRs merged. | See `00-START-NEXT-SESSION.md` |
 | **797** | **Integration Deepening** - Frontend batch actions + consultation triggers. Gate/opportunity consultations for human approval via PA chat. PR #17-21: QuerySet fix, full system scope prompt, batch UI, approve_gate/waive_gate/execute_opportunity handlers. | `SESSION_797_INTEGRATION_DEEPENING.md` |
 | **796** | **Human-AI Assistant Connection** - 3 phases complete. PA surfaces pending decisions, batch_decide/auto_execute/consult actions, consultation response loop with pattern matching. | `SESSION_796_CONTEXT_PRESERVATION.md` |
 | **795** | **Reasoning Engine Explained** - Gate system clarity, reasoning documentation | `SESSION_795_REASONING_ENGINE_EXPLAINED.md` |
