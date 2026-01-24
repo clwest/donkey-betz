@@ -1,153 +1,117 @@
-# Session 801 - Ready for Next Steps
+# Session 802 - Ready for Next Steps
 
-**Previous Session:** 800 (Operator Mode + Cloudinary Egress Optimization)
+**Previous Session:** 801 (Neural Orchestra Metrics Fix)
 **Date:** January 23, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
 
 ---
 
-## SESSION 800 COMPLETED
+## SESSION 801 COMPLETED
 
-### Focus: PA Operator Mode + Railway Egress Cost Optimization
+### Focus: Neural Orchestra Active Agents & Collaborations Fix
 
-Two major initiatives completed:
-1. **PA Operator Mode** - Transform PA from "tour guide" to "control plane"
-2. **Cloudinary Migration** - Reduce Railway egress costs ($2,737/month estimated → near zero for images)
+Fixed stale metrics on Neural Orchestra page where Active Agents was stuck at 90 and Collaborations showed only 1.
 
-### PRs Merged (9 total)
+### PR Merged
 
 | PR | Feature |
 |----|---------|
-| #49 | **Operator Mode for PA** - Real-time state injection |
-| #50 | Documentation update |
-| #51 | **reasoning_engine_tool** - Connect PA to ThinkingAgent |
-| #52 | Documentation update |
-| #53 | **Production Celery warnings fix** - AgentContribution.project + workspace context None user |
-| #54 | Documentation update |
-| #55 | **Cloudinary image persistence** - New images auto-upload to Cloudinary |
-| #56 | **Cloudinary migration commands** - `migrate_images_to_cloudinary`, `check_cloudinary_status` |
-| #57 | **Migration command fix** - Limit handling bugfix |
+| #59 | **Neural Orchestra metrics fix** - Active Now + improved Collaborations |
 
 ---
 
 ### Key Changes
 
-#### 1. Operator Mode (`_build_operator_mode_section()`)
+#### 1. Active Agents Metric Fix
 
-Injects real-time state into PA prompt:
-- **What Changed** - Recent KnowledgeTransfer, AgentMemory insights
-- **What's Happening** - Active/recent agent executions
-- **What's Blocked** - Pending gates, consultations
-- **Production Status** - Content channels, spider activity
-
-Plus explicit operator instructions to lead with state, not capabilities.
-
-#### 2. Reasoning Engine Tool
-
-New PA tool `reasoning_engine_tool` to access ThinkingAgent:
-- `thoughts` - Get recent thinking cycles
-- `insights` - Get insights from reasoning
-- `actions` - Get autonomous actions taken
-- `status` - Get reasoning engine stats
-- `trigger` - Queue new thinking cycle
-
-User can now ask: "What has the system been thinking about?"
-
-#### 3. Cloudinary Egress Optimization (PRs #55-57)
-
-**Problem:** Railway egress costs estimated at $2,737/month due to serving images through Django.
+**Problem:** "Active Agents" showed 90 all day (24h rolling count that rarely changes)
 
 **Solution:**
-1. **New images** - Automatically uploaded to Cloudinary via `save_watermarked_image()`
-2. **Existing images** - Migration command to upload to Cloudinary
-3. **URL handling** - `ImageHistory.get_full_url()` returns Cloudinary URLs directly (no proxy)
+- Show `active_now` (1h window) as primary "Active Now" metric
+- Show `active_24h` as secondary "X in 24h" indicator below
+- Real-time activity now updates when agents execute
 
-**Files Changed:**
-- `core/services/watermark_integration.py` - Cloudinary upload on save
-- `core/views_image.py` - Handle Cloudinary URLs in 6 locations
-- `content/models.py` - `get_full_url()` and `get_thumbnail_url()` return http URLs directly
-- `core/management/commands/migrate_images_to_cloudinary.py` - Migration command
-- `core/management/commands/check_cloudinary_status.py` - Status checker
+**Before:** Active (24h): 90 (appeared stuck)
+**After:** Active Now: 44 | 90 in 24h
 
-**Commands:**
-```bash
-# Check migration status
-python manage.py check_cloudinary_status
+#### 2. Collaborations Metric Fix
 
-# Dry run migration
-python manage.py migrate_images_to_cloudinary --dry-run
+**Problem:** Collaborations showed only 1 (only counted projects with 2+ agent contributions)
 
-# Run migration
-python manage.py migrate_images_to_cloudinary
+**Solution:**
+- Combine multi-agent projects + KnowledgeTransfer in 24h
+- KnowledgeTransfer represents real knowledge sharing between agents
+- Now shows meaningful collaboration activity
 
-# With options
-python manage.py migrate_images_to_cloudinary --limit=100 --batch-size=50
-```
+**Before:** Collaborations: 1
+**After:** Collaborations: 131
 
-#### 4. VideoAgent Investigation
+#### Files Changed
 
-Investigated why VideoAgent showed 92% "failure rate":
-- **Finding:** VideoAgent only received identity queries ("State your name"), NOT actual video tasks
-- **Root Cause:** Tool description is intentionally restrictive ("EXPENSIVE - USE SPARINGLY")
-- **Status:** Working as designed - videos require explicit user request
+- `ai_core/consciousness/neural_orchestra_reality_bridge.py` - Improved collaborations calculation
+- `frontend/src/pages/NeuralOrchestraPage.tsx` - Show active_now as primary, 24h as secondary
 
 ---
 
-## WHAT'S READY FOR SESSION 801
+## WHAT'S READY FOR SESSION 802
 
 ### System State
-- Production deployed with Cloudinary integration
-- New images automatically persist to Cloudinary CDN
-- PA has Operator Mode + Reasoning Engine access
+- Production deployed with Neural Orchestra metrics fix
+- Active Now shows real-time agent activity (1h window)
+- Collaborations includes KnowledgeTransfer (meaningful metric)
 - All body systems green
 
-### Production Notes
-- Production database shows 0 images (ephemeral filesystem lost old images)
-- New images will persist via Cloudinary
-- Verify by generating a test image and checking for `res.cloudinary.com` URL
+### Production Metrics (Current)
+- Total Agents: 214
+- Active Now: 44
+- Active 24h: 90
+- Collaborations: 131
 
 ### Potential Next Steps
 
-1. **Test Image Generation**
-   - Generate a new image in production
-   - Verify Cloudinary URL is returned
+1. **Monitor Neural Orchestra**
+   - Verify metrics update as agents execute
+   - Check frontend displays correctly
 
-2. **Monitor Egress Costs**
-   - Check Railway billing after a few days
-   - Should see reduced network egress
+2. **Additional Metric Improvements**
+   - Add trend indicators (up/down arrows)
+   - Show collaboration details on click
+   - Add time-series graphs for activity
 
-3. **Other Egress Optimization** (if needed)
-   - WebSocket message batching (~100 endpoints active)
-   - API response caching
-   - Celery task consolidation
+3. **Continue Session 800 Items**
+   - Monitor Railway egress costs (Cloudinary migration)
+   - Test image generation in production
 
 ---
 
 ## QUICK REFERENCE
 
-### Cloudinary Commands
-```bash
-# Check status
-railway run python manage.py check_cloudinary_status
-
-# Migrate existing images (if any)
-railway run python manage.py migrate_images_to_cloudinary
-```
-
 ### Production Commands
 ```bash
-# Seed production
-railway run python manage.py seed_production
+# Check Neural Orchestra API
+curl https://donkey-betz-platform-production.up.railway.app/api/neural-orchestra/agents/stats/
 
-# Check agents
-railway run python manage.py shell -c "from core.models_unified_system import Agent; print(Agent.objects.count())"
+# Check agent activity
+railway run python manage.py shell -c "
+from core.models_unified_system import AgentExecution
+from django.utils import timezone
+from datetime import timedelta
+print(AgentExecution.objects.filter(created_at__gte=timezone.now()-timedelta(hours=1)).count())
+"
+
+# Check KnowledgeTransfer (collaborations)
+railway run python manage.py shell -c "
+from core.models_unified_system import KnowledgeTransfer
+from django.utils import timezone
+from datetime import timedelta
+print(KnowledgeTransfer.objects.filter(created_at__gte=timezone.now()-timedelta(hours=24)).count())
+"
 ```
 
-### Required Environment Variables (Railway)
-```
-CLOUDINARY_CLOUD_NAME=donkeybetz
-CLOUDINARY_API_KEY=xxx
-CLOUDINARY_API_SECRET=xxx
+### Cloudinary Commands (from Session 800)
+```bash
+railway run python manage.py check_cloudinary_status
+railway run python manage.py migrate_images_to_cloudinary
 ```
 
 ---
@@ -156,6 +120,7 @@ CLOUDINARY_API_SECRET=xxx
 
 | Session | Focus |
 |---------|-------|
+| **801** | Neural Orchestra Metrics Fix - Active Now + Collaborations |
 | **800** | Operator Mode + Cloudinary Egress Optimization - 9 PRs merged |
 | **799** | Production Fixes & Seeding - 10 PRs merged |
 | **798** | Workspace & Docs Context Injection - 12 PRs merged |
