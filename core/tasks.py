@@ -10,6 +10,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from typing import Dict, Any
 import os
@@ -174,6 +175,134 @@ def run_autonomy_cycle(user_id: int = None):
     except Exception as e:
         logger.exception(f"Autonomy cycle task failed: {e}")
         return {'error': str(e)}
+
+
+# ==================== SESSION 811: CONVERSATION ACTION EXECUTION ====================
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def execute_agent_task(
+    self,
+    agent_name: str,
+    task: str,
+    context: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Session 811: Execute a task via a specific agent from conversation next_steps.
+
+    This task is queued by ConversationActionDispatcher when a conversation
+    produces next_steps that should be executed.
+
+    Args:
+        agent_name: Name of the agent to execute the task (e.g., "ResearchAgent")
+        task: Task description from conversation next_steps
+        context: Additional context including conversation_id, participants
+
+    Returns:
+        Dict with execution result including status and output
+    """
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import Agent, AgentExecution
+    from decimal import Decimal
+
+    context = context or {}
+    conversation_id = context.get('conversation_id', 'unknown')
+    execution_start = time.time()
+
+    logger.info(
+        f"[execute_agent_task] Starting: {agent_name} <- '{task[:50]}...' "
+        f"(conversation={conversation_id})"
+    )
+
+    try:
+        # Create execution record
+        agent_obj = Agent.objects.filter(name=agent_name).first()
+
+        execution_record = None
+        if agent_obj:
+            execution_record = AgentExecution.objects.create(
+                agent=agent_obj,
+                task=task[:500],  # Truncate for DB field
+                status='in_progress',
+                input_data={
+                    'task': task,
+                    'context': context,
+                    'source': 'conversation_action_dispatch',
+                }
+            )
+
+        # Route to agent
+        router = AgentRouter()
+        result = router.route(
+            agent_name=agent_name,
+            task=task,
+            context={
+                'source': 'conversation_action_dispatch',
+                'conversation_id': conversation_id,
+                **context
+            }
+        )
+
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+
+        # Update execution record
+        if execution_record:
+            execution_record.status = 'completed' if result.success else 'failed'
+            execution_record.execution_time_ms = execution_time_ms
+            execution_record.output_data = {
+                'content': result.content[:5000] if result.content else None,
+                'metadata': result.metadata or {},
+            }
+            if not result.success:
+                execution_record.error_message = result.error or 'Unknown error'
+            execution_record.completed_at = timezone.now()
+            execution_record.save()
+
+            # Update agent metrics
+            Agent.objects.filter(pk=agent_obj.pk).update(
+                total_executions=F('total_executions') + 1,
+                successful_executions=F('successful_executions') + (1 if result.success else 0)
+            )
+
+        logger.info(
+            f"[execute_agent_task] Completed: {agent_name} "
+            f"(success={result.success}, time={execution_time_ms}ms)"
+        )
+
+        return {
+            'success': result.success,
+            'agent_name': agent_name,
+            'task': task,
+            'content': result.content[:1000] if result.content else None,
+            'execution_time_ms': execution_time_ms,
+            'execution_id': str(execution_record.id) if execution_record else None,
+            'conversation_id': conversation_id,
+        }
+
+    except Exception as e:
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+        logger.error(f"[execute_agent_task] Failed: {agent_name} - {e}")
+
+        # Update execution record on failure
+        if execution_record:
+            execution_record.status = 'failed'
+            execution_record.error_message = str(e)
+            execution_record.execution_time_ms = execution_time_ms
+            execution_record.completed_at = timezone.now()
+            execution_record.save()
+
+        # Retry on certain errors
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e)
+
+        return {
+            'success': False,
+            'agent_name': agent_name,
+            'task': task,
+            'error': str(e),
+            'execution_time_ms': execution_time_ms,
+            'conversation_id': conversation_id,
+        }
 
 
 @shared_task(bind=True)
