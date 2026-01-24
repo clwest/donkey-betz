@@ -21,6 +21,7 @@ Fixed stale metrics on Neural Orchestra page where Active Agents was stuck at 90
 | #61 | **Celery Beat args fix** - Fixed missing category argument in scheduled tasks |
 | #63 | **AI Assistant timeout fix** - 60s OpenAI + 90s axios timeout |
 | #64 | **Channels page episodes view** - All Episodes tab with search, preview, copy |
+| #66 | **Datetime timezone fix** - Fixed offset-naive vs offset-aware comparison error |
 
 ---
 
