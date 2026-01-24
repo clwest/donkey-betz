@@ -54,19 +54,25 @@ class WeightedLearningService:
     }
 
     # =========================================================================
-    # SAFETY FAIL KEYWORD CLASSIFICATION (v1.1 - Strong/Weak system)
+    # SAFETY FAIL KEYWORD CLASSIFICATION (v1.2 - Session 805)
     # =========================================================================
     # Strong keywords: Single hit is enough to classify as safety FAIL
     # Weak keywords: Need 2 weak hits OR 1 weak + 1 strong to classify
+    #
+    # Session 805: Removed operational monitoring terms that caused false positives:
+    # - 'integrity_anomaly': This is an operational monitoring signal, not safety
+    # - 'anomaly': Used for error rate spikes, not security issues
+    # - 'integrity': Too generic, used in operational contexts
 
     STRONG_SAFETY_KEYWORDS = [
-        'kill_switch', 'harmful', 'security', 'integrity_anomaly',
-        'data_breach', 'offensive', 'discriminat', 'compliance_violation'
+        'kill_switch', 'kill-switch', 'harmful', 'security', 'data_breach',
+        'offensive', 'discriminat', 'compliance_violation',
+        'unauthorized', 'malicious', 'exploit'
     ]
 
     WEAK_SAFETY_KEYWORDS = [
-        'privacy', 'bias', 'trust', 'anomaly', 'user_trust',
-        'safety', 'integrity', 'compliance'
+        'privacy', 'bias', 'user_trust', 'safety', 'compliance',
+        'pii', 'gdpr', 'sensitive_data'
     ]
 
     # Minimum samples for reliable evidence (novelty penalty threshold)
