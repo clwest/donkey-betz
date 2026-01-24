@@ -3,6 +3,10 @@ Autonomous Action Executor - Executes decisions made by the ThinkingAgent
 
 Session 544: This service takes the decisions from the ThinkingAgent and
 actually executes them using the appropriate agents and services.
+
+Session 804: Added _create_blog_attention_item() to surface auto-generated
+blogs in the Human Interface. Previously, blogs were created but not visible
+because HumanAttentionItem entries weren't being created.
 """
 
 import logging
@@ -35,6 +39,50 @@ class AutonomousActionExecutor:
             'triage_dreams': self._execute_triage_dreams,  # Session 564: Dream pipeline
             'auto_approve_gates': self._execute_auto_approve_gates,  # Session 654: Auto-approve low-risk gates
         }
+
+    def _create_blog_attention_item(
+        self,
+        blog,
+        content_type: str = 'report',
+        agent_name: str = 'ThinkingAgent'
+    ) -> bool:
+        """
+        Session 804: Create HumanAttentionItem for auto-generated SelfBlog entries.
+
+        This ensures all auto-generated blogs surface in the Human Interface
+        for review, just like blogs created by generate_self_blog_task.
+
+        Args:
+            blog: The SelfBlog instance that was created
+            content_type: Type of content (report, research, deliverable)
+            agent_name: Name of the agent that created it
+
+        Returns:
+            True if attention item was created, False otherwise
+        """
+        try:
+            from core.services.human_attention_bridge import HumanAttentionBridge
+
+            bridge = HumanAttentionBridge()
+
+            # Build summary from blog intro or title
+            summary = blog.intro[:200] if blog.intro else f"Auto-generated {content_type}: {blog.title}"
+
+            bridge.create_content_review_attention(
+                content_type=content_type,
+                title=blog.title,
+                summary=summary,
+                content_id=str(blog.id),
+                agent_name=agent_name,
+                quality_score=75,  # Default score for auto-generated content
+            )
+
+            logger.info(f"📋 [Session 804] Created attention item for blog {blog.id}")
+            return True
+
+        except Exception as e:
+            logger.warning(f"📋 [Session 804] Failed to create attention item for blog {blog.id}: {e}")
+            return False
 
     def execute_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -311,6 +359,9 @@ class AutonomousActionExecutor:
             }
         )
 
+        # Session 804: Create attention item so report surfaces in Human Interface
+        self._create_blog_attention_item(blog, content_type='report', agent_name='ThinkingAgent')
+
         return {
             'report_id': str(blog.id),
             'topic': topic,
@@ -497,6 +548,9 @@ class AutonomousActionExecutor:
                 )
                 research_blog_id = str(blog.id)
                 logger.info(f"Research report saved: {blog.id}")
+
+                # Session 804: Create attention item so research surfaces in Human Interface
+                self._create_blog_attention_item(blog, content_type='research', agent_name='ResearchAgent')
 
             except Exception as e:
                 logger.warning(f"Could not save research report: {e}")
@@ -711,6 +765,9 @@ The document should:
 
             logger.info(f"Deliverable saved to SelfBlog: {blog.id} ({stage_prefix})")
 
+            # Session 804: Create attention item so deliverable surfaces in Human Interface
+            self._create_blog_attention_item(blog, content_type='deliverable', agent_name='TechnicalDocumentAgent')
+
             return {
                 'deliverable': deliverable_name,
                 'success': True,
@@ -825,6 +882,9 @@ The document should:
                     'fallback_used': True,
                 }
             )
+
+            # Session 804: Create attention item so deliverable surfaces in Human Interface
+            self._create_blog_attention_item(blog, content_type='deliverable', agent_name='ContentWriterAgent')
 
             return {
                 'deliverable': deliverable_name,
