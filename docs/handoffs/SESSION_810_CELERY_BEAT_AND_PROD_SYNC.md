@@ -2,7 +2,7 @@
 
 **Date:** January 24, 2026
 **Previous Session:** 809 (Persona Agent Dormancy Root Cause)
-**Status:** COMPLETE - 5 New Management Commands, 60+ Tasks Restored
+**Status:** COMPLETE - 5 New Management Commands, 60+ Tasks Restored, $385/day Egress Fix
 
 ---
 
@@ -14,6 +14,7 @@ This session addressed critical discrepancies between local and production envir
 2. **Blog Visibility** - 1,000+ SelfBlogs invisible due to missing HumanAttentionItem entries
 3. **Agent Relationships** - Production had 0 relationships vs 462 locally
 4. **Database Health Monitoring** - Created tool to compare environments
+5. **pgvector Egress Costs** - $385.56/day (7,711 GB) from embedding vectors being pulled unnecessarily
 
 ---
 
@@ -133,6 +134,41 @@ Creates relationships based on category affinities:
 
 ---
 
+## pgvector Egress Cost Fix
+
+### The Problem
+
+Railway billing showed **$385.56/day** in pgvector egress (7,711 GB). Root cause: SpiderData and AgentMemory queries were pulling embedding vectors (~6KB each) on every query, even when not needed.
+
+```
+SpiderData.embedding = 1536 floats × 4 bytes = ~6KB per record
+AgentMemory.embedding = 1536 floats × 4 bytes = ~6KB per record
+
+Celery tasks querying these tables constantly = massive egress
+```
+
+### The Fix
+
+Added `.defer('embedding')` to 52 queries across 8 files:
+
+| File | Queries Fixed |
+|------|---------------|
+| `core/tasks.py` | 34 |
+| `core/views_memory_palace.py` | 7 |
+| `core/agents/personal_assistant_agent.py` | 4 |
+| `core/views_spider_feed.py` | 3 |
+| `core/views_spider_dashboard.py` | 1 |
+| `core/views_analytics.py` | 1 |
+| `core/views_orchestration.py` | 1 |
+| `core/views_predictions.py` | 1 |
+
+### Expected Savings
+
+- **Before**: ~7,711 GB egress/day = $385.56/day
+- **After**: Significant reduction (embeddings only fetched when actually needed for similarity search)
+
+---
+
 ## New Management Commands Created
 
 | Command | Purpose | PR |
@@ -180,6 +216,14 @@ railway run python manage.py db_health_snapshot
 ### Modified Files
 - `00-START-NEXT-SESSION.md` - Updated for Session 811
 - `CLAUDE.md` - Updated Celery task count (139 → 228)
+- `core/tasks.py` - Added `.defer('embedding')` to 34 queries
+- `core/views_memory_palace.py` - Added `.defer('embedding')` to 7 queries
+- `core/agents/personal_assistant_agent.py` - Added `.defer('embedding')` to 4 queries
+- `core/views_spider_feed.py` - Added `.defer('embedding')` to 3 queries
+- `core/views_spider_dashboard.py` - Added `.defer('embedding')` to 1 query
+- `core/views_analytics.py` - Added `.defer('embedding')` to 1 query
+- `core/views_orchestration.py` - Added `.defer('embedding')` to 1 query
+- `core/views_predictions.py` - Added `.defer('embedding')` to 1 query
 
 ---
 
@@ -192,6 +236,7 @@ railway run python manage.py db_health_snapshot
 | #100 | feat(Session 810): Database health snapshot | ✅ Merged |
 | #101 | feat(Session 810): Bootstrap agent relationships | ✅ Merged |
 | #102 | fix: Remove invalid collaboration_score field | ✅ Merged |
+| #104 | fix(Session 810): Reduce pgvector egress costs with .defer('embedding') | ✅ Merged |
 
 ---
 
@@ -204,6 +249,8 @@ railway run python manage.py db_health_snapshot
 3. **Backfill Commands**: When adding features that create related records (like HumanAttentionItem for SelfBlog), always create a backfill command for existing data.
 
 4. **Environment Comparison**: The `db_health_snapshot` command is invaluable for identifying drift between environments.
+
+5. **pgvector Egress Costs**: Always use `.defer('embedding')` when querying models with vector fields unless you specifically need the embeddings. Each 1536-float vector is ~6KB, and Celery tasks running every minute can cause massive egress costs.
 
 ---
 
