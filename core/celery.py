@@ -2117,6 +2117,31 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=3, day_of_week=0),  # Sunday 3 AM
         'options': {'expires': 14400, 'queue': 'long_running'}
     },
+    # Session 807: Agent exercise schedules for weak muscles
+    # Research agents - Every 2 hours (CustomerResearchAgent, ResearchAgent)
+    'run-research-analysis-agents': {
+        'task': 'core.tasks.run_research_analysis_agents',
+        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
+        'options': {'expires': 7200, 'queue': 'agents'}
+    },
+    # Content studio agents - Every 4 hours (TopicMinerAgent, ContrarianAgent)
+    'run-content-studio-agents': {
+        'task': 'core.tasks.run_content_studio_agents',
+        'schedule': crontab(minute=30, hour='*/4'),  # Every 4 hours at :30
+        'options': {'expires': 14400, 'queue': 'agents'}
+    },
+    # Campaign/series agents - Every 6 hours (AISeriesWorkflowAgent, CampaignOrchestratorAgent)
+    'run-campaign-series-agents': {
+        'task': 'core.tasks.run_campaign_series_agents',
+        'schedule': crontab(minute=45, hour='*/6'),  # Every 6 hours at :45
+        'options': {'expires': 21600, 'queue': 'agents'}
+    },
+    # Business strategy agents - Every 8 hours (CompetitorAnalysisAgent, etc.)
+    'run-business-strategy-agents': {
+        'task': 'core.tasks.run_business_strategy_agents',
+        'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours at :00
+        'options': {'expires': 28800, 'queue': 'agents'}
+    },
 }
 
 # Task routing configuration
