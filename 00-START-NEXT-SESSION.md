@@ -105,14 +105,19 @@ python manage.py backfill_experiment_learnings --limit 50
 - Meta questions skip spider data
 - Auto-generated blogs visible in Human Interface
 
+### Issues Investigated
+
+1. **Gate Approval Imbalance - RESOLVED (By Design)**
+   - 118 waived vs 6 approved
+   - **Finding:** This ratio is correct and intentional
+   - Risk classification: HIGH=security/infrastructure, LOW=product/experiment/pipeline
+   - 97% of decisions are `product` type (Domain Intelligence, knowledge bootstrapping)
+   - All 4 HIGH risk decisions got proper human approval
+   - Auto-waiving low-risk decisions reduces friction without compromising safety
+
 ### Remaining Issues to Investigate
 
-1. **Gate Approval Imbalance**
-   - 118 waived vs 6 approved
-   - Are gates being auto-waived too aggressively?
-   - Review gate criteria and waiver logic
-
-2. **Negative Learning Weight**
+1. **Negative Learning Weight**
    - System reported net negative learning weight (-6.014)
    - Now that learnings are extracted, does this improve?
    - Review learning weight calculation
