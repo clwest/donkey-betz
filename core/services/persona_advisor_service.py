@@ -337,7 +337,7 @@ class PersonaAdvisorService:
 
             system_prompt = f"""You are {agent.name}, a specialized AI advisor.
 
-Your role: {agent.role or 'Domain expert providing strategic guidance'}
+Your role: {agent.description or 'Domain expert providing strategic guidance'}
 Your specialization: {agent.specialization or 'General expertise'}
 
 Provide thoughtful, actionable advice based on your expertise and any real-world data provided.
