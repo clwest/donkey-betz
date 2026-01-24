@@ -736,13 +736,15 @@ def gallery_generate(request):
                         if base64_match:
                             image_data = base64.b64decode(base64_match.group(1))
                             # Session 487: Apply creator watermark before saving
+                            # Session 800: Now returns Cloudinary URL in production
                             file_path = save_watermarked_image(
                                 image_bytes=image_data,
                                 filename=filename,
                                 user=user,
                                 generation_params={'prompt': prompt, 'model': quality, 'style': style}
                             )
-                            url = default_storage.url(file_path)
+                            # Session 800: file_path may be Cloudinary URL or local path
+                            url = file_path if file_path.startswith('http') else default_storage.url(file_path)
                         else:
                             continue
                     else:
@@ -750,13 +752,15 @@ def gallery_generate(request):
                         response = requests.get(image_url, timeout=30)
                         if response.status_code == 200:
                             # Session 487: Apply creator watermark before saving
+                            # Session 800: Now returns Cloudinary URL in production
                             file_path = save_watermarked_image(
                                 image_bytes=response.content,
                                 filename=filename,
                                 user=user,
                                 generation_params={'prompt': prompt, 'model': quality, 'style': style}
                             )
-                            url = default_storage.url(file_path)
+                            # Session 800: file_path may be Cloudinary URL or local path
+                            url = file_path if file_path.startswith('http') else default_storage.url(file_path)
                         else:
                             continue
 
@@ -1270,13 +1274,15 @@ def remove_background(request):
             filepath = os.path.join('generated_images', filename)
 
             # Session 487: Apply creator watermark before saving
+            # Session 800: Now returns Cloudinary URL in production
             saved_path = save_watermarked_image(
                 image_bytes=response.content,
                 filename=filepath,
                 user=request.user,
                 generation_params={'operation': 'remove_background'}
             )
-            image_url = default_storage.url(saved_path)
+            # Session 800: saved_path may be Cloudinary URL or local path
+            image_url = saved_path if saved_path.startswith('http') else default_storage.url(saved_path)
 
             logger.info(f"✅ Background removed successfully - saved to {saved_path}")
 
@@ -1380,13 +1386,15 @@ def recolor_image(request):
             filepath = os.path.join('generated_images', filename)
 
             # Session 487: Apply creator watermark before saving
+            # Session 800: Now returns Cloudinary URL in production
             saved_path = save_watermarked_image(
                 image_bytes=response.content,
                 filename=filepath,
                 user=request.user,
                 generation_params={'operation': 'recolor', 'object': prompt, 'color': color}
             )
-            image_url = default_storage.url(saved_path)
+            # Session 800: saved_path may be Cloudinary URL or local path
+            image_url = saved_path if saved_path.startswith('http') else default_storage.url(saved_path)
 
             logger.info(f"✅ Recolor complete: {prompt} → {color} - saved to {saved_path}")
 
@@ -1565,13 +1573,15 @@ def upscale_image(request):
                         filename = f'upscaled_{method}_{uuid.uuid4().hex[:8]}.png'
                         filepath = os.path.join('generated_images', filename)
                         # Session 487: Apply creator watermark before saving
+                        # Session 800: Now returns Cloudinary URL in production
                         saved_path = save_watermarked_image(
                             image_bytes=result_response.content,
                             filename=filepath,
                             user=request.user,
                             generation_params={'operation': 'upscale', 'method': 'creative'}
                         )
-                        image_url = default_storage.url(saved_path)
+                        # Session 800: saved_path may be Cloudinary URL or local path
+                        image_url = saved_path if saved_path.startswith('http') else default_storage.url(saved_path)
 
                         logger.info(f"✅ Creative upscale complete after {(attempt+1)*2}s - saved to {saved_path}")
 
@@ -1612,13 +1622,15 @@ def upscale_image(request):
                 filepath = os.path.join('generated_images', filename)
 
                 # Session 487: Apply creator watermark before saving
+                # Session 800: Now returns Cloudinary URL in production
                 saved_path = save_watermarked_image(
                     image_bytes=response.content,
                     filename=filepath,
                     user=request.user,
                     generation_params={'operation': 'upscale', 'method': method}
                 )
-                image_url = default_storage.url(saved_path)
+                # Session 800: saved_path may be Cloudinary URL or local path
+                image_url = saved_path if saved_path.startswith('http') else default_storage.url(saved_path)
 
                 logger.info(f"✅ Upscale complete: {method} method - saved to {saved_path}")
 
