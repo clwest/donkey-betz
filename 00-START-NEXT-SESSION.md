@@ -1,185 +1,223 @@
-# Session 806 - Ready for Next Steps
+# Session 807 - Ready for Next Steps
 
-**Previous Session:** 805 (Learning System Fix)
-**Date:** January 23, 2026
+**Previous Session:** 806 (Personal Assistant Context Optimization)
+**Date:** January 24, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
 
 ---
 
-## SESSION 805 COMPLETED
+## SESSION 806 COMPLETED
 
-### Focus: Fix Learning System - Anomaly Detection + Learning Extraction
+### Focus: Personal Assistant Context Overload Refactoring
 
-Investigated and fixed the learning system issues identified by auto-generated blogs.
+Implemented a 4-component architecture to reduce PA context/token usage by ~70%.
 
-### PRs Merged
+### PR Merged
 
 | PR | Feature |
 |----|---------|
-| #75 | **Learning System Fix** - Anomaly detection false positives + learning extraction for halted experiments |
-| #77 | **Gate Imbalance Finding** - Documented that 118:6 waived:approved ratio is by design |
-| #78 | **Learning Weight Fix** - Fixed safety keyword classification causing negative weight |
+| #82 | **Context Optimization** - 4 new services for tool routing, token tracking, lazy loading, and context summarization |
 
 ---
 
-### Key Changes
+### Key Components Created
 
-#### Issue 1: Anomaly Detection False Positives (Fixed)
+#### 1. ToolCategoryRouter (`core/assistant/tool_category_router.py`)
 
-**Problem:** 84/116 experiments were auto-halted with the same reason: "Integrity anomaly detected in output logs"
+**Purpose:** Two-stage tool routing - classify query first, then show only relevant tools.
 
-**Root Cause:**
-- `_detect_integrity_anomaly()` in `experiment_metrics.py` triggers when:
-  - `current_errors > 5 AND current_errors > (previous_hourly_avg * 3)`
-- Overnight periods have 0 activity, so any daytime errors (6+) looked like a 3x spike
-- Most "errors" were routine: ImageAgent/VideoAgent API failures ("No images generated", "Connection error 400")
+**Categories (8):**
+- CREATION (image, video, audio, 3D)
+- EDITING (image/video editing)
+- RESEARCH (web search, content writing)
+- BUSINESS (competitor, customer, brand, marketing)
+- DEVELOPMENT (code, devops)
+- SYSTEM (body vitals, workspace, budget)
+- INTELLIGENCE (predictions, gates, pilots)
+- ORCHESTRATION (workflows, pipelines, revenue)
 
-**Fix:**
-- Added minimum baseline of 3 errors/hour to compare against
-- Raised threshold from 6 to 10 errors before triggering
-- This prevents normal operational errors from triggering false anomalies
-
-**Files Changed:**
-- `core/services/experiment_metrics.py` - Improved `_detect_integrity_anomaly()` logic
+**Result:** 47 → 10 tools per request for category-specific queries (65% reduction)
 
 ---
 
-#### Issue 2: Learning Extraction for Halted Experiments (Fixed)
+#### 2. ContextBudgetManager (`core/services/context_budget_manager.py`)
 
-**Problem:** Only 15/116 experiments had ExperimentLearning records (87% missing!)
+**Purpose:** Track and enforce token budgets per context section.
 
-**Root Cause:**
-- `halt()` method in Experiment model didn't call learning extraction
-- `evaluate_and_complete_pilots` task only extracts learnings from normally completed pilots
-- Halted experiments were losing their valuable learnings
+**Features:**
+- tiktoken for real-time token counting (cl100k_base encoding)
+- Priority-based allocation (CRITICAL/HIGH/MEDIUM/LOW)
+- 4,000 token total budget
+- Truncation and skip logic for over-budget scenarios
 
-**Fix:**
-- Added `_extract_halt_learning()` method to `Experiment.halt()`
-- Captures halt reason as "what failed" insight
-- Provides actionable recommendations for future experiments
-
-**Files Changed:**
-- `core/models_pilot_readiness.py` - Added `_extract_halt_learning()` method
+**Budget Allocation:**
+| Section | Priority | Max Tokens |
+|---------|----------|------------|
+| system_prompt_core | CRITICAL | 500 |
+| user_message | CRITICAL | 500 |
+| conversation_history | HIGH | 800 |
+| project_context | HIGH | 400 |
+| spider_intelligence | MEDIUM | 600 |
+| learning_patterns | MEDIUM | 300 |
+| pending_decisions | HIGH | 200 |
+| workspace_context | MEDIUM | 200 |
+| advisor_context | LOW | 200 |
+| proactive_intelligence | LOW | 200 |
+| operator_mode | LOW | 100 |
 
 ---
 
-#### Backfill Command Created
+#### 3. LazyContextLoader (`core/services/lazy_context_loader.py`)
 
-New management command to backfill learnings for experiments missing them:
+**Purpose:** Load context sections on-demand based on query classification.
 
-```bash
-# Dry run
-python manage.py backfill_experiment_learnings --dry-run
+**Query Type → Sections:**
+| Query Type | Required | Skip |
+|------------|----------|------|
+| QUESTION | spider, pending_decisions | workspace, operator |
+| CREATION | project, learning, workspace | proactive, operator |
+| CONVERSATION | history | spider, learning, advisor |
+| WORKFLOW | workspace, project, learning | proactive |
+| OPPORTUNITY | spider, proactive, advisor | workspace |
 
-# Run for halted experiments only
-python manage.py backfill_experiment_learnings --halted-only
+**Result:** 16 → 2-5 sections per request
 
-# Run with limit
-python manage.py backfill_experiment_learnings --limit 50
+---
+
+#### 4. ContextSummarizer (`core/services/context_summarizer.py`)
+
+**Purpose:** Compress verbose context into concise summaries.
+
+**Compression Ratios:**
+| Section | Before | After | Ratio |
+|---------|--------|-------|-------|
+| Spider Intelligence | 2,000 tokens | 200 tokens | 10:1 |
+| Learning Patterns | 800 tokens | 150 tokens | 5:1 |
+| Advisor Context | 600 tokens | 100 tokens | 6:1 |
+| Proactive Intelligence | 500 tokens | 50 tokens | 10:1 |
+
+---
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/personal_ai_assistant_enhanced.py` | Added imports, initialization, `_build_optimized_context()`, `_get_optimized_tools()`, budget tracking |
+| `core/services/spider_context_builder.py` | Added `build_summary()` method |
+| `core/services/learning_pattern_engine.py` | Added `get_summary()` method |
+| `core/services/advisor_context_builder.py` | Added `build_summary()` method |
+
+---
+
+### Feature Flags (Gradual Rollout)
+
+All new services have enable/disable flags:
+
+```python
+# Enable/disable each component
+ToolCategoryRouter.set_category_routing(True/False)
+ContextBudgetManager.set_enforcement(True/False)
+LazyContextLoader.set_lazy_loading(True/False)
+ContextSummarizer.set_summarization(True/False)
 ```
 
-**Production Result:** Created 85 learnings from existing experiments (0 failed)
+---
 
-**Files Created:**
-- `core/management/commands/backfill_experiment_learnings.py`
+### Expected Results
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Tool definition tokens | 1,300 | 400 | 69% reduction |
+| Context tokens | 6,200 | 900 | 85% reduction |
+| Total system tokens | 7,500 | 1,300 | 83% reduction |
+| Context/User ratio | 90%/10% | 40%/60% | User gets 6x more budget |
 
 ---
 
-### Production Metrics (After Fix)
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Experiments with Learnings | 15 | 100 |
-| Learning Coverage | 13% | 100%+ |
-| Anomaly Detection Threshold | 6 errors | 10 errors |
-| Baseline Comparison | 0 (causes false positives) | min 3/hour |
-
----
-
-## WHAT'S READY FOR SESSION 806
+## WHAT'S READY FOR SESSION 807
 
 ### System State
-- Production deployed with learning system fix
+- Context optimization components deployed
+- All feature flags available for gradual rollout
+- Token counting via tiktoken working
+- Query classification via keywords (no LLM call)
 - All body systems green
-- Learning coverage now at 100%+
-- Anomaly detection no longer triggers false positives
-- LLM cost tracking active
-- Meta questions skip spider data
-- Auto-generated blogs visible in Human Interface
+- Learning coverage at 100%+
 
-### Issues Investigated
+### Next Steps to Consider
 
-1. **Gate Approval Imbalance - RESOLVED (By Design)**
-   - 118 waived vs 6 approved
-   - **Finding:** This ratio is correct and intentional
-   - Risk classification: HIGH=security/infrastructure, LOW=product/experiment/pipeline
-   - 97% of decisions are `product` type (Domain Intelligence, knowledge bootstrapping)
-   - All 4 HIGH risk decisions got proper human approval
-   - Auto-waiving low-risk decisions reduces friction without compromising safety
+1. **Enable Budget Enforcement**
+   - Currently observability-only (logging but not truncating)
+   - Enable `ENABLE_ENFORCEMENT = True` to actually truncate/skip sections
+   - Monitor response quality for regressions
 
-2. **Negative Learning Weight - FIXED (PR #78)**
-   - Problem: Net learning weight was -3 to -6
-   - Root cause: "Integrity anomaly" halt reason triggered safety classification
-   - All 84 halted experiments got -1.0 (safety fail) instead of -0.5 (execution fail)
-   - Fix: Removed operational monitoring terms from safety keywords (v1.2 classification)
-   - Result: Net weight improved from -3.169 to **-0.944** (70% improvement!)
+2. **Integration Testing**
+   - Test PA responses with different query types
+   - Verify tool routing accuracy for each category
+   - A/B test summarized vs full context
 
-### Remaining Issues to Monitor
+3. **Tune Budgets Based on Logs**
+   - Review budget reports from production
+   - Adjust section budgets based on actual usage
+   - Identify sections that are consistently over-budget
 
-1. **Experiment Success Rate**
-   - With anomaly detection fixed, will success rate improve?
-   - Monitor next 24h for experiment outcomes
+4. **Frontend Observability**
+   - Consider adding token usage display to assistant UI
+   - Show which tools/sections were loaded for transparency
 
 ---
 
 ## QUICK REFERENCE
 
-### Check Learning System Health
+### Test Context Optimization
 ```bash
-# Check learning coverage
-railway run python manage.py shell -c "
-from core.models_pilot_readiness import Experiment, ExperimentLearning
-total = Experiment.objects.filter(status__in=['success', 'failure', 'partial', 'inconclusive']).count()
-learnings = ExperimentLearning.objects.count()
-print(f'Experiments: {total}')
-print(f'Learnings: {learnings}')
-print(f'Coverage: {learnings/max(total,1)*100:.1f}%')
-"
+# Test the components
+python manage.py shell -c "
+from core.services.context_budget_manager import get_context_budget_manager
+from core.services.lazy_context_loader import get_lazy_context_loader, QueryType
+from core.services.context_summarizer import get_context_summarizer
+from core.assistant.tool_category_router import get_tool_category_router
 
-# Check recent experiment halts
-railway run python manage.py shell -c "
-from core.models_pilot_readiness import Experiment
-from django.utils import timezone
-from datetime import timedelta
-halted = Experiment.objects.filter(
-    is_halted=True,
-    halted_at__gte=timezone.now()-timedelta(hours=24)
-)
-print(f'Halted in 24h: {halted.count()}')
-for e in halted[:5]:
-    print(f'  {e.halt_reason[:60]}...')
+# Budget Manager
+bm = get_context_budget_manager()
+bm.start_request()
+bm.set_section('test', 'Hello world')
+print(f'Budget: {bm.get_budget_report()}')
+
+# Lazy Loader
+ll = get_lazy_context_loader()
+sections = ll.get_required_sections(QueryType.QUESTION, 'What is AI?')
+print(f'Sections for QUESTION: {sections}')
+
+# Summarizer
+cs = get_context_summarizer()
+test_data = {'has_data': True, 'relevant_trends': [{'topic': 'AI agents'}]}
+summary = cs.summarize_spider_context(test_data)
+print(f'Summary: {summary}')
+
+# Tool Router
+tr = get_tool_category_router()
+match = tr.classify_message('Generate an image of a sunset')
+print(f'Category: {match.primary}, Confidence: {match.confidence}')
 "
 ```
 
-### Production Commands
+### Enable/Disable Components
 ```bash
-# Check LLM cost tracking
-railway run python manage.py shell -c "
-from core.models_llm_routing import LLMCallLog
-from django.utils import timezone
-from datetime import timedelta
-logs = LLMCallLog.objects.filter(created_at__gte=timezone.now()-timedelta(hours=24))
-print(f'Calls: {logs.count()}')
-print(f'Cost: \${sum(float(l.cost) for l in logs):.4f}')
-"
+python manage.py shell -c "
+from core.services.context_budget_manager import ContextBudgetManager
+from core.services.lazy_context_loader import LazyContextLoader
+from core.services.context_summarizer import ContextSummarizer
+from core.assistant.tool_category_router import ToolCategoryRouter
 
-# Check experiment status
-railway run python manage.py shell -c "
-from core.models_pilot_readiness import Experiment
-from django.db.models import Count
-statuses = Experiment.objects.values('status').annotate(count=Count('id'))
-for s in statuses:
-    print(f\"{s['status']}: {s['count']}\")
+# Check current state
+print(f'Budget Enforcement: {ContextBudgetManager.ENABLE_ENFORCEMENT}')
+print(f'Lazy Loading: {LazyContextLoader.ENABLE_LAZY_LOADING}')
+print(f'Summarization: {ContextSummarizer.ENABLE_SUMMARIZATION}')
+print(f'Category Routing: {ToolCategoryRouter.ENABLE_CATEGORY_ROUTING}')
+
+# To enable enforcement (example):
+# ContextBudgetManager.set_enforcement(True)
 "
 ```
 
@@ -189,7 +227,8 @@ for s in statuses:
 
 | Session | Focus |
 |---------|-------|
-| **805** | Learning System Fix - Anomaly detection + learning extraction (1 PR) |
+| **806** | Personal Assistant Context Optimization - 4 new services (1 PR) |
+| **805** | Learning System Fix - Anomaly detection + learning extraction (3 PRs) |
 | **804** | Auto-Generated Blog Visibility Fix (1 PR) |
 | **803** | LLM Cost Tracking + AI Assistant Performance (4 PRs) |
 | **802** | AI Assistant Timeout Fix + Neural Orchestra Metrics |
