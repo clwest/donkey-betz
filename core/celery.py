@@ -1529,8 +1529,9 @@ app.conf.beat_schedule = {
     },
 
     # Autonomous Content Studio - Content generation system
+    # Session 799: Fixed task name to match @shared_task(name=...) decorator
     'run-autonomous-content-studio': {
-        'task': 'core.tasks.run_autonomous_content_studio',
+        'task': 'autonomous_studio.run_main_loop',
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
         'options': {
             'expires': 14400,  # 4 hours
