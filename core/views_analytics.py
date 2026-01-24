@@ -1688,7 +1688,8 @@ def get_chart_learning_progress(request):
     }
 
     try:
-        memories = AgentMemory.objects.filter(created_at__gte=cutoff)
+        # Session 810: Defer embedding fields to reduce egress costs
+        memories = AgentMemory.objects.filter(created_at__gte=cutoff).defer('embedding')
         learning_data['memories_created'] = memories.count()
 
         for memory in memories:

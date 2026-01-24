@@ -806,7 +806,7 @@ def process_spider_data_automatic():
     connector = SpiderAgentConnector()
 
     # Get unprocessed spider data (limit to 100 per run to avoid overload)
-    unprocessed = SpiderData.objects.filter(is_processed=False)[:100]
+    unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding')[:100]
 
     results = {
         'processed': 0,
@@ -862,8 +862,8 @@ def process_core_spider_data():
     connector = SpiderAgentConnector()
 
     # Get unprocessed spider data (500 per run to catch up with backlog)
-    unprocessed = SpiderData.objects.filter(is_processed=False).order_by('created_at')[:500]
-    total_unprocessed = SpiderData.objects.filter(is_processed=False).count()
+    unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding').order_by('created_at')[:500]
+    total_unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding').count()
 
     results = {
         'processed': 0,
@@ -3214,7 +3214,7 @@ def score_spider_data_async(spider_data_id: str, priority: str = 'normal', sourc
         User = get_user_model()
 
         # Get spider data
-        spider_data = SpiderData.objects.get(id=spider_data_id)
+        spider_data = SpiderData.objects.get(id=spider_data_id).defer('embedding')
 
         # Get user if provided
         user = None
@@ -7098,7 +7098,7 @@ def trigger_spider_conversations(self, min_relevance: int = 70, max_conversation
             created_at__gte=cutoff,
             relevance_score__gte=min_relevance,
             is_processed=True
-        ).exclude(
+        ).defer('embedding').exclude(
             # Exclude data already discussed (check by spider_name in recent conversations)
             spider_name__in=AgentConversation.objects.filter(
                 trigger_type='spider_data',
@@ -10290,7 +10290,7 @@ def generate_memory_embedding(memory_id: str):
         from openai import OpenAI
         import os
 
-        memory = AgentMemory.objects.get(id=memory_id)
+        memory = AgentMemory.objects.get(id=memory_id).defer('embedding')
 
         # Create embedding text combining title, content, and context
         embed_text = f"{memory.title}\n\n{memory.content}"
@@ -10334,7 +10334,7 @@ def auto_connect_memories(memory_id: str, threshold: float = 0.7):
         from core.models_unified_system import AgentMemory, MemoryConnection
         import numpy as np
 
-        memory = AgentMemory.objects.get(id=memory_id)
+        memory = AgentMemory.objects.get(id=memory_id).defer('embedding')
 
         # Session 736: Guard against empty embeddings - use 'is None' for numpy arrays
         if memory.embedding is None or len(memory.embedding) == 0:
@@ -10345,7 +10345,7 @@ def auto_connect_memories(memory_id: str, threshold: float = 0.7):
         other_memories = AgentMemory.objects.filter(
             agent=memory.agent,
             embedding__isnull=False
-        ).exclude(id=memory_id)[:50]
+        ).defer('embedding').exclude(id=memory_id)[:50]
 
         if not other_memories.exists():
             return {'status': 'skipped', 'reason': 'no_other_memories'}
@@ -10491,7 +10491,7 @@ def organize_memories_into_rooms(agent_id: str):
         room_dict = {r.room_type: r for r in rooms}
         memories_organized = 0
 
-        for memory in AgentMemory.objects.filter(agent=agent):
+        for memory in AgentMemory.objects.filter(agent=agent).defer('embedding'):
             target_room_type = type_to_room.get(memory.memory_type, 'general')
             target_room = room_dict.get(target_room_type)
 
@@ -14318,7 +14318,7 @@ def score_and_route_opportunity(opportunity_id: str, user_id: int = None):
         spider_data = None
         if opportunity.spider_data_id:
             try:
-                spider_data = SpiderData.objects.get(id=opportunity.spider_data_id)
+                spider_data = SpiderData.objects.get(id=opportunity.spider_data_id).defer('embedding')
             except SpiderData.DoesNotExist:
                 pass
 
@@ -15248,7 +15248,7 @@ def run_unified_intelligence_pipeline():
     try:
         from core.models_unified_system import SpiderData
         cutoff = timezone.now() - timedelta(hours=24)
-        recent_spider_data = SpiderData.objects.filter(created_at__gte=cutoff).count()
+        recent_spider_data = SpiderData.objects.filter(created_at__gte=cutoff).defer('embedding').count()
 
         results['phases']['spider_data'] = {
             'status': 'checked',
@@ -15484,7 +15484,7 @@ def unified_pipeline_health_check():
     try:
         from core.models_unified_system import SpiderData, Opportunity
 
-        spider_count = SpiderData.objects.filter(created_at__gte=cutoff).count()
+        spider_count = SpiderData.objects.filter(created_at__gte=cutoff).defer('embedding').count()
         opp_count = Opportunity.objects.filter(created_at__gte=cutoff).count()
 
         health['systems']['market_intelligence'] = {
@@ -15903,7 +15903,7 @@ def run_blockchain_security_monitor():
         spider_data = SpiderData.objects.filter(
             spider_name__in=blockchain_spiders,
             created_at__gte=cutoff
-        ).order_by('-created_at')
+        ).defer('embedding').order_by('-created_at')
 
         session.spider_data_processed = spider_data.count()
         logger.info(f"🕷️ Processing {session.spider_data_processed} spider data records")
@@ -16114,7 +16114,7 @@ def run_stock_market_intelligence():
         spider_data = SpiderData.objects.filter(
             spider_name__in=financial_spiders,
             created_at__gte=cutoff
-        ).order_by('-created_at')
+        ).defer('embedding').order_by('-created_at')
 
         session.spider_data_processed = spider_data.count()
         logger.info(f"🕷️ Processing {session.spider_data_processed} spider data records")
@@ -17009,7 +17009,7 @@ def run_design_trends_monitor(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=design_spiders,
             created_at__gte=cutoff
-        ).order_by('-created_at')
+        ).defer('embedding').order_by('-created_at')
 
         items_processed = 0
         trends_created = 0
@@ -17117,7 +17117,7 @@ def run_viral_content_predictor(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['reddit', 'hackernews', 'bluesky', 'producthunt'],
             created_at__gte=cutoff
-        )[:50]
+        ).defer('embedding')[:50]
 
         predictions_created = 0
         for data in spider_data:
@@ -17182,7 +17182,7 @@ def run_job_match_intelligence(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['remoteok', 'weworkremotely', 'adzuna'],
             created_at__gte=cutoff
-        )[:100]
+        ).defer('embedding')[:100]
 
         profile, _ = JobMatchProfile.objects.get_or_create(
             user=None,
@@ -17233,7 +17233,7 @@ def run_side_hustle_detector(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['reddit', 'producthunt', 'kickstarter'],
             created_at__gte=cutoff
-        )[:100]
+        ).defer('embedding')[:100]
 
         hustles = {'dropshipping': 'dropship', 'digital_products': 'digital product', 'saas': 'saas'}
         created = 0
@@ -17282,7 +17282,7 @@ def run_crypto_sentiment_monitor(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['coingecko', 'reddit', 'bluesky'],
             created_at__gte=cutoff
-        )[:200]
+        ).defer('embedding')[:200]
 
         mentions = defaultdict(int)
         for data in spider_data:
@@ -17336,7 +17336,7 @@ def run_tech_stack_tracker(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['github', 'hackernews', 'devto'],
             created_at__gte=cutoff
-        )[:300]
+        ).defer('embedding')[:300]
 
         techs = {'python': 'language', 'react': 'framework', 'rust': 'language', 'langchain': 'ai_ml',
                  'typescript': 'language', 'go': 'language', 'kubernetes': 'devops', 'docker': 'devops',
@@ -17405,7 +17405,7 @@ def run_ai_model_monitor(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['huggingface', 'github', 'hackernews'],
             created_at__gte=cutoff
-        )[:100]
+        ).defer('embedding')[:100]
 
         created = 0
         for data in spider_data:
@@ -17461,7 +17461,7 @@ def run_case_law_monitor(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['courtlistener', 'findlaw', 'justia_family_law'],
             created_at__gte=cutoff
-        )[:50]
+        ).defer('embedding')[:50]
 
         created = 0
         for data in spider_data:
@@ -17511,7 +17511,7 @@ def run_regulatory_change_detector(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['government', 'legal_news', 'business_news'],
             created_at__gte=cutoff
-        )[:100]
+        ).defer('embedding')[:100]
 
         created = 0
         reg_keywords = ['regulation', 'rule', 'policy', 'sec', 'ftc', 'fda']
@@ -17661,7 +17661,7 @@ def run_freelance_opportunity_scout(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['remoteok', 'weworkremotely', 'adzuna', 'hackernews'],
             created_at__gte=cutoff
-        ).order_by('-created_at')[:200]
+        ).defer('embedding').order_by('-created_at')[:200]
 
         # Freelance keywords to identify contract/freelance work
         freelance_keywords = [
@@ -17753,7 +17753,7 @@ def run_sec_filing_analyzer(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['sec_edgar', 'yahoo_finance', 'business_news'],
             created_at__gte=cutoff
-        ).order_by('-created_at')[:150]
+        ).defer('embedding').order_by('-created_at')[:150]
 
         # SEC filing types to track
         filing_types = ['10-K', '10-Q', '8-K', '13F', 'S-1', 'DEF 14A', '4']
@@ -17861,7 +17861,7 @@ def run_earnings_predictor(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['yahoo_finance', 'business_news', 'finnhub', 'hackernews'],
             created_at__gte=cutoff
-        ).order_by('-created_at')[:200]
+        ).defer('embedding').order_by('-created_at')[:200]
 
         # Earnings-related keywords
         earnings_keywords = [
@@ -18007,7 +18007,7 @@ def run_skill_gap_analyzer(self):
         spider_data = SpiderData.objects.filter(
             spider_name__in=['coursera', 'education_rss', 'hackernews', 'devto'],
             created_at__gte=cutoff
-        ).order_by('-created_at')[:200]
+        ).defer('embedding').order_by('-created_at')[:200]
 
         # Match skills to courses
         analyses_created = 0
@@ -18449,7 +18449,7 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500, topic_ca
         if topic_category == 'trending':
             # Get interesting topics from spider data
             trending_data = list(
-                SpiderData.objects.filter(created_at__gte=last_24h)
+                SpiderData.objects.filter(created_at__gte=last_24h).defer('embedding')
                 .exclude(title__isnull=True)
                 .exclude(title='')
                 .values('title', 'source', 'url', 'content')
@@ -21522,7 +21522,7 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         from core.models_agent_memory import AgentMemory
         memories = AgentMemory.objects.filter(
             created_at__gte=pilot.started_at
-        ).count()
+        ).defer('embedding').count()
         metrics['agent_memories_created'] = memories
         
     except Exception:
@@ -23048,7 +23048,7 @@ def generate_human_attention_items():
         try:
             from core.models_unified_system import SpiderData
             recent_spider_data = SpiderData.objects.filter(
-                created_at__gte=timezone.now() - timedelta(hours=1),
+                created_at__gte=timezone.now().defer('embedding') - timedelta(hours=1),
                 data_type__in=['market_alert', 'security_alert', 'price_alert', 'breaking_news']
             )[:5]
 
@@ -24436,7 +24436,7 @@ def run_market_monitoring_agents():
 
     # Get recent market data from spiders
     recent_data = SpiderData.objects.filter(
-        discovered_at__gte=timezone.now() - timedelta(hours=24)
+        discovered_at__gte=timezone.now().defer('embedding') - timedelta(hours=24)
     ).order_by('-discovered_at')[:50]
 
     market_context = {
@@ -24498,7 +24498,7 @@ def run_blockchain_monitoring_agents():
     # Get recent crypto data from spiders
     crypto_keywords = ['bitcoin', 'ethereum', 'crypto', 'blockchain', 'defi', 'whale']
     recent_crypto = SpiderData.objects.filter(
-        discovered_at__gte=timezone.now() - timedelta(hours=24)
+        discovered_at__gte=timezone.now().defer('embedding') - timedelta(hours=24)
     ).filter(
         title__iregex=r'|'.join(crypto_keywords)
     ).order_by('-discovered_at')[:30]
@@ -25672,7 +25672,7 @@ def agent_daily_summary():
         files_modified = operations.filter(operation_type='file_update').count()
 
         # Memories created
-        memories = AgentMemory.objects.filter(created_at__gte=yesterday).count()
+        memories = AgentMemory.objects.filter(created_at__gte=yesterday).defer('embedding').count()
 
         # Build summary content
         from datetime import datetime
@@ -27078,7 +27078,7 @@ def _run_agent_group(group_name: str, agent_names: list, task_generator, emoji: 
 
     # Get recent spider data for context
     recent_data = SpiderData.objects.filter(
-        created_at__gte=timezone.now() - timedelta(hours=24)
+        created_at__gte=timezone.now().defer('embedding') - timedelta(hours=24)
     ).order_by('-created_at')[:100]
 
     context = {
