@@ -46,17 +46,18 @@ class DocsContextBuilder:
         'audio': ['features', 'architecture'],
         '3d': ['features', 'architecture'],
 
-        # Development agents need architecture and API docs
-        'code_generator': ['architecture', 'api', 'database'],
-        'full_stack_developer': ['architecture', 'api', 'database', 'frontend'],
-        'code_review': ['architecture', 'guides'],
-        'devops': ['architecture', 'body', 'celery'],
-        'prompt_engineering': ['architecture', 'llm', 'agents'],
+        # Development agents need architecture, API, and integration docs
+        # Session 798: Added integration, learning, backend for comprehensive code awareness
+        'code_generator': ['architecture', 'api', 'database', 'backend', 'integration', 'learning'],
+        'full_stack_developer': ['architecture', 'api', 'database', 'frontend', 'backend', 'integration', 'learning'],
+        'code_review': ['architecture', 'guides', 'backend', 'integration'],
+        'devops': ['architecture', 'body', 'celery', 'backend', 'integration'],
+        'prompt_engineering': ['architecture', 'llm', 'agents', 'learning'],
 
         # Research agents need broad awareness
-        'research': ['architecture', 'agents', 'spiders'],
+        'research': ['architecture', 'agents', 'spiders', 'integration'],
         'content_writer': ['features', 'agents'],
-        'technical_document': ['architecture', 'api', 'database'],
+        'technical_document': ['architecture', 'api', 'database', 'backend', 'integration'],
 
         # Strategy agents need system understanding
         'content_strategy': ['agents', 'spiders', 'features'],
@@ -86,14 +87,15 @@ class DocsContextBuilder:
         'podcast': ['features', 'agents'],
 
         # Personal Assistant needs everything
-        'personal_assistant': ['architecture', 'agents', 'body', 'features', 'api'],
+        # Session 798: Added integration, learning, backend, frontend for comprehensive awareness
+        'personal_assistant': ['architecture', 'agents', 'body', 'features', 'api', 'integration', 'learning', 'backend', 'frontend'],
 
         # Workflow agents
-        'workflow': ['agents', 'architecture', 'integration'],
-        'campaign_orchestrator': ['agents', 'features'],
+        'workflow': ['agents', 'architecture', 'integration', 'learning'],
+        'campaign_orchestrator': ['agents', 'features', 'integration'],
 
-        # Default for unmatched agents
-        'default': ['architecture', 'agents'],
+        # Default for unmatched agents - Session 798: Added integration for baseline awareness
+        'default': ['architecture', 'agents', 'integration'],
     }
 
     # Task keyword to doc category boosts
