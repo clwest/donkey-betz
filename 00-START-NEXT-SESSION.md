@@ -1,8 +1,53 @@
-# Session 807 - Ready for Next Steps
+# Session 808 - Ready for Next Steps
 
-**Previous Session:** 806 (Personal Assistant Context Optimization)
+**Previous Session:** 807 (Body System Tables Fix + ImageAgent Error Reporting)
 **Date:** January 24, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
+
+---
+
+## SESSION 807 COMPLETED
+
+### Focus: Production Fixes
+
+Two production issues fixed:
+
+### PR Merged
+
+| PR | Feature |
+|----|---------|
+| #84 | **ImageAgent Error Reporting** - Fixed SDXL returning `success=True` with empty images |
+| #85 | **Body System Tables Restoration** - Migration 0184 restores tables deleted by erroneous 0183 |
+
+---
+
+### Issue 1: ImageAgent "No images were generated" Error
+
+**Problem:** ImageAgent returned generic "No images were generated" even when Stability AI returned specific errors (content moderation, API failures).
+
+**Root Cause:** `_generate_with_sdxl()` in `content/image_generation.py` returned `success=True` even when the images list was empty.
+
+**Fix:**
+- Added check for empty images list after SDXL generation
+- Return `success=False` with specific error messages:
+  - "Image blocked by content moderation"
+  - "Stability AI returned an error during generation"
+  - "Stability AI returned no artifacts"
+- Fixed wrong attribute access in `core/views_image.py`: `result.error` → `result.error_message`
+- Added `last_error` tracking across generation attempts
+
+---
+
+### Issue 2: Missing `core_brain_pulse` Database Table
+
+**Problem:** Production logs showed `relation "core_brain_pulse" does not exist` causing PA fallback responses.
+
+**Root Cause:** Migration 0183 (Jan 23) accidentally deleted body system tables that 0181 (Jan 21) had created:
+- BrainPulse, CognitiveChannel, CognitiveStatus
+- SkinPulse, SkinStatus
+- NervousPulse, NervousStatus, WebSocketConnectionLog
+
+**Fix:** Created migration 0184 to restore all deleted tables with full schema matching `core/models_brain.py`.
 
 ---
 
