@@ -12,11 +12,13 @@
 
 Investigated and fixed the learning system issues identified by auto-generated blogs.
 
-### PR Merged
+### PRs Merged
 
 | PR | Feature |
 |----|---------|
 | #75 | **Learning System Fix** - Anomaly detection false positives + learning extraction for halted experiments |
+| #77 | **Gate Imbalance Finding** - Documented that 118:6 waived:approved ratio is by design |
+| #78 | **Learning Weight Fix** - Fixed safety keyword classification causing negative weight |
 
 ---
 
@@ -115,14 +117,16 @@ python manage.py backfill_experiment_learnings --limit 50
    - All 4 HIGH risk decisions got proper human approval
    - Auto-waiving low-risk decisions reduces friction without compromising safety
 
-### Remaining Issues to Investigate
+2. **Negative Learning Weight - FIXED (PR #78)**
+   - Problem: Net learning weight was -3 to -6
+   - Root cause: "Integrity anomaly" halt reason triggered safety classification
+   - All 84 halted experiments got -1.0 (safety fail) instead of -0.5 (execution fail)
+   - Fix: Removed operational monitoring terms from safety keywords (v1.2 classification)
+   - Result: Net weight improved from -3.169 to **-0.944** (70% improvement!)
 
-1. **Negative Learning Weight**
-   - System reported net negative learning weight (-6.014)
-   - Now that learnings are extracted, does this improve?
-   - Review learning weight calculation
+### Remaining Issues to Monitor
 
-3. **Experiment Success Rate**
+1. **Experiment Success Rate**
    - With anomaly detection fixed, will success rate improve?
    - Monitor next 24h for experiment outcomes
 
