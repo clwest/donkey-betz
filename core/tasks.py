@@ -26528,6 +26528,106 @@ AGENT_WORKSPACE_REGISTRY = {
 AGENT_CATEGORIES = list(set(config['category'] for config in AGENT_WORKSPACE_REGISTRY.values()))
 
 
+def _extract_agent_output_content(result, task_description: str) -> str:
+    """
+    Session 813: Extract meaningful content from agent results.
+
+    Agents return structured data with various keys. This function extracts
+    the actual content to write to workspace files.
+
+    Common data keys agents use:
+    - content, output, analysis, code, research, report, response, summary
+    - results (array of findings)
+    - message (fallback description)
+
+    Args:
+        result: AgentResult object from agent execution
+        task_description: The original task for fallback message
+
+    Returns:
+        Formatted string content for the workspace file
+    """
+    import json
+
+    # Priority order of keys to check for text content
+    CONTENT_KEYS = [
+        'content', 'output', 'analysis', 'code', 'research',
+        'report', 'response', 'summary', 'recommendation',
+        'strategy', 'plan', 'document', 'article', 'script',
+        'memo', 'brief', 'findings', 'insights', 'text'
+    ]
+
+    # Keys that contain arrays of results
+    ARRAY_KEYS = ['results', 'items', 'data', 'entries', 'records']
+
+    if not hasattr(result, 'data') or not result.data:
+        # No data dict, use message or fallback
+        if hasattr(result, 'message') and result.message:
+            return result.message
+        return f'Execution completed for: {task_description}'
+
+    data = result.data
+    output_parts = []
+
+    # 1. Check for direct content keys
+    for key in CONTENT_KEYS:
+        if key in data and data[key]:
+            value = data[key]
+            if isinstance(value, str) and len(value) > 50:  # Substantial content
+                output_parts.append(f"## {key.replace('_', ' ').title()}\n\n{value}")
+
+    # 2. Check for array results
+    for key in ARRAY_KEYS:
+        if key in data and isinstance(data[key], list) and data[key]:
+            output_parts.append(f"## {key.replace('_', ' ').title()}\n")
+            for i, item in enumerate(data[key][:10], 1):  # Limit to 10 items
+                if isinstance(item, dict):
+                    # Format dict item
+                    item_title = item.get('title') or item.get('name') or item.get('source') or f'Item {i}'
+                    item_content = item.get('content') or item.get('summary') or item.get('description') or ''
+                    output_parts.append(f"### {i}. {item_title}\n{item_content[:500]}\n")
+                elif isinstance(item, str):
+                    output_parts.append(f"- {item[:200]}")
+
+    # 3. Check for nested structures with useful data
+    if 'ml_analysis' in data and isinstance(data['ml_analysis'], dict):
+        ml = data['ml_analysis']
+        ml_parts = []
+        if ml.get('topics_detected'):
+            ml_parts.append(f"Topics: {', '.join(ml['topics_detected'][:5])}")
+        if ml.get('sentiment'):
+            ml_parts.append(f"Sentiment: {ml['sentiment']}")
+        if ml.get('ml_insights'):
+            ml_parts.append(f"Insights: {ml['ml_insights']}")
+        if ml_parts:
+            output_parts.append(f"## ML Analysis\n\n" + '\n'.join(ml_parts))
+
+    # 4. If we found substantial content, use it
+    if output_parts:
+        return '\n\n'.join(output_parts)
+
+    # 5. Check message as backup
+    if hasattr(result, 'message') and result.message and len(result.message) > 50:
+        return result.message
+
+    # 6. Final fallback: serialize the entire data dict as formatted output
+    # This ensures we never lose agent output
+    if data:
+        # Filter out internal/meta keys
+        skip_keys = {'type', 'content_type', 'query', 'topic', 'timestamp', 'agent_name'}
+        filtered_data = {k: v for k, v in data.items() if k not in skip_keys and v}
+
+        if filtered_data:
+            try:
+                formatted = json.dumps(filtered_data, indent=2, default=str)
+                return f"## Agent Output Data\n\n```json\n{formatted[:8000]}\n```"
+            except Exception:
+                pass
+
+    # Ultimate fallback
+    return f'Execution completed for: {task_description}\n\nAgent returned data with keys: {list(data.keys())}'
+
+
 @shared_task(name='core.tasks.universal_agent_workspace_output')
 def universal_agent_workspace_output(agent_name: str, topic: str = None):
     """
@@ -26627,11 +26727,9 @@ def universal_agent_workspace_output(agent_name: str, topic: str = None):
             spider_context={}
         )
 
-        # Extract output from AgentResult
-        if hasattr(result, 'data'):
-            output_content = result.data.get('output', '') or result.message or f'Execution completed for: {task_description}'
-        else:
-            output_content = str(result)
+        # Session 813: Improved output extraction from AgentResult
+        # Agents return structured data with various keys - we need to capture all of it
+        output_content = _extract_agent_output_content(result, task_description)
 
         # Format output file
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
