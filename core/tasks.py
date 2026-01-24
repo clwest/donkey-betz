@@ -305,6 +305,87 @@ def execute_agent_task(
         }
 
 
+# ==================== SESSION 812: CONTENT PRODUCTION ORCHESTRATION ====================
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=120)
+def produce_content_package(
+    self,
+    production_id: str,
+    content_type: str,
+    topic: str,
+    context: Dict[str, Any] = None,
+    skip_assets: list = None,
+    user_id: int = None
+) -> Dict[str, Any]:
+    """
+    Session 812: Produce a complete content package asynchronously.
+
+    This task orchestrates multiple agents to create complete content packages
+    (blog posts with images, podcasts with artwork, etc.).
+
+    Args:
+        production_id: Unique ID for this production
+        content_type: Type of content (blog_post, podcast, video, etc.)
+        topic: Main topic for the content
+        context: Additional context (tone, target_audience, etc.)
+        skip_assets: List of asset types to skip
+        user_id: User ID for context
+
+    Returns:
+        Dict with production results including all created assets
+    """
+    from core.services.content_production_orchestrator import ContentProductionOrchestrator
+
+    context = context or {}
+    skip_assets = skip_assets or []
+
+    logger.info(
+        f"[produce_content_package] Starting production {production_id}: "
+        f"{content_type} - {topic}"
+    )
+
+    try:
+        # Get user if user_id provided
+        user = None
+        if user_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.filter(id=user_id).first()
+
+        orchestrator = ContentProductionOrchestrator(user=user)
+
+        # Execute production synchronously (within the async task)
+        result = orchestrator.produce_content(
+            content_type=content_type,
+            topic=topic,
+            context=context,
+            skip_assets=skip_assets,
+            async_mode=False  # Don't re-queue, execute directly
+        )
+
+        logger.info(
+            f"[produce_content_package] Completed {production_id}: "
+            f"status={result.status}, assets={len(result.assets)}"
+        )
+
+        return result.to_dict()
+
+    except Exception as e:
+        logger.error(f"[produce_content_package] Failed {production_id}: {e}")
+
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e)
+
+        return {
+            'production_id': production_id,
+            'content_type': content_type,
+            'topic': topic,
+            'status': 'failed',
+            'error': str(e),
+        }
+
+
 @shared_task(bind=True)
 def run_spider_by_category(self, category: str):
     """
