@@ -1263,6 +1263,82 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.promote_to_shared_knowledge',
         'schedule': crontab(day_of_week='sunday', hour=5, minute=0),  # Weekly Sunday 5 AM
     },
+    # =========================================================================
+    # Session 808: Agent Exercise Schedules (51 dormant agents)
+    # These tasks exercise dormant agents to keep them active and functional
+    # =========================================================================
+    'run-market-monitoring-agents': {
+        'task': 'core.tasks.run_market_monitoring_agents',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
+    },
+    'run-blockchain-monitoring-agents': {
+        'task': 'core.tasks.run_blockchain_monitoring_agents',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+    },
+    'run-business-strategy-agents': {
+        'task': 'core.tasks.run_business_strategy_agents',
+        'schedule': crontab(hour=8, minute=0),  # Daily at 8 AM
+    },
+    'run-content-creation-agents': {
+        'task': 'core.tasks.run_content_creation_agents',
+        'schedule': crontab(minute=10, hour='*/3'),  # Every 3 hours at :10
+    },
+    'run-strategy-marketing-agents': {
+        'task': 'core.tasks.run_strategy_marketing_agents',
+        'schedule': crontab(minute=20, hour='*/4'),  # Every 4 hours at :20
+    },
+    'run-research-analysis-agents': {
+        'task': 'core.tasks.run_research_analysis_agents',
+        'schedule': crontab(minute=30, hour='*/2'),  # Every 2 hours at :30
+    },
+    'run-stock-financial-agents': {
+        'task': 'core.tasks.run_stock_financial_agents',
+        'schedule': crontab(minute=40, hour='*/3'),  # Every 3 hours at :40
+    },
+    'run-prediction-market-agents': {
+        'task': 'core.tasks.run_prediction_market_agents',
+        'schedule': crontab(minute=50, hour='*/2'),  # Every 2 hours at :50
+    },
+    'run-narrative-culture-agents': {
+        'task': 'core.tasks.run_narrative_culture_agents',
+        'schedule': crontab(minute=15, hour='*/6'),  # Every 6 hours at :15
+    },
+    'run-development-tech-agents': {
+        'task': 'core.tasks.run_development_tech_agents',
+        'schedule': crontab(minute=25, hour='*/4'),  # Every 4 hours at :25
+    },
+    'run-executive-leadership-agents': {
+        'task': 'core.tasks.run_executive_leadership_agents',
+        'schedule': crontab(minute=35, hour='*/6'),  # Every 6 hours at :35
+    },
+    'run-podcast-debate-agents': {
+        'task': 'core.tasks.run_podcast_debate_agents',
+        'schedule': crontab(minute=45, hour='*/8'),  # Every 8 hours at :45
+    },
+    'run-content-studio-agents': {
+        'task': 'core.tasks.run_content_studio_agents',
+        'schedule': crontab(minute=55, hour='*/4'),  # Every 4 hours at :55
+    },
+    'run-campaign-series-agents': {
+        'task': 'core.tasks.run_campaign_series_agents',
+        'schedule': crontab(minute=5, hour='*/6'),  # Every 6 hours at :05
+    },
+    'run-system-orchestration-agents': {
+        'task': 'core.tasks.run_system_orchestration_agents',
+        'schedule': crontab(minute=10, hour='*/2'),  # Every 2 hours at :10
+    },
+    'run-quality-audit-agents': {
+        'task': 'core.tasks.run_quality_audit_agents',
+        'schedule': crontab(minute=20, hour='*/4'),  # Every 4 hours at :20
+    },
+    'run-specialty-agents': {
+        'task': 'core.tasks.run_specialty_agents',
+        'schedule': crontab(minute=30, hour='*/8'),  # Every 8 hours at :30
+    },
+    'exercise-all-dormant-agents': {
+        'task': 'core.tasks.exercise_all_dormant_agents',
+        'schedule': crontab(day_of_week='sunday', hour=4, minute=0),  # Weekly Sunday 4 AM
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
