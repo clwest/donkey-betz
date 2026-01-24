@@ -133,9 +133,10 @@ def get_all_agent_classes() -> Dict[str, type]:
                             try:
                                 from persistence.models import SpiderData
                                 # Get recent spider data relevant to this agent's specialization
+                                # Session 807: Defer embedding fields to reduce egress costs
                                 relevant_data = SpiderData.objects.filter(
                                     routed_to_agents__contains=[self.config['name']]
-                                ).order_by('-created_at')[:10]
+                                ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
 
                                 if relevant_data.exists():
                                     spider_summary = []

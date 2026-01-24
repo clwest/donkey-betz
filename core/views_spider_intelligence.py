@@ -409,10 +409,11 @@ def market_research_dashboard(request):
         since = timezone.now() - timedelta(hours=hours)
 
         # ========== CRYPTO SECTION ==========
+        # Session 807: Defer embedding fields to reduce egress costs
         crypto_data = SpiderData.objects.filter(
             spider_name__in=['coingecko', 'etherscan'],
             created_at__gte=since
-        ).order_by('-created_at')
+        ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')
 
         crypto_assets = []
         seen_crypto = set()
@@ -481,11 +482,12 @@ def market_research_dashboard(request):
 
         # ========== FINANCIAL NEWS ==========
         # Get news from financial news sources
+        # Session 807: Defer embedding fields to reduce egress costs
         news_spiders = ['business_news', 'reuters_rss', 'seekingalpha', 'newsapi', 'bbc', 'cnn']
         news_data = SpiderData.objects.filter(
             spider_name__in=news_spiders,
             created_at__gte=since
-        ).order_by('-created_at')
+        ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')
 
         # Collect all financial news
         all_news = []
@@ -614,10 +616,11 @@ def opportunities_dashboard(request):
         def get_spider_items(source_names, item_limit=10):
             items = []
             for source in source_names:
+                # Session 807: Defer embedding fields to reduce egress costs
                 spider_data = SpiderData.objects.filter(
                     spider_name__icontains=source,
                     created_at__gte=cutoff
-                ).order_by('-created_at')[:5]  # Get fewer records, each has multiple items
+                ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]  # Get fewer records, each has multiple items
 
                 for data in spider_data:
                     raw = data.raw_data or {}
@@ -710,10 +713,11 @@ def opportunities_dashboard(request):
         # Business & Tech Discussions from Reddit
         # Session 385: Broadened to include AI, ML, design, and tech discussions
         # SpiderData stores items in raw_data['items'] as a list
+        # Session 807: Defer embedding fields to reduce egress costs
         reddit_data = SpiderData.objects.filter(
             spider_name__icontains='reddit',
             created_at__gte=cutoff
-        ).order_by('-created_at')[:15]  # Get more records for variety
+        ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:15]  # Get more records for variety
 
         # Session 386: Ensure subreddit diversity in discussions
         # Collect posts grouped by subreddit first, then interleave for variety
@@ -1142,7 +1146,8 @@ def spider_data_feed(request):
         sort = request.GET.get('sort', 'recent')
 
         # Build queryset
-        queryset = SpiderData.objects.exclude(raw_data__isnull=True)
+        # Session 807: Defer embedding fields to reduce egress costs
+        queryset = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').exclude(raw_data__isnull=True)
 
         if category != 'all':
             queryset = queryset.filter(data_type=category)
@@ -1606,7 +1611,8 @@ def spider_timeline(request):
         browseable_counts = {}
         for spider_name in set(f['spider_name'] for f in freshness):
             # Sample recent records to count actual items
-            recent = SpiderData.objects.filter(spider_name=spider_name).order_by('-created_at')[:3]
+            # Session 807: Defer embedding fields to reduce egress costs
+            recent = SpiderData.objects.filter(spider_name=spider_name).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:3]
             item_count = 0
             for r in recent:
                 if r.raw_data and isinstance(r.raw_data.get('items'), list):
@@ -1814,10 +1820,11 @@ def spider_detail(request, spider_name):
         since = timezone.now() - timedelta(hours=hours)
 
         # Get recent data from this spider
+        # Session 807: Defer embedding fields to reduce egress costs
         queryset = SpiderData.objects.filter(
             spider_name__iexact=spider_name,
             created_at__gte=since
-        ).exclude(raw_data__isnull=True).order_by('-created_at')[:20]
+        ).defer('embedding', 'item_embeddings', 'embedding_text').exclude(raw_data__isnull=True).order_by('-created_at')[:20]
 
         items = []
         seen_urls = set()

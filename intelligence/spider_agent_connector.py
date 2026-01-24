@@ -388,9 +388,10 @@ console.log('Opportunity processed with score:', result);"""
 
         try:
             # Get unprocessed spider data
+            # Session 807: Defer embedding fields to reduce egress costs
             unprocessed = SpiderData.objects.filter(
                 is_processed=False
-            ).order_by('-created_at')[:limit]
+            ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:limit]
 
             for spider_data in unprocessed:
                 try:

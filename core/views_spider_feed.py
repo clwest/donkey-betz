@@ -113,9 +113,10 @@ def spider_feed(request):
         hours = request.GET.get('hours')
 
         # Base query - only items with annotations
+        # Session 807: Defer embedding fields to reduce egress costs
         queryset = SpiderData.objects.filter(
             annotations__isnull=False
-        ).distinct().prefetch_related('annotations')
+        ).defer('embedding', 'item_embeddings', 'embedding_text').distinct().prefetch_related('annotations')
 
         # Apply filters
         if source:

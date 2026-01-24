@@ -33,7 +33,8 @@ def intelligence_activity_feed(request):
         now = timezone.now()
 
         # Get recent spider data (last 10 items)
-        recent_spider_data = SpiderData.objects.all().order_by('-created_at')[:10]
+        # Session 807: Defer embedding fields to reduce egress costs
+        recent_spider_data = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
 
         for item in recent_spider_data:
             # Make spider name more readable

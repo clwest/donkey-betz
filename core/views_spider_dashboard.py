@@ -134,7 +134,8 @@ def spider_activity_feed(request):
 
     # Get recent spider data from database
     try:
-        recent_entries = SpiderData.objects.order_by('-created_at')[:20]
+        # Session 807: Defer embedding fields to reduce egress costs
+        recent_entries = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
 
         for entry in recent_entries:
             # Handle raw_data being either dict or list

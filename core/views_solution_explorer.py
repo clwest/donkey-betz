@@ -110,11 +110,12 @@ def get_solution_detail(request, solution_id):
         ).select_related('teacher_agent', 'student_agent')[:5]
 
         # Get spider data that contributed to this solution
+        # Session 807: Defer embedding fields to reduce egress costs
         spider_sources = SpiderData.objects.filter(
             processed=True,
             created_at__lte=solution.created_at,
             created_at__gte=solution.created_at - timedelta(hours=1)
-        )[:5]
+        ).defer('embedding', 'item_embeddings', 'embedding_text')[:5]
 
         return JsonResponse({
             'success': True,
@@ -223,9 +224,10 @@ def get_data_flow(request):
         # Get recent spider data with solutions
         flows = []
 
+        # Session 807: Defer embedding fields to reduce egress costs
         spider_data = SpiderData.objects.filter(
             processed=True
-        ).order_by('-created_at')[:20]
+        ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
 
         for spider in spider_data:
             # Find solutions created around the same time
