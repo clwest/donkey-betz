@@ -40,6 +40,12 @@ from .conversation_roles import (
 logger = logging.getLogger(__name__)
 
 
+# Session 811: Feature flags for AI World Conversation Enhancement
+ENABLE_DREAM_INJECTION = True
+ENABLE_ACTION_DISPATCH = True
+ENABLE_CROSS_AGENT_MEMORY = True
+
+
 @dataclass
 class ConversationState:
     """Tracks conversation state for contract enforcement."""
@@ -224,6 +230,77 @@ class ConversationOrchestrator:
             import openai
             self._client = openai.OpenAI(api_key=self.api_key)
         return self._client
+
+    def _get_agent_dreams(self, agent_name: str, limit: int = 2) -> List[Dict[str, Any]]:
+        """
+        Session 811: Get recent dreams for an agent to inject into conversations.
+
+        Uses the existing SciFiIntegrationService._get_recent_dreams() method.
+
+        Args:
+            agent_name: Name of the agent
+            limit: Maximum number of dreams to return
+
+        Returns:
+            List of dream dicts with content, dream_type, and created_at
+        """
+        if not ENABLE_DREAM_INJECTION:
+            return []
+
+        try:
+            from core.super_platform.scifi_integration import SciFiIntegrationService
+            service = SciFiIntegrationService()
+            dreams = service._get_recent_dreams(agent_name, limit=limit)
+            return dreams
+        except Exception as e:
+            logger.warning(f"Could not fetch dreams for {agent_name}: {e}")
+            return []
+
+    def _format_dream_context(
+        self,
+        agent1_name: str,
+        agent1_dreams: List[Dict],
+        agent2_name: str,
+        agent2_dreams: List[Dict]
+    ) -> str:
+        """
+        Session 811: Format dreams from both agents into a context block.
+
+        This gives agents awareness of each other's creative thoughts,
+        enabling more meaningful cross-pollination of ideas.
+
+        Args:
+            agent1_name: Name of first agent
+            agent1_dreams: Dreams from first agent
+            agent2_name: Name of second agent
+            agent2_dreams: Dreams from second agent
+
+        Returns:
+            Formatted string to inject into conversation prompts
+        """
+        if not agent1_dreams and not agent2_dreams:
+            return ""
+
+        lines = ["=== DREAM CONTEXT (Recent Creative Thoughts) ==="]
+
+        if agent1_dreams:
+            lines.append(f"\n{agent1_name}'s recent dreams:")
+            for i, dream in enumerate(agent1_dreams, 1):
+                dream_type = dream.get('dream_type', 'creative')
+                content = dream.get('content', '')[:150]
+                lines.append(f"  {i}. [{dream_type}] {content}")
+
+        if agent2_dreams:
+            lines.append(f"\n{agent2_name}'s recent dreams:")
+            for i, dream in enumerate(agent2_dreams, 1):
+                dream_type = dream.get('dream_type', 'creative')
+                content = dream.get('content', '')[:150]
+                lines.append(f"  {i}. [{dream_type}] {content}")
+
+        lines.append("\nConsider how these creative insights might inform this discussion.")
+        lines.append("=" * 50)
+
+        return "\n".join(lines)
 
     def _get_agent_knowledge(self, agent_name: str) -> Dict[str, Any]:
         """
@@ -442,6 +519,17 @@ class ConversationOrchestrator:
         logger.info(f"Agent knowledge loaded: {agent1['name']} has {len(agent1_knowledge.get('knowledge_sources', []))} learnings, "
                     f"{agent2['name']} has {len(agent2_knowledge.get('knowledge_sources', []))} learnings")
 
+        # Session 811: Load dreams for both agents (AI World Enhancement)
+        agent1_dreams = self._get_agent_dreams(agent1['name'], limit=2)
+        agent2_dreams = self._get_agent_dreams(agent2['name'], limit=2)
+        dream_context = self._format_dream_context(
+            agent1['name'], agent1_dreams,
+            agent2['name'], agent2_dreams
+        )
+        dreams_injected = len(agent1_dreams) + len(agent2_dreams)
+        if dreams_injected > 0:
+            logger.info(f"Dreams loaded: {agent1['name']} has {len(agent1_dreams)}, {agent2['name']} has {len(agent2_dreams)}")
+
         state = ConversationState()
         messages = []
         conversation_context = []
@@ -471,7 +559,8 @@ class ConversationOrchestrator:
                 is_final_turn=is_final_turn,
                 state=state,
                 system_context=system_context,
-                agent_knowledge_context=current_knowledge_context  # Session 318: Real knowledge
+                agent_knowledge_context=current_knowledge_context,  # Session 318: Real knowledge
+                dream_context=dream_context  # Session 811: Dream injection
             )
 
             # Generate response with retry logic
@@ -537,6 +626,50 @@ class ConversationOrchestrator:
 
         logger.info(f"Conversation complete: {len(messages)} messages, valid={validation['is_valid']}")
 
+        # Session 811: AI World Enhancement - Create memories and dispatch actions
+        ai_world_metadata = {
+            'dreams_injected': dreams_injected,
+            'memories_created': 0,
+            'actions_dispatched': 0,
+            'cluster_created': False,
+        }
+
+        # Generate a conversation ID for tracking
+        import uuid
+        conversation_id = str(uuid.uuid4())
+
+        # Create cross-agent memories from conversation insights
+        if ENABLE_CROSS_AGENT_MEMORY and decision_summary:
+            try:
+                from core.services.conversation_memory_service import create_conversation_memories
+                memory_result = create_conversation_memories(
+                    conversation_id=conversation_id,
+                    participants=[agent1['name'], agent2['name']],
+                    decision_summary=decision_summary,
+                    topic=topic,
+                    messages=messages
+                )
+                ai_world_metadata['memories_created'] = memory_result.get('memories_created', 0)
+                ai_world_metadata['cluster_created'] = memory_result.get('cluster_created', False)
+                ai_world_metadata['cluster_id'] = memory_result.get('cluster_id')
+            except Exception as e:
+                logger.warning(f"Failed to create conversation memories: {e}")
+
+        # Dispatch next_steps as actual agent tasks
+        if ENABLE_ACTION_DISPATCH and decision_summary and decision_summary.get('next_steps'):
+            try:
+                from core.services.conversation_action_dispatcher import dispatch_conversation_actions
+                dispatch_result = dispatch_conversation_actions(
+                    conversation_id=conversation_id,
+                    decision_summary=decision_summary,
+                    participants=[agent1['name'], agent2['name']],
+                    context={'topic': topic, 'conversation_type': conversation_type}
+                )
+                ai_world_metadata['actions_dispatched'] = dispatch_result.get('dispatched_count', 0)
+                ai_world_metadata['actions_failed'] = dispatch_result.get('failed_count', 0)
+            except Exception as e:
+                logger.warning(f"Failed to dispatch conversation actions: {e}")
+
         return {
             'messages': messages,
             'decision_summary': decision_summary,
@@ -558,7 +691,9 @@ class ConversationOrchestrator:
             },
             'topic': topic,
             'participants': [agent1['name'], agent2['name']],
-            'conversation_type': conversation_type
+            'conversation_type': conversation_type,
+            'conversation_id': conversation_id,  # Session 811
+            'ai_world': ai_world_metadata,  # Session 811: AI World Enhancement
         }
 
     def _build_turn_prompt(
@@ -573,7 +708,8 @@ class ConversationOrchestrator:
         is_final_turn: bool,
         state: ConversationState,
         system_context: str = "",  # Session 315: Live system stats
-        agent_knowledge_context: str = ""  # Session 318: Agent's real knowledge
+        agent_knowledge_context: str = "",  # Session 318: Agent's real knowledge
+        dream_context: str = ""  # Session 811: Dream injection
     ) -> str:
         """Build the complete prompt for a conversation turn."""
 
@@ -675,10 +811,12 @@ Start your response with a FRESH, UNIQUE opening that hasn't been used yet.""")
         if discourse_avoidance:
             turn_instructions.append(discourse_avoidance)
 
-        # Assemble full prompt with agent knowledge (Session 318) and system context
+        # Assemble full prompt with agent knowledge (Session 318), system context, and dreams (Session 811)
         prompt = f"""{role_prompt}
 
 {agent_knowledge_context}
+
+{dream_context}
 
 {system_context}
 
@@ -691,7 +829,7 @@ Start your response with a FRESH, UNIQUE opening that hasn't been used yet.""")
 
 {chr(10).join(turn_instructions)}
 
-Draw on your knowledge and experiences above. Write your response now. Do NOT prefix with your name - just write the message content directly."""
+Draw on your knowledge and experiences above. If relevant, reference the creative dreams shared above. Write your response now. Do NOT prefix with your name - just write the message content directly."""
 
         return prompt
 
