@@ -1,83 +1,67 @@
-# Session 799 - Ready for New Work
+# Session 800 - Ready for New Work
 
-**Previous Session:** 798 (Workspace & Docs Context Injection)
+**Previous Session:** 799 (Production Fixes & Seeding)
 **Date:** January 23, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
 
 ---
 
-## SESSION 798 COMPLETED
+## SESSION 799 COMPLETED
 
 ### Summary
-Session 798 focused on making agents workspace-aware and docs-aware. All agents now automatically receive context about the active workspace (tech stack, key files, directory structure) and relevant documentation based on their role.
+Session 799 investigated production data issues and fixed 6 bugs discovered during investigation. Created production seeding command and fixed PA's overly aggressive system command detection that was causing 3+ minute response times.
 
-### PRs Merged (12 total)
+### PRs Merged (6 total)
 
-| PR | Title | Key Changes |
-|----|-------|-------------|
-| #25 | Auth Gating for WorkspacePage | Fixed 404 errors with `enabled: isAuthenticated` |
-| #26 | GitHub URL Validation | `validate_github_url()` with clear error messages |
-| #27 | Documentation Update | Session file updates |
-| #28 | Workspace Context Injection | `_get_workspace_context()` in AgentRouter |
-| #30 | Docs Context Injection + Agent Docs Tools | `DocsContextBuilder` service + 6 BaseAgent tools |
-| #32 | Git in Production Docker | Added git to production runtime |
-| #33 | PA Workspace Awareness | `_build_workspace_context_section()` for PA |
-| #34 | Fix PA Workspace Context | Fixed wrong endpoint + model relationship bugs |
-| #35 | Fix Dashboard Math Bugs | Learning Velocity trend + Agent effectiveness |
-| #36 | Expand Code Agent Docs | Added integration/learning/backend to code agents |
+| PR | Issue | Fix |
+|----|-------|-----|
+| #38 | `broadcast_evolution_status` - Invalid select_related 'evolution' | XPHistory has `agent` FK, not `evolution` |
+| #39 | `scifi_integration` - AgentMemory has no 'user' field | Removed `user=user` from filter queries |
+| #40 | Production seeding needed | Created `seed_production` command |
+| #41 | `sync_agents` command doesn't exist | Changed to check count + use `populate_agents` |
+| #42 | PA took 3+ mins for "Tell me about this system" | Changed to specific command patterns |
+| #43 | `execute_action_plan()` missing required argument | Created `process_pending_action_plans` wrapper |
 
-### Key Architectural Changes
+### Key Changes
 
-**1. Workspace Context Injection (PR #28)**
+**1. Production Seeding Command**
+```bash
+railway run python manage.py seed_production
 ```
-AgentRouter.route() → _get_workspace_context() → spider_context['workspace']
-```
-All agents receive: workspace_name, tech_stack, key_files, directory_purposes, coding_patterns
+Creates 5 Content Channels, 7 System Configs, syncs agents.
 
-**2. Docs Context Injection (PR #30)**
-```
-AgentRouter.route() → _get_docs_context() → spider_context['docs']
-```
-All agents receive: relevant_docs (up to 10), recent_sessions (last 5), categories based on agent type
+**2. PA System Command Detection Fix**
+Changed from broad keyword matching (`"system" in message`) to specific command patterns (`"check database"`, `"list agents"`, etc.).
 
-**3. PA Workspace Awareness (PR #33-34)**
-Personal Assistant system prompt now includes full workspace context section with tech stack, key files, and directory structure.
+**3. Celery Beat Fix**
+Created wrapper task `process_pending_action_plans` that finds ActionPlans with `status='created'` and queues them for execution.
 
-**4. Code Agent Docs Expansion (PR #36)**
-Development agents now have access to:
-- `integration` (148 docs) - how components connect
-- `learning` (88 docs) - learning loop patterns
-- `backend` (33 docs) - backend architecture
-
-### Bug Fixes
-
-**Dashboard Math (PR #35)**
-- Learning Velocity: Changed from `{rate}%` to `{rate.toFixed(2)}/day` (was showing -21.861%)
-- Agent Effectiveness: Removed `* 100` multiplier (was showing 9500% instead of 95%)
-
-**PA Endpoint (PR #34)**
-- Frontend now calls `/assistant/chat/` (EnhancedPA) instead of `/v1/assistant/chat/` (hardcoded)
-- Fixed model relationship: `key_files` etc. are on `WorkspaceContext`, not `ProjectWorkspace`
+### Production Status
+- 214 Agents synced
+- 5 Content Channels created
+- 7 System configurations created
+- Autonomous content generation enabled
 
 ---
 
-## WHAT'S READY FOR SESSION 799
+## WHAT'S READY FOR SESSION 800
 
 ### System State
-- All agents receive workspace + docs context automatically
-- Personal Assistant knows about active workspace
-- Dashboard displays correct math
-- Code agents have comprehensive docs access
+- Production seeded and running
+- PA gives AI responses (not generic help)
+- Celery Beat schedules fixed
+- All body systems green
 
 ### Potential Next Steps
 
-1. **Test Workspace + Docs Integration in Production**
-   - Verify context appears in agent execution logs
-   - Test PA workspace awareness with real queries
+1. **Monitor Production**
+   - Verify autonomous content generation starts
+   - Check spider data collection
+   - Monitor Celery task execution
 
-2. **Agent Docs Write Testing**
-   - Have an agent create documentation using `_create_session_handoff()`
-   - Verify backup creation before overwriting
+2. **Content Channels**
+   - View generated content in Content Channels page
+   - Verify podcast generation on weekly schedule
 
 3. **New Features**
    - Whatever the user needs!
@@ -86,35 +70,26 @@ Development agents now have access to:
 
 ## QUICK REFERENCE
 
-### Context Injection Summary
-```python
-# What agents receive via spider_context:
-spider_context = {
-    'workspace': {
-        'has_workspace': True,
-        'workspace_name': 'unified-donkey-betz',
-        'tech_stack': {'frontend': 'react', 'backend': 'django'},
-        'key_files': {'urls': 'core/urls.py', 'models': 'core/models.py'},
-        'directory_purposes': {'agents': 'AI agents', 'services': 'Business logic'},
-    },
-    'docs': {
-        'has_docs': True,
-        'categories_queried': ['architecture', 'api', 'integration'],
-        'relevant_docs': [...],  # Up to 10 docs
-        'recent_sessions': [...],  # Last 5 handoffs
-        'total_docs_available': 1548,
-    }
-}
+### Production Commands
+```bash
+# Seed production
+railway run python manage.py seed_production
+
+# Audit production data
+PROD_URL=https://app.railway.app PROD_TOKEN=token ./scripts/production_data_audit.sh
+
+# Check agents
+railway run python manage.py shell -c "from core.models_unified_system import Agent; print(Agent.objects.count())"
 ```
 
-### BaseAgent Docs Tools
-```python
-self._read_doc('docs/ARCHITECTURE.md')
-self._write_doc('docs/new_doc.md', content)
-self._create_session_handoff(799, 'Title', content)
-self._regenerate_docs_index()
-self._get_docs_for_task('Create API endpoint')
-```
+### Content Channels Created
+| Channel | Topic | Frequency |
+|---------|-------|-----------|
+| Tech & AI Insights | AI, ML, tech trends | daily |
+| Market Intelligence | stocks, crypto, financial | daily |
+| Sports Analytics | betting, odds, predictions | daily |
+| Career & Jobs | job market, career advice | weekly |
+| AI Podcast Studio | AI discussions, debates | weekly |
 
 ---
 
@@ -122,6 +97,7 @@ self._get_docs_for_task('Create API endpoint')
 
 | Session | Focus |
 |---------|-------|
+| **799** | Production Fixes & Seeding - 6 PRs merged |
 | **798** | Workspace & Docs Context Injection - 12 PRs merged |
 | **797** | Integration Deepening - Gate & Opportunity consultation triggers |
 | **796** | Human-AI Assistant Connection - 3 phases complete |
