@@ -522,9 +522,10 @@ def api_activity_stream(request):
             })
 
         # Recent spider data (or most recent 5 if none in window)
-        spider_data = SpiderData.objects.filter(created_at__gte=time_window).order_by('-created_at')[:10]
+        # Session 807: Defer embedding fields to reduce egress costs
+        spider_data = SpiderData.objects.filter(created_at__gte=time_window).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
         if not spider_data.exists():
-            spider_data = SpiderData.objects.order_by('-created_at')[:5]
+            spider_data = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]
         for sd in spider_data:
             activities.append({
                 'type': 'spider',

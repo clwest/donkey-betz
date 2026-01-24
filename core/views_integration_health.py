@@ -56,7 +56,8 @@ def integration_health(request):
         spider_total = SpiderData.objects.count()
         spider_24h = SpiderData.objects.filter(created_at__gte=last_24h).count()
         spider_7d = SpiderData.objects.filter(created_at__gte=last_7d).count()
-        last_spider = SpiderData.objects.order_by('-created_at').first()
+        # Session 807: Defer embedding fields to reduce egress costs
+        last_spider = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at').first()
 
         spider_status = 'healthy'
         if spider_24h == 0:
@@ -442,7 +443,8 @@ class IntegrationAlertView(View):
         # Check spider data freshness
         try:
             from core.models_unified_system import SpiderData
-            last_spider = SpiderData.objects.order_by('-created_at').first()
+            # Session 807: Defer embedding fields to reduce egress costs
+            last_spider = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at').first()
             if last_spider:
                 hours_since = (now - last_spider.created_at).total_seconds() / 3600
                 if hours_since > 6:
