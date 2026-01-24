@@ -44,7 +44,8 @@ def spider_network_data(request):
 
     # Get spider data from database
     try:
-        spider_data_entries = SpiderData.objects.all()
+        # Session 810: Defer embedding fields to reduce egress costs
+        spider_data_entries = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').all()
         opportunities = spider_data_entries.filter(data_type='opportunity').count()
         total_data = spider_data_entries.count()
 

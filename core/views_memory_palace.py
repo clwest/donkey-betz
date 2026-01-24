@@ -39,7 +39,8 @@ def get_agent_memories(request, agent_id):
         sort_by = request.GET.get('sort_by', 'importance')  # Session 753: Sort options
 
         # Build query
-        memories = AgentMemory.objects.filter(agent=agent)
+        # Session 810: Defer embedding fields to reduce egress costs
+        memories = AgentMemory.objects.filter(agent=agent).defer('embedding')
 
         if memory_type:
             memories = memories.filter(memory_type=memory_type)
@@ -101,7 +102,8 @@ def get_memory_detail(request, memory_id):
         from core.models_unified_system import AgentMemory, AgentExecution
 
         try:
-            memory = AgentMemory.objects.get(id=memory_id)
+            # Session 810: Defer embedding fields to reduce egress costs
+            memory = AgentMemory.objects.defer('embedding').get(id=memory_id)
         except AgentMemory.DoesNotExist:
             return JsonResponse({'error': 'Memory not found'}, status=404)
 
@@ -377,7 +379,8 @@ def assign_memory_to_room(request):
             }, status=400)
 
         try:
-            memory = AgentMemory.objects.get(id=memory_id)
+            # Session 810: Defer embedding fields to reduce egress costs
+            memory = AgentMemory.objects.defer('embedding').get(id=memory_id)
             room = MemoryPalaceRoom.objects.get(id=room_id)
         except (AgentMemory.DoesNotExist, MemoryPalaceRoom.DoesNotExist) as e:
             return JsonResponse({'error': str(e)}, status=404)
@@ -451,8 +454,9 @@ def connect_memories(request):
             }, status=400)
 
         try:
-            source = AgentMemory.objects.get(id=source_id)
-            target = AgentMemory.objects.get(id=target_id)
+            # Session 810: Defer embedding fields to reduce egress costs
+            source = AgentMemory.objects.defer('embedding').get(id=source_id)
+            target = AgentMemory.objects.defer('embedding').get(id=target_id)
         except AgentMemory.DoesNotExist as e:
             return JsonResponse({'error': str(e)}, status=404)
 
@@ -498,7 +502,8 @@ def get_memory_connections(request, memory_id):
         from core.models_unified_system import AgentMemory, MemoryConnection
 
         try:
-            memory = AgentMemory.objects.get(id=memory_id)
+            # Session 810: Defer embedding fields to reduce egress costs
+            memory = AgentMemory.objects.defer('embedding').get(id=memory_id)
         except AgentMemory.DoesNotExist:
             return JsonResponse({'error': 'Memory not found'}, status=404)
 
@@ -589,7 +594,8 @@ def delete_memory(request, memory_id):
         from core.models_unified_system import AgentMemory
 
         try:
-            memory = AgentMemory.objects.get(id=memory_id)
+            # Session 810: Defer embedding fields to reduce egress costs
+            memory = AgentMemory.objects.defer('embedding').get(id=memory_id)
         except AgentMemory.DoesNotExist:
             return JsonResponse({'error': 'Memory not found'}, status=404)
 

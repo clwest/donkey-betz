@@ -7874,7 +7874,8 @@ Actions:
 
             # Fallback to direct model access
             from core.models_unified_system import AgentMemory
-            memories = AgentMemory.objects.all().order_by('-created_at')[:20]
+            # Session 810: Defer embedding fields to reduce egress costs
+            memories = AgentMemory.objects.defer('embedding').all().order_by('-created_at')[:20]
             return {
                 'success': True,
                 'snapshots': [
@@ -7920,7 +7921,8 @@ Actions:
             elif action == 'search':
                 if query:
                     from core.models_unified_system import AgentMemory
-                    memories = AgentMemory.objects.filter(content__icontains=query).order_by('-created_at')[:limit]
+                    # Session 810: Defer embedding fields to reduce egress costs
+                    memories = AgentMemory.objects.defer('embedding').filter(content__icontains=query).order_by('-created_at')[:limit]
                     return {
                         'success': True,
                         'results': [
@@ -7932,7 +7934,8 @@ Actions:
 
             elif action == 'recent':
                 from core.models_unified_system import AgentMemory
-                memories = AgentMemory.objects.all().order_by('-created_at')[:limit]
+                # Session 810: Defer embedding fields to reduce egress costs
+                memories = AgentMemory.objects.defer('embedding').all().order_by('-created_at')[:limit]
                 return {
                     'success': True,
                     'memories': [
@@ -7944,7 +7947,8 @@ Actions:
 
             elif action == 'important':
                 from core.models_unified_system import AgentMemory
-                memories = AgentMemory.objects.filter(importance__gte=0.7).order_by('-importance', '-created_at')[:limit]
+                # Session 810: Defer embedding fields to reduce egress costs
+                memories = AgentMemory.objects.defer('embedding').filter(importance__gte=0.7).order_by('-importance', '-created_at')[:limit]
                 return {
                     'success': True,
                     'memories': [

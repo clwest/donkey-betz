@@ -912,7 +912,8 @@ class OrchestrationStepIntelligenceView(View):
                         if agent_record and step_exec.started_at and step_exec.completed_at:
                             from datetime import timedelta
                             # Primary: Find memories created during this step's execution window
-                            memories = AgentMemory.objects.filter(
+                            # Session 810: Defer embedding fields to reduce egress costs
+                            memories = AgentMemory.objects.defer('embedding').filter(
                                 agent=agent_record,
                                 created_at__gte=step_exec.started_at - timedelta(seconds=10),
                                 created_at__lte=step_exec.completed_at + timedelta(seconds=10)

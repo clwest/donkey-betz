@@ -210,9 +210,10 @@ def spider_feed_trending(request):
         cutoff = timezone.now() - timedelta(hours=hours)
 
         # Get items with recent annotations, ranked by annotation count
+        # Session 810: Defer embedding fields to reduce egress costs
         trending = SpiderData.objects.filter(
             annotations__created_at__gte=cutoff
-        ).annotate(
+        ).defer('embedding', 'item_embeddings', 'embedding_text').annotate(
             recent_annotation_count=Count('annotations', filter=Q(annotations__created_at__gte=cutoff)),
             net_score=Coalesce(
                 Sum(
@@ -249,7 +250,8 @@ def spider_feed_item_detail(request, item_id):
     Get full details for a single spider data item.
     """
     try:
-        spider_data = SpiderData.objects.prefetch_related('annotations').get(id=item_id)
+        # Session 810: Defer embedding fields to reduce egress costs
+        spider_data = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').prefetch_related('annotations').get(id=item_id)
 
         # Increment view count on all annotations
         SpiderDataAnnotation.objects.filter(spider_data=spider_data).update(
@@ -290,7 +292,8 @@ def spider_feed_annotate(request, item_id):
     """
     import json
     try:
-        spider_data = SpiderData.objects.get(id=item_id)
+        # Session 810: Defer embedding fields to reduce egress costs
+        spider_data = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').get(id=item_id)
 
         try:
             data = json.loads(request.body)

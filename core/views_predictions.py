@@ -634,7 +634,8 @@ def generate_agent_prediction(agent, context=None):
         # Get agent's recent memories and dreams for context
         from .models_unified_system import AgentMemory
 
-        recent_memories = AgentMemory.objects.filter(
+        # Session 810: Defer embedding fields to reduce egress costs
+        recent_memories = AgentMemory.objects.defer('embedding').filter(
             agent=agent
         ).order_by('-importance', '-created_at')[:5]
 
