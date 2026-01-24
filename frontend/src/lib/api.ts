@@ -8,6 +8,9 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Session 802: Add 90-second timeout to prevent browser default (2 min) timeout
+  // This ensures we get a proper error before the browser silently times out
+  timeout: 90000,
 })
 
 // Request interceptor to add auth token
