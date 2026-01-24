@@ -2,7 +2,7 @@
 
 **Date:** January 23, 2026
 **Focus:** Production data investigation, bug fixes, and database seeding
-**PRs Merged:** 6 (#38, #39, #40, #41, #42, #43)
+**PRs Merged:** 10 (#38, #39, #40, #41, #42, #43, #44, #45, #46, #47)
 
 ---
 
@@ -95,6 +95,67 @@ def process_pending_action_plans():
     return {"status": "success", "plans_queued": len(pending_plans)}
 ```
 
+### 5. Operations Tab View Content (PR #45)
+
+**Issue:** "View Content" button on Operations tab cards showed minimal information for command operations.
+
+**Root Cause:** `FileContentModal` only displayed `file_content_after`, missing command-specific fields.
+
+**File:** `frontend/src/pages/WorkspacePage.tsx`
+
+**Solution:** Extended `OperationDetail` interface to include command fields and updated modal to show appropriate content based on operation type:
+
+```typescript
+interface OperationDetail {
+  // ... existing fields
+  command?: string
+  command_output?: string
+  command_error?: string
+  exit_code?: number
+  execution_time_ms?: number
+}
+```
+
+### 6. AgentEvolution level_title Attribute (PR #46)
+
+**Error:** `'AgentEvolution' object has no attribute 'level_title'`
+
+**Root Cause:** `AgentEvolution` model has a `get_title()` method, not a `level_title` attribute.
+
+**File:** `core/tasks.py`
+
+```python
+# Before (wrong)
+title=evo.level_title,
+'level_title': evo.level_title,
+
+# After (fixed)
+title=evo.get_title(),
+'level_title': evo.get_title(),
+```
+
+### 7. Content Studio Task Name Mismatch (PR #47)
+
+**Issue:** Autonomous content studio task never ran in production despite being scheduled.
+
+**Root Cause:** Task decorator uses `name='autonomous_studio.run_main_loop'` but Celery Beat schedule referenced `core.tasks.run_autonomous_content_studio`.
+
+**File:** `core/celery.py`
+
+```python
+# Before (wrong)
+'run-autonomous-content-studio': {
+    'task': 'core.tasks.run_autonomous_content_studio',
+    ...
+}
+
+# After (fixed)
+'run-autonomous-content-studio': {
+    'task': 'autonomous_studio.run_main_loop',
+    ...
+}
+```
+
 ---
 
 ## Production Seeding Command (PR #40, #41)
@@ -165,13 +226,14 @@ PROD_URL=https://your-app.railway.app PROD_TOKEN=your_token ./scripts/production
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Fixed XPHistory field names in broadcast_evolution_status |
+| `core/tasks.py` | Fixed XPHistory fields, AgentEvolution.get_title() |
 | `core/super_platform/scifi_integration.py` | Removed user field from AgentMemory queries |
 | `core/personal_ai_assistant_enhanced.py` | Changed to specific command pattern matching |
 | `intelligence/tasks.py` | Added process_pending_action_plans wrapper |
-| `core/celery.py` | Updated beat schedule to use wrapper task |
+| `core/celery.py` | Beat schedule fixes (wrapper task + content studio task name) |
 | `core/management/commands/seed_production.py` | **NEW** - Production seeding command |
 | `scripts/production_data_audit.sh` | **NEW** - Production audit script |
+| `frontend/src/pages/WorkspacePage.tsx` | Enhanced Operations tab View Content modal |
 
 ---
 
