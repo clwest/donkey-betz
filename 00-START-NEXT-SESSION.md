@@ -1,18 +1,20 @@
-# Session 800 - Operator Mode
+# Session 801 - Ready for Next Steps
 
-**Previous Session:** 799 (Production Fixes & Seeding)
+**Previous Session:** 800 (Operator Mode + Cloudinary Egress Optimization)
 **Date:** January 23, 2026
 **Status:** 74 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN
 
 ---
 
-## SESSION 800 IN PROGRESS
+## SESSION 800 COMPLETED
 
-### Focus: PA Operator Mode Transformation
+### Focus: PA Operator Mode + Railway Egress Cost Optimization
 
-Addressing critical feedback that the PA was "describing the system, not inhabiting it" - transforming from "tour guide" to "control plane".
+Two major initiatives completed:
+1. **PA Operator Mode** - Transform PA from "tour guide" to "control plane"
+2. **Cloudinary Migration** - Reduce Railway egress costs ($2,737/month estimated → near zero for images)
 
-### PRs Merged So Far
+### PRs Merged (9 total)
 
 | PR | Feature |
 |----|---------|
@@ -21,6 +23,12 @@ Addressing critical feedback that the PA was "describing the system, not inhabit
 | #51 | **reasoning_engine_tool** - Connect PA to ThinkingAgent |
 | #52 | Documentation update |
 | #53 | **Production Celery warnings fix** - AgentContribution.project + workspace context None user |
+| #54 | Documentation update |
+| #55 | **Cloudinary image persistence** - New images auto-upload to Cloudinary |
+| #56 | **Cloudinary migration commands** - `migrate_images_to_cloudinary`, `check_cloudinary_status` |
+| #57 | **Migration command fix** - Limit handling bugfix |
+
+---
 
 ### Key Changes
 
@@ -45,117 +53,102 @@ New PA tool `reasoning_engine_tool` to access ThinkingAgent:
 
 User can now ask: "What has the system been thinking about?"
 
-#### 3. Production Celery Warnings Fix (PR #53)
+#### 3. Cloudinary Egress Optimization (PRs #55-57)
 
-Fixed two warnings discovered in deploy logs:
+**Problem:** Railway egress costs estimated at $2,737/month due to serving images through Django.
 
-1. **AgentContribution.project type error**
-   - Error: String passed to project field (requires PartnershipProject instance)
-   - Fix: Set `project=None` for scheduled runs (field is nullable since Session 752)
+**Solution:**
+1. **New images** - Automatically uploaded to Cloudinary via `save_watermarked_image()`
+2. **Existing images** - Migration command to upload to Cloudinary
+3. **URL handling** - `ImageHistory.get_full_url()` returns Cloudinary URLs directly (no proxy)
 
-2. **Workspace context NoneType error**
-   - Error: `'NoneType' object has no attribute 'id'` in agent_router.py
-   - Fix: Added early return for None user + handle None in workspace_manager
+**Files Changed:**
+- `core/services/watermark_integration.py` - Cloudinary upload on save
+- `core/views_image.py` - Handle Cloudinary URLs in 6 locations
+- `content/models.py` - `get_full_url()` and `get_thumbnail_url()` return http URLs directly
+- `core/management/commands/migrate_images_to_cloudinary.py` - Migration command
+- `core/management/commands/check_cloudinary_status.py` - Status checker
 
----
-
-## SESSION 799 COMPLETED
-
-### Summary
-Session 799 investigated production data issues and fixed 10 bugs discovered during investigation. Created production seeding command, fixed PA's overly aggressive system command detection, enhanced Operations tab UI, and fixed autonomous content studio task scheduling.
-
-### PRs Merged (10 total)
-
-| PR | Issue | Fix |
-|----|-------|-----|
-| #38 | `broadcast_evolution_status` - Invalid select_related 'evolution' | XPHistory has `agent` FK, not `evolution` |
-| #39 | `scifi_integration` - AgentMemory has no 'user' field | Removed `user=user` from filter queries |
-| #40 | Production seeding needed | Created `seed_production` command |
-| #41 | `sync_agents` command doesn't exist | Changed to check count + use `populate_agents` |
-| #42 | PA took 3+ mins for "Tell me about this system" | Changed to specific command patterns |
-| #43 | `execute_action_plan()` missing required argument | Created `process_pending_action_plans` wrapper |
-| #44 | Session handoff documentation | Created SESSION_799_PRODUCTION_FIXES.md |
-| #45 | Operations tab "View Content" showed minimal info | Enhanced modal for all operation types |
-| #46 | `AgentEvolution` has no attribute 'level_title' | Changed to `get_title()` method |
-| #47 | Content studio task not running in production | Fixed task name mismatch in Celery Beat |
-
-### Key Changes
-
-**1. Production Seeding Command**
+**Commands:**
 ```bash
-railway run python manage.py seed_production
+# Check migration status
+python manage.py check_cloudinary_status
+
+# Dry run migration
+python manage.py migrate_images_to_cloudinary --dry-run
+
+# Run migration
+python manage.py migrate_images_to_cloudinary
+
+# With options
+python manage.py migrate_images_to_cloudinary --limit=100 --batch-size=50
 ```
-Creates 5 Content Channels, 7 System Configs, syncs agents.
 
-**2. PA System Command Detection Fix**
-Changed from broad keyword matching (`"system" in message`) to specific command patterns (`"check database"`, `"list agents"`, etc.).
+#### 4. VideoAgent Investigation
 
-**3. Celery Beat Fix**
-Created wrapper task `process_pending_action_plans` that finds ActionPlans with `status='created'` and queues them for execution.
-
-**4. Operations Tab UI Enhancement**
-FileContentModal now displays appropriate content for all operation types (file_create, command_exec, git_commit, etc.) with command output, execution time, and error details.
-
-**5. AgentEvolution Fix**
-Changed `evo.level_title` to `evo.get_title()` - the model has a method, not an attribute.
-
-**6. Content Studio Task Name Fix**
-Fixed mismatch between `@shared_task(name='autonomous_studio.run_main_loop')` decorator and Celery Beat schedule that referenced `core.tasks.run_autonomous_content_studio`.
-
-### Production Status
-- 214 Agents synced
-- 5 Content Channels created
-- 7 System configurations created
-- Autonomous content generation enabled
+Investigated why VideoAgent showed 92% "failure rate":
+- **Finding:** VideoAgent only received identity queries ("State your name"), NOT actual video tasks
+- **Root Cause:** Tool description is intentionally restrictive ("EXPENSIVE - USE SPARINGLY")
+- **Status:** Working as designed - videos require explicit user request
 
 ---
 
-## WHAT'S READY FOR SESSION 800
+## WHAT'S READY FOR SESSION 801
 
 ### System State
-- Production seeded and running
-- PA gives AI responses (not generic help)
-- Celery Beat schedules fixed
+- Production deployed with Cloudinary integration
+- New images automatically persist to Cloudinary CDN
+- PA has Operator Mode + Reasoning Engine access
 - All body systems green
+
+### Production Notes
+- Production database shows 0 images (ephemeral filesystem lost old images)
+- New images will persist via Cloudinary
+- Verify by generating a test image and checking for `res.cloudinary.com` URL
 
 ### Potential Next Steps
 
-1. **Monitor Production**
-   - Verify autonomous content generation starts
-   - Check spider data collection
-   - Monitor Celery task execution
+1. **Test Image Generation**
+   - Generate a new image in production
+   - Verify Cloudinary URL is returned
 
-2. **Content Channels**
-   - View generated content in Content Channels page
-   - Verify podcast generation on weekly schedule
+2. **Monitor Egress Costs**
+   - Check Railway billing after a few days
+   - Should see reduced network egress
 
-3. **New Features**
-   - Whatever the user needs!
+3. **Other Egress Optimization** (if needed)
+   - WebSocket message batching (~100 endpoints active)
+   - API response caching
+   - Celery task consolidation
 
 ---
 
 ## QUICK REFERENCE
+
+### Cloudinary Commands
+```bash
+# Check status
+railway run python manage.py check_cloudinary_status
+
+# Migrate existing images (if any)
+railway run python manage.py migrate_images_to_cloudinary
+```
 
 ### Production Commands
 ```bash
 # Seed production
 railway run python manage.py seed_production
 
-# Audit production data
-PROD_URL=https://app.railway.app PROD_TOKEN=token ./scripts/production_data_audit.sh
-
 # Check agents
 railway run python manage.py shell -c "from core.models_unified_system import Agent; print(Agent.objects.count())"
 ```
 
-### Content Channels Created
-| Channel | Topic | Frequency |
-|---------|-------|-----------|
-| Tech & AI Insights | AI, ML, tech trends | daily |
-| Market Intelligence | stocks, crypto, financial | daily |
-| Sports Analytics | betting, odds, predictions | daily |
-| Career & Jobs | job market, career advice | weekly |
-| AI Podcast Studio | AI discussions, debates | weekly |
+### Required Environment Variables (Railway)
+```
+CLOUDINARY_CLOUD_NAME=donkeybetz
+CLOUDINARY_API_KEY=xxx
+CLOUDINARY_API_SECRET=xxx
+```
 
 ---
 
@@ -163,7 +156,7 @@ railway run python manage.py shell -c "from core.models_unified_system import Ag
 
 | Session | Focus |
 |---------|-------|
-| **800** | Operator Mode - PA transformation from tour guide to control plane |
+| **800** | Operator Mode + Cloudinary Egress Optimization - 9 PRs merged |
 | **799** | Production Fixes & Seeding - 10 PRs merged |
 | **798** | Workspace & Docs Context Injection - 12 PRs merged |
 | **797** | Integration Deepening - Gate & Opportunity consultation triggers |
