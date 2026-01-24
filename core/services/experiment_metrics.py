@@ -261,11 +261,18 @@ class ExperimentMetricsService:
             # Normalize by time (previous is N-1 hours)
             previous_hourly_avg = previous_errors / max(self.ANOMALY_DETECTION_WINDOW_HOURS - 1, 1)
 
-            # 3x spike in errors = anomaly
-            if current_errors > 5 and current_errors > (previous_hourly_avg * 3):
+            # Session 805: Use a minimum baseline to avoid false positives
+            # When previous average is 0 (overnight/low activity), use baseline of 3 errors/hour
+            # This prevents normal daytime activity from triggering anomalies
+            MINIMUM_BASELINE = 3.0
+            comparison_baseline = max(previous_hourly_avg, MINIMUM_BASELINE)
+
+            # 3x spike in errors = anomaly (but compared against reasonable baseline)
+            # Also require at least 10 errors (not just 6) to trigger
+            if current_errors > 10 and current_errors > (comparison_baseline * 3):
                 logger.warning(
                     f"[Session 600] Integrity anomaly: Error spike detected "
-                    f"(current: {current_errors}, avg: {previous_hourly_avg:.1f})"
+                    f"(current: {current_errors}, baseline: {comparison_baseline:.1f})"
                 )
                 return True
 
