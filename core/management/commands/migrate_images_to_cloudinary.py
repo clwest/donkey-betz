@@ -103,14 +103,19 @@ class Command(BaseCommand):
             # Also skip data URIs
             queryset = queryset.exclude(file_path__startswith='data:')
 
-        total_count = queryset.count()
-        self.stdout.write(f'Found {total_count} images to migrate')
+        # Apply ordering before any slicing
+        queryset = queryset.order_by('created_at')
+
+        total_to_process = queryset.count()
+        self.stdout.write(f'Found {total_to_process} images to migrate')
 
         if limit:
-            queryset = queryset[:limit]
+            total_to_process = min(limit, total_to_process)
             self.stdout.write(f'Limited to {limit} images')
+        else:
+            total_to_process = total_to_process
 
-        if total_count == 0:
+        if total_to_process == 0:
             self.stdout.write(self.style.SUCCESS('No images to migrate!'))
             return
 
@@ -124,10 +129,14 @@ class Command(BaseCommand):
 
         # Process in batches
         processed = 0
-        images = list(queryset.order_by('created_at')[:batch_size])
+        images = list(queryset[:batch_size])
 
         while images:
             for image in images:
+                # Check limit before processing
+                if limit and processed >= limit:
+                    break
+
                 processed += 1
 
                 # Get local file path
@@ -144,7 +153,7 @@ class Command(BaseCommand):
 
                 if not os.path.exists(local_path):
                     self.stdout.write(
-                        self.style.WARNING(f'[{processed}/{total_count}] File not found: {image.file_path}')
+                        self.style.WARNING(f'[{processed}/{total_to_process}] File not found: {image.file_path}')
                     )
                     stats['not_found'] += 1
                     continue
@@ -156,7 +165,7 @@ class Command(BaseCommand):
 
                 if dry_run:
                     self.stdout.write(
-                        f'[{processed}/{total_count}] Would upload: {image.file_path} -> {folder}/{public_id}'
+                        f'[{processed}/{total_to_process}] Would upload: {image.file_path} -> {folder}/{public_id}'
                     )
                     stats['uploaded'] += 1
                     continue
@@ -176,16 +185,16 @@ class Command(BaseCommand):
 
                     stats['uploaded'] += 1
 
-                    if processed % 10 == 0 or processed == total_count:
+                    if processed % 10 == 0 or processed == total_to_process:
                         self.stdout.write(
                             self.style.SUCCESS(
-                                f'[{processed}/{total_count}] Migrated: {old_path[:40]}... -> Cloudinary'
+                                f'[{processed}/{total_to_process}] Migrated: {old_path[:40]}... -> Cloudinary'
                             )
                         )
                 else:
                     stats['failed'] += 1
                     self.stdout.write(
-                        self.style.ERROR(f'[{processed}/{total_count}] Failed: {image.file_path} - {result["error"]}')
+                        self.style.ERROR(f'[{processed}/{total_to_process}] Failed: {image.file_path} - {result["error"]}')
                     )
 
             # Get next batch
@@ -193,7 +202,7 @@ class Command(BaseCommand):
                 break
             last_id = images[-1].id
             images = list(
-                queryset.filter(id__gt=last_id).order_by('created_at')[:batch_size]
+                queryset.filter(id__gt=last_id)[:batch_size]
             )
 
         # Summary
