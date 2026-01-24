@@ -202,7 +202,6 @@ class Command(BaseCommand):
                                 strength=strength,
                                 trust_level=random.uniform(0.4, 0.8),
                                 respect_level=random.uniform(0.5, 0.9),
-                                collaboration_score=random.uniform(0.3, 0.7) if rel_type != 'rivalry' else 0.1,
                             )
 
                         created += 1
@@ -245,7 +244,6 @@ class Command(BaseCommand):
                             strength=strength,
                             trust_level=random.uniform(0.5, 0.9),
                             respect_level=random.uniform(0.5, 0.9),
-                            collaboration_score=random.uniform(0.4, 0.8) if rel_type != 'rivalry' else 0.2,
                         )
 
                     created += 1
