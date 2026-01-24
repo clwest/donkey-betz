@@ -484,6 +484,66 @@ class AdvisorContextBuilder:
             logger.error(f"Failed to get advisor for task: {e}")
             return None
 
+    def build_summary(
+        self,
+        agent_name: str,
+        task: str,
+        max_chars: int = 100
+    ) -> str:
+        """
+        Session 806: Build a compact summary of advisor wisdom.
+
+        This method returns a single-line summary suitable for prompt injection
+        with minimal token usage (~25 tokens vs ~150 for full context).
+
+        Args:
+            agent_name: Name of the agent
+            task: The task being performed
+            max_chars: Maximum characters for the summary
+
+        Returns:
+            Compact summary string like:
+            "Advisors: Warren Buffett | Framework: Margin Of Safety | Key: Focus on..."
+        """
+        try:
+            context = self.build_context_for_agent(agent_name, task)
+
+            if not context.get('has_advice'):
+                return ""
+
+            # Use the built-in summary if available and short enough
+            summary = context.get('summary', '')
+            if summary and len(summary) <= max_chars:
+                return summary
+
+            # Build more compact summary
+            parts = []
+
+            # Advisor names (most important)
+            advisors = context.get('relevant_advisors', [])
+            if advisors:
+                names = [a.get('name', '').split(' (')[0] for a in advisors[:1] if a.get('name')]
+                if names:
+                    parts.append(f"Advisor: {names[0]}")
+
+            # Key framework
+            frameworks = context.get('decision_frameworks', [])
+            if frameworks:
+                framework = frameworks[0].replace('_', ' ').title()
+                parts.append(f"Use: {framework}")
+
+            result = " | ".join(parts)
+
+            if len(result) > max_chars:
+                result = result[:max_chars - 3] + "..."
+
+            logger.debug(f"🧙 [Session 806] Advisor summary: {len(result)} chars")
+            return result
+
+        except Exception as e:
+            logger.warning(f"Failed to build advisor summary: {e}")
+            return ""
+
 
 # Singleton instance
 _advisor_context_builder: Optional[AdvisorContextBuilder] = None
