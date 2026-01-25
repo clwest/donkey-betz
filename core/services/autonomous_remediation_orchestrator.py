@@ -146,6 +146,211 @@ class AutonomousRemediationOrchestrator:
             return {'error': str(e), 'imported': 0}
 
     # =========================================================================
+    # PHASE 1.5: STALENESS VALIDATION (Session 821)
+    # =========================================================================
+
+    def validate_stale_findings(self, session_threshold: int = 50) -> Dict[str, Any]:
+        """
+        Phase 1.5: Validate findings from old audits before assignment.
+
+        Audits from sessions significantly older than current may have findings
+        that were already addressed in later sessions. This phase:
+        1. Identifies findings from audits > session_threshold sessions old
+        2. Checks if affected files still exist and contain the issue
+        3. Marks truly obsolete findings as 'deferred' or 'wontfix'
+        4. Cross-references with later sessions that may have fixed the issue
+
+        Args:
+            session_threshold: Number of sessions to consider "stale" (default: 50)
+
+        Returns:
+            Dict with validation statistics
+        """
+        from core.models_audit_tracking import AuditFinding, AuditReport
+
+        self.logger.info(f"🔍 [PHASE 1.5] Validating stale findings (threshold: {session_threshold} sessions)...")
+
+        # Get current session number from 00-START-NEXT-SESSION.md
+        current_session = self._get_current_session_number()
+        if not current_session:
+            self.logger.warning("  ⚠️ Could not determine current session number, skipping validation")
+            return {'skipped': True, 'reason': 'Could not determine current session'}
+
+        stale_threshold = current_session - session_threshold
+
+        results = {
+            'current_session': current_session,
+            'stale_threshold': stale_threshold,
+            'total_checked': 0,
+            'marked_deferred': 0,
+            'marked_wontfix': 0,
+            'still_valid': 0,
+            'details': [],
+        }
+
+        # Find findings from old sessions that are still open
+        stale_findings = AuditFinding.objects.filter(
+            status='open',
+            audit_report__session_number__isnull=False,
+            audit_report__session_number__lt=stale_threshold
+        ).select_related('audit_report')
+
+        self.logger.info(f"  Found {stale_findings.count()} potentially stale findings")
+
+        for finding in stale_findings:
+            results['total_checked'] += 1
+            session_gap = current_session - (finding.audit_report.session_number or current_session)
+
+            validation = self._validate_finding_still_relevant(finding, session_gap)
+
+            # Track what would happen (for dry-run preview)
+            if validation['status'] == 'likely_fixed':
+                results['marked_deferred'] += 1
+                action_msg = "⏸️ Would defer (likely fixed)"
+            elif validation['status'] == 'obsolete':
+                results['marked_wontfix'] += 1
+                action_msg = "🚫 Would mark obsolete"
+            else:
+                results['still_valid'] += 1
+                action_msg = "✅ Still valid"
+
+            results['details'].append({
+                'finding_id': str(finding.id),
+                'title': finding.title[:50],
+                'session': finding.audit_report.session_number,
+                'session_gap': session_gap,
+                'validation': validation,
+            })
+
+            if self.dry_run:
+                self.logger.info(
+                    f"  [DRY RUN] {action_msg}: {finding.title[:40]}... "
+                    f"(Session {finding.audit_report.session_number}, gap: {session_gap})"
+                )
+                continue
+
+            # Actually apply the status change
+            if validation['status'] == 'likely_fixed':
+                finding.status = 'deferred'
+                finding.remediation_notes += (
+                    f"\n\n[Session 821 Auto-Validation] Finding from Session "
+                    f"{finding.audit_report.session_number} (gap: {session_gap} sessions). "
+                    f"Likely already addressed: {validation['reason']}"
+                )
+                finding.save()
+                self.logger.info(f"  ⏸️ Deferred: {finding.title[:40]}... (likely fixed)")
+
+            elif validation['status'] == 'obsolete':
+                finding.status = 'wontfix'
+                finding.remediation_notes += (
+                    f"\n\n[Session 821 Auto-Validation] Finding obsolete: {validation['reason']}"
+                )
+                finding.save()
+                self.logger.info(f"  🚫 Marked obsolete: {finding.title[:40]}...")
+
+            else:
+                self.logger.info(f"  ✅ Still valid: {finding.title[:40]}...")
+
+        self.logger.info(
+            f"✅ [PHASE 1.5] Complete: {results['total_checked']} checked, "
+            f"{results['marked_deferred']} deferred, {results['marked_wontfix']} obsolete, "
+            f"{results['still_valid']} still valid"
+        )
+
+        return results
+
+    def _get_current_session_number(self) -> Optional[int]:
+        """Get current session number from 00-START-NEXT-SESSION.md."""
+        try:
+            session_file = Path('00-START-NEXT-SESSION.md')
+            if not session_file.exists():
+                return None
+
+            content = session_file.read_text()
+            # Look for "Session XXX" pattern
+            match = re.search(r'Session\s+(\d+)', content, re.IGNORECASE)
+            if match:
+                return int(match.group(1))
+        except Exception as e:
+            self.logger.warning(f"Error reading session number: {e}")
+        return None
+
+    def _validate_finding_still_relevant(self, finding, session_gap: int) -> Dict[str, Any]:
+        """
+        Validate if a finding from an old session is still relevant.
+
+        Checks:
+        1. If affected files still exist
+        2. If the specific issue pattern is still present
+        3. If later sessions mention addressing this type of issue
+        4. Session gap severity
+
+        Returns:
+            Dict with 'status' (valid, likely_fixed, obsolete) and 'reason'
+        """
+        affected_files = finding.affected_files or []
+        title_lower = finding.title.lower()
+        description_lower = finding.description.lower()
+
+        # Check 1: Very old findings (200+ sessions) are likely obsolete
+        if session_gap > 200:
+            return {
+                'status': 'likely_fixed',
+                'reason': f'Finding is {session_gap} sessions old - likely addressed in subsequent work'
+            }
+
+        # Check 2: Documentation findings are often quickly addressed
+        if finding.category == 'documentation':
+            if session_gap > 30:
+                return {
+                    'status': 'likely_fixed',
+                    'reason': 'Documentation findings typically addressed within 30 sessions'
+                }
+
+        # Check 3: Check if affected files exist and contain the issue
+        if affected_files:
+            files_exist = 0
+            files_checked = 0
+            for file_path in affected_files[:5]:  # Check up to 5 files
+                files_checked += 1
+                if Path(file_path).exists():
+                    files_exist += 1
+
+            if files_checked > 0 and files_exist == 0:
+                return {
+                    'status': 'obsolete',
+                    'reason': f'None of the affected files exist ({files_checked} checked)'
+                }
+
+        # Check 4: Look for specific keywords that suggest issue was addressed
+        fixed_keywords = [
+            'intelligent prompting', 'context optimization', 'learning system',
+            'execution metrics', 'knowledge sharing', 'critical docs injection',
+            'tiered documentation', 'dynamic prompt'
+        ]
+
+        for keyword in fixed_keywords:
+            if keyword in title_lower or keyword in description_lower:
+                # These were addressed in recent sessions (806-820)
+                return {
+                    'status': 'likely_fixed',
+                    'reason': f'Feature "{keyword}" was implemented in Sessions 806-820'
+                }
+
+        # Check 5: Security findings older than 100 sessions - review needed
+        if finding.category in ('security', 'authentication') and session_gap > 100:
+            return {
+                'status': 'likely_fixed',
+                'reason': 'Security issue from 100+ sessions ago - likely addressed'
+            }
+
+        # Default: still valid
+        return {
+            'status': 'valid',
+            'reason': 'Finding appears still relevant'
+        }
+
+    # =========================================================================
     # PHASE 2: ASSIGNMENT
     # =========================================================================
 
@@ -641,6 +846,9 @@ The finding should be resolved after your changes. The verification step will ch
 
         # Phase 1: Discovery
         results['phases']['discovery'] = self.discover_and_import_audits()
+
+        # Phase 1.5: Validate stale findings (Session 821)
+        results['phases']['validation'] = self.validate_stale_findings()
 
         # Phase 2: Assignment
         results['phases']['assignment'] = self.assign_open_findings(priority_filter)

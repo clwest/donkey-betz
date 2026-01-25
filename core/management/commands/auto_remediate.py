@@ -1,12 +1,17 @@
 """
-Auto Remediate Command - Session 820: Self-Healing Orchestration System
+Auto Remediate Command - Session 820/821: Self-Healing Orchestration System
 
-Runs the autonomous remediation cycle to discover audits, assign findings to agents,
-execute fixes, and verify results. The system can heal itself without human intervention.
+Runs the autonomous remediation cycle to discover audits, validate findings,
+assign to agents, execute fixes, and verify results. The system can heal itself
+without human intervention.
+
+Session 821: Added staleness validation phase to check if findings from old
+sessions are still relevant before assigning them to agents.
 
 Usage:
     python manage.py auto_remediate                    # Run full cycle
     python manage.py auto_remediate --discover        # Phase 1: Discover/import audits
+    python manage.py auto_remediate --validate        # Phase 1.5: Validate stale findings
     python manage.py auto_remediate --assign          # Phase 2: Assign findings to agents
     python manage.py auto_remediate --execute         # Phase 3: Execute remediation tasks
     python manage.py auto_remediate --verify          # Phase 4: Verify completed fixes
@@ -35,6 +40,11 @@ class Command(BaseCommand):
             '--discover',
             action='store_true',
             help='Phase 1 only: Discover and import new audit files',
+        )
+        parser.add_argument(
+            '--validate',
+            action='store_true',
+            help='Phase 1.5 only: Validate stale findings from old sessions',
         )
         parser.add_argument(
             '--assign',
@@ -76,6 +86,7 @@ class Command(BaseCommand):
         # Determine which phases to run
         phases = {
             'discover': options['discover'],
+            'validate': options['validate'],
             'assign': options['assign'],
             'execute': options['execute'],
             'verify': options['verify'],
@@ -102,6 +113,8 @@ class Command(BaseCommand):
         else:
             if phases['discover']:
                 self._run_discover(orchestrator, dry_run, verbose)
+            if phases['validate']:
+                self._run_validate(orchestrator, dry_run, verbose)
             if phases['assign']:
                 self._run_assign(orchestrator, dry_run, limit, verbose)
             if phases['execute']:
@@ -271,6 +284,47 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.ERROR(f"Error in discover phase: {e}")
             )
+
+    def _run_validate(self, orchestrator, dry_run, verbose):
+        """Run Phase 1.5: Validate stale findings from old sessions."""
+        self.stdout.write("")
+        self.stdout.write(self.style.NOTICE("Phase 1.5: Validating Stale Findings..."))
+
+        try:
+            if dry_run:
+                self.stdout.write("Would validate findings from old sessions for staleness")
+                orchestrator.dry_run = True
+
+            results = orchestrator.validate_stale_findings()
+
+            if results.get('skipped'):
+                self.stdout.write(
+                    self.style.WARNING(f"Skipped: {results.get('reason', 'Unknown')}")
+                )
+                return
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Checked {results.get('total_checked', 0)} stale findings: "
+                    f"{results.get('marked_deferred', 0)} deferred, "
+                    f"{results.get('marked_wontfix', 0)} obsolete, "
+                    f"{results.get('still_valid', 0)} still valid"
+                )
+            )
+
+            if verbose:
+                for detail in results.get('details', []):
+                    status = detail['validation']['status']
+                    icon = '⏸️' if status == 'likely_fixed' else '🚫' if status == 'obsolete' else '✅'
+                    self.stdout.write(
+                        f"  {icon} Session {detail['session']}: {detail['title']}"
+                    )
+
+        except Exception as e:
+            self.stdout.write(
+                self.style.ERROR(f"Error in validate phase: {e}")
+            )
+            logger.exception("Error in validate phase")
 
     def _run_assign(self, orchestrator, dry_run, limit, verbose):
         """Run Phase 2: Assign findings to agents."""
