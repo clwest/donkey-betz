@@ -129,7 +129,9 @@ export function DocumentViewer({
         setMetadata(response.data.metadata)
       } catch (err: any) {
         console.error('Error fetching document:', err)
-        setError(err.response?.data?.error || 'Failed to load document')
+        // Ensure error is always a string, not an object
+        const errorMsg = err.response?.data?.error
+        setError(typeof errorMsg === 'string' ? errorMsg : err.message || 'Failed to load document')
       } finally {
         setIsLoading(false)
       }
