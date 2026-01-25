@@ -173,7 +173,7 @@ export function EmergencyControls({
 
             {/* Agent Quarantine - Session 818: Made clickable */}
             <a
-              href="/ai-studio?tab=agents"
+              href="/agents"
               className="flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors group"
             >
               <div className="flex items-center gap-3">
