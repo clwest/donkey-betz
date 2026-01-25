@@ -34,6 +34,7 @@ import DocumentsPage from '@/pages/DocumentsPage'
 import MythologyLabPage from '@/pages/MythologyLabPage'
 import ContentChannelsPage from '@/pages/ContentChannelsPage'
 import BlogViewerPage from '@/pages/BlogViewerPage'  // Session 742: Blog viewer for content review
+import BlogsPage from '@/pages/BlogsPage'  // Session 814: Dedicated blogs list page
 import DistributionPage from '@/pages/DistributionPage'  // Session 745: Distribution dashboard
 import AutonomousSystemsPage from '@/pages/AutonomousSystemsPage'  // Session 745: Autonomous systems
 import ReasoningEnginePage from '@/pages/ReasoningEnginePage'  // Session 745: Reasoning engine
@@ -116,6 +117,7 @@ function App() {
         <Route path="spider-feed" element={<SpiderFeedPage />} />  {/* Session 783: Spider News Feed */}
         <Route path="docs-index" element={<DocsIndexPage />} />  {/* Session 784: Documentation Index Browser */}
         <Route path="agent-monitor" element={<AgentMonitorPage />} />  {/* Session 794: Live Agent Monitor */}
+        <Route path="blogs" element={<BlogsPage />} />  {/* Session 814: Blogs list page */}
         <Route path="blog/:blogId" element={<BlogViewerPage />} />  {/* Session 742: Blog viewer for content review */}
       </Route>
     </Routes>
