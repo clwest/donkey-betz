@@ -1,68 +1,82 @@
-# Session 816 - Platform Command Center Polish & Playbooks
+# Session 817 - Revenue Data & Canon Promotion
 
-**Previous Session:** 815 (WorkspacePage → Platform Command Center)
+**Previous Session:** 816 (Operations Panel Overhaul + Playbooks + Audits Browser)
 **Date:** January 24, 2026
 **Status:** 75 Core + 139 Persona Agents | 46 Frontend Pages | ALL BODY SYSTEMS GREEN | **228 Active Celery Beat Tasks**
 
 ---
 
-## Session 815 Summary
+## Session 816 Summary
 
 ### What Was Built
-Transformed WorkspacePage into a **Platform Command Center** with 3 new tabs:
 
-| Tab | Purpose | Status |
-|-----|---------|--------|
-| **Command** | Mission progress, metrics grid, quick actions, activity feed | ✅ Complete |
-| **Governance** | Emergency controls, pending decisions, escalation path | ✅ Complete |
-| **Knowledge** | Canon browser, playbook browser | ✅ Complete |
+1. **Operations Panel Overhaul** - Complete transformation of Operations tab
+   - Stats dashboard (total ops, 24h activity, success rate, pending reviews)
+   - Advanced filtering (search, type, status, date range)
+   - Grouping views (list, date, agent, type)
+   - Expandable operation rows with full details
+
+2. **4 Playbooks Created** - Initial standard operating procedures
+   - `creator/VIDEO_PRODUCTION_WORKFLOW.md`
+   - `devops/DEPLOYMENT_CHECKLIST.md`
+   - `development/AGENT_CREATION_GUIDE.md`
+   - `marketing/CONTENT_CALENDAR_PROCESS.md`
+
+3. **Audits Browser** - New component to browse 58 system audits
+   - Type filtering (session, system, integration, database, archive, other)
+   - Integrated into Knowledge tab
+   - New API: `GET /api/platform/audits/`
 
 ### New APIs Created
 ```
-GET  /api/platform/mission/     - Current mission + metrics
-GET  /api/platform/metrics/     - Revenue, LLM costs, canon, playbooks
-GET  /api/platform/governance/  - Owner, emergency controls, decisions
-POST /api/platform/emergency-halt/  - Trigger emergency halt
-GET  /api/platform/canon/       - List canon documents
-GET  /api/platform/playbooks/   - List playbooks
+GET /api/platform/audits/  - List system audits with type filtering
 ```
 
 ### New Components
-- `MissionCard` - Mission statement, goal, status
-- `MetricsGrid` - 4-card progress grid
-- `EmergencyControls` - SKIN lock, quarantine, halt button
-- `CanonBrowser` - Browse canon by category
-- `PlaybookBrowser` - Browse playbooks by category
+- `OperationsPanel` (~850 lines) - Complete Operations tab replacement
+- `AuditsBrowser` (~230 lines) - Audit document browser
+
+### PRs Merged
+- PR #131 - Operations Panel Overhaul
+- PR #132 - Playbooks + Audits Browser
 
 ---
 
-## PRIMARY GOAL: Polish & Create Content
+## PRIMARY GOAL: Real Data Integration
 
-### 1. Create First Playbooks (`docs/playbooks/`)
-The playbook browser shows 0 playbooks. Create initial set:
+### 1. Connect Real Revenue Data
+Currently showing $0 in metrics. Wire up actual Revenue model data to MetricsGrid.
 
-```
-docs/playbooks/
-├── creator/
-│   └── VIDEO_PRODUCTION_WORKFLOW.md
-├── devops/
-│   └── DEPLOYMENT_CHECKLIST.md
-├── development/
-│   └── AGENT_CREATION_GUIDE.md
-└── marketing/
-    └── CONTENT_CALENDAR_PROCESS.md
-```
+**Files to check:**
+- `core/models.py` - Revenue model
+- `core/views_platform_command.py` - metrics_view function
+- `frontend/src/components/platform/MetricsGrid.tsx`
 
-### 2. Connect Real Revenue Data
-Currently showing $0. Wire up actual Revenue model data.
+### 2. Canon Promotion Flow
+Add "Promote to Canon" button in Human Interface for high-quality agent outputs.
 
-### 3. Canon Promotion Flow
-Add "Promote to Canon" button in Human Interface for high-quality outputs.
+**Requirements:**
+- Button on attention items with high scores
+- Endpoint: `POST /api/platform/canon/promote/`
+- Copy file to `docs/canon/{category}/`
+- Create canon metadata entry
 
-### 4. Cost Tracking Enhancement
-- Show cost per agent
-- Show cost trend (7-day chart)
-- Budget alerts
+### 3. Cost Tracking Enhancement
+- Show cost per agent (last 7 days)
+- Cost trend chart (7-day history)
+- Budget alert indicators
+
+**Files to modify:**
+- `core/views_platform_command.py` - add cost breakdown
+- `frontend/src/components/platform/MetricsGrid.tsx` - add trend display
+
+### 4. Real Emergency Controls
+Make SKIN Lock toggle actually functional (currently display-only).
+
+**Requirements:**
+- `POST /api/platform/skin-lock/` - Toggle SKIN lock
+- Update `EmergencyControls.tsx` to call endpoint
+- Verify SKIN layer checks lock status
 
 ---
 
@@ -70,11 +84,12 @@ Add "Promote to Canon" button in Human Interface for high-quality outputs.
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Monthly Revenue | $10,000 | TBD | 🟡 |
+| Monthly Revenue | $10,000 | $0 | 🔴 Need data |
 | Daily LLM Cost | < $50 | TBD | 🟡 |
 | Canon Docs | 20+ | **1** | 🔴 |
-| Playbooks | 10+ | **0** | 🔴 |
-| Cognitive Load | Decreasing | TBD | 🟡 |
+| Playbooks | 10+ | **4** | 🟡 +4 |
+| System Audits | -- | **58** | ✅ Visible |
+| Data Display | 95% | **90%** | 🟢 +5% |
 
 ---
 
@@ -91,22 +106,33 @@ cd frontend && npm run dev
 # Navigate to /workspace to see Platform Command Center
 ```
 
-### Test New APIs
+### Test APIs
 ```bash
+# Platform APIs
 curl http://localhost:8000/api/platform/mission/
+curl http://localhost:8000/api/platform/metrics/
 curl http://localhost:8000/api/platform/governance/
 curl http://localhost:8000/api/platform/canon/
+curl http://localhost:8000/api/platform/playbooks/
+curl http://localhost:8000/api/platform/audits/
 ```
 
 ### Key Files
 ```
-# Session 815 - New files
-core/views_platform_command.py
-frontend/src/components/platform/
-frontend/src/pages/WorkspacePage.tsx (updated)
+# Session 816 - New files
+frontend/src/components/workspace/OperationsPanel.tsx
+frontend/src/components/platform/AuditsBrowser.tsx
+docs/playbooks/creator/VIDEO_PRODUCTION_WORKFLOW.md
+docs/playbooks/devops/DEPLOYMENT_CHECKLIST.md
+docs/playbooks/development/AGENT_CREATION_GUIDE.md
+docs/playbooks/marketing/CONTENT_CALENDAR_PROCESS.md
+
+# Session 816 - Modified
+core/views_platform_command.py (added audits API)
+frontend/src/pages/WorkspacePage.tsx (OperationsPanel + AuditsBrowser)
 
 # Documentation
-docs/handoffs/SESSION_815_PLATFORM_COMMAND_CENTER.md
+docs/handoffs/SESSION_816_OPERATIONS_PLAYBOOKS_AUDITS.md
 ```
 
 ---
@@ -115,6 +141,7 @@ docs/handoffs/SESSION_815_PLATFORM_COMMAND_CENTER.md
 
 | Session | Focus |
 |---------|-------|
+| **816** | Operations Panel Overhaul + 4 Playbooks + Audits Browser |
 | **815** | WorkspacePage → Platform Command Center (Command, Governance, Knowledge tabs) |
 | **814** | Documentation Architecture + Governance + Human Supremacy |
 | **813** | SKIN Layer Audit + Workspace Output Fix |
@@ -124,4 +151,4 @@ docs/handoffs/SESSION_815_PLATFORM_COMMAND_CENTER.md
 
 ---
 
-**START HERE:** Open http://localhost:8000/workspace to see the new Platform Command Center. Create playbooks and enhance with real data.
+**START HERE:** Open http://localhost:8000/workspace to see the Platform Command Center. Focus on wiring real revenue data and implementing canon promotion flow.
