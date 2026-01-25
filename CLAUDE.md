@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 25, 2026 - Session 823
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 90% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 46 Frontend Pages | Deliverables Marketplace | Self-Healing System + Staleness Validation
+**Last Updated:** January 25, 2026 - Session 824
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 90% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 46 Frontend Pages | **UI Control Center** | Self-Executing
 
 ## System Stats (Session 746)
 | Component | Count | Details |
@@ -27,7 +27,7 @@
 | **Frontend Pages** | 46 | +BlogsPage (Session 814), +DocsIndexPage (Session 784), +SpiderFeedPage (Session 783), +OrchestrationPage (Session 768) |
 | **Content Channels** | 3 | 91 episodes with unique AI-generated titles |
 | **Frontend Bundle** | 1,941 KB | All sci-fi features + 9 body systems + Platform Command Center + Smart Tool Results Renderer |
-| **Platform APIs** | 7 | Mission, metrics, governance, emergency-halt, canon, playbooks, **audits** (Session 816) |
+| **Platform APIs** | 16 | +9 Session 824: live-metrics, triggers (list/toggle/run-now), actions (spiders/remediation/health/audit), remediation status |
 | **Deliverables APIs** | 9 | list, detail, save, unsave, clone, templateize, export, stats, types (Session 819) |
 | **Playbooks** | 4 | creator, devops, development, marketing (Session 816) |
 | **System Audits** | 58 | Now browsable in Knowledge tab (Session 816) |
@@ -259,6 +259,9 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **824** | **UI Integration Sprint** - Exposed all backend capabilities from Sessions 819-823 to the UI. 9 new API endpoints (live-metrics, triggers, actions, remediation). 3 new React components (LiveMetricsDashboard, TriggerRulesPanel, ActionsPanel). Fixed broken /ai-studio links, added platform APIs to PUBLIC_PATHS, expandable Recent Activity cards. PRs #194-199. | `SESSION_824_UI_INTEGRATION_SPRINT.md` |
+| **823** | **SELF-EXECUTION ENGINE** - System now monitors its own metrics and triggers actions automatically. MetricsActionTrigger service with 10 rules (no_spider_data_24h, agent_executions_zero, etc.). run_metrics_action_check Celery task runs every 30 min. Actions include run_spider_network, run_agent_health_rotation, run_autonomous_remediation. PRs #187-192. | `SESSION_823_SELF_EXECUTION_ENGINE.md` |
+| **822** | **SKIN Layer Autonomous Remediation** - Agents can now write fixes to real project workspaces. Extended SKIN Layer with remediation capabilities. Added workspace_id tracking to remediation tasks. PRs #177-186. | `SESSION_822_SKIN_REMEDIATION.md` |
 | **821** | **Phase 1.5 Staleness Validation** - Self-healing system was processing old audit findings (200+ sessions old) without checking relevance. Added Phase 1.5 between Discovery and Assignment: validates stale findings using age, file existence, and feature keywords. 694 stale findings identified. `--validate` option added to `auto_remediate` command. PRs #166-167. | `SESSION_821_STALENESS_VALIDATION.md` |
 | **820** | **Self-Healing Orchestration + Tiered Docs Injection** - (1) Self-healing system: auto-discovers audits, assigns findings to agents, executes fixes, verifies results. 4-phase cycle with AutonomousRemediationOrchestrator service, 6 Celery tasks, `auto_remediate.py` command. (2) Tiered docs injection: Added `requires_system_context` flag to BaseAgent. 8 system-aware agents get CLAUDE.md + 00-START-NEXT-SESSION.md injected. PRs #159-160. | `SESSION_820_SELF_HEALING_ORCHESTRATION.md` |
 | **819** | **Deliverables Marketplace + Audit Tracking + Mythology Fix + Intelligent Prompting** - (1) Deliverables Marketplace: 3-mode Operations tab (Timeline/Deliverables/Jobs), Deliverable model with 12 types, DeliverableEnvelopeService, 9 API endpoints, 7 React components. (2) AuditReport, AuditFinding, AuditRemediationTask, AuditVerificationRun models for actionable audits. (3) Fixed Mythology System on production: 10 MythPatterns, 8 MythologyGuards, 3 Celery tasks. (4) Extended intelligent prompting to 24+ agents. | `SESSION_819_DELIVERABLES_MARKETPLACE.md` |
