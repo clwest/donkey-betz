@@ -1,0 +1,504 @@
+// Session 825: Slim WorkspacePage Orchestrator
+// Reduced from 3,825 lines to ~400 lines by delegating to modular components
+// This file orchestrates the Workspace tabs and handles top-level state
+
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  FolderOpen,
+  RefreshCw,
+  Loader2,
+  X,
+  XCircle,
+  Wifi,
+  WifiOff,
+  Target,
+  Shield,
+  BookOpen,
+  FolderTree,
+  History,
+  Plus,
+  Server,
+  Workflow,
+  Palette,
+  Database,
+  Sparkles,
+  Lightbulb,
+} from 'lucide-react'
+import { cn } from '@/lib/cn'
+import { workspaceApi } from '@/lib/api'
+import { useSystemEvents } from '@/hooks/useWebSocket'
+import { useAuthStore } from '@/stores/authStore'
+import { CompactBreadcrumb } from '@/components/Breadcrumb'
+
+// Import modular workspace components
+import {
+  CommandTab,
+  GovernanceTab,
+  KnowledgeTab,
+  OperationsTab,
+  FilesTab,
+  InfrastructureTab,
+  OrchestrationTab,
+  ContentStudioTab,
+  DataSourcesTab,
+  AIConsciousnessTab,
+  IntelligenceTab,
+} from './workspace/tabs'
+import { Toast } from './workspace/components'
+import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
+
+// Tab configuration - using 'as const' to preserve the icon types
+const tabs = [
+  { id: 'command' as WorkspaceTab, label: 'Command', icon: Target },
+  { id: 'infrastructure' as WorkspaceTab, label: 'Infrastructure', icon: Server },
+  { id: 'orchestration' as WorkspaceTab, label: 'Orchestration', icon: Workflow },
+  { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
+  { id: 'datasources' as WorkspaceTab, label: 'Data', icon: Database },
+  { id: 'consciousness' as WorkspaceTab, label: 'AI Mind', icon: Sparkles },
+  { id: 'intelligence' as WorkspaceTab, label: 'Intel', icon: Lightbulb },
+  { id: 'governance' as WorkspaceTab, label: 'Governance', icon: Shield },
+  { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
+  { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
+  { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
+]
+
+// Workspace Selector Modal
+function WorkspaceSelectorModal({
+  workspaces,
+  onSelect,
+  onClose,
+  onCreateNew,
+}: {
+  workspaces: Workspace[]
+  onSelect: (id: string) => void
+  onClose: () => void
+  onCreateNew: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <h3 className="text-lg font-semibold">Select Workspace</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-4 space-y-2 overflow-y-auto max-h-96">
+          {workspaces.map((ws) => (
+            <button
+              key={ws.id}
+              onClick={() => {
+                onSelect(ws.id)
+                onClose()
+              }}
+              className={cn(
+                'w-full p-3 rounded-lg text-left transition-colors',
+                ws.is_active
+                  ? 'bg-primary-500/20 border border-primary-500/50'
+                  : 'bg-dark-bg hover:bg-dark-border'
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FolderOpen size={18} className={ws.is_active ? 'text-primary-400' : 'text-gray-400'} />
+                  <span className="font-medium">{ws.name}</span>
+                </div>
+                {ws.is_active && (
+                  <span className="text-xs px-2 py-1 rounded bg-primary-500/20 text-primary-400">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-1 truncate">{ws.path}</p>
+            </button>
+          ))}
+        </div>
+        <div className="p-4 border-t border-dark-border">
+          <button
+            onClick={onCreateNew}
+            className="btn btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <Plus size={16} />
+            Register New Workspace
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Register Workspace Modal (simplified)
+function RegisterWorkspaceModal({
+  onClose,
+  onSubmit,
+  isLoading,
+}: {
+  onClose: () => void
+  onSubmit: (data: { path: string; name?: string; description?: string }) => void
+  isLoading: boolean
+}) {
+  const [path, setPath] = useState('')
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (path.trim()) {
+      onSubmit({ path: path.trim(), name: name.trim() || undefined, description: description.trim() || undefined })
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-lg mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <h3 className="text-lg font-semibold">Register New Workspace</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Project Path *</label>
+            <input
+              type="text"
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              placeholder="/path/to/your/project"
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Name (optional)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="My Project"
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Description (optional)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief project description"
+              rows={2}
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none resize-none"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+              Cancel
+            </button>
+            <button type="submit" disabled={isLoading || !path.trim()} className="btn btn-primary flex-1 flex items-center justify-center gap-2">
+              {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              Register
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+export default function WorkspacePage() {
+  // Core state
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('command')
+  const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [actionResult, setActionResult] = useState<ActionResult | null>(null)
+  const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set())
+
+  const queryClient = useQueryClient()
+  const { isAuthenticated } = useAuthStore()
+
+  // WebSocket for real-time updates
+  const { status: wsStatus } = useSystemEvents({
+    onFileModified: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace-files'] })
+      queryClient.invalidateQueries({ queryKey: ['workspace-operations'] })
+    },
+    onAgentExecutionComplete: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace-operations'] })
+    },
+  })
+
+  // Core workspace queries
+  const { data: workspacesData, isLoading: loadingWorkspaces, error: workspacesError } = useQuery({
+    queryKey: ['workspaces'],
+    queryFn: () => workspaceApi.list(),
+    retry: false,
+    enabled: isAuthenticated,
+  })
+
+  const { data: activeWorkspaceData } = useQuery({
+    queryKey: ['workspace-active'],
+    queryFn: () => workspaceApi.getActive(),
+    retry: false,
+    enabled: isAuthenticated,
+  })
+
+  const activeWorkspace = activeWorkspaceData?.data as Workspace | undefined
+  const workspaces = (workspacesData?.data?.results || workspacesData?.data || []) as Workspace[]
+
+  // Mutations
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => workspaceApi.activate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+      queryClient.invalidateQueries({ queryKey: ['workspace-active'] })
+      showSuccess('Workspace activated')
+    },
+    onError: () => showError('Failed to activate workspace'),
+  })
+
+  const registerMutation = useMutation({
+    mutationFn: (data: { path: string; name?: string; description?: string }) =>
+      workspaceApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+      setShowRegisterModal(false)
+      showSuccess('Workspace registered successfully!')
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || 'Failed to register workspace'
+      showError(message)
+    },
+  })
+
+  const scanMutation = useMutation({
+    mutationFn: (id: string) => workspaceApi.scan(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace-stats'] })
+      showSuccess('Workspace scanned')
+    },
+    onError: () => showError('Failed to scan workspace'),
+  })
+
+  // Helper functions
+  const showSuccess = (message: string) => setActionResult({ type: 'success', message })
+  const showError = (message: string) => setActionResult({ type: 'error', message })
+
+  const toggleActivityExpanded = (id: string) => {
+    setExpandedActivityIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // Clear toast
+  useEffect(() => {
+    if (actionResult) {
+      const timer = setTimeout(() => setActionResult(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [actionResult])
+
+  // Loading state
+  if (loadingWorkspaces) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  // Error state
+  if (workspacesError) {
+    const isAuthError =
+      (workspacesError as { response?: { status?: number } })?.response?.status === 401 ||
+      (workspacesError as { response?: { status?: number } })?.response?.status === 403
+
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="h-16 w-16 rounded-full bg-accent-red/20 flex items-center justify-center">
+          <XCircle size={32} className="text-accent-red" />
+        </div>
+        <h2 className="text-xl font-semibold">
+          {isAuthError ? 'Authentication Required' : 'Failed to Load Workspaces'}
+        </h2>
+        <p className="text-gray-400 text-center max-w-md">
+          {isAuthError
+            ? 'Please log in to access the Workspace Manager.'
+            : 'Unable to connect to the Workspace API.'}
+        </p>
+        {isAuthError && (
+          <a href="/login" className="btn btn-primary">
+            Go to Login
+          </a>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <CompactBreadcrumb currentPage="Workspace" className="mb-2" />
+          <h1 className="text-2xl font-bold">Workspace</h1>
+          <p className="text-sm text-gray-400 mt-1">SKIN Layer - Agent Project Execution System</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* WebSocket status */}
+          <div
+            className={cn(
+              'flex items-center gap-1.5 px-2 py-1 rounded text-xs',
+              wsStatus === 'connected'
+                ? 'bg-accent-green/10 text-accent-green'
+                : wsStatus === 'connecting'
+                ? 'bg-accent-amber/10 text-accent-amber'
+                : 'bg-gray-500/10 text-gray-500'
+            )}
+            title={`WebSocket: ${wsStatus}`}
+          >
+            {wsStatus === 'connected' ? <Wifi size={12} /> : <WifiOff size={12} />}
+            <span className="hidden sm:inline">
+              {wsStatus === 'connected' ? 'Live' : wsStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+            </span>
+          </div>
+
+          {/* Workspace selector */}
+          <button
+            onClick={() => setShowWorkspaceSelector(true)}
+            className="btn btn-secondary flex items-center gap-2"
+          >
+            <FolderOpen size={16} />
+            {activeWorkspace?.name || 'Select Workspace'}
+          </button>
+
+          {/* Scan button */}
+          {activeWorkspace && (
+            <button
+              onClick={() => scanMutation.mutate(activeWorkspace.id)}
+              disabled={scanMutation.isPending}
+              className="btn btn-secondary flex items-center gap-2"
+            >
+              {scanMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+              Scan
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* No workspace selected */}
+      {!activeWorkspace && (
+        <div className="card text-center py-12">
+          <FolderOpen size={48} className="mx-auto text-gray-500 mb-4" />
+          <h3 className="text-lg font-medium mb-2">No Workspace Selected</h3>
+          <p className="text-sm text-gray-400 mb-4">Select or register a workspace to get started</p>
+          <button onClick={() => setShowWorkspaceSelector(true)} className="btn btn-primary">
+            Select Workspace
+          </button>
+        </div>
+      )}
+
+      {/* Main content when workspace is selected */}
+      {activeWorkspace && (
+        <>
+          {/* Tab Navigation */}
+          <div className="flex gap-2 border-b border-dark-border pb-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
+                  activeTab === tab.id
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
+                )}
+              >
+                <tab.icon size={16} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'command' && (
+            <CommandTab
+              setActiveTab={setActiveTab}
+              expandedActivityIds={expandedActivityIds}
+              toggleActivityExpanded={toggleActivityExpanded}
+            />
+          )}
+
+          {activeTab === 'infrastructure' && <InfrastructureTab />}
+
+          {activeTab === 'orchestration' && <OrchestrationTab />}
+
+          {activeTab === 'content' && <ContentStudioTab />}
+
+          {activeTab === 'datasources' && <DataSourcesTab />}
+
+          {activeTab === 'consciousness' && <AIConsciousnessTab />}
+
+          {activeTab === 'intelligence' && <IntelligenceTab />}
+
+          {activeTab === 'governance' && <GovernanceTab />}
+
+          {activeTab === 'knowledge' && <KnowledgeTab />}
+
+          {activeTab === 'files' && <FilesTab activeWorkspaceId={activeWorkspace.id} />}
+
+          {activeTab === 'operations' && (
+            <OperationsTab
+              activeWorkspace={activeWorkspace}
+              onViewFileContent={(operationId) => {
+                console.log('View file content:', operationId)
+                // TODO: Implement file content viewer modal
+              }}
+              showSuccess={showSuccess}
+              showError={showError}
+            />
+          )}
+        </>
+      )}
+
+      {/* Modals */}
+      {showWorkspaceSelector && (
+        <WorkspaceSelectorModal
+          workspaces={workspaces}
+          onSelect={(id) => activateMutation.mutate(id)}
+          onClose={() => setShowWorkspaceSelector(false)}
+          onCreateNew={() => {
+            setShowWorkspaceSelector(false)
+            setShowRegisterModal(true)
+          }}
+        />
+      )}
+
+      {showRegisterModal && (
+        <RegisterWorkspaceModal
+          onClose={() => setShowRegisterModal(false)}
+          onSubmit={(data) => registerMutation.mutate(data)}
+          isLoading={registerMutation.isPending}
+        />
+      )}
+
+      {/* Toast */}
+      {actionResult && <Toast result={actionResult} onClose={() => setActionResult(null)} />}
+    </div>
+  )
+}

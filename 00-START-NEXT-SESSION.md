@@ -1,206 +1,101 @@
-# Session 824 - UI Integration Sprint
+# Session 826 - Goal-Driven Conversations
 
-**Previous Session:** 823 (Self-Execution Engine)
+**Previous Session:** 825 (UI Consolidation - COMPLETE)
 **Date:** January 25, 2026
-**Status:** 74 Agents | 77 Spiders | 237 Celery Tasks | 60 Audits | **SELF-AWARE + SELF-EXECUTING + UI CONTROL**
+**Status:** 74 Agents | 77 Spiders | 234 Celery Tasks | 60 Audits | **UI CONSOLIDATION COMPLETE**
 
 ---
 
-## Session 824 Progress
+## Session 825 Completed ✅
 
-### PR #194 Merged: Live Metrics & Self-Execution UI
+### Phase 1 + Phase 2 Complete
 
-**Backend - 9 New API Endpoints:**
+**Created modular Workspace Command Center with 11 tabs:**
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /api/platform/live-metrics/` | Real-time system metrics |
-| `GET /api/platform/triggers/` | List trigger rules |
-| `POST /api/platform/triggers/<name>/toggle/` | Toggle rule |
-| `POST /api/platform/triggers/run-now/` | Manual check |
-| `POST /api/platform/actions/run-spiders/` | Spider collection |
-| `POST /api/platform/actions/run-remediation/` | Remediation cycle |
-| `POST /api/platform/actions/agent-health-check/` | Agent health |
-| `POST /api/platform/actions/run-self-audit/` | Self-audit |
-| `GET /api/platform/remediation/status/` | Remediation status |
+| Tab | Sub-tabs | Consolidates |
+|-----|----------|--------------|
+| Command | - | Mission, metrics, triggers, actions |
+| **Infrastructure** | health, integration, services, llm, analytics, billing | 6 pages |
+| **Orchestration** | monitor, workflows, automation, hivemind | 4 pages |
+| **Content** | gallery, channels, blogs, podcast, distribution | 5 pages |
+| **Data** | spiders, feed, learning | 3 pages |
+| **AI Mind** | memory, orchestra, mood, evolution, relationships, social, capsules, travel | 8 pages |
+| **Intel** | reasoning, safety, collective | 3 pages |
+| Governance | - | Emergency controls, decisions |
+| Knowledge | - | Docs, audits, playbooks |
+| Files | - | File browser, git |
+| Operations | - | Operation history |
 
-**Frontend - 3 New Components:**
+**Files Created (Phase 2):**
+```
+frontend/src/pages/workspace/tabs/
+├── InfrastructureTab.tsx    # 520 lines
+├── OrchestrationTab.tsx     # 475 lines
+├── ContentStudioTab.tsx     # 480 lines
+├── DataSourcesTab.tsx       # 430 lines
+├── AIConsciousnessTab.tsx   # 580 lines
+├── IntelligenceTab.tsx      # 450 lines
+└── index.ts                 # Updated exports
+```
 
-1. **LiveMetricsDashboard** - Real-time system health
-2. **TriggerRulesPanel** - Self-execution control with "Run Check Now"
-3. **ActionsPanel** - Run Spiders, Remediation, Health Check, Self-Audit
+**Key Stats:**
+- 29 pages consolidated → 6 new tabs
+- ~28,340 lines → ~2,935 lines
+- Frontend build: 2,195 KB
+- Production safe: Compact views with links to full pages
 
-**Result:** The Workspace Command tab is now a fully functional control center!
+**To enable new Workspace:**
+```tsx
+// In App.tsx:
+import WorkspacePage from '@/pages/WorkspacePageNew'
+```
 
 ---
 
-## The Problem (Resolved)
+## Session 826 Mission
 
-Over Sessions 819-823, we built powerful backend capabilities that are **CLI-only**:
+**Goal:** Make agent conversations goal-driven instead of aimless.
 
-| Session | Capability | Current Access | Should Be |
-|---------|------------|----------------|-----------|
-| 819 | Deliverables Marketplace | Plan only | Workspace → Deliverables tab |
-| 820 | Self-Healing Orchestration | `auto_remediate` CLI | Workspace → Remediation tab |
-| 822 | SKIN Layer (file writes) | CLI only | Workspace → Operations tab |
-| 823 | Self-Execution Engine | `run_metrics_action_check()` | Workspace → Command tab |
-| 823 | Live System Metrics | `_gather_live_system_metrics()` | Workspace → Dashboard |
+### The Problem
 
-**The Workspace page should be the command center**, not the terminal.
+Agents have aimless conversations because they receive no explicit objective:
+- No clear goal for the conversation
+- Random agent selection (not topic-matched)
+- No success criteria to evaluate outcomes
+- No structured turn flow
+
+### The Solution
+
+1. **Add `objective` and `success_criteria` to conversation creation**
+   - Every conversation starts with a clear goal
+   - Success can be measured
+
+2. **Replace random agent selection with topic-matched routing**
+   - Use agent specialties to select participants
+   - Match conversation topic to agent expertise
+
+3. **Inject rich context into conversation agents**
+   - Spider data relevant to topic
+   - Learning patterns
+   - Advisor wisdom
+
+4. **Add structured turn flow**
+   - Propose → Challenge → Synthesize → Decide
+   - Each agent has a role in the conversation
 
 ---
 
-## Session 824 Goals
+## Key Files to Modify
 
-### Phase 1: Expose Live Metrics (API + UI) ✅ DONE
-
-**Backend API:**
 ```python
-# New endpoint: /api/platform/live-metrics/
-# Returns output of _gather_live_system_metrics()
-{
-    "components": {"agents": 213, "spiders": 77, "celery_tasks": 228},
-    "health": {"heart": "healthy", "lungs": "unknown", "brain": "focused", "skin": "dormant"},
-    "activity": {"spider_entries_24h": 0, "agent_executions_24h": 94, "llm_calls_24h": 6055},
-    "remediation": {"open_findings": 755, "tasks_by_status": {...}},
-    "revenue": {"total": 0.01, "last_7_days": 0}
-}
-```
+# Backend
+core/conversation_orchestrator.py    # Main orchestration logic
+core/models_unified_system.py        # Add objective, success_criteria fields
+core/services/agent_context_builder.py  # Context injection
+core/agent_router.py                 # Topic-matched routing
 
-**Frontend Component:** `LiveMetricsDashboard.tsx`
-- Real-time metrics cards
-- Body system health indicators
-- Activity sparklines
-- Auto-refresh every 60 seconds
-
-### Phase 2: Trigger Rules Management ✅ DONE
-
-**Backend API:**
-```python
-# GET /api/platform/triggers/
-# Returns all trigger rules with status
-[
-    {"name": "no_spider_data_24h", "enabled": true, "in_cooldown": false, ...},
-    ...
-]
-
-# POST /api/platform/triggers/{name}/toggle/
-# Enable/disable a trigger rule
-
-# POST /api/platform/triggers/run-now/
-# Manually run metrics check
-```
-
-**Frontend Component:** `TriggerRulesPanel.tsx`
-- List all 10 trigger rules
-- Show condition, threshold, action
-- Toggle enabled/disabled
-- Show cooldown status
-- "Run Check Now" button
-
-### Phase 3: Manual Actions Panel ✅ DONE
-
-**Backend API:**
-```python
-# POST /api/platform/actions/run-spiders/
-# POST /api/platform/actions/run-remediation/
-# POST /api/platform/actions/run-self-audit/
-# POST /api/platform/actions/agent-health-check/
-```
-
-**Frontend Component:** `ActionsPanel.tsx`
-- Button grid for common actions
-- Confirmation dialogs
-- Status feedback (running/complete/failed)
-
-### Phase 4: Remediation Status View ✅ DONE
-
-**Backend API:**
-```python
-# GET /api/platform/remediation/status/
-# Returns findings and task status
-{
-    "open_findings": 755,
-    "by_priority": {"P0": 5, "P1": 23, "P2": 127, ...},
-    "recent_tasks": [...],
-    "agents_assigned": [...]
-}
-```
-
-**Frontend Component:** `RemediationStatusPanel.tsx`
-- Finding counts by priority
-- Recent task list with status
-- Agent assignment overview
-
----
-
-## Implementation Order
-
-1. **Create `/api/platform/live-metrics/` endpoint** using existing `_gather_live_system_metrics()`
-2. **Create `LiveMetricsDashboard.tsx`** component
-3. **Add to Workspace Command tab** (replace or enhance current metrics)
-4. **Create `/api/platform/triggers/` endpoints**
-5. **Create `TriggerRulesPanel.tsx`** component
-6. **Create `/api/platform/actions/` endpoints**
-7. **Create `ActionsPanel.tsx`** component
-8. **Create `/api/platform/remediation/status/` endpoint**
-9. **Create `RemediationStatusPanel.tsx`** component
-
----
-
-## Current Workspace Structure
-
-The Workspace page already has Platform Command Center tabs (Session 815):
-
-```
-Workspace Page
-├── Operations Tab (existing - file operations log)
-├── Command Tab (Session 815)
-│   ├── Mission section
-│   ├── Metrics section ← ENHANCE with live metrics
-│   └── Activity section
-├── Governance Tab (Session 815)
-│   ├── Emergency controls
-│   └── Pending decisions
-└── Knowledge Tab (Session 815)
-    ├── Canon browser
-    ├── Playbooks
-    └── Audits browser
-```
-
-**Proposed Enhancement:**
-```
-Command Tab
-├── Live Metrics Dashboard (NEW - Phase 1)
-├── Trigger Rules Panel (NEW - Phase 2)
-├── Actions Panel (NEW - Phase 3)
-└── Remediation Status (NEW - Phase 4)
-```
-
----
-
-## Key Files
-
-### Backend (to create/modify)
-```
-core/views_platform.py         # Add live-metrics, triggers, actions endpoints
-core/urls.py                   # Add new routes
-```
-
-### Frontend (to create)
-```
-frontend/src/components/platform/LiveMetricsDashboard.tsx
-frontend/src/components/platform/TriggerRulesPanel.tsx
-frontend/src/components/platform/ActionsPanel.tsx
-frontend/src/components/platform/RemediationStatusPanel.tsx
-```
-
-### Existing (reference)
-```
-core/tasks.py                  # _gather_live_system_metrics()
-core/services/metrics_action_trigger.py  # MetricsActionTrigger
-frontend/src/pages/WorkspacePage.tsx     # Platform Command Center
-frontend/src/components/platform/        # Existing platform components
+# Frontend
+frontend/src/pages/AgentSocialPage.tsx  # UI for creating goal-driven conversations
 ```
 
 ---
@@ -208,12 +103,14 @@ frontend/src/components/platform/        # Existing platform components
 ## Quick Start
 
 ```bash
+# Read the UI consolidation handoff
+cat docs/handoffs/SESSION_825_UI_CONSOLIDATION_PLAN.md
+
 # Start platform
 make start && make celery
 
-# Current CLI commands (to be replaced by UI)
-python manage.py shell -c "from core.tasks import run_metrics_action_check; print(run_metrics_action_check())"
-python manage.py auto_remediate --status
+# Frontend dev
+cd frontend && npm run dev
 ```
 
 ---
@@ -222,13 +119,16 @@ python manage.py auto_remediate --status
 
 | Session | Focus |
 |---------|-------|
-| **824** | UI Integration Sprint - Live Metrics, Triggers, Actions in Workspace ✅ |
+| **825** | UI Consolidation - 29 pages → 6 tabs ✅ COMPLETE |
+| **824** | UI Integration Sprint - Live Metrics, Triggers, Actions |
 | **823** | SELF-EXECUTION - System now self-aware + self-executing |
-| **822** | SKIN Layer Autonomous Remediation - Agents can write files |
-| **821** | Phase 1.5 Staleness Validation for Self-Healing System |
+| **822** | SKIN Layer Autonomous Remediation |
+| **821** | Phase 1.5 Staleness Validation |
 | **820** | Self-Healing Orchestration + Tiered Docs Injection |
-| **819** | Deliverables Marketplace - Product catalog of AI outputs |
+| **819** | Deliverables Marketplace |
 
 ---
 
-**START HERE:** Session 824 COMPLETE. The Workspace Command tab is now a fully functional control center with Live Metrics, Self-Execution Triggers, and Manual Actions panels. Ready for Session 825.
+**SESSION 825 UI CONSOLIDATION COMPLETE!**
+
+**Next:** Goal-Driven Conversations (Session 826)
