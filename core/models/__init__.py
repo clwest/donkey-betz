@@ -65,6 +65,15 @@ from ..models_human_interface import *
 # Import orchestration layer models (Session 764)
 from ..models_orchestration import *
 
+# Import deliverables models (Session 819 - Deliverables Marketplace)
+from ..models_deliverables import (
+    DeliverableType,
+    ContentFormat,
+    Deliverable,
+    DeliverableExport,
+    DeliverableCollection,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -187,4 +196,11 @@ __all__ = [
     'OrchestrationExecution',
     'OrchestrationStepExecution',
     'OrchestrationApprovalGate',
+
+    # Deliverables Marketplace (Session 819)
+    'DeliverableType',
+    'ContentFormat',
+    'Deliverable',
+    'DeliverableExport',
+    'DeliverableCollection',
 ]

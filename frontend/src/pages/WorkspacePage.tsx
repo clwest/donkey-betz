@@ -6,7 +6,17 @@ import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformAp
 // Session 818: Added DocumentViewer for inline document reading
 import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser, AuditsBrowser, DocumentViewer } from '@/components/platform'
 // Session 816: Enhanced Operations Panel
-import { OperationsPanel } from '@/components/workspace'
+// Session 819: Added Deliverables Marketplace components
+import {
+  OperationsPanel,
+  DeliverablesModeSwitch,
+  DeliverablesGrid,
+  DeliverableDetailModal,
+  TraceDrawer,
+  JobsPanel,
+  type DeliverableViewMode,
+  type Deliverable
+} from '@/components/workspace'
 // Session 714: Real-time system events
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import {
@@ -1611,6 +1621,10 @@ export default function WorkspacePage() {
   const [docsStatusFilter, setDocsStatusFilter] = useState<string>('')
   const [docsTypeFilter, setDocsTypeFilter] = useState<string>('')
   const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null)
+  // Session 819: Deliverables Marketplace state
+  const [deliverablesMode, setDeliverablesMode] = useState<DeliverableViewMode>('timeline')
+  const [selectedDeliverable, setSelectedDeliverable] = useState<Deliverable | null>(null)
+  const [showTraceDrawer, setShowTraceDrawer] = useState(false)
   // Session 785: Collapsible Directory Map
   const [directoryMapExpanded, setDirectoryMapExpanded] = useState(false)
   // Session 818: Document viewer state for inline reading in Knowledge tab
@@ -3260,17 +3274,81 @@ export default function WorkspacePage() {
           )}
 
           {/* Operations Tab - Session 816: Enhanced with OperationsPanel */}
+          {/* Session 819: Deliverables Marketplace with 3 modes */}
           {activeTab === 'operations' && activeWorkspace && (
-            <OperationsPanel
-              workspaceId={activeWorkspace.id}
-              operations={operations}
-              isLoading={loadingOperations}
-              onRollback={(id) => rollbackMutation.mutate(id)}
-              onViewContent={(id) => {
-                setSelectedOperationId(id)
-                setShowFileContent(true)
+            <div className="flex flex-col h-full">
+              {/* Mode Switcher */}
+              <div className="flex items-center justify-between mb-4">
+                <DeliverablesModeSwitch
+                  mode={deliverablesMode}
+                  onModeChange={setDeliverablesMode}
+                  counts={{
+                    timeline: operations.length,
+                    deliverables: undefined, // Will be populated from stats query
+                    jobs: undefined
+                  }}
+                />
+              </div>
+
+              {/* Timeline Mode - Original OperationsPanel */}
+              {deliverablesMode === 'timeline' && (
+                <OperationsPanel
+                  workspaceId={activeWorkspace.id}
+                  operations={operations}
+                  isLoading={loadingOperations}
+                  onRollback={(id) => rollbackMutation.mutate(id)}
+                  onViewContent={(id) => {
+                    setSelectedOperationId(id)
+                    setShowFileContent(true)
+                  }}
+                  rollbackMutation={rollbackMutation}
+                />
+              )}
+
+              {/* Deliverables Mode - Product Catalog */}
+              {deliverablesMode === 'deliverables' && (
+                <DeliverablesGrid
+                  onDeliverableClick={(deliverable) => setSelectedDeliverable(deliverable)}
+                  onTraceClick={(deliverable) => {
+                    setSelectedDeliverable(deliverable)
+                    setShowTraceDrawer(true)
+                  }}
+                />
+              )}
+
+              {/* Jobs Mode - Execution Tracking */}
+              {deliverablesMode === 'jobs' && (
+                <JobsPanel
+                  onJobClick={(job) => {
+                    // Could navigate to job details or show in modal
+                    console.log('Job clicked:', job)
+                  }}
+                  onDeliverableClick={(deliverableId) => {
+                    // Fetch and show deliverable
+                    console.log('View deliverable:', deliverableId)
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Session 819: Deliverable Detail Modal */}
+          {selectedDeliverable && !showTraceDrawer && (
+            <DeliverableDetailModal
+              deliverable={selectedDeliverable}
+              onClose={() => setSelectedDeliverable(null)}
+              onTraceClick={() => setShowTraceDrawer(true)}
+            />
+          )}
+
+          {/* Session 819: Trace Drawer */}
+          {selectedDeliverable && (
+            <TraceDrawer
+              deliverable={selectedDeliverable}
+              isOpen={showTraceDrawer}
+              onClose={() => {
+                setShowTraceDrawer(false)
               }}
-              rollbackMutation={rollbackMutation}
             />
           )}
 
