@@ -2175,7 +2175,7 @@ export default function WorkspacePage() {
                 metrics={missionData?.metrics_summary}
                 isLoading={loadingMission}
                 onRevenueClick={() => window.location.href = '/human?tab=revenue'}
-                onCostClick={() => window.location.href = '/ai-studio?tab=analytics'}
+                onCostClick={() => window.location.href = '/analytics'}
                 onCanonClick={() => setActiveTab('knowledge')}
                 onPlaybooksClick={() => setActiveTab('knowledge')}
               />
@@ -2229,7 +2229,7 @@ export default function WorkspacePage() {
                       <h3 className="text-md font-semibold uppercase">Recent Activity</h3>
                     </div>
                     <a
-                      href="/ai-studio?tab=agents"
+                      href="/agents"
                       className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
                     >
                       View All Agents
@@ -2240,7 +2240,7 @@ export default function WorkspacePage() {
                     {metricsData.recent_activity.map((activity, i) => (
                       <a
                         key={i}
-                        href={`/ai-studio?tab=agents&search=${encodeURIComponent(activity.agent_name)}`}
+                        href="/agents"
                         className="flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
