@@ -371,24 +371,25 @@ class Command(BaseCommand):
 
             results = orchestrator.execute_assigned_tasks(limit=limit)
 
-            successful = results.get('successful', 0)
+            succeeded = results.get('succeeded', 0)
             failed = results.get('failed', 0)
-            total = results.get('tasks_executed', 0)
+            attempted = results.get('attempted', 0)
 
-            if successful > 0:
+            if succeeded > 0:
                 self.stdout.write(
-                    self.style.SUCCESS(f"Executed {total} tasks: {successful} successful, {failed} failed")
+                    self.style.SUCCESS(f"Executed {attempted} tasks: {succeeded} successful, {failed} failed")
                 )
             else:
                 self.stdout.write(
-                    f"Executed {total} tasks: {successful} successful, {failed} failed"
+                    f"Executed {attempted} tasks: {succeeded} successful, {failed} failed"
                 )
 
             if verbose:
                 for execution in results.get('executions', []):
-                    status = "✅" if execution['success'] else "❌"
+                    is_success = execution.get('status') == 'success'
+                    status_icon = "✅" if is_success else "❌"
                     self.stdout.write(
-                        f"  {status} {execution['task']} by {execution['agent']}"
+                        f"  {status_icon} Task {execution.get('task_id', 'unknown')} by {execution.get('agent', 'unknown')}"
                     )
 
         except Exception as e:
@@ -409,20 +410,24 @@ class Command(BaseCommand):
             results = orchestrator.verify_completed_fixes(limit=limit)
 
             verified = results.get('verified', 0)
-            pending = results.get('pending', 0)
+            failed = results.get('failed', 0)
+            pending = results.get('total_pending', 0)
 
             if verified > 0:
                 self.stdout.write(
-                    self.style.SUCCESS(f"Verified {verified} fixes, {pending} still pending")
+                    self.style.SUCCESS(f"Verified {verified} fixes ({failed} failed), {pending} still pending")
                 )
             else:
-                self.stdout.write(f"Verified {verified} fixes, {pending} still pending")
+                self.stdout.write(f"Verified {verified} fixes ({failed} failed), {pending} still pending")
 
             if verbose:
                 for verification in results.get('verifications', []):
-                    status = "✅" if verification['passed'] else "❌"
+                    passed = verification.get('passed', False)
+                    status_icon = "✅" if passed else "❌"
+                    finding_title = verification.get('finding_title', 'Unknown')
+                    result_msg = verification.get('result', verification.get('error', 'No details'))
                     self.stdout.write(
-                        f"  {status} {verification['finding']}: {verification['result']}"
+                        f"  {status_icon} {finding_title}: {result_msg}"
                     )
 
         except Exception as e:
