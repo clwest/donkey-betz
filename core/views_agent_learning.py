@@ -678,12 +678,16 @@ def trigger_agent_conversation(request):
     Body:
     {
         "topic": "Best practices for logo design",
-        "conversation_type": "brainstorm",  // optional
-        "participant_ids": [...]  // optional specific agents
+        "conversation_type": "analytical",  // Session 826: analytical, creative, debate, planning, critique, general
+        "objective": "Determine the best approach for X",  // Session 826: Goal for conversation
+        "success_criteria": ["Identify at least 3 options", "Recommend one"],  // Session 826: Measurable outcomes
+        "auto_select_agents": true,  // Session 826: Let system pick best agents
+        "participant_ids": [...]  // optional specific agents (ignored if auto_select_agents=true)
     }
     """
     try:
-        from core.tasks import run_agent_conversation
+        from core.agent_conversation_consumer import AgentConversationConsumer
+        from asgiref.sync import async_to_sync
 
         body = json.loads(request.body)
         topic = body.get('topic')
@@ -694,16 +698,31 @@ def trigger_agent_conversation(request):
                 'error': 'Topic is required'
             }, status=400)
 
-        # Trigger conversation task
-        result = run_agent_conversation.delay(
-            max_conversations=1,
-            max_messages=6
+        # Session 826: Extract goal-driven conversation parameters
+        conversation_type = body.get('conversation_type', 'general')
+        objective = body.get('objective')
+        success_criteria = body.get('success_criteria', [])
+        auto_select_agents = body.get('auto_select_agents', False)
+
+        # Generate conversation synchronously using the consumer logic
+        consumer = AgentConversationConsumer()
+        result = async_to_sync(consumer.generate_live_conversation)(
+            topic=topic,
+            conversation_type=conversation_type,
+            objective=objective,
+            success_criteria=success_criteria,
+            auto_select_agents=auto_select_agents
         )
 
         return JsonResponse({
             'success': True,
-            'message': f'Agent conversation triggered on topic: {topic}',
-            'task_id': result.id
+            'message': f'Agent conversation generated on topic: {topic}',
+            'conversation_id': result.get('conversation_id'),
+            'objective': objective,
+            'conversation_type': conversation_type,
+            'participants': result.get('participants', []),
+            'quality_score': result.get('quality_score', 0),
+            'result': result
         })
 
     except Exception as e:
