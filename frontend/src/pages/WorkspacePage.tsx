@@ -930,6 +930,110 @@ interface AgentOutputData {
   [key: string]: unknown
 }
 
+// Session 818: Blog/Article Content structure
+interface BlogContent {
+  title?: string
+  meta_description?: string
+  intro?: string
+  sections?: Array<{ header?: string; content?: string }>
+  conclusion?: string
+  tags?: string[]
+  full_text?: string
+}
+
+// Session 818: Check if data contains blog/article content
+function isBlogContent(data: unknown): data is { content: BlogContent } {
+  if (!data || typeof data !== 'object') return false
+  const obj = data as Record<string, unknown>
+  if (!obj.content || typeof obj.content !== 'object') return false
+  const content = obj.content as Record<string, unknown>
+  // Must have title and either sections or full_text
+  return (
+    typeof content.title === 'string' &&
+    (Array.isArray(content.sections) || typeof content.full_text === 'string')
+  )
+}
+
+// Session 818: Render blog/article content beautifully
+function BlogContentRenderer({ content }: { content: BlogContent }) {
+  const [showFullText, setShowFullText] = useState(false)
+
+  return (
+    <div className="space-y-6">
+      {/* Title & Meta */}
+      <div className="border-b border-gray-700 pb-4">
+        <h1 className="text-2xl font-bold text-white mb-2">{content.title}</h1>
+        {content.meta_description && (
+          <p className="text-sm text-gray-400 italic">{content.meta_description}</p>
+        )}
+        {content.tags && content.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {content.tags.map((tag, i) => (
+              <span key={i} className="text-xs px-2 py-1 rounded-full bg-primary-500/20 text-primary-400">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Intro */}
+      {content.intro && (
+        <div className="text-gray-300 leading-relaxed bg-gray-800/30 p-4 rounded-lg border-l-4 border-primary-500">
+          {content.intro}
+        </div>
+      )}
+
+      {/* Sections */}
+      {content.sections && content.sections.length > 0 && (
+        <div className="space-y-6">
+          {content.sections.map((section, i) => (
+            <div key={i} className="space-y-2">
+              {section.header && (
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <span className="text-primary-400">{i + 1}.</span>
+                  {section.header.replace(/^\d+\.\s*/, '')}
+                </h2>
+              )}
+              {section.content && (
+                <p className="text-gray-300 leading-relaxed pl-6">{section.content}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Conclusion */}
+      {content.conclusion && (
+        <div className="bg-accent-green/10 border border-accent-green/30 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-accent-green mb-2 uppercase">Conclusion</h3>
+          <p className="text-gray-300 leading-relaxed">{content.conclusion}</p>
+        </div>
+      )}
+
+      {/* Full Text Toggle */}
+      {content.full_text && (
+        <div className="border-t border-gray-700 pt-4">
+          <button
+            onClick={() => setShowFullText(!showFullText)}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            {showFullText ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            {showFullText ? 'Hide' : 'Show'} Full Text ({content.full_text.length.toLocaleString()} chars)
+          </button>
+          {showFullText && (
+            <div className="mt-4 p-4 bg-gray-800/50 rounded-lg">
+              <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
+                {content.full_text}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Render a single article/item card
 function ArticleCard({ article }: { article: { title?: string; url?: string; description?: string; source?: string; tags?: string[] } }) {
   return (
@@ -1124,13 +1228,20 @@ function ToolResultsRenderer({ data }: { data: AgentOutputData }) {
         </div>
       )}
 
-      {/* Other fields */}
-      {Object.keys(data).filter(k => !['task', 'tool_results', 'summary'].includes(k)).length > 0 && (
+      {/* Session 818: Blog/Article Content */}
+      {isBlogContent(data) && (
+        <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700">
+          <BlogContentRenderer content={data.content} />
+        </div>
+      )}
+
+      {/* Other fields (excluding blog content which is rendered above) */}
+      {Object.keys(data).filter(k => !['task', 'tool_results', 'summary', 'content'].includes(k)).length > 0 && (
         <div className="p-3 bg-gray-800/50 rounded-lg">
           <div className="text-xs text-gray-400 mb-2">Additional Data</div>
           <pre className="text-xs font-mono text-gray-300 overflow-auto max-h-[200px]">
             {JSON.stringify(
-              Object.fromEntries(Object.entries(data).filter(([k]) => !['task', 'tool_results', 'summary'].includes(k))),
+              Object.fromEntries(Object.entries(data).filter(([k]) => !['task', 'tool_results', 'summary', 'content'].includes(k))),
               null, 2
             )}
           </pre>
@@ -1147,9 +1258,16 @@ function extractJsonFromMarkdown(content: string): AgentOutputData | null {
   if (jsonBlockMatch && jsonBlockMatch[1]) {
     try {
       const parsed = JSON.parse(jsonBlockMatch[1])
-      // Check if it looks like agent output
-      if (parsed && typeof parsed === 'object' && ('tool_results' in parsed || 'task' in parsed)) {
-        return parsed as AgentOutputData
+      // Check if it looks like agent output (tool_results, task, or blog content)
+      if (parsed && typeof parsed === 'object') {
+        // Traditional agent output
+        if ('tool_results' in parsed || 'task' in parsed) {
+          return parsed as AgentOutputData
+        }
+        // Session 818: Blog/article content
+        if (isBlogContent(parsed)) {
+          return parsed as AgentOutputData
+        }
       }
     } catch {
       // Not valid JSON
