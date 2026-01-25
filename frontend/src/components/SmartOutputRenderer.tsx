@@ -599,44 +599,252 @@ function SignalsRenderer({ signals }: { signals: Signal[] }) {
   )
 }
 
-// Tool Results
+// Session 822: Smart Tool Results Renderer
+// Renders executive tools (roadmap, sprint, risk) with nice cards instead of raw JSON
 function ToolResultsRenderer({ results }: { results: ToolResult[] }) {
-  const [expanded, setExpanded] = useState<number | null>(null)
-
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-medium text-accent-amber flex items-center gap-2">
         <Wrench className="w-4 h-4" />
         Tool Results ({results.length})
       </h4>
-      <div className="space-y-2">
-        {results.map((tr, i) => (
-          <div key={i} className="bg-dark-card rounded-lg border border-dark-border overflow-hidden">
-            <button
-              onClick={() => setExpanded(expanded === i ? null : i)}
-              className="w-full p-3 flex items-center justify-between hover:bg-dark-lighter transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-accent-amber" />
-                <span className="text-sm text-white font-medium">{tr.tool || tr.name || `Tool ${i + 1}`}</span>
-                {tr.success !== undefined && (
-                  tr.success ?
-                    <CheckCircle className="w-4 h-4 text-accent-green" /> :
-                    <XCircle className="w-4 h-4 text-accent-red" />
-                )}
-              </div>
-              {expanded === i ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-            </button>
-            {expanded === i && tr.result && (
-              <div className="p-3 border-t border-dark-border bg-dark-bg">
-                <pre className="text-xs text-gray-300 overflow-auto max-h-40 font-mono">
-                  {typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        ))}
+      <div className="space-y-3">
+        {results.map((tr, i) => {
+          const result = tr.result as Record<string, unknown> | undefined
+          const toolName = tr.tool || tr.name || `Tool ${i + 1}`
+
+          // Detect and render specific tool types
+          if (result?.analysis && typeof result.analysis === 'object') {
+            return <RoadmapAnalysisCard key={i} toolName={toolName} data={result.analysis as RoadmapAnalysis} />
+          }
+          if (result?.plan && typeof result.plan === 'object') {
+            return <SprintPlanCard key={i} toolName={toolName} data={result.plan as SprintPlan} />
+          }
+          if (result?.assessment && typeof result.assessment === 'object') {
+            return <RiskAssessmentCard key={i} toolName={toolName} data={result.assessment as RiskAssessment} />
+          }
+
+          // Fallback: Collapsible JSON view for unknown tools
+          return <GenericToolCard key={i} toolName={toolName} result={tr} />
+        })}
       </div>
+    </div>
+  )
+}
+
+// Types for executive tools
+interface RoadmapAnalysis {
+  scope?: string
+  timeframe?: string
+  priorities?: Array<{ priority: number; item: string; status: string }>
+  recommendations?: string[]
+}
+
+interface SprintPlan {
+  sprint_name?: string
+  duration_days?: number
+  focus_area?: string
+  suggested_tasks?: Array<{ task: string; estimate: string }>
+  capacity_notes?: string
+  notes?: string
+}
+
+interface RiskAssessment {
+  area?: string
+  identified_risks?: Array<{ risk: string; severity: string; mitigation: string }>
+  overall_risk_level?: string
+  recommendations?: string[]
+}
+
+// Roadmap Analysis Card
+function RoadmapAnalysisCard({ toolName, data }: { toolName: string; data: RoadmapAnalysis }) {
+  return (
+    <div className="bg-dark-card rounded-lg border border-dark-border p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <BarChart3 className="w-4 h-4 text-accent-blue" />
+        <span className="text-sm font-medium text-white">{toolName}</span>
+        {data.scope && <span className="text-xs px-2 py-0.5 bg-accent-blue/20 text-accent-blue rounded">{data.scope}</span>}
+        {data.timeframe && <span className="text-xs text-gray-400">{data.timeframe}</span>}
+      </div>
+
+      {data.priorities && data.priorities.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs text-gray-400 uppercase tracking-wide">Priorities</span>
+          <div className="space-y-1">
+            {data.priorities.map((p, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="w-5 h-5 rounded-full bg-accent-amber/20 text-accent-amber text-xs flex items-center justify-center font-medium">
+                  {p.priority}
+                </span>
+                <span className="text-gray-200 flex-1">{p.item}</span>
+                <span className={cn(
+                  "text-xs px-2 py-0.5 rounded",
+                  p.status === 'in_progress' ? 'bg-accent-blue/20 text-accent-blue' :
+                  p.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                  'bg-gray-700 text-gray-400'
+                )}>{p.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.recommendations && data.recommendations.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs text-gray-400 uppercase tracking-wide">Recommendations</span>
+          <ul className="space-y-1">
+            {data.recommendations.map((rec, i) => (
+              <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                <Lightbulb className="w-3 h-3 text-accent-amber mt-1 flex-shrink-0" />
+                {rec}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Sprint Plan Card
+function SprintPlanCard({ toolName, data }: { toolName: string; data: SprintPlan }) {
+  return (
+    <div className="bg-dark-card rounded-lg border border-dark-border p-4 space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <ListChecks className="w-4 h-4 text-accent-green" />
+        <span className="text-sm font-medium text-white">{data.sprint_name || toolName}</span>
+        {data.duration_days && (
+          <span className="text-xs px-2 py-0.5 bg-accent-green/20 text-accent-green rounded flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {data.duration_days} days
+          </span>
+        )}
+      </div>
+
+      {data.focus_area && (
+        <p className="text-sm text-gray-400">
+          <span className="text-gray-500">Focus:</span> {data.focus_area}
+        </p>
+      )}
+
+      {data.suggested_tasks && data.suggested_tasks.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs text-gray-400 uppercase tracking-wide">Tasks</span>
+          <div className="space-y-1">
+            {data.suggested_tasks.map((t, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <CheckCircle className="w-3 h-3 text-gray-500" />
+                <span className="text-gray-200 flex-1">{t.task}</span>
+                <span className={cn(
+                  "text-xs px-2 py-0.5 rounded",
+                  t.estimate === 'small' ? 'bg-accent-green/20 text-accent-green' :
+                  t.estimate === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                  'bg-accent-red/20 text-accent-red'
+                )}>{t.estimate}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.notes && (
+        <p className="text-xs text-gray-500 italic">{data.notes}</p>
+      )}
+    </div>
+  )
+}
+
+// Risk Assessment Card
+function RiskAssessmentCard({ toolName, data }: { toolName: string; data: RiskAssessment }) {
+  const riskLevelColor = {
+    low: 'bg-accent-green/20 text-accent-green',
+    medium: 'bg-accent-amber/20 text-accent-amber',
+    high: 'bg-accent-red/20 text-accent-red',
+    critical: 'bg-red-600/30 text-red-400'
+  }[data.overall_risk_level || 'low'] || 'bg-gray-700 text-gray-400'
+
+  return (
+    <div className="bg-dark-card rounded-lg border border-dark-border p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <AlertCircle className="w-4 h-4 text-accent-amber" />
+        <span className="text-sm font-medium text-white">{toolName}</span>
+        {data.area && <span className="text-xs text-gray-400">({data.area})</span>}
+        {data.overall_risk_level && (
+          <span className={cn("text-xs px-2 py-0.5 rounded uppercase", riskLevelColor)}>
+            {data.overall_risk_level} risk
+          </span>
+        )}
+      </div>
+
+      {data.identified_risks && data.identified_risks.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs text-gray-400 uppercase tracking-wide">Identified Risks</span>
+          <div className="space-y-2">
+            {data.identified_risks.map((r, i) => (
+              <div key={i} className="bg-dark-bg rounded p-2 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-xs px-1.5 py-0.5 rounded uppercase",
+                    r.severity === 'low' ? 'bg-accent-green/20 text-accent-green' :
+                    r.severity === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                    'bg-accent-red/20 text-accent-red'
+                  )}>{r.severity}</span>
+                  <span className="text-sm text-white">{r.risk}</span>
+                </div>
+                <p className="text-xs text-gray-400 pl-2">
+                  <span className="text-gray-500">Mitigation:</span> {r.mitigation}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.recommendations && data.recommendations.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs text-gray-400 uppercase tracking-wide">Recommendations</span>
+          <ul className="space-y-1">
+            {data.recommendations.map((rec, i) => (
+              <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                <CheckCircle className="w-3 h-3 text-accent-green mt-1 flex-shrink-0" />
+                {rec}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Generic Tool Card (fallback for unknown tools)
+function GenericToolCard({ toolName, result }: { toolName: string; result: ToolResult }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="bg-dark-card rounded-lg border border-dark-border overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-3 flex items-center justify-between hover:bg-dark-lighter transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Wrench className="w-4 h-4 text-accent-amber" />
+          <span className="text-sm text-white font-medium">{toolName}</span>
+          {result.success !== undefined && (
+            result.success ?
+              <CheckCircle className="w-4 h-4 text-accent-green" /> :
+              <XCircle className="w-4 h-4 text-accent-red" />
+          )}
+        </div>
+        {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+      </button>
+      {expanded && result.result && (
+        <div className="p-3 border-t border-dark-border bg-dark-bg">
+          <pre className="text-xs text-gray-300 overflow-auto max-h-40 font-mono">
+            {typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   )
 }
