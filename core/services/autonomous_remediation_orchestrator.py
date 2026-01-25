@@ -94,17 +94,325 @@ class AutonomousRemediationOrchestrator:
         orchestrator.verify_completed_fixes()
     """
 
-    def __init__(self, max_tasks_per_cycle: int = 5, dry_run: bool = False):
+    def __init__(self, max_tasks_per_cycle: int = 5, dry_run: bool = False, auto_commit: bool = True):
         """
         Initialize the orchestrator.
 
         Args:
             max_tasks_per_cycle: Maximum remediation tasks to execute per cycle
             dry_run: If True, don't actually execute anything
+            auto_commit: If True, auto-commit generated code changes (Session 822)
         """
         self.max_tasks_per_cycle = max_tasks_per_cycle
         self.dry_run = dry_run
+        self.auto_commit = auto_commit
         self.logger = logging.getLogger(__name__)
+        self._workspace = None
+        self._workspace_manager = None
+
+    # =========================================================================
+    # SESSION 822: SKIN LAYER INTEGRATION
+    # =========================================================================
+
+    def _get_system_workspace(self):
+        """
+        Session 822: Get the system workspace for autonomous file operations.
+
+        Returns the project workspace for this codebase, enabling agents
+        to write generated code directly.
+        """
+        if self._workspace:
+            return self._workspace
+
+        try:
+            from django.apps import apps
+            from django.contrib.auth import get_user_model
+
+            ProjectWorkspace = apps.get_model('core', 'ProjectWorkspace')
+            User = get_user_model()
+
+            # Get system user or admin
+            system_user = User.objects.filter(username='system').first()
+            if not system_user:
+                system_user = User.objects.filter(username='admin').first()
+
+            if not system_user:
+                self.logger.warning("No system or admin user found for workspace access")
+                return None
+
+            # Get the active workspace
+            workspace = ProjectWorkspace.objects.filter(
+                is_active=True,
+                allow_file_write=True
+            ).first()
+
+            if workspace:
+                self._workspace = workspace
+                self.logger.info(f"Using workspace: {workspace.name} @ {workspace.root_path}")
+
+            return self._workspace
+
+        except Exception as e:
+            self.logger.error(f"Failed to get system workspace: {e}")
+            return None
+
+    def _get_workspace_manager(self):
+        """Get WorkspaceManager for file operations."""
+        if self._workspace_manager:
+            return self._workspace_manager
+
+        try:
+            from core.services.workspace_manager import WorkspaceManager
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+
+            # Get system user
+            system_user = User.objects.filter(username='system').first()
+            if not system_user:
+                system_user = User.objects.filter(username='admin').first()
+
+            if system_user:
+                self._workspace_manager = WorkspaceManager(user=system_user)
+
+            return self._workspace_manager
+
+        except Exception as e:
+            self.logger.error(f"Failed to get WorkspaceManager: {e}")
+            return None
+
+    def _parse_code_from_result(self, result_data: Dict[str, Any]) -> List[Dict[str, str]]:
+        """
+        Session 822: Extract generated code files from agent result.
+
+        Parses agent output to find code blocks that should be written.
+        Supports multiple formats:
+        - Direct 'code' field with file markers
+        - 'results' array with code items
+        - 'files' array with filename/content
+        """
+        files = []
+
+        # Check for 'results' array (common format)
+        if 'results' in result_data:
+            for r in result_data['results']:
+                if isinstance(r, dict) and 'data' in r:
+                    data = r['data']
+                    if 'code' in data:
+                        files.extend(self._parse_code_blocks(data['code']))
+
+        # Check for direct 'code' field
+        if 'code' in result_data:
+            files.extend(self._parse_code_blocks(result_data['code']))
+
+        # Check for 'files' array
+        if 'files' in result_data and isinstance(result_data['files'], list):
+            for f in result_data['files']:
+                if isinstance(f, dict) and 'filename' in f and 'content' in f:
+                    files.append({
+                        'filename': f['filename'],
+                        'content': f['content'],
+                        'language': f.get('language', 'python')
+                    })
+
+        # Check for 'content' field that might have code
+        if 'content' in result_data and isinstance(result_data['content'], str):
+            if '```' in result_data['content']:
+                files.extend(self._parse_code_blocks(result_data['content']))
+
+        return files
+
+    def _parse_code_blocks(self, content: str) -> List[Dict[str, str]]:
+        """
+        Parse code blocks from markdown-formatted content.
+
+        Supports formats:
+        - ```python\n# filename.py\n...\n```
+        - ### path/to/file.py\n```python\n...\n```
+        """
+        files = []
+
+        # Pattern 1: ### path/to/file.ext\n```lang\n...\n```
+        pattern1 = r'###\s+([^\n]+)\n```(\w+)?\n(.*?)```'
+        for match in re.finditer(pattern1, content, re.DOTALL):
+            filename = match.group(1).strip()
+            language = match.group(2) or 'text'
+            code = match.group(3).strip()
+            files.append({
+                'filename': filename,
+                'content': code,
+                'language': language
+            })
+
+        # Pattern 2: ```python\n# path/to/file.py\n...\n```
+        if not files:
+            pattern2 = r'```(\w+)?\n#\s*([^\n]+\.py)\n(.*?)```'
+            for match in re.finditer(pattern2, content, re.DOTALL):
+                language = match.group(1) or 'python'
+                filename = match.group(2).strip()
+                code = match.group(3).strip()
+                files.append({
+                    'filename': filename,
+                    'content': f"# {filename}\n{code}",
+                    'language': language
+                })
+
+        return files
+
+    def _write_and_commit_files(
+        self,
+        files: List[Dict[str, str]],
+        task,
+        agent_name: str
+    ) -> Dict[str, Any]:
+        """
+        Session 822: Write generated files to workspace and auto-commit.
+
+        This is the core SKIN layer integration that enables autonomous
+        code deployment without human intervention.
+        """
+        if not files:
+            return {'written': False, 'reason': 'No files to write'}
+
+        workspace = self._get_system_workspace()
+        if not workspace:
+            return {'written': False, 'reason': 'No workspace available'}
+
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {'written': False, 'reason': 'No workspace manager available'}
+
+        written_files = []
+        failed_files = []
+
+        for file_info in files:
+            filename = file_info.get('filename', '').strip()
+            content = file_info.get('content', '')
+
+            # Skip invalid files
+            if not filename or not content:
+                continue
+
+            # Clean up filename
+            filename = filename.lstrip('/')
+            if filename.startswith('```'):
+                continue
+
+            try:
+                operation = manager.write_file(
+                    workspace=workspace,
+                    file_path=filename,
+                    content=content,
+                    agent_name=agent_name
+                )
+
+                if operation.success:
+                    written_files.append({
+                        'path': filename,
+                        'operation_id': str(operation.id),
+                        'size': len(content)
+                    })
+                    self.logger.info(f"  📝 Wrote: {filename}")
+                else:
+                    failed_files.append({
+                        'path': filename,
+                        'error': operation.error_message
+                    })
+
+            except Exception as e:
+                self.logger.error(f"  ❌ Failed to write {filename}: {e}")
+                failed_files.append({
+                    'path': filename,
+                    'error': str(e)
+                })
+
+        result = {
+            'written': len(written_files) > 0,
+            'files_written': written_files,
+            'files_failed': failed_files,
+            'total_written': len(written_files),
+            'total_failed': len(failed_files)
+        }
+
+        # Auto-commit if enabled and files were written
+        if self.auto_commit and written_files:
+            commit_result = self._auto_commit_changes(
+                workspace=workspace,
+                files=written_files,
+                task=task,
+                agent_name=agent_name
+            )
+            result['commit'] = commit_result
+
+        return result
+
+    def _auto_commit_changes(
+        self,
+        workspace,
+        files: List[Dict],
+        task,
+        agent_name: str
+    ) -> Dict[str, Any]:
+        """
+        Session 822: Auto-commit changes made by agents.
+
+        Creates a git commit with the remediation details.
+        """
+        try:
+            root_path = Path(workspace.root_path)
+
+            # Stage the files
+            file_paths = [f['path'] for f in files]
+            stage_cmd = ['git', 'add'] + file_paths
+
+            result = subprocess.run(
+                stage_cmd,
+                cwd=str(root_path),
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                return {'committed': False, 'error': result.stderr}
+
+            # Create commit message
+            finding_title = task.finding.title[:50] if task.finding else 'Unknown finding'
+            commit_msg = f"""fix(auto-remediate): {finding_title}
+
+Auto-remediation by {agent_name}
+Finding ID: {task.finding.id if task.finding else 'N/A'}
+Task ID: {task.id}
+
+Files modified:
+{chr(10).join('- ' + f['path'] for f in files)}
+
+Co-Authored-By: {agent_name} <auto@system>
+"""
+
+            # Commit
+            commit_cmd = ['git', 'commit', '-m', commit_msg]
+            result = subprocess.run(
+                commit_cmd,
+                cwd=str(root_path),
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                self.logger.info(f"  ✅ Auto-committed: {finding_title}")
+                return {
+                    'committed': True,
+                    'message': commit_msg.split('\n')[0],
+                    'files': len(files)
+                }
+            else:
+                return {'committed': False, 'error': result.stderr}
+
+        except Exception as e:
+            self.logger.error(f"  ❌ Auto-commit failed: {e}")
+            return {'committed': False, 'error': str(e)}
 
     # =========================================================================
     # PHASE 1: DISCOVERY
@@ -574,7 +882,12 @@ The finding should be resolved after your changes. The verification step will ch
         return results
 
     def _execute_single_task(self, task) -> Dict[str, Any]:
-        """Execute a single remediation task via the agent."""
+        """
+        Execute a single remediation task via the agent.
+
+        Session 822: Now includes SKIN layer integration to automatically
+        write generated code to the workspace and auto-commit.
+        """
         from core.agent_router import AgentRouter
 
         self.logger.info(f"  → Executing: {task.title[:50]}... via {task.assigned_agent}")
@@ -599,6 +912,19 @@ The finding should be resolved after your changes. The verification step will ch
                 }
             )
 
+            # Session 822: SKIN Layer Integration
+            # Parse and write any generated code files
+            skin_result = None
+            if result.success and hasattr(result, 'data') and result.data:
+                files = self._parse_code_from_result(result.data)
+                if files:
+                    self.logger.info(f"  📦 Found {len(files)} files to write")
+                    skin_result = self._write_and_commit_files(
+                        files=files,
+                        task=task,
+                        agent_name=task.assigned_agent
+                    )
+
             # Record result
             task.status = 'completed' if result.success else 'failed'
             task.completed_at = timezone.now()
@@ -608,6 +934,7 @@ The finding should be resolved after your changes. The verification step will ch
                 'data': result.data if hasattr(result, 'data') else {},
                 'agent_name': result.agent_name if hasattr(result, 'agent_name') else task.assigned_agent,
                 'execution_time_ms': result.execution_time_ms if hasattr(result, 'execution_time_ms') else 0,
+                'skin_result': skin_result,  # Session 822: Track SKIN layer operations
             }
             task.save()
 
@@ -616,12 +943,18 @@ The finding should be resolved after your changes. The verification step will ch
                 task.finding.status = 'fixed'
                 task.finding.fixed_by = f"Auto-remediation via {task.assigned_agent}"
                 task.finding.fixed_at = timezone.now()
-                task.finding.remediation_notes = result.message[:500] if result.message else ''
+                remediation_notes = result.message[:500] if result.message else ''
+                if skin_result and skin_result.get('written'):
+                    remediation_notes += f"\n\nFiles written: {skin_result.get('total_written', 0)}"
+                    if skin_result.get('commit', {}).get('committed'):
+                        remediation_notes += " (auto-committed)"
+                task.finding.remediation_notes = remediation_notes
                 task.finding.save()
 
             return {
                 'success': result.success,
                 'message': result.message,
+                'skin_result': skin_result,
             }
 
         except Exception as e:
