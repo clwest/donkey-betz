@@ -41,14 +41,13 @@ frontend/src/pages/workspace/tabs/
 **Key Stats:**
 - 29 pages consolidated → 6 new tabs
 - ~28,340 lines → ~2,935 lines
-- Frontend build: 2,195 KB
+- Frontend bundle: 1,948 KB
 - Production safe: Compact views with links to full pages
 
-**To enable new Workspace:**
-```tsx
-// In App.tsx:
-import WorkspacePage from '@/pages/WorkspacePageNew'
-```
+**Additional Enhancements:**
+- **Collapsible Sidebar** (PR #202): Click panel icon to toggle, state persists in localStorage
+- **TypeScript Fixes** (PR #203): Fixed 9 components with unused import warnings
+- **WorkspacePageNew NOW LIVE** in App.tsx
 
 ---
 

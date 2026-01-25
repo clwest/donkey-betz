@@ -2,7 +2,7 @@
 
 **Date:** January 25, 2026
 **Focus:** Comprehensive UI consolidation - reducing 47 pages to ~20 pages by making Workspace the true command center
-**Status:** PHASE 1 + PHASE 2 COMPLETE
+**Status:** COMPLETE (Phase 1 + Phase 2 + Collapsible Sidebar + TypeScript Fixes + WorkspacePageNew Enabled)
 
 ---
 
@@ -190,9 +190,72 @@ After UI consolidation, Session 826 will address the agent conversation system:
 
 ---
 
-**PHASE 1 + PHASE 2 COMPLETE!**
+**ALL PHASES COMPLETE!**
 
-**Next Steps:**
-1. Update App.tsx to use WorkspacePageNew (when ready to go fully live)
-2. Phase 3: Remove retired pages after testing (optional cleanup)
-3. Session 826: Goal-Driven Conversations
+---
+
+## Additional Work Completed
+
+### Collapsible Sidebar (PR #202)
+
+Added collapsible sidebar for laptop users:
+- Click panel icon to toggle collapsed/expanded
+- Collapsed: 64px wide, icons only with tooltips
+- Expanded: 256px wide, icons + labels
+- State persists in localStorage
+- Badge indicators work in both modes
+
+**Files Modified:**
+- `frontend/src/components/layout/Sidebar.tsx` - Added collapse functionality
+- `frontend/src/index.css` - Added `relative` to nav-link class for badge positioning
+
+### TypeScript Fixes (PR #203)
+
+Fixed all TypeScript warnings in active components:
+
+| File | Fix |
+|------|-----|
+| `App.tsx` | Enabled WorkspacePageNew |
+| `AuditsBrowser.tsx` | Remove unused `Folder` |
+| `CanonBrowser.tsx` | Remove unused `ExternalLink` |
+| `EmergencyControls.tsx` | Remove unused `ExternalLink` |
+| `TriggerRulesPanel.tsx` | Remove unused `RefreshCw` |
+| `LiveMetricsDashboard.tsx` | Remove unused `useEffect` |
+| `SmartOutputRenderer.tsx` | Fix type errors, remove 5 unused imports |
+| `OperationsPanel.tsx` | Remove 6 unused imports |
+| `DocumentViewer.tsx` | Fix unused `match` parameter |
+
+### WorkspacePageNew Now Live
+
+`App.tsx` now imports and uses `WorkspacePageNew` as the default workspace:
+```tsx
+import WorkspacePage from '@/pages/WorkspacePageNew'  // Session 825: New modular workspace
+```
+
+---
+
+## PRs Merged
+
+| PR | Title | Focus |
+|----|-------|-------|
+| **#201** | feat(Session 825): Phase 2 - 6 consolidated workspace tabs | New tabs |
+| **#202** | feat(Session 825): Collapsible sidebar | Laptop UX |
+| **#203** | fix(Session 825): TypeScript warnings + enable WorkspacePageNew | Final cleanup |
+
+---
+
+## Final Stats
+
+| Metric | Value |
+|--------|-------|
+| Pages Consolidated | 29 → 6 tabs |
+| New Tab Lines | ~2,935 |
+| Frontend Bundle | 1,948 KB |
+| TypeScript Errors | 0 (in active components) |
+| PRs Merged | 3 |
+
+---
+
+**SESSION 825 COMPLETE!**
+
+**Next:** Session 826 - Goal-Driven Conversations
