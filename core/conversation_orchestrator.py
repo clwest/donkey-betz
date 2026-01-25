@@ -45,6 +45,61 @@ ENABLE_DREAM_INJECTION = True
 ENABLE_ACTION_DISPATCH = True
 ENABLE_CROSS_AGENT_MEMORY = True
 
+# Session 826: Goal-Driven Conversation Enhancement
+ENABLE_RICH_CONTEXT = True  # Inject spider/advisor/learning context
+ENABLE_AUTO_AGENT_SELECTION = True  # Select topic-matched agents
+ENABLE_STRUCTURED_TURNS = True  # Use turn flow patterns
+
+
+# Session 826: Structured turn flows for different conversation types
+TURN_FLOWS = {
+    'analytical': ['propose', 'challenge', 'synthesize', 'decide'],
+    'creative': ['brainstorm', 'expand', 'refine', 'select'],
+    'debate': ['position', 'counter', 'rebut', 'conclude'],
+    'planning': ['goals', 'steps', 'dependencies', 'schedule'],
+    'critique': ['present', 'challenge', 'defend', 'improve'],
+    'general': ['explore', 'discuss', 'clarify', 'summarize'],
+}
+
+# Session 826: Turn-specific prompts for structured flow
+TURN_PROMPTS = {
+    # Analytical flow
+    'propose': "Present your initial analysis or proposal on this topic. Be specific and grounded in data.",
+    'challenge': "Challenge the previous perspective. What's missing, flawed, or overlooked?",
+    'synthesize': "Synthesize the best elements from both viewpoints into a coherent approach.",
+    'decide': "Based on the discussion, what's the recommended action? Be decisive.",
+
+    # Creative flow
+    'brainstorm': "Generate bold, creative ideas without self-censoring. Think big.",
+    'expand': "Build on the ideas shared. How can we make them bigger or more impactful?",
+    'refine': "Refine the most promising ideas. What's practical? What needs adjustment?",
+    'select': "Select the best idea(s) and explain why they should move forward.",
+
+    # Debate flow
+    'position': "State your position clearly and make your strongest argument.",
+    'counter': "Present a counter-argument. Identify weaknesses in the previous position.",
+    'rebut': "Rebut the counter-argument. Defend your position with evidence.",
+    'conclude': "Summarize the debate and state the most defensible conclusion.",
+
+    # Planning flow
+    'goals': "Define the clear goals and success criteria for this initiative.",
+    'steps': "Break down the initiative into concrete, actionable steps.",
+    'dependencies': "Identify dependencies, risks, and potential blockers.",
+    'schedule': "Propose a timeline and assign ownership for each step.",
+
+    # Critique flow
+    'present': "Present the idea, work, or approach that needs critique.",
+    'challenge': "Provide constructive critique. What could be improved?",
+    'defend': "Defend the approach or acknowledge valid criticisms.",
+    'improve': "Propose specific improvements based on the critique.",
+
+    # General flow
+    'explore': "Explore the topic from your unique perspective.",
+    'discuss': "Build on what's been shared. Add your expertise.",
+    'clarify': "Clarify any ambiguities and deepen the analysis.",
+    'summarize': "Summarize key insights and propose next steps.",
+}
+
 
 @dataclass
 class ConversationState:
@@ -60,6 +115,10 @@ class ConversationState:
     used_openers: List[str] = field(default_factory=list)
     # Session 781 Level 3: Track discourse markers for comprehensive repetition prevention
     used_discourse_markers: List[str] = field(default_factory=list)
+    # Session 826: Goal-driven conversation tracking
+    objective: str = ""
+    success_criteria: List[str] = field(default_factory=list)
+    criteria_met: List[bool] = field(default_factory=list)  # Track which criteria are satisfied
 
 
 # Session 781: Disallowed opener patterns - these are banned globally
@@ -222,6 +281,10 @@ class ConversationOrchestrator:
         self.api_key = api_key or os.environ.get('OPENAI_API_KEY')
         self.model = model
         self._client = None
+        # Session 826: Lazy-loaded context builders
+        self._spider_context = None
+        self._advisor_context = None
+        self._learning_context = None
 
     @property
     def client(self):
@@ -230,6 +293,191 @@ class ConversationOrchestrator:
             import openai
             self._client = openai.OpenAI(api_key=self.api_key)
         return self._client
+
+    # Session 826: Lazy-loaded context builders for rich context injection
+    @property
+    def spider_context_builder(self):
+        """Lazy-load SpiderContextBuilder."""
+        if self._spider_context is None:
+            from core.services.spider_context_builder import get_spider_context_builder
+            self._spider_context = get_spider_context_builder()
+        return self._spider_context
+
+    @property
+    def advisor_context_builder(self):
+        """Lazy-load AdvisorContextBuilder."""
+        if self._advisor_context is None:
+            from core.services.advisor_context_builder import get_advisor_context_builder
+            self._advisor_context = get_advisor_context_builder()
+        return self._advisor_context
+
+    @property
+    def learning_pattern_engine(self):
+        """Lazy-load LearningPatternEngine."""
+        if self._learning_context is None:
+            from core.services.learning_pattern_engine import get_learning_pattern_engine
+            self._learning_context = get_learning_pattern_engine()
+        return self._learning_context
+
+    def _get_rich_context(self, agent_name: str, topic: str) -> str:
+        """
+        Session 826: Build rich context from spider, advisor, and learning systems.
+
+        This gives agents real-time intelligence, advisor wisdom, and learned patterns
+        to make conversations more grounded and insightful.
+
+        Args:
+            agent_name: Name of the agent to get context for
+            topic: The conversation topic
+
+        Returns:
+            Formatted context string for prompt injection (~115 tokens total)
+        """
+        if not ENABLE_RICH_CONTEXT:
+            return ""
+
+        context_parts = []
+
+        try:
+            # Spider data (~50 tokens) - real-time trends and intelligence
+            spider_summary = self.spider_context_builder.build_summary(agent_name, topic)
+            if spider_summary:
+                context_parts.append(f"**Recent Intelligence:** {spider_summary}")
+        except Exception as e:
+            logger.debug(f"Could not get spider context for {agent_name}: {e}")
+
+        try:
+            # Advisor wisdom (~25 tokens) - decision frameworks from legendary advisors
+            advisor_summary = self.advisor_context_builder.build_summary(agent_name, topic)
+            if advisor_summary:
+                context_parts.append(f"**Advisor Insights:** {advisor_summary}")
+        except Exception as e:
+            logger.debug(f"Could not get advisor context for {agent_name}: {e}")
+
+        try:
+            # Learning patterns (~40 tokens) - what this agent has learned
+            learning_summary = self.learning_pattern_engine.get_summary(agent_name, topic)
+            if learning_summary:
+                context_parts.append(f"**Learned Patterns:** {learning_summary}")
+        except Exception as e:
+            logger.debug(f"Could not get learning context for {agent_name}: {e}")
+
+        if context_parts:
+            logger.debug(f"🧠 [Session 826] Rich context built for {agent_name}: {len(context_parts)} sources")
+            return "\n".join(context_parts)
+
+        return ""
+
+    def _select_agents_for_topic(
+        self,
+        topic: str,
+        required_capabilities: Optional[List[str]] = None,
+        num_agents: int = 2
+    ) -> List[Dict[str, Any]]:
+        """
+        Session 826: Select agents best suited for the conversation topic.
+
+        Uses the AgentRegistry's scoring system to find agents whose capabilities
+        match the topic, then ensures diversity by selecting different specializations.
+
+        Args:
+            topic: The conversation topic to match agents against
+            required_capabilities: Optional list of required capabilities
+            num_agents: Number of agents to select (default 2)
+
+        Returns:
+            List of agent dicts with name, type, and specialization
+        """
+        if not ENABLE_AUTO_AGENT_SELECTION:
+            return []
+
+        try:
+            from core.models.agents_registry.models import AgentRegistry
+
+            # Get or create the registry
+            registry, _ = AgentRegistry.objects.get_or_create(
+                registry_name='unified_agent_registry'
+            )
+
+            # Find agents best suited for this topic
+            candidates = registry.find_agents_for_task(
+                task_description=topic,
+                required_capabilities=required_capabilities,
+                limit=num_agents * 3  # Get extras for diversity selection
+            )
+
+            if not candidates or len(candidates) < num_agents:
+                logger.debug(f"Not enough candidates found for topic '{topic[:50]}...'")
+                return []
+
+            # Select diverse agents (different specializations)
+            selected = []
+            seen_specializations = set()
+
+            for candidate in candidates:
+                agent = candidate.get('agent')
+                if not agent:
+                    continue
+
+                spec = getattr(agent, 'specialization', '') or 'general'
+
+                # Skip if we already have this specialization
+                if spec in seen_specializations:
+                    continue
+
+                selected.append({
+                    'name': agent.name,
+                    'type': getattr(agent, 'agent_type', agent.name),
+                    'specialization': spec,
+                    'score': candidate.get('score', 0)
+                })
+                seen_specializations.add(spec)
+
+                if len(selected) >= num_agents:
+                    break
+
+            if selected:
+                agent_names = [a['name'] for a in selected]
+                logger.info(f"🎯 [Session 826] Auto-selected agents for topic: {agent_names}")
+
+            return selected
+
+        except Exception as e:
+            logger.warning(f"Could not auto-select agents: {e}")
+            return []
+
+    def _get_turn_type(self, turn_number: int, conversation_type: str, total_turns: int) -> str:
+        """
+        Session 826: Get the turn type based on conversation flow.
+
+        Maps the current turn to a structured role in the conversation flow.
+        Handles cases where num_turns doesn't match flow length.
+
+        Args:
+            turn_number: Current turn (0-indexed)
+            conversation_type: Type of conversation (analytical, creative, etc.)
+            total_turns: Total number of turns in conversation
+
+        Returns:
+            Turn type string (e.g., 'propose', 'challenge', 'synthesize')
+        """
+        if not ENABLE_STRUCTURED_TURNS:
+            return 'discuss'  # Default neutral turn type
+
+        flow = TURN_FLOWS.get(conversation_type, TURN_FLOWS['general'])
+        flow_length = len(flow)
+
+        # Map turn_number to flow index
+        # For 6 turns with 4-item flow: [0,1] -> 0, [2,3] -> 1, [4] -> 2, [5] -> 3
+        if total_turns <= flow_length:
+            # Direct mapping
+            turn_index = min(turn_number, flow_length - 1)
+        else:
+            # Spread flow across more turns
+            turns_per_phase = total_turns / flow_length
+            turn_index = min(int(turn_number / turns_per_phase), flow_length - 1)
+
+        return flow[turn_index]
 
     def _get_agent_dreams(self, agent_name: str, limit: int = 2) -> List[Dict[str, Any]]:
         """
@@ -480,7 +728,11 @@ class ConversationOrchestrator:
         topic: str,
         conversation_type: str = "brainstorm",
         num_turns: int = 6,
-        max_retries: int = 2
+        max_retries: int = 2,
+        # Session 826: Goal-driven conversation parameters
+        objective: Optional[str] = None,
+        success_criteria: Optional[List[str]] = None,
+        auto_select_agents: bool = False
     ) -> Dict[str, Any]:
         """
         Generate a complete conversation between two agents.
@@ -489,9 +741,12 @@ class ConversationOrchestrator:
             agent1: First agent dict with name, type, specialization
             agent2: Second agent dict
             topic: Conversation topic
-            conversation_type: Type of conversation (brainstorm, consultation, synthesis, critique)
+            conversation_type: Type of conversation (analytical, creative, debate, planning, critique, general)
             num_turns: Number of message exchanges (default 6)
             max_retries: Retries per message if contract not met
+            objective: Session 826 - Clear goal for the conversation (what should be achieved)
+            success_criteria: Session 826 - List of criteria to evaluate outcome
+            auto_select_agents: Session 826 - Override agent1/agent2 with topic-matched agents
 
         Returns:
             Dict with:
@@ -499,7 +754,17 @@ class ConversationOrchestrator:
                 - decision_summary: Extracted DecisionSummary or None
                 - validation: Contract validation results
                 - state: Conversation state metrics
+                - objective: The conversation objective (Session 826)
+                - success_criteria: The success criteria (Session 826)
         """
+        # Session 826: Auto-select agents if requested
+        if auto_select_agents:
+            selected = self._select_agents_for_topic(topic, num_agents=2)
+            if len(selected) >= 2:
+                agent1 = selected[0]
+                agent2 = selected[1]
+                logger.info(f"🎯 [Session 826] Auto-selected: {agent1['name']} & {agent2['name']}")
+
         logger.info(f"Starting conversation: {agent1['name']} <-> {agent2['name']} on '{topic}'")
 
         # Session 786: Store topic for retry prompts in _generate_message
@@ -530,9 +795,20 @@ class ConversationOrchestrator:
         if dreams_injected > 0:
             logger.info(f"Dreams loaded: {agent1['name']} has {len(agent1_dreams)}, {agent2['name']} has {len(agent2_dreams)}")
 
-        state = ConversationState()
+        # Session 826: Initialize state with objective and success criteria
+        state = ConversationState(
+            objective=objective or "",
+            success_criteria=success_criteria or [],
+            criteria_met=[False] * len(success_criteria or [])
+        )
         messages = []
         conversation_context = []
+
+        # Session 826: Build rich context for both agents (spider/advisor/learning)
+        agent1_rich_context = self._get_rich_context(agent1['name'], topic) if ENABLE_RICH_CONTEXT else ""
+        agent2_rich_context = self._get_rich_context(agent2['name'], topic) if ENABLE_RICH_CONTEXT else ""
+        if agent1_rich_context or agent2_rich_context:
+            logger.info(f"🧠 [Session 826] Rich context injected for agents")
 
         for turn in range(num_turns):
             # Alternate between agents
@@ -541,6 +817,12 @@ class ConversationOrchestrator:
 
             # Session 318: Get the right knowledge context for the current speaker
             current_knowledge_context = agent1_context if turn % 2 == 0 else agent2_context
+
+            # Session 826: Get the rich context for the current speaker
+            current_rich_context = agent1_rich_context if turn % 2 == 0 else agent2_rich_context
+
+            # Session 826: Get the turn type based on conversation flow
+            turn_type = self._get_turn_type(turn, conversation_type, num_turns)
 
             # Determine if we need to force tension (every 2-3 turns)
             turns_since_tension = turn - state.last_tension_turn
@@ -560,7 +842,11 @@ class ConversationOrchestrator:
                 state=state,
                 system_context=system_context,
                 agent_knowledge_context=current_knowledge_context,  # Session 318: Real knowledge
-                dream_context=dream_context  # Session 811: Dream injection
+                dream_context=dream_context,  # Session 811: Dream injection
+                # Session 826: Goal-driven conversation enhancements
+                rich_context=current_rich_context,
+                turn_type=turn_type,
+                num_turns=num_turns
             )
 
             # Generate response with retry logic
@@ -694,6 +980,11 @@ class ConversationOrchestrator:
             'conversation_type': conversation_type,
             'conversation_id': conversation_id,  # Session 811
             'ai_world': ai_world_metadata,  # Session 811: AI World Enhancement
+            # Session 826: Goal-driven conversation metadata
+            'objective': objective,
+            'success_criteria': success_criteria,
+            'auto_selected_agents': auto_select_agents,
+            'rich_context_injected': bool(agent1_rich_context or agent2_rich_context),
         }
 
     def _build_turn_prompt(
@@ -709,7 +1000,11 @@ class ConversationOrchestrator:
         state: ConversationState,
         system_context: str = "",  # Session 315: Live system stats
         agent_knowledge_context: str = "",  # Session 318: Agent's real knowledge
-        dream_context: str = ""  # Session 811: Dream injection
+        dream_context: str = "",  # Session 811: Dream injection
+        # Session 826: Goal-driven conversation parameters
+        rich_context: str = "",
+        turn_type: str = "discuss",
+        num_turns: int = 6
     ) -> str:
         """Build the complete prompt for a conversation turn."""
 
@@ -734,6 +1029,19 @@ class ConversationOrchestrator:
 
         # Build turn-specific instructions
         turn_instructions = []
+
+        # Session 826: Add objective-focused preamble if objective is set
+        if state.objective:
+            turn_instructions.append(f"""CONVERSATION OBJECTIVE:
+This conversation has a clear goal: {state.objective}
+
+Keep this objective in mind as you respond. Every contribution should move toward achieving this goal.""")
+
+        # Session 826: Add structured turn directive
+        if ENABLE_STRUCTURED_TURNS and turn_type in TURN_PROMPTS:
+            turn_directive = TURN_PROMPTS[turn_type]
+            turn_instructions.append(f"""TURN ROLE ({turn_type.upper()}):
+{turn_directive}""")
 
         if turn == 0:
             turn_instructions.append(f"""OPENING MESSAGE INSTRUCTIONS:
@@ -811,12 +1119,14 @@ Start your response with a FRESH, UNIQUE opening that hasn't been used yet.""")
         if discourse_avoidance:
             turn_instructions.append(discourse_avoidance)
 
-        # Assemble full prompt with agent knowledge (Session 318), system context, and dreams (Session 811)
+        # Assemble full prompt with agent knowledge (Session 318), system context, dreams (Session 811), and rich context (Session 826)
         prompt = f"""{role_prompt}
 
 {agent_knowledge_context}
 
 {dream_context}
+
+{rich_context}
 
 {system_context}
 
@@ -829,13 +1139,45 @@ Start your response with a FRESH, UNIQUE opening that hasn't been used yet.""")
 
 {chr(10).join(turn_instructions)}
 
-Draw on your knowledge and experiences above. If relevant, reference the creative dreams shared above. Write your response now. Do NOT prefix with your name - just write the message content directly."""
+Draw on your knowledge and experiences above. If relevant, reference the creative dreams shared above or the recent intelligence provided. Write your response now. Do NOT prefix with your name - just write the message content directly."""
 
         return prompt
 
     def _get_conversation_type_instructions(self, conversation_type: str) -> str:
         """Get instructions specific to conversation type."""
         instructions = {
+            # Session 826: New structured conversation types
+            'analytical': """CONVERSATION TYPE: Analytical Discussion
+Goal: Rigorously analyze a topic through structured reasoning
+Flow: Propose → Challenge → Synthesize → Decide
+Approach: Use data and evidence. Challenge assumptions. Build toward a clear decision.""",
+
+            'creative': """CONVERSATION TYPE: Creative Exploration
+Goal: Generate innovative ideas through collaborative ideation
+Flow: Brainstorm → Expand → Refine → Select
+Approach: Think boldly. Build on ideas. Refine the best ones. Select winners.""",
+
+            'debate': """CONVERSATION TYPE: Structured Debate
+Goal: Explore opposing viewpoints to find the strongest position
+Flow: Position → Counter → Rebut → Conclude
+Approach: Argue clearly. Listen to counter-arguments. Seek truth, not victory.""",
+
+            'planning': """CONVERSATION TYPE: Implementation Planning
+Goal: Create actionable plan with clear steps and ownership
+Flow: Goals → Steps → Dependencies → Schedule
+Approach: Be specific. Identify blockers. Assign ownership. Set timelines.""",
+
+            'critique': """CONVERSATION TYPE: Constructive Critique
+Goal: Stress-test an idea through rigorous analysis
+Flow: Present → Challenge → Defend → Improve
+Approach: Find weaknesses, propose improvements, validate strengths.""",
+
+            'general': """CONVERSATION TYPE: Open Discussion
+Goal: Explore a topic freely while building toward insights
+Flow: Explore → Discuss → Clarify → Summarize
+Approach: Share perspectives. Ask questions. Build understanding. Summarize learnings.""",
+
+            # Legacy types (kept for backwards compatibility)
             'brainstorm': """CONVERSATION TYPE: Strategic Brainstorm
 Goal: Generate innovative ideas while maintaining practicality
 Approach: Build on ideas, but challenge weak ones. Push for specifics.""",
@@ -847,14 +1189,6 @@ Approach: Ask probing questions, give detailed answers with caveats.""",
             'synthesis': """CONVERSATION TYPE: Knowledge Synthesis
 Goal: Combine different perspectives into unified insights
 Approach: Find connections, resolve contradictions, create frameworks.""",
-
-            'critique': """CONVERSATION TYPE: Constructive Critique
-Goal: Stress-test an idea through rigorous analysis
-Approach: Find weaknesses, propose improvements, validate strengths.""",
-
-            'planning': """CONVERSATION TYPE: Implementation Planning
-Goal: Create actionable plan from abstract idea
-Approach: Break down into steps, identify dependencies, assign ownership.""",
 
             'analysis': """CONVERSATION TYPE: Deep Analysis
 Goal: Thoroughly analyze a topic from multiple angles

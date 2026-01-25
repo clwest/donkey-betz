@@ -3,17 +3,18 @@
  *
  * Session 717: Original conversation contract with quality metrics.
  * Session 782: Consolidated into unified view with all conversation types.
+ * Session 826: Added goal-driven conversation creation form.
  *
  * Features:
  * - Merged view of HiveMind sessions + Legacy AgentConversations
  * - Type filter tabs (All / HiveMind / Legacy)
  * - Quality contract metrics and compliance rates
  * - Message-level analysis on expansion
+ * - Goal-driven conversation creation with objectives and success criteria
  */
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -36,12 +37,27 @@ import {
   Plus,
   Brain,
   History,
+  Play,
+  Sparkles,
+  X,
 } from 'lucide-react'
-import { conversationContractApi } from '@/lib/api'
+import { conversationContractApi, conversationsApi } from '@/lib/api'
 import Breadcrumb from '@/components/Breadcrumb'
 
 // Session 782: Type filter for conversations
 type ConversationTypeFilter = 'all' | 'hivemind' | 'legacy'
+
+// Session 826: Conversation type options for goal-driven conversations
+type ConversationType = 'analytical' | 'creative' | 'debate' | 'planning' | 'critique' | 'general'
+
+const CONVERSATION_TYPES: { value: ConversationType; label: string; description: string }[] = [
+  { value: 'analytical', label: 'Analytical', description: 'Rigorous analysis: Propose → Challenge → Synthesize → Decide' },
+  { value: 'creative', label: 'Creative', description: 'Ideation: Brainstorm → Expand → Refine → Select' },
+  { value: 'debate', label: 'Debate', description: 'Opposing viewpoints: Position → Counter → Rebut → Conclude' },
+  { value: 'planning', label: 'Planning', description: 'Implementation: Goals → Steps → Dependencies → Schedule' },
+  { value: 'critique', label: 'Critique', description: 'Stress-test: Present → Challenge → Defend → Improve' },
+  { value: 'general', label: 'General', description: 'Open discussion: Explore → Discuss → Clarify → Summarize' },
+]
 
 // Types
 interface ContractOverview {
@@ -149,6 +165,205 @@ interface ContractRequirements {
     description: string
     required_sections: string[]
   }
+}
+
+// Session 826: Goal-Driven Conversation Creation Form
+function GoalDrivenConversationForm({
+  onSuccess,
+  onClose,
+}: {
+  onSuccess: () => void
+  onClose: () => void
+}) {
+  const [topic, setTopic] = useState('')
+  const [conversationType, setConversationType] = useState<ConversationType>('analytical')
+  const [objective, setObjective] = useState('')
+  const [criteriaInput, setCriteriaInput] = useState('')
+  const [successCriteria, setSuccessCriteria] = useState<string[]>([])
+  const [autoSelectAgents, setAutoSelectAgents] = useState(true)
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      conversationsApi.create({
+        topic,
+        conversation_type: conversationType,
+        objective: objective || undefined,
+        success_criteria: successCriteria.length > 0 ? successCriteria : undefined,
+        auto_select_agents: autoSelectAgents,
+      }),
+    onSuccess: () => {
+      onSuccess()
+      onClose()
+    },
+  })
+
+  const addCriteria = () => {
+    if (criteriaInput.trim()) {
+      setSuccessCriteria([...successCriteria, criteriaInput.trim()])
+      setCriteriaInput('')
+    }
+  }
+
+  const removeCriteria = (index: number) => {
+    setSuccessCriteria(successCriteria.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="rounded-lg border border-primary-500/30 bg-gradient-to-br from-primary-900/20 to-purple-900/20 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary-400" />
+          Create Goal-Driven Conversation
+        </h3>
+        <button
+          onClick={onClose}
+          className="p-1 text-gray-400 hover:text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {/* Topic */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Topic <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="What should the agents discuss?"
+            className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        {/* Conversation Type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Conversation Type
+          </label>
+          <select
+            value={conversationType}
+            onChange={(e) => setConversationType(e.target.value as ConversationType)}
+            className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            {CONVERSATION_TYPES.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label} - {type.description}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Objective */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Objective
+            <span className="text-gray-500 font-normal ml-1">(What should be achieved?)</span>
+          </label>
+          <textarea
+            value={objective}
+            onChange={(e) => setObjective(e.target.value)}
+            placeholder="e.g., Determine the best approach for implementing user authentication"
+            rows={2}
+            className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+          />
+        </div>
+
+        {/* Success Criteria */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Success Criteria
+            <span className="text-gray-500 font-normal ml-1">(Measurable outcomes)</span>
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={criteriaInput}
+              onChange={(e) => setCriteriaInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCriteria())}
+              placeholder="Add a success criterion..."
+              className="flex-1 px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <button
+              onClick={addCriteria}
+              disabled={!criteriaInput.trim()}
+              className="px-3 py-2 bg-primary-500/20 text-primary-300 rounded-lg hover:bg-primary-500/30 transition-colors disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+          {successCriteria.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {successCriteria.map((criteria, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-dark-bg border border-dark-border rounded text-sm text-gray-300"
+                >
+                  {criteria}
+                  <button
+                    onClick={() => removeCriteria(i)}
+                    className="text-gray-500 hover:text-red-400"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Auto-select agents */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="autoSelectAgents"
+            checked={autoSelectAgents}
+            onChange={(e) => setAutoSelectAgents(e.target.checked)}
+            className="rounded border-dark-border bg-dark-bg text-primary-500 focus:ring-primary-500"
+          />
+          <label htmlFor="autoSelectAgents" className="text-sm text-gray-300">
+            Auto-select agents based on topic
+            <span className="text-gray-500 ml-1">(recommended)</span>
+          </label>
+        </div>
+
+        {/* Submit */}
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => createMutation.mutate()}
+            disabled={!topic.trim() || createMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
+          >
+            {createMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Start Conversation
+              </>
+            )}
+          </button>
+        </div>
+
+        {createMutation.isError && (
+          <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            Failed to create conversation: {(createMutation.error as Error)?.message || 'Unknown error'}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // Quality Score Badge
@@ -603,13 +818,14 @@ function TypeFilterTabs({
 
 // Main Page Component
 export default function ConversationContractPage() {
-  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [days, setDays] = useState(30)
   const [typeFilter, setTypeFilter] = useState<ConversationTypeFilter>('all')
+  const [showCreateForm, setShowCreateForm] = useState(false)
 
   // Overview query
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['conversation-contract', days],
     queryFn: async () => {
       const response = await conversationContractApi.overview(days)
@@ -666,11 +882,12 @@ export default function ConversationContractPage() {
       <Breadcrumb currentPage="Conversations" />
 
       {/* Header - Session 782: Updated for unified view */}
+      {/* Session 826: Added goal-driven conversation creation */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Agent Conversations</h1>
           <p className="text-gray-400 mt-1">
-            Unified view of all agent conversations with quality analytics
+            Goal-driven agent conversations with quality analytics
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -684,14 +901,34 @@ export default function ConversationContractPage() {
             <option value={90}>Last 90 days</option>
           </select>
           <button
-            onClick={() => navigate('/hive-mind')}
+            onClick={() => setShowCreateForm(!showCreateForm)}
             className="flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-white hover:bg-primary-600 transition-colors"
           >
-            <Plus className="h-4 w-4" />
-            New Session
+            {showCreateForm ? (
+              <>
+                <X className="h-4 w-4" />
+                Cancel
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                New Conversation
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Session 826: Goal-Driven Conversation Creation Form */}
+      {showCreateForm && (
+        <GoalDrivenConversationForm
+          onSuccess={() => {
+            refetch()
+            queryClient.invalidateQueries({ queryKey: ['conversation-contract'] })
+          }}
+          onClose={() => setShowCreateForm(false)}
+        />
+      )}
 
       {/* Session 782: Type Filter Tabs */}
       <TypeFilterTabs
