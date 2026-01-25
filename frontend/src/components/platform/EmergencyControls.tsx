@@ -9,7 +9,7 @@
 import { useState } from 'react'
 import {
   AlertTriangle, Lock, Unlock, Power, Shield, AlertCircle,
-  CheckCircle, Loader2, XCircle, Activity, ChevronRight, ExternalLink
+  CheckCircle, Loader2, XCircle, Activity, ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 

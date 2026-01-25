@@ -9,12 +9,12 @@
  *   <SmartOutputRenderer data={output_data} agentName="ContentWriterAgent" />
  */
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
-  FileText, BookOpen, Mic, Lightbulb, BarChart3, Signal, Code2,
+  BookOpen, Mic, Lightbulb, BarChart3, Signal,
   Image as ImageIcon, Wrench, ChevronDown, ChevronRight, ExternalLink,
-  Play, Clock, Users, TrendingUp, AlertCircle, CheckCircle, XCircle,
-  Brain, Sparkles, ListChecks, Quote, Newspaper, Radio
+  Clock, Users, TrendingUp, AlertCircle, CheckCircle, XCircle,
+  Brain, Sparkles, ListChecks, Newspaper, Radio
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -838,10 +838,10 @@ function GenericToolCard({ toolName, result }: { toolName: string; result: ToolR
         </div>
         {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
       </button>
-      {expanded && result.result && (
+      {expanded && result.result != null && (
         <div className="p-3 border-t border-dark-border bg-dark-bg">
           <pre className="text-xs text-gray-300 overflow-auto max-h-40 font-mono">
-            {typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2)}
+            {typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2) as string}
           </pre>
         </div>
       )}
@@ -1107,7 +1107,7 @@ function MetricsRenderer({ data }: { data: OutputData }) {
 
 export function SmartOutputRenderer({
   data,
-  agentName,
+  agentName: _agentName,
   maxHeight = '600px',
   showRawToggle = true,
   className
@@ -1119,10 +1119,11 @@ export function SmartOutputRenderer({
     return <p className="text-sm text-gray-500 italic">No output data</p>
   }
 
+  let parsedData: OutputData
   if (typeof data === 'string') {
     // Try to parse as JSON
     try {
-      data = JSON.parse(data) as OutputData
+      parsedData = JSON.parse(data) as OutputData
     } catch {
       // If not JSON, render as text
       return (
@@ -1131,9 +1132,11 @@ export function SmartOutputRenderer({
         </div>
       )
     }
+  } else {
+    parsedData = data
   }
 
-  const outputData = data as OutputData
+  const outputData = parsedData
 
   // Session 820: Unwrap specialist delegation patterns to extract trends/discussions
   const { trends, discussions, delegations, unwrappedTask } = unwrapSpecialistData(outputData)

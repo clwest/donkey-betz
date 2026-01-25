@@ -5,7 +5,7 @@
  * Shows component counts, body system health, activity, and remediation status.
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
