@@ -8,15 +8,15 @@
  * - Full data display in OperationRow
  */
 
-import React, { useState, useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { workspaceApi } from '@/lib/api'
 import {
   History, Search, Loader2, Filter, Calendar, ChevronDown, ChevronRight,
   CheckCircle, XCircle, Clock, RotateCcw, Eye, FileText, Code, Plus,
   Trash2, GitCommit, GitBranch, File, Terminal, Play, TestTube, Paintbrush,
-  Rocket, AlertTriangle, TrendingUp, Activity, Users, BarChart3,
-  ChevronUp, Copy, Check, ExternalLink
+  Rocket, AlertTriangle, Activity, Users, BarChart3,
+  ChevronUp, Copy, Check
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import EntityLink from '@/components/EntityLink'

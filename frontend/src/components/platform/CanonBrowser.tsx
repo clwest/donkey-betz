@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import { BookOpen, Folder, FileText, Clock, ChevronRight, ExternalLink } from 'lucide-react'
+import { BookOpen, Folder, FileText, Clock, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface CanonDocument {
