@@ -4005,6 +4005,7 @@ from core.views_platform_command import (
     canon_promote_view,  # Session 819
     playbooks_view,
     audits_view,
+    audit_run_view,  # Session 819
     doc_content_view,
     skin_lock_toggle_view,
 )
@@ -4018,6 +4019,7 @@ urlpatterns += [
     path('api/platform/canon/promote/', canon_promote_view, name='platform-canon-promote'),  # Session 819
     path('api/platform/playbooks/', playbooks_view, name='platform-playbooks'),
     path('api/platform/audits/', audits_view, name='platform-audits'),
+    path('api/platform/audits/run/', audit_run_view, name='platform-audits-run'),  # Session 819
     path('api/platform/doc-content/', doc_content_view, name='platform-doc-content'),  # Session 818
     path('api/platform/skin-lock/', skin_lock_toggle_view, name='platform-skin-lock'),  # Session 818
 ]
