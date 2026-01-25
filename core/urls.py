@@ -4052,6 +4052,38 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 819: Audit Tracking System API
+# =========================================================================
+from core.views_audit_tracking import (
+    findings_list,
+    finding_detail,
+    finding_update_status,
+    finding_create_task,
+    finding_verify,
+    findings_summary,
+    audit_reports_list,
+    audit_report_detail,
+    import_audits,
+    open_p0_findings,
+)
+
+urlpatterns += [
+    # Findings
+    path('api/audit-tracking/findings/', findings_list, name='audit-findings-list'),
+    path('api/audit-tracking/findings/summary/', findings_summary, name='audit-findings-summary'),
+    path('api/audit-tracking/findings/p0/', open_p0_findings, name='audit-p0-findings'),
+    path('api/audit-tracking/findings/<uuid:finding_id>/', finding_detail, name='audit-finding-detail'),
+    path('api/audit-tracking/findings/<uuid:finding_id>/status/', finding_update_status, name='audit-finding-status'),
+    path('api/audit-tracking/findings/<uuid:finding_id>/task/', finding_create_task, name='audit-finding-task'),
+    path('api/audit-tracking/findings/<uuid:finding_id>/verify/', finding_verify, name='audit-finding-verify'),
+    # Reports
+    path('api/audit-tracking/reports/', audit_reports_list, name='audit-reports-list'),
+    path('api/audit-tracking/reports/<uuid:report_id>/', audit_report_detail, name='audit-report-detail'),
+    # Import
+    path('api/audit-tracking/import/', import_audits, name='audit-import'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

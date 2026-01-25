@@ -67,6 +67,14 @@ from .models_deliverables import (
     DeliverableCollection,
 )
 
+# Import audit tracking models (Session 819 - Audit Tracking System)
+from .models_audit_tracking import (
+    AuditReport,
+    AuditFinding,
+    AuditRemediationTask,
+    AuditVerificationRun,
+)
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
