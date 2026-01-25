@@ -107,26 +107,31 @@ def _parse_mission_file() -> Dict[str, Any]:
 
 
 def _get_revenue_metrics() -> Dict[str, Any]:
-    """Get current revenue metrics."""
-    from core.models import Revenue
+    """
+    Get current revenue metrics.
+
+    Session 819: Fixed status filters to match actual Revenue model statuses.
+    Revenue model uses: 'pending', 'completed', 'cancelled'
+    """
+    from core.models_unified_system import Revenue
 
     now = timezone.now()
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # Get monthly revenue (confirmed + received)
+    # Get monthly revenue (completed only)
     monthly = Revenue.objects.filter(
         created_at__gte=start_of_month,
-        status__in=['confirmed', 'received']
+        status='completed'
     ).aggregate(total=Sum('amount'))
 
-    # Get total lifetime revenue
+    # Get total lifetime revenue (completed)
     lifetime = Revenue.objects.filter(
-        status__in=['confirmed', 'received']
+        status='completed'
     ).aggregate(total=Sum('amount'))
 
-    # Get pending revenue
+    # Get pending revenue (awaiting completion)
     pending = Revenue.objects.filter(
-        status__in=['potential', 'pending']
+        status='pending'
     ).aggregate(total=Sum('amount'))
 
     return {
