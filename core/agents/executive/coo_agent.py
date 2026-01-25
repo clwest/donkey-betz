@@ -72,6 +72,7 @@ class COOAgent(BaseAgent):
     """
 
     name = "COOAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are COOAgent, the Chief Operating Officer AI assistant.
 
