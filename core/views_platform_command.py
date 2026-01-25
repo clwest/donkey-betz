@@ -1,5 +1,5 @@
 """
-Platform Command Center API - Session 815
+Platform Command Center API - Session 815 + Session 824
 
 Provides APIs for the Platform Command Center which serves as the main
 control interface for system governance, mission tracking, and knowledge management.
@@ -11,6 +11,17 @@ Endpoints:
 - POST /api/platform/emergency-halt/ - Trigger emergency halt
 - GET /api/platform/canon/ - List canon documents
 - GET /api/platform/playbooks/ - List playbooks
+
+Session 824: Live Metrics & Self-Execution Control
+- GET /api/platform/live-metrics/ - Real-time system metrics
+- GET /api/platform/triggers/ - List trigger rules
+- POST /api/platform/triggers/<name>/toggle/ - Toggle trigger rule
+- POST /api/platform/triggers/run-now/ - Manual metrics check
+- POST /api/platform/actions/run-spiders/ - Trigger spider run
+- POST /api/platform/actions/run-remediation/ - Trigger remediation
+- POST /api/platform/actions/run-self-audit/ - Trigger self-audit
+- POST /api/platform/actions/agent-health-check/ - Trigger agent health check
+- GET /api/platform/remediation/status/ - Remediation status
 """
 
 import logging
@@ -1516,3 +1527,375 @@ def _generate_audit_report(results: Dict[str, Any], username: str) -> str:
 """
 
     return report
+
+
+# =============================================================================
+# Session 824: Live Metrics API
+# =============================================================================
+
+@require_GET
+def live_metrics_view(request):
+    """
+    GET /api/platform/live-metrics/
+
+    Returns real-time system metrics by calling _gather_live_system_metrics().
+
+    Session 824: Exposes the self-awareness metrics to the UI.
+    """
+    try:
+        from core.tasks import _gather_live_system_metrics
+        metrics = _gather_live_system_metrics()
+
+        return JsonResponse({
+            'success': True,
+            'metrics': metrics,
+        })
+    except Exception as e:
+        logger.error(f"Failed to gather live metrics: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+# =============================================================================
+# Session 824: Trigger Rules API
+# =============================================================================
+
+@require_GET
+def triggers_list_view(request):
+    """
+    GET /api/platform/triggers/
+
+    Returns all trigger rules with their current status.
+
+    Session 824: Exposes MetricsActionTrigger rules to the UI.
+    """
+    try:
+        from core.services.metrics_action_trigger import MetricsActionTrigger
+
+        trigger_service = MetricsActionTrigger()
+        rules = trigger_service.get_rules_summary()
+
+        return JsonResponse({
+            'success': True,
+            'rules': rules,
+            'total': len(rules),
+            'enabled_count': sum(1 for r in rules if r['enabled']),
+        })
+    except Exception as e:
+        logger.error(f"Failed to list triggers: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@csrf_exempt
+@require_POST
+def trigger_toggle_view(request, rule_name: str):
+    """
+    POST /api/platform/triggers/<name>/toggle/
+
+    Toggle a trigger rule's enabled state.
+
+    Note: Currently rules are in-memory, so this toggle is session-scoped.
+    For persistence, would need to store enabled state in database.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        from core.services.metrics_action_trigger import MetricsActionTrigger
+
+        trigger_service = MetricsActionTrigger()
+
+        # Find the rule
+        rule_found = False
+        for rule in trigger_service.rules:
+            if rule.condition.name == rule_name:
+                rule.enabled = not rule.enabled
+                rule_found = True
+                new_state = rule.enabled
+                break
+
+        if not rule_found:
+            return JsonResponse({
+                'success': False,
+                'error': f'Rule not found: {rule_name}'
+            }, status=404)
+
+        logger.info(f"Trigger rule {rule_name} {'enabled' if new_state else 'disabled'} by {request.user.username}")
+
+        return JsonResponse({
+            'success': True,
+            'rule_name': rule_name,
+            'enabled': new_state,
+            'message': f"Rule {'enabled' if new_state else 'disabled'}",
+        })
+    except Exception as e:
+        logger.error(f"Failed to toggle trigger: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@csrf_exempt
+@require_POST
+def trigger_run_now_view(request):
+    """
+    POST /api/platform/triggers/run-now/
+
+    Manually run the metrics check and trigger any matching actions.
+
+    Session 824: Allows on-demand self-execution from the UI.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        from core.tasks import run_metrics_action_check
+
+        # Run synchronously for immediate feedback
+        result = run_metrics_action_check()
+
+        logger.info(f"Manual metrics check triggered by {request.user.username}: {result.get('actions_triggered', 0)} actions")
+
+        return JsonResponse({
+            'success': True,
+            'result': result,
+            'message': f"Metrics check completed. {result.get('actions_triggered', 0)} actions triggered.",
+        })
+    except Exception as e:
+        logger.error(f"Failed to run metrics check: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+# =============================================================================
+# Session 824: Manual Actions API
+# =============================================================================
+
+@csrf_exempt
+@require_POST
+def action_run_spiders_view(request):
+    """
+    POST /api/platform/actions/run-spiders/
+
+    Trigger spider network to collect fresh data.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        import json
+        body = json.loads(request.body) if request.body else {}
+        category = body.get('category')  # Optional: run specific category
+
+        from core.tasks import run_spider_network, run_spider_by_category
+
+        if category:
+            run_spider_by_category.delay(category=category)
+            message = f"Spider category '{category}' triggered"
+        else:
+            run_spider_network.delay()
+            message = "Full spider network triggered"
+
+        logger.info(f"{message} by {request.user.username}")
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'category': category,
+        })
+    except Exception as e:
+        logger.error(f"Failed to run spiders: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@csrf_exempt
+@require_POST
+def action_run_remediation_view(request):
+    """
+    POST /api/platform/actions/run-remediation/
+
+    Trigger autonomous remediation cycle.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        import json
+        body = json.loads(request.body) if request.body else {}
+        limit = body.get('limit', 5)  # Default to 5 findings
+
+        from core.tasks import run_autonomous_remediation_cycle
+
+        run_autonomous_remediation_cycle.delay(limit=limit)
+
+        message = f"Remediation cycle triggered (limit: {limit})"
+        logger.info(f"{message} by {request.user.username}")
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'limit': limit,
+        })
+    except Exception as e:
+        logger.error(f"Failed to run remediation: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@csrf_exempt
+@require_POST
+def action_agent_health_check_view(request):
+    """
+    POST /api/platform/actions/agent-health-check/
+
+    Trigger agent health rotation check.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        from core.tasks import run_agent_health_rotation
+
+        run_agent_health_rotation.delay()
+
+        message = "Agent health rotation triggered"
+        logger.info(f"{message} by {request.user.username}")
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+        })
+    except Exception as e:
+        logger.error(f"Failed to run agent health check: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@csrf_exempt
+@require_POST
+def action_run_self_audit_view(request):
+    """
+    POST /api/platform/actions/run-self-audit/
+
+    Trigger system self-audit with live data.
+
+    Session 824: Uses the enhanced self-audit from Session 823.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        from core.tasks import run_system_self_audit
+
+        run_system_self_audit.delay()
+
+        message = "System self-audit triggered (will save to docs/audits/)"
+        logger.info(f"{message} by {request.user.username}")
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+        })
+    except Exception as e:
+        logger.error(f"Failed to run self-audit: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+# =============================================================================
+# Session 824: Remediation Status API
+# =============================================================================
+
+@require_GET
+def remediation_status_view(request):
+    """
+    GET /api/platform/remediation/status/
+
+    Returns detailed remediation status including findings and tasks.
+
+    Session 824: Exposes remediation status to the UI.
+    """
+    try:
+        from core.models_audit_tracking import AuditFinding, AuditRemediationTask
+        from django.db.models import Count
+
+        # Findings by status
+        findings_by_status = dict(
+            AuditFinding.objects.values('status').annotate(
+                count=Count('id')
+            ).values_list('status', 'count')
+        )
+
+        # Findings by priority
+        findings_by_priority = dict(
+            AuditFinding.objects.values('priority').annotate(
+                count=Count('id')
+            ).values_list('priority', 'count')
+        )
+
+        # Tasks by status
+        tasks_by_status = dict(
+            AuditRemediationTask.objects.values('status').annotate(
+                count=Count('id')
+            ).values_list('status', 'count')
+        )
+
+        # Recent tasks
+        recent_tasks = AuditRemediationTask.objects.order_by('-created_at')[:10]
+        recent_tasks_list = [{
+            'id': str(task.id),
+            'finding_title': task.finding.title if task.finding else 'Unknown',
+            'agent': task.assigned_agent,
+            'status': task.status,
+            'created_at': task.created_at.isoformat() if task.created_at else None,
+            'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+        } for task in recent_tasks]
+
+        # Agents with assignments
+        agents_assigned = list(
+            AuditRemediationTask.objects.filter(
+                status__in=['assigned', 'in_progress']
+            ).values('assigned_agent').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10]
+        )
+
+        return JsonResponse({
+            'success': True,
+            'findings': {
+                'total': sum(findings_by_status.values()),
+                'by_status': findings_by_status,
+                'by_priority': findings_by_priority,
+                'open': findings_by_status.get('open', 0),
+                'fixed': findings_by_status.get('fixed', 0),
+            },
+            'tasks': {
+                'total': sum(tasks_by_status.values()),
+                'by_status': tasks_by_status,
+                'recent': recent_tasks_list,
+            },
+            'agents_assigned': agents_assigned,
+        })
+    except Exception as e:
+        logger.error(f"Failed to get remediation status: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)

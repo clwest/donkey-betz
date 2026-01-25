@@ -4,7 +4,7 @@ import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformAp
 // Session 815: Platform Command Center components
 // Session 816: Added AuditsBrowser
 // Session 818: Added DocumentViewer for inline document reading
-import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser, AuditsBrowser, DocumentViewer } from '@/components/platform'
+import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser, AuditsBrowser, DocumentViewer, LiveMetricsDashboard, TriggerRulesPanel, ActionsPanel } from '@/components/platform'
 // Session 816: Enhanced Operations Panel
 // Session 819: Added Deliverables Marketplace components
 import {
@@ -2210,6 +2210,15 @@ export default function WorkspacePage() {
                   </button>
                 </div>
               </div>
+
+              {/* Session 824: Live Metrics Dashboard */}
+              <LiveMetricsDashboard />
+
+              {/* Session 824: Trigger Rules Panel */}
+              <TriggerRulesPanel />
+
+              {/* Session 824: Actions Panel */}
+              <ActionsPanel />
 
               {/* Recent Activity Feed - Session 818: Made clickable */}
               {metricsData?.recent_activity && metricsData.recent_activity.length > 0 && (
