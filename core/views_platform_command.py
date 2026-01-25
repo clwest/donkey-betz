@@ -829,3 +829,91 @@ def audits_view(request):
         'by_type': counts['by_type'],
         'filtered_count': len(audits),
     })
+
+
+# =============================================================================
+# Session 818: Document Content API
+# =============================================================================
+
+@require_GET
+def doc_content_view(request):
+    """
+    GET /api/platform/doc-content/
+
+    Fetch the content of a documentation file.
+
+    Query params:
+    - path: Relative path to the document (e.g., 'docs/canon/example.md')
+
+    Returns:
+    - content: Raw markdown content
+    - metadata: Title, lines, size, modified date
+    """
+    doc_path = request.GET.get('path', '')
+
+    if not doc_path:
+        return JsonResponse({
+            'error': 'Missing path parameter'
+        }, status=400)
+
+    # Security: Only allow reading from docs/ directory
+    if not doc_path.startswith('docs/'):
+        return JsonResponse({
+            'error': 'Invalid path - must be within docs/ directory'
+        }, status=403)
+
+    # Security: Prevent directory traversal
+    if '..' in doc_path:
+        return JsonResponse({
+            'error': 'Invalid path - directory traversal not allowed'
+        }, status=403)
+
+    # Build full path
+    full_path = Path(settings.BASE_DIR) / doc_path
+
+    if not full_path.exists():
+        return JsonResponse({
+            'error': f'Document not found: {doc_path}'
+        }, status=404)
+
+    if not full_path.is_file():
+        return JsonResponse({
+            'error': 'Path is not a file'
+        }, status=400)
+
+    # Only allow markdown files
+    if full_path.suffix.lower() not in ['.md', '.markdown']:
+        return JsonResponse({
+            'error': 'Only markdown files are supported'
+        }, status=400)
+
+    try:
+        content = full_path.read_text(encoding='utf-8')
+        stat = full_path.stat()
+
+        # Extract title from content
+        title = None
+        for line in content.split('\n')[:10]:
+            if line.startswith('# '):
+                title = line[2:].strip()
+                break
+
+        if not title:
+            title = full_path.stem.replace('_', ' ').replace('-', ' ').title()
+
+        return JsonResponse({
+            'content': content,
+            'metadata': {
+                'path': doc_path,
+                'name': full_path.name,
+                'title': title,
+                'lines': content.count('\n') + 1,
+                'size_bytes': stat.st_size,
+                'modified_at': datetime.fromtimestamp(stat.st_mtime, tz=dt_timezone.utc).isoformat(),
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error reading document {doc_path}: {e}")
+        return JsonResponse({
+            'error': f'Error reading document: {str(e)}'
+        }, status=500)
