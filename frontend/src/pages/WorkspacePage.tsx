@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
+import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformApi, humanApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
 // Session 815: Platform Command Center components
 // Session 816: Added AuditsBrowser
 // Session 818: Added DocumentViewer for inline document reading
@@ -1827,6 +1827,19 @@ export default function WorkspacePage() {
     },
   })
 
+  // Session 818: Decision mutation for quick approve/dismiss from Command tab
+  const decisionMutation = useMutation({
+    mutationFn: ({ itemId, decision }: { itemId: string; decision: string }) =>
+      humanApi.decide(itemId, decision),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platform-governance'] })
+      setActionResult({ type: 'success', message: 'Decision recorded' })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to record decision' })
+    },
+  })
+
   // Clear toast
   useEffect(() => {
     if (actionResult) {
@@ -1989,10 +2002,14 @@ export default function WorkspacePage() {
                 isLoading={loadingMission}
               />
 
-              {/* Metrics Grid */}
+              {/* Metrics Grid - Session 818: Added click handlers */}
               <MetricsGrid
                 metrics={missionData?.metrics_summary}
                 isLoading={loadingMission}
+                onRevenueClick={() => window.location.href = '/human?tab=revenue'}
+                onCostClick={() => window.location.href = '/ai-studio?tab=analytics'}
+                onCanonClick={() => setActiveTab('knowledge')}
+                onPlaybooksClick={() => setActiveTab('knowledge')}
               />
 
               {/* Quick Actions */}
@@ -2026,18 +2043,28 @@ export default function WorkspacePage() {
                 </div>
               </div>
 
-              {/* Recent Activity Feed */}
+              {/* Recent Activity Feed - Session 818: Made clickable */}
               {metricsData?.recent_activity && metricsData.recent_activity.length > 0 && (
                 <div className="card">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Activity className="text-primary-400" size={18} />
-                    <h3 className="text-md font-semibold uppercase">Recent Activity</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Activity className="text-primary-400" size={18} />
+                      <h3 className="text-md font-semibold uppercase">Recent Activity</h3>
+                    </div>
+                    <a
+                      href="/ai-studio?tab=agents"
+                      className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                    >
+                      View All Agents
+                      <ChevronRight size={12} />
+                    </a>
                   </div>
                   <div className="space-y-2">
                     {metricsData.recent_activity.map((activity, i) => (
-                      <div
+                      <a
                         key={i}
-                        className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+                        href={`/ai-studio?tab=agents&search=${encodeURIComponent(activity.agent_name)}`}
+                        className="flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
                           {activity.success ? (
@@ -2046,24 +2073,29 @@ export default function WorkspacePage() {
                             <XCircle size={14} className="text-accent-red" />
                           )}
                           <div>
-                            <span className="text-sm text-white">{activity.agent_name}</span>
+                            <span className="text-sm text-white group-hover:text-primary-400 transition-colors">
+                              {activity.agent_name}
+                            </span>
                             <p className="text-xs text-gray-500 truncate max-w-md">
                               {activity.task}
                             </p>
                           </div>
                         </div>
-                        {activity.completed_at && (
-                          <span className="text-xs text-gray-500">
-                            {new Date(activity.completed_at).toLocaleString()}
-                          </span>
-                        )}
-                      </div>
+                        <div className="flex items-center gap-2">
+                          {activity.completed_at && (
+                            <span className="text-xs text-gray-500">
+                              {new Date(activity.completed_at).toLocaleString()}
+                            </span>
+                          )}
+                          <ChevronRight size={14} className="text-gray-600 group-hover:text-primary-400 transition-colors" />
+                        </div>
+                      </a>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Pending Decisions Preview */}
+              {/* Pending Decisions Preview - Session 818: Made interactive */}
               {governanceData?.pending_decisions && governanceData.pending_decisions.length > 0 && (
                 <div className="card border border-accent-amber/30">
                   <div className="flex items-center justify-between mb-4">
@@ -2073,34 +2105,68 @@ export default function WorkspacePage() {
                         Pending Decisions ({governanceData.pending_decisions_count})
                       </h3>
                     </div>
-                    <button
-                      onClick={() => setActiveTab('governance')}
-                      className="text-xs text-primary-400 hover:text-primary-300"
+                    <a
+                      href="/human?tab=attention"
+                      className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
                     >
-                      View All →
-                    </button>
+                      View All
+                      <ChevronRight size={12} />
+                    </a>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {governanceData.pending_decisions.slice(0, 3).map((decision) => (
                       <div
                         key={decision.id}
-                        className="p-3 bg-gray-800/50 rounded-lg"
+                        className="p-4 bg-gray-800/50 hover:bg-gray-800/80 rounded-lg transition-colors"
                       >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="text-sm font-medium text-white">{decision.title}</h4>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {decision.source_agent || decision.source_type}
-                            </p>
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-white truncate">{decision.title}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-500">
+                                {decision.source_agent || decision.source_type}
+                              </span>
+                              {decision.ml_recommendation && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                                  AI: {decision.ml_recommendation}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <span className={cn(
-                            'text-xs px-2 py-0.5 rounded',
+                            'text-xs px-2 py-0.5 rounded flex-shrink-0 ml-2',
                             decision.urgency === 'critical' ? 'bg-accent-red/20 text-accent-red' :
                             decision.urgency === 'high' ? 'bg-accent-amber/20 text-accent-amber' :
                             'bg-gray-700 text-gray-400'
                           )}>
                             {decision.urgency}
                           </span>
+                        </div>
+                        {/* Quick action buttons */}
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={() => decisionMutation.mutate({ itemId: decision.id, decision: 'approve' })}
+                            disabled={decisionMutation.isPending}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-green/20 hover:bg-accent-green/30 text-accent-green rounded text-xs font-medium transition-colors disabled:opacity-50"
+                          >
+                            <CheckCircle size={12} />
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => decisionMutation.mutate({ itemId: decision.id, decision: 'dismiss' })}
+                            disabled={decisionMutation.isPending}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                          >
+                            <X size={12} />
+                            Dismiss
+                          </button>
+                          <a
+                            href={`/human?tab=attention&item=${decision.id}`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 hover:text-white text-xs transition-colors ml-auto"
+                          >
+                            View Details
+                            <ChevronRight size={12} />
+                          </a>
                         </div>
                       </div>
                     ))}
