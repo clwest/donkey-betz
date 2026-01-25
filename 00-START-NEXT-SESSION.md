@@ -1,114 +1,80 @@
-# Session 815 - UI Rework for New System Architecture
+# Session 816 - Platform Command Center Polish & Playbooks
 
-**Previous Session:** 814 (Documentation Architecture + Governance Framework)
+**Previous Session:** 815 (WorkspacePage → Platform Command Center)
 **Date:** January 24, 2026
-**Status:** 75 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN | **228 Active Celery Beat Tasks**
+**Status:** 75 Core + 139 Persona Agents | 46 Frontend Pages | ALL BODY SYSTEMS GREEN | **228 Active Celery Beat Tasks**
 
 ---
 
-## PRIMARY GOAL: Complete UI Rework
+## Session 815 Summary
 
-The system architecture has evolved significantly. The UI needs to reflect:
+### What Was Built
+Transformed WorkspacePage into a **Platform Command Center** with 3 new tabs:
 
-1. **Governance Framework** - Human authority, kill switches, escalation paths
-2. **Mission Focus** - Q1 2026: $10k MRR goal
-3. **Canon System** - Promote best outputs to locked knowledge
-4. **Playbooks** - Gold standard operational guides
-5. **Cost Consciousness** - LLM cost tracking and optimization
+| Tab | Purpose | Status |
+|-----|---------|--------|
+| **Command** | Mission progress, metrics grid, quick actions, activity feed | ✅ Complete |
+| **Governance** | Emergency controls, pending decisions, escalation path | ✅ Complete |
+| **Knowledge** | Canon browser, playbook browser | ✅ Complete |
 
----
-
-## New Architecture to Reflect in UI
-
-### Documentation System (`/docs/`)
+### New APIs Created
 ```
-docs/
-├── governance/           # Authority Framework
-│   └── SYSTEM_OWNER.md  # Chris = final authority
-├── missions/             # Agent Focus
-│   └── CURRENT_MISSION.md
-├── canon/                # Locked Knowledge
-│   ├── INDEX.md
-│   └── creative/DAVINCI_RESOLVE_WORKFLOW.md
-└── playbooks/            # Gold Standard Guides
-    ├── creator/
-    ├── devops/
-    ├── marketing/
-    └── development/
+GET  /api/platform/mission/     - Current mission + metrics
+GET  /api/platform/metrics/     - Revenue, LLM costs, canon, playbooks
+GET  /api/platform/governance/  - Owner, emergency controls, decisions
+POST /api/platform/emergency-halt/  - Trigger emergency halt
+GET  /api/platform/canon/       - List canon documents
+GET  /api/platform/playbooks/   - List playbooks
 ```
 
-### Key Concepts for UI
-
-| Concept | Description | UI Need |
-|---------|-------------|---------|
-| **System Owner** | Chris has final authority | Override buttons, kill switches |
-| **Current Mission** | $10k MRR Q1 2026 | Mission dashboard, progress tracking |
-| **Canon** | Locked authoritative docs | "Promote to Canon" button, canon browser |
-| **Playbooks** | Reusable operational guides | Playbook browser, creation flow |
-| **Kill Switches** | Emergency halt procedures | Emergency controls panel |
-| **Cognitive Load** | Reduce Chris's mental overhead | Simplified decision UI |
+### New Components
+- `MissionCard` - Mission statement, goal, status
+- `MetricsGrid` - 4-card progress grid
+- `EmergencyControls` - SKIN lock, quarantine, halt button
+- `CanonBrowser` - Browse canon by category
+- `PlaybookBrowser` - Browse playbooks by category
 
 ---
 
-## UI Pages to Review/Rework
+## PRIMARY GOAL: Polish & Create Content
 
-### High Priority
-| Page | Current State | Needed Changes |
-|------|---------------|----------------|
-| **Dashboard** | Generic stats | Add mission progress, cost tracking, canon count |
-| **Human Interface** | Decision review | Add "Promote to Canon" action, mission alignment indicators |
-| **Docs Index** | File browser | Add governance/missions/canon sections prominently |
-| **Control Center** | System controls | Add kill switch buttons, emergency procedures |
+### 1. Create First Playbooks (`docs/playbooks/`)
+The playbook browser shows 0 playbooks. Create initial set:
 
-### Medium Priority
-| Page | Current State | Needed Changes |
-|------|---------------|----------------|
-| **Blogs Page** | List view | Category tabs (blog/audit/technical_document) |
-| **Workspace** | File management | Show canon-worthy outputs, playbook candidates |
-| **Neural Orchestra** | Agent visualization | Show mission alignment, cost per agent |
+```
+docs/playbooks/
+├── creator/
+│   └── VIDEO_PRODUCTION_WORKFLOW.md
+├── devops/
+│   └── DEPLOYMENT_CHECKLIST.md
+├── development/
+│   └── AGENT_CREATION_GUIDE.md
+└── marketing/
+    └── CONTENT_CALENDAR_PROCESS.md
+```
 
-### Consider Adding
-| New Page/Feature | Purpose |
-|------------------|---------|
-| **Mission Control** | Single view of mission progress, key metrics |
-| **Canon Browser** | Browse and manage canonical knowledge |
-| **Playbook Studio** | Create and manage operational playbooks |
-| **Cost Dashboard** | LLM costs, budget tracking, optimization |
+### 2. Connect Real Revenue Data
+Currently showing $0. Wire up actual Revenue model data.
+
+### 3. Canon Promotion Flow
+Add "Promote to Canon" button in Human Interface for high-quality outputs.
+
+### 4. Cost Tracking Enhancement
+- Show cost per agent
+- Show cost trend (7-day chart)
+- Budget alerts
 
 ---
 
-## Current Mission Metrics (for UI)
+## Current Metrics
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
 | Monthly Revenue | $10,000 | TBD | 🟡 |
 | Daily LLM Cost | < $50 | TBD | 🟡 |
-| Canon Docs | 20+ | 1 | 🔴 |
-| Playbooks | 10+ | 0 | 🔴 |
+| Canon Docs | 20+ | **1** | 🔴 |
+| Playbooks | 10+ | **0** | 🔴 |
 | Cognitive Load | Decreasing | TBD | 🟡 |
-
----
-
-## Session 814 Summary
-
-### PRs Merged
-| PR | Description |
-|----|-------------|
-| **#124** | Blog delete functionality |
-| **#125** | Technical documents save to workspace via SKIN layer |
-| **#126** | Workspace write key fix |
-| **#127** | Documentation architecture with governance & focus layers |
-| **#128** | Session handoff |
-
-### Key Files Created
-- `docs/DOCUMENTATION_ARCHITECTURE.md` - Master architecture
-- `docs/governance/SYSTEM_OWNER.md` - Human authority framework
-- `docs/missions/CURRENT_MISSION.md` - Q1 2026 mission
-- `docs/canon/INDEX.md` - Canon registry
-- `docs/canon/creative/DAVINCI_RESOLVE_WORKFLOW.md` - First canon doc
-
-### DocsContextBuilder Updates
-All agents now receive governance and mission context automatically.
 
 ---
 
@@ -122,20 +88,25 @@ make start && make celery
 ### Frontend Development
 ```bash
 cd frontend && npm run dev
+# Navigate to /workspace to see Platform Command Center
 ```
 
-### Key Documents
+### Test New APIs
 ```bash
-cat docs/governance/SYSTEM_OWNER.md
-cat docs/missions/CURRENT_MISSION.md
-cat docs/DOCUMENTATION_ARCHITECTURE.md
+curl http://localhost:8000/api/platform/mission/
+curl http://localhost:8000/api/platform/governance/
+curl http://localhost:8000/api/platform/canon/
 ```
 
-### Emergency Commands
-```bash
-python manage.py skin_lock --all      # Halt workspace writes
-python manage.py quarantine_agent --name <Agent>
-make stop-celery                       # Stop all tasks
+### Key Files
+```
+# Session 815 - New files
+core/views_platform_command.py
+frontend/src/components/platform/
+frontend/src/pages/WorkspacePage.tsx (updated)
+
+# Documentation
+docs/handoffs/SESSION_815_PLATFORM_COMMAND_CENTER.md
 ```
 
 ---
@@ -144,6 +115,7 @@ make stop-celery                       # Stop all tasks
 
 | Session | Focus |
 |---------|-------|
+| **815** | WorkspacePage → Platform Command Center (Command, Governance, Knowledge tabs) |
 | **814** | Documentation Architecture + Governance + Human Supremacy |
 | **813** | SKIN Layer Audit + Workspace Output Fix |
 | **812** | Content Production Teams + Persona Advisory |
@@ -152,4 +124,4 @@ make stop-celery                       # Stop all tasks
 
 ---
 
-**START HERE:** Review current frontend pages and plan UI rework to reflect new governance, mission, and canon architecture.
+**START HERE:** Open http://localhost:8000/workspace to see the new Platform Command Center. Create playbooks and enhance with real data.

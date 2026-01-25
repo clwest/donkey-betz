@@ -2508,3 +2508,162 @@ export const agentCollaborationApi = {
     participating_agents: string[]
   }) => api.post('/agent-collab/initiate/', data),
 }
+
+// =============================================================================
+// Session 815: Platform Command Center API
+// =============================================================================
+
+export interface MissionMetric {
+  current: number
+  target: number
+  progress_pct: number
+}
+
+export interface MissionMetricsSummary {
+  revenue: MissionMetric
+  llm_cost: MissionMetric
+  canon: MissionMetric
+  playbooks: MissionMetric
+}
+
+export interface MissionData {
+  status: string
+  statement: string
+  goal: string
+  period: string
+  session?: number
+  priorities?: Array<{
+    rank: number
+    name: string
+    why: string
+  }>
+}
+
+export interface SystemOwner {
+  name: string
+  authority: string
+  override_level: string
+  contact: string
+}
+
+export interface EmergencyStatus {
+  skin_lock: boolean
+  skin_status: string
+  quarantined_agents: string[]
+  quarantined_count: number
+  system_paused: boolean
+  pending_critical_decisions: number
+}
+
+export interface PendingDecision {
+  id: string
+  title: string
+  summary: string
+  urgency: string
+  item_type: string
+  source_type: string
+  source_agent: string
+  created_at: string
+  ml_recommendation: string
+}
+
+export interface CanonDocument {
+  path: string
+  name: string
+  title: string
+  category: string
+  size_bytes: number
+  modified_at: string
+  lines: number
+}
+
+export interface Playbook {
+  path: string
+  name: string
+  title: string
+  description: string
+  category: string
+  size_bytes: number
+  modified_at: string
+}
+
+export interface RecentActivity {
+  agent_name: string
+  task: string
+  completed_at: string | null
+  success: boolean
+}
+
+export const platformApi = {
+  // Get current mission with metrics summary
+  mission: () =>
+    api.get<{
+      mission: MissionData
+      metrics_summary: MissionMetricsSummary
+    }>('/platform/mission/'),
+
+  // Get detailed metrics
+  metrics: () =>
+    api.get<{
+      revenue: {
+        monthly: number
+        lifetime: number
+        pending: number
+      }
+      llm_costs: {
+        daily: { cost: number; calls: number; tokens: number }
+        weekly: { cost: number; calls: number }
+        monthly: { cost: number; calls: number }
+      }
+      canon: {
+        total: number
+        by_category: Record<string, number>
+      }
+      playbooks: {
+        total: number
+        by_category: Record<string, number>
+      }
+      recent_activity: RecentActivity[]
+    }>('/platform/metrics/'),
+
+  // Get governance status
+  governance: () =>
+    api.get<{
+      owner: SystemOwner
+      emergency_controls: EmergencyStatus
+      pending_decisions: PendingDecision[]
+      pending_decisions_count: number
+      authority_escalation_path: Array<{
+        level: number
+        entity: string
+        scope: string
+      }>
+    }>('/platform/governance/'),
+
+  // Trigger emergency halt
+  emergencyHalt: () =>
+    api.post<{
+      success: boolean
+      message: string
+      attention_item_id?: string
+      error?: string
+    }>('/platform/emergency-halt/'),
+
+  // Get canon documents
+  canon: (category?: string) =>
+    api.get<{
+      documents: CanonDocument[]
+      total: number
+      by_category: Record<string, number>
+      filtered_count: number
+    }>('/platform/canon/', { params: category ? { category } : {} }),
+
+  // Get playbooks
+  playbooks: (category?: string) =>
+    api.get<{
+      playbooks: Playbook[]
+      total: number
+      by_category: Record<string, number>
+      filtered_count: number
+    }>('/platform/playbooks/', { params: category ? { category } : {} }),
+}

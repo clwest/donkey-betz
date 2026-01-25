@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
+import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
+// Session 815: Platform Command Center components
+import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser } from '@/components/platform'
 // Session 714: Real-time system events
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import {
@@ -13,7 +15,9 @@ import {
   // Session 780: Icons for project context sections
   Key, Puzzle, Package, Link2, Map,
   // Session 784: Docs tab icon
-  Book, ArrowRight
+  Book, ArrowRight,
+  // Session 815: Platform Command Center icons
+  Target, Shield, BookOpen, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
@@ -21,7 +25,8 @@ import { useAuthStore } from '@/stores/authStore'
 import EntityLink from '@/components/EntityLink'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
-type WorkspaceTab = 'overview' | 'files' | 'git' | 'operations' | 'reviews' | 'docs'
+// Session 815: Updated tabs for Platform Command Center
+type WorkspaceTab = 'command' | 'governance' | 'knowledge' | 'overview' | 'files' | 'git' | 'operations' | 'reviews' | 'docs'
 
 // Session 780: WorkspaceContext interface for project understanding
 interface WorkspaceContext {
@@ -96,8 +101,12 @@ interface ActionResult {
   message: string
 }
 
+// Session 815: Updated tabs for Platform Command Center
 const tabs = [
-  { id: 'overview' as WorkspaceTab, label: 'Overview', icon: Activity },
+  { id: 'command' as WorkspaceTab, label: 'Command', icon: Target },
+  { id: 'governance' as WorkspaceTab, label: 'Governance', icon: Shield },
+  { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
+  { id: 'overview' as WorkspaceTab, label: 'Workspace', icon: Activity },
   { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
   { id: 'git' as WorkspaceTab, label: 'Git', icon: GitBranch },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
@@ -1168,7 +1177,8 @@ function FileContentModal({ operation, isLoading, onClose }: {
 }
 
 export default function WorkspacePage() {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview')
+  // Session 815: Default to Command tab for Platform Command Center
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('command')
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [showCommitModal, setShowCommitModal] = useState(false)
@@ -1349,6 +1359,52 @@ export default function WorkspacePage() {
     enabled: !!selectedDocPath && activeTab === 'docs',
   })
 
+  // Session 815: Platform Command Center queries
+  const { data: missionData, isLoading: loadingMission } = useQuery({
+    queryKey: ['platform-mission'],
+    queryFn: async () => {
+      const res = await platformApi.mission()
+      return res.data
+    },
+    enabled: activeTab === 'command',
+  })
+
+  const { data: metricsData, isLoading: loadingMetrics } = useQuery({
+    queryKey: ['platform-metrics'],
+    queryFn: async () => {
+      const res = await platformApi.metrics()
+      return res.data
+    },
+    enabled: activeTab === 'command',
+  })
+
+  const { data: governanceData, isLoading: loadingGovernance } = useQuery({
+    queryKey: ['platform-governance'],
+    queryFn: async () => {
+      const res = await platformApi.governance()
+      return res.data
+    },
+    enabled: activeTab === 'governance' || activeTab === 'command',
+  })
+
+  const { data: canonData, isLoading: loadingCanon } = useQuery({
+    queryKey: ['platform-canon'],
+    queryFn: async () => {
+      const res = await platformApi.canon()
+      return res.data
+    },
+    enabled: activeTab === 'knowledge',
+  })
+
+  const { data: playbooksData, isLoading: loadingPlaybooks } = useQuery({
+    queryKey: ['platform-playbooks'],
+    queryFn: async () => {
+      const res = await platformApi.playbooks()
+      return res.data
+    },
+    enabled: activeTab === 'knowledge',
+  })
+
   // Mutations
   const activateMutation = useMutation({
     mutationFn: (id: string) => workspaceApi.activate(id),
@@ -1443,6 +1499,18 @@ export default function WorkspacePage() {
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to submit review' })
       setReviewingOperationId(null)  // Clear loading state on error too
+    },
+  })
+
+  // Session 815: Emergency Halt mutation
+  const emergencyHaltMutation = useMutation({
+    mutationFn: () => platformApi.emergencyHalt(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['platform-governance'] })
+      setActionResult({ type: 'success', message: data.data.message || 'Emergency halt triggered' })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to trigger emergency halt' })
     },
   })
 
@@ -1599,7 +1667,297 @@ export default function WorkspacePage() {
             ))}
           </div>
 
-          {/* Overview Tab */}
+          {/* Session 815: Command Tab - Platform Command Center */}
+          {activeTab === 'command' && (
+            <div className="space-y-6">
+              {/* Mission Card */}
+              <MissionCard
+                mission={missionData?.mission}
+                isLoading={loadingMission}
+              />
+
+              {/* Metrics Grid */}
+              <MetricsGrid
+                metrics={missionData?.metrics_summary}
+                isLoading={loadingMission}
+              />
+
+              {/* Quick Actions */}
+              <div className="card">
+                <div className="flex items-center gap-2 mb-4">
+                  <Zap className="text-accent-amber" size={18} />
+                  <h3 className="text-md font-semibold uppercase">Quick Actions</h3>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => setActiveTab('governance')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+                  >
+                    <Shield size={16} className="text-accent-blue" />
+                    View Governance
+                  </button>
+                  <a
+                    href="/human"
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+                  >
+                    <Heart size={16} className="text-accent-red" />
+                    System Health
+                  </a>
+                  <button
+                    onClick={() => setActiveTab('knowledge')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+                  >
+                    <BookOpen size={16} className="text-accent-purple" />
+                    Browse Knowledge
+                  </button>
+                </div>
+              </div>
+
+              {/* Recent Activity Feed */}
+              {metricsData?.recent_activity && metricsData.recent_activity.length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Activity className="text-primary-400" size={18} />
+                    <h3 className="text-md font-semibold uppercase">Recent Activity</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {metricsData.recent_activity.map((activity, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          {activity.success ? (
+                            <CheckCircle size={14} className="text-accent-green" />
+                          ) : (
+                            <XCircle size={14} className="text-accent-red" />
+                          )}
+                          <div>
+                            <span className="text-sm text-white">{activity.agent_name}</span>
+                            <p className="text-xs text-gray-500 truncate max-w-md">
+                              {activity.task}
+                            </p>
+                          </div>
+                        </div>
+                        {activity.completed_at && (
+                          <span className="text-xs text-gray-500">
+                            {new Date(activity.completed_at).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Decisions Preview */}
+              {governanceData?.pending_decisions && governanceData.pending_decisions.length > 0 && (
+                <div className="card border border-accent-amber/30">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="text-accent-amber" size={18} />
+                      <h3 className="text-md font-semibold uppercase">
+                        Pending Decisions ({governanceData.pending_decisions_count})
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('governance')}
+                      className="text-xs text-primary-400 hover:text-primary-300"
+                    >
+                      View All →
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {governanceData.pending_decisions.slice(0, 3).map((decision) => (
+                      <div
+                        key={decision.id}
+                        className="p-3 bg-gray-800/50 rounded-lg"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-sm font-medium text-white">{decision.title}</h4>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {decision.source_agent || decision.source_type}
+                            </p>
+                          </div>
+                          <span className={cn(
+                            'text-xs px-2 py-0.5 rounded',
+                            decision.urgency === 'critical' ? 'bg-accent-red/20 text-accent-red' :
+                            decision.urgency === 'high' ? 'bg-accent-amber/20 text-accent-amber' :
+                            'bg-gray-700 text-gray-400'
+                          )}>
+                            {decision.urgency}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Session 815: Governance Tab */}
+          {activeTab === 'governance' && (
+            <div className="space-y-6">
+              <EmergencyControls
+                emergency={governanceData?.emergency_controls}
+                owner={governanceData?.owner}
+                isLoading={loadingGovernance}
+                onEmergencyHalt={async () => {
+                  await emergencyHaltMutation.mutateAsync()
+                }}
+              />
+
+              {/* Pending Decisions Full List */}
+              {governanceData?.pending_decisions && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CheckSquare className="text-primary-400" size={18} />
+                    <h3 className="text-md font-semibold uppercase">
+                      Pending Decisions ({governanceData.pending_decisions_count})
+                    </h3>
+                  </div>
+                  {governanceData.pending_decisions.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <CheckCircle className="mx-auto mb-2" size={24} />
+                      <p>No pending decisions</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {governanceData.pending_decisions.map((decision) => (
+                        <div
+                          key={decision.id}
+                          className="p-4 bg-gray-800/50 rounded-lg border border-gray-700/50"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="text-sm font-medium text-white">{decision.title}</h4>
+                            <span className={cn(
+                              'text-xs px-2 py-0.5 rounded',
+                              decision.urgency === 'critical' ? 'bg-accent-red/20 text-accent-red' :
+                              decision.urgency === 'high' ? 'bg-accent-amber/20 text-accent-amber' :
+                              'bg-gray-700 text-gray-400'
+                            )}>
+                              {decision.urgency}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mb-3">{decision.summary}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              <span>{decision.item_type}</span>
+                              <span>•</span>
+                              <span>{decision.source_agent || decision.source_type}</span>
+                              <span>•</span>
+                              <span>{new Date(decision.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <a
+                              href={`/human?item=${decision.id}`}
+                              className="text-xs text-primary-400 hover:text-primary-300"
+                            >
+                              View in Human Interface →
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Authority Escalation Path */}
+              {governanceData?.authority_escalation_path && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ArrowRight className="text-gray-400" size={18} />
+                    <h3 className="text-md font-semibold uppercase">Authority Escalation Path</h3>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {governanceData.authority_escalation_path.map((level, i) => (
+                      <React.Fragment key={level.level}>
+                        <div className="flex flex-col items-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold">
+                            {level.level}
+                          </div>
+                          <span className="text-sm mt-2">{level.entity}</span>
+                          <span className="text-xs text-gray-500">{level.scope}</span>
+                        </div>
+                        {i < governanceData.authority_escalation_path.length - 1 && (
+                          <ChevronRight className="text-gray-600" size={20} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Session 815: Knowledge Tab */}
+          {activeTab === 'knowledge' && (
+            <div className="space-y-6">
+              {/* Canon Section */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="text-accent-purple" size={18} />
+                    <h3 className="text-md font-semibold uppercase">Canon Documents</h3>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {canonData?.total || 0} documents
+                  </span>
+                </div>
+                <CanonBrowser
+                  data={canonData}
+                  isLoading={loadingCanon}
+                  onSelectDocument={(doc) => {
+                    // Navigate to docs page with this doc selected
+                    window.open(`/docs-index?search=${encodeURIComponent(doc.path)}`, '_blank')
+                  }}
+                />
+              </div>
+
+              {/* Playbooks Section */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="text-accent-cyan" size={18} />
+                    <h3 className="text-md font-semibold uppercase">Playbooks</h3>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {playbooksData?.total || 0} playbooks
+                  </span>
+                </div>
+                <PlaybookBrowser
+                  data={playbooksData}
+                  isLoading={loadingPlaybooks}
+                  onSelectPlaybook={(playbook) => {
+                    window.open(`/docs-index?search=${encodeURIComponent(playbook.path)}`, '_blank')
+                  }}
+                />
+              </div>
+
+              {/* Quick Link to Full Docs */}
+              <div className="card border border-dashed border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">Full Documentation Index</h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Browse all 1,500+ documentation files
+                    </p>
+                  </div>
+                  <a
+                    href="/docs-index"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-500/20 hover:bg-primary-500/30 text-primary-400 rounded-lg text-sm transition-colors"
+                  >
+                    <ExternalLink size={14} />
+                    Open Index
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Overview Tab (now renamed to Workspace) */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {/* Active Workspace Info */}
