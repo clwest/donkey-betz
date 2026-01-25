@@ -591,6 +591,9 @@ Your output should be ready for executive review and formal approval processes."
         stage_purpose = stage_info.get('purpose', '')
         expected_outputs = stage_info.get('outputs', [])
 
+        # Session 814: Inject critical system docs for context awareness
+        critical_docs_context = self._get_critical_system_context(task=task)
+
         prompt = f"""Create a {stage_name} document for the following:
 
 **Topic:** {topic}
@@ -603,6 +606,13 @@ Your output should be ready for executive review and formal approval processes."
 **Task:** {task}
 
 """
+        # Session 814: Add critical system context if available
+        if critical_docs_context:
+            prompt += f"""
+{critical_docs_context}
+
+"""
+
         if research_context:
             prompt += f"""**Research Context:**
 {research_context}
@@ -630,6 +640,11 @@ Your output should be ready for executive review and formal approval processes."
 6. Add the document stage footer
 7. NEVER use casual or blog-style language
 8. Make all criteria specific and measurable (not vague)
+9. **CRITICAL: If System Context is provided above, you MUST reference specific details from it:**
+   - Mention exact counts (e.g., "74 agents", "77 spiders", "228 Celery tasks")
+   - Reference specific systems (HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN)
+   - Include session numbers and features mentioned in the context
+   - Your output should be specific to THIS system, NOT generic
 
 Generate the complete document now:"""
 
@@ -644,10 +659,11 @@ Generate the complete document now:"""
             client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
             # Use GPT-4 for high-quality technical writing
+            # Session 814: Increased max_tokens to handle large context + response
             response = client.chat.completions.create(
                 model="gpt-4o",  # or gpt-4-turbo for cost savings
                 messages=messages,
-                max_tokens=4000,
+                max_tokens=8000,
                 temperature=0.3,  # Lower temperature for consistent, formal output
             )
 
@@ -656,6 +672,43 @@ Generate the complete document now:"""
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             return None
+
+    def _get_critical_system_context(self, task: str = "") -> str:
+        """
+        Session 814: Get critical system documentation context.
+
+        Uses DocsContextBuilder to inject CLAUDE.md and 00-START-NEXT-SESSION.md
+        so the agent has full awareness of the system it's documenting.
+        """
+        try:
+            from core.services.docs_context_builder import DocsContextBuilder
+
+            builder = DocsContextBuilder()
+            # Get critical docs with full content
+            context = builder.build_context_for_agent(
+                agent_name=self.name,
+                task=task,
+                include_critical_docs=True,
+                include_content_snippets=True,  # Enable full content
+                max_docs=5  # Focus on most relevant
+            )
+
+            if context and context.get('has_docs'):
+                # Extract the summary string from the context dict
+                summary = context.get('summary', '')
+                if summary and len(summary) > 100:  # Has meaningful content
+                    return f"""## System Context (Auto-Injected)
+The following provides critical context about the system being documented:
+
+{summary}
+
+Use this context to make your documentation specific to THIS system, not generic.
+Reference specific details (agent counts, service counts, features) from above.
+"""
+            return ""
+        except Exception as e:
+            logger.warning(f"Failed to load critical system context: {e}")
+            return ""
 
 
 def get_stage_for_doc_type(doc_type: str) -> Dict[str, Any]:
