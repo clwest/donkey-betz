@@ -195,7 +195,7 @@ export default function BlogsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
             <input
               type="text"
-              placeholder="Search blogs by title, content, or tags..."
+              placeholder="Search by title, content, or tags..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={handleKeyPress}
