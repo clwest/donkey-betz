@@ -1,51 +1,42 @@
-# Session 817 - Revenue Data & Canon Promotion
+# Session 818 - Revenue Data & Canon Promotion
 
-**Previous Session:** 816 (Operations Panel Overhaul + Playbooks + Audits Browser)
+**Previous Session:** 817 (Autonomous Agent Behavior + Smart Tool Results Renderer)
 **Date:** January 24, 2026
 **Status:** 75 Core + 139 Persona Agents | 46 Frontend Pages | ALL BODY SYSTEMS GREEN | **228 Active Celery Beat Tasks**
 
 ---
 
-## Session 816 Summary
+## Session 817 Summary
 
 ### What Was Built
 
-1. **Operations Panel Overhaul** - Complete transformation of Operations tab
-   - Stats dashboard (total ops, 24h activity, success rate, pending reviews)
-   - Advanced filtering (search, type, status, date range)
-   - Grouping views (list, date, agent, type)
-   - Expandable operation rows with full details
+1. **Smart Tool Results Renderer** - Operations view now displays tool results beautifully
+   - TrendCard, ArticleCard, ToolResultCard components
+   - Expandable sections for trend data with article counts
+   - Smart View toggle in FileContentModal
+   - Auto-detection of tool_results, trends, simple values
 
-2. **4 Playbooks Created** - Initial standard operating procedures
-   - `creator/VIDEO_PRODUCTION_WORKFLOW.md`
-   - `devops/DEPLOYMENT_CHECKLIST.md`
-   - `development/AGENT_CREATION_GUIDE.md`
-   - `marketing/CONTENT_CALENDAR_PROCESS.md`
+2. **Autonomous Agent Behavior** - ALL 74 agents now autonomous
+   - Added AUTONOMOUS AGENT BEHAVIOR directive to BaseAgent
+   - Injected into ALL agent prompts automatically
+   - Agents output structured reports, not conversations
+   - No more "Please provide..." or questions in output
 
-3. **Audits Browser** - New component to browse 58 system audits
-   - Type filtering (session, system, integration, database, archive, other)
-   - Integrated into Knowledge tab
-   - New API: `GET /api/platform/audits/`
-
-### New APIs Created
-```
-GET /api/platform/audits/  - List system audits with type filtering
-```
-
-### New Components
-- `OperationsPanel` (~850 lines) - Complete Operations tab replacement
-- `AuditsBrowser` (~230 lines) - Audit document browser
+3. **PerformanceAnalystAgent Enhancement**
+   - Added `list_available_channels` tool
+   - Agent can discover channels autonomously
 
 ### PRs Merged
-- PR #131 - Operations Panel Overhaul
-- PR #132 - Playbooks + Audits Browser
+- PR #133 - Docs for Session 816
+- PR #134 - Smart Tool Results Renderer (+294 lines)
+- PR #135 - Autonomous Agent Behavior (+93 lines)
 
 ---
 
 ## PRIMARY GOAL: Real Data Integration
 
 ### 1. Connect Real Revenue Data
-Currently showing $0 in metrics. Wire up actual Revenue model data to MetricsGrid.
+Currently showing $0 in Platform Command Center metrics. Wire up actual Revenue model data.
 
 **Files to check:**
 - `core/models.py` - Revenue model
@@ -90,6 +81,7 @@ Make SKIN Lock toggle actually functional (currently display-only).
 | Playbooks | 10+ | **4** | 🟡 +4 |
 | System Audits | -- | **58** | ✅ Visible |
 | Data Display | 95% | **90%** | 🟢 +5% |
+| Agent Autonomy | 100% | **100%** | ✅ Session 817 |
 
 ---
 
@@ -119,20 +111,13 @@ curl http://localhost:8000/api/platform/audits/
 
 ### Key Files
 ```
-# Session 816 - New files
-frontend/src/components/workspace/OperationsPanel.tsx
-frontend/src/components/platform/AuditsBrowser.tsx
-docs/playbooks/creator/VIDEO_PRODUCTION_WORKFLOW.md
-docs/playbooks/devops/DEPLOYMENT_CHECKLIST.md
-docs/playbooks/development/AGENT_CREATION_GUIDE.md
-docs/playbooks/marketing/CONTENT_CALENDAR_PROCESS.md
-
-# Session 816 - Modified
-core/views_platform_command.py (added audits API)
-frontend/src/pages/WorkspacePage.tsx (OperationsPanel + AuditsBrowser)
+# Session 817 - Modified
+core/agents/base_agent.py (AUTONOMOUS AGENT BEHAVIOR directive)
+core/agents/content/performance_analyst_agent.py (list_available_channels tool)
+frontend/src/pages/WorkspacePage.tsx (Smart Tool Results Renderer)
 
 # Documentation
-docs/handoffs/SESSION_816_OPERATIONS_PLAYBOOKS_AUDITS.md
+docs/handoffs/SESSION_817_AUTONOMOUS_AGENTS_TOOL_RENDERER.md
 ```
 
 ---
@@ -141,6 +126,7 @@ docs/handoffs/SESSION_816_OPERATIONS_PLAYBOOKS_AUDITS.md
 
 | Session | Focus |
 |---------|-------|
+| **817** | Autonomous Agent Behavior + Smart Tool Results Renderer |
 | **816** | Operations Panel Overhaul + 4 Playbooks + Audits Browser |
 | **815** | WorkspacePage → Platform Command Center (Command, Governance, Knowledge tabs) |
 | **814** | Documentation Architecture + Governance + Human Supremacy |
