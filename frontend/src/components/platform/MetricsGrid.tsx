@@ -1,11 +1,12 @@
 /**
  * Session 815: Metrics Grid Component
+ * Session 818: Added click handlers for interactivity
  *
  * Displays 4-card grid for mission metrics with progress bars.
  * Part of the Platform Command Center.
  */
 
-import { DollarSign, Cpu, BookOpen, FileText } from 'lucide-react'
+import { DollarSign, Cpu, BookOpen, FileText, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface MetricItem {
@@ -24,6 +25,11 @@ interface MetricsSummary {
 interface MetricsGridProps {
   metrics?: MetricsSummary
   isLoading?: boolean
+  // Session 818: Click handlers for navigation
+  onRevenueClick?: () => void
+  onCostClick?: () => void
+  onCanonClick?: () => void
+  onPlaybooksClick?: () => void
 }
 
 interface MetricCardProps {
@@ -35,6 +41,7 @@ interface MetricCardProps {
   color: string
   format?: 'currency' | 'number'
   invertProgress?: boolean // For costs, lower is better
+  onClick?: () => void // Session 818
 }
 
 function MetricCard({
@@ -46,6 +53,7 @@ function MetricCard({
   color,
   format = 'number',
   invertProgress = false,
+  onClick,
 }: MetricCardProps) {
   const displayValue = format === 'currency'
     ? `$${current.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
@@ -66,14 +74,25 @@ function MetricCard({
       : 'bg-accent-amber'
 
   return (
-    <div className="card">
+    <div
+      className={cn(
+        'card transition-all duration-200',
+        onClick && 'cursor-pointer hover:bg-gray-800/80 hover:border-gray-600 group'
+      )}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-gray-400">{label}</span>
-        <div
-          className="h-8 w-8 rounded-lg flex items-center justify-center"
-          style={{ backgroundColor: `${color}20` }}
-        >
-          <Icon size={16} style={{ color }} />
+        <span className="text-sm text-gray-400 group-hover:text-gray-300">{label}</span>
+        <div className="flex items-center gap-2">
+          <div
+            className="h-8 w-8 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: `${color}20` }}
+          >
+            <Icon size={16} style={{ color }} />
+          </div>
+          {onClick && (
+            <ChevronRight size={16} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+          )}
         </div>
       </div>
 
@@ -100,7 +119,14 @@ function MetricCard({
   )
 }
 
-export function MetricsGrid({ metrics, isLoading }: MetricsGridProps) {
+export function MetricsGrid({
+  metrics,
+  isLoading,
+  onRevenueClick,
+  onCostClick,
+  onCanonClick,
+  onPlaybooksClick,
+}: MetricsGridProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -129,6 +155,7 @@ export function MetricsGrid({ metrics, isLoading }: MetricsGridProps) {
         progressPct={metrics.revenue.progress_pct}
         color="#22c55e"
         format="currency"
+        onClick={onRevenueClick}
       />
       <MetricCard
         label="Daily LLM Cost"
@@ -139,6 +166,7 @@ export function MetricsGrid({ metrics, isLoading }: MetricsGridProps) {
         color="#f59e0b"
         format="currency"
         invertProgress
+        onClick={onCostClick}
       />
       <MetricCard
         label="Canon Docs"
@@ -147,6 +175,7 @@ export function MetricsGrid({ metrics, isLoading }: MetricsGridProps) {
         target={metrics.canon.target}
         progressPct={metrics.canon.progress_pct}
         color="#8b5cf6"
+        onClick={onCanonClick}
       />
       <MetricCard
         label="Playbooks"
@@ -155,6 +184,7 @@ export function MetricsGrid({ metrics, isLoading }: MetricsGridProps) {
         target={metrics.playbooks.target}
         progressPct={metrics.playbooks.progress_pct}
         color="#06b6d4"
+        onClick={onPlaybooksClick}
       />
     </div>
   )
