@@ -20,6 +20,10 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token
+    // Session 819: Debug logging for auth issues
+    if (process.env.NODE_ENV === 'development' || config.url?.includes('/platform/')) {
+      console.log('[API Auth]', config.url, token ? 'Token present' : 'No token', 'withCredentials:', config.withCredentials)
+    }
     if (token) {
       config.headers.Authorization = `Token ${token}`
     }
