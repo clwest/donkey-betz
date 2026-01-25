@@ -129,10 +129,15 @@ class AutonomousRemediationOrchestrator:
             results = service.import_all_audits(dry_run=self.dry_run)
 
             self.logger.info(
-                f"✅ [PHASE 1] Complete: {results.get('imported', 0)} imported, "
-                f"{results.get('updated', 0)} updated, "
-                f"{results.get('findings_created', 0)} findings"
+                f"✅ [PHASE 1] Complete: {results.get('total_files', 0)} files scanned, "
+                f"{results.get('imported', 0)} reports imported, "
+                f"{results.get('total_findings', 0)} findings extracted"
             )
+
+            # Normalize keys for management command
+            results['files_scanned'] = results.get('total_files', 0)
+            results['reports_imported'] = results.get('imported', 0)
+            results['findings_extracted'] = results.get('total_findings', 0)
 
             return results
 
