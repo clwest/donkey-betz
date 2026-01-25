@@ -337,6 +337,45 @@ class DocsContextBuilder:
 
         return None
 
+    # Session 814: Critical docs that MUST be injected with full content
+    # These docs contain essential system context that all agents need
+    CRITICAL_DOCS = [
+        ('CLAUDE.md', 300),  # (path, max_lines) - System overview, stats, architecture
+        ('00-START-NEXT-SESSION.md', 200),  # Current session priorities
+    ]
+
+    def _get_critical_docs_content(self) -> str:
+        """
+        Session 814: Always read and return the content of critical system docs.
+
+        These docs (CLAUDE.md, 00-START-NEXT-SESSION.md) contain essential context
+        that ALL agents need to understand the system state. Without these, agents
+        operate without knowledge of system architecture, agent counts, recent
+        session decisions, and current priorities.
+
+        Returns:
+            Formatted string with critical doc contents for prompt injection
+        """
+        parts = [
+            "## Critical System Context (Session 814)",
+            "The following documentation provides essential system context:",
+            ""
+        ]
+
+        for doc_path, max_lines in self.CRITICAL_DOCS:
+            content = self._read_doc_content(doc_path, max_lines=max_lines)
+            if content:
+                parts.append(f"### {doc_path}")
+                parts.append("```markdown")
+                parts.append(content)
+                parts.append("```")
+                parts.append("")
+                logger.debug(f"📚 [Session 814] Injected critical doc: {doc_path} ({len(content)} chars)")
+            else:
+                logger.warning(f"📚 [Session 814] Critical doc not found: {doc_path}")
+
+        return '\n'.join(parts)
+
     def build_context_for_agent(
         self,
         agent_name: str,
@@ -344,7 +383,8 @@ class DocsContextBuilder:
         max_docs: int = 10,
         include_recent_sessions: bool = True,
         include_content_snippets: bool = False,
-        max_content_lines: int = 50
+        max_content_lines: int = 50,
+        include_critical_docs: bool = True  # Session 814: Always inject CLAUDE.md, 00-START-NEXT-SESSION.md
     ) -> Dict[str, Any]:
         """
         Build comprehensive documentation context for an agent.
@@ -359,6 +399,8 @@ class DocsContextBuilder:
             include_recent_sessions: Include recent session handoffs
             include_content_snippets: Include actual doc content (increases context size)
             max_content_lines: Max lines per content snippet
+            include_critical_docs: Session 814 - Always include CLAUDE.md and 00-START-NEXT-SESSION.md
+                                   content. These provide essential system context.
 
         Returns:
             Dict with structured docs context ready for prompt injection
@@ -424,12 +466,24 @@ class DocsContextBuilder:
             }
 
             # Build summary for prompt injection
-            summary_parts = [
-                f"## Documentation Context",
+            summary_parts = []
+
+            # Session 814: ALWAYS inject critical docs first (CLAUDE.md, 00-START-NEXT-SESSION.md)
+            # These provide essential system context that all agents need
+            if include_critical_docs:
+                critical_content = self._get_critical_docs_content()
+                if critical_content:
+                    summary_parts.append(critical_content)
+                    summary_parts.append("")  # Blank line separator
+                    context['critical_docs_injected'] = True
+                    logger.info(f"📚 [Session 814] Critical docs injected for {agent_name}")
+
+            summary_parts.extend([
+                f"## Additional Documentation Context",
                 f"Total system docs: {len(documents)}",
                 f"",
                 f"### Relevant Documentation ({len(relevant_docs)} docs):",
-            ]
+            ])
 
             for doc in relevant_docs[:5]:  # Top 5 for summary
                 summary_parts.append(self._format_doc_for_context(doc))
