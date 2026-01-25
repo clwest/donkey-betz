@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
 **Last Updated:** January 24, 2026 - Session 814
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 85% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 45 Frontend Pages
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 85% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 46 Frontend Pages
 
 ## System Stats (Session 746)
 | Component | Count | Details |
@@ -24,7 +24,7 @@
 | **OPEN Systems** | 7/7 | Full composability (Session 653) |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, **SKIN** |
 | **Body API Endpoints** | 65 | +6 skin endpoints, unified via body_vitals.py |
-| **Frontend Pages** | 45 | +DocsIndexPage (Session 784), +SpiderFeedPage (Session 783), +OrchestrationPage (Session 768), +IntegrationHealthPage (Session 758) |
+| **Frontend Pages** | 46 | +BlogsPage (Session 814), +DocsIndexPage (Session 784), +SpiderFeedPage (Session 783), +OrchestrationPage (Session 768) |
 | **Content Channels** | 3 | 91 episodes with unique AI-generated titles |
 | **Frontend Bundle** | 1,390 KB | All sci-fi features + 9 body systems + enhanced data displays |
 
@@ -49,6 +49,8 @@
 **Documentation Index Browser (Session 784):** Cognitive Build Ledger UI - browse 1,512 docs with status badges (active/superseded/deprecated/draft), cross-reference graph (1,816 links), broken link detection (100), orphan detection (50). DocsIndexPage with filters, search, DocDetailsPanel showing inbound/outbound links with context snippets.
 **Learning System Fix (Session 805):** Fixed 3 critical issues: (1) Anomaly detection false positives - 84 experiments incorrectly halted due to comparing to zero baseline, fixed with minimum 3/hour baseline. (2) Missing learnings - 87% of experiments had no learnings extracted, added `_extract_halt_learning()` to Experiment.halt(). (3) Negative learning weight - operational monitoring terms in safety keywords caused -1.0 signal for normal failures, fixed with v1.2 classification. Net weight improved from -3.169 to -0.944 (70% improvement).
 **Personal Assistant Context Optimization (Session 806):** Reduced PA context token usage by ~70%. Created 4 new services: (1) ToolCategoryRouter - Two-stage tool routing (47→10 tools per request based on 8 categories). (2) ContextBudgetManager - Token tracking with tiktoken, priority-based allocation (4,000 token budget). (3) LazyContextLoader - On-demand context loading based on query classification (16→2-5 sections). (4) ContextSummarizer - 5-10x compression for spider/learning/advisor context. Feature flags enable gradual rollout.
+**Critical Docs Injection (Session 814):** DocsContextBuilder now always injects CLAUDE.md and 00-START-NEXT-SESSION.md content into agent prompts. Agents performing self-audits now produce system-specific documentation referencing exact counts (74 agents, 77 spiders, 228 Celery tasks) instead of generic content. TechnicalDocumentAgent updated with `_get_critical_system_context()` method.
+**Spider Search Performance (Session 814):** Fixed research phase taking 14+ minutes due to unbounded database iteration. Added `MAX_ENTRIES_TO_SCAN` limits to SpiderIntelligenceService (300) and SpiderSemanticSearch (200). Research phase: 14+ min → 47 seconds.
 
 ---
 
@@ -128,6 +130,8 @@ This command scans all `/docs/` folders and generates an up-to-date `INDEX.md` w
 | `core/services/context_budget_manager.py` | **Session 806** - Token tracking with tiktoken (4,000 token budget) |
 | `core/services/lazy_context_loader.py` | **Session 806** - On-demand context loading (16→2-5 sections) |
 | `core/services/context_summarizer.py` | **Session 806** - Context compression (5-10x ratios) |
+| `core/services/docs_context_builder.py` | **Session 814** - Critical docs injection (CLAUDE.md, 00-START-NEXT-SESSION.md) |
+| `frontend/src/pages/BlogsPage.tsx` | **Session 814** - Dedicated blogs browsing page |
 
 ---
 
@@ -239,7 +243,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **814** | **Spider Search Performance Fix** - Fixed research phase taking 14+ minutes due to unbounded database iteration. Added `MAX_ENTRIES_TO_SCAN` limits to SpiderIntelligenceService (7 loops) and SpiderSemanticSearch. Research phase: 14+ min → 47s. Content Production Teams now verified working. PRs #114, #115. | See `00-START-NEXT-SESSION.md` |
+| **814** | **Spider Search Fix + Blogs Page + Agent Docs Injection** - (1) Fixed research phase 14+ min → 47s via `MAX_ENTRIES_TO_SCAN` limits. (2) Added dedicated `/blogs` page (BlogsPage.tsx). (3) DocsContextBuilder now injects CLAUDE.md + 00-START-NEXT-SESSION.md into agent prompts. (4) TechnicalDocumentAgent now produces system-specific audits. 7 PRs merged (#115-#121). | See `00-START-NEXT-SESSION.md` |
 | **813** | **SKIN Layer Audit + Workspace Output Fix** - Deep audit of SKIN Layer (Session 695). 89 operations, 100% success, 194KB written. Fixed workspace output extraction to capture actual agent content instead of stubs. PR #112. | See `00-START-NEXT-SESSION.md` |
 | **812** | **Content Production Teams + Persona Advisory** - Built ContentProductionOrchestrator with multi-agent collaboration. PersonaAdvisorService enables 139 persona agents to provide domain expertise via LLM. PR #110. | See `00-START-NEXT-SESSION.md` |
 | **811** | **AI World Conversation Enhancement** - Dream injection into conversations, action dispatch from next_steps, cross-agent memory creation. Transforms isolated agent exchanges into collaborative AI ecosystem. | See `00-START-NEXT-SESSION.md` |
