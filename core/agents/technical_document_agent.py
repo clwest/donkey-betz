@@ -519,9 +519,17 @@ Your output should be ready for executive review and formal approval processes."
                 classification=classification
             )
 
+            # Session 819: Use intelligent prompting for full context
+            intelligent_prompt = self._build_intelligent_prompt(
+                task=task,
+                scifi_context=scifi_context,
+                spider_context=spider_context,
+                additional_context=""
+            )
+
             # Call GPT to generate the document
             messages = [
-                {"role": "system", "content": self.system_prompt},
+                {"role": "system", "content": intelligent_prompt},
                 {"role": "user", "content": generation_prompt}
             ]
 

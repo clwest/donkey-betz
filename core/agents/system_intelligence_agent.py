@@ -214,10 +214,18 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                 # Build rich context for LLM
                 items_context = self._format_items_for_llm(items)
 
+                # Session 819: Use intelligent prompting for full context
+                intelligent_prompt = self._build_intelligent_prompt(
+                    task=task,
+                    scifi_context=scifi_context or {},
+                    spider_context=spider_context or {},
+                    additional_context=f"\n\n## Current System Attention Items\n{items_context}"
+                )
+
                 # Build messages for GPT
                 messages = [
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": f"User question: {task}\n\nCurrent system attention items:\n{items_context}"}
+                    {"role": "system", "content": intelligent_prompt},
+                    {"role": "user", "content": f"User question: {task}"}
                 ]
 
                 # Session 761: Call GPT with tools enabled for LLM-driven tool use
