@@ -2752,6 +2752,8 @@ urlpatterns = [
     path('api/v1/research/self-blog/list/', views_research_demo.self_blog_list_api, name='research-self-blog-list'),
     # Session 570: Self-blog by ID endpoint
     path('api/v1/research/self-blog/<uuid:blog_id>/', views_research_demo.self_blog_by_id_api, name='research-self-blog-by-id'),
+    # Session 814: Delete self-blog endpoint
+    path('api/v1/research/self-blog/<uuid:blog_id>/delete/', views_research_demo.delete_self_blog_api, name='research-self-blog-delete'),
     # Session 643: Enabled self-blog generation endpoints
     path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
     path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),

@@ -693,6 +693,36 @@ def self_blog_by_id_api(request, blog_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["DELETE"])
+def delete_self_blog_api(request, blog_id):
+    """
+    Session 814: Delete a self-blog by ID.
+    Allows cleanup of empty or unwanted blog posts.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+
+        blog = SelfBlog.objects.filter(id=blog_id).first()
+
+        if blog:
+            title = blog.title
+            blog.delete()
+            logger.info(f"Deleted self-blog: {title} (ID: {blog_id})")
+            return JsonResponse({
+                'success': True,
+                'message': f'Blog "{title}" deleted successfully'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Blog not found'
+            }, status=404)
+
+    except Exception as e:
+        logger.error(f"Error in delete_self_blog_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 @require_http_methods(["POST"])
 def generate_self_blog_api(request):
     """
