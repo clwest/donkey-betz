@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import {
@@ -43,6 +43,8 @@ import {
   Stethoscope,
   GitBranch,
   Book,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -103,6 +105,19 @@ export default function Sidebar() {
   const { logout, user } = useAuthStore()
   const navigate = useNavigate()
 
+  // Collapsed state - persist in localStorage
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar-collapsed')
+    return saved === 'true'
+  })
+
+  // Toggle collapse and persist
+  const toggleCollapse = () => {
+    const newState = !isCollapsed
+    setIsCollapsed(newState)
+    localStorage.setItem('sidebar-collapsed', String(newState))
+  }
+
   // Unified store selectors for badges
   const pendingDecisions = usePendingDecisionsCount()
   const runningPilots = useRunningPilotsCount()
@@ -132,14 +147,31 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="flex w-64 flex-col border-r border-dark-border bg-dark-card">
-      {/* Logo */}
-      <div className="flex h-16 items-center border-b border-dark-border px-6">
-        <h1 className="text-xl font-bold text-primary-400">Donkey Betz</h1>
+    <aside
+      className={cn(
+        'flex flex-col border-r border-dark-border bg-dark-card transition-all duration-200',
+        isCollapsed ? 'w-16' : 'w-64'
+      )}
+    >
+      {/* Logo & Collapse Toggle */}
+      <div className="flex h-16 items-center justify-between border-b border-dark-border px-3">
+        {!isCollapsed && (
+          <h1 className="text-xl font-bold text-primary-400 truncate">Donkey Betz</h1>
+        )}
+        <button
+          onClick={toggleCollapse}
+          className={cn(
+            'p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-border transition-colors',
+            isCollapsed && 'mx-auto'
+          )}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
+        </button>
       </div>
 
       {/* Navigation - scrollable area */}
-      <nav className="flex-1 overflow-y-auto space-y-1 p-4">
+      <nav className={cn('flex-1 overflow-y-auto space-y-1', isCollapsed ? 'p-2' : 'p-4')}>
         {navItems.map(({ path, label, icon: Icon }) => {
           const badge = getBadgeCount(path)
           return (
@@ -147,14 +179,24 @@ export default function Sidebar() {
               key={path}
               to={path}
               className={({ isActive }) =>
-                cn('nav-link', isActive && 'active')
+                cn(
+                  'nav-link',
+                  isActive && 'active',
+                  isCollapsed && 'justify-center px-2'
+                )
               }
+              title={isCollapsed ? label : undefined}
             >
               <Icon size={20} />
-              <span className="flex-1">{label}</span>
-              {badge !== null && (
+              {!isCollapsed && <span className="flex-1">{label}</span>}
+              {badge !== null && !isCollapsed && (
                 <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 text-xs font-medium text-white">
                   {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+              {badge !== null && isCollapsed && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-medium text-white">
+                  {badge > 9 ? '9+' : badge}
                 </span>
               )}
             </NavLink>
@@ -163,25 +205,29 @@ export default function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="border-t border-dark-border p-4">
-        <div className="flex items-center justify-between">
+      <div className={cn('border-t border-dark-border', isCollapsed ? 'p-2' : 'p-4')}>
+        <div className={cn('flex items-center', isCollapsed ? 'justify-center' : 'justify-between')}>
           <button
             onClick={() => navigate('/profile')}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-            title="View Profile"
+            title={isCollapsed ? user?.username || 'Profile' : 'View Profile'}
           >
-            <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-sm font-medium">
+            <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
               {user?.username?.charAt(0).toUpperCase() || 'U'}
             </div>
-            <span className="text-sm text-gray-300">{user?.username}</span>
+            {!isCollapsed && (
+              <span className="text-sm text-gray-300 truncate">{user?.username}</span>
+            )}
           </button>
-          <button
-            onClick={() => logout()}
-            className="text-gray-400 hover:text-white transition-colors"
-            title="Logout"
-          >
-            <LogOut size={18} />
-          </button>
+          {!isCollapsed && (
+            <button
+              onClick={() => logout()}
+              className="text-gray-400 hover:text-white transition-colors"
+              title="Logout"
+            >
+              <LogOut size={18} />
+            </button>
+          )}
         </div>
       </div>
     </aside>
