@@ -1820,7 +1820,9 @@ export default function WorkspacePage() {
     mutationFn: () => platformApi.emergencyHalt(),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['platform-governance'] })
-      setActionResult({ type: 'success', message: data.data.message || 'Emergency halt triggered' })
+      // Ensure message is always a string
+      const msg = data.data.message
+      setActionResult({ type: 'success', message: typeof msg === 'string' ? msg : 'Emergency halt triggered' })
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to trigger emergency halt' })
