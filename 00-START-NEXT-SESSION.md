@@ -2,7 +2,7 @@
 
 **Previous Session:** 822 (SKIN Layer Autonomous Remediation)
 **Date:** January 25, 2026
-**Status:** 74 Agents | 77 Spiders | 234 Celery Tasks | 58 Audits | Self-Healing + SKIN Active
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | 58 Audits | Self-Healing + SKIN Active
 
 ---
 
@@ -34,6 +34,8 @@ Tested the 3 files written by SKIN layer in Session 822:
 - PR #182 - **Codebase Context Discovery** (fixes the root cause!)
 - PR #183 - Documentation updates
 - PR #184 - **Auto-PR Creation** for agent-generated code
+- PR #185 - Documentation updates
+- PR #186 - **Periodic System Self-Audit** task (Sundays at 3am)
 
 ### Context Discovery Implementation (PR #182)
 
@@ -124,6 +126,7 @@ for r in Revenue.objects.all()[:5]:
 ## Self-Healing Pipeline (Complete!)
 
 ```
+Phase 0:   Self-Audit → TechnicalDocumentAgent audits system (weekly) ✅ (PR #186)
 Phase 1:   Discover  → Scan docs/audits/ for audit files
 Phase 1.5: Validate  → Check stale findings (>50 sessions old)
 Phase 2:   Assign    → Match findings to agents
@@ -131,6 +134,25 @@ Phase 2.5: Context   → Search codebase for existing code ✅ (PR #182)
 Phase 3:   Execute   → Run agent + WRITE FILES via SKIN
 Phase 3.5: Auto-PR   → Create PR for human review ✅ (PR #184)
 Phase 4:   Verify    → Confirm fixes worked
+```
+
+### Periodic Self-Audit (PR #186)
+
+Added automated system self-audit to generate fresh audit reports:
+
+```python
+# New Celery task: core/tasks.py
+@shared_task
+def run_system_self_audit():
+    """Runs weekly on Sundays at 3am"""
+    agent = TechnicalDocumentAgent()
+    result = agent.execute(task="Perform comprehensive SYSTEM SELF-AUDIT...")
+    # Saves audit to docs/audits/SYSTEM_SELF_AUDIT_{timestamp}.md
+```
+
+**Manual trigger:**
+```bash
+python manage.py shell -c "from core.tasks import run_system_self_audit; run_system_self_audit()"
 ```
 
 ---
