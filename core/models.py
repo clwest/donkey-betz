@@ -58,6 +58,15 @@ from .models_brain import *
 from .models_nervous import *
 from .models_skin import *
 
+# Import deliverables models (Session 819 - Deliverables Marketplace)
+from .models_deliverables import (
+    DeliverableType,
+    ContentFormat,
+    Deliverable,
+    DeliverableExport,
+    DeliverableCollection,
+)
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
