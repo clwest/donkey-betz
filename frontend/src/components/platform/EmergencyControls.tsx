@@ -1,5 +1,6 @@
 /**
  * Session 815: Emergency Controls Component
+ * Session 818: Made SKIN Lock toggleable, added interactivity
  *
  * Displays governance controls including SKIN lock, emergency halt,
  * and quarantine status. Part of the Platform Command Center.
@@ -8,7 +9,7 @@
 import { useState } from 'react'
 import {
   AlertTriangle, Lock, Unlock, Power, Shield, AlertCircle,
-  CheckCircle, Loader2, XCircle, Activity
+  CheckCircle, Loader2, XCircle, Activity, ChevronRight, ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -33,15 +34,18 @@ interface EmergencyControlsProps {
   owner?: SystemOwner
   isLoading?: boolean
   onEmergencyHalt?: () => Promise<void>
+  onSkinLockToggle?: (action: 'lock' | 'unlock' | 'toggle') => Promise<void>  // Session 818
 }
 
 export function EmergencyControls({
   emergency,
   owner,
   isLoading,
-  onEmergencyHalt
+  onEmergencyHalt,
+  onSkinLockToggle
 }: EmergencyControlsProps) {
   const [isHalting, setIsHalting] = useState(false)
+  const [isTogglingLock, setIsTogglingLock] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
   const handleHalt = async () => {
@@ -53,6 +57,17 @@ export function EmergencyControls({
       setShowConfirm(false)
     } finally {
       setIsHalting(false)
+    }
+  }
+
+  const handleSkinLockToggle = async () => {
+    if (!onSkinLockToggle) return
+
+    setIsTogglingLock(true)
+    try {
+      await onSkinLockToggle('toggle')
+    } finally {
+      setIsTogglingLock(false)
     }
   }
 
@@ -112,7 +127,7 @@ export function EmergencyControls({
 
         {emergency && (
           <div className="space-y-3">
-            {/* SKIN Lock Status */}
+            {/* SKIN Lock Status - Session 818: Now toggleable */}
             <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
                 {emergency.skin_lock ? (
@@ -130,19 +145,43 @@ export function EmergencyControls({
                   )}>
                     {emergency.skin_lock ? 'LOCKED' : 'OFF'}
                   </span>
+                  <span className="text-xs text-gray-500 ml-2">{emergency.skin_status}</span>
                 </div>
               </div>
-              <span className="text-xs text-gray-500">{emergency.skin_status}</span>
+              {onSkinLockToggle && (
+                <button
+                  onClick={handleSkinLockToggle}
+                  disabled={isTogglingLock}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50',
+                    emergency.skin_lock
+                      ? 'bg-accent-green/20 hover:bg-accent-green/30 text-accent-green'
+                      : 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red'
+                  )}
+                >
+                  {isTogglingLock ? (
+                    <Loader2 className="animate-spin" size={12} />
+                  ) : emergency.skin_lock ? (
+                    <Unlock size={12} />
+                  ) : (
+                    <Lock size={12} />
+                  )}
+                  {emergency.skin_lock ? 'Unlock' : 'Lock'}
+                </button>
+              )}
             </div>
 
-            {/* Agent Quarantine */}
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+            {/* Agent Quarantine - Session 818: Made clickable */}
+            <a
+              href="/ai-studio?tab=agents"
+              className="flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors group"
+            >
               <div className="flex items-center gap-3">
                 <Shield className={cn(
                   emergency.quarantined_count > 0 ? 'text-accent-amber' : 'text-accent-green'
                 )} size={16} />
                 <div>
-                  <span className="text-sm text-white">Agent Quarantine</span>
+                  <span className="text-sm text-white group-hover:text-primary-400 transition-colors">Agent Quarantine</span>
                   <span className={cn(
                     'ml-2 text-xs px-2 py-0.5 rounded',
                     emergency.quarantined_count > 0
@@ -153,21 +192,27 @@ export function EmergencyControls({
                   </span>
                 </div>
               </div>
-              <span className="text-xs text-gray-500">
-                {emergency.quarantined_count > 0
-                  ? `${emergency.quarantined_agents.slice(0, 2).join(', ')}${emergency.quarantined_count > 2 ? '...' : ''}`
-                  : 'None quarantined'}
-              </span>
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  {emergency.quarantined_count > 0
+                    ? `${emergency.quarantined_agents.slice(0, 2).join(', ')}${emergency.quarantined_count > 2 ? '...' : ''}`
+                    : 'None quarantined'}
+                </span>
+                <ChevronRight size={14} className="text-gray-600 group-hover:text-primary-400 transition-colors" />
+              </div>
+            </a>
 
-            {/* System Status */}
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+            {/* System Status - Session 818: Made clickable */}
+            <a
+              href="/human?tab=body"
+              className="flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors group"
+            >
               <div className="flex items-center gap-3">
                 <Activity className={cn(
                   emergency.system_paused ? 'text-accent-red' : 'text-accent-green'
                 )} size={16} />
                 <div>
-                  <span className="text-sm text-white">System Status</span>
+                  <span className="text-sm text-white group-hover:text-primary-400 transition-colors">System Status</span>
                   <span className={cn(
                     'ml-2 text-xs px-2 py-0.5 rounded',
                     emergency.system_paused
@@ -178,7 +223,8 @@ export function EmergencyControls({
                   </span>
                 </div>
               </div>
-            </div>
+              <ChevronRight size={14} className="text-gray-600 group-hover:text-primary-400 transition-colors" />
+            </a>
 
             {/* Critical Decisions Warning */}
             {emergency.pending_critical_decisions > 0 && (
