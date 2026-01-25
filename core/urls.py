@@ -296,6 +296,7 @@ from core.views_agent_learning import (
     # Session 244: Agent Conversations
     get_agent_conversations,
     trigger_agent_conversation,
+    get_conversation_task_status,  # Session 827: Async task status
     # Session 247: Agent Dreams
     get_agent_dreams,
     trigger_agent_dreams,
@@ -2963,6 +2964,7 @@ urlpatterns = [
     # Session 244: Agent Conversations API
     path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
     path('api/agent-conversations/trigger/', trigger_agent_conversation, name='trigger-agent-conversation'),
+    path('api/agent-conversations/task/<str:task_id>/', get_conversation_task_status, name='conversation-task-status'),  # Session 827
 
     # Session 717: Conversation Contract Analytics API
     path('api/conversation-contract/overview/', get_conversation_contract_overview, name='conversation-contract-overview'),

@@ -669,6 +669,7 @@ def _get_agent_emoji(specialization: str) -> str:
 @require_http_methods(["POST"])
 # Session 751: Removed @login_required to match get_agent_conversations (Session 564)
 # This allows the UI to trigger conversations without authentication
+# Session 827: Made async via Celery to fix production 502 timeouts
 def trigger_agent_conversation(request):
     """
     Manually trigger an agent conversation on a specific topic.
@@ -683,12 +684,13 @@ def trigger_agent_conversation(request):
         "success_criteria": ["Identify at least 3 options", "Recommend one"],  // Session 826: Measurable outcomes
         "auto_select_agents": true,  // Session 826: Let system pick best agents
         "participant_ids": [...]  // optional specific agents (ignored if auto_select_agents=true)
+        "sync": false  // Session 827: Set to true to run synchronously (for local testing)
     }
+
+    Session 827: Returns immediately with task_id for async execution.
+    Poll /api/agent-conversations/task/<task_id>/ for status.
     """
     try:
-        from core.agent_conversation_consumer import AgentConversationConsumer
-        from asgiref.sync import async_to_sync
-
         body = json.loads(request.body)
         topic = body.get('topic')
 
@@ -703,30 +705,135 @@ def trigger_agent_conversation(request):
         objective = body.get('objective')
         success_criteria = body.get('success_criteria', [])
         auto_select_agents = body.get('auto_select_agents', False)
+        participant_ids = body.get('participant_ids', [])
 
-        # Generate conversation synchronously using the consumer logic
-        consumer = AgentConversationConsumer()
-        result = async_to_sync(consumer.generate_live_conversation)(
+        # Session 827: Check if sync execution requested (for local testing)
+        run_sync = body.get('sync', False)
+
+        if run_sync:
+            # Synchronous execution (original behavior, for local testing)
+            from core.agent_conversation_consumer import AgentConversationConsumer
+            from asgiref.sync import async_to_sync
+
+            consumer = AgentConversationConsumer()
+            result = async_to_sync(consumer.generate_live_conversation)(
+                topic=topic,
+                conversation_type=conversation_type,
+                objective=objective,
+                success_criteria=success_criteria,
+                auto_select_agents=auto_select_agents
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Agent conversation generated on topic: {topic}',
+                'conversation_id': result.get('conversation_id'),
+                'objective': objective,
+                'conversation_type': conversation_type,
+                'participants': result.get('participants', []),
+                'quality_score': result.get('quality_score', 0),
+                'result': result
+            })
+
+        # Session 827: Async execution via Celery (default for production)
+        from core.tasks import run_triggered_conversation
+
+        task_result = run_triggered_conversation.delay(
             topic=topic,
             conversation_type=conversation_type,
             objective=objective,
             success_criteria=success_criteria,
-            auto_select_agents=auto_select_agents
+            auto_select_agents=auto_select_agents,
+            participant_ids=participant_ids
+        )
+
+        logger.info(
+            f"Agent conversation queued: task_id={task_result.id}, "
+            f"topic='{topic[:50]}...', type={conversation_type}"
         )
 
         return JsonResponse({
             'success': True,
-            'message': f'Agent conversation generated on topic: {topic}',
-            'conversation_id': result.get('conversation_id'),
+            'message': f'Agent conversation queued on topic: {topic}',
+            'status': 'queued',
+            'task_id': task_result.id,
             'objective': objective,
             'conversation_type': conversation_type,
-            'participants': result.get('participants', []),
-            'quality_score': result.get('quality_score', 0),
-            'result': result
+            'poll_url': f'/api/agent-conversations/task/{task_result.id}/'
         })
 
     except Exception as e:
         logger.error(f"Error triggering agent conversation: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# Session 827: Conversation Task Status
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_conversation_task_status(request, task_id):
+    """
+    Get the status of a triggered conversation task.
+
+    GET /api/agent-conversations/task/<task_id>/
+
+    Session 827: Added to support async conversation execution.
+
+    Returns:
+    - state: PENDING, PROGRESS, SUCCESS, FAILURE
+    - result: Conversation result if SUCCESS
+    - error: Error message if FAILURE
+    """
+    try:
+        from celery.result import AsyncResult
+        from celery import current_app
+        from datetime import datetime
+
+        result = AsyncResult(task_id, app=current_app)
+
+        if result.state == 'PENDING':
+            response = {
+                'state': 'PENDING',
+                'message': 'Conversation is waiting to start...',
+                'task_id': task_id
+            }
+        elif result.state == 'PROGRESS':
+            response = {
+                'state': 'PROGRESS',
+                'message': 'Conversation in progress...',
+                'info': result.info if result.info else {},
+                'task_id': task_id
+            }
+        elif result.state == 'SUCCESS':
+            response = {
+                'state': 'SUCCESS',
+                'message': 'Conversation complete',
+                'result': result.result,
+                'task_id': task_id
+            }
+        elif result.state == 'FAILURE':
+            response = {
+                'state': 'FAILURE',
+                'message': 'Conversation failed',
+                'error': str(result.info) if result.info else 'Unknown error',
+                'task_id': task_id
+            }
+        else:
+            response = {
+                'state': result.state,
+                'message': f'Task is in {result.state} state',
+                'task_id': task_id
+            }
+
+        return JsonResponse(response)
+
+    except Exception as e:
+        logger.error(f"Error getting conversation task status: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)

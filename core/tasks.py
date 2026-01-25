@@ -28651,3 +28651,100 @@ def get_remediation_status():
     except Exception as e:
         logger.error(f"❌ [AUTO-REMEDIATE] Status check failed: {e}")
         return {'error': str(e)}
+
+
+# =============================================================================
+# Session 827: Async Triggered Conversations
+# Fixes production 502 timeout by running conversations as Celery tasks
+# =============================================================================
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=60)
+def run_triggered_conversation(
+    self,
+    topic: str,
+    conversation_type: str = 'general',
+    objective: str = None,
+    success_criteria: list = None,
+    auto_select_agents: bool = False,
+    participant_ids: list = None
+):
+    """
+    Session 827: Run a triggered agent conversation asynchronously.
+
+    This task handles goal-driven conversations that were previously
+    executed synchronously, causing 502 timeouts on production.
+
+    Args:
+        topic: Conversation topic
+        conversation_type: Type of conversation (analytical, creative, debate, etc.)
+        objective: Goal for the conversation
+        success_criteria: List of measurable outcomes
+        auto_select_agents: Whether to auto-select agents for topic
+        participant_ids: Specific agent IDs to participate (ignored if auto_select_agents)
+
+    Returns:
+        Dict with conversation result including conversation_id, participants, quality_score
+    """
+    from core.agent_conversation_consumer import AgentConversationConsumer
+    import asyncio
+
+    task_id = self.request.id if self.request else 'unknown'
+    logger.info(
+        f"💬 [TRIGGERED-CONVO] Starting async conversation: "
+        f"topic='{topic[:50]}...', type={conversation_type}, task_id={task_id}"
+    )
+
+    try:
+        # Create consumer and run conversation
+        consumer = AgentConversationConsumer()
+
+        # Run the async function in an event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            result = loop.run_until_complete(
+                consumer.generate_live_conversation(
+                    topic=topic,
+                    conversation_type=conversation_type,
+                    objective=objective,
+                    success_criteria=success_criteria or [],
+                    auto_select_agents=auto_select_agents
+                )
+            )
+        finally:
+            loop.close()
+
+        logger.info(
+            f"✅ [TRIGGERED-CONVO] Conversation complete: "
+            f"conversation_id={result.get('conversation_id')}, "
+            f"quality={result.get('quality_score', 0)}, "
+            f"participants={result.get('participants', [])}"
+        )
+
+        return {
+            'success': True,
+            'topic': topic,
+            'conversation_type': conversation_type,
+            'objective': objective,
+            'conversation_id': result.get('conversation_id'),
+            'participants': result.get('participants', []),
+            'quality_score': result.get('quality_score', 0),
+            'messages': result.get('messages', []),
+            'result': result
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [TRIGGERED-CONVO] Failed: {e}")
+
+        # Retry on transient failures
+        if self.request.retries < self.max_retries:
+            logger.info(f"🔄 [TRIGGERED-CONVO] Retrying... ({self.request.retries + 1}/{self.max_retries})")
+            raise self.retry(exc=e)
+
+        return {
+            'success': False,
+            'topic': topic,
+            'error': str(e)
+        }
