@@ -863,6 +863,206 @@ The finding should be resolved after your changes. The verification step will ch
         return prompt
 
     # =========================================================================
+    # SESSION 823: CODEBASE CONTEXT DISCOVERY
+    # =========================================================================
+
+    def _extract_key_terms(self, finding) -> List[str]:
+        """
+        Session 823: Extract key terms from a finding for codebase search.
+
+        Identifies class names, function names, model names, and other
+        identifiers that can be searched in the codebase.
+
+        Returns:
+            List of search terms (e.g., ['AgentMood', 'mood_expires_at'])
+        """
+        terms = []
+        text = f"{finding.title} {finding.description} {finding.recommendation or ''}"
+
+        # Pattern 1: CamelCase class names (e.g., AgentMood, UserProfile)
+        camel_case = re.findall(r'\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b', text)
+        terms.extend(camel_case)
+
+        # Pattern 2: snake_case identifiers (e.g., mood_expires_at, user_id)
+        snake_case = re.findall(r'\b([a-z]+_[a-z_]+)\b', text)
+        # Filter out common words
+        common_words = {'the_', 'this_', 'that_', 'and_', 'for_', 'with_'}
+        snake_case = [s for s in snake_case if not any(s.startswith(w) for w in common_words)]
+        terms.extend(snake_case)
+
+        # Pattern 3: Model references (e.g., "the Agent model", "AgentMood table")
+        model_refs = re.findall(r'\b([A-Z][a-zA-Z]+)\s+(?:model|table|class|object)', text)
+        terms.extend(model_refs)
+
+        # Pattern 4: File path references (e.g., core/models.py)
+        file_refs = re.findall(r'([a-z_]+/[a-z_/.]+\.py)', text)
+        terms.extend(file_refs)
+
+        # Pattern 5: Function/method names in backticks (e.g., `save()`, `check_mood()`)
+        backtick_refs = re.findall(r'`([a-zA-Z_][a-zA-Z0-9_]*)`', text)
+        terms.extend(backtick_refs)
+
+        # Deduplicate and filter short terms
+        unique_terms = list(dict.fromkeys(terms))  # Preserve order, remove duplicates
+        filtered_terms = [t for t in unique_terms if len(t) >= 3]
+
+        self.logger.debug(f"  📝 Extracted {len(filtered_terms)} key terms: {filtered_terms[:10]}")
+
+        return filtered_terms[:15]  # Limit to prevent excessive searches
+
+    def _discover_codebase_context(self, finding) -> Dict[str, Any]:
+        """
+        Session 823: Search the codebase for context relevant to a finding.
+
+        Uses grep to find where key terms are defined/used in the codebase,
+        providing agents with the actual file locations and code snippets.
+
+        Returns:
+            Dict with:
+            - affected_files: List of file paths with line numbers
+            - code_snippets: Dict of file -> relevant code
+            - search_terms: Terms that were searched
+        """
+        import os
+
+        project_root = Path(__file__).parent.parent.parent  # Go up to project root
+        terms = self._extract_key_terms(finding)
+
+        if not terms:
+            return {'affected_files': [], 'code_snippets': {}, 'search_terms': []}
+
+        affected_files = []
+        code_snippets = {}
+        files_seen = set()
+
+        for term in terms[:8]:  # Limit searches to prevent slowdown
+            try:
+                # Search for class/function definitions first
+                patterns = [
+                    f"class {term}",      # Class definition
+                    f"def {term}",        # Function definition
+                    f"{term} = ",         # Variable assignment
+                ]
+
+                for pattern in patterns:
+                    try:
+                        # Use grep with exclusions for speed
+                        result = subprocess.run(
+                            [
+                                'grep', '-rn',
+                                '--include=*.py',
+                                '--exclude-dir=.venv',
+                                '--exclude-dir=node_modules',
+                                '--exclude-dir=.git',
+                                '--exclude-dir=__pycache__',
+                                '--exclude-dir=migrations',
+                                '--exclude-dir=staticfiles',
+                                '--exclude-dir=media',
+                                '-m', '10',  # Max 10 matches per file
+                                pattern,
+                                str(project_root)
+                            ],
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                            cwd=str(project_root)
+                        )
+
+                        if result.returncode == 0 and result.stdout:
+                            lines = result.stdout.strip().split('\n')[:5]  # Limit results per pattern
+
+                            for line in lines:
+                                if ':' in line:
+                                    parts = line.split(':', 2)
+                                    if len(parts) >= 3:
+                                        file_path = parts[0]
+                                        line_num = parts[1]
+                                        code = parts[2].strip()
+
+                                        # Skip test files and migrations
+                                        if '/tests/' in file_path or '/migrations/' in file_path:
+                                            continue
+                                        # Skip the orchestrator itself
+                                        if 'autonomous_remediation_orchestrator' in file_path:
+                                            continue
+
+                                        # Make path relative
+                                        try:
+                                            rel_path = os.path.relpath(file_path, project_root)
+                                        except ValueError:
+                                            rel_path = file_path
+
+                                        file_ref = f"{rel_path}:{line_num}"
+
+                                        if file_ref not in files_seen:
+                                            files_seen.add(file_ref)
+                                            affected_files.append(file_ref)
+
+                                            # Store code snippet
+                                            if rel_path not in code_snippets:
+                                                code_snippets[rel_path] = []
+                                            code_snippets[rel_path].append({
+                                                'line': int(line_num),
+                                                'code': code[:200],  # Truncate long lines
+                                                'term': term,
+                                            })
+
+                    except subprocess.TimeoutExpired:
+                        self.logger.warning(f"  ⏱️ Search timeout for pattern: {pattern}")
+                        continue
+
+            except Exception as e:
+                self.logger.warning(f"  ⚠️ Search error for term '{term}': {e}")
+                continue
+
+        self.logger.info(f"  🔍 Found {len(affected_files)} relevant locations for {len(terms)} terms")
+
+        return {
+            'affected_files': affected_files[:20],  # Limit total results
+            'code_snippets': code_snippets,
+            'search_terms': terms,
+        }
+
+    def _build_context_prompt(self, finding, codebase_context: Dict[str, Any]) -> str:
+        """
+        Session 823: Build an enhanced task prompt with codebase context.
+
+        Injects discovered file locations and code snippets into the task
+        description so the agent knows what already exists.
+        """
+        base_description = finding.description
+
+        # Build context section
+        context_parts = []
+
+        if codebase_context.get('affected_files'):
+            context_parts.append("\n\n## EXISTING CODEBASE CONTEXT\n")
+            context_parts.append("**IMPORTANT:** The following files already exist in the codebase. ")
+            context_parts.append("MODIFY existing code rather than creating new files/apps.\n\n")
+
+            context_parts.append("### Relevant File Locations:\n")
+            for file_ref in codebase_context['affected_files'][:10]:
+                context_parts.append(f"- `{file_ref}`\n")
+
+            # Add code snippets for key files
+            if codebase_context.get('code_snippets'):
+                context_parts.append("\n### Existing Code:\n")
+                for file_path, snippets in list(codebase_context['code_snippets'].items())[:3]:
+                    context_parts.append(f"\n**{file_path}:**\n```python\n")
+                    for snippet in snippets[:3]:
+                        context_parts.append(f"# Line {snippet['line']}: {snippet['code']}\n")
+                    context_parts.append("```\n")
+
+            context_parts.append("\n### Instructions:\n")
+            context_parts.append("1. Check if the fix already exists in the files above\n")
+            context_parts.append("2. If modifying an existing model, update it in place\n")
+            context_parts.append("3. Do NOT create new Django apps for existing models\n")
+            context_parts.append("4. Include the full file path in your code output\n")
+
+        enhanced_description = base_description + ''.join(context_parts)
+        return enhanced_description
+
+    # =========================================================================
     # PHASE 3: EXECUTION
     # =========================================================================
 
@@ -946,6 +1146,10 @@ The finding should be resolved after your changes. The verification step will ch
 
         Session 822: Now includes SKIN layer integration to automatically
         write generated code to the workspace and auto-commit.
+
+        Session 823: Added codebase context discovery to prevent agents from
+        creating duplicate code. Now searches for existing implementations
+        before executing.
         """
         from core.agent_router import AgentRouter
 
@@ -957,17 +1161,32 @@ The finding should be resolved after your changes. The verification step will ch
         task.save(update_fields=['status', 'started_at', 'updated_at'])
 
         try:
+            # Session 823: Discover codebase context before execution
+            self.logger.info(f"  🔍 Discovering codebase context...")
+            codebase_context = self._discover_codebase_context(task.finding)
+
+            # Build enhanced task description with context
+            enhanced_description = self._build_context_prompt(task.finding, codebase_context)
+
+            # Merge discovered files with any pre-existing affected_files
+            all_affected_files = list(task.finding.affected_files or [])
+            all_affected_files.extend(codebase_context.get('affected_files', []))
+            # Deduplicate
+            all_affected_files = list(dict.fromkeys(all_affected_files))
+
             # Route to the assigned agent
             router = AgentRouter(user=None)  # System execution
             result = router.route(
                 agent_name=task.assigned_agent,
-                task=task.description,
+                task=enhanced_description,  # Session 823: Use enhanced description
                 context={
                     'audit_finding_id': str(task.finding.id),
                     'audit_report_id': str(task.finding.audit_report.id) if task.finding.audit_report else None,
-                    'affected_files': task.finding.affected_files,
+                    'affected_files': all_affected_files,  # Session 823: Include discovered files
+                    'code_snippets': codebase_context.get('code_snippets', {}),  # Session 823
                     'priority': task.finding.priority,
                     'autonomous_remediation': True,
+                    'codebase_search_terms': codebase_context.get('search_terms', []),  # Session 823
                 }
             )
 
