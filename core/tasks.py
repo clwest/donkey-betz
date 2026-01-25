@@ -28188,6 +28188,64 @@ def _format_metrics_for_audit(metrics: dict) -> str:
     return "\n".join(lines)
 
 
+# =============================================================================
+# Session 823: Metrics Action Trigger - Self-Execution Engine
+# =============================================================================
+
+@shared_task
+def run_metrics_action_check():
+    """
+    Session 823: Check system metrics and trigger corrective actions.
+
+    This is the SELF-EXECUTION engine that makes the system truly autonomous.
+    It runs hourly and:
+    1. Gathers live system metrics (same as self-audit)
+    2. Evaluates metrics against trigger conditions
+    3. Automatically executes corrective actions when issues are detected
+
+    Example triggers:
+    - spider_entries_24h == 0 → Run spider collection
+    - open_findings > 100 → Trigger remediation cycle
+    - body system unhealthy → Run health recovery
+
+    Runs hourly via Celery Beat.
+    """
+    logger.info("🎯 [METRICS CHECK] Starting metrics action check...")
+
+    try:
+        # Gather live system metrics
+        metrics = _gather_live_system_metrics()
+        logger.info(f"📊 [METRICS CHECK] Gathered {len(metrics)} metric categories")
+
+        # Initialize trigger service and evaluate
+        from core.services.metrics_action_trigger import MetricsActionTrigger
+        trigger_service = MetricsActionTrigger()
+
+        results = trigger_service.evaluate_and_trigger(metrics)
+
+        # Log summary
+        logger.info(
+            f"🎯 [METRICS CHECK] Complete: "
+            f"{results['rules_evaluated']} rules evaluated, "
+            f"{results['conditions_met']} conditions met, "
+            f"{results['actions_triggered']} actions triggered, "
+            f"{results['actions_skipped_cooldown']} skipped (cooldown)"
+        )
+
+        # Log each triggered action
+        for action in results.get('actions', []):
+            if action.get('success'):
+                logger.info(f"   ✅ {action['rule']}: {action['message']}")
+            else:
+                logger.warning(f"   ❌ {action['rule']}: {action['message']}")
+
+        return results
+
+    except Exception as e:
+        logger.exception(f"❌ [METRICS CHECK] Failed: {e}")
+        return {'error': str(e)}
+
+
 @shared_task
 def run_system_self_audit():
     """
