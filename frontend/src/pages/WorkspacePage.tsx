@@ -1609,6 +1609,8 @@ export default function WorkspacePage() {
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [showCommitModal, setShowCommitModal] = useState(false)
   const [showBranchModal, setShowBranchModal] = useState(false)
+  // Session 824: Track expanded activity items
+  const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set())
   const [selectedFilePath, setSelectedFilePath] = useState<string>()
   const [showFileHistory, setShowFileHistory] = useState(false)
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
@@ -2220,13 +2222,14 @@ export default function WorkspacePage() {
               {/* Session 824: Actions Panel */}
               <ActionsPanel />
 
-              {/* Recent Activity Feed - Session 818: Made clickable */}
+              {/* Recent Activity Feed - Session 824: Made expandable */}
               {metricsData?.recent_activity && metricsData.recent_activity.length > 0 && (
                 <div className="card">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Activity className="text-primary-400" size={18} />
                       <h3 className="text-md font-semibold uppercase">Recent Activity</h3>
+                      <span className="text-xs text-gray-500">({metricsData.recent_activity.length})</span>
                     </div>
                     <a
                       href="/agents"
@@ -2237,37 +2240,145 @@ export default function WorkspacePage() {
                     </a>
                   </div>
                   <div className="space-y-2">
-                    {metricsData.recent_activity.map((activity, i) => (
-                      <a
-                        key={i}
-                        href="/agents"
-                        className="flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors group cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          {activity.success ? (
-                            <CheckCircle size={14} className="text-accent-green" />
-                          ) : (
-                            <XCircle size={14} className="text-accent-red" />
+                    {metricsData.recent_activity.map((activity) => {
+                      const isExpanded = expandedActivityIds.has(activity.id)
+                      const toggleExpand = () => {
+                        setExpandedActivityIds(prev => {
+                          const next = new Set(prev)
+                          if (next.has(activity.id)) {
+                            next.delete(activity.id)
+                          } else {
+                            next.add(activity.id)
+                          }
+                          return next
+                        })
+                      }
+
+                      return (
+                        <div
+                          key={activity.id}
+                          className={cn(
+                            'rounded-lg transition-all',
+                            isExpanded ? 'bg-gray-800' : 'bg-gray-800/50 hover:bg-gray-800'
                           )}
-                          <div>
-                            <span className="text-sm text-white group-hover:text-primary-400 transition-colors">
-                              {activity.agent_name}
-                            </span>
-                            <p className="text-xs text-gray-500 truncate max-w-md">
-                              {activity.task}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {activity.completed_at && (
-                            <span className="text-xs text-gray-500">
-                              {new Date(activity.completed_at).toLocaleString()}
-                            </span>
+                        >
+                          {/* Header Row - Always visible */}
+                          <button
+                            onClick={toggleExpand}
+                            className="w-full flex items-center justify-between p-3 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              {activity.success ? (
+                                <CheckCircle size={14} className="text-accent-green" />
+                              ) : (
+                                <XCircle size={14} className="text-accent-red" />
+                              )}
+                              <div className="text-left">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-white">
+                                    {activity.agent_name}
+                                  </span>
+                                  {activity.agent_category && (
+                                    <span className="text-xs px-1.5 py-0.5 bg-primary-500/20 text-primary-400 rounded">
+                                      {activity.agent_category}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500 truncate max-w-md">
+                                  {activity.task}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {activity.execution_time_ms && (
+                                <span className="text-xs text-gray-500">
+                                  {activity.execution_time_ms}ms
+                                </span>
+                              )}
+                              {activity.completed_at && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(activity.completed_at).toLocaleString()}
+                                </span>
+                              )}
+                              {isExpanded ? (
+                                <ChevronDown size={14} className="text-primary-400" />
+                              ) : (
+                                <ChevronRight size={14} className="text-gray-600" />
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Expanded Content */}
+                          {isExpanded && (
+                            <div className="px-3 pb-3 space-y-3 border-t border-gray-700/50">
+                              {/* Full Task */}
+                              <div className="pt-3">
+                                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-1">Task</h4>
+                                <p className="text-sm text-gray-300">{activity.task_full || activity.task}</p>
+                              </div>
+
+                              {/* Metrics Row */}
+                              <div className="flex flex-wrap gap-4 text-xs">
+                                {activity.execution_time_ms && (
+                                  <div className="flex items-center gap-1">
+                                    <Clock size={12} className="text-gray-500" />
+                                    <span className="text-gray-400">Duration:</span>
+                                    <span className="text-white">{activity.execution_time_ms}ms</span>
+                                  </div>
+                                )}
+                                {activity.tokens_used > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <Hash size={12} className="text-gray-500" />
+                                    <span className="text-gray-400">Tokens:</span>
+                                    <span className="text-white">{activity.tokens_used.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {activity.cost > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-gray-400">Cost:</span>
+                                    <span className="text-accent-green">${activity.cost.toFixed(4)}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Error Message */}
+                              {activity.error_message && (
+                                <div className="p-2 bg-accent-red/10 rounded border border-accent-red/30">
+                                  <h4 className="text-xs font-semibold text-accent-red uppercase mb-1">Error</h4>
+                                  <p className="text-xs text-gray-300">{activity.error_message}</p>
+                                </div>
+                              )}
+
+                              {/* Output Summary */}
+                              {activity.output_summary && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-gray-400 uppercase mb-1">Output</h4>
+                                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{activity.output_summary}</p>
+                                </div>
+                              )}
+
+                              {/* Tool Results */}
+                              {activity.tool_results && activity.tool_results.length > 0 && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2">Tools Used</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {activity.tool_results.map((tool: string | { name?: string; tool?: string }, idx: number) => (
+                                      <span
+                                        key={idx}
+                                        className="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded flex items-center gap-1"
+                                      >
+                                        <Wrench size={10} />
+                                        {typeof tool === 'string' ? tool : (tool.name || tool.tool || 'Unknown')}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
-                          <ChevronRight size={14} className="text-gray-600 group-hover:text-primary-400 transition-colors" />
                         </div>
-                      </a>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

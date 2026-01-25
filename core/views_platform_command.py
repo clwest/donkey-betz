@@ -488,15 +488,42 @@ def _get_recent_activity() -> List[Dict[str, Any]]:
     from core.models_unified_system import AgentExecution
 
     recent = AgentExecution.objects.filter(
-        status='completed'
-    ).order_by('-completed_at')[:10]
+        status__in=['completed', 'failed']
+    ).select_related('agent').order_by('-completed_at')[:10]
 
-    return [{
-        'agent_name': ex.agent.name if ex.agent else 'Unknown',
-        'task': ex.task[:100] if ex.task else 'Task completed',
-        'completed_at': ex.completed_at.isoformat() if ex.completed_at else None,
-        'success': ex.status == 'completed',
-    } for ex in recent]
+    results = []
+    for ex in recent:
+        # Extract summary from output_data if available
+        output_summary = None
+        tool_results = []
+        if ex.output_data:
+            # Try to get a summary or description from output
+            if isinstance(ex.output_data, dict):
+                output_summary = ex.output_data.get('summary') or ex.output_data.get('description') or ex.output_data.get('content', '')[:500]
+                # Extract tool results if present
+                if 'tool_results' in ex.output_data:
+                    tool_results = ex.output_data.get('tool_results', [])[:5]  # Limit to 5 tools
+                elif 'tools_used' in ex.output_data:
+                    tool_results = ex.output_data.get('tools_used', [])[:5]
+
+        results.append({
+            'id': str(ex.id),
+            'agent_name': ex.agent.name if ex.agent else 'Unknown',
+            'agent_category': ex.agent.category if ex.agent else None,
+            'task': ex.task[:100] if ex.task else 'Task completed',
+            'task_full': ex.task if ex.task else 'Task completed',
+            'completed_at': ex.completed_at.isoformat() if ex.completed_at else None,
+            'success': ex.status == 'completed',
+            'status': ex.status,
+            'execution_time_ms': ex.execution_time_ms,
+            'tokens_used': ex.tokens_used,
+            'cost': float(ex.cost) if ex.cost else 0,
+            'error_message': ex.error_message if ex.status == 'failed' else None,
+            'output_summary': output_summary[:500] if output_summary else None,
+            'tool_results': tool_results,
+        })
+
+    return results
 
 
 # =============================================================================
