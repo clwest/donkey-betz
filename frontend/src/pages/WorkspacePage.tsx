@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
 // Session 815: Platform Command Center components
 import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser } from '@/components/platform'
+// Session 816: Enhanced Operations Panel
+import { OperationsPanel } from '@/components/workspace'
 // Session 714: Real-time system events
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import {
@@ -2642,50 +2644,19 @@ export default function WorkspacePage() {
             </div>
           )}
 
-          {/* Operations Tab */}
-          {activeTab === 'operations' && (
-            <div className="space-y-4">
-              {/* Filter */}
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={operationFilter}
-                    onChange={(e) => setOperationFilter(e.target.value)}
-                    placeholder="Filter by file or agent..."
-                    className="w-full pl-10 pr-4 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none"
-                  />
-                </div>
-                <span className="text-sm text-gray-400">{filteredOperations.length} operations</span>
-              </div>
-
-              {/* Operations List */}
-              {loadingOperations ? (
-                <div className="flex items-center justify-center h-32">
-                  <Loader2 size={24} className="animate-spin text-primary-400" />
-                </div>
-              ) : filteredOperations.length > 0 ? (
-                <div className="space-y-3">
-                  {filteredOperations.map(op => (
-                    <OperationRow
-                      key={op.id}
-                      operation={op}
-                      onRollback={() => rollbackMutation.mutate(op.id)}
-                      onViewContent={() => {
-                        setSelectedOperationId(op.id)
-                        setShowFileContent(true)
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="card text-center py-12">
-                  <History size={32} className="mx-auto text-gray-500 mb-2" />
-                  <p className="text-gray-400">No operations found</p>
-                </div>
-              )}
-            </div>
+          {/* Operations Tab - Session 816: Enhanced with OperationsPanel */}
+          {activeTab === 'operations' && activeWorkspace && (
+            <OperationsPanel
+              workspaceId={activeWorkspace.id}
+              operations={operations}
+              isLoading={loadingOperations}
+              onRollback={(id) => rollbackMutation.mutate(id)}
+              onViewContent={(id) => {
+                setSelectedOperationId(id)
+                setShowFileContent(true)
+              }}
+              rollbackMutation={rollbackMutation}
+            />
           )}
 
           {/* Reviews Tab */}
