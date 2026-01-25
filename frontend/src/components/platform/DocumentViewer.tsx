@@ -55,7 +55,7 @@ function formatDate(dateStr: string): string {
 function renderMarkdown(text: string): string {
   let html = text
     // Tables
-    .replace(/^\|(.+)\|$/gim, (match, content) => {
+    .replace(/^\|(.+)\|$/gim, (_match, content) => {
       const cells = content.split('|').map((c: string) => c.trim())
       const isHeader = cells.some((c: string) => c.match(/^-+$/))
       if (isHeader) return ''

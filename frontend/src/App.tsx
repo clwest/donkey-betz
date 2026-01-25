@@ -15,7 +15,7 @@ import PodcastPage from '@/pages/PodcastPage'
 import PortfolioPage from '@/pages/PortfolioPage'
 import AdminPage from '@/pages/AdminPage'
 import HumanPage from '@/pages/HumanPage'
-import WorkspacePage from '@/pages/WorkspacePage'
+import WorkspacePage from '@/pages/WorkspacePageNew'  // Session 825: New modular workspace
 import LLMRoutingPage from '@/pages/LLMRoutingPage'
 import BodyHealthPage from '@/pages/BodyHealthPage'
 import HiveMindPage from '@/pages/HiveMindPage'

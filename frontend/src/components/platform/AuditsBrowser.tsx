@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import { FileSearch, Folder, ChevronRight, Clock, ExternalLink, AlertTriangle, Database, RefreshCw, Archive, FileText } from 'lucide-react'
+import { FileSearch, ChevronRight, Clock, ExternalLink, AlertTriangle, Database, RefreshCw, Archive, FileText } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface Audit {
