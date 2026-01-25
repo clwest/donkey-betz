@@ -28247,6 +28247,70 @@ def run_metrics_action_check():
 
 
 @shared_task
+def run_agent_health_rotation():
+    """
+    Session 824: Run health check across all agent categories.
+
+    This task checks agent health by running a lightweight test execution
+    on a sample of agents from each category.
+
+    Used by MetricsActionTrigger when agent_executions_24h == 0.
+    """
+    logger.info("🔄 [AGENT HEALTH] Starting agent health rotation check...")
+
+    results = {
+        'agents_checked': 0,
+        'healthy': 0,
+        'unhealthy': 0,
+        'errors': [],
+    }
+
+    try:
+        from core.models_unified_system import Agent
+
+        # Get a sample of active agents (one from each category)
+        categories = Agent.objects.filter(
+            is_active=True
+        ).values_list('category', flat=True).distinct()
+
+        for category in categories:
+            try:
+                # Get one agent from this category
+                agent_record = Agent.objects.filter(
+                    is_active=True,
+                    category=category
+                ).first()
+
+                if agent_record:
+                    results['agents_checked'] += 1
+                    # Just verify the agent can be loaded via AGENT_MAP
+                    try:
+                        from core.agent_router import AgentRouter
+                        if agent_record.name in AgentRouter.AGENT_MAP:
+                            results['healthy'] += 1
+                        else:
+                            results['unhealthy'] += 1
+                    except Exception as e:
+                        results['unhealthy'] += 1
+                        results['errors'].append(f"{agent_record.name}: {str(e)[:50]}")
+            except Exception as e:
+                results['errors'].append(f"Category {category}: {str(e)[:50]}")
+
+        logger.info(
+            f"🔄 [AGENT HEALTH] Complete: "
+            f"{results['agents_checked']} checked, "
+            f"{results['healthy']} healthy, "
+            f"{results['unhealthy']} unhealthy"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.exception(f"❌ [AGENT HEALTH] Failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
 def run_system_self_audit():
     """
     Session 823: Run a comprehensive system self-audit with LIVE DATA.

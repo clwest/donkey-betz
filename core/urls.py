@@ -4008,6 +4008,16 @@ from core.views_platform_command import (
     audit_run_view,  # Session 819
     doc_content_view,
     skin_lock_toggle_view,
+    # Session 824: Live Metrics & Self-Execution Control
+    live_metrics_view,
+    triggers_list_view,
+    trigger_toggle_view,
+    trigger_run_now_view,
+    action_run_spiders_view,
+    action_run_remediation_view,
+    action_agent_health_check_view,
+    action_run_self_audit_view,
+    remediation_status_view,
 )
 
 urlpatterns += [
@@ -4022,6 +4032,16 @@ urlpatterns += [
     path('api/platform/audits/run/', audit_run_view, name='platform-audits-run'),  # Session 819
     path('api/platform/doc-content/', doc_content_view, name='platform-doc-content'),  # Session 818
     path('api/platform/skin-lock/', skin_lock_toggle_view, name='platform-skin-lock'),  # Session 818
+    # Session 824: Live Metrics & Self-Execution Control
+    path('api/platform/live-metrics/', live_metrics_view, name='platform-live-metrics'),
+    path('api/platform/triggers/', triggers_list_view, name='platform-triggers-list'),
+    path('api/platform/triggers/<str:rule_name>/toggle/', trigger_toggle_view, name='platform-trigger-toggle'),
+    path('api/platform/triggers/run-now/', trigger_run_now_view, name='platform-trigger-run-now'),
+    path('api/platform/actions/run-spiders/', action_run_spiders_view, name='platform-action-run-spiders'),
+    path('api/platform/actions/run-remediation/', action_run_remediation_view, name='platform-action-run-remediation'),
+    path('api/platform/actions/agent-health-check/', action_agent_health_check_view, name='platform-action-agent-health'),
+    path('api/platform/actions/run-self-audit/', action_run_self_audit_view, name='platform-action-run-self-audit'),
+    path('api/platform/remediation/status/', remediation_status_view, name='platform-remediation-status'),
 ]
 
 # =========================================================================

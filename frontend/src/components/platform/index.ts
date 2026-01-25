@@ -2,6 +2,7 @@
  * Session 815: Platform Command Center Components
  * Session 816: Added AuditsBrowser
  * Session 818: Added DocumentViewer
+ * Session 824: Added LiveMetricsDashboard, TriggerRulesPanel, ActionsPanel
  *
  * Export all platform components for easy importing.
  */
@@ -13,3 +14,7 @@ export { CanonBrowser } from './CanonBrowser'
 export { PlaybookBrowser } from './PlaybookBrowser'
 export { AuditsBrowser } from './AuditsBrowser'
 export { DocumentViewer } from './DocumentViewer'
+// Session 824: Live Metrics & Self-Execution Control
+export { LiveMetricsDashboard } from './LiveMetricsDashboard'
+export { TriggerRulesPanel } from './TriggerRulesPanel'
+export { ActionsPanel } from './ActionsPanel'
