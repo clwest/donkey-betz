@@ -550,6 +550,8 @@ Your output should be ready for executive review and formal approval processes."
             )
 
             # Build result
+            # Session 814: Check workspace_result.get('success') for proper status
+            workspace_saved = workspace_result and workspace_result.get('success', False)
             result_data = {
                 'content': {
                     'full_text': document_content,
@@ -558,21 +560,29 @@ Your output should be ready for executive review and formal approval processes."
                     'stage': stage,
                     'stage_name': DOCUMENT_STAGES.get(stage, {}).get('name', 'Document'),
                     'topic': topic,
-                    'workspace_file': workspace_result.get('path') if workspace_result else None,
+                    'workspace_file': workspace_result.get('path') if workspace_saved else None,
+                    'workspace': workspace_result.get('workspace') if workspace_saved else None,
                 },
                 'metadata': {
                     'classification': classification,
                     'generated_at': datetime.now().isoformat(),
                     'stage_purpose': DOCUMENT_STAGES.get(stage, {}).get('purpose', ''),
-                    'saved_to_workspace': workspace_result is not None,
+                    'saved_to_workspace': workspace_saved,
+                    'workspace_reason': workspace_result.get('reason') if workspace_result and not workspace_saved else None,
                 }
             }
 
             execution_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
 
+            workspace_msg = ""
+            if workspace_saved:
+                workspace_msg = f" (saved to workspace: {workspace_result.get('workspace', 'default')})"
+            elif workspace_result and workspace_result.get('reason'):
+                workspace_msg = f" (workspace: {workspace_result.get('reason')})"
+
             return AgentResult(
                 success=True,
-                message=f"Generated Stage {stage} - {DOCUMENT_STAGES.get(stage, {}).get('name', 'Document')}" + (" (saved to workspace)" if workspace_result else ""),
+                message=f"Generated Stage {stage} - {DOCUMENT_STAGES.get(stage, {}).get('name', 'Document')}{workspace_msg}",
                 data=result_data,
                 execution_time_ms=execution_time_ms,
                 agent_name=self.name
@@ -631,17 +641,24 @@ generated_at: {datetime.now().isoformat()}
                 base_path=""
             )
 
-            if write_result.get('success'):
+            # Session 814: Check 'written' key (not 'success') per SKIN layer API
+            if write_result.get('written'):
                 logger.info(f"📝 [Session 814] Saved technical document to workspace: {filename}")
                 return {
                     'success': True,
                     'filename': filename,
                     'path': f"documents/{filename}",
+                    'workspace': write_result.get('workspace'),
                     'operations': write_result.get('operations', [])
                 }
             else:
-                logger.warning(f"Failed to write document to workspace: {write_result.get('error')}")
-                return None
+                reason = write_result.get('reason', 'Unknown error')
+                logger.warning(f"Failed to write document to workspace: {reason}")
+                return {
+                    'success': False,
+                    'reason': reason,
+                    'files_generated': write_result.get('files_generated', 1)
+                }
 
         except Exception as e:
             logger.error(f"Failed to save technical document to workspace: {e}")
