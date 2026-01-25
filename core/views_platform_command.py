@@ -1113,3 +1113,406 @@ def canon_promote_view(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 819: System Audit Trigger API
+# =============================================================================
+
+@csrf_exempt
+@require_POST
+def audit_run_view(request):
+    """
+    POST /api/platform/audits/run/
+
+    Trigger a comprehensive system audit and save to docs/audits/.
+
+    Session 819: Allows triggering audits from the UI.
+
+    Returns:
+    {
+        "success": true,
+        "audit_path": "docs/audits/SESSION_819_SYSTEM_AUDIT.md",
+        "summary": {...},
+        "message": "System audit completed"
+    }
+    """
+    import subprocess
+    import os
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        # Run the comprehensive system audit
+        results = _run_system_audit()
+
+        # Generate the audit report
+        audit_filename = f"SESSION_819_SYSTEM_AUDIT_{timezone.now().strftime('%Y%m%d_%H%M%S')}.md"
+        audit_path = _get_docs_dir() / 'audits' / audit_filename
+
+        # Ensure audits directory exists
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Generate markdown report
+        report_content = _generate_audit_report(results, request.user.username)
+
+        # Save the report
+        audit_path.write_text(report_content, encoding='utf-8')
+
+        logger.info(f"System audit completed by {request.user.username}: {audit_path}")
+
+        return JsonResponse({
+            'success': True,
+            'audit_path': f"docs/audits/{audit_filename}",
+            'summary': {
+                'passed': results['passed'],
+                'failed': results['failed'],
+                'warnings': results['warnings'],
+                'total_checks': results['passed'] + results['failed'] + results['warnings'],
+                'health_score': results.get('health_score', 0),
+            },
+            'message': f"System audit completed - {results['passed']} passed, {results['failed']} failed, {results['warnings']} warnings"
+        })
+
+    except Exception as e:
+        logger.error(f"System audit failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def _run_system_audit() -> Dict[str, Any]:
+    """
+    Run comprehensive system audit checks.
+
+    Session 819: Adapted from system_health_check management command for API use.
+    """
+    import os
+    import subprocess
+
+    results = {
+        'passed': 0,
+        'failed': 0,
+        'warnings': 0,
+        'checks': [],
+        'timestamp': timezone.now().isoformat(),
+    }
+
+    def _pass(category: str, check: str, detail: str = ""):
+        results['passed'] += 1
+        results['checks'].append({
+            'status': 'pass',
+            'category': category,
+            'check': check,
+            'detail': detail
+        })
+
+    def _fail(category: str, check: str, detail: str = ""):
+        results['failed'] += 1
+        results['checks'].append({
+            'status': 'fail',
+            'category': category,
+            'check': check,
+            'detail': detail
+        })
+
+    def _warn(category: str, check: str, detail: str = ""):
+        results['warnings'] += 1
+        results['checks'].append({
+            'status': 'warn',
+            'category': category,
+            'check': check,
+            'detail': detail
+        })
+
+    # === SERVICES ===
+    # Redis
+    try:
+        import redis
+        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
+        r.ping()
+        _pass('services', 'Redis connected')
+    except Exception as e:
+        _fail('services', 'Redis connection', str(e))
+
+    # PostgreSQL
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        _pass('services', 'PostgreSQL connected')
+    except Exception as e:
+        _fail('services', 'PostgreSQL connection', str(e))
+
+    # Daphne
+    try:
+        import requests
+        resp = requests.get('http://localhost:8000/health/ping/', timeout=5)
+        if resp.status_code == 200:
+            _pass('services', 'Daphne/Django running')
+        else:
+            _fail('services', 'Daphne health check', f'Status {resp.status_code}')
+    except Exception as e:
+        _fail('services', 'Daphne connection', str(e))
+
+    # === DATABASE ===
+    try:
+        from django.apps import apps
+        model_count = len(apps.get_models())
+        if model_count > 300:
+            _pass('database', f'{model_count} Django models registered')
+        else:
+            _warn('database', f'Only {model_count} models (expected 300+)')
+    except Exception as e:
+        _fail('database', 'Model count', str(e))
+
+    # Key tables
+    try:
+        from core.models_unified_system import Agent
+        agent_count = Agent.objects.count()
+        active_count = Agent.objects.filter(is_active=True).count()
+        _pass('database', f'Agents: {active_count} active / {agent_count} total')
+    except Exception as e:
+        _fail('database', 'Agents table', str(e))
+
+    try:
+        from core.models import AgentDream
+        dream_count = AgentDream.objects.count()
+        _pass('database', f'Agent Dreams: {dream_count}')
+    except Exception as e:
+        _fail('database', 'Agent Dreams table', str(e))
+
+    try:
+        from core.models import AgentConversation
+        conv_count = AgentConversation.objects.count()
+        _pass('database', f'Agent Conversations: {conv_count}')
+    except Exception as e:
+        _fail('database', 'Agent Conversations table', str(e))
+
+    try:
+        from core.models import SelfBlog
+        blog_count = SelfBlog.objects.count()
+        _pass('database', f'Self Blogs: {blog_count}')
+    except Exception as e:
+        _fail('database', 'Self Blogs table', str(e))
+
+    # === AGENTS ===
+    try:
+        from core.agent_router import AgentRouter
+        _pass('agents', 'AgentRouter available')
+    except Exception as e:
+        _fail('agents', 'AgentRouter', str(e))
+
+    # === SPIDERS ===
+    try:
+        from ai_core.spiders.spider_registry import get_spider_registry
+        registry = get_spider_registry()
+        spiders = registry.list_spiders()
+        spider_count = len(spiders)
+        if spider_count >= 70:
+            _pass('spiders', f'{spider_count} spiders registered')
+        else:
+            _warn('spiders', f'Only {spider_count} spiders (expected 70+)')
+    except Exception as e:
+        _warn('spiders', 'Spider registry', str(e))
+
+    # === CELERY ===
+    try:
+        result = subprocess.run(['pgrep', '-f', 'celery.*worker'], capture_output=True)
+        if result.returncode == 0:
+            worker_pids = result.stdout.decode().strip().split('\n')
+            _pass('celery', f'{len(worker_pids)} Celery worker processes')
+        else:
+            _fail('celery', 'No Celery workers found')
+    except Exception as e:
+        _fail('celery', 'Celery worker check', str(e))
+
+    try:
+        result = subprocess.run(['pgrep', '-f', 'celery.*beat'], capture_output=True)
+        if result.returncode == 0:
+            _pass('celery', 'Celery beat scheduler running')
+        else:
+            _fail('celery', 'Celery beat not running')
+    except Exception as e:
+        _fail('celery', 'Celery beat check', str(e))
+
+    # === CONTENT SYSTEM ===
+    try:
+        from core.models_autonomous_studio import ContentChannel, ChannelEpisode
+        channels = ContentChannel.objects.filter(status='active').count()
+        episodes = ChannelEpisode.objects.count()
+        if channels > 0:
+            _pass('content', f'{channels} active channels, {episodes} episodes')
+        else:
+            _warn('content', 'No active content channels')
+    except Exception as e:
+        _fail('content', 'Content system', str(e))
+
+    # === PILOTS ===
+    try:
+        from core.models_pilot_readiness import PilotExecution, Experiment, PilotReadinessGate
+        pilots = PilotExecution.objects.count()
+        experiments = Experiment.objects.count()
+        gates = PilotReadinessGate.objects.count()
+        _pass('pilots', f'{pilots} pilots, {experiments} experiments, {gates} gates')
+    except Exception as e:
+        _fail('pilots', 'Pilot system', str(e))
+
+    # === ML MODELS ===
+    openai_key = os.environ.get('OPENAI_API_KEY')
+    if openai_key and len(openai_key) > 10:
+        _pass('ml', 'OpenAI API key configured')
+    else:
+        _fail('ml', 'OpenAI API key missing')
+
+    anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
+    if anthropic_key and len(anthropic_key) > 10:
+        _pass('ml', 'Anthropic API key configured')
+    else:
+        _warn('ml', 'Anthropic API key not configured')
+
+    # === BODY SYSTEMS ===
+    body_systems = ['heart', 'lungs', 'circulatory', 'spine', 'immune', 'digestive', 'muscular', 'brain', 'skin']
+    for system in body_systems:
+        try:
+            from core.models_body_vitals import BodySystemHealth
+            health = BodySystemHealth.objects.filter(system_name=system).first()
+            if health:
+                if health.is_healthy:
+                    _pass('body_systems', f'{system.upper()} system healthy')
+                else:
+                    _warn('body_systems', f'{system.upper()} system unhealthy')
+            else:
+                _warn('body_systems', f'{system.upper()} system status unknown')
+        except Exception:
+            _warn('body_systems', f'{system.upper()} system check failed')
+
+    # Calculate health score
+    total = results['passed'] + results['failed'] + results['warnings']
+    if total > 0:
+        results['health_score'] = int((results['passed'] / total) * 100)
+    else:
+        results['health_score'] = 0
+
+    return results
+
+
+def _generate_audit_report(results: Dict[str, Any], username: str) -> str:
+    """
+    Generate a markdown audit report.
+
+    Session 819: Creates readable audit documents for docs/audits/.
+    """
+    timestamp = results.get('timestamp', timezone.now().isoformat())
+    health_score = results.get('health_score', 0)
+    passed = results['passed']
+    failed = results['failed']
+    warnings = results['warnings']
+    total = passed + failed + warnings
+
+    # Determine status
+    if failed == 0 and warnings == 0:
+        status = "HEALTHY"
+        status_emoji = "✅"
+    elif failed == 0:
+        status = "WARNINGS"
+        status_emoji = "⚠️"
+    else:
+        status = "ISSUES FOUND"
+        status_emoji = "❌"
+
+    report = f"""# System Audit Report
+
+**Generated:** {timestamp}
+**Triggered by:** {username}
+**Status:** {status_emoji} {status}
+**Health Score:** {health_score}%
+
+---
+
+## Summary
+
+| Metric | Count |
+|--------|-------|
+| Total Checks | {total} |
+| ✅ Passed | {passed} |
+| ⚠️ Warnings | {warnings} |
+| ❌ Failed | {failed} |
+
+---
+
+## Checks by Category
+
+"""
+
+    # Group checks by category
+    categories = {}
+    for check in results['checks']:
+        cat = check['category']
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(check)
+
+    for category, checks in sorted(categories.items()):
+        cat_passed = sum(1 for c in checks if c['status'] == 'pass')
+        cat_failed = sum(1 for c in checks if c['status'] == 'fail')
+        cat_warnings = sum(1 for c in checks if c['status'] == 'warn')
+
+        report += f"### {category.upper().replace('_', ' ')}\n\n"
+        report += f"*{cat_passed} passed, {cat_warnings} warnings, {cat_failed} failed*\n\n"
+
+        for check in checks:
+            if check['status'] == 'pass':
+                emoji = "✅"
+            elif check['status'] == 'warn':
+                emoji = "⚠️"
+            else:
+                emoji = "❌"
+
+            report += f"- {emoji} {check['check']}"
+            if check.get('detail'):
+                report += f" - {check['detail']}"
+            report += "\n"
+
+        report += "\n"
+
+    # Add failed checks section if any
+    failed_checks = [c for c in results['checks'] if c['status'] == 'fail']
+    if failed_checks:
+        report += """---
+
+## Failed Checks (Action Required)
+
+"""
+        for check in failed_checks:
+            report += f"- **[{check['category']}]** {check['check']}"
+            if check.get('detail'):
+                report += f" - {check['detail']}"
+            report += "\n"
+
+    # Add warnings section if any
+    warning_checks = [c for c in results['checks'] if c['status'] == 'warn']
+    if warning_checks:
+        report += """
+---
+
+## Warnings (Review Recommended)
+
+"""
+        for check in warning_checks:
+            report += f"- **[{check['category']}]** {check['check']}"
+            if check.get('detail'):
+                report += f" - {check['detail']}"
+            report += "\n"
+
+    report += f"""
+---
+
+*Generated by Session 819 System Audit API*
+"""
+
+    return report

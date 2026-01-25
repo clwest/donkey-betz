@@ -1976,6 +1976,22 @@ export default function WorkspacePage() {
     },
   })
 
+  // Session 819: Run System Audit mutation
+  const auditRunMutation = useMutation({
+    mutationFn: () => platformApi.runAudit(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['platform-audits'] })
+      const summary = data.data.summary
+      setActionResult({
+        type: 'success',
+        message: `Audit completed: ${summary.passed} passed, ${summary.failed} failed, ${summary.warnings} warnings (${summary.health_score}% healthy)`
+      })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to run system audit' })
+    },
+  })
+
   // Clear toast
   useEffect(() => {
     if (actionResult) {
@@ -2492,15 +2508,35 @@ export default function WorkspacePage() {
               </div>
 
               {/* Session 816: Audits Section */}
+              {/* Session 819: Added Run Audit button */}
               <div className="card">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Search className="text-accent-amber" size={18} />
                     <h3 className="text-md font-semibold uppercase">System Audits</h3>
                   </div>
-                  <span className="text-xs text-gray-500">
-                    {auditsData?.total || 0} audits
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">
+                      {auditsData?.total || 0} audits
+                    </span>
+                    <button
+                      onClick={() => auditRunMutation.mutate()}
+                      disabled={auditRunMutation.isPending}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber rounded text-xs transition-colors disabled:opacity-50"
+                    >
+                      {auditRunMutation.isPending ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          Running...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw size={12} />
+                          Run Audit
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <AuditsBrowser
                   data={auditsData}
