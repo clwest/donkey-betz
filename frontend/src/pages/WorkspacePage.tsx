@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
 // Session 815: Platform Command Center components
 // Session 816: Added AuditsBrowser
-import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser, AuditsBrowser } from '@/components/platform'
+// Session 818: Added DocumentViewer for inline document reading
+import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser, AuditsBrowser, DocumentViewer } from '@/components/platform'
 // Session 816: Enhanced Operations Panel
 import { OperationsPanel } from '@/components/workspace'
 // Session 714: Real-time system events
@@ -1494,6 +1495,13 @@ export default function WorkspacePage() {
   const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null)
   // Session 785: Collapsible Directory Map
   const [directoryMapExpanded, setDirectoryMapExpanded] = useState(false)
+  // Session 818: Document viewer state for inline reading in Knowledge tab
+  const [viewerDocument, setViewerDocument] = useState<{
+    path: string
+    title: string
+    category: string
+    categoryColor: string
+  } | null>(null)
   const queryClient = useQueryClient()
 
   // Session 714: Real-time event handlers - refresh data when file events occur
@@ -2215,8 +2223,13 @@ export default function WorkspacePage() {
                   data={canonData}
                   isLoading={loadingCanon}
                   onSelectDocument={(doc) => {
-                    // Navigate to docs page with this doc selected
-                    window.open(`/docs-index?search=${encodeURIComponent(doc.path)}`, '_blank')
+                    // Session 818: Open inline viewer instead of navigating away
+                    setViewerDocument({
+                      path: doc.path,
+                      title: doc.title,
+                      category: doc.category,
+                      categoryColor: '#8b5cf6' // purple for canon
+                    })
                   }}
                 />
               </div>
@@ -2236,7 +2249,13 @@ export default function WorkspacePage() {
                   data={playbooksData}
                   isLoading={loadingPlaybooks}
                   onSelectPlaybook={(playbook) => {
-                    window.open(`/docs-index?search=${encodeURIComponent(playbook.path)}`, '_blank')
+                    // Session 818: Open inline viewer instead of navigating away
+                    setViewerDocument({
+                      path: playbook.path,
+                      title: playbook.title,
+                      category: playbook.category,
+                      categoryColor: '#06b6d4' // cyan for playbooks
+                    })
                   }}
                 />
               </div>
@@ -2256,7 +2275,13 @@ export default function WorkspacePage() {
                   data={auditsData}
                   isLoading={loadingAudits}
                   onSelectAudit={(audit) => {
-                    window.open(`/docs-index?search=${encodeURIComponent(audit.path)}`, '_blank')
+                    // Session 818: Open inline viewer instead of navigating away
+                    setViewerDocument({
+                      path: audit.path,
+                      title: audit.title,
+                      category: audit.audit_type,
+                      categoryColor: '#f59e0b' // amber for audits
+                    })
                   }}
                 />
               </div>
@@ -3318,6 +3343,16 @@ export default function WorkspacePage() {
 
       {/* Toast */}
       {actionResult && <Toast result={actionResult} onClose={() => setActionResult(null)} />}
+
+      {/* Session 818: Document Viewer for inline reading in Knowledge tab */}
+      <DocumentViewer
+        documentPath={viewerDocument?.path || null}
+        title={viewerDocument?.title}
+        category={viewerDocument?.category}
+        categoryColor={viewerDocument?.categoryColor}
+        isOpen={!!viewerDocument}
+        onClose={() => setViewerDocument(null)}
+      />
     </div>
   )
 }
