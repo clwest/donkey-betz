@@ -3,9 +3,10 @@
  * Displays full blog content from SelfBlog model
  */
 
-import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle, Trash2, X } from 'lucide-react'
 
 interface Blog {
   id: string
@@ -24,6 +25,9 @@ interface Blog {
 
 export default function BlogViewerPage() {
   const { blogId } = useParams<{ blogId: string }>()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['blog', blogId],
@@ -37,6 +41,32 @@ export default function BlogViewerPage() {
     },
     enabled: !!blogId,
   })
+
+  // Session 814: Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/v1/research/self-blog/${blogId}/delete/`, {
+        method: 'DELETE',
+      })
+      const json = await response.json()
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to delete blog')
+      }
+      return json
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
+      navigate('/blogs')
+    },
+  })
+
+  const handleDelete = () => {
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = () => {
+    deleteMutation.mutate()
+  }
 
   if (isLoading) {
     return (
@@ -65,6 +95,53 @@ export default function BlogViewerPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-dark-card border border-dark-border rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-semibold text-accent-red">Delete Blog</h3>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-gray-300 mb-2">Are you sure you want to delete this blog?</p>
+            <p className="text-sm text-gray-400 mb-4 line-clamp-2">"{blog.title}"</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="btn btn-secondary"
+                disabled={deleteMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="btn bg-accent-red/20 text-accent-red hover:bg-accent-red/30 flex items-center gap-2"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                Delete
+              </button>
+            </div>
+            {deleteMutation.isError && (
+              <p className="text-accent-red text-sm mt-3">
+                {deleteMutation.error instanceof Error
+                  ? deleteMutation.error.message
+                  : 'Failed to delete'}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Back button */}
       <Link
         to="/blogs"
@@ -187,8 +264,12 @@ export default function BlogViewerPage() {
           <button className="btn btn-primary">
             Approve for Publishing
           </button>
-          <button className="btn bg-accent-red/20 text-accent-red hover:bg-accent-red/30">
-            Needs Revision
+          <button
+            onClick={handleDelete}
+            className="btn bg-accent-red/20 text-accent-red hover:bg-accent-red/30 flex items-center gap-2"
+          >
+            <Trash2 size={16} />
+            Delete
           </button>
         </div>
       </div>

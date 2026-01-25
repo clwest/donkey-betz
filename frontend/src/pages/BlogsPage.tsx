@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   BookOpen,
   Search,
@@ -16,6 +16,8 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  Trash2,
+  X,
 } from 'lucide-react'
 
 interface Blog {
@@ -39,6 +41,8 @@ export default function BlogsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<Blog | null>(null)
+  const queryClient = useQueryClient()
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['blogs-page', page, search],
@@ -50,6 +54,24 @@ export default function BlogsPage() {
       })
       const response = await fetch(`/api/v1/research/self-blog/list/?${params}`)
       return response.json()
+    },
+  })
+
+  // Session 814: Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (blogId: string) => {
+      const response = await fetch(`/api/v1/research/self-blog/${blogId}/delete/`, {
+        method: 'DELETE',
+      })
+      const json = await response.json()
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to delete blog')
+      }
+      return json
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
+      setDeleteConfirm(null)
     },
   })
 
@@ -83,8 +105,67 @@ export default function BlogsPage() {
     }
   }
 
+  const handleDelete = (blog: Blog, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDeleteConfirm(blog)
+  }
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      deleteMutation.mutate(deleteConfirm.id)
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-dark-card border border-dark-border rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-semibold text-accent-red">Delete Blog</h3>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-gray-300 mb-2">Are you sure you want to delete this blog?</p>
+            <p className="text-sm text-gray-400 mb-4 line-clamp-2">"{deleteConfirm.title}"</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="btn btn-secondary"
+                disabled={deleteMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="btn bg-accent-red/20 text-accent-red hover:bg-accent-red/30 flex items-center gap-2"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                Delete
+              </button>
+            </div>
+            {deleteMutation.isError && (
+              <p className="text-accent-red text-sm mt-3">
+                {deleteMutation.error instanceof Error
+                  ? deleteMutation.error.message
+                  : 'Failed to delete'}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -165,52 +246,59 @@ export default function BlogsPage() {
       {!isLoading && !error && blogs.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {blogs.map((blog) => (
-            <Link
-              key={blog.id}
-              to={`/blog/${blog.id}`}
-              className="card hover:border-primary-500/50 transition-colors cursor-pointer group"
-            >
-              <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors">
-                {blog.title}
-              </h3>
-              <p className="text-sm text-gray-400 mb-3 line-clamp-3">{blog.intro}</p>
+            <div key={blog.id} className="card hover:border-primary-500/50 transition-colors group relative">
+              <Link to={`/blog/${blog.id}`} className="block">
+                <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors pr-8">
+                  {blog.title}
+                </h3>
+                <p className="text-sm text-gray-400 mb-3 line-clamp-3">{blog.intro}</p>
 
-              {/* Tags */}
-              <div className="flex flex-wrap gap-1 mb-3">
-                {blog.tags.slice(0, 3).map((tag, i) => (
-                  <span
-                    key={i}
-                    className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400"
-                  >
-                    {tag}
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {blog.tags.slice(0, 3).map((tag, i) => (
+                    <span
+                      key={i}
+                      className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {blog.tags.length > 3 && (
+                    <span className="text-xs text-gray-500">+{blog.tags.length - 3} more</span>
+                  )}
+                </div>
+
+                {/* Meta */}
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <FileText size={12} />
+                    {blog.word_count} words
                   </span>
-                ))}
-                {blog.tags.length > 3 && (
-                  <span className="text-xs text-gray-500">+{blog.tags.length - 3} more</span>
-                )}
-              </div>
-
-              {/* Meta */}
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <FileText size={12} />
-                  {blog.word_count} words
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar size={12} />
-                  {new Date(blog.created_at).toLocaleDateString()}
-                </span>
-              </div>
-
-              {/* Tone badge */}
-              {blog.tone && (
-                <div className="mt-2">
-                  <span className="text-xs px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple capitalize">
-                    {blog.tone}
+                  <span className="flex items-center gap-1">
+                    <Calendar size={12} />
+                    {new Date(blog.created_at).toLocaleDateString()}
                   </span>
                 </div>
-              )}
-            </Link>
+
+                {/* Tone badge */}
+                {blog.tone && (
+                  <div className="mt-2">
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple capitalize">
+                      {blog.tone}
+                    </span>
+                  </div>
+                )}
+              </Link>
+
+              {/* Delete button */}
+              <button
+                onClick={(e) => handleDelete(blog, e)}
+                className="absolute top-4 right-4 p-1.5 rounded bg-dark-bg/80 text-gray-400 hover:text-accent-red hover:bg-accent-red/20 transition-colors opacity-0 group-hover:opacity-100"
+                title="Delete blog"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           ))}
         </div>
       )}
