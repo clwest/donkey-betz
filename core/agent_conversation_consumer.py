@@ -75,8 +75,19 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
 
             if message_type == 'start_conversation':
                 # User requested a new conversation
+                # Session 826: Support goal-driven conversation parameters
                 topic = data.get('topic', 'general discussion')
-                await self.start_live_conversation(topic)
+                conversation_type = data.get('conversation_type', 'general')
+                objective = data.get('objective')
+                success_criteria = data.get('success_criteria', [])
+                auto_select_agents = data.get('auto_select_agents', False)
+                await self.start_live_conversation(
+                    topic=topic,
+                    conversation_type=conversation_type,
+                    objective=objective,
+                    success_criteria=success_criteria,
+                    auto_select_agents=auto_select_agents
+                )
 
             elif message_type == 'get_recent':
                 # User wants recent conversations
@@ -143,17 +154,35 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
 
         return result
 
-    async def start_live_conversation(self, topic=None):
-        """Start a new live conversation and stream it."""
+    async def start_live_conversation(
+        self,
+        topic=None,
+        conversation_type='general',
+        objective=None,
+        success_criteria=None,
+        auto_select_agents=False
+    ):
+        """
+        Start a new live conversation and stream it.
+
+        Session 826: Enhanced with goal-driven conversation parameters.
+        """
         await self.send(text_data=json.dumps({
             'type': 'conversation_starting',
             'message': 'Starting new agent conversation...',
+            'objective': objective,
             'timestamp': timezone.now().isoformat()
         }))
 
         # Run the conversation generator
         try:
-            result = await self.generate_live_conversation(topic)
+            result = await self.generate_live_conversation(
+                topic=topic,
+                conversation_type=conversation_type,
+                objective=objective,
+                success_criteria=success_criteria,
+                auto_select_agents=auto_select_agents
+            )
             await self.send(text_data=json.dumps({
                 'type': 'conversation_complete',
                 'result': result,
@@ -167,14 +196,29 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
             }))
 
     @database_sync_to_async
-    def generate_live_conversation(self, topic=None):
+    def generate_live_conversation(
+        self,
+        topic=None,
+        conversation_type='general',
+        objective=None,
+        success_criteria=None,
+        auto_select_agents=False
+    ):
         """
         Generate a conversation using the Session 261 ConversationOrchestrator.
+
+        Session 826: Enhanced with goal-driven conversation parameters:
+        - objective: Clear goal for the conversation
+        - success_criteria: Measurable outcomes to evaluate
+        - auto_select_agents: Let system pick topic-matched agents
+        - conversation_type: Structured flow (analytical, creative, debate, etc.)
 
         This upgraded version ensures:
         - Constructive tension (no empty agreement)
         - Platform grounding (metrics and systems referenced)
         - Structured outputs (DecisionSummary with insights and features)
+        - Rich context injection (spider/advisor/learning)
+        - Structured turn flows
         """
         from core.models import (
             Agent, AgentConversation, ConversationMessage
@@ -230,19 +274,23 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
         responder = random.choice(possible_responders)
         logger.info(f"Random pairing: {initiator.name} + {responder.name}")
 
-        # Pick conversation type - weighted toward strategic types
-        conversation_types = [
-            ('brainstorm', 3),      # Strategic brainstorming
-            ('analysis', 2),        # Deep analysis
-            ('planning', 2),        # Implementation planning
-            ('critique', 1),        # Constructive critique
-            ('synthesis', 1),       # Knowledge synthesis
-            ('consultation', 1),    # Expert consultation
-        ]
-        conv_type = random.choices(
-            [t[0] for t in conversation_types],
-            weights=[t[1] for t in conversation_types]
-        )[0]
+        # Session 826: Use provided conversation_type or pick strategically
+        if conversation_type == 'general':
+            # Legacy weighted random selection for backwards compatibility
+            conversation_types_weighted = [
+                ('analytical', 3),      # Structured analysis
+                ('creative', 2),        # Brainstorming
+                ('planning', 2),        # Implementation planning
+                ('critique', 1),        # Constructive critique
+                ('debate', 1),          # Structured debate
+                ('general', 1),         # Open discussion
+            ]
+            conv_type = random.choices(
+                [t[0] for t in conversation_types_weighted],
+                weights=[t[1] for t in conversation_types_weighted]
+            )[0]
+        else:
+            conv_type = conversation_type
 
         # Session 318: Generate engaging topics based on agent pairing
         if not topic:
@@ -282,6 +330,7 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
         try:
             orchestrator = ConversationOrchestrator()
 
+            # Session 826: Pass goal-driven conversation parameters
             result = orchestrator.generate_conversation(
                 agent1={
                     'name': initiator.name,
@@ -296,7 +345,11 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
                 topic=topic,
                 conversation_type=conv_type,
                 num_turns=6,
-                max_retries=2
+                max_retries=2,
+                # Session 826: Goal-driven parameters
+                objective=objective,
+                success_criteria=success_criteria or [],
+                auto_select_agents=auto_select_agents
             )
 
             # Save messages to database

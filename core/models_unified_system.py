@@ -9781,6 +9781,39 @@ class HiveMindSession(models.Model):
         help_text="Topic for conversation mode sessions"
     )
 
+    # Session 826: Goal-driven conversation fields
+    CONVERSATION_TYPE_CHOICES = [
+        ('general', 'General'),           # Default free-form conversation
+        ('analytical', 'Analytical'),     # Propose → Challenge → Synthesize → Decide
+        ('creative', 'Creative'),         # Brainstorm → Expand → Refine → Select
+        ('debate', 'Debate'),             # Position → Counter → Rebut → Conclude
+        ('planning', 'Planning'),         # Goals → Steps → Dependencies → Schedule
+        ('critique', 'Critique'),         # Present → Challenge → Defend → Improve
+    ]
+    conversation_type = models.CharField(
+        max_length=20,
+        choices=CONVERSATION_TYPE_CHOICES,
+        default='general',
+        help_text="Session 826: Type of conversation flow (determines turn structure)"
+    )
+    objective = models.TextField(
+        blank=True,
+        help_text="Session 826: Clear objective for the conversation (what should be achieved)"
+    )
+    success_criteria = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Session 826: List of success criteria to evaluate conversation outcome"
+    )
+    auto_selected_agents = models.BooleanField(
+        default=False,
+        help_text="Session 826: Whether agents were auto-selected based on topic"
+    )
+    rich_context_injected = models.BooleanField(
+        default=False,
+        help_text="Session 826: Whether spider/advisor/learning context was injected"
+    )
+
     # Session status
     STATUS_CHOICES = [
         ('initializing', 'Initializing'),
