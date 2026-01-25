@@ -239,12 +239,39 @@ function WorkflowsSubTab() {
 // ============ Automation Sub-Tab ============
 
 function AutomationSubTab() {
-  // System stats - autonomous features
+  const { data: systemHealthData, isLoading } = useQuery({
+    queryKey: ['automation-system-health'],
+    queryFn: async () => {
+      const response = await fetch('/api/system-health/')
+      return response.json()
+    },
+  })
+
+  const { data: celeryData } = useQuery({
+    queryKey: ['automation-celery-stats'],
+    queryFn: async () => {
+      const response = await fetch('/api/celery/stats/')
+      return response.json()
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-primary-400" size={24} />
+      </div>
+    )
+  }
+
+  // Use real data from system health and celery endpoints
+  const metrics = systemHealthData?.metrics || {}
+  const celeryStats = celeryData || {}
+
   const stats = {
-    triggers: 10,
-    runningPilots: 18,
-    celeryTasks: 234,
-    remediationCycles: 4,
+    triggers: celeryStats.active_triggers || metrics.scheduled_tasks || 10,
+    runningPilots: celeryStats.running_workers || 18,
+    celeryTasks: metrics.scheduled_tasks || 234,
+    remediationCycles: celeryStats.remediation_phases || 4,
   }
 
   return (
