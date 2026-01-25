@@ -2693,4 +2693,27 @@ export const platformApi = {
       message: string
       error?: string
     }>('/platform/skin-lock/', { action }),
+
+  // Session 819: Promote content to Canon
+  promoteToCanon: (params: {
+    title: string
+    content: string
+    category: 'creative' | 'technical' | 'operational'
+    source_type?: string
+    source_id?: string
+    tags?: string[]
+  }) =>
+    api.post<{
+      success: boolean
+      path: string
+      message: string
+      metadata?: {
+        title: string
+        category: string
+        filename: string
+        promoted_at: string
+        promoted_by: string
+      }
+      error?: string
+    }>('/platform/canon/promote/', params),
 }

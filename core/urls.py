@@ -4002,6 +4002,7 @@ from core.views_platform_command import (
     governance_view,
     emergency_halt_view,
     canon_view,
+    canon_promote_view,  # Session 819
     playbooks_view,
     audits_view,
     doc_content_view,
@@ -4014,6 +4015,7 @@ urlpatterns += [
     path('api/platform/governance/', governance_view, name='platform-governance'),
     path('api/platform/emergency-halt/', emergency_halt_view, name='platform-emergency-halt'),
     path('api/platform/canon/', canon_view, name='platform-canon'),
+    path('api/platform/canon/promote/', canon_promote_view, name='platform-canon-promote'),  # Session 819
     path('api/platform/playbooks/', playbooks_view, name='platform-playbooks'),
     path('api/platform/audits/', audits_view, name='platform-audits'),
     path('api/platform/doc-content/', doc_content_view, name='platform-doc-content'),  # Session 818

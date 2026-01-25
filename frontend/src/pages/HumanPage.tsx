@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { humanApi, agentsApi, bodyApi } from '@/lib/api'
+import { humanApi, agentsApi, bodyApi, platformApi } from '@/lib/api'
 // Session 714: Real-time system events
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import {
@@ -41,6 +41,7 @@ import {
   GitBranch,
   Brain,
   AlertOctagon,
+  BookMarked,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -549,20 +550,25 @@ const ACTION_STYLE_MAP: Record<string, string> = {
 
 // Decision Modal - Session 742: Enhanced with payload display and item type badges
 // Session 763: Added Mission Control execute action support
+// Session 819: Added Canon promotion support
 function DecisionModal({
   item,
   onClose,
   onDecide,
   onExecuteAction,
+  onPromoteToCanon,
   isLoading,
   isExecuting,
+  isPromoting,
 }: {
   item: AttentionItem
   onClose: () => void
   onDecide: (decision: string, feedback: string, confidence: number) => void
   onExecuteAction?: (action: string, feedback: string) => void
+  onPromoteToCanon?: (category: 'creative' | 'technical' | 'operational') => void
   isLoading: boolean
   isExecuting?: boolean
+  isPromoting?: boolean
 }) {
   const [feedback, setFeedback] = useState('')
   const [confidence, setConfidence] = useState(80)
@@ -771,6 +777,48 @@ function DecisionModal({
             <Eye size={16} />
             Watch & Verify
           </button>
+
+          {/* Session 819: Promote to Canon button for high-quality content */}
+          {onPromoteToCanon && ['review', 'insight', 'approval'].includes(item.item_type) && (
+            <div className="relative group">
+              <button
+                disabled={isLoading || isExecuting || isPromoting}
+                className="btn flex items-center gap-2 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+                onClick={() => onPromoteToCanon('operational')}
+              >
+                {isPromoting ? <Loader2 size={16} className="animate-spin" /> : <BookMarked size={16} />}
+                Promote to Canon
+              </button>
+              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block">
+                <div className="bg-dark-card border border-dark-border rounded-lg shadow-lg p-2 text-xs">
+                  <div className="text-gray-400 mb-2">Select category:</div>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => onPromoteToCanon('creative')}
+                      disabled={isPromoting}
+                      className="px-3 py-1 rounded hover:bg-purple-500/20 text-left text-purple-300"
+                    >
+                      Creative
+                    </button>
+                    <button
+                      onClick={() => onPromoteToCanon('technical')}
+                      disabled={isPromoting}
+                      className="px-3 py-1 rounded hover:bg-purple-500/20 text-left text-purple-300"
+                    >
+                      Technical
+                    </button>
+                    <button
+                      onClick={() => onPromoteToCanon('operational')}
+                      disabled={isPromoting}
+                      className="px-3 py-1 rounded hover:bg-purple-500/20 text-left text-purple-300"
+                    >
+                      Operational
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -882,6 +930,26 @@ export default function HumanPage() {
         console.log('Action executed:', data.message)
       }
       setSelectedItem(null)
+    },
+  })
+
+  // Session 819: Canon promotion mutation
+  const canonPromoteMutation = useMutation({
+    mutationFn: (params: {
+      title: string
+      content: string
+      category: 'creative' | 'technical' | 'operational'
+      source_type?: string
+      source_id?: string
+    }) => platformApi.promoteToCanon(params),
+    onSuccess: (response) => {
+      const data = response.data
+      if (data.success) {
+        console.log('Promoted to Canon:', data.path)
+        // Invalidate canon data in platform queries
+        queryClient.invalidateQueries({ queryKey: ['platform-canon'] })
+        setSelectedItem(null)
+      }
     },
   })
 
@@ -1917,8 +1985,19 @@ export default function HumanPage() {
               feedback,
             })
           }
+          // Session 819: Canon promotion
+          onPromoteToCanon={(category) =>
+            canonPromoteMutation.mutate({
+              title: selectedItem.title,
+              content: selectedItem.summary + (selectedItem.payload ? '\n\n---\n\n' + JSON.stringify(selectedItem.payload, null, 2) : ''),
+              category,
+              source_type: selectedItem.source_type,
+              source_id: selectedItem.source_id,
+            })
+          }
           isLoading={decideMutation.isPending}
           isExecuting={executeActionMutation.isPending}
+          isPromoting={canonPromoteMutation.isPending}
         />
       )}
     </div>
