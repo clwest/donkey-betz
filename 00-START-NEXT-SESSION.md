@@ -34,8 +34,9 @@ Tested the 3 files written by SKIN layer in Session 822:
 - PR #182 - **Codebase Context Discovery** (fixes the root cause!)
 - PR #183 - Documentation updates
 - PR #184 - **Auto-PR Creation** for agent-generated code
-- PR #185 - Documentation updates
-- PR #186 - **Periodic System Self-Audit** task (Sundays at 3am)
+- PR #185-187 - Documentation updates
+- PR #188 - Fix session number parsing in self-audit
+- PR #189 - **Enhanced Self-Audit with Live Data** (queries real system state!)
 
 ### Context Discovery Implementation (PR #182)
 
@@ -108,7 +109,30 @@ Implemented auto-PR workflow instead of direct commits:
 - ✅ Returns to original branch after PR creation
 - ✅ Added `--no-pr` flag to management command
 
-### 4. Revenue Data Integration (Carried Forward)
+### 4. ~~Enhanced Self-Audit with Live Data~~ ✅ DONE (PR #189)
+Self-audit now queries REAL system state instead of documentation:
+
+```python
+# Live data gathered by _gather_live_system_metrics():
+- Component counts from database (agents, spiders, Celery tasks)
+- Body system health via actual service calls (Heart, Lungs, Brain, Skin)
+- Activity metrics (executions, spider data, LLM calls, costs)
+- Error tracking with top failing agents
+- Revenue tracking with totals
+- Remediation status (755 open findings!)
+```
+
+**Key Findings from Live Audit:**
+| Metric | Value | Note |
+|--------|-------|------|
+| Agents in DB | 213 | Higher than 74 expected |
+| Celery Tasks | 228 | Matches expectations |
+| Spider Data (24h) | 0 | Spiders not running! |
+| LLM Calls (24h) | 6,055 | Very active |
+| Open Findings | 755 | Needs attention |
+| Revenue | $0.01 | Needs revenue generation |
+
+### 5. Revenue Data Integration (Carried Forward)
 Platform Command Center still showing $0. Verify revenue signals are working.
 
 ```bash
