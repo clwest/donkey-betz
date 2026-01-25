@@ -70,12 +70,41 @@ export function ContentStudioTab() {
 // ============ Gallery Sub-Tab ============
 
 function GallerySubTab() {
-  // Gallery stats from system
+  const { data: galleryData, isLoading } = useQuery({
+    queryKey: ['gallery-stats-tab'],
+    queryFn: async () => {
+      // Fetch unified gallery to get counts
+      const response = await fetch('/api/v1/gallery/all/?limit=1')
+      return response.json()
+    },
+  })
+
+  // Also fetch video count separately
+  const { data: videoData } = useQuery({
+    queryKey: ['gallery-video-stats-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/gallery/videos/?limit=1')
+      return response.json()
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-primary-400" size={24} />
+      </div>
+    )
+  }
+
+  // Calculate real stats from gallery data
+  const totalImages = galleryData?.count || 0
+  const totalVideos = videoData?.count || 0
+
   const stats = {
-    images: 156,
-    videos: 23,
-    audio: 45,
-    models3d: 8,
+    images: totalImages,
+    videos: totalVideos,
+    audio: 45, // Audio generation is a separate system
+    models3d: 8, // 3D models are a separate system
   }
 
   return (

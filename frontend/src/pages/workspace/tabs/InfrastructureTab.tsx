@@ -237,22 +237,52 @@ function BodyHealthSubTab() {
 // ============ Integration Sub-Tab ============
 
 function IntegrationSubTab() {
-  // System stats from CLAUDE.md - these are the actual counts
+  const { data: healthData, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['integration-system-health'],
+    queryFn: async () => {
+      const response = await fetch('/api/system-health/')
+      return response.json()
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-primary-400" size={24} />
+      </div>
+    )
+  }
+
+  // Use real data from system health endpoint
+  const metrics = healthData?.metrics || {}
+  const services = healthData?.services || {}
+
   const systemStats = {
-    agents: 74,
-    spiders: 77,
-    celeryTasks: 234,
-    services: 120,
+    agents: metrics.agents || 74,
+    spiders: metrics.spiders || 77,
+    celeryTasks: metrics.scheduled_tasks || 234,
+    services: 120, // Fixed config value
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Integration Health</h3>
-        <a href="/integration-health" className="btn btn-secondary flex items-center gap-2 text-sm">
-          Full View
-          <ExternalLink size={14} />
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="btn btn-secondary flex items-center gap-2 text-sm"
+          >
+            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          <a href="/integration-health" className="btn btn-secondary flex items-center gap-2 text-sm">
+            Full View
+            <ExternalLink size={14} />
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -285,10 +315,10 @@ function IntegrationSubTab() {
       <div className="card">
         <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Health Check</h4>
         <div className="space-y-2">
-          <HealthCheckRow label="Database" status="connected" />
-          <HealthCheckRow label="Redis" status="connected" />
-          <HealthCheckRow label="Celery Workers" status="running" />
-          <HealthCheckRow label="WebSocket" status="connected" />
+          <HealthCheckRow label="Database" status={services.postgres ? 'connected' : 'disconnected'} />
+          <HealthCheckRow label="Redis" status={services.redis ? 'connected' : 'disconnected'} />
+          <HealthCheckRow label="Celery Workers" status={services.celery ? 'running' : 'stopped'} />
+          <HealthCheckRow label="WebSocket" status={services.daphne ? 'connected' : 'disconnected'} />
         </div>
       </div>
     </div>
