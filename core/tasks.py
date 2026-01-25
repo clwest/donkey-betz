@@ -27946,9 +27946,9 @@ def _gather_live_system_metrics():
 
     try:
         # Count spiders from the registry instead of a model
-        from ai_core.spider_registry import get_spider_registry
+        from ai_core.spiders.spider_registry import get_spider_registry
         registry = get_spider_registry()
-        metrics['components']['spiders_registered'] = len(registry.get_all_spiders())
+        metrics['components']['spiders_registered'] = len(registry.list_spiders())
         # Also count spider execution logs
         from core.models_unified_system import SpiderExecutionLog
         metrics['components']['spider_executions_total'] = SpiderExecutionLog.objects.count()
@@ -28020,7 +28020,7 @@ def _gather_live_system_metrics():
     # =========================================================================
     try:
         from core.models_unified_system import AgentExecution
-        executions_24h = AgentExecution.objects.filter(started_at__gte=last_24h)
+        executions_24h = AgentExecution.objects.filter(created_at__gte=last_24h)
         metrics['activity']['agent_executions_24h'] = executions_24h.count()
         metrics['activity']['successful_executions_24h'] = executions_24h.filter(status='completed').count()
         metrics['activity']['failed_executions_24h'] = executions_24h.filter(status='failed').count()
@@ -28058,8 +28058,8 @@ def _gather_live_system_metrics():
         from core.models_unified_system import AgentExecution
         recent_failures = AgentExecution.objects.filter(
             status='failed',
-            started_at__gte=last_7d
-        ).values('agent_name').annotate(count=Count('id')).order_by('-count')[:10]
+            created_at__gte=last_7d
+        ).values('agent__name').annotate(count=Count('id')).order_by('-count')[:10]
         metrics['errors']['top_failing_agents'] = list(recent_failures)
     except Exception as e:
         metrics['errors']['failing_agents_error'] = str(e)
