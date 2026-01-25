@@ -1,100 +1,110 @@
-# Session 826 - Goal-Driven Conversations
+# Session 827 - Production API Investigation
 
-**Previous Session:** 825 (UI Consolidation - COMPLETE)
+**Previous Session:** 826 (Goal-Driven Conversations - COMPLETE)
 **Date:** January 25, 2026
-**Status:** 74 Agents | 77 Spiders | 234 Celery Tasks | 60 Audits | **UI CONSOLIDATION COMPLETE**
+**Status:** 74 Agents | 77 Spiders | 234 Celery Tasks | **GOAL-DRIVEN CONVERSATIONS COMPLETE**
 
 ---
 
-## Session 825 Completed ✅
+## Session 826 Completed ✅
 
-### Phase 1 + Phase 2 Complete
+### What Was Accomplished
 
-**Created modular Workspace Command Center with 11 tabs:**
+**1. Goal-Driven Conversations (PR #206)**
+- Added `objective` and `success_criteria` to conversation creation
+- Structured turn flows: propose → challenge → synthesize → decide
+- Topic-matched agent selection via `_select_agents_for_topic()`
+- Rich context injection from spider/advisor/learning systems
+- New conversation types: analytical, creative, debate, planning, critique
 
-| Tab | Sub-tabs | Consolidates |
-|-----|----------|--------------|
-| Command | - | Mission, metrics, triggers, actions |
-| **Infrastructure** | health, integration, services, llm, analytics, billing | 6 pages |
-| **Orchestration** | monitor, workflows, automation, hivemind | 4 pages |
-| **Content** | gallery, channels, blogs, podcast, distribution | 5 pages |
-| **Data** | spiders, feed, learning | 3 pages |
-| **AI Mind** | memory, orchestra, mood, evolution, relationships, social, capsules, travel | 8 pages |
-| **Intel** | reasoning, safety, collective | 3 pages |
-| Governance | - | Emergency controls, decisions |
-| Knowledge | - | Docs, audits, playbooks |
-| Files | - | File browser, git |
-| Operations | - | Operation history |
+**2. Workspace Real Data (PR #207)**
+- Connected AIConsciousnessTab to `/api/agent-conversations/`
+- Connected OrchestrationTab to `/api/system-health/` and `/api/celery/stats/`
+- Connected InfrastructureTab to real service status checks
+- Connected ContentStudioTab to `/api/v1/gallery/all/`
+- Fully implemented FilesTab with git integration
 
-**Files Created (Phase 2):**
+**3. CodeReviewAgent Self-Review (PR #208)**
+- **Executed locally** (production had 502 timeout - see below)
+- Agent found 4 issues in FilesTab, all fixed:
+  - State reset on workspace change
+  - O(1) Set lookups instead of O(n) array includes
+  - Refresh all queries together
+  - Error handling UI
+
+---
+
+## ⚠️ Known Issue: Production 502 Error
+
+When attempting to trigger agent execution on Railway production, APIs return:
+
+```json
+{"status":"error","code":502,"message":"Application failed to respond"}
 ```
-frontend/src/pages/workspace/tabs/
-├── InfrastructureTab.tsx    # 520 lines
-├── OrchestrationTab.tsx     # 475 lines
-├── ContentStudioTab.tsx     # 480 lines
-├── DataSourcesTab.tsx       # 430 lines
-├── AIConsciousnessTab.tsx   # 580 lines
-├── IntelligenceTab.tsx      # 450 lines
-└── index.ts                 # Updated exports
-```
 
-**Key Stats:**
-- 29 pages consolidated → 6 new tabs
-- ~28,340 lines → ~2,935 lines
-- Frontend bundle: 1,948 KB
-- Production safe: Compact views with links to full pages
+**Affected endpoints:**
+- `/api/agent-conversations/trigger/` (with goal-driven params)
+- `/api/agent/execute/` (agent execution)
 
-**Additional Enhancements:**
-- **Collapsible Sidebar** (PR #202): Click panel icon to toggle, state persists in localStorage
-- **TypeScript Fixes** (PR #203): Fixed 9 components with unused import warnings
-- **WorkspacePageNew NOW LIVE** in App.tsx
+**Workaround used in Session 826:**
+- CodeReviewAgent was executed **locally** via Django shell
+- It worked correctly and identified real issues
 
 ---
 
-## Session 826 Mission
+## Session 827 Mission
 
-**Goal:** Make agent conversations goal-driven instead of aimless.
+**Goal:** Investigate and fix production 502 timeout errors on agent execution endpoints.
 
-### The Problem
+### Investigation Plan
 
-Agents have aimless conversations because they receive no explicit objective:
-- No clear goal for the conversation
-- Random agent selection (not topic-matched)
-- No success criteria to evaluate outcomes
-- No structured turn flow
+1. **Check Railway logs for errors**
+   ```bash
+   railway logs --tail 100
+   ```
 
-### The Solution
+2. **Check Daphne/ASGI configuration**
+   - Timeout settings
+   - Worker configuration
+   - Memory limits
 
-1. **Add `objective` and `success_criteria` to conversation creation**
-   - Every conversation starts with a clear goal
-   - Success can be measured
+3. **Check if it's a cold start issue**
+   - Railway may be spinning down workers
+   - First request takes too long
 
-2. **Replace random agent selection with topic-matched routing**
-   - Use agent specialties to select participants
-   - Match conversation topic to agent expertise
+4. **Consider async execution pattern**
+   - Return immediately with task_id
+   - Poll for completion
+   - WebSocket for real-time updates
 
-3. **Inject rich context into conversation agents**
-   - Spider data relevant to topic
-   - Learning patterns
-   - Advisor wisdom
+### Potential Fixes
 
-4. **Add structured turn flow**
-   - Propose → Challenge → Synthesize → Decide
-   - Each agent has a role in the conversation
+1. **Increase Railway timeout**
+   - Check `railway.toml` or environment settings
+   - Default may be too short for LLM calls
+
+2. **Add health check endpoint**
+   - Keep workers warm
+   - Prevent cold start issues
+
+3. **Implement async execution**
+   - Return 202 Accepted with task_id
+   - Use Celery for background execution
+   - Client polls or uses WebSocket
 
 ---
 
-## Key Files to Modify
+## Key Files
 
 ```python
-# Backend
-core/conversation_orchestrator.py    # Main orchestration logic
-core/models_unified_system.py        # Add objective, success_criteria fields
-core/services/agent_context_builder.py  # Context injection
-core/agent_router.py                 # Topic-matched routing
+# Backend - Agent Execution
+core/views_agent_hybrid.py           # execute_agent_hybrid endpoint
+core/agent_conversation_consumer.py  # WebSocket consumer
+core/conversation_orchestrator.py    # Goal-driven conversations
 
-# Frontend
-frontend/src/pages/AgentSocialPage.tsx  # UI for creating goal-driven conversations
+# Deployment
+railway.toml                         # Railway configuration
+Procfile                             # Process definitions
 ```
 
 ---
@@ -102,14 +112,20 @@ frontend/src/pages/AgentSocialPage.tsx  # UI for creating goal-driven conversati
 ## Quick Start
 
 ```bash
-# Read the UI consolidation handoff
-cat docs/handoffs/SESSION_825_UI_CONSOLIDATION_PLAN.md
+# 1. Read Session 826 handoff
+cat docs/handoffs/SESSION_826_GOAL_DRIVEN_CONVERSATIONS.md
 
-# Start platform
+# 2. Check Railway logs
+railway logs --tail 100
+
+# 3. Start local platform
 make start && make celery
 
-# Frontend dev
-cd frontend && npm run dev
+# 4. Test agent execution locally
+python manage.py shell
+>>> from core.agents.code_review_agent import CodeReviewAgent
+>>> agent = CodeReviewAgent()
+>>> result = agent.execute("Review a file", {}, {}, {})
 ```
 
 ---
@@ -118,16 +134,16 @@ cd frontend && npm run dev
 
 | Session | Focus |
 |---------|-------|
-| **825** | UI Consolidation - 29 pages → 6 tabs ✅ COMPLETE |
+| **826** | Goal-Driven Conversations + Workspace Real Data + CodeReviewAgent ✅ |
+| **825** | UI Consolidation - 29 pages → 6 tabs ✅ |
 | **824** | UI Integration Sprint - Live Metrics, Triggers, Actions |
 | **823** | SELF-EXECUTION - System now self-aware + self-executing |
 | **822** | SKIN Layer Autonomous Remediation |
 | **821** | Phase 1.5 Staleness Validation |
 | **820** | Self-Healing Orchestration + Tiered Docs Injection |
-| **819** | Deliverables Marketplace |
 
 ---
 
-**SESSION 825 UI CONSOLIDATION COMPLETE!**
+**SESSION 826 GOAL-DRIVEN CONVERSATIONS COMPLETE!**
 
-**Next:** Goal-Driven Conversations (Session 826)
+**Next:** Investigate production 502 errors (Session 827)
