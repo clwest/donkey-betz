@@ -27905,17 +27905,304 @@ def calculate_guard_effectiveness():
 
 
 # =============================================================================
-# Session 823: Periodic System Audit Task
+# Session 823: Periodic System Audit Task (Enhanced with Live Data)
 # =============================================================================
+
+
+def _gather_live_system_metrics():
+    """
+    Session 823: Gather live system metrics from database and services.
+
+    This function queries actual system state rather than relying on documentation.
+    Returns a dict with real counts, health status, and activity metrics.
+    """
+    from datetime import datetime, timedelta
+    from django.db.models import Count, Sum, Avg
+    from django.utils import timezone
+
+    metrics = {
+        'timestamp': datetime.now().isoformat(),
+        'components': {},
+        'health': {},
+        'activity': {},
+        'errors': {},
+        'revenue': {},
+        'remediation': {},
+    }
+
+    now = timezone.now()
+    last_24h = now - timedelta(hours=24)
+    last_7d = now - timedelta(days=7)
+
+    # =========================================================================
+    # 1. COMPONENT COUNTS (from database)
+    # =========================================================================
+    try:
+        from core.models_unified_system import Agent
+        metrics['components']['agents_in_db'] = Agent.objects.count()
+        metrics['components']['active_agents'] = Agent.objects.filter(is_active=True).count()
+    except Exception as e:
+        metrics['components']['agents_error'] = str(e)
+
+    try:
+        # Count spiders from the registry instead of a model
+        from ai_core.spider_registry import get_spider_registry
+        registry = get_spider_registry()
+        metrics['components']['spiders_registered'] = len(registry.get_all_spiders())
+        # Also count spider execution logs
+        from core.models_unified_system import SpiderExecutionLog
+        metrics['components']['spider_executions_total'] = SpiderExecutionLog.objects.count()
+    except Exception as e:
+        metrics['components']['spiders_error'] = str(e)
+
+    try:
+        from django_celery_beat.models import PeriodicTask
+        metrics['components']['celery_tasks'] = PeriodicTask.objects.filter(enabled=True).count()
+        metrics['components']['celery_tasks_total'] = PeriodicTask.objects.count()
+    except Exception as e:
+        metrics['components']['celery_tasks_error'] = str(e)
+
+    try:
+        from core.models_unified_system import Advisor
+        metrics['components']['advisors'] = Advisor.objects.count()
+    except Exception as e:
+        metrics['components']['advisors_error'] = str(e)
+
+    # =========================================================================
+    # 2. BODY SYSTEM HEALTH (call actual services)
+    # =========================================================================
+    body_systems = ['heart', 'lungs', 'brain', 'spine', 'immune', 'digestive', 'muscular', 'circulatory', 'skin']
+
+    for system in body_systems:
+        try:
+            if system == 'heart':
+                from core.services.heart import get_heart_monitor
+                service = get_heart_monitor()
+                vitals = service.get_vitals()
+                metrics['health']['heart'] = {
+                    'status': vitals.get('overall_status', 'unknown'),
+                    'health_score': vitals.get('health_score', 0),
+                    'subsystems': len(vitals.get('subsystems', {})),
+                }
+            elif system == 'lungs':
+                from core.services.lungs import get_lungs_monitor
+                service = get_lungs_monitor()
+                vitals = service.get_vitals()
+                metrics['health']['lungs'] = {
+                    'status': vitals.get('status', 'unknown'),
+                    'oxygen_level': vitals.get('oxygen_level', 0),
+                    'active_budgets': vitals.get('active_budgets', 0),
+                }
+            elif system == 'brain':
+                from core.services.brain import BrainService
+                service = BrainService()
+                vitals = service.get_vitals()
+                metrics['health']['brain'] = {
+                    'status': vitals.get('status', 'unknown') if vitals else 'unknown',
+                    'active_conversations': vitals.get('active_conversations', 0) if vitals else 0,
+                }
+            elif system == 'skin':
+                from core.services.skin import SkinService
+                service = SkinService()
+                status = service.get_status()
+                metrics['health']['skin'] = {
+                    'status': status.get('status', 'unknown') if status else 'unknown',
+                    'recent_operations': status.get('recent_operations', 0) if status else 0,
+                }
+            else:
+                # For other systems, just note they exist
+                metrics['health'][system] = {'status': 'not_checked'}
+        except Exception as e:
+            metrics['health'][system] = {'status': 'error', 'error': str(e)[:100]}
+
+    # =========================================================================
+    # 3. RECENT ACTIVITY (last 24 hours)
+    # =========================================================================
+    try:
+        from core.models_unified_system import AgentExecution
+        executions_24h = AgentExecution.objects.filter(started_at__gte=last_24h)
+        metrics['activity']['agent_executions_24h'] = executions_24h.count()
+        metrics['activity']['successful_executions_24h'] = executions_24h.filter(status='completed').count()
+        metrics['activity']['failed_executions_24h'] = executions_24h.filter(status='failed').count()
+    except Exception as e:
+        metrics['activity']['agent_executions_error'] = str(e)
+
+    try:
+        from core.models_unified_system import SpiderData
+        metrics['activity']['spider_entries_24h'] = SpiderData.objects.filter(created_at__gte=last_24h).count()
+        metrics['activity']['spider_entries_7d'] = SpiderData.objects.filter(created_at__gte=last_7d).count()
+    except Exception as e:
+        metrics['activity']['spider_entries_error'] = str(e)
+
+    try:
+        from core.models_skin_layer import WorkspaceOperation
+        ops_24h = WorkspaceOperation.objects.filter(created_at__gte=last_24h)
+        metrics['activity']['workspace_operations_24h'] = ops_24h.count()
+        metrics['activity']['workspace_files_written_24h'] = ops_24h.filter(operation_type='write').count()
+    except Exception as e:
+        metrics['activity']['workspace_operations_error'] = str(e)
+
+    try:
+        from core.models_llm_routing import LLMCallLog
+        llm_24h = LLMCallLog.objects.filter(created_at__gte=last_24h)
+        metrics['activity']['llm_calls_24h'] = llm_24h.count()
+        cost_sum = llm_24h.aggregate(total=Sum('cost'))['total']
+        metrics['activity']['llm_cost_24h'] = float(cost_sum) if cost_sum else 0.0
+    except Exception as e:
+        metrics['activity']['llm_calls_error'] = str(e)
+
+    # =========================================================================
+    # 4. ERROR TRACKING
+    # =========================================================================
+    try:
+        from core.models_unified_system import AgentExecution
+        recent_failures = AgentExecution.objects.filter(
+            status='failed',
+            started_at__gte=last_7d
+        ).values('agent_name').annotate(count=Count('id')).order_by('-count')[:10]
+        metrics['errors']['top_failing_agents'] = list(recent_failures)
+    except Exception as e:
+        metrics['errors']['failing_agents_error'] = str(e)
+
+    # =========================================================================
+    # 5. REVENUE TRACKING
+    # =========================================================================
+    try:
+        from core.models_unified_system import Revenue
+        metrics['revenue']['total_records'] = Revenue.objects.count()
+        revenue_sum = Revenue.objects.aggregate(total=Sum('amount'))['total']
+        metrics['revenue']['total_amount'] = float(revenue_sum) if revenue_sum else 0.0
+        revenue_7d = Revenue.objects.filter(created_at__gte=last_7d).aggregate(total=Sum('amount'))['total']
+        metrics['revenue']['last_7_days'] = float(revenue_7d) if revenue_7d else 0.0
+    except Exception as e:
+        metrics['revenue']['error'] = str(e)
+
+    # =========================================================================
+    # 6. REMEDIATION STATUS
+    # =========================================================================
+    try:
+        from core.models_audit_tracking import AuditFinding
+        findings = AuditFinding.objects.values('status').annotate(count=Count('id'))
+        metrics['remediation']['findings_by_status'] = {f['status']: f['count'] for f in findings}
+        metrics['remediation']['open_findings'] = AuditFinding.objects.filter(status='open').count()
+        metrics['remediation']['fixed_findings'] = AuditFinding.objects.filter(status='fixed').count()
+    except Exception as e:
+        metrics['remediation']['findings_error'] = str(e)
+
+    try:
+        from core.models_audit_tracking import AuditRemediationTask
+        tasks = AuditRemediationTask.objects.values('status').annotate(count=Count('id'))
+        metrics['remediation']['tasks_by_status'] = {t['status']: t['count'] for t in tasks}
+    except Exception as e:
+        metrics['remediation']['tasks_error'] = str(e)
+
+    # =========================================================================
+    # 7. INTEGRATION HEALTH
+    # =========================================================================
+    try:
+        from core.models_unified_system import AgentMemory
+        memories_24h = AgentMemory.objects.filter(created_at__gte=last_24h).count()
+        metrics['activity']['memories_created_24h'] = memories_24h
+        total_memories = AgentMemory.objects.count()
+        metrics['activity']['total_memories'] = total_memories
+    except Exception as e:
+        metrics['activity']['memories_error'] = str(e)
+
+    return metrics
+
+
+def _format_metrics_for_audit(metrics: dict) -> str:
+    """Format the live metrics as a markdown section for the audit prompt."""
+    lines = ["## LIVE SYSTEM METRICS (Queried from Database)", ""]
+
+    # Components
+    lines.append("### Component Counts")
+    comp = metrics.get('components', {})
+    lines.append(f"- **Agents in DB:** {comp.get('agents_in_db', 'error')} (active: {comp.get('active_agents', 'N/A')})")
+    lines.append(f"- **Spiders Registered:** {comp.get('spiders_registered', 'error')} (executions: {comp.get('spider_executions_total', 'N/A')})")
+    lines.append(f"- **Celery Tasks (enabled):** {comp.get('celery_tasks', 'error')} (total: {comp.get('celery_tasks_total', 'N/A')})")
+    lines.append(f"- **Advisors:** {comp.get('advisors', 'error')}")
+    lines.append("")
+
+    # Health
+    lines.append("### Body System Health")
+    health = metrics.get('health', {})
+    for system, data in health.items():
+        status = data.get('status', 'unknown') if isinstance(data, dict) else 'unknown'
+        extra = ""
+        if isinstance(data, dict):
+            if 'score' in data:
+                extra = f" (score: {data['score']})"
+            elif 'error' in data:
+                extra = f" (error: {data['error'][:50]})"
+        lines.append(f"- **{system.upper()}:** {status}{extra}")
+    lines.append("")
+
+    # Activity
+    lines.append("### Recent Activity (Last 24 Hours)")
+    activity = metrics.get('activity', {})
+    lines.append(f"- **Agent Executions:** {activity.get('agent_executions_24h', 'error')} (successful: {activity.get('successful_executions_24h', 'N/A')}, failed: {activity.get('failed_executions_24h', 'N/A')})")
+    lines.append(f"- **Spider Data Entries:** {activity.get('spider_entries_24h', 'error')} (7d: {activity.get('spider_entries_7d', 'N/A')})")
+    lines.append(f"- **Workspace Operations:** {activity.get('workspace_operations_24h', 'error')} (files written: {activity.get('workspace_files_written_24h', 'N/A')})")
+    lines.append(f"- **LLM Calls:** {activity.get('llm_calls_24h', 'error')} (cost: ${activity.get('llm_cost_24h', 0):.2f})")
+    lines.append(f"- **Memories Created:** {activity.get('memories_created_24h', 'error')} (total: {activity.get('total_memories', 'N/A')})")
+    lines.append("")
+
+    # Errors
+    lines.append("### Error Analysis (Last 7 Days)")
+    errors = metrics.get('errors', {})
+    top_failing = errors.get('top_failing_agents', [])
+    if top_failing:
+        lines.append("Top failing agents:")
+        for agent in top_failing[:5]:
+            lines.append(f"  - {agent.get('agent_name', 'unknown')}: {agent.get('count', 0)} failures")
+    else:
+        lines.append("- No agent failures recorded")
+    lines.append("")
+
+    # Revenue
+    lines.append("### Revenue Tracking")
+    revenue = metrics.get('revenue', {})
+    lines.append(f"- **Total Revenue Records:** {revenue.get('total_records', 'error')}")
+    lines.append(f"- **Total Amount:** ${revenue.get('total_amount', 0):.2f}")
+    lines.append(f"- **Last 7 Days:** ${revenue.get('last_7_days', 0):.2f}")
+    lines.append("")
+
+    # Remediation
+    lines.append("### Autonomous Remediation Status")
+    remediation = metrics.get('remediation', {})
+    findings = remediation.get('findings_by_status', {})
+    if findings:
+        lines.append("Findings by status:")
+        for status, count in findings.items():
+            lines.append(f"  - {status}: {count}")
+    lines.append(f"- **Open Findings:** {remediation.get('open_findings', 'N/A')}")
+    lines.append(f"- **Fixed Findings:** {remediation.get('fixed_findings', 'N/A')}")
+    tasks = remediation.get('tasks_by_status', {})
+    if tasks:
+        lines.append("Tasks by status:")
+        for status, count in tasks.items():
+            lines.append(f"  - {status}: {count}")
+    lines.append("")
+
+    return "\n".join(lines)
+
 
 @shared_task
 def run_system_self_audit():
     """
-    Session 823: Run a comprehensive system self-audit.
+    Session 823: Run a comprehensive system self-audit with LIVE DATA.
 
-    Uses TechnicalDocumentAgent to analyze the current system state and
-    generate an audit report. The report is saved to docs/audits/ where
-    it will be discovered by the autonomous remediation system.
+    This task:
+    1. Queries actual database counts (agents, spiders, tasks, etc.)
+    2. Checks body system health by calling actual services
+    3. Measures recent activity (executions, spider data, LLM calls)
+    4. Identifies errors and failing components
+    5. Tracks revenue and remediation status
+    6. Passes all this REAL data to TechnicalDocumentAgent for analysis
+
+    The report is saved to docs/audits/ where it will be discovered
+    by the autonomous remediation system.
 
     Runs weekly on Sundays at 3am.
     """
@@ -27923,55 +28210,71 @@ def run_system_self_audit():
     from datetime import datetime
     from pathlib import Path
 
-    logger.info("📋 [SYSTEM AUDIT] Starting periodic system self-audit...")
+    logger.info("📋 [SYSTEM AUDIT] Starting periodic system self-audit with LIVE DATA...")
 
     try:
         # Get current session number from 00-START-NEXT-SESSION.md
-        # This file has the active session in the header: "# Session 823 - Active"
         import re
         session_number = 823  # Default
         session_file_path = Path(__file__).parent.parent / '00-START-NEXT-SESSION.md'
         if session_file_path.exists():
             content = session_file_path.read_text()
-            # Match "# Session XXX" at the start of the file
             match = re.search(r'^#\s+Session\s+(\d+)', content, re.MULTILINE)
             if match:
                 session_number = int(match.group(1))
+
+        # =====================================================================
+        # GATHER LIVE SYSTEM METRICS
+        # =====================================================================
+        logger.info("📊 [SYSTEM AUDIT] Gathering live system metrics...")
+        live_metrics = _gather_live_system_metrics()
+        metrics_text = _format_metrics_for_audit(live_metrics)
+        logger.info(f"📊 [SYSTEM AUDIT] Gathered metrics: {len(live_metrics)} categories")
 
         # Import and run the TechnicalDocumentAgent
         from core.agents.technical_document_agent import TechnicalDocumentAgent
 
         agent = TechnicalDocumentAgent()
 
-        # Create the audit task
+        # Create the audit task with LIVE DATA
         audit_task = f"""
         Perform a comprehensive SYSTEM SELF-AUDIT of the Donkey Betz Platform.
 
-        Your task is to analyze the current system state and generate an audit report.
-        Use the system context provided (CLAUDE.md and 00-START-NEXT-SESSION.md) to:
+        IMPORTANT: Below are LIVE METRICS queried directly from the database.
+        Use these ACTUAL numbers in your analysis, not estimates from documentation.
 
-        1. VERIFY COMPONENT COUNTS:
-           - Count of agents (should be ~74)
-           - Count of spiders (should be ~77)
-           - Count of Celery tasks (should be ~234)
-           - Count of services
+        {metrics_text}
 
-        2. CHECK SYSTEM HEALTH:
-           - Are all body systems operational (HEART, LUNGS, BRAIN, etc.)?
-           - Are Celery workers running?
-           - Are spiders collecting data?
+        Based on the LIVE DATA above, generate an audit report that:
 
-        3. IDENTIFY GAPS:
-           - Missing functionality
-           - Disconnected components
-           - Incomplete integrations
+        1. VERIFIES COMPONENT COUNTS:
+           - Compare actual counts to expected (74 agents, 77 spiders, ~235 Celery tasks)
+           - Flag any significant discrepancies
 
-        4. RECOMMEND PRIORITIES:
-           - What should be fixed first?
-           - What can be deferred?
+        2. ANALYZES SYSTEM HEALTH:
+           - Which body systems are healthy vs having issues?
+           - Are agents actively executing tasks?
+           - Is spider data being collected?
+
+        3. IDENTIFIES CRITICAL ISSUES (P0-P1):
+           - Zero activity in key areas
+           - High error rates
+           - Body systems in error state
+           - No revenue being tracked
+
+        4. IDENTIFIES IMPROVEMENT OPPORTUNITIES (P2-P3):
+           - Low activity areas
+           - Missing integrations
+           - Optimization opportunities
+
+        5. RECOMMENDS SPECIFIC ACTIONS:
+           - What needs immediate attention?
+           - What can be automated?
+           - What's working well and should be preserved?
 
         Output a formal audit report with findings categorized by priority (P0-P3).
-        Include specific file paths and line numbers where relevant.
+        Include the actual numbers from the live metrics.
+        Be specific about what's working and what's not.
         """
 
         context = {
@@ -27980,6 +28283,7 @@ def run_system_self_audit():
             'topic': f'Session {session_number} System Self-Audit',
             'classification': 'INTERNAL',
             'is_system_audit': True,
+            'live_metrics': live_metrics,  # Include raw metrics for potential tool use
         }
 
         result = agent.execute(task=audit_task, context=context)
@@ -27998,13 +28302,24 @@ def run_system_self_audit():
             full_text = content.get('full_text', '') if isinstance(content, dict) else str(content)
 
             if full_text:
-                # Add header
+                # Add header with live metrics summary
                 header = f"""# System Self-Audit Report
 
 **Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 **Session:** {session_number}
 **Agent:** TechnicalDocumentAgent
-**Type:** Automated Self-Audit
+**Type:** Automated Self-Audit (LIVE DATA)
+
+## Quick Stats (Live)
+| Metric | Value |
+|--------|-------|
+| Agents | {live_metrics.get('components', {}).get('agents_in_db', 'N/A')} |
+| Spiders | {live_metrics.get('components', {}).get('spiders_in_db', 'N/A')} |
+| Celery Tasks | {live_metrics.get('components', {}).get('celery_tasks', 'N/A')} |
+| Executions (24h) | {live_metrics.get('activity', {}).get('agent_executions_24h', 'N/A')} |
+| Spider Entries (24h) | {live_metrics.get('activity', {}).get('spider_entries_24h', 'N/A')} |
+| LLM Calls (24h) | {live_metrics.get('activity', {}).get('llm_calls_24h', 'N/A')} |
+| Revenue (Total) | ${live_metrics.get('revenue', {}).get('total_amount', 0):.2f} |
 
 ---
 
@@ -28016,18 +28331,20 @@ def run_system_self_audit():
                     'success': True,
                     'audit_file': str(audit_path),
                     'session': session_number,
+                    'live_metrics': live_metrics,
                 }
             else:
                 logger.warning("⚠️ [SYSTEM AUDIT] Agent returned no content")
-                return {'success': False, 'error': 'No audit content generated'}
+                return {'success': False, 'error': 'No audit content generated', 'live_metrics': live_metrics}
 
         else:
             logger.error(f"❌ [SYSTEM AUDIT] Agent failed: {result.message}")
-            return {'success': False, 'error': result.message}
+            return {'success': False, 'error': result.message, 'live_metrics': live_metrics}
 
     except Exception as e:
         logger.error(f"❌ [SYSTEM AUDIT] Self-audit failed: {e}")
-        return {'error': str(e)}
+        import traceback
+        return {'error': str(e), 'traceback': traceback.format_exc()}
 
 
 # =============================================================================
