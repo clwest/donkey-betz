@@ -26,8 +26,10 @@
 | **Body API Endpoints** | 65 | +6 skin endpoints, unified via body_vitals.py |
 | **Frontend Pages** | 46 | +BlogsPage (Session 814), +DocsIndexPage (Session 784), +SpiderFeedPage (Session 783), +OrchestrationPage (Session 768) |
 | **Content Channels** | 3 | 91 episodes with unique AI-generated titles |
-| **Frontend Bundle** | 1,929 KB | All sci-fi features + 9 body systems + Platform Command Center + Enhanced Operations |
-| **Platform APIs** | 6 | Mission, metrics, governance, emergency-halt, canon, playbooks (Session 815) |
+| **Frontend Bundle** | 1,935 KB | All sci-fi features + 9 body systems + Platform Command Center + Enhanced Operations + Audits Browser |
+| **Platform APIs** | 7 | Mission, metrics, governance, emergency-halt, canon, playbooks, **audits** (Session 816) |
+| **Playbooks** | 4 | creator, devops, development, marketing (Session 816) |
+| **System Audits** | 58 | Now browsable in Knowledge tab (Session 816) |
 
 **Data Display Enhancements (Session 746):** Comprehensive audit revealed ~40% of API data wasn't displayed. Fixed: Human Page (stats, decision history, ML override indicators), Betting Page (singles vs parlays, per-sport breakdown, wager leg details), Dashboard (network graph visualization with active agents/connections), Intelligence Page (gate checklist details, execution history, latency metrics).
 **Integration Roadmap COMPLETE (Session 744):** All 5 phases done - Celery health, spider-to-agent data flow, learning patterns, advisor wisdom, feedback loops. All 74 agents now receive context automatically + can delegate to specialists. DynamicTeamBuilder enables cross-domain agent teams.
@@ -245,7 +247,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **816** | **Operations Panel Overhaul** - Complete transformation of Operations tab: (1) Stats dashboard with totals, success rates, agent/type breakdowns. (2) Enhanced filtering: type, status, date range, search. (3) Grouping view: by date, agent, type. (4) Enhanced OperationRow with expandable details, command output, file sizes, lines changed. Data display: 85%→90%. | `SESSION_816_OPERATIONS_PANEL_OVERHAUL.md` |
+| **816** | **Operations Panel + Playbooks + Audits Browser** - (1) Operations tab overhaul: stats dashboard, enhanced filtering (type/status/date), grouping (date/agent/type), expandable rows with command output. (2) Created 4 playbooks: VIDEO_PRODUCTION_WORKFLOW, DEPLOYMENT_CHECKLIST, AGENT_CREATION_GUIDE, CONTENT_CALENDAR_PROCESS. (3) Audits Browser: new API + component, 58 audits now visible in Knowledge tab. Data display: 85%→90%. PRs #131-132. | `SESSION_816_OPERATIONS_PLAYBOOKS_AUDITS.md` |
 | **815** | **Platform Command Center** - Transformed WorkspacePage into governance-focused command center. 3 new tabs (Command, Governance, Knowledge), 6 new APIs, 5 new components. | `SESSION_815_PLATFORM_COMMAND_CENTER.md` |
 | **814** | **Spider Search Fix + Blogs Page + Agent Docs Injection** - (1) Fixed research phase 14+ min → 47s via `MAX_ENTRIES_TO_SCAN` limits. (2) Added dedicated `/blogs` page (BlogsPage.tsx). (3) DocsContextBuilder now injects CLAUDE.md + 00-START-NEXT-SESSION.md into agent prompts. (4) TechnicalDocumentAgent now produces system-specific audits. 7 PRs merged (#115-#121). | See `00-START-NEXT-SESSION.md` |
 | **813** | **SKIN Layer Audit + Workspace Output Fix** - Deep audit of SKIN Layer (Session 695). 89 operations, 100% success, 194KB written. Fixed workspace output extraction to capture actual agent content instead of stubs. PR #112. | See `00-START-NEXT-SESSION.md` |
