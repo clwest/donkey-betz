@@ -2,7 +2,7 @@
 
 **Previous Session:** 822 (SKIN Layer Autonomous Remediation)
 **Date:** January 25, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | 58 Audits | Self-Healing + SKIN Active
+**Status:** 74 Agents | 77 Spiders | 236 Celery Tasks | 60 Audits | **SELF-AWARE + SELF-EXECUTING**
 
 ---
 
@@ -37,6 +37,8 @@ Tested the 3 files written by SKIN layer in Session 822:
 - PR #185-187 - Documentation updates
 - PR #188 - Fix session number parsing in self-audit
 - PR #189 - **Enhanced Self-Audit with Live Data** (queries real system state!)
+- PR #190 - Documentation updates for live data audit
+- PR #191 - **Self-Execution Engine** (system now acts on problems automatically!)
 
 ### Context Discovery Implementation (PR #182)
 
@@ -132,7 +134,44 @@ Self-audit now queries REAL system state instead of documentation:
 | Open Findings | 755 | Needs attention |
 | Revenue | $0.01 | Needs revenue generation |
 
-### 5. Revenue Data Integration (Carried Forward)
+### 5. Self-Execution Engine ✅ DONE (PR #191)
+
+The system is now **SELF-EXECUTING**: it automatically triggers corrective actions when live metrics indicate problems.
+
+```python
+# New Celery task runs every hour:
+@shared_task
+def run_metrics_action_check():
+    """Evaluates metrics and triggers corrective actions."""
+    metrics = _gather_live_system_metrics()
+    trigger_service = MetricsActionTrigger()
+    results = trigger_service.evaluate_and_trigger(metrics)
+```
+
+**10 Trigger Rules Configured:**
+
+| Condition | Threshold | Action |
+|-----------|-----------|--------|
+| `spider_entries_24h == 0` | No data | Run spider collection |
+| `spider_entries_24h < 100` | Low data | Run news category spiders |
+| `open_findings > 100` | Backlog | Run autonomous remediation |
+| `heart.status == "error"` | Unhealthy | Run heart health check |
+| `agent_executions_24h == 0` | No activity | Run agent health rotation |
+| `failed_executions_24h > 10` | High failures | SystemIntelligenceAgent investigates |
+| `revenue.last_7_days == 0` | No revenue | OpportunityScoringAgent finds opportunities |
+
+**First Run Results (5 actions auto-triggered):**
+- ✅ `no_spider_data_24h` → `run_spider_network`
+- ✅ `low_spider_data_24h` → `run_spider_by_category`
+- ✅ `high_open_findings` (755) → `run_autonomous_remediation_cycle`
+- ✅ `skin_dormant_too_long` → Logged observation
+- ✅ `zero_revenue_7d` → `OpportunityScoringAgent` queued
+
+**The platform is now:**
+- **Self-Aware**: Queries its own state via `_gather_live_system_metrics()`
+- **Self-Executing**: Automatically acts on problems via `MetricsActionTrigger`
+
+### 6. Revenue Data Integration (Carried Forward)
 Platform Command Center still showing $0. Verify revenue signals are working.
 
 ```bash
@@ -217,6 +256,11 @@ python manage.py auto_remediate
 
 ### Key Files
 ```
+# Self-Execution Engine (Session 823)
+core/services/metrics_action_trigger.py  # 10 trigger rules
+core/tasks.py:run_metrics_action_check   # Hourly Celery task
+core/tasks.py:_gather_live_system_metrics # Live metrics gathering
+
 # Revenue Signals
 core/signals/revenue_signals.py
 
@@ -237,7 +281,7 @@ core/models_unified_system.py:11202  # mood_expires_at field
 
 | Session | Focus |
 |---------|-------|
-| **823** | Tested SKIN output, found duplicate, improved context understanding |
+| **823** | **SELF-EXECUTION** - System now self-aware + self-executing via MetricsActionTrigger |
 | **822** | SKIN Layer Autonomous Remediation - Agents can write files! |
 | **821** | Phase 1.5 Staleness Validation for Self-Healing System |
 | **820** | Self-Healing Orchestration + Tiered Docs Injection |
@@ -246,4 +290,8 @@ core/models_unified_system.py:11202  # mood_expires_at field
 
 ---
 
-**START HERE:** Session 823 found that SKIN layer wrote valid code but it was a duplicate of existing functionality. Before running more autonomous remediations, improve agent prompts with codebase context to prevent duplicates.
+**START HERE:** Session 823 achieved **SELF-EXECUTION**. The platform now:
+1. Queries its own state (self-aware via `_gather_live_system_metrics()`)
+2. Automatically acts on problems (self-executing via `MetricsActionTrigger`)
+
+First run triggered 5 corrective actions automatically (spider collection, remediation, agent analysis).
