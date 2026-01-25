@@ -2203,6 +2203,15 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
         'options': {'expires': 7200, 'queue': 'long_running'}
     },
+
+    # ==================== SESSION 823: PERIODIC SYSTEM SELF-AUDIT ====================
+    # Generate comprehensive system audits using TechnicalDocumentAgent
+    # Audits are saved to docs/audits/ for discovery by remediation system
+    'run-system-self-audit': {
+        'task': 'core.tasks.run_system_self_audit',
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Sundays at 3 AM
+        'options': {'expires': 7200, 'queue': 'long_running'}
+    },
 }
 
 # Task routing configuration
