@@ -835,6 +835,61 @@ def audits_view(request):
 # Session 818: Document Content API
 # =============================================================================
 
+@csrf_exempt
+@require_POST
+def skin_lock_toggle_view(request):
+    """
+    POST /api/platform/skin-lock/
+
+    Toggle the SKIN lock status. When locked, agents cannot write to workspaces.
+
+    Session 818: Real emergency control for SKIN layer.
+    """
+    from core.models_skin import SkinStatus
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        import json
+        body = json.loads(request.body) if request.body else {}
+        action = body.get('action', 'toggle')  # 'lock', 'unlock', or 'toggle'
+
+        # Get or create the singleton status (id=1)
+        skin_status, created = SkinStatus.objects.get_or_create(id=1)
+        current_locked = skin_status.status in ['damaged', 'healing']
+
+        # Determine new status
+        if action == 'lock':
+            new_locked = True
+        elif action == 'unlock':
+            new_locked = False
+        else:  # toggle
+            new_locked = not current_locked
+
+        # Update the singleton status
+        new_status = 'damaged' if new_locked else 'healthy'
+        skin_status.status = new_status
+        skin_status.is_healthy = not new_locked
+        skin_status.health_score = 0.0 if new_locked else 100.0
+        skin_status.save()
+
+        logger.info(f"SKIN {'LOCKED' if new_locked else 'UNLOCKED'} by {request.user.username}")
+
+        return JsonResponse({
+            'success': True,
+            'locked': new_locked,
+            'status': new_status,
+            'message': f"SKIN {'locked' if new_locked else 'unlocked'} successfully"
+        })
+    except Exception as e:
+        logger.error(f"SKIN lock toggle failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @require_GET
 def doc_content_view(request):
     """

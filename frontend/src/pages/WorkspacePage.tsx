@@ -1842,6 +1842,22 @@ export default function WorkspacePage() {
     },
   })
 
+  // Session 818: SKIN lock toggle mutation
+  const skinLockMutation = useMutation({
+    mutationFn: (action: 'lock' | 'unlock' | 'toggle') =>
+      platformApi.skinLock(action),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['platform-governance'] })
+      setActionResult({
+        type: 'success',
+        message: data.data.message || 'SKIN lock toggled'
+      })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to toggle SKIN lock' })
+    },
+  })
+
   // Clear toast
   useEffect(() => {
     if (actionResult) {
@@ -2188,6 +2204,9 @@ export default function WorkspacePage() {
                 onEmergencyHalt={async () => {
                   await emergencyHaltMutation.mutateAsync()
                 }}
+                onSkinLockToggle={async (action) => {
+                  await skinLockMutation.mutateAsync(action)
+                }}
               />
 
               {/* Pending Decisions Full List */}
@@ -2223,19 +2242,45 @@ export default function WorkspacePage() {
                             </span>
                           </div>
                           <p className="text-xs text-gray-400 mb-3">{decision.summary}</p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 text-xs text-gray-500">
-                              <span>{decision.item_type}</span>
-                              <span>•</span>
-                              <span>{decision.source_agent || decision.source_type}</span>
-                              <span>•</span>
-                              <span>{new Date(decision.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <a
-                              href={`/human?item=${decision.id}`}
-                              className="text-xs text-primary-400 hover:text-primary-300"
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                            <span>{decision.item_type}</span>
+                            <span>•</span>
+                            <span>{decision.source_agent || decision.source_type}</span>
+                            <span>•</span>
+                            <span>{new Date(decision.created_at).toLocaleDateString()}</span>
+                            {decision.ml_recommendation && (
+                              <>
+                                <span>•</span>
+                                <span className="px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                                  AI: {decision.ml_recommendation}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          {/* Session 818: Quick action buttons */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => decisionMutation.mutate({ itemId: decision.id, decision: 'approve' })}
+                              disabled={decisionMutation.isPending}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-green/20 hover:bg-accent-green/30 text-accent-green rounded text-xs font-medium transition-colors disabled:opacity-50"
                             >
-                              View in Human Interface →
+                              <CheckCircle size={12} />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => decisionMutation.mutate({ itemId: decision.id, decision: 'dismiss' })}
+                              disabled={decisionMutation.isPending}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                            >
+                              <X size={12} />
+                              Dismiss
+                            </button>
+                            <a
+                              href={`/human?tab=attention&item=${decision.id}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 hover:text-white text-xs transition-colors ml-auto"
+                            >
+                              View Details
+                              <ChevronRight size={12} />
                             </a>
                           </div>
                         </div>

@@ -4005,6 +4005,7 @@ from core.views_platform_command import (
     playbooks_view,
     audits_view,
     doc_content_view,
+    skin_lock_toggle_view,
 )
 
 urlpatterns += [
@@ -4016,6 +4017,7 @@ urlpatterns += [
     path('api/platform/playbooks/', playbooks_view, name='platform-playbooks'),
     path('api/platform/audits/', audits_view, name='platform-audits'),
     path('api/platform/doc-content/', doc_content_view, name='platform-doc-content'),  # Session 818
+    path('api/platform/skin-lock/', skin_lock_toggle_view, name='platform-skin-lock'),  # Session 818
 ]
 
 # =========================================================================
