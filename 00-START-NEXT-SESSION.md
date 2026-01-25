@@ -2,7 +2,34 @@
 
 **Previous Session:** 822 (SKIN Layer Autonomous Remediation)
 **Date:** January 25, 2026
-**Status:** 74 Agents | 77 Spiders | 234 Celery Tasks | 57 Audits | Self-Healing + SKIN Active
+**Status:** 74 Agents | 77 Spiders | 234 Celery Tasks | 58 Audits | Self-Healing + SKIN Active
+
+---
+
+## Session 823 Progress
+
+### Key Finding: Agent-Generated Code Was Duplicate
+
+Tested the 3 files written by SKIN layer in Session 822:
+- `scifi/models.py` - AgentMood with mood_expires_at
+- `scifi/management/commands/backfill_mood_expiry.py`
+- `scifi/tests/test_models.py`
+
+**Result:** Tests failed because `scifi` app wasn't in INSTALLED_APPS. Investigation revealed the EXISTING `AgentMood` model in `core/models_unified_system.py:11202` already has the `mood_expires_at` field! The agent created a duplicate.
+
+### Lesson Learned
+
+| Component | Status | Note |
+|-----------|--------|------|
+| SKIN Layer | ✅ Working | Files successfully written to filesystem |
+| Code Parsing | ✅ Working | 4 patterns extracted filenames correctly |
+| Agent Context | ⚠️ Gap | Agent didn't know the fix already existed |
+
+**Action Needed:** Improve agent prompts with better codebase context to avoid creating duplicates.
+
+### PRs Merged (Session 823)
+- PR #179 - Session 822 handoff documentation
+- PR #180 - Cleanup duplicate agent-generated files
 
 ---
 
@@ -29,51 +56,26 @@
      4. Extract from class names for substantial code blocks
    - Also parses 'message' and 'query' fields for code
 
-4. **First Agent-Generated Files Written**
-   - `scifi/models.py` - AgentMood with mood_expires_at (2183 bytes)
-   - `scifi/management/commands/backfill_mood_expiry.py` (3174 bytes)
-   - `scifi/tests/test_models.py` (3715 bytes)
-
-### PRs Merged
-- PR #176 - Revenue tracking signals
-- PR #177 - SKIN layer integration for autonomous remediation
-- PR #178 - Enhanced code parsing + agent-generated files
-
-### Test Results
-```json
-{
-  "written": true,
-  "total_written": 3,
-  "files_written": [
-    {"path": "scifi/models.py", "size": 2183},
-    {"path": "scifi/management/commands/backfill_mood_expiry.py", "size": 3174},
-    {"path": "scifi/tests/test_models.py", "size": 3715}
-  ]
-}
-```
-
 ---
 
-## PRIORITIES FOR SESSION 823
+## PRIORITIES FOR SESSION 823 (Continued)
 
-### 1. Test Agent-Generated Code
-The SKIN layer wrote 3 files. Verify they work correctly.
+### 1. ~~Test Agent-Generated Code~~ ✅ DONE
+Tested and found duplicate - removed in PR #180.
 
-```bash
-# Run the backfill command
-python manage.py backfill_mood_expiry --dry-run
+### 2. Improve Agent Context for Remediation
+Before the next SKIN layer run, agents need:
+- List of existing model locations (e.g., "AgentMood is in core/models_unified_system.py")
+- Summary of what fields already exist
+- Clear instruction to MODIFY existing code, not create new apps
 
-# Run the tests
-python manage.py test scifi.tests.test_models
-```
-
-### 2. Auto-PR Creation for Agent Code
+### 3. Auto-PR Creation for Agent Code
 Currently auto-commit is blocked on main branch (safety). Add automatic PR creation:
 - Create feature branch for each remediation task
 - Write files to branch
 - Create PR for human review
 
-### 3. Revenue Data Integration (Carried Forward)
+### 4. Revenue Data Integration (Carried Forward)
 Platform Command Center still showing $0. Verify revenue signals are working.
 
 ```bash
@@ -86,21 +88,17 @@ for r in Revenue.objects.all()[:5]:
 "
 ```
 
-### 4. Improve Agent Output Consistency
-Some agents return specifications instead of code. Consider:
-- Adding stricter prompt instructions for code generation
-- Enforcing output format in agent tools
-
 ---
 
-## Self-Healing Pipeline (Updated)
+## Self-Healing Pipeline
 
 ```
 Phase 1: Discover  → Scan docs/audits/ for audit files
 Phase 1.5: Validate → Check stale findings (>50 sessions old)
 Phase 2: Assign    → Match findings to agents
-Phase 3: Execute   → Run agent + WRITE FILES via SKIN (NEW!)
+Phase 3: Execute   → Run agent + WRITE FILES via SKIN
 Phase 4: Verify    → Confirm fixes worked
+Phase 5: Context   → (NEW) Inject existing code locations ← NEEDED
 ```
 
 ---
@@ -110,9 +108,9 @@ Phase 4: Verify    → Confirm fixes worked
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
 | Monthly Revenue | $10,000 | $0 | Signals added |
-| SKIN Files Written | -- | **3** | NEW! |
+| SKIN Files Written | -- | 0 | Duplicates removed |
 | Celery Tasks | -- | **234** | ✅ |
-| Audit Reports | -- | **57** | ✅ |
+| Audit Reports | -- | **58** | ✅ |
 | Health Score | 90%+ | 88.9% | ✅ |
 
 ---
@@ -139,10 +137,10 @@ python manage.py auto_remediate --execute --no-commit
 python manage.py auto_remediate
 ```
 
-### Key Files (Session 822)
+### Key Files
 ```
 # Revenue Signals
-core/signals/revenue_signals.py (NEW)
+core/signals/revenue_signals.py
 
 # SKIN Layer Integration
 core/services/autonomous_remediation_orchestrator.py
@@ -150,10 +148,9 @@ core/services/autonomous_remediation_orchestrator.py
   - _write_and_commit_files()
   - _auto_commit_changes()
 
-# Agent-Generated Files
-scifi/models.py (NEW - agent wrote this)
-scifi/management/commands/backfill_mood_expiry.py (NEW)
-scifi/tests/test_models.py (NEW)
+# Existing AgentMood (DO NOT DUPLICATE)
+core/models_unified_system.py:11142  # AgentMood class
+core/models_unified_system.py:11202  # mood_expires_at field
 ```
 
 ---
@@ -162,13 +159,13 @@ scifi/tests/test_models.py (NEW)
 
 | Session | Focus |
 |---------|-------|
+| **823** | Tested SKIN output, found duplicate, improved context understanding |
 | **822** | SKIN Layer Autonomous Remediation - Agents can write files! |
 | **821** | Phase 1.5 Staleness Validation for Self-Healing System |
 | **820** | Self-Healing Orchestration + Tiered Docs Injection |
 | **819** | Deliverables Marketplace - Product catalog of AI outputs |
 | **818** | Platform Command Center UI Interactivity |
-| **817** | Autonomous Agent Behavior + Smart Tool Results Renderer |
 
 ---
 
-**START HERE:** The self-healing system can now write code autonomously! Run `python manage.py auto_remediate --execute --limit 3` to generate and write fixes for audit findings. Files are written but auto-commit is blocked on main (create feature branches manually for now).
+**START HERE:** Session 823 found that SKIN layer wrote valid code but it was a duplicate of existing functionality. Before running more autonomous remediations, improve agent prompts with codebase context to prevent duplicates.
