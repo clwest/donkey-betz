@@ -220,15 +220,28 @@ class AutonomousRemediationOrchestrator:
             if '```' in result_data['content']:
                 files.extend(self._parse_code_blocks(result_data['content']))
 
+        # Session 822: Also check 'message' field (agents sometimes put code here)
+        if 'message' in result_data and isinstance(result_data['message'], str):
+            if '```' in result_data['message']:
+                files.extend(self._parse_code_blocks(result_data['message']))
+
+        # Session 822: Check 'query' field in results (may contain code)
+        if 'query' in result_data and isinstance(result_data['query'], str):
+            if '```' in result_data['query']:
+                files.extend(self._parse_code_blocks(result_data['query']))
+
         return files
 
     def _parse_code_blocks(self, content: str) -> List[Dict[str, str]]:
         """
         Parse code blocks from markdown-formatted content.
 
+        Session 822: Enhanced to extract filenames from multiple formats.
         Supports formats:
-        - ```python\n# filename.py\n...\n```
         - ### path/to/file.py\n```python\n...\n```
+        - ```python\n# filename.py\n...\n```
+        - Docstrings containing filenames
+        - Fallback naming for substantial code blocks
         """
         files = []
 
@@ -256,6 +269,52 @@ class AutonomousRemediationOrchestrator:
                     'content': f"# {filename}\n{code}",
                     'language': language
                 })
+
+        # Pattern 3: Docstring with filename ("""filename.py or '''filename.py)
+        if not files:
+            pattern3 = r'```(\w+)?\n(?:#![^\n]*\n)?(?:\"\"\"|\'\'\')([^\n]+\.py)\n(.*?)```'
+            for match in re.finditer(pattern3, content, re.DOTALL):
+                language = match.group(1) or 'python'
+                filename = match.group(2).strip()
+                code = match.group(3).strip()
+                # Reconstruct with docstring
+                first_line = f'"""{filename}'
+                files.append({
+                    'filename': filename,
+                    'content': f'{first_line}\n{code}',
+                    'language': language
+                })
+
+        # Pattern 4: Look for filename in first few lines of code block
+        if not files:
+            pattern4 = r'```(\w+)?\n(.*?)```'
+            for match in re.finditer(pattern4, content, re.DOTALL):
+                language = match.group(1) or 'python'
+                code = match.group(2).strip()
+
+                # Skip very short blocks (likely examples, not real files)
+                if len(code) < 100:
+                    continue
+
+                # Try to extract filename from docstring (handles newline after opening quotes)
+                filename = None
+                docstring_match = re.search(r'(?:\"\"\"|\'\'\')[\n\s]*([^\n\"]+\.py)', code[:400])
+                if docstring_match:
+                    filename = docstring_match.group(1).strip()
+
+                # Try to extract from class/function name for substantial code
+                if not filename and ('class ' in code or 'def ' in code):
+                    # Generate filename from first class or major function
+                    class_match = re.search(r'class\s+(\w+)', code)
+                    if class_match:
+                        filename = f"{class_match.group(1).lower()}.py"
+
+                if filename:
+                    files.append({
+                        'filename': filename,
+                        'content': code,
+                        'language': language
+                    })
 
         return files
 
