@@ -44,6 +44,13 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Dream signals not available
 
+        # Session 822: Connect revenue tracking signals
+        try:
+            from core.signals import connect_revenue_signals
+            connect_revenue_signals()
+        except ImportError:
+            pass  # Revenue signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
