@@ -54,8 +54,8 @@ export default function BlogViewerPage() {
         <p className="text-gray-400 mb-4">
           {error instanceof Error ? error.message : 'The requested blog could not be loaded.'}
         </p>
-        <Link to="/human" className="btn btn-primary">
-          Back to Human Interface
+        <Link to="/blogs" className="btn btn-primary">
+          Back to Blogs
         </Link>
       </div>
     )
@@ -67,11 +67,11 @@ export default function BlogViewerPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Back button */}
       <Link
-        to="/human"
+        to="/blogs"
         className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft size={18} />
-        Back to Human Interface
+        Back to Blogs
       </Link>
 
       {/* Header */}
@@ -179,9 +179,9 @@ export default function BlogViewerPage() {
 
       {/* Action buttons */}
       <div className="flex justify-between items-center">
-        <Link to="/human" className="btn btn-secondary">
+        <Link to="/blogs" className="btn btn-secondary">
           <ArrowLeft size={16} className="mr-2" />
-          Back
+          Back to Blogs
         </Link>
         <div className="flex gap-2">
           <button className="btn btn-primary">
