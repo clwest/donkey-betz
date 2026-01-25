@@ -30,6 +30,32 @@ Tested the 3 files written by SKIN layer in Session 822:
 ### PRs Merged (Session 823)
 - PR #179 - Session 822 handoff documentation
 - PR #180 - Cleanup duplicate agent-generated files
+- PR #181 - Document duplicate code finding
+- PR #182 - **Codebase Context Discovery** (fixes the root cause!)
+
+### Context Discovery Implementation (PR #182)
+
+Added automatic codebase search before agent execution:
+
+```python
+# New methods in AutonomousRemediationOrchestrator:
+_extract_key_terms(finding)      # Extract CamelCase, snake_case identifiers
+_discover_codebase_context()     # Search codebase with grep
+_build_context_prompt()          # Inject files/snippets into task
+```
+
+**Example output for "Fix Mood Expiration" finding:**
+```
+📝 Extracted terms: ['AgentMood', 'mood_expires_at']
+
+🔍 Found 6 affected files:
+   - core/models_unified_system.py:11142  ← AgentMood class
+   - core/models_unified_system.py:11202  ← mood_expires_at already exists!
+   - core/tasks.py:10889
+   - core/views_agent_mood.py:288
+```
+
+Now agents will see this context and know NOT to create duplicates!
 
 ---
 
@@ -63,11 +89,12 @@ Tested the 3 files written by SKIN layer in Session 822:
 ### 1. ~~Test Agent-Generated Code~~ ✅ DONE
 Tested and found duplicate - removed in PR #180.
 
-### 2. Improve Agent Context for Remediation
-Before the next SKIN layer run, agents need:
-- List of existing model locations (e.g., "AgentMood is in core/models_unified_system.py")
-- Summary of what fields already exist
-- Clear instruction to MODIFY existing code, not create new apps
+### 2. ~~Improve Agent Context for Remediation~~ ✅ DONE (PR #182)
+Implemented codebase context discovery:
+- ✅ `_extract_key_terms()` - Extracts class names, function names from findings
+- ✅ `_discover_codebase_context()` - Searches codebase with grep
+- ✅ `_build_context_prompt()` - Injects file locations + code snippets
+- ✅ Instructions tell agent to MODIFY existing code, not create new apps
 
 ### 3. Auto-PR Creation for Agent Code
 Currently auto-commit is blocked on main branch (safety). Add automatic PR creation:
