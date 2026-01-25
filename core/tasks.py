@@ -27902,3 +27902,187 @@ def calculate_guard_effectiveness():
     except Exception as e:
         logger.error(f"❌ Error calculating guard effectiveness: {e}")
         return {'error': str(e)}
+
+
+# =============================================================================
+# Session 820: Autonomous Remediation System Tasks
+# =============================================================================
+
+@shared_task
+def discover_and_import_audits():
+    """
+    Session 820: Automatically discover and import new audit files.
+
+    Scans docs/audits/ for new or updated audit files and imports them
+    into the AuditReport/AuditFinding database. Runs daily at midnight.
+    """
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info("🔍 [AUTO-REMEDIATE] Discovering and importing audits...")
+
+    try:
+        orchestrator = get_remediation_orchestrator()
+        results = orchestrator.discover_and_import_audits()
+
+        logger.info(
+            f"✅ [AUTO-REMEDIATE] Imported {results.get('imported', 0)} audits, "
+            f"{results.get('findings_created', 0)} findings"
+        )
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [AUTO-REMEDIATE] Audit discovery failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def assign_open_findings_to_agents():
+    """
+    Session 820: Auto-assign open findings to appropriate agents.
+
+    Matches each open finding to the best agent based on category and
+    affected files. Runs every 2 hours to catch new findings.
+    """
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info("🎯 [AUTO-REMEDIATE] Assigning findings to agents...")
+
+    try:
+        orchestrator = get_remediation_orchestrator()
+        # Only auto-assign P0 and P1 findings
+        results = orchestrator.assign_open_findings(priority_filter=['P0', 'P1'])
+
+        logger.info(
+            f"✅ [AUTO-REMEDIATE] Assigned {results.get('assigned', 0)} findings"
+        )
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [AUTO-REMEDIATE] Finding assignment failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def execute_remediation_tasks():
+    """
+    Session 820: Execute assigned remediation tasks via agents.
+
+    Runs each assigned task through the AgentRouter. Limits to 3 tasks
+    per cycle to avoid overwhelming the system. Runs every 4 hours.
+    """
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info("🔧 [AUTO-REMEDIATE] Executing remediation tasks...")
+
+    try:
+        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=3)
+        results = orchestrator.execute_assigned_tasks()
+
+        logger.info(
+            f"✅ [AUTO-REMEDIATE] Executed {results.get('attempted', 0)} tasks, "
+            f"{results.get('succeeded', 0)} succeeded"
+        )
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [AUTO-REMEDIATE] Task execution failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def verify_completed_fixes():
+    """
+    Session 820: Verify that completed fixes actually worked.
+
+    Runs verification checks on 'fixed' findings. Reopens findings
+    where verification fails. Runs every 6 hours.
+    """
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info("🔬 [AUTO-REMEDIATE] Verifying completed fixes...")
+
+    try:
+        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=5)
+        results = orchestrator.verify_completed_fixes()
+
+        logger.info(
+            f"✅ [AUTO-REMEDIATE] Verified {results.get('verified', 0)} fixes, "
+            f"{results.get('failed', 0)} failed verification"
+        )
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [AUTO-REMEDIATE] Verification failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def run_autonomous_remediation_cycle():
+    """
+    Session 820: Run a complete autonomous remediation cycle.
+
+    Orchestrates all phases: discover → assign → execute → verify.
+    This is the main entry point for the self-healing system.
+    Runs daily at 2am after the audit discovery at midnight.
+    """
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info("🔄 [AUTO-REMEDIATE] Starting full remediation cycle...")
+
+    try:
+        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=5)
+        results = orchestrator.run_remediation_cycle(priority_filter=['P0', 'P1'])
+
+        # Log summary
+        summary = results.get('summary', {})
+        state = summary.get('findings_state', {})
+
+        logger.info(
+            f"✅ [AUTO-REMEDIATE] Cycle complete! "
+            f"Open P0: {state.get('open_p0', 0)}, "
+            f"Open P1: {state.get('open_p1', 0)}, "
+            f"Verified: {state.get('verified', 0)}"
+        )
+
+        # Log alerts
+        for alert in summary.get('alerts', []):
+            logger.warning(f"[AUTO-REMEDIATE] {alert}")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [AUTO-REMEDIATE] Remediation cycle failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def get_remediation_status():
+    """
+    Session 820: Get current autonomous remediation status.
+
+    Provides a snapshot of findings, tasks, and overall system health.
+    Can be called manually or via API.
+    """
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info("📊 [AUTO-REMEDIATE] Getting remediation status...")
+
+    try:
+        orchestrator = get_remediation_orchestrator()
+        status = orchestrator.get_status()
+
+        # Log summary
+        findings = status.get('findings', {})
+        logger.info(
+            f"📊 [AUTO-REMEDIATE] Status: "
+            f"Open: {findings.get('open', 0)}, "
+            f"In Progress: {findings.get('in_progress', 0)}, "
+            f"Fixed: {findings.get('fixed', 0)}, "
+            f"Verified: {findings.get('verified', 0)}"
+        )
+
+        return status
+
+    except Exception as e:
+        logger.error(f"❌ [AUTO-REMEDIATE] Status check failed: {e}")
+        return {'error': str(e)}
