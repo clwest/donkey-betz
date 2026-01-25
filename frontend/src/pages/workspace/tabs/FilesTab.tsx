@@ -1,8 +1,13 @@
 // Session 825: Files Tab
 // Session 826: Implemented real file browser with git status
+// Session 826: Fixed issues from CodeReviewAgent:
+//   - Reset state on workspace change
+//   - Use Sets for O(1) git status lookups
+//   - Refresh all queries (files, git, stats)
+//   - Add error handling UI
 // Extracted from WorkspacePage.tsx for modular architecture
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   FolderTree,
@@ -17,6 +22,7 @@ import {
   Folder,
   RefreshCw,
   Code,
+  XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi } from '@/lib/api'
@@ -37,8 +43,20 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['src', 'core']))
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
 
+  // Session 826 Fix: Reset state when workspace changes
+  useEffect(() => {
+    setSelectedFile(null)
+    setExpandedDirs(new Set(['src', 'core']))
+  }, [activeWorkspaceId])
+
   // Fetch file tree
-  const { data: filesData, isLoading: filesLoading, refetch: refetchFiles, isFetching } = useQuery({
+  const {
+    data: filesData,
+    isLoading: filesLoading,
+    isFetching: filesFetching,
+    error: filesError,
+    refetch: refetchFiles,
+  } = useQuery({
     queryKey: ['workspace-files', activeWorkspaceId],
     queryFn: async () => {
       if (!activeWorkspaceId) return null
@@ -49,7 +67,13 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
   })
 
   // Fetch git status
-  const { data: gitData, isLoading: gitLoading } = useQuery({
+  const {
+    data: gitData,
+    isLoading: gitLoading,
+    isFetching: gitFetching,
+    error: gitError,
+    refetch: refetchGit,
+  } = useQuery({
     queryKey: ['workspace-git-status', activeWorkspaceId],
     queryFn: async () => {
       if (!activeWorkspaceId) return null
@@ -60,7 +84,11 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
   })
 
   // Fetch workspace stats
-  const { data: statsData } = useQuery({
+  const {
+    data: statsData,
+    isFetching: statsFetching,
+    refetch: refetchStats,
+  } = useQuery({
     queryKey: ['workspace-stats', activeWorkspaceId],
     queryFn: async () => {
       if (!activeWorkspaceId) return null
@@ -69,6 +97,20 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
     },
     enabled: !!activeWorkspaceId,
   })
+
+  // Session 826 Fix: Combined fetching state for refresh button
+  const isRefreshing = filesFetching || gitFetching || statsFetching
+
+  // Session 826 Fix: Refresh all queries
+  const refreshAll = async () => {
+    await Promise.all([refetchFiles(), refetchGit(), refetchStats()])
+  }
+
+  // Session 826 Fix: Convert arrays to Sets for O(1) lookups
+  const gitStatus = gitData || { branch: 'main', modified: [], untracked: [], staged: [] }
+  const modifiedSet = useMemo(() => new Set(gitStatus.modified || []), [gitStatus.modified])
+  const untrackedSet = useMemo(() => new Set(gitStatus.untracked || []), [gitStatus.untracked])
+  const stagedSet = useMemo(() => new Set(gitStatus.staged || []), [gitStatus.staged])
 
   if (!activeWorkspaceId) {
     return (
@@ -94,8 +136,31 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
     )
   }
 
+  // Session 826 Fix: Show error state
+  if (filesError || gitError) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="h-16 w-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+            <XCircle size={32} className="text-red-400" />
+          </div>
+          <h3 className="font-semibold text-lg">Failed to Load Workspace</h3>
+          <p className="text-sm text-gray-400 mt-1">
+            {(filesError as Error)?.message || (gitError as Error)?.message || 'Unknown error'}
+          </p>
+          <button
+            type="button"
+            onClick={() => refreshAll()}
+            className="btn btn-secondary mt-4"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const files: FileNode[] = filesData?.files || []
-  const gitStatus = gitData || { branch: 'main', modified: [], untracked: [], staged: [] }
   const stats = statsData || { total_files: 0, total_lines: 0, languages: {} }
 
   const toggleDir = (path: string) => {
@@ -138,13 +203,15 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
   const renderFileTree = (nodes: FileNode[], depth = 0) => {
     return nodes.map((node) => {
       const isExpanded = expandedDirs.has(node.path)
-      const isModified = gitStatus.modified?.includes(node.path)
-      const isUntracked = gitStatus.untracked?.includes(node.path)
-      const isStaged = gitStatus.staged?.includes(node.path)
+      // Session 826 Fix: O(1) Set lookups instead of O(n) array includes
+      const isModified = modifiedSet.has(node.path)
+      const isUntracked = untrackedSet.has(node.path)
+      const isStaged = stagedSet.has(node.path)
 
       return (
         <div key={node.path}>
           <button
+            type="button"
             onClick={() => {
               if (node.type === 'directory') {
                 toggleDir(node.path)
@@ -191,11 +258,12 @@ export function FilesTab({ activeWorkspaceId }: FilesTabProps) {
           </div>
         </div>
         <button
-          onClick={() => refetchFiles()}
-          disabled={isFetching}
+          type="button"
+          onClick={refreshAll}
+          disabled={isRefreshing}
           className="btn btn-secondary flex items-center gap-2 text-sm"
         >
-          <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
+          <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
           Refresh
         </button>
       </div>
