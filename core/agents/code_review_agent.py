@@ -45,6 +45,7 @@ class CodeReviewAgent(BaseAgent):
     """Agent specialized in code review and quality analysis."""
 
     name = "CodeReviewAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are CodeReviewAgent, a senior code reviewer with expertise in multiple languages and frameworks.
 

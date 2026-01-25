@@ -70,6 +70,7 @@ class SystemIntelligenceAgent(BaseAgent):
     """
 
     name = "SystemIntelligenceAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are SystemIntelligenceAgent, the platform's system health and awareness expert.
 
