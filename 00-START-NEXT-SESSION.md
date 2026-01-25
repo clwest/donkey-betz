@@ -32,6 +32,8 @@ Tested the 3 files written by SKIN layer in Session 822:
 - PR #180 - Cleanup duplicate agent-generated files
 - PR #181 - Document duplicate code finding
 - PR #182 - **Codebase Context Discovery** (fixes the root cause!)
+- PR #183 - Documentation updates
+- PR #184 - **Auto-PR Creation** for agent-generated code
 
 ### Context Discovery Implementation (PR #182)
 
@@ -96,11 +98,13 @@ Implemented codebase context discovery:
 - ✅ `_build_context_prompt()` - Injects file locations + code snippets
 - ✅ Instructions tell agent to MODIFY existing code, not create new apps
 
-### 3. Auto-PR Creation for Agent Code
-Currently auto-commit is blocked on main branch (safety). Add automatic PR creation:
-- Create feature branch for each remediation task
-- Write files to branch
-- Create PR for human review
+### 3. ~~Auto-PR Creation for Agent Code~~ ✅ DONE (PR #184)
+Implemented auto-PR workflow instead of direct commits:
+- ✅ `_create_pr_for_changes()` replaces `_auto_commit_changes()`
+- ✅ Creates feature branch (`auto-remediate/{finding-id}-{uuid}`)
+- ✅ Commits files, pushes branch, creates PR via `gh`
+- ✅ Returns to original branch after PR creation
+- ✅ Added `--no-pr` flag to management command
 
 ### 4. Revenue Data Integration (Carried Forward)
 Platform Command Center still showing $0. Verify revenue signals are working.
@@ -117,15 +121,16 @@ for r in Revenue.objects.all()[:5]:
 
 ---
 
-## Self-Healing Pipeline
+## Self-Healing Pipeline (Complete!)
 
 ```
-Phase 1: Discover  → Scan docs/audits/ for audit files
-Phase 1.5: Validate → Check stale findings (>50 sessions old)
-Phase 2: Assign    → Match findings to agents
-Phase 3: Execute   → Run agent + WRITE FILES via SKIN
-Phase 4: Verify    → Confirm fixes worked
-Phase 5: Context   → (NEW) Inject existing code locations ← NEEDED
+Phase 1:   Discover  → Scan docs/audits/ for audit files
+Phase 1.5: Validate  → Check stale findings (>50 sessions old)
+Phase 2:   Assign    → Match findings to agents
+Phase 2.5: Context   → Search codebase for existing code ✅ (PR #182)
+Phase 3:   Execute   → Run agent + WRITE FILES via SKIN
+Phase 3.5: Auto-PR   → Create PR for human review ✅ (PR #184)
+Phase 4:   Verify    → Confirm fixes worked
 ```
 
 ---
