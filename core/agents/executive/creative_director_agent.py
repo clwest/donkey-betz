@@ -72,6 +72,7 @@ class CreativeDirectorAgent(BaseAgent):
     """
 
     name = "CreativeDirectorAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are CreativeDirectorAgent, the Creative Director AI assistant.
 

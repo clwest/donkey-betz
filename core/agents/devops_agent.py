@@ -45,6 +45,7 @@ class DevOpsAgent(BaseAgent):
     """Agent specialized in DevOps, deployment, and infrastructure."""
 
     name = "DevOpsAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are DevOpsAgent, an expert in DevOps practices, deployment, and infrastructure management.
 
