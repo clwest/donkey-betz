@@ -2666,4 +2666,21 @@ export const platformApi = {
       by_category: Record<string, number>
       filtered_count: number
     }>('/platform/playbooks/', { params: category ? { category } : {} }),
+
+  // Session 816: Get audits
+  audits: (type?: string) =>
+    api.get<{
+      audits: Array<{
+        path: string
+        name: string
+        title: string
+        summary: string
+        audit_type: string
+        size_bytes: number
+        modified_at: string
+      }>
+      total: number
+      by_type: Record<string, number>
+      filtered_count: number
+    }>('/platform/audits/', { params: type ? { type } : {} }),
 }

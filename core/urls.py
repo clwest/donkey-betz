@@ -4003,6 +4003,7 @@ from core.views_platform_command import (
     emergency_halt_view,
     canon_view,
     playbooks_view,
+    audits_view,
 )
 
 urlpatterns += [
@@ -4012,6 +4013,7 @@ urlpatterns += [
     path('api/platform/emergency-halt/', emergency_halt_view, name='platform-emergency-halt'),
     path('api/platform/canon/', canon_view, name='platform-canon'),
     path('api/platform/playbooks/', playbooks_view, name='platform-playbooks'),
+    path('api/platform/audits/', audits_view, name='platform-audits'),
 ]
 
 # =========================================================================
