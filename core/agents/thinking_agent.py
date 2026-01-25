@@ -181,7 +181,17 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
     def _format_context_for_thinking(self, context: Dict[str, Any]) -> str:
         """Format the context data into a prompt for the LLM."""
 
-        prompt_parts = [self.thinking_prompt, "\n\n## Current Context\n"]
+        # Session 819: Start with intelligent prompt for full platform context
+        base_prompt = self._build_intelligent_prompt(
+            task="Autonomous thinking cycle",
+            scifi_context={},
+            spider_context={},
+            additional_context=""
+        )
+
+        # Replace the base system_prompt section with thinking_prompt
+        # The intelligent prompt includes autonomous behavior directive which is perfect for ThinkingAgent
+        prompt_parts = [base_prompt, "\n\n## THINKING AGENT SPECIFIC INSTRUCTIONS\n", self.thinking_prompt, "\n\n## Current Context\n"]
 
         # Add timestamp
         prompt_parts.append(f"**Current Time:** {timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
