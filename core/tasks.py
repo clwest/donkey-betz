@@ -27926,13 +27926,15 @@ def run_system_self_audit():
     logger.info("📋 [SYSTEM AUDIT] Starting periodic system self-audit...")
 
     try:
-        # Get current session number from CLAUDE.md
+        # Get current session number from 00-START-NEXT-SESSION.md
+        # This file has the active session in the header: "# Session 823 - Active"
+        import re
         session_number = 823  # Default
-        claude_md_path = Path(__file__).parent.parent / 'CLAUDE.md'
-        if claude_md_path.exists():
-            content = claude_md_path.read_text()
-            import re
-            match = re.search(r'Session\s+(\d+)', content)
+        session_file_path = Path(__file__).parent.parent / '00-START-NEXT-SESSION.md'
+        if session_file_path.exists():
+            content = session_file_path.read_text()
+            # Match "# Session XXX" at the start of the file
+            match = re.search(r'^#\s+Session\s+(\d+)', content, re.MULTILINE)
             if match:
                 session_number = int(match.group(1))
 
