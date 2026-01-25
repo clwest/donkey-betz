@@ -156,6 +156,20 @@ class DocsContextBuilder:
         'celery': ['celery'],
         'async': ['celery'],
         'background': ['celery'],
+
+        # Session 814: Governance and mission keywords
+        'governance': ['governance'],
+        'authority': ['governance'],
+        'override': ['governance'],
+        'approval': ['governance'],
+        'gate': ['governance'],
+        'mission': ['missions'],
+        'goal': ['missions'],
+        'focus': ['missions'],
+        'priority': ['missions'],
+        'canon': ['canon'],
+        'playbook': ['playbooks'],
+        'workflow': ['playbooks', 'workflows'],
     }
 
     # Priority documents that should always be considered
@@ -166,6 +180,10 @@ class DocsContextBuilder:
         'docs/AGENTS.md',
         'docs/CAPABILITIES.md',
         'docs/DATABASE_MODEL_REFERENCE.md',
+        # Session 814: Governance and mission docs are always high priority
+        'docs/governance/SYSTEM_OWNER.md',
+        'docs/missions/CURRENT_MISSION.md',
+        'docs/canon/INDEX.md',
     ]
 
     def __init__(self):
@@ -342,6 +360,8 @@ class DocsContextBuilder:
     CRITICAL_DOCS = [
         ('CLAUDE.md', 300),  # (path, max_lines) - System overview, stats, architecture
         ('00-START-NEXT-SESSION.md', 200),  # Current session priorities
+        ('docs/governance/SYSTEM_OWNER.md', 100),  # Session 814: Human authority framework
+        ('docs/missions/CURRENT_MISSION.md', 100),  # Session 814: What agents should focus on
     ]
 
     def _get_critical_docs_content(self) -> str:
