@@ -3994,6 +3994,27 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 815: Platform Command Center API
+# =========================================================================
+from core.views_platform_command import (
+    mission_view,
+    metrics_view,
+    governance_view,
+    emergency_halt_view,
+    canon_view,
+    playbooks_view,
+)
+
+urlpatterns += [
+    path('api/platform/mission/', mission_view, name='platform-mission'),
+    path('api/platform/metrics/', metrics_view, name='platform-metrics'),
+    path('api/platform/governance/', governance_view, name='platform-governance'),
+    path('api/platform/emergency-halt/', emergency_halt_view, name='platform-emergency-halt'),
+    path('api/platform/canon/', canon_view, name='platform-canon'),
+    path('api/platform/playbooks/', playbooks_view, name='platform-playbooks'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
