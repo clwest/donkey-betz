@@ -53,7 +53,18 @@ export default function BlogsPage() {
     },
   })
 
-  const blogs: Blog[] = data?.blogs || []
+  // Session 814: Defensive handling for API response
+  const rawBlogs = data?.blogs || data?.results || []
+  const blogs: Blog[] = rawBlogs.map((blog: Record<string, unknown>) => ({
+    ...blog,
+    id: String(blog.id || ''),
+    title: String(blog.title || 'Untitled'),
+    intro: String(blog.intro || ''),
+    tags: Array.isArray(blog.tags) ? blog.tags : [],
+    word_count: Number(blog.word_count) || 0,
+    tone: String(blog.tone || ''),
+    created_at: String(blog.created_at || new Date().toISOString()),
+  }))
   const pagination: BlogPagination = data?.pagination || {
     page: 1,
     per_page: 12,
