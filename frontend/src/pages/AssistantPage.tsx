@@ -186,10 +186,13 @@ export default function AssistantPage() {
   const chatMutation = useMutation({
     mutationFn: (message: string) => assistantApi.chat(message, { use_personal_assistant: true }),
     onSuccess: (response) => {
+      // Ensure content is always a string, not an object
+      const rawContent = response.data.response || response.data.message || 'No response'
+      const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.data.response || response.data.message || 'No response',
+        content,
         timestamp: new Date(),
         tools_used: response.data.tools_used || [],
       }
