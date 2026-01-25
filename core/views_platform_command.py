@@ -977,3 +977,139 @@ def doc_content_view(request):
         return JsonResponse({
             'error': f'Error reading document: {str(e)}'
         }, status=500)
+
+
+# =============================================================================
+# Session 819: Canon Promotion API
+# =============================================================================
+
+@csrf_exempt
+@require_POST
+def canon_promote_view(request):
+    """
+    POST /api/platform/canon/promote/
+
+    Promote content to the Canon documentation.
+
+    Session 819: Allows promoting high-quality agent outputs to canonical docs.
+
+    Request body:
+    {
+        "title": "Document Title",
+        "content": "Markdown content to promote",
+        "category": "creative" | "technical" | "operational",
+        "source_type": "agent_output" | "blog" | "document",
+        "source_id": "optional source identifier",
+        "tags": ["optional", "tags"]
+    }
+
+    Returns:
+    {
+        "success": true,
+        "path": "docs/canon/creative/document_title.md",
+        "message": "Successfully promoted to Canon"
+    }
+    """
+    import json
+    import re
+    from slugify import slugify
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+
+        # Required fields
+        title = body.get('title', '').strip()
+        content = body.get('content', '').strip()
+        category = body.get('category', 'operational').lower()
+
+        if not title:
+            return JsonResponse({'error': 'Title is required'}, status=400)
+
+        if not content:
+            return JsonResponse({'error': 'Content is required'}, status=400)
+
+        # Validate category
+        valid_categories = ['creative', 'technical', 'operational']
+        if category not in valid_categories:
+            return JsonResponse({
+                'error': f'Invalid category. Must be one of: {", ".join(valid_categories)}'
+            }, status=400)
+
+        # Optional fields
+        source_type = body.get('source_type', 'document')
+        source_id = body.get('source_id', '')
+        tags = body.get('tags', [])
+
+        # Generate filename from title
+        try:
+            filename = slugify(title, separator='_').upper() + '.md'
+        except Exception:
+            # Fallback if slugify not available
+            filename = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_').upper() + '.md'
+
+        # Build full path
+        canon_dir = _get_docs_dir() / 'canon' / category
+        canon_dir.mkdir(parents=True, exist_ok=True)
+        doc_path = canon_dir / filename
+
+        # Check if file already exists
+        if doc_path.exists():
+            return JsonResponse({
+                'error': f'Document already exists: {filename}',
+                'existing_path': str(doc_path.relative_to(settings.BASE_DIR))
+            }, status=409)
+
+        # Build document content with metadata header
+        promoted_at = timezone.now().strftime('%Y-%m-%d')
+        promoted_by = request.user.username
+
+        doc_content = f"""# {title}
+
+**Category:** {category.title()}
+**Promoted:** {promoted_at} by {promoted_by}
+**Source:** {source_type}
+"""
+        if source_id:
+            doc_content += f"**Source ID:** {source_id}\n"
+
+        if tags:
+            doc_content += f"**Tags:** {', '.join(tags)}\n"
+
+        doc_content += f"""
+---
+
+{content}
+"""
+
+        # Write the file
+        doc_path.write_text(doc_content, encoding='utf-8')
+
+        logger.info(f"Canon document created: {doc_path} by {promoted_by}")
+
+        # Return relative path for display
+        relative_path = f"docs/canon/{category}/{filename}"
+
+        return JsonResponse({
+            'success': True,
+            'path': relative_path,
+            'message': f'Successfully promoted "{title}" to Canon ({category})',
+            'metadata': {
+                'title': title,
+                'category': category,
+                'filename': filename,
+                'promoted_at': promoted_at,
+                'promoted_by': promoted_by,
+            }
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        logger.error(f"Canon promotion failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
