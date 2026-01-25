@@ -2683,4 +2683,14 @@ export const platformApi = {
       by_type: Record<string, number>
       filtered_count: number
     }>('/platform/audits/', { params: type ? { type } : {} }),
+
+  // Session 818: Toggle SKIN lock
+  skinLock: (action: 'lock' | 'unlock' | 'toggle' = 'toggle') =>
+    api.post<{
+      success: boolean
+      locked: boolean
+      status: string
+      message: string
+      error?: string
+    }>('/platform/skin-lock/', { action }),
 }
