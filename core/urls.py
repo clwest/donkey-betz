@@ -4025,6 +4025,33 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 819: Deliverables Marketplace API
+# =========================================================================
+from core.views_deliverables import (
+    list_deliverables,
+    get_deliverable,
+    save_deliverable,
+    unsave_deliverable,
+    clone_deliverable,
+    templateize_deliverable,
+    export_deliverable,
+    get_deliverable_stats,
+    get_deliverable_types,
+)
+
+urlpatterns += [
+    path('api/deliverables/', list_deliverables, name='deliverables-list'),
+    path('api/deliverables/stats/', get_deliverable_stats, name='deliverables-stats'),
+    path('api/deliverables/types/', get_deliverable_types, name='deliverables-types'),
+    path('api/deliverables/<uuid:deliverable_id>/', get_deliverable, name='deliverable-detail'),
+    path('api/deliverables/<uuid:deliverable_id>/save/', save_deliverable, name='deliverable-save'),
+    path('api/deliverables/<uuid:deliverable_id>/unsave/', unsave_deliverable, name='deliverable-unsave'),
+    path('api/deliverables/<uuid:deliverable_id>/clone/', clone_deliverable, name='deliverable-clone'),
+    path('api/deliverables/<uuid:deliverable_id>/templateize/', templateize_deliverable, name='deliverable-templateize'),
+    path('api/deliverables/<uuid:deliverable_id>/export/', export_deliverable, name='deliverable-export'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
