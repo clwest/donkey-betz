@@ -1,4 +1,4 @@
-# Session 815 - Continue Platform Operations
+# Session 815 - UI Rework for New System Architecture
 
 **Previous Session:** 814 (Documentation Architecture + Governance Framework)
 **Date:** January 24, 2026
@@ -6,85 +6,137 @@
 
 ---
 
-## SESSION 814 COMPLETED - Documentation Architecture & Human Supremacy
+## PRIMARY GOAL: Complete UI Rework
 
-### New Documentation System
+The system architecture has evolved significantly. The UI needs to reflect:
 
-Created comprehensive `/docs/` architecture that serves as the system's institutional brain:
+1. **Governance Framework** - Human authority, kill switches, escalation paths
+2. **Mission Focus** - Q1 2026: $10k MRR goal
+3. **Canon System** - Promote best outputs to locked knowledge
+4. **Playbooks** - Gold standard operational guides
+5. **Cost Consciousness** - LLM cost tracking and optimization
 
+---
+
+## New Architecture to Reflect in UI
+
+### Documentation System (`/docs/`)
 ```
 docs/
-├── governance/              # Authority Framework
-│   └── SYSTEM_OWNER.md     # Chris = final authority, kill switches
-├── missions/                # Agent Focus
-│   └── CURRENT_MISSION.md  # Q1 2026: $10k MRR focus
-├── canon/                   # Locked Knowledge
-│   └── creative/DAVINCI_RESOLVE_WORKFLOW.md  # First canon doc
-└── playbooks/               # Gold Standard Guides
+├── governance/           # Authority Framework
+│   └── SYSTEM_OWNER.md  # Chris = final authority
+├── missions/             # Agent Focus
+│   └── CURRENT_MISSION.md
+├── canon/                # Locked Knowledge
+│   ├── INDEX.md
+│   └── creative/DAVINCI_RESOLVE_WORKFLOW.md
+└── playbooks/            # Gold Standard Guides
     ├── creator/
     ├── devops/
     ├── marketing/
     └── development/
 ```
 
-### Key Documents Created
+### Key Concepts for UI
 
-| Document | Purpose |
-|----------|---------|
-| `DOCUMENTATION_ARCHITECTURE.md` | Master architecture for docs system |
-| `governance/SYSTEM_OWNER.md` | Human authority, emergency procedures, escalation |
-| `missions/CURRENT_MISSION.md` | $10k MRR Q1 2026 focus, cost efficiency |
-| `canon/INDEX.md` | Registry of canonical documents |
-
-### DocsContextBuilder Now Injects Governance
-
-All agents automatically receive:
-- `SYSTEM_OWNER.md` - Human authority framework
-- `CURRENT_MISSION.md` - What agents should focus on
-
-### PRs Merged (Session 814)
-
-| PR | Description |
-|----|-------------|
-| **#124** | feat: Blog delete functionality |
-| **#125** | feat: Technical documents save to workspace via SKIN layer |
-| **#126** | fix: Workspace write key mismatch (`'written'` not `'success'`) |
-| **#127** | feat: Documentation architecture with governance & focus layers |
-
-### Generated Technical Documents
-
-**Stage 2 Revision** - Added human supremacy:
-- System Owner: Chris (final authority)
-- Emergency override procedures (SKIN lock, agent quarantine)
-- Escalation paths
-
-**Stage 3 Evaluation Protocol** - Metrics for HUMAN EXPERIENCE:
-- Decision Latency: ≤ 2x pre-governance speed
-- False Blocks: < 20% false positive rate
-- Cost Impact: Stable or decreasing
-- Cognitive Load (Chris): Reduced mental overhead
-
-**Kill Switch Triggers:**
-- Cognitive load increases 2 consecutive weeks
-- False block rate > 30%
-- Critical opportunities missed
-- System Owner feels "it's too much"
+| Concept | Description | UI Need |
+|---------|-------------|---------|
+| **System Owner** | Chris has final authority | Override buttons, kill switches |
+| **Current Mission** | $10k MRR Q1 2026 | Mission dashboard, progress tracking |
+| **Canon** | Locked authoritative docs | "Promote to Canon" button, canon browser |
+| **Playbooks** | Reusable operational guides | Playbook browser, creation flow |
+| **Kill Switches** | Emergency halt procedures | Emergency controls panel |
+| **Cognitive Load** | Reduce Chris's mental overhead | Simplified decision UI |
 
 ---
 
-## Current Mission: Q1 2026
+## UI Pages to Review/Rework
 
-> **Transform Donkey Betz from a powerful AI platform into a focused, revenue-generating product.**
+### High Priority
+| Page | Current State | Needed Changes |
+|------|---------------|----------------|
+| **Dashboard** | Generic stats | Add mission progress, cost tracking, canon count |
+| **Human Interface** | Decision review | Add "Promote to Canon" action, mission alignment indicators |
+| **Docs Index** | File browser | Add governance/missions/canon sections prominently |
+| **Control Center** | System controls | Add kill switch buttons, emergency procedures |
 
-**Goal:** $10,000 MRR by end of Q1 2026
+### Medium Priority
+| Page | Current State | Needed Changes |
+|------|---------------|----------------|
+| **Blogs Page** | List view | Category tabs (blog/audit/technical_document) |
+| **Workspace** | File management | Show canon-worthy outputs, playbook candidates |
+| **Neural Orchestra** | Agent visualization | Show mission alignment, cost per agent |
 
-**Focus Areas:**
-1. Quality over quantity
-2. Cost consciousness (< $50/day LLM costs)
-3. Human experience first
-4. Compound value (reusable assets)
+### Consider Adding
+| New Page/Feature | Purpose |
+|------------------|---------|
+| **Mission Control** | Single view of mission progress, key metrics |
+| **Canon Browser** | Browse and manage canonical knowledge |
+| **Playbook Studio** | Create and manage operational playbooks |
+| **Cost Dashboard** | LLM costs, budget tracking, optimization |
 
-See `docs/missions/CURRENT_MISSION.md` for full details.
+---
+
+## Current Mission Metrics (for UI)
+
+| Metric | Target | Current | Status |
+|--------|--------|---------|--------|
+| Monthly Revenue | $10,000 | TBD | 🟡 |
+| Daily LLM Cost | < $50 | TBD | 🟡 |
+| Canon Docs | 20+ | 1 | 🔴 |
+| Playbooks | 10+ | 0 | 🔴 |
+| Cognitive Load | Decreasing | TBD | 🟡 |
+
+---
+
+## Session 814 Summary
+
+### PRs Merged
+| PR | Description |
+|----|-------------|
+| **#124** | Blog delete functionality |
+| **#125** | Technical documents save to workspace via SKIN layer |
+| **#126** | Workspace write key fix |
+| **#127** | Documentation architecture with governance & focus layers |
+| **#128** | Session handoff |
+
+### Key Files Created
+- `docs/DOCUMENTATION_ARCHITECTURE.md` - Master architecture
+- `docs/governance/SYSTEM_OWNER.md` - Human authority framework
+- `docs/missions/CURRENT_MISSION.md` - Q1 2026 mission
+- `docs/canon/INDEX.md` - Canon registry
+- `docs/canon/creative/DAVINCI_RESOLVE_WORKFLOW.md` - First canon doc
+
+### DocsContextBuilder Updates
+All agents now receive governance and mission context automatically.
+
+---
+
+## Quick Reference
+
+### Start Platform
+```bash
+make start && make celery
+```
+
+### Frontend Development
+```bash
+cd frontend && npm run dev
+```
+
+### Key Documents
+```bash
+cat docs/governance/SYSTEM_OWNER.md
+cat docs/missions/CURRENT_MISSION.md
+cat docs/DOCUMENTATION_ARCHITECTURE.md
+```
+
+### Emergency Commands
+```bash
+python manage.py skin_lock --all      # Halt workspace writes
+python manage.py quarantine_agent --name <Agent>
+make stop-celery                       # Stop all tasks
+```
 
 ---
 
@@ -92,65 +144,12 @@ See `docs/missions/CURRENT_MISSION.md` for full details.
 
 | Session | Focus |
 |---------|-------|
-| **814** | Documentation Architecture + Governance Framework + Human Supremacy |
+| **814** | Documentation Architecture + Governance + Human Supremacy |
 | **813** | SKIN Layer Audit + Workspace Output Fix |
 | **812** | Content Production Teams + Persona Advisory |
-| **811** | AI World Conversation Enhancement - Dreams, Actions, Memories |
-| **810** | MASSIVE Celery Beat Fix - 60 Tasks Restored |
-| **809** | Production vs Local Investigation - ROOT CAUSE FOUND |
+| **811** | AI World Conversation Enhancement |
+| **810** | Celery Beat Fix - 60 Tasks Restored |
 
 ---
 
-## QUICK REFERENCE
-
-### Start Platform
-```bash
-make start && make celery
-```
-
-### Key Documents to Read
-```bash
-# System authority
-cat docs/governance/SYSTEM_OWNER.md
-
-# Current mission
-cat docs/missions/CURRENT_MISSION.md
-
-# Canon registry
-cat docs/canon/INDEX.md
-```
-
-### Emergency Commands
-```bash
-# SKIN lock - halt all workspace writes
-python manage.py skin_lock --all
-
-# Agent quarantine
-python manage.py quarantine_agent --name <AgentName>
-
-# Stop all Celery
-make stop-celery
-```
-
-### Regenerate Docs Index
-```bash
-python manage.py build_docs_index
-```
-
----
-
-## NEXT PRIORITIES
-
-### Immediate
-1. **Populate playbooks** - Move best agent outputs to playbook folders
-2. **Promote to canon** - Review generated Stage 2/3 docs for promotion
-3. **Verify governance injection** - Test that agents receive SYSTEM_OWNER.md
-
-### Strategic
-1. **Mission metrics dashboard** - Track $10k MRR progress
-2. **Cost tracking visibility** - Monitor LLM costs against targets
-3. **Canon promotion UI** - "Promote to Canon" button in Human Interface
-
-### Technical
-1. Workspace write works via web UI (requires active workspace)
-2. SelfBlog category field ready but not yet used in UI
+**START HERE:** Review current frontend pages and plan UI rework to reflect new governance, mission, and canon architecture.
