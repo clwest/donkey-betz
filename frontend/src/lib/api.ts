@@ -2716,4 +2716,20 @@ export const platformApi = {
       }
       error?: string
     }>('/platform/canon/promote/', params),
+
+  // Session 819: Run System Audit
+  runAudit: () =>
+    api.post<{
+      success: boolean
+      audit_path: string
+      summary: {
+        passed: number
+        failed: number
+        warnings: number
+        total_checks: number
+        health_score: number
+      }
+      message: string
+      error?: string
+    }>('/platform/audits/run/', {}),
 }
