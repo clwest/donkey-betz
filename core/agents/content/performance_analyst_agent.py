@@ -63,7 +63,7 @@ class PerformanceAnalystAgent(BaseAgent):
 
     name = "PerformanceAnalystAgent"
 
-    system_prompt = """You are the Performance Analyst Agent - you use data to guide content decisions.
+    system_prompt = """You are the Performance Analyst Agent - you analyze content performance data to guide decisions.
 
 Your job is to:
 1. ANALYZE HISTORY - What worked before for this channel
@@ -71,17 +71,11 @@ Your job is to:
 3. PREDICT PERFORMANCE - Estimate how a proposed topic will do
 4. PROVIDE CONFIDENCE - How sure are we based on data
 
-You use:
-- Channel's TopicPerformance records (which topics worked)
-- Episode performance history (views, engagement, retention)
-- Pattern analysis (what characteristics predict success)
-- Confidence scores (how much data supports the prediction)
-
-When evaluating a proposed topic, you provide:
-- Historical precedent (similar topics we've done)
-- Performance prediction (estimated views/engagement)
-- Confidence level (how sure we are)
-- Data-driven recommendation (supported by evidence)
+WORKFLOW:
+1. First, use list_available_channels to see what channels exist
+2. If no channel_id provided, analyze the most active channel
+3. Use get_topic_performance_history, get_success_patterns, predict_topic_performance
+4. Compile findings into a structured report
 
 You argue based on EVIDENCE, not opinions:
 - "Topic X historically gets 30% more views"
@@ -89,15 +83,31 @@ You argue based on EVIDENCE, not opinions:
 - "Audience retention is 50% higher for Z format"
 - "We have high confidence because we've tested this 10 times"
 
-You're the voice of reason in debates - neither blindly trendy nor contrarian, just data-driven.
-
-CRITICAL: Always use tools to get real performance data. Never make up statistics."""
+You're the voice of reason - neither blindly trendy nor contrarian, just data-driven.
+Always use tools to get real performance data. Never make up statistics."""
 
     description = "Analyzes historical performance to guide content decisions"
 
     def _get_available_tools(self) -> List[Dict[str, Any]]:
         """Define GPT tools for performance analysis"""
         return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_available_channels",
+                    "description": "List all available content channels in the system. Use this first if no channel_id is provided to discover what channels exist.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of channels to return (default: 10)"
+                            }
+                        },
+                        "required": []
+                    }
+                }
+            },
             {
                 "type": "function",
                 "function": {
@@ -325,7 +335,9 @@ CRITICAL: Always use tools to get real performance data. Never make up statistic
     def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a tool and return results"""
         try:
-            if tool_name == "get_topic_performance_history":
+            if tool_name == "list_available_channels":
+                return self._list_available_channels(tool_input)
+            elif tool_name == "get_topic_performance_history":
                 return self._get_topic_performance_history(tool_input)
             elif tool_name == "predict_topic_performance":
                 return self._predict_topic_performance(tool_input)
@@ -350,6 +362,39 @@ CRITICAL: Always use tools to get real performance data. Never make up statistic
     # =========================================================================
     # TOOL IMPLEMENTATIONS
     # =========================================================================
+
+    def _list_available_channels(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
+        """List all available content channels in the system."""
+        from core.models import ContentChannel
+
+        limit = tool_input.get('limit', 10)
+
+        channels = ContentChannel.objects.all().order_by('-total_episodes_created')[:limit]
+
+        if not channels:
+            return {
+                "channels_found": 0,
+                "message": "No content channels found in the system",
+                "channels": []
+            }
+
+        channel_list = []
+        for channel in channels:
+            channel_list.append({
+                "id": str(channel.id),
+                "name": channel.name,
+                "platform": channel.platform,
+                "total_episodes": channel.total_episodes_created,
+                "total_views": channel.total_views,
+                "avg_retention_rate": float(channel.avg_retention_rate),
+                "is_active": channel.is_active
+            })
+
+        return {
+            "channels_found": len(channel_list),
+            "channels": channel_list,
+            "recommendation": f"Most active channel: {channel_list[0]['name']} ({channel_list[0]['total_episodes']} episodes)" if channel_list else "No channels available"
+        }
 
     def _get_topic_performance_history(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Get historical performance for similar topics"""
