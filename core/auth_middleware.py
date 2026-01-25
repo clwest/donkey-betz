@@ -363,6 +363,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/platform/audits/',  # System audits browser
         '/api/platform/doc-content/',  # Document content viewer
         '/api/deliverables/',  # Deliverables marketplace
+
+        # Session 819: Audit Tracking System APIs (read-only endpoints)
+        '/api/audit-tracking/findings/',  # Findings list and summary
+        '/api/audit-tracking/reports/',  # Audit reports list
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
