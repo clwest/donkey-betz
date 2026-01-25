@@ -354,7 +354,7 @@ class AutonomousRemediationOrchestrator:
     # PHASE 2: ASSIGNMENT
     # =========================================================================
 
-    def assign_open_findings(self, priority_filter: List[str] = None) -> Dict[str, Any]:
+    def assign_open_findings(self, priority_filter: List[str] = None, limit: int = None) -> Dict[str, Any]:
         """
         Phase 2: Assign open findings to appropriate agents.
 
@@ -365,6 +365,7 @@ class AutonomousRemediationOrchestrator:
 
         Args:
             priority_filter: Only assign findings with these priorities (e.g., ['P0', 'P1'])
+            limit: Maximum number of findings to assign (default: no limit)
 
         Returns:
             Dict with assignment statistics
@@ -384,11 +385,16 @@ class AutonomousRemediationOrchestrator:
             priority__in=priority_filter
         ).order_by('priority', '-created_at')
 
+        # Apply limit if specified
+        if limit:
+            open_findings = open_findings[:limit]
+
         results = {
-            'total_open': open_findings.count(),
+            'total_open': AuditFinding.objects.filter(status='open', assigned_agent='').count(),
             'assigned': 0,
             'skipped': 0,
             'assignments': [],
+            'limit_applied': limit,
         }
 
         for finding in open_findings:
