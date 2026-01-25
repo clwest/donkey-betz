@@ -10,7 +10,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Count
 from django.utils import timezone
 from typing import Dict, Any
 import os
@@ -27788,3 +27788,117 @@ def run_specialty_agents():
         return tasks.get(agent, f'Perform your primary function and report insights')
 
     return _run_agent_group('SPECIALTY', agents, task_gen, '🔧')
+
+
+# =============================================================================
+# Session 819: Mythology System Tasks
+# =============================================================================
+
+@shared_task
+def update_mythology_pattern_statistics():
+    """
+    Session 819: Update MythPattern frequency counts and prevention rates.
+
+    Runs daily at 4am to aggregate statistics from MythologyEvents.
+    """
+    from mythology.models import MythPattern, MythologyEvent
+    from django.db.models import Count
+
+    logger.info("🛡️ Updating mythology pattern statistics...")
+
+    try:
+        # Get event counts by pattern type
+        event_counts = MythologyEvent.objects.values('event_type').annotate(
+            count=Count('id')
+        )
+
+        updated = 0
+        for item in event_counts:
+            pattern = MythPattern.objects.filter(pattern_type=item['event_type']).first()
+            if pattern:
+                pattern.frequency_count = item['count']
+                pattern.last_seen = timezone.now()
+                pattern.save(update_fields=['frequency_count', 'last_seen', 'updated_at'])
+                updated += 1
+
+        logger.info(f"✅ Updated {updated} mythology patterns with statistics")
+        return {'updated_patterns': updated}
+
+    except Exception as e:
+        logger.error(f"❌ Error updating mythology pattern statistics: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_flagged_hallucinations():
+    """
+    Session 819: Process and analyze flagged hallucinations.
+
+    Runs every 6 hours to review flagged content and update statistics.
+    """
+    from mythology.models import FlaggedHallucination, MythologyAlert
+
+    logger.info("🔍 Processing flagged hallucinations...")
+
+    try:
+        # Get unprocessed flagged content
+        pending = FlaggedHallucination.objects.filter(
+            status='pending'
+        ).select_related('flagged_by')[:100]
+
+        processed = 0
+        for flag in pending:
+            # Auto-process based on confidence score
+            if hasattr(flag, 'confidence_score') and flag.confidence_score > 0.9:
+                flag.status = 'confirmed'
+                flag.save(update_fields=['status', 'updated_at'])
+                processed += 1
+
+        # Count by severity
+        severity_counts = FlaggedHallucination.objects.values('severity').annotate(
+            count=Count('id')
+        )
+
+        logger.info(f"✅ Processed {processed} flagged hallucinations")
+        return {
+            'processed': processed,
+            'pending': pending.count(),
+            'by_severity': {s['severity']: s['count'] for s in severity_counts}
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error processing flagged hallucinations: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def calculate_guard_effectiveness():
+    """
+    Session 819: Calculate effectiveness rates for mythology guards.
+
+    Runs daily at 4am to update guard statistics.
+    """
+    from mythology.models import MythologyGuard, MythologyEvent
+
+    logger.info("📊 Calculating mythology guard effectiveness...")
+
+    try:
+        guards = MythologyGuard.objects.filter(is_active=True)
+        updated = 0
+
+        for guard in guards:
+            # Calculate effectiveness based on events prevented vs triggered
+            if guard.times_triggered > 0:
+                guard.effectiveness_rate = guard.times_successful / guard.times_triggered
+                guard.save(update_fields=['effectiveness_rate', 'updated_at'])
+                updated += 1
+
+        logger.info(f"✅ Updated effectiveness for {updated} guards")
+        return {
+            'updated_guards': updated,
+            'total_active_guards': guards.count()
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error calculating guard effectiveness: {e}")
+        return {'error': str(e)}
