@@ -353,6 +353,15 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/teams/',  # Agent teams list and management
         '/api/collaboration/history/',  # Collaboration history for Network tab
         '/api/agent-collab/messages/',  # Inter-agent messages for Messages tab
+
+        # Session 819: Platform Command Center APIs (read-only for WorkspacePage)
+        '/api/platform/mission/',  # Mission progress
+        '/api/platform/metrics/',  # Revenue and cost metrics
+        '/api/platform/governance/',  # Governance controls status
+        '/api/platform/canon/',  # Canon documents
+        '/api/platform/playbooks/',  # Playbooks
+        '/api/platform/audits/',  # System audits (list)
+        '/api/platform/doc-content/',  # Documentation content viewer
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
