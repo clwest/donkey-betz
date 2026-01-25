@@ -1,6 +1,6 @@
 # Session 815 - Continue Platform Operations
 
-**Previous Session:** 814 (Spider Search Performance Fix + Content Production Verified)
+**Previous Session:** 814 (Spider Search Fix + Blogs Page + Agent Docs Injection)
 **Date:** January 24, 2026
 **Status:** 75 Core + 139 Persona Agents | 45 Frontend Pages | ALL BODY SYSTEMS GREEN | **228 Active Celery Beat Tasks**
 
@@ -8,7 +8,7 @@
 
 ## SESSION 814 COMPLETED
 
-### Critical Performance Fix: Spider Search
+### 1. Spider Search Performance Fix (PR #115, #116)
 
 **Problem:** Content production research phase took **14+ minutes**, making the platform impractical.
 
@@ -16,37 +16,62 @@
 - `SpiderIntelligenceService` - 7 methods iterated through ALL SpiderData entries
 - `SpiderSemanticSearch.semantic_search()` - Generated embeddings on-the-fly for all matches
 
-**Fix (PR #115):**
+**Fix:**
 - Added `MAX_ENTRIES_TO_SCAN = 300` to SpiderIntelligenceService (7 loops)
 - Added `MAX_ENTRIES_TO_SCAN = 200` to SpiderSemanticSearch
-- Most relevant data is in recent entries anyway (ordered by `-created_at`)
-
-### Performance Improvement
 
 | Phase | Before | After |
 |-------|--------|-------|
 | **Research** | 14+ minutes | **47.7 seconds** |
 
-### Content Production Verified Working
+### 2. Blogs Page Added (PR #117)
 
-Ran full blog post production:
-```
-✅ strategy_advice completed (10,000ms)
-✅ research completed (47,769ms)  ← Was 14+ minutes!
-✅ blog_content completed (51,585ms)
-🔧 hero_image creating via ImageAgent...
-```
+Created dedicated `/blogs` page for browsing AI-generated blog posts:
+- New `BlogsPage.tsx` with search, pagination, and grid layout
+- Added "Blogs" link to sidebar with BookOpen icon
+- Route: `/blogs` for list, `/blog/:blogId` for individual posts
 
-### PRs Merged/Created
+### 3. Critical Docs Injection (PR #118, #119)
 
-- **PR #114**: fix(Session 814): Fix 'Agent' object has no attribute 'role' error
-- **PR #115**: perf(Session 814): Fix slow spider search causing 14+ minute research phase
+**Problem:** Agents performing self-audits produced generic documentation instead of system-specific content because they didn't receive CLAUDE.md or 00-START-NEXT-SESSION.md.
+
+**Fix - DocsContextBuilder (PR #118):**
+- Added `CRITICAL_DOCS` list with CLAUDE.md (300 lines) and 00-START-NEXT-SESSION.md (200 lines)
+- Added `_get_critical_docs_content()` method to always read these files
+- Added `include_critical_docs=True` parameter (default) to `build_context_for_agent()`
+
+**Fix - TechnicalDocumentAgent (PR #119):**
+- Added `_get_critical_system_context()` method that calls DocsContextBuilder
+- Updated prompt instructions to REQUIRE using specific system details
+- Increased max_tokens from 4000 to 8000 for large context + response
+
+**Before (generic):**
+> "The AI Agent Architecture requires a self-audit to ensure alignment with organizational goals"
+
+**After (system-specific):**
+> "This audit is critical... which includes **74 agents, 77 spiders, and 228 Celery tasks**"
+
+### 4. Docs Index Regenerated (PR #120)
+
+- Total docs: 1553 (+3 audit files)
+- Added Session 814 audit files with before/after comparisons
+
+### PRs Merged
+
+| PR | Description |
+|----|-------------|
+| **#115** | perf: Fix slow spider search (14+ min → 47s) |
+| **#116** | docs: Session 814 handoff |
+| **#117** | feat: Add dedicated Blogs page |
+| **#118** | fix: DocsContextBuilder critical docs injection |
+| **#119** | fix: TechnicalDocumentAgent critical docs injection |
+| **#120** | docs: Regenerate docs index |
 
 ---
 
 ## Content Production Now Viable
 
-With the performance fix, content production is now practical for regular use:
+With the performance fix, content production is practical for regular use:
 
 ```bash
 # Blog post production (~2-3 minutes total)
@@ -72,11 +97,21 @@ python manage.py produce_content social_campaign "Product launch"
 
 ---
 
+## Agent Docs Injection Now Active
+
+Any agent that calls `DocsContextBuilder.build_context_for_agent()` now receives:
+- Full content of CLAUDE.md (system stats, architecture, recent sessions)
+- Full content of 00-START-NEXT-SESSION.md (current priorities)
+
+This enables agents to produce system-aware documentation instead of generic content.
+
+---
+
 ## Previous Sessions
 
 | Session | Focus |
 |---------|-------|
-| **814** | Spider Search Performance Fix (14+ min → 47s) |
+| **814** | Spider Search Fix + Blogs Page + Agent Docs Injection |
 | **813** | SKIN Layer Audit + Workspace Output Fix |
 | **812** | Content Production Teams + Persona Advisory |
 | **811** | AI World Conversation Enhancement - Dreams, Actions, Memories |
@@ -99,6 +134,11 @@ python manage.py produce_content --list
 python manage.py produce_content blog_post "Topic" --json
 ```
 
+### View Blogs
+```
+http://localhost:8000/ai-studio/blogs
+```
+
 ### Workspace Operations
 ```bash
 # Check workspace status
@@ -115,7 +155,7 @@ ls -la financial/ development/ security/
 ---
 
 **NEXT PRIORITIES:**
-1. Merge PR #115 (spider search performance)
-2. Run full content production end-to-end to verify all 9 assets complete
-3. Test other content types (podcast, newsletter, video)
-4. Consider caching frequently-used spider queries for further optimization
+1. Run full content production end-to-end to verify all 9 assets complete
+2. Test other content types (podcast, newsletter, video)
+3. Consider caching frequently-used spider queries for further optimization
+4. Extend critical docs injection to other agents that bypass BaseAgent's prompt building
