@@ -80,14 +80,20 @@ class Command(BaseCommand):
         parser.add_argument(
             '--no-commit',
             action='store_true',
-            help='Disable auto-commit of generated code (Session 822)',
+            help='Disable auto-PR creation for generated code (Session 823)',
+        )
+        parser.add_argument(
+            '--no-pr',
+            action='store_true',
+            help='Alias for --no-commit: disable auto-PR creation',
         )
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         limit = options['limit']
         verbose = options['verbose']
-        auto_commit = not options['no_commit']  # Session 822: SKIN layer auto-commit
+        # Session 823: Changed from auto-commit to auto-PR
+        auto_pr = not (options['no_commit'] or options.get('no_pr', False))
 
         # Determine which phases to run
         phases = {
@@ -107,12 +113,16 @@ class Command(BaseCommand):
                 self.style.WARNING("DRY RUN - no changes will be made")
             )
 
-        if auto_commit:
+        if auto_pr:
             self.stdout.write(
-                self.style.NOTICE("SKIN Layer: Auto-commit enabled (use --no-commit to disable)")
+                self.style.NOTICE("SKIN Layer: Auto-PR enabled (use --no-pr to disable)")
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING("SKIN Layer: Auto-PR disabled (files will be written but no PR created)")
             )
 
-        orchestrator = AutonomousRemediationOrchestrator(auto_commit=auto_commit)
+        orchestrator = AutonomousRemediationOrchestrator(auto_commit=auto_pr)
 
         if phases['status'] or run_full_cycle:
             self._show_status(orchestrator)

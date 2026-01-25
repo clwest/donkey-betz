@@ -393,19 +393,19 @@ class AutonomousRemediationOrchestrator:
             'total_failed': len(failed_files)
         }
 
-        # Auto-commit if enabled and files were written
+        # Auto-PR if enabled and files were written
         if self.auto_commit and written_files:
-            commit_result = self._auto_commit_changes(
+            pr_result = self._create_pr_for_changes(
                 workspace=workspace,
                 files=written_files,
                 task=task,
                 agent_name=agent_name
             )
-            result['commit'] = commit_result
+            result['pr'] = pr_result
 
         return result
 
-    def _auto_commit_changes(
+    def _create_pr_for_changes(
         self,
         workspace,
         files: List[Dict],
@@ -413,31 +413,66 @@ class AutonomousRemediationOrchestrator:
         agent_name: str
     ) -> Dict[str, Any]:
         """
-        Session 822: Auto-commit changes made by agents.
+        Session 823: Create a PR for agent-generated changes.
 
-        Creates a git commit with the remediation details.
+        Instead of committing directly to main (which is blocked by pre-commit
+        hooks for safety), this method:
+        1. Creates a feature branch
+        2. Commits the changes
+        3. Pushes the branch
+        4. Creates a PR for human review
+        5. Returns to the original branch
+
+        This enables autonomous code generation while maintaining human oversight.
         """
+        import uuid
+
         try:
             root_path = Path(workspace.root_path)
+            finding_id = str(task.finding.id)[:8] if task.finding else 'unknown'
+            finding_title = task.finding.title[:40] if task.finding else 'Unknown finding'
 
-            # Stage the files
-            file_paths = [f['path'] for f in files]
-            stage_cmd = ['git', 'add'] + file_paths
+            # Generate unique branch name
+            branch_name = f"auto-remediate/{finding_id}-{uuid.uuid4().hex[:6]}"
 
+            # Step 1: Get current branch to return to later
             result = subprocess.run(
-                stage_cmd,
+                ['git', 'branch', '--show-current'],
+                cwd=str(root_path),
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            original_branch = result.stdout.strip() or 'main'
+
+            # Step 2: Create and switch to feature branch
+            result = subprocess.run(
+                ['git', 'checkout', '-b', branch_name],
                 cwd=str(root_path),
                 capture_output=True,
                 text=True,
                 timeout=30
             )
-
             if result.returncode != 0:
-                return {'committed': False, 'error': result.stderr}
+                return {'pr_created': False, 'error': f'Failed to create branch: {result.stderr}'}
 
-            # Create commit message
-            finding_title = task.finding.title[:50] if task.finding else 'Unknown finding'
-            commit_msg = f"""fix(auto-remediate): {finding_title}
+            self.logger.info(f"  🌿 Created branch: {branch_name}")
+
+            try:
+                # Step 3: Stage the files
+                file_paths = [f['path'] for f in files]
+                result = subprocess.run(
+                    ['git', 'add'] + file_paths,
+                    cwd=str(root_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode != 0:
+                    raise Exception(f'Failed to stage files: {result.stderr}')
+
+                # Step 4: Create commit
+                commit_msg = f"""fix(auto-remediate): {finding_title}
 
 Auto-remediation by {agent_name}
 Finding ID: {task.finding.id if task.finding else 'N/A'}
@@ -448,30 +483,90 @@ Files modified:
 
 Co-Authored-By: {agent_name} <auto@system>
 """
+                result = subprocess.run(
+                    ['git', 'commit', '-m', commit_msg],
+                    cwd=str(root_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode != 0:
+                    raise Exception(f'Failed to commit: {result.stderr}')
 
-            # Commit
-            commit_cmd = ['git', 'commit', '-m', commit_msg]
-            result = subprocess.run(
-                commit_cmd,
-                cwd=str(root_path),
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+                self.logger.info(f"  ✅ Committed changes")
 
-            if result.returncode == 0:
-                self.logger.info(f"  ✅ Auto-committed: {finding_title}")
+                # Step 5: Push the branch
+                result = subprocess.run(
+                    ['git', 'push', '-u', 'origin', branch_name],
+                    cwd=str(root_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                if result.returncode != 0:
+                    raise Exception(f'Failed to push: {result.stderr}')
+
+                self.logger.info(f"  📤 Pushed to origin/{branch_name}")
+
+                # Step 6: Create PR using gh CLI
+                pr_title = f"fix(auto-remediate): {finding_title}"
+                pr_body = f"""## Auto-Remediation PR
+
+**Agent:** {agent_name}
+**Finding:** {task.finding.title if task.finding else 'N/A'}
+**Finding ID:** {task.finding.id if task.finding else 'N/A'}
+**Task ID:** {task.id}
+
+### Files Modified
+{chr(10).join('- `' + f['path'] + '`' for f in files)}
+
+### Description
+This PR was automatically generated by the autonomous remediation system.
+Please review the changes before merging.
+
+---
+🤖 Generated by Auto-Remediation System
+"""
+                result = subprocess.run(
+                    ['gh', 'pr', 'create',
+                     '--title', pr_title,
+                     '--body', pr_body,
+                     '--base', 'main'],
+                    cwd=str(root_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+
+                pr_url = None
+                if result.returncode == 0:
+                    pr_url = result.stdout.strip()
+                    self.logger.info(f"  🎉 Created PR: {pr_url}")
+                else:
+                    self.logger.warning(f"  ⚠️ PR creation failed: {result.stderr}")
+
                 return {
-                    'committed': True,
-                    'message': commit_msg.split('\n')[0],
-                    'files': len(files)
+                    'pr_created': pr_url is not None,
+                    'pr_url': pr_url,
+                    'branch': branch_name,
+                    'files': len(files),
+                    'commit_message': commit_msg.split('\n')[0]
                 }
-            else:
-                return {'committed': False, 'error': result.stderr}
+
+            finally:
+                # Step 7: Always return to original branch
+                subprocess.run(
+                    ['git', 'checkout', original_branch],
+                    cwd=str(root_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                self.logger.info(f"  ↩️ Returned to {original_branch}")
 
         except Exception as e:
-            self.logger.error(f"  ❌ Auto-commit failed: {e}")
-            return {'committed': False, 'error': str(e)}
+            self.logger.error(f"  ❌ PR creation failed: {e}")
+            return {'pr_created': False, 'error': str(e)}
 
     # =========================================================================
     # PHASE 1: DISCOVERY
@@ -1224,8 +1319,11 @@ The finding should be resolved after your changes. The verification step will ch
                 remediation_notes = result.message[:500] if result.message else ''
                 if skin_result and skin_result.get('written'):
                     remediation_notes += f"\n\nFiles written: {skin_result.get('total_written', 0)}"
-                    if skin_result.get('commit', {}).get('committed'):
-                        remediation_notes += " (auto-committed)"
+                    pr_info = skin_result.get('pr', {})
+                    if pr_info.get('pr_created'):
+                        remediation_notes += f"\n\nPR created: {pr_info.get('pr_url', 'unknown')}"
+                    elif pr_info.get('error'):
+                        remediation_notes += f"\n\nPR creation failed: {pr_info.get('error')}"
                 task.finding.remediation_notes = remediation_notes
                 task.finding.save()
 
