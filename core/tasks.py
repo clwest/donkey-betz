@@ -27905,6 +27905,130 @@ def calculate_guard_effectiveness():
 
 
 # =============================================================================
+# Session 823: Periodic System Audit Task
+# =============================================================================
+
+@shared_task
+def run_system_self_audit():
+    """
+    Session 823: Run a comprehensive system self-audit.
+
+    Uses TechnicalDocumentAgent to analyze the current system state and
+    generate an audit report. The report is saved to docs/audits/ where
+    it will be discovered by the autonomous remediation system.
+
+    Runs weekly on Sundays at 3am.
+    """
+    import os
+    from datetime import datetime
+    from pathlib import Path
+
+    logger.info("📋 [SYSTEM AUDIT] Starting periodic system self-audit...")
+
+    try:
+        # Get current session number from CLAUDE.md
+        session_number = 823  # Default
+        claude_md_path = Path(__file__).parent.parent / 'CLAUDE.md'
+        if claude_md_path.exists():
+            content = claude_md_path.read_text()
+            import re
+            match = re.search(r'Session\s+(\d+)', content)
+            if match:
+                session_number = int(match.group(1))
+
+        # Import and run the TechnicalDocumentAgent
+        from core.agents.technical_document_agent import TechnicalDocumentAgent
+
+        agent = TechnicalDocumentAgent()
+
+        # Create the audit task
+        audit_task = f"""
+        Perform a comprehensive SYSTEM SELF-AUDIT of the Donkey Betz Platform.
+
+        Your task is to analyze the current system state and generate an audit report.
+        Use the system context provided (CLAUDE.md and 00-START-NEXT-SESSION.md) to:
+
+        1. VERIFY COMPONENT COUNTS:
+           - Count of agents (should be ~74)
+           - Count of spiders (should be ~77)
+           - Count of Celery tasks (should be ~234)
+           - Count of services
+
+        2. CHECK SYSTEM HEALTH:
+           - Are all body systems operational (HEART, LUNGS, BRAIN, etc.)?
+           - Are Celery workers running?
+           - Are spiders collecting data?
+
+        3. IDENTIFY GAPS:
+           - Missing functionality
+           - Disconnected components
+           - Incomplete integrations
+
+        4. RECOMMEND PRIORITIES:
+           - What should be fixed first?
+           - What can be deferred?
+
+        Output a formal audit report with findings categorized by priority (P0-P3).
+        Include specific file paths and line numbers where relevant.
+        """
+
+        context = {
+            'doc_type': 'analysis_report',
+            'stage': 4,
+            'topic': f'Session {session_number} System Self-Audit',
+            'classification': 'INTERNAL',
+            'is_system_audit': True,
+        }
+
+        result = agent.execute(task=audit_task, context=context)
+
+        if result.success and result.data:
+            # Save the audit report to docs/audits/
+            audit_dir = Path(__file__).parent.parent / 'docs' / 'audits'
+            audit_dir.mkdir(parents=True, exist_ok=True)
+
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            audit_filename = f'SYSTEM_SELF_AUDIT_{timestamp}.md'
+            audit_path = audit_dir / audit_filename
+
+            # Extract content from result
+            content = result.data.get('content', {})
+            full_text = content.get('full_text', '') if isinstance(content, dict) else str(content)
+
+            if full_text:
+                # Add header
+                header = f"""# System Self-Audit Report
+
+**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Session:** {session_number}
+**Agent:** TechnicalDocumentAgent
+**Type:** Automated Self-Audit
+
+---
+
+"""
+                audit_path.write_text(header + full_text)
+                logger.info(f"✅ [SYSTEM AUDIT] Saved audit to {audit_filename}")
+
+                return {
+                    'success': True,
+                    'audit_file': str(audit_path),
+                    'session': session_number,
+                }
+            else:
+                logger.warning("⚠️ [SYSTEM AUDIT] Agent returned no content")
+                return {'success': False, 'error': 'No audit content generated'}
+
+        else:
+            logger.error(f"❌ [SYSTEM AUDIT] Agent failed: {result.message}")
+            return {'success': False, 'error': result.message}
+
+    except Exception as e:
+        logger.error(f"❌ [SYSTEM AUDIT] Self-audit failed: {e}")
+        return {'error': str(e)}
+
+
+# =============================================================================
 # Session 820: Autonomous Remediation System Tasks
 # =============================================================================
 
