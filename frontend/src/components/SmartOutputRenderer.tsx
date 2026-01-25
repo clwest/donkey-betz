@@ -197,6 +197,107 @@ interface DebateResult {
   arguments?: { side: string; points: string[] }[]
 }
 
+// Session 820: Trend and Discussion interfaces for TopicMiner/TrendAnalysis output
+interface TrendItem {
+  topic?: string
+  title?: string
+  source?: string
+  relevance?: number
+  score?: number
+  mentions?: number
+  articles?: unknown[]
+}
+
+interface DiscussionItem {
+  title?: string
+  description?: string
+  url?: string
+  source?: string
+  category?: string
+  similarity?: number
+}
+
+// Session 820: Specialist delegation result (agent delegation patterns)
+interface SpecialistResult {
+  success?: boolean
+  specialist?: string
+  delegating_agent?: string
+  specialist_response?: string
+  specialist_data?: {
+    task?: string
+    tool_results?: ToolResult[]
+    [key: string]: unknown
+  }
+}
+
+// Session 820: Helper to unwrap nested specialist delegation patterns
+function unwrapSpecialistData(data: OutputData): {
+  trends: TrendItem[]
+  discussions: DiscussionItem[]
+  delegations: { specialist: string; task: string }[]
+  unwrappedTask?: string
+} {
+  const trends: TrendItem[] = []
+  const discussions: DiscussionItem[] = []
+  const delegations: { specialist: string; task: string }[] = []
+  let unwrappedTask: string | undefined
+
+  // Check for direct trends/discussions
+  if (data.trends && Array.isArray(data.trends)) {
+    trends.push(...data.trends)
+  }
+  if (data.discussions && Array.isArray(data.discussions)) {
+    discussions.push(...data.discussions)
+  }
+
+  // Check tool_results for specialist delegations
+  if (data.tool_results && Array.isArray(data.tool_results)) {
+    for (const tr of data.tool_results) {
+      const toolResult = tr as SpecialistResult
+
+      // Track delegation
+      if (toolResult.specialist) {
+        delegations.push({
+          specialist: toolResult.specialist,
+          task: toolResult.specialist_data?.task || 'Delegated task'
+        })
+      }
+
+      // Look for trends/discussions in specialist_data.tool_results
+      if (toolResult.specialist_data?.tool_results) {
+        for (const innerTr of toolResult.specialist_data.tool_results) {
+          const result = innerTr.result as Record<string, unknown> | undefined
+          if (result) {
+            if (result.trends && Array.isArray(result.trends)) {
+              trends.push(...result.trends)
+            }
+            if (result.discussions && Array.isArray(result.discussions)) {
+              discussions.push(...result.discussions)
+            }
+          }
+        }
+        // Get the task from specialist_data
+        if (toolResult.specialist_data.task) {
+          unwrappedTask = toolResult.specialist_data.task
+        }
+      }
+
+      // Also check direct result object
+      const directResult = tr.result as Record<string, unknown> | undefined
+      if (directResult) {
+        if (directResult.trends && Array.isArray(directResult.trends)) {
+          trends.push(...directResult.trends)
+        }
+        if (directResult.discussions && Array.isArray(directResult.discussions)) {
+          discussions.push(...directResult.discussions)
+        }
+      }
+    }
+  }
+
+  return { trends, discussions, delegations, unwrappedTask }
+}
+
 interface SmartOutputRendererProps {
   data: OutputData | string | null | undefined
   agentName?: string
@@ -540,6 +641,140 @@ function ToolResultsRenderer({ results }: { results: ToolResult[] }) {
   )
 }
 
+// Session 820: Trending Topics
+function TrendsRenderer({ trends }: { trends: TrendItem[] }) {
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-medium text-accent-amber flex items-center gap-2">
+        <TrendingUp className="w-4 h-4" />
+        Trending Topics ({trends.length})
+      </h4>
+      <div className="space-y-2">
+        {trends.slice(0, 15).map((trend, i) => (
+          <div key={i} className="p-3 bg-dark-card rounded-lg border border-dark-border">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white font-medium line-clamp-2">
+                  {trend.topic || trend.title || `Topic ${i + 1}`}
+                </p>
+                {trend.source && (
+                  <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-accent-cyan/20 text-accent-cyan rounded">
+                    {trend.source}
+                  </span>
+                )}
+              </div>
+              {(trend.relevance !== undefined || trend.score !== undefined) && (
+                <div className="flex-shrink-0 text-right">
+                  <div className="text-lg font-bold text-accent-amber">
+                    {((trend.relevance ?? trend.score ?? 0) * 100).toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-gray-500">relevance</div>
+                </div>
+              )}
+              {trend.mentions !== undefined && (
+                <div className="flex-shrink-0 text-right">
+                  <div className="text-lg font-bold text-accent-purple">
+                    {trend.mentions}
+                  </div>
+                  <div className="text-xs text-gray-500">mentions</div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {trends.length > 15 && (
+          <p className="text-xs text-gray-500 text-center">+ {trends.length - 15} more topics</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Session 820: Discussions/Articles
+function DiscussionsRenderer({ discussions }: { discussions: DiscussionItem[] }) {
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-medium text-accent-green flex items-center gap-2">
+        <Newspaper className="w-4 h-4" />
+        Related Discussions ({discussions.length})
+      </h4>
+      <div className="space-y-2">
+        {discussions.slice(0, 10).map((disc, i) => (
+          <div key={i} className="p-3 bg-dark-card rounded-lg border border-dark-border">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                {disc.url ? (
+                  <a
+                    href={disc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-white font-medium hover:text-accent-cyan transition-colors line-clamp-2 flex items-start gap-1"
+                  >
+                    {disc.title || 'Discussion'}
+                    <ExternalLink className="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-500" />
+                  </a>
+                ) : (
+                  <p className="text-sm text-white font-medium line-clamp-2">
+                    {disc.title || 'Discussion'}
+                  </p>
+                )}
+                {disc.description && (
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{disc.description}</p>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  {disc.source && (
+                    <span className="px-2 py-0.5 text-xs bg-accent-green/20 text-accent-green rounded">
+                      {disc.source}
+                    </span>
+                  )}
+                  {disc.category && (
+                    <span className="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">
+                      {disc.category}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {disc.similarity !== undefined && (
+                <div className="flex-shrink-0 text-right">
+                  <div className="text-sm font-bold text-accent-green">
+                    {(disc.similarity * 100).toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-gray-500">match</div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {discussions.length > 10 && (
+          <p className="text-xs text-gray-500 text-center">+ {discussions.length - 10} more discussions</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Session 820: Specialist Delegations
+function DelegationsRenderer({ delegations }: { delegations: { specialist: string; task: string }[] }) {
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-medium text-accent-purple flex items-center gap-2">
+        <Users className="w-4 h-4" />
+        Agent Delegations ({delegations.length})
+      </h4>
+      <div className="space-y-1">
+        {delegations.map((del, i) => (
+          <div key={i} className="p-2 bg-accent-purple/10 border border-accent-purple/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-accent-purple font-medium">{del.specialist}</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{del.task}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Images
 function ImagesRenderer({ images }: { images: ImageResult[] }) {
   return (
@@ -692,6 +927,12 @@ export function SmartOutputRenderer({
 
   const outputData = data as OutputData
 
+  // Session 820: Unwrap specialist delegation patterns to extract trends/discussions
+  const { trends, discussions, delegations, unwrappedTask } = unwrapSpecialistData(outputData)
+  const hasTrends = trends.length > 0
+  const hasDiscussions = discussions.length > 0
+  const hasDelegations = delegations.length > 0
+
   // Determine what type of content we have
   const hasBlog = outputData.content && typeof outputData.content === 'object' &&
     ('title' in outputData.content || 'sections' in outputData.content || 'body' in outputData.content)
@@ -700,7 +941,9 @@ export function SmartOutputRenderer({
   const hasRecommendations = outputData.recommendations && Array.isArray(outputData.recommendations) && outputData.recommendations.length > 0
   const hasAnalysis = outputData.analysis && typeof outputData.analysis === 'object'
   const hasSignals = outputData.signals && Array.isArray(outputData.signals) && outputData.signals.length > 0
-  const hasToolResults = outputData.tool_results && Array.isArray(outputData.tool_results) && outputData.tool_results.length > 0
+  // Don't show raw tool_results if we've already extracted trends/discussions from them
+  const hasToolResults = !hasTrends && !hasDiscussions &&
+    outputData.tool_results && Array.isArray(outputData.tool_results) && outputData.tool_results.length > 0
   const hasImages = outputData.images && Array.isArray(outputData.images) && outputData.images.length > 0
   const hasThinking = outputData.thinking_result && typeof outputData.thinking_result === 'object'
   const hasMetrics = outputData.items_count !== undefined || outputData.info_count !== undefined ||
@@ -710,7 +953,8 @@ export function SmartOutputRenderer({
 
   // Check if we have any structured content
   const hasStructuredContent = hasBlog || hasResearch || hasPodcast || hasRecommendations ||
-    hasAnalysis || hasSignals || hasToolResults || hasImages || hasThinking || hasMetrics || hasInsights
+    hasAnalysis || hasSignals || hasToolResults || hasImages || hasThinking || hasMetrics || hasInsights ||
+    hasTrends || hasDiscussions
 
   return (
     <div className={cn("space-y-4", className)} style={{ maxHeight, overflowY: 'auto' }}>
@@ -739,13 +983,22 @@ export function SmartOutputRenderer({
             </div>
           )}
 
-          {/* Task */}
-          {outputData.task && (
+          {/* Task (use unwrapped task if available from specialist delegation) */}
+          {(unwrappedTask || outputData.task) && (
             <div className="p-3 bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg">
               <div className="text-xs text-accent-cyan mb-1">Task</div>
-              <p className="text-sm text-white">{outputData.task}</p>
+              <p className="text-sm text-white">{unwrappedTask || outputData.task}</p>
             </div>
           )}
+
+          {/* Session 820: Agent Delegations */}
+          {hasDelegations && <DelegationsRenderer delegations={delegations} />}
+
+          {/* Session 820: Trending Topics (unwrapped from specialist data) */}
+          {hasTrends && <TrendsRenderer trends={trends} />}
+
+          {/* Session 820: Related Discussions (unwrapped from specialist data) */}
+          {hasDiscussions && <DiscussionsRenderer discussions={discussions} />}
 
           {/* Summary */}
           {outputData.summary && !hasAnalysis && (
