@@ -338,17 +338,20 @@ class Command(BaseCommand):
 
             results = orchestrator.assign_open_findings(limit=limit)
 
+            assigned = results.get('assigned', 0)
+            tasks_created = len(results.get('assignments', []))
+
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"Processed {results.get('findings_processed', 0)} findings, "
-                    f"created {results.get('tasks_created', 0)} remediation tasks"
+                    f"Assigned {assigned} findings, "
+                    f"created {tasks_created} remediation tasks"
                 )
             )
 
             if verbose:
                 for assignment in results.get('assignments', []):
                     self.stdout.write(
-                        f"  {assignment['finding']} -> {assignment['agent']}"
+                        f"  {assignment.get('finding_title', 'Unknown')} -> {assignment['agent']}"
                     )
 
         except Exception as e:
