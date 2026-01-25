@@ -710,8 +710,10 @@ The finding should be resolved after your changes. The verification step will ch
 
             results['verifications'].append({
                 'finding_id': str(finding.id),
+                'finding_title': finding.title[:50],
                 'passed': verification_result.get('passed', False),
                 'type': verification_result.get('type', 'auto'),
+                'result': verification_result.get('summary', 'Verified'),
             })
 
         self.logger.info(
