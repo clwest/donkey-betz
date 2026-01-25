@@ -683,3 +683,149 @@ def playbooks_view(request):
         'by_category': counts['by_category'],
         'filtered_count': len(playbooks),
     })
+
+
+# =============================================================================
+# Session 816: Audits API
+# =============================================================================
+
+def _count_audits() -> Dict[str, Any]:
+    """Count audit documents by type."""
+    audits_dir = _get_docs_dir() / 'audits'
+
+    if not audits_dir.exists():
+        return {'total': 0, 'by_type': {}}
+
+    by_type: Dict[str, int] = {}
+    total = 0
+
+    for item in audits_dir.glob('*.md'):
+        if item.is_file():
+            # Categorize by filename prefix
+            name = item.stem.lower()
+            if name.startswith('session_'):
+                audit_type = 'session'
+            elif name.startswith('audit_'):
+                audit_type = 'system'
+            elif 'integration' in name:
+                audit_type = 'integration'
+            elif 'database' in name or 'db' in name:
+                audit_type = 'database'
+            elif 'archive' in name:
+                audit_type = 'archive'
+            else:
+                audit_type = 'other'
+
+            by_type[audit_type] = by_type.get(audit_type, 0) + 1
+            total += 1
+
+    return {'total': total, 'by_type': by_type}
+
+
+def _list_audits() -> List[Dict[str, Any]]:
+    """List all audit documents with metadata."""
+    audits_dir = _get_docs_dir() / 'audits'
+
+    if not audits_dir.exists():
+        return []
+
+    audits = []
+
+    def _extract_title(content: str, filename: str) -> str:
+        """Extract title from markdown content."""
+        lines = content.split('\n')
+        for line in lines[:10]:
+            if line.startswith('# '):
+                return line[2:].strip()
+        # Fallback: convert filename to title
+        return filename.replace('_', ' ').replace('.md', '').title()
+
+    def _extract_summary(content: str) -> str:
+        """Extract summary from markdown content."""
+        lines = content.split('\n')
+        in_summary = False
+        summary_lines = []
+
+        for line in lines:
+            if line.strip().lower() in ['## summary', '## overview', '---']:
+                if line.strip() == '---' and in_summary:
+                    break
+                in_summary = line.strip().lower() in ['## summary', '## overview']
+                continue
+            if in_summary and line.strip():
+                summary_lines.append(line.strip())
+                if len(summary_lines) >= 3:
+                    break
+
+        return ' '.join(summary_lines)[:200] if summary_lines else ''
+
+    def _get_audit_type(name: str) -> str:
+        """Determine audit type from filename."""
+        name = name.lower()
+        if name.startswith('session_'):
+            return 'session'
+        elif name.startswith('audit_'):
+            return 'system'
+        elif 'integration' in name:
+            return 'integration'
+        elif 'database' in name or 'db' in name:
+            return 'database'
+        elif 'archive' in name:
+            return 'archive'
+        return 'other'
+
+    def _process_audit(file_path: Path) -> Optional[Dict[str, Any]]:
+        """Process a single audit file."""
+        try:
+            content = file_path.read_text(encoding='utf-8')
+            stat = file_path.stat()
+
+            return {
+                'path': f"docs/audits/{file_path.name}",
+                'name': file_path.name,
+                'title': _extract_title(content, file_path.name),
+                'summary': _extract_summary(content),
+                'audit_type': _get_audit_type(file_path.stem),
+                'size_bytes': stat.st_size,
+                'modified_at': datetime.fromtimestamp(stat.st_mtime, tz=dt_timezone.utc).isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"Error reading audit {file_path}: {e}")
+            return None
+
+    # Process all audit files
+    for item in audits_dir.glob('*.md'):
+        if item.is_file():
+            audit = _process_audit(item)
+            if audit:
+                audits.append(audit)
+
+    # Sort by modified date (newest first)
+    audits.sort(key=lambda a: a['modified_at'], reverse=True)
+
+    return audits
+
+
+@require_GET
+def audits_view(request):
+    """
+    GET /api/platform/audits/
+
+    Returns list of audit documents.
+
+    Query params:
+    - type: Filter by audit type (session, system, integration, database, archive, other)
+    """
+    audits = _list_audits()
+    counts = _count_audits()
+
+    type_filter = request.GET.get('type')
+    if type_filter:
+        audits = [a for a in audits if a['audit_type'] == type_filter]
+
+    return JsonResponse({
+        'audits': audits,
+        'total': counts['total'],
+        'by_type': counts['by_type'],
+        'filtered_count': len(audits),
+    })
