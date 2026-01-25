@@ -2212,6 +2212,15 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Sundays at 3 AM
         'options': {'expires': 7200, 'queue': 'long_running'}
     },
+
+    # ==================== SESSION 823: METRICS ACTION TRIGGERS ====================
+    # Self-execution engine: evaluates live metrics and triggers corrective actions
+    # Examples: no spider data → run spiders, high open findings → run remediation
+    'run-metrics-action-check': {
+        'task': 'core.tasks.run_metrics_action_check',
+        'schedule': crontab(minute=0),  # Every hour at :00
+        'options': {'expires': 3600, 'queue': 'long_running'}
+    },
 }
 
 # Task routing configuration
