@@ -499,12 +499,15 @@ The finding should be resolved after your changes. The verification step will ch
     # PHASE 3: EXECUTION
     # =========================================================================
 
-    def execute_assigned_tasks(self) -> Dict[str, Any]:
+    def execute_assigned_tasks(self, limit: int = None) -> Dict[str, Any]:
         """
         Phase 3: Execute assigned remediation tasks via agents.
 
         Runs each assigned task through the AgentRouter to let the
         appropriate agent attempt to fix the issue.
+
+        Args:
+            limit: Maximum number of tasks to execute (default: max_tasks_per_cycle)
 
         Returns:
             Dict with execution statistics
@@ -513,13 +516,16 @@ The finding should be resolved after your changes. The verification step will ch
 
         self.logger.info("🔧 [PHASE 3] Executing remediation tasks...")
 
+        # Use provided limit or fall back to default
+        task_limit = limit if limit is not None else self.max_tasks_per_cycle
+
         # Get assigned but not yet started tasks
         tasks = AuditRemediationTask.objects.filter(
             status='assigned',
             assigned_agent__isnull=False
         ).exclude(
             assigned_agent=''
-        ).order_by('finding__priority', 'created_at')[:self.max_tasks_per_cycle]
+        ).order_by('finding__priority', 'created_at')[:task_limit]
 
         results = {
             'total_queued': AuditRemediationTask.objects.filter(status='assigned').count(),
@@ -634,12 +640,15 @@ The finding should be resolved after your changes. The verification step will ch
     # PHASE 4: VERIFICATION
     # =========================================================================
 
-    def verify_completed_fixes(self) -> Dict[str, Any]:
+    def verify_completed_fixes(self, limit: int = None) -> Dict[str, Any]:
         """
         Phase 4: Verify that completed fixes actually worked.
 
         Runs verification checks on findings marked as 'fixed' to confirm
         the issue was actually resolved.
+
+        Args:
+            limit: Maximum number of fixes to verify (default: max_tasks_per_cycle)
 
         Returns:
             Dict with verification statistics
@@ -648,11 +657,14 @@ The finding should be resolved after your changes. The verification step will ch
 
         self.logger.info("🔬 [PHASE 4] Verifying completed fixes...")
 
+        # Use provided limit or fall back to default
+        verify_limit = limit if limit is not None else self.max_tasks_per_cycle
+
         # Get fixed but not verified findings
         fixed_findings = AuditFinding.objects.filter(
             status='fixed',
             is_verified=False
-        ).order_by('fixed_at')[:self.max_tasks_per_cycle]
+        ).order_by('fixed_at')[:verify_limit]
 
         results = {
             'total_pending': AuditFinding.objects.filter(status='fixed', is_verified=False).count(),
