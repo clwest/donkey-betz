@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
 // Session 815: Platform Command Center components
@@ -20,7 +20,9 @@ import {
   // Session 784: Docs tab icon
   Book, ArrowRight,
   // Session 815: Platform Command Center icons
-  Target, Shield, BookOpen, Zap
+  Target, Shield, BookOpen, Zap,
+  // Session 817: Tool results rendering
+  TrendingUp, Hash, Tag, Globe, Wrench
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useBodyGovernance } from '@/stores/bodyStore'
@@ -909,6 +911,252 @@ interface OperationDetail {
   lines_changed?: number
 }
 
+// =============================================================================
+// Session 817: Smart Tool Results Renderer
+// Renders agent tool_results JSON in a human-readable format
+// =============================================================================
+
+interface ToolResult {
+  tool: string
+  arguments?: Record<string, unknown>
+  result?: unknown
+}
+
+interface AgentOutputData {
+  task?: string
+  tool_results?: ToolResult[]
+  summary?: string
+  [key: string]: unknown
+}
+
+// Render a single article/item card
+function ArticleCard({ article }: { article: { title?: string; url?: string; description?: string; source?: string; tags?: string[] } }) {
+  return (
+    <div className="p-3 bg-dark-bg/50 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-colors">
+      <div className="flex items-start gap-2">
+        <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          {article.url ? (
+            <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-cyan-400 line-clamp-2">
+              {article.title || 'Untitled'}
+            </a>
+          ) : (
+            <span className="text-sm font-medium text-white line-clamp-2">{article.title || 'Untitled'}</span>
+          )}
+          {article.description && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{article.description}</p>
+          )}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {article.source && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">{article.source}</span>
+            )}
+            {article.tags?.slice(0, 3).map((tag, i) => (
+              <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Render a trend item
+function TrendCard({ trend }: { trend: { topic?: string; mentions?: number; score?: number; sources?: string[]; articles?: unknown[] } }) {
+  const [expanded, setExpanded] = useState(false)
+  const articles = (trend.articles || []) as Array<{ title?: string; url?: string; description?: string; source?: string; tags?: string[] }>
+
+  return (
+    <div className="border border-gray-700 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-3 bg-gray-800/50 hover:bg-gray-800 flex items-center justify-between transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <TrendingUp className="w-4 h-4 text-cyan-400" />
+          <span className="font-medium text-white">{trend.topic || 'Unknown Topic'}</span>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="flex items-center gap-1">
+              <Hash className="w-3 h-3" />
+              {trend.mentions || 0} mentions
+            </span>
+            {trend.score !== undefined && (
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                Score: {trend.score.toFixed(0)}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {trend.sources && trend.sources.length > 0 && (
+            <span className="text-xs text-gray-500">{trend.sources.length} sources</span>
+          )}
+          {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+        </div>
+      </button>
+      {expanded && articles.length > 0 && (
+        <div className="p-3 space-y-2 bg-gray-900/30 max-h-[400px] overflow-y-auto">
+          {articles.map((article, i) => (
+            <ArticleCard key={i} article={article} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Render a single tool result
+function ToolResultCard({ toolResult, index }: { toolResult: ToolResult; index: number }) {
+  const [showRaw, setShowRaw] = useState(false)
+  const result = toolResult.result as Record<string, unknown> | undefined
+
+  // Detect if result contains trends data
+  const hasTrends = result && Array.isArray(result.top_trends)
+  const trends = hasTrends ? (result.top_trends as Array<{ topic?: string; mentions?: number; score?: number; sources?: string[]; articles?: unknown[] }>) : []
+
+  // Detect if result is a simple success/value
+  const isSimpleResult = result && typeof result === 'object' && 'success' in result && Object.keys(result).length <= 5
+
+  return (
+    <div className="border border-gray-700 rounded-lg overflow-hidden">
+      {/* Tool Header */}
+      <div className="px-4 py-3 bg-gray-800/70 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Wrench className="w-4 h-4 text-purple-400" />
+          <span className="font-medium text-white">{toolResult.tool}</span>
+          {toolResult.arguments && (
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              {Object.entries(toolResult.arguments).slice(0, 3).map(([k, v], i) => (
+                <span key={k} className="px-1.5 py-0.5 rounded bg-gray-700">
+                  {k}: {String(v)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => setShowRaw(!showRaw)}
+          className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700"
+        >
+          {showRaw ? 'Hide Raw' : 'Show Raw'}
+        </button>
+      </div>
+
+      {/* Result Content */}
+      <div className="p-4">
+        {showRaw ? (
+          <pre className="text-xs bg-dark-bg p-3 rounded overflow-auto max-h-[400px] font-mono text-gray-300">
+            {JSON.stringify(toolResult.result, null, 2)}
+          </pre>
+        ) : hasTrends ? (
+          <div className="space-y-2">
+            <div className="text-sm text-gray-400 mb-3">
+              Found {trends.length} trends ({result?.sector || 'all'} sector, {result?.days_analyzed || '?'} days)
+            </div>
+            {trends.slice(0, 10).map((trend, i) => (
+              <TrendCard key={i} trend={trend} />
+            ))}
+            {trends.length > 10 && (
+              <p className="text-xs text-gray-500 text-center py-2">
+                + {trends.length - 10} more trends (show raw to see all)
+              </p>
+            )}
+          </div>
+        ) : isSimpleResult ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(result).map(([key, value]) => (
+              <div key={key} className="p-2 bg-dark-bg/50 rounded">
+                <div className="text-xs text-gray-500 mb-1">{key}</div>
+                <div className={cn(
+                  "text-sm font-medium",
+                  key === 'success' && value === true ? 'text-green-400' :
+                  key === 'success' && value === false ? 'text-red-400' :
+                  'text-white'
+                )}>
+                  {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <pre className="text-xs bg-dark-bg p-3 rounded overflow-auto max-h-[300px] font-mono text-gray-300">
+            {JSON.stringify(toolResult.result, null, 2)}
+          </pre>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Main component: renders full agent output data
+function ToolResultsRenderer({ data }: { data: AgentOutputData }) {
+  const toolResults = data.tool_results || []
+
+  return (
+    <div className="space-y-4">
+      {/* Task */}
+      {data.task && (
+        <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+          <div className="text-xs text-cyan-400 mb-1">Task</div>
+          <p className="text-sm text-white">{data.task}</p>
+        </div>
+      )}
+
+      {/* Summary */}
+      {data.summary && (
+        <div className="p-3 bg-gray-800/50 rounded-lg">
+          <div className="text-xs text-gray-400 mb-1">Summary</div>
+          <p className="text-sm text-gray-300">{data.summary}</p>
+        </div>
+      )}
+
+      {/* Tool Results */}
+      {toolResults.length > 0 && (
+        <div className="space-y-3">
+          <div className="text-sm text-gray-400">
+            {toolResults.length} tool result{toolResults.length !== 1 ? 's' : ''}
+          </div>
+          {toolResults.map((tr, i) => (
+            <ToolResultCard key={i} toolResult={tr} index={i} />
+          ))}
+        </div>
+      )}
+
+      {/* Other fields */}
+      {Object.keys(data).filter(k => !['task', 'tool_results', 'summary'].includes(k)).length > 0 && (
+        <div className="p-3 bg-gray-800/50 rounded-lg">
+          <div className="text-xs text-gray-400 mb-2">Additional Data</div>
+          <pre className="text-xs font-mono text-gray-300 overflow-auto max-h-[200px]">
+            {JSON.stringify(
+              Object.fromEntries(Object.entries(data).filter(([k]) => !['task', 'tool_results', 'summary'].includes(k))),
+              null, 2
+            )}
+          </pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Helper: Extract JSON from markdown content
+function extractJsonFromMarkdown(content: string): AgentOutputData | null {
+  // Look for ```json ... ``` blocks
+  const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
+  if (jsonBlockMatch && jsonBlockMatch[1]) {
+    try {
+      const parsed = JSON.parse(jsonBlockMatch[1])
+      // Check if it looks like agent output
+      if (parsed && typeof parsed === 'object' && ('tool_results' in parsed || 'task' in parsed)) {
+        return parsed as AgentOutputData
+      }
+    } catch {
+      // Not valid JSON
+    }
+  }
+  return null
+}
+
 function FileContentModal({ operation, isLoading, onClose }: {
   operation: OperationDetail | null
   isLoading: boolean
@@ -917,6 +1165,8 @@ function FileContentModal({ operation, isLoading, onClose }: {
   const [copied, setCopied] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
   const [activeView, setActiveView] = useState<'content' | 'diff' | 'output'>('content')
+  // Session 817: Smart view mode for tool results
+  const [smartView, setSmartView] = useState(true)
 
   // Session 799: Determine what content to show based on operation type
   const isFileOperation = ['file_create', 'file_modify', 'file_update', 'file_delete', 'file_rename'].includes(operation?.operation_type || '')
@@ -946,6 +1196,15 @@ function FileContentModal({ operation, isLoading, onClose }: {
   const fileName = operation?.file_path?.split('/').pop() || operation?.operation_type || 'Unknown'
   const hasDiff = isFileOperation && operation?.diff
   const hasCommandOutput = (isCommandOperation || isGitOperation) && operation?.command_output
+
+  // Session 817: Extract JSON tool results from markdown content
+  const extractedToolResults = useMemo(() => {
+    if (!content || !isMarkdown) return null
+    return extractJsonFromMarkdown(content)
+  }, [content, isMarkdown])
+
+  // Check if we can show smart view
+  const hasSmartContent = !!extractedToolResults
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content)
@@ -1079,6 +1338,19 @@ function FileContentModal({ operation, isLoading, onClose }: {
                   {showRaw ? 'Rendered' : 'Raw'}
                 </button>
               )}
+              {/* Session 817: Smart View toggle for tool results */}
+              {hasSmartContent && activeView === 'content' && !showRaw && (
+                <button
+                  onClick={() => setSmartView(!smartView)}
+                  className={cn(
+                    "text-xs px-2 py-1 rounded transition-colors flex items-center gap-1",
+                    smartView ? "bg-cyan-500/20 text-cyan-400" : "bg-dark-border text-gray-400 hover:text-white"
+                  )}
+                >
+                  <Wrench size={12} />
+                  {smartView ? 'Smart View' : 'Text View'}
+                </button>
+              )}
               {content && (
                 <span className="text-xs text-gray-500">
                   {content.length.toLocaleString()} characters • {content.split('\n').length} lines
@@ -1132,6 +1404,26 @@ function FileContentModal({ operation, isLoading, onClose }: {
                 </div>
               ))}
             </pre>
+          ) : hasSmartContent && smartView && !showRaw ? (
+            // Session 817: Smart view for tool results
+            <div>
+              {/* Render markdown header (everything before the JSON block) */}
+              {content.split('```json')[0] && (
+                <div
+                  className="prose prose-invert prose-sm max-w-none text-gray-300 mb-6"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(content.split('```json')[0]) }}
+                />
+              )}
+              {/* Render tool results with smart renderer */}
+              <ToolResultsRenderer data={extractedToolResults!} />
+              {/* Render markdown footer (everything after the JSON block) */}
+              {content.split('```')[2] && (
+                <div
+                  className="prose prose-invert prose-sm max-w-none text-gray-300 mt-6"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(content.split('```').slice(2).join('```')) }}
+                />
+              )}
+            </div>
           ) : isMarkdown && !showRaw ? (
             <div
               className="prose prose-invert prose-sm max-w-none text-gray-300"
