@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi, workspaceOperationsApi, bodyApi, docsIndexApi, platformApi, DocsDocument, DocsDetailResponse } from '@/lib/api'
 // Session 815: Platform Command Center components
-import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser } from '@/components/platform'
+// Session 816: Added AuditsBrowser
+import { MissionCard, MetricsGrid, EmergencyControls, CanonBrowser, PlaybookBrowser, AuditsBrowser } from '@/components/platform'
 // Session 816: Enhanced Operations Panel
 import { OperationsPanel } from '@/components/workspace'
 // Session 714: Real-time system events
@@ -1407,6 +1408,16 @@ export default function WorkspacePage() {
     enabled: activeTab === 'knowledge',
   })
 
+  // Session 816: Audits query
+  const { data: auditsData, isLoading: loadingAudits } = useQuery({
+    queryKey: ['platform-audits'],
+    queryFn: async () => {
+      const res = await platformApi.audits()
+      return res.data
+    },
+    enabled: activeTab === 'knowledge',
+  })
+
   // Mutations
   const activateMutation = useMutation({
     mutationFn: (id: string) => workspaceApi.activate(id),
@@ -1934,6 +1945,26 @@ export default function WorkspacePage() {
                   isLoading={loadingPlaybooks}
                   onSelectPlaybook={(playbook) => {
                     window.open(`/docs-index?search=${encodeURIComponent(playbook.path)}`, '_blank')
+                  }}
+                />
+              </div>
+
+              {/* Session 816: Audits Section */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Search className="text-accent-amber" size={18} />
+                    <h3 className="text-md font-semibold uppercase">System Audits</h3>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {auditsData?.total || 0} audits
+                  </span>
+                </div>
+                <AuditsBrowser
+                  data={auditsData}
+                  isLoading={loadingAudits}
+                  onSelectAudit={(audit) => {
+                    window.open(`/docs-index?search=${encodeURIComponent(audit.path)}`, '_blank')
                   }}
                 />
               </div>
