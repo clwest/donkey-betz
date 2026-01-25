@@ -77,11 +77,17 @@ class Command(BaseCommand):
             action='store_true',
             help='Show detailed output for each operation',
         )
+        parser.add_argument(
+            '--no-commit',
+            action='store_true',
+            help='Disable auto-commit of generated code (Session 822)',
+        )
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         limit = options['limit']
         verbose = options['verbose']
+        auto_commit = not options['no_commit']  # Session 822: SKIN layer auto-commit
 
         # Determine which phases to run
         phases = {
@@ -101,7 +107,12 @@ class Command(BaseCommand):
                 self.style.WARNING("DRY RUN - no changes will be made")
             )
 
-        orchestrator = AutonomousRemediationOrchestrator()
+        if auto_commit:
+            self.stdout.write(
+                self.style.NOTICE("SKIN Layer: Auto-commit enabled (use --no-commit to disable)")
+            )
+
+        orchestrator = AutonomousRemediationOrchestrator(auto_commit=auto_commit)
 
         if phases['status'] or run_full_cycle:
             self._show_status(orchestrator)
