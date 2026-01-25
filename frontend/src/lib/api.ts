@@ -11,6 +11,9 @@ export const api = axios.create({
   // Session 802: Add 90-second timeout to prevent browser default (2 min) timeout
   // This ensures we get a proper error before the browser silently times out
   timeout: 90000,
+  // Session 819: Include credentials (cookies) for session authentication
+  // This allows Django session auth to work for cross-origin requests
+  withCredentials: true,
 })
 
 // Request interceptor to add auth token
@@ -29,9 +32,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Session 819: Only redirect to login for explicit auth endpoints
+    // Other 401s should be handled by the component (user might just need to refresh)
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout()
-      window.location.href = '/login'
+      const url = error.config?.url || ''
+      const isAuthEndpoint = url.includes('/auth/') || url.includes('/login')
+
+      // Only force logout/redirect for auth-related 401s
+      if (isAuthEndpoint) {
+        useAuthStore.getState().logout()
+        window.location.href = '/login'
+      }
+      // For other endpoints, just log the error - component can handle it
+      console.warn('Authentication required for:', url)
     }
     return Promise.reject(error)
   }
