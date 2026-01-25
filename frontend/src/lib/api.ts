@@ -229,6 +229,7 @@ export const dreamsApi = {
 // Session 695: Conversations API for Conversation Thread Viewer
 // Session 716: Enhanced with trigger
 // Session 735: Added time_range and pagination support
+// Session 826: Enhanced with goal-driven conversation creation
 export const conversationsApi = {
   list: (params?: {
     limit?: number
@@ -247,6 +248,14 @@ export const conversationsApi = {
   },
   detail: (conversationId: string) => api.get(`/agent-conversations/${conversationId}/`),
   trigger: () => api.post('/agent-conversations/trigger/'),
+  // Session 826: Create goal-driven conversation
+  create: (params: {
+    topic: string
+    conversation_type?: 'analytical' | 'creative' | 'debate' | 'planning' | 'critique' | 'general'
+    objective?: string
+    success_criteria?: string[]
+    auto_select_agents?: boolean
+  }) => api.post('/agent-conversations/trigger/', params),
 }
 
 // Session 717: Conversation Contract API - Quality analytics for agent conversations
