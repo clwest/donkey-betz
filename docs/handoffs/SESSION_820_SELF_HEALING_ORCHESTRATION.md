@@ -233,6 +233,58 @@ railway run python manage.py shell -c "from django_celery_beat.models import Per
 
 ---
 
+## Feature 2: Tiered Documentation Injection
+
+### Problem
+System-aware agents (like TechnicalDocumentAgent) produced generic content because they didn't know actual system stats (74 agents, 77 spiders, 228 Celery tasks, etc.).
+
+### Solution
+Added `requires_system_context` flag to BaseAgent. When True, `_build_intelligent_prompt()` injects critical docs (CLAUDE.md, 00-START-NEXT-SESSION.md).
+
+### Implementation
+
+```python
+# In BaseAgent (core/agents/base_agent.py)
+requires_system_context: bool = False  # Default off for most agents
+
+# In _build_intelligent_prompt()
+if self.requires_system_context:
+    from core.services.docs_context_builder import get_docs_context_builder
+    builder = get_docs_context_builder()
+    critical_content = builder._get_critical_docs_content()
+    if critical_content:
+        prompt_parts.append(f"\n\n{critical_content}")
+```
+
+### Agents Enabled (8 total)
+
+| Agent | Reason |
+|-------|--------|
+| SystemIntelligenceAgent | System health monitoring |
+| CTOAgent | Technical planning |
+| COOAgent | Operations planning |
+| TechnicalDocumentAgent | System audits |
+| FullStackDeveloperAgent | Development context |
+| CodeReviewAgent | Code quality |
+| DevOpsAgent | Infrastructure |
+| CreativeDirectorAgent | Creative guidance |
+
+### Token Savings
+~70% reduction vs injecting docs into all 74 agents.
+
+---
+
+## PRs Merged
+
+| PR | Title |
+|----|-------|
+| #159 | feat(Session 820): Self-Healing Orchestration System |
+| #160 | feat(Session 820): Tiered documentation injection for system-aware agents |
+| #161 | docs(Session 820): Add tiered documentation injection to CLAUDE.md |
+| #162 | fix(Session 820): Correct discover phase stats key mapping |
+
+---
+
 ## Related Documentation
 
 - [CLAUDE.md](/CLAUDE.md) - Updated with Session 820 stats
