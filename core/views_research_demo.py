@@ -597,7 +597,8 @@ def self_blog_api(request):
 def self_blog_list_api(request):
     """
     Session 780: Get paginated list of all self-blog posts.
-    Supports pagination and search for the Content Channels page.
+    Session 814: Added category filtering for technical documents/audits.
+    Supports pagination, search, and category filtering.
     """
     try:
         from core.models_unified_system import SelfBlog
@@ -606,9 +607,18 @@ def self_blog_list_api(request):
         page = int(request.GET.get('page', 1))
         per_page = int(request.GET.get('per_page', 20))
         search = request.GET.get('search', '').strip()
+        category = request.GET.get('category', '').strip()  # Session 814
 
         # Build query
         queryset = SelfBlog.objects.all().order_by('-created_at')
+
+        # Session 814: Filter by category if specified
+        if category:
+            if category == 'documents':
+                # Show all non-blog categories (technical docs, audits, etc.)
+                queryset = queryset.exclude(category='blog')
+            else:
+                queryset = queryset.filter(category=category)
 
         if search:
             queryset = queryset.filter(
@@ -618,6 +628,13 @@ def self_blog_list_api(request):
             )
 
         total = queryset.count()
+
+        # Session 814: Get category counts for UI tabs
+        category_counts = {
+            'all': SelfBlog.objects.count(),
+            'blog': SelfBlog.objects.filter(category='blog').count(),
+            'documents': SelfBlog.objects.exclude(category='blog').count(),
+        }
 
         # Paginate
         start = (page - 1) * per_page
@@ -630,6 +647,7 @@ def self_blog_list_api(request):
                 {
                     'id': str(b.id),
                     'title': b.title,
+                    'category': getattr(b, 'category', 'blog'),  # Session 814
                     'meta_description': b.meta_description,
                     'intro': b.intro[:200] + '...' if len(b.intro) > 200 else b.intro,
                     'tags': b.tags or [],
@@ -646,7 +664,8 @@ def self_blog_list_api(request):
                 'total_pages': (total + per_page - 1) // per_page,
                 'has_next': end < total,
                 'has_prev': page > 1,
-            }
+            },
+            'category_counts': category_counts,  # Session 814
         })
 
     except Exception as e:
@@ -670,6 +689,7 @@ def self_blog_by_id_api(request, blog_id):
                 'blog': {
                     'id': str(blog.id),
                     'title': blog.title,
+                    'category': getattr(blog, 'category', 'blog'),  # Session 814
                     'meta_description': blog.meta_description,
                     'intro': blog.intro,
                     'sections': blog.sections,

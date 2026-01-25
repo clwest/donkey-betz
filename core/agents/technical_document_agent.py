@@ -537,20 +537,34 @@ Your output should be ready for executive review and formal approval processes."
             # Extract the document content
             document_content = response.strip()
 
+            # Session 814: Save to workspace for UI visibility via SKIN layer
+            doc_title = f"Stage {stage} - {DOCUMENT_STAGES.get(stage, {}).get('name', 'Document')}: {topic}"
+            workspace_result = self._save_to_workspace(
+                title=doc_title,
+                content=document_content,
+                doc_type=doc_type,
+                stage=stage,
+                topic=topic,
+                classification=classification,
+                user=context.get('user')
+            )
+
             # Build result
             result_data = {
                 'content': {
                     'full_text': document_content,
-                    'title': f"Stage {stage} - {DOCUMENT_STAGES.get(stage, {}).get('name', 'Document')}: {topic}",
+                    'title': doc_title,
                     'doc_type': doc_type,
                     'stage': stage,
                     'stage_name': DOCUMENT_STAGES.get(stage, {}).get('name', 'Document'),
                     'topic': topic,
+                    'workspace_file': workspace_result.get('path') if workspace_result else None,
                 },
                 'metadata': {
                     'classification': classification,
                     'generated_at': datetime.now().isoformat(),
                     'stage_purpose': DOCUMENT_STAGES.get(stage, {}).get('purpose', ''),
+                    'saved_to_workspace': workspace_result is not None,
                 }
             }
 
@@ -558,7 +572,7 @@ Your output should be ready for executive review and formal approval processes."
 
             return AgentResult(
                 success=True,
-                message=f"Generated Stage {stage} - {DOCUMENT_STAGES.get(stage, {}).get('name', 'Document')}",
+                message=f"Generated Stage {stage} - {DOCUMENT_STAGES.get(stage, {}).get('name', 'Document')}" + (" (saved to workspace)" if workspace_result else ""),
                 data=result_data,
                 execution_time_ms=execution_time_ms,
                 agent_name=self.name
@@ -571,6 +585,67 @@ Your output should be ready for executive review and formal approval processes."
                 message=f"Error generating document: {str(e)}",
                 data={}
             )
+
+    def _save_to_workspace(
+        self,
+        title: str,
+        content: str,
+        doc_type: str,
+        stage: int,
+        topic: str,
+        classification: str,
+        user=None
+    ):
+        """
+        Session 814: Save technical document to workspace for UI visibility.
+        Documents are stored in the workspace with audit trail via SKIN layer.
+        """
+        try:
+            # Generate filename from title
+            safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '' for c in topic)
+            safe_title = safe_title.replace(' ', '_').lower()[:50]
+            filename = f"stage_{stage}_{doc_type}_{safe_title}.md"
+
+            # Add metadata header to document
+            metadata_header = f"""---
+title: {title}
+type: {doc_type}
+stage: {stage}
+classification: {classification}
+generated_by: {self.name}
+generated_at: {datetime.now().isoformat()}
+---
+
+"""
+            full_content = metadata_header + content
+
+            # Use workspace write via SKIN layer
+            files_to_write = [{
+                'path': f"documents/{filename}",
+                'content': full_content
+            }]
+
+            write_result = self._write_files_to_workspace(
+                files=files_to_write,
+                user=user,
+                base_path=""
+            )
+
+            if write_result.get('success'):
+                logger.info(f"📝 [Session 814] Saved technical document to workspace: {filename}")
+                return {
+                    'success': True,
+                    'filename': filename,
+                    'path': f"documents/{filename}",
+                    'operations': write_result.get('operations', [])
+                }
+            else:
+                logger.warning(f"Failed to write document to workspace: {write_result.get('error')}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Failed to save technical document to workspace: {e}")
+            return None
 
     def _build_generation_prompt(
         self,

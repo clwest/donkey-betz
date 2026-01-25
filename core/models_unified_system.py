@@ -19826,13 +19826,23 @@ class SelfBlog(models.Model):
     """
     Stores blog posts written by the system about itself.
     A meta-demonstration of the platform's capabilities.
+    Session 814: Added category field to support technical documents/audits.
     """
+    CATEGORY_CHOICES = [
+        ('blog', 'Blog Post'),
+        ('audit', 'System Audit'),
+        ('technical_document', 'Technical Document'),
+        ('prototype_plan', 'Prototype Plan'),
+        ('research_brief', 'Research Brief'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='blog', db_index=True)
     meta_description = models.TextField(blank=True)
-    intro = models.TextField()
+    intro = models.TextField(blank=True)
     sections = models.JSONField(default=list, help_text="List of {header, content} sections")
-    conclusion = models.TextField()
+    conclusion = models.TextField(blank=True)
     tags = models.JSONField(default=list)
     full_text = models.TextField(help_text="Complete blog as markdown")
 
