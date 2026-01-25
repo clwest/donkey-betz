@@ -40,6 +40,8 @@ import { useBodyGovernance } from '@/stores/bodyStore'
 import { useAuthStore } from '@/stores/authStore'
 import EntityLink from '@/components/EntityLink'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
+// Session 820: Smart output renderer for human-readable agent outputs
+import { SmartOutputRenderer } from '@/components/SmartOutputRenderer'
 
 // Session 815: Updated tabs for Platform Command Center
 type WorkspaceTab = 'command' | 'governance' | 'knowledge' | 'overview' | 'files' | 'git' | 'operations' | 'reviews' | 'docs'
@@ -1543,8 +1545,8 @@ function FileContentModal({ operation, isLoading, onClose }: {
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content.split('```json')[0]) }}
                 />
               )}
-              {/* Render tool results with smart renderer */}
-              <ToolResultsRenderer data={extractedToolResults!} />
+              {/* Session 820: Use SmartOutputRenderer for human-readable agent outputs */}
+              <SmartOutputRenderer data={extractedToolResults} agentName={operation?.agent_name} />
               {/* Render markdown footer (everything after the JSON block) */}
               {content.split('```')[2] && (
                 <div
