@@ -175,6 +175,7 @@ class BaseAgent(ABC, TimeTravelMixin):
     system_prompt: str = ""
     tools: List[Dict[str, Any]] = []
     can_delegate: bool = True  # Session 744: Enable autonomous delegation to specialists
+    requires_system_context: bool = False  # Session 820: Inject CLAUDE.md + critical docs for system-aware agents
 
     def __init__(self, user=None, health_check_mode: bool = False):
         """
@@ -1460,6 +1461,20 @@ EXAMPLES OF CORRECT OUTPUT:
                 prompt_parts.append(f"\n\n{PLATFORM_CONTEXT}")
         except ImportError:
             pass
+
+        # 1.5 Session 820: Inject critical system docs for system-aware agents
+        # Agents with requires_system_context=True get CLAUDE.md, 00-START-NEXT-SESSION.md
+        # injected so they have accurate knowledge of system state (74 agents, 77 spiders, etc.)
+        if self.requires_system_context:
+            try:
+                from core.services.docs_context_builder import get_docs_context_builder
+                builder = get_docs_context_builder()
+                critical_content = builder._get_critical_docs_content()
+                if critical_content:
+                    prompt_parts.append(f"\n\n{critical_content}")
+                    logger.debug(f"📚 [Session 820] Injected critical docs for {self.name}")
+            except Exception as e:
+                logger.warning(f"📚 [Session 820] Failed to inject critical docs for {self.name}: {e}")
 
         # 2. Add Temporal Awareness
         prompt_parts.append(f"""

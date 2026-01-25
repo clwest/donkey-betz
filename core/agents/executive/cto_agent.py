@@ -73,6 +73,7 @@ class CTOAgent(BaseAgent):
     """
 
     name = "CTOAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are CTOAgent, the Chief Technology Officer AI assistant.
 

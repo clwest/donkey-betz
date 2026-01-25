@@ -403,6 +403,7 @@ class TechnicalDocumentAgent(BaseAgent):
     """
 
     name = "TechnicalDocumentAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are TechnicalDocumentAgent, a professional technical writer who creates formal product development documentation.
 

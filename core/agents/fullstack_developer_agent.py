@@ -52,6 +52,7 @@ class FullStackDeveloperAgent(BaseAgent):
     """Agent specialized in building complete full-stack features."""
 
     name = "FullStackDeveloperAgent"
+    requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
 
     system_prompt = """You are FullStackDeveloperAgent, an expert full-stack developer capable of building complete features.
 
