@@ -906,27 +906,37 @@ The finding should be resolved after your changes. The verification step will ch
 
     def get_status(self) -> Dict[str, Any]:
         """Get current remediation status."""
-        from core.models_audit_tracking import AuditFinding, AuditRemediationTask, AuditReport
+        from core.models_audit_tracking import (
+            AuditFinding, AuditRemediationTask, AuditReport, AuditVerificationRun
+        )
 
         return {
-            'audits': {
-                'total': AuditReport.objects.count(),
-            },
-            'findings': {
-                'total': AuditFinding.objects.count(),
+            # Overview counts
+            'audit_reports': AuditReport.objects.count(),
+            'total_findings': AuditFinding.objects.count(),
+            'remediation_tasks': AuditRemediationTask.objects.count(),
+            'verification_runs': AuditVerificationRun.objects.count(),
+
+            # Findings by status
+            'findings_by_status': {
                 'open': AuditFinding.objects.filter(status='open').count(),
                 'in_progress': AuditFinding.objects.filter(status='in_progress').count(),
                 'fixed': AuditFinding.objects.filter(status='fixed').count(),
                 'verified': AuditFinding.objects.filter(status='verified').count(),
                 'wontfix': AuditFinding.objects.filter(status='wontfix').count(),
-                'by_priority': {
-                    'P0': AuditFinding.objects.filter(priority='P0', status='open').count(),
-                    'P1': AuditFinding.objects.filter(priority='P1', status='open').count(),
-                    'P2': AuditFinding.objects.filter(priority='P2', status='open').count(),
-                    'P3': AuditFinding.objects.filter(priority='P3', status='open').count(),
-                },
+                'deferred': AuditFinding.objects.filter(status='deferred').count(),
             },
-            'tasks': {
+
+            # Findings by priority (open only)
+            'findings_by_priority': {
+                'P0': AuditFinding.objects.filter(priority='P0', status='open').count(),
+                'P1': AuditFinding.objects.filter(priority='P1', status='open').count(),
+                'P2': AuditFinding.objects.filter(priority='P2', status='open').count(),
+                'P3': AuditFinding.objects.filter(priority='P3', status='open').count(),
+            },
+
+            # Tasks by status
+            'tasks_by_status': {
                 'pending': AuditRemediationTask.objects.filter(status='pending').count(),
                 'assigned': AuditRemediationTask.objects.filter(status='assigned').count(),
                 'in_progress': AuditRemediationTask.objects.filter(status='in_progress').count(),
