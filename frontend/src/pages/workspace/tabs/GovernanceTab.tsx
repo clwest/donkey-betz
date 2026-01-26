@@ -1,8 +1,9 @@
 // Session 825: Governance Tab
 // Session 829: Added Self-Healing Remediation Controls
 // Session 830: Live polling with pause toggle, by-agent progress table
+// Session 831: Added error handling and success feedback for mutations
 // Extracted from WorkspacePage.tsx for modular architecture
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   CheckSquare,
@@ -16,15 +17,25 @@ import {
   Pause,
   Clock,
   Activity,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
 import { EmergencyControls } from '@/components/platform'
 
+// Session 831: Feedback message type
+interface FeedbackMessage {
+  type: 'success' | 'error' | 'info'
+  message: string
+  timestamp: number
+}
+
 export function GovernanceTab() {
   const queryClient = useQueryClient()
   const [remediationLimit, setRemediationLimit] = useState(20)
   const [isPolling, setIsPolling] = useState(true) // Session 830: Polling toggle (default ON)
+  const [feedback, setFeedback] = useState<FeedbackMessage | null>(null) // Session 831: User feedback
 
   const { data: governanceData, isLoading: loadingGovernance } = useQuery({
     queryKey: ['platform-governance'],
@@ -75,21 +86,49 @@ export function GovernanceTab() {
   })
 
   // Session 829: Run remediation mutation
+  // Session 831: Added success/error feedback
   const runRemediationMutation = useMutation({
     mutationFn: (params: { limit?: number; write_files?: boolean }) =>
       platformApi.runRemediation(params),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['self-healing-progress'] })
       queryClient.invalidateQueries({ queryKey: ['remediation-status'] })
+      setFeedback({
+        type: 'success',
+        message: response.data?.message || 'Remediation cycle started successfully',
+        timestamp: Date.now(),
+      })
+    },
+    onError: (error: any) => {
+      console.error('Remediation error:', error)
+      setFeedback({
+        type: 'error',
+        message: error.response?.data?.error || error.message || 'Failed to start remediation',
+        timestamp: Date.now(),
+      })
     },
   })
 
   // Session 829: Run self-audit mutation
+  // Session 831: Added success/error feedback
   const runSelfAuditMutation = useMutation({
     mutationFn: () => platformApi.runSelfAudit(),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['self-healing-progress'] })
       queryClient.invalidateQueries({ queryKey: ['remediation-status'] })
+      setFeedback({
+        type: 'success',
+        message: response.data?.message || 'Self-audit started successfully',
+        timestamp: Date.now(),
+      })
+    },
+    onError: (error: any) => {
+      console.error('Self-audit error:', error)
+      setFeedback({
+        type: 'error',
+        message: error.response?.data?.error || error.message || 'Failed to start self-audit',
+        timestamp: Date.now(),
+      })
     },
   })
 
@@ -318,6 +357,29 @@ export function GovernanceTab() {
                 Run Audit
               </button>
             </div>
+
+            {/* Session 831: Feedback Message */}
+            {feedback && Date.now() - feedback.timestamp < 30000 && (
+              <div
+                className={cn(
+                  'flex items-center gap-2 p-3 rounded-lg text-sm',
+                  feedback.type === 'success' && 'bg-accent-green/10 text-accent-green',
+                  feedback.type === 'error' && 'bg-accent-red/10 text-accent-red',
+                  feedback.type === 'info' && 'bg-primary-500/10 text-primary-400'
+                )}
+              >
+                {feedback.type === 'success' && <CheckCircle size={16} />}
+                {feedback.type === 'error' && <XCircle size={16} />}
+                {feedback.type === 'info' && <AlertCircle size={16} />}
+                <span>{feedback.message}</span>
+                <button
+                  onClick={() => setFeedback(null)}
+                  className="ml-auto text-current opacity-60 hover:opacity-100"
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
             {/* Last Updated Footer */}
             <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-dark-border">
