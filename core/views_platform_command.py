@@ -1755,10 +1755,11 @@ def action_run_remediation_view(request):
     Trigger autonomous remediation cycle.
 
     Session 829: Added agent parameter and write_files support.
+    Session 831: Auto-detect agent with most pending tasks if none specified.
 
     Parameters:
         limit: Maximum tasks to process (default: 20)
-        agent: Specific agent to run (default: CodeGeneratorAgent)
+        agent: Specific agent to run (default: auto-detect from pending tasks)
         write_files: Whether to write generated files to workspace (default: true)
     """
     if not request.user.is_authenticated:
@@ -1766,10 +1767,47 @@ def action_run_remediation_view(request):
 
     try:
         import json
+        from django.db.models import Count
+        from core.models_audit_tracking import AuditRemediationTask
+
         body = json.loads(request.body) if request.body else {}
         limit = body.get('limit', 20)
-        agent = body.get('agent', 'CodeGeneratorAgent')
+        agent = body.get('agent')  # None = auto-detect
         write_files = body.get('write_files', True)
+
+        # Session 831: Auto-detect agent with most pending tasks
+        if not agent:
+            # Find agent with most assigned (pending) tasks
+            top_agent = AuditRemediationTask.objects.filter(
+                status='assigned'
+            ).values('assigned_agent').annotate(
+                count=Count('id')
+            ).order_by('-count').first()
+
+            if top_agent:
+                agent = top_agent['assigned_agent']
+                pending_count = top_agent['count']
+                logger.info(f"Auto-selected {agent} with {pending_count} pending tasks")
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No pending remediation tasks found',
+                    'tasks_available': 0,
+                })
+
+        # Get count of tasks that will be processed
+        tasks_available = AuditRemediationTask.objects.filter(
+            assigned_agent=agent,
+            status='assigned'
+        ).count()
+
+        if tasks_available == 0:
+            return JsonResponse({
+                'success': False,
+                'message': f'No pending tasks for {agent}',
+                'agent': agent,
+                'tasks_available': 0,
+            })
 
         from core.tasks import run_agent_remediation_batch
 
@@ -1779,7 +1817,7 @@ def action_run_remediation_view(request):
             write_files=write_files
         )
 
-        message = f"Remediation triggered: {agent} (limit: {limit}, write_files: {write_files})"
+        message = f"Remediation triggered: {agent} ({min(limit, tasks_available)} of {tasks_available} tasks, write_files: {write_files})"
         logger.info(f"{message} by {request.user.username}")
 
         return JsonResponse({
@@ -1787,6 +1825,7 @@ def action_run_remediation_view(request):
             'message': message,
             'agent': agent,
             'limit': limit,
+            'tasks_available': tasks_available,
             'write_files': write_files,
         })
     except Exception as e:
