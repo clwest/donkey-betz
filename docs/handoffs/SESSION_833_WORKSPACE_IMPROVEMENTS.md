@@ -1,8 +1,8 @@
-# Session 833 - Workspace Tab Improvements
+# Session 833 - Workspace Tab Improvements + Blog Approval Workflow
 
 **Previous Session:** 832 (Recent Activity Enhancement)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow
 
 ---
 
@@ -74,6 +74,40 @@ Implemented full document viewer modal with markdown rendering.
 
 **API Method Added:** `platformApi.docContent(path: string)` in `api.ts`
 
+### 5. Blog Approval Workflow
+
+Implemented complete blog approval workflow allowing review before publishing.
+
+**Workflow:** Draft → Approved → Published
+
+**Backend Changes:**
+- Added `status` field to `SelfBlog` model with choices: `draft`, `approved`, `published`
+- Created migration `0190_session_833_selfblog_status.py`
+- Added `POST /api/v1/research/self-blog/<id>/approve/` - moves draft to approved
+- Added `POST /api/v1/research/self-blog/<id>/publish/` - moves approved to published (supports `force=true`)
+- Updated list endpoint with `?status=` filtering and `status_counts` in response
+
+**Frontend Changes:**
+
+| File | Changes |
+|------|---------|
+| `api.ts` | Added `blogsApi` with `list`, `get`, `delete`, `approve`, `publish` methods |
+| `BlogsPage.tsx` | Complete rewrite with status tabs, badges, quick approve/publish buttons |
+| `BlogViewerPage.tsx` | Status badge in header, context-aware approve/publish buttons |
+| `ContentStudioTab.tsx` | Status badges on BlogRow, fixed broken link (`/blogs/` → `/blog/`) |
+
+**BlogsPage Features:**
+- Status filter tabs: All, Draft, Approved, Published (with counts)
+- Status badges on blog cards (amber=draft, blue=approved, green=published)
+- Quick approve/publish buttons on card hover
+- Search and category filtering
+
+**BlogViewerPage Features:**
+- Status badge next to title
+- "Approve for Publishing" button (shown for drafts)
+- "Publish" button (shown for approved)
+- "Published" indicator (shown for published)
+
 ---
 
 ## Files Modified
@@ -82,24 +116,30 @@ Implemented full document viewer modal with markdown rendering.
 | File | Purpose |
 |------|---------|
 | `frontend/src/components/ErrorState.tsx` | Shared error state component |
+| `core/migrations/0190_session_833_selfblog_status.py` | Add status field to SelfBlog |
 
-### Backend API (Already Existed)
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /api/platform/doc-content/?path=docs/...` | Fetch document content (Session 818) |
+### Backend
+| File | Changes |
+|------|---------|
+| `core/models_unified_system.py` | Added `status` field to SelfBlog model |
+| `core/views_research_demo.py` | Added approve/publish endpoints, status filtering |
+| `core/urls.py` | Added routes for approve/publish endpoints |
 
 ### Frontend
 | File | Changes |
 |------|---------|
-| `frontend/src/lib/api.ts` | Added `platformApi.docContent()` method |
+| `frontend/src/lib/api.ts` | Added `platformApi.docContent()` and `blogsApi` |
+| `frontend/src/pages/BlogsPage.tsx` | Complete rewrite with approval workflow UI |
+| `frontend/src/pages/BlogViewerPage.tsx` | Status badge, approve/publish buttons |
 | `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | Document viewer modal with markdown rendering |
 | `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Dynamic API calls for HiveMind |
 | `frontend/src/pages/workspace/tabs/InfrastructureTab.tsx` | Dynamic API calls for LLM Routing |
+| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Status badges, fixed blog link |
 | 6 other workspace tabs | Added error handling with ErrorState |
 
 ---
 
-## API Client Addition
+## API Client Additions
 
 ### `platformApi.docContent(path)`
 
@@ -118,6 +158,19 @@ docContent: (path: string) =>
     }
     error?: string
   }>('/platform/doc-content/', { params: { path } }),
+```
+
+### `blogsApi`
+
+```typescript
+export const blogsApi = {
+  list: (params?: { page?: number; per_page?: number; status?: string; category?: string; search?: string }) =>
+    api.get<BlogListResponse>('/v1/research/self-blog/list/', { params }),
+  get: (blogId: string) => api.get<{ success: boolean; blog: Blog }>(`/v1/research/self-blog/${blogId}/`),
+  delete: (blogId: string) => api.delete(`/v1/research/self-blog/${blogId}/delete/`),
+  approve: (blogId: string) => api.post(`/v1/research/self-blog/${blogId}/approve/`),
+  publish: (blogId: string, force?: boolean) => api.post(`/v1/research/self-blog/${blogId}/publish/`, { force }),
+}
 ```
 
 ---
@@ -146,6 +199,17 @@ To verify changes:
    - Should see modal with markdown-rendered content
    - Should see metadata footer (lines, size, modified date)
 
+5. **Blog Approval Workflow:**
+   - Go to /blogs
+   - Should see status tabs: All, Draft, Approved, Published
+   - Each tab shows count of blogs in that status
+   - Hover over a draft blog card → should see "Approve" button
+   - Click "Approve" → blog moves to Approved status
+   - Hover over approved blog → should see "Publish" button
+   - Click blog title to open viewer
+   - Viewer shows status badge next to title
+   - Approve/Publish buttons work from viewer page
+
 ---
 
 ## Previous Sessions
@@ -162,4 +226,4 @@ To verify changes:
 
 ---
 
-**SESSION 833 COMPLETE - All workspace tabs now have error handling, dynamic data, and document viewer**
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow (Draft → Approved → Published)**
