@@ -1,31 +1,38 @@
-# Session 829 - Self-Healing System NOW WRITING FILES
+# Session 829 - Self-Healing System with UI Controls
 
 **Previous Session:** 828 (Self-Healing System Execution)
 **Date:** January 25, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **SELF-HEALING 68.5% COMPLETE + FILE WRITING**
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **SELF-HEALING 69.3% COMPLETE + UI CONTROLS**
 
 ---
 
-## BREAKTHROUGH: SKIN Layer File Writing Enabled
+## BREAKTHROUGHS This Session
 
-**At 23:05 UTC, the self-healing system achieved autonomous code writing capability.**
+### 1. SKIN Layer File Writing (23:05 UTC)
+The self-healing system now writes files directly to the codebase.
 
-```bash
-# Run with file writing enabled
-python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20 --write-files
-```
+### 2. UI Remediation Controls (23:30 UTC)
+**Navigate to: Workspace > Governance > Self-Healing System**
 
-The system now discovers issues AND applies fixes directly to the codebase!
+The system is now fully controllable from the UI:
+- Real-time progress bar (514/742 = 69.3%)
+- Task status grid (completed/in-progress/pending)
+- Agent breakdown showing task counts
+- "Run Remediation" button with batch size control
+- "Run Audit" button to discover new findings
+- Auto-refresh every 30 seconds
+
+**No more CLI-only execution!**
 
 ---
 
 ## Session 828-829 Progress
 
-### Current Status (23:05 UTC)
+### Current Status (23:35 UTC)
 
 **Self-Healing System Execution at Scale**
 
-5 agents processed 508 remediation tasks autonomously (68.5%):
+5 agents processed 514 remediation tasks autonomously (69.3%):
 
 | Agent | Completed | Total | Progress | Status |
 |-------|-----------|-------|----------|--------|
@@ -33,15 +40,16 @@ The system now discovers issues AND applies fixes directly to the codebase!
 | **TechnicalDocumentAgent** | 21 | 21 | 100% | ✅ DONE |
 | **FullStackDeveloperAgent** | 37 | 37 | 100% | ✅ DONE |
 | **DevOpsAgent** | 84 | 84 | 100% | ✅ DONE |
-| **CodeGeneratorAgent** | 326 | 560 | 58.2% | ⏳ RUNNING + FILE WRITING |
+| **CodeGeneratorAgent** | 332 | 560 | 59.3% | ⏳ RUNNING + FILE WRITING |
 
-**Key Achievement:** Zero failures - 100% success rate + SKIN layer file writing verified
+**Key Achievement:** Zero failures + SKIN layer file writing + UI Controls
 
 ### Milestones
 - ✅ 50% Complete (371/742) - Achieved 20:15 UTC
 - ✅ 60% Complete (446/742) - Achieved 21:47 UTC
 - ✅ 65% Complete (482/742) - Achieved 22:31 UTC
 - ✅ **SKIN Layer File Writing** - Achieved 23:05 UTC
+- ✅ **UI Remediation Controls** - Achieved 23:30 UTC
 - ⏳ 70% Target (519/742) - In Progress
 
 ---
@@ -50,21 +58,19 @@ The system now discovers issues AND applies fixes directly to the codebase!
 
 | Priority | Task | Count |
 |----------|------|-------|
-| P1 | CodeGeneratorAgent tasks | 234 remaining |
-
-### Currently Running
-- CodeGeneratorAgent with SKIN layer file writing
-- Each batch processes 20 tasks
-- ~1-2 tasks complete per minute
+| P1 | CodeGeneratorAgent tasks | 228 remaining |
 
 ### To Continue Execution
 
-```bash
-# Run remaining CodeGeneratorAgent tasks WITH FILE WRITING
-python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20 --write-files
+**Option 1: Use the UI (Recommended)**
+1. Navigate to http://localhost:8000/ai-studio/
+2. Go to Workspace > Governance tab
+3. Find the "Self-Healing System" panel
+4. Set batch size and click "Run Remediation"
 
-# Or without file writing (just records results)
-python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20
+**Option 2: Use CLI**
+```bash
+python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20 --write-files
 ```
 
 ---
@@ -104,9 +110,12 @@ python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20 --write-files
 
 | File | Changes |
 |------|---------|
-| `/tmp/run_agent_tasks.py` | Batch execution script |
+| `frontend/src/pages/workspace/tabs/GovernanceTab.tsx` | Self-Healing UI controls |
+| `frontend/src/lib/api.ts` | Remediation API endpoints |
+| `core/tasks.py` | `run_agent_remediation_batch` Celery task |
+| `core/views_platform_command.py` | Remediation status + run endpoints |
+| `/tmp/run_agent_tasks.py` | CLI batch execution script |
 | `docs/handoffs/SESSION_828_SELF_HEALING_EXECUTION.md` | Live progress tracker |
-| `docs/handoffs/SESSION_828_AGENT_WORK_LOGS.md` | Agent work documentation |
 
 ---
 
@@ -114,7 +123,7 @@ python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20 --write-files
 
 | Session | Focus |
 |---------|-------|
-| **828-829** | Self-Healing Execution - 508/742 tasks (68.5%) + FILE WRITING |
+| **828-829** | Self-Healing Execution - 514/742 tasks (69.3%) + UI CONTROLS |
 | **827** | Production 502 Fix - Async Conversations |
 | **826** | Goal-Driven Conversations + Workspace Real Data |
 | **825** | UI Consolidation - 29 pages to 6 tabs |
@@ -124,4 +133,4 @@ python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20 --write-files
 
 ---
 
-**SESSION 829 IN PROGRESS - 508/742 tasks complete (68.5%) + SKIN LAYER FILE WRITING ENABLED**
+**SESSION 829 COMPLETE - 514/742 tasks (69.3%) + SKIN LAYER + UI CONTROLS**
