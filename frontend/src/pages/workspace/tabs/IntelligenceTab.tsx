@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { reasoningApi, mythologyApi, collectiveApi } from '@/lib/api'
+import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
 type IntelligenceSubTab = 'reasoning' | 'safety' | 'collective'
@@ -65,7 +66,7 @@ export function IntelligenceTab() {
 // ============ Reasoning Engine Sub-Tab ============
 
 function ReasoningSubTab() {
-  const { data: dashboardData, isLoading } = useQuery({
+  const { data: dashboardData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['reasoning-dashboard-tab'],
     queryFn: async () => {
       const res = await reasoningApi.dashboard()
@@ -83,6 +84,10 @@ function ReasoningSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load reasoning data" />
   }
 
   const dashboard = dashboardData || {
@@ -167,7 +172,7 @@ function ReasoningSubTab() {
 // ============ Safety (Mythology Lab) Sub-Tab ============
 
 function SafetySubTab() {
-  const { data: statsData, isLoading } = useQuery({
+  const { data: statsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['mythology-stats-tab'],
     queryFn: async () => {
       const res = await mythologyApi.stats()
@@ -185,6 +190,10 @@ function SafetySubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load safety data" />
   }
 
   const stats = statsData || {
@@ -279,7 +288,7 @@ function SafetySubTab() {
 // ============ Collective Intelligence Sub-Tab ============
 
 function CollectiveSubTab() {
-  const { data: dashboardData, isLoading } = useQuery({
+  const { data: dashboardData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['collective-dashboard-tab'],
     queryFn: async () => {
       const res = await collectiveApi.dashboard()
@@ -297,6 +306,10 @@ function CollectiveSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load collective data" />
   }
 
   const dashboard = dashboardData || {

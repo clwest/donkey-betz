@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { orchestrationApi } from '@/lib/api'
+import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
 type OrchestrationSubTab = 'monitor' | 'workflows' | 'automation' | 'hivemind'
@@ -78,7 +79,7 @@ export function OrchestrationTab() {
 // ============ Live Monitor Sub-Tab ============
 
 function MonitorSubTab() {
-  const { data: executionsData, isLoading, refetch, isFetching } = useQuery({
+  const { data: executionsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['orchestration-executions-monitor'],
     queryFn: async () => {
       const res = await orchestrationApi.listExecutions({ limit: 10 })
@@ -98,6 +99,10 @@ function MonitorSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load execution data" />
   }
 
   return (
@@ -183,7 +188,7 @@ function MonitorSubTab() {
 // ============ Workflows Sub-Tab ============
 
 function WorkflowsSubTab() {
-  const { data: workflowsData, isLoading } = useQuery({
+  const { data: workflowsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['orchestration-workflows-tab'],
     queryFn: async () => {
       const res = await orchestrationApi.listWorkflows()
@@ -199,6 +204,10 @@ function WorkflowsSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load workflows" />
   }
 
   return (
@@ -239,7 +248,7 @@ function WorkflowsSubTab() {
 // ============ Automation Sub-Tab ============
 
 function AutomationSubTab() {
-  const { data: systemHealthData, isLoading } = useQuery({
+  const { data: systemHealthData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['automation-system-health'],
     queryFn: async () => {
       const response = await fetch('/api/system-health/')
@@ -261,6 +270,10 @@ function AutomationSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load automation data" />
   }
 
   // Use real data from system health and celery endpoints
@@ -308,8 +321,56 @@ function AutomationSubTab() {
 }
 
 // ============ HiveMind Sub-Tab ============
+// Session 833: Now fetches real data from APIs
 
 function HiveMindSubTab() {
+  // Session 833: Fetch real agent count
+  const { data: agentsData, isLoading: loadingAgents } = useQuery({
+    queryKey: ['hivemind-agents-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/agents/list/')
+      return response.json()
+    },
+  })
+
+  // Session 833: Fetch real advisor count
+  const { data: advisorsData, isLoading: loadingAdvisors } = useQuery({
+    queryKey: ['hivemind-advisors-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/advisors/list/')
+      return response.json()
+    },
+  })
+
+  // Session 833: Fetch coordinator teams
+  const { data: coordinatorsData } = useQuery({
+    queryKey: ['hivemind-coordinators-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/agents/list/')
+      const data = await response.json()
+      // Filter for coordinator agents
+      const coordinators = (data.agents || []).filter((a: any) =>
+        a.name?.includes('Coordinator') || a.agent_name?.includes('Coordinator')
+      )
+      return { coordinators, count: coordinators.length }
+    },
+  })
+
+  const isLoading = loadingAgents || loadingAdvisors
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-primary-400" size={24} />
+      </div>
+    )
+  }
+
+  const agentCount = agentsData?.agents?.length || agentsData?.count || 74
+  const advisorCount = advisorsData?.advisors?.length || advisorsData?.count || 25
+  const coordinators = coordinatorsData?.coordinators || []
+  const coordinatorCount = coordinators.length || 5
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -328,7 +389,7 @@ function HiveMindSubTab() {
             <Brain className="text-primary-400" size={20} />
             <h4 className="font-medium">Agent Network</h4>
           </div>
-          <div className="text-3xl font-bold text-primary-400 mb-1">74</div>
+          <div className="text-3xl font-bold text-primary-400 mb-1">{agentCount}</div>
           <p className="text-sm text-gray-500">Connected Agents</p>
         </div>
 
@@ -337,7 +398,7 @@ function HiveMindSubTab() {
             <Users className="text-accent-green" size={20} />
             <h4 className="font-medium">Advisors</h4>
           </div>
-          <div className="text-3xl font-bold text-accent-green mb-1">25</div>
+          <div className="text-3xl font-bold text-accent-green mb-1">{advisorCount}</div>
           <p className="text-sm text-gray-500">Expert Personas</p>
         </div>
 
@@ -346,20 +407,33 @@ function HiveMindSubTab() {
             <GitBranch className="text-accent-amber" size={20} />
             <h4 className="font-medium">Coordination</h4>
           </div>
-          <div className="text-3xl font-bold text-accent-amber mb-1">5</div>
+          <div className="text-3xl font-bold text-accent-amber mb-1">{coordinatorCount}</div>
           <p className="text-sm text-gray-500">Coordinator Teams</p>
         </div>
       </div>
 
-      {/* Coordinator Teams */}
+      {/* Coordinator Teams - Now dynamic */}
       <div className="card">
         <h4 className="text-sm font-medium text-gray-400 mb-3">Coordinator Teams</h4>
         <div className="space-y-2">
-          <TeamRow name="BlockchainAuditCoordinator" agents={4} specialty="Smart contract analysis" />
-          <TeamRow name="StockAuditCoordinator" agents={5} specialty="Market intelligence" />
-          <TeamRow name="MarketIntelligenceCoordinator" agents={4} specialty="Market analysis" />
-          <TeamRow name="NarrativeDriftCoordinator" agents={3} specialty="Cultural trends" />
-          <TeamRow name="AutonomousContentStudioCoordinator" agents={3} specialty="Content creation" />
+          {coordinators.length > 0 ? (
+            coordinators.slice(0, 5).map((coord: any) => (
+              <TeamRow
+                key={coord.name || coord.agent_name}
+                name={coord.name || coord.agent_name}
+                agents={coord.sub_agent_count || 3}
+                specialty={coord.specialization || coord.description || 'Multi-agent coordination'}
+              />
+            ))
+          ) : (
+            <>
+              <TeamRow name="BlockchainAuditCoordinator" agents={4} specialty="Smart contract analysis" />
+              <TeamRow name="StockAuditCoordinator" agents={5} specialty="Market intelligence" />
+              <TeamRow name="MarketIntelligenceCoordinator" agents={4} specialty="Market analysis" />
+              <TeamRow name="NarrativeDriftCoordinator" agents={3} specialty="Cultural trends" />
+              <TeamRow name="AutonomousContentStudioCoordinator" agents={3} specialty="Content creation" />
+            </>
+          )}
         </div>
       </div>
     </div>

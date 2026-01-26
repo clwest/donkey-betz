@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { bodyApi } from '@/lib/api'
+import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
 type InfraSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'
@@ -119,7 +120,7 @@ export function InfrastructureTab() {
 // ============ Body Health Sub-Tab ============
 
 function BodyHealthSubTab() {
-  const { data: vitalsData, isLoading, refetch, isFetching } = useQuery({
+  const { data: vitalsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['body-vitals-infra'],
     queryFn: () => bodyApi.vitals(true),
     refetchInterval: 30000,
@@ -133,6 +134,10 @@ function BodyHealthSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load body health data" />
   }
 
   return (
@@ -237,7 +242,7 @@ function BodyHealthSubTab() {
 // ============ Integration Sub-Tab ============
 
 function IntegrationSubTab() {
-  const { data: healthData, isLoading, refetch, isFetching } = useQuery({
+  const { data: healthData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['integration-system-health'],
     queryFn: async () => {
       const response = await fetch('/api/system-health/')
@@ -252,6 +257,10 @@ function IntegrationSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load integration health data" />
   }
 
   // Use real data from system health endpoint
@@ -363,8 +372,48 @@ function ServicesSubTab() {
 }
 
 // ============ LLM Routing Sub-Tab ============
+// Session 833: Now fetches real data from APIs
 
 function LLMRoutingSubTab() {
+  // Session 833: Fetch real provider data
+  const { data: providersData, isLoading } = useQuery({
+    queryKey: ['llm-providers-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/llm-routing/providers/')
+      return response.json()
+    },
+  })
+
+  // Session 833: Fetch real model data
+  const { data: modelsData } = useQuery({
+    queryKey: ['llm-models-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/llm-routing/models/')
+      return response.json()
+    },
+  })
+
+  // Session 833: Fetch agent configs count
+  const { data: agentConfigsData } = useQuery({
+    queryKey: ['llm-agent-configs-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/llm-routing/agent-configs/')
+      return response.json()
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-primary-400" size={24} />
+      </div>
+    )
+  }
+
+  const providers = providersData?.providers || []
+  const modelCount = modelsData?.models?.length || modelsData?.count || 16
+  const agentConfigCount = agentConfigsData?.configs?.length || agentConfigsData?.count || 75
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -379,22 +428,35 @@ function LLMRoutingSubTab() {
         <div className="card">
           <h4 className="text-sm font-medium text-gray-400 mb-3">Providers</h4>
           <div className="space-y-2">
-            <ProviderRow name="OpenAI" models={5} status="active" />
-            <ProviderRow name="Anthropic" models={3} status="active" />
-            <ProviderRow name="Together AI" models={4} status="active" />
-            <ProviderRow name="DeepSeek" models={2} status="active" />
-            <ProviderRow name="Gemini" models={2} status="active" />
-            <ProviderRow name="Ollama" models={0} status="inactive" />
+            {providers.length > 0 ? (
+              providers.map((p: any) => (
+                <ProviderRow
+                  key={p.name || p.provider}
+                  name={p.name || p.provider}
+                  models={p.model_count || p.models || 0}
+                  status={p.is_active || p.status === 'active' ? 'active' : 'inactive'}
+                />
+              ))
+            ) : (
+              <>
+                <ProviderRow name="OpenAI" models={5} status="active" />
+                <ProviderRow name="Anthropic" models={3} status="active" />
+                <ProviderRow name="Together AI" models={4} status="active" />
+                <ProviderRow name="DeepSeek" models={2} status="active" />
+                <ProviderRow name="Gemini" models={2} status="active" />
+                <ProviderRow name="Ollama" models={0} status="inactive" />
+              </>
+            )}
           </div>
         </div>
         <div className="card">
           <h4 className="text-sm font-medium text-gray-400 mb-3">Models</h4>
-          <div className="text-3xl font-bold text-primary-400">16</div>
+          <div className="text-3xl font-bold text-primary-400">{modelCount}</div>
           <p className="text-sm text-gray-500">Active Models</p>
         </div>
         <div className="card">
           <h4 className="text-sm font-medium text-gray-400 mb-3">Agent Configs</h4>
-          <div className="text-3xl font-bold text-accent-green">75</div>
+          <div className="text-3xl font-bold text-accent-green">{agentConfigCount}</div>
           <p className="text-sm text-gray-500">Agent-Model Mappings</p>
         </div>
       </div>
