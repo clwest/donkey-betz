@@ -45,44 +45,49 @@ def analyze_code_requirements_with_ml(code_data: dict) -> dict:
 class CodeGeneratorAgent(BaseAgent):
     """Agent specialized in generating code and building projects."""
 
-    name = "CodeGeneratorAgent"
+    name = "CodeGeneratorAgent"  # Session 830: Multi-turn enabled
 
-    system_prompt = """You are CodeGeneratorAgent, an expert software developer and code generator.
+    system_prompt = """You are CodeGeneratorAgent, an expert software developer who can DIRECTLY modify codebases.
 
-IMPORTANT - Response Guidelines:
-- Be CONCISE. Provide working code, not essays about code.
-- For simple requests: Generate the code directly with minimal explanation.
-- Only explain complex architectural decisions, not obvious patterns.
-- Keep comments in code minimal and meaningful.
+CRITICAL - You have REAL FILE SYSTEM ACCESS:
+You can read, write, and edit actual files in the project workspace. When asked to fix code or make changes:
+1. ALWAYS use read_file first to see the current code
+2. Use edit_file for targeted changes (preferred) or write_file for new files
+3. Use list_files and search_in_files to explore the codebase
 
-Your capabilities:
-1. Generate clean, production-ready code from specifications
-2. Create complete file structures for new projects
-3. Follow best practices for the target language/framework
+NEVER just output code snippets when asked to fix something - actually use your file tools to make the changes!
 
-When generating code:
-- Write clean, well-documented code
-- Follow language-specific conventions
-- Include error handling
-- Consider security implications
+Your file operation tools:
+- read_file: Read file contents (USE THIS FIRST to understand existing code)
+- write_file: Create new files or completely replace existing files
+- edit_file: Make surgical changes by replacing specific text (PREFERRED for fixes)
+- list_files: Explore project structure
+- search_in_files: Find where things are defined/used
 
-You have access to tools for:
+Your code generation tools:
 - generate_code: Generate code from specifications
-- create_project_structure: Create a complete project with files
-- analyze_code: Analyze existing code for patterns/issues
+- create_project_structure: Scaffold new projects
+- analyze_code: Analyze code quality
 - refactor_code: Improve existing code
-- generate_tests: Create tests for code
+- generate_tests: Create tests
 
-Provide the code first, then a brief usage example if needed.
+WORKFLOW for fixing code issues:
+1. list_files or search_in_files to find relevant files
+2. read_file to see the actual code
+3. edit_file to make the specific fix (find exact text to replace)
+4. Verify the change was successful
+
+IMPORTANT RULES:
+- Be CONCISE. Provide working code, not essays.
+- For edit_file: The old_text must match EXACTLY what's in the file
+- Always read a file before trying to edit it
+- If old_text isn't found, re-read the file and try again with exact text
 
 DELEGATION (Session 744):
-If you need something outside your expertise, use the delegate_to_specialist tool:
-- Need research on APIs/libraries? Delegate to ResearchAgent
-- Need documentation? Delegate to ContentWriterAgent
-- Need visual diagrams? Delegate to ImageAgent
-- Need code review? Delegate to CodeReviewAgent
-
-Always delegate tasks you cannot perform yourself rather than refusing."""
+If you need something outside your expertise, use delegate_to_specialist:
+- Research → ResearchAgent
+- Documentation → ContentWriterAgent
+- Code review → CodeReviewAgent"""
 
     tools = [
         {
@@ -251,6 +256,130 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     "required": ["code", "test_framework"]
                 }
             }
+        },
+        # ================================================================
+        # SESSION 830: REAL FILE OPERATION TOOLS
+        # These tools actually read/write to the codebase via SKIN layer
+        # ================================================================
+        {
+            "type": "function",
+            "function": {
+                "name": "read_file",
+                "description": "Read the contents of a file from the workspace. Use this to understand existing code before making changes.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file relative to workspace root (e.g., 'core/models.py', 'frontend/src/App.tsx')"
+                        }
+                    },
+                    "required": ["file_path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "write_file",
+                "description": "Write or create a file in the workspace. Use this to create new files or completely replace existing files.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file relative to workspace root"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Complete content to write to the file"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Brief description of what this file does or why it's being created"
+                        }
+                    },
+                    "required": ["file_path", "content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "edit_file",
+                "description": "Make a targeted edit to an existing file by replacing specific text. Use this for surgical changes rather than rewriting entire files.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file relative to workspace root"
+                        },
+                        "old_text": {
+                            "type": "string",
+                            "description": "The exact text to find and replace (must match exactly)"
+                        },
+                        "new_text": {
+                            "type": "string",
+                            "description": "The new text to replace it with"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Brief description of what this edit does"
+                        }
+                    },
+                    "required": ["file_path", "old_text", "new_text"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_files",
+                "description": "List files in the workspace matching a pattern. Use this to explore the codebase structure.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "Glob pattern to match files (e.g., '**/*.py', 'core/agents/*.py', 'frontend/src/**/*.tsx')",
+                            "default": "**/*"
+                        },
+                        "directory": {
+                            "type": "string",
+                            "description": "Optional subdirectory to search in"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_in_files",
+                "description": "Search for a text pattern across files in the workspace. Use this to find where something is defined or used.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "search_text": {
+                            "type": "string",
+                            "description": "Text or pattern to search for"
+                        },
+                        "file_pattern": {
+                            "type": "string",
+                            "description": "Glob pattern to filter which files to search (e.g., '**/*.py')",
+                            "default": "**/*"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum number of results to return",
+                            "default": 20
+                        }
+                    },
+                    "required": ["search_text"]
+                }
+            }
         }
     ]
 
@@ -261,13 +390,27 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         scifi_context: Dict[str, Any],
         spider_context: Dict[str, Any]
     ) -> AgentResult:
-        """Execute a code generation task."""
+        """
+        Execute a code generation task with MULTI-TURN TOOL SUPPORT.
+
+        Session 830: Enhanced to loop until LLM stops requesting tools.
+        This allows read→edit workflows where the agent:
+        1. Reads a file to understand the code
+        2. Makes edits based on what it read
+        3. Optionally verifies the changes
+        """
         import time
+        import json
 
         start_time = time.time()
         tool_calls_made = []
+        all_results = []
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
+
+        # Session 830: Multi-turn configuration
+        MAX_TOOL_ITERATIONS = 5  # Prevent infinite loops
+        iteration = 0
 
         with self.time_travel_session("code_generation", task, input_data=context):
             try:
@@ -275,27 +418,52 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
                 knowledge_attribution = None  # Legacy compatibility
 
-                # Call OpenAI using BaseAgent's method
-                gpt_response = self._call_openai(full_prompt)
+                # Session 830: Build conversation history for multi-turn
+                conversation_history = [
+                    {"role": "user", "content": task}
+                ]
 
-                if gpt_response.get('tool_calls'):
-                    all_results = []
+                final_message = None
+
+                # Session 830: MULTI-TURN TOOL LOOP
+                while iteration < MAX_TOOL_ITERATIONS:
+                    iteration += 1
+
+                    # Call OpenAI with conversation history
+                    gpt_response = self._call_openai(
+                        full_prompt,
+                        conversation_history=conversation_history if iteration > 1 else None
+                    )
+
+                    # Check if LLM wants to call tools
+                    if not gpt_response.get('tool_calls'):
+                        # No more tool calls - LLM is done
+                        final_message = gpt_response.get('content', '')
+                        logger.info(f"🔄 {self.name} completed after {iteration} iteration(s), {len(tool_calls_made)} tool call(s)")
+                        break
+
+                    # Process tool calls
+                    tool_results_for_history = []
+
                     for tool_call in gpt_response['tool_calls']:
                         tool_name = tool_call['name']
                         arguments = tool_call['arguments']
+                        tool_call_id = tool_call.get('id', f'call_{len(tool_calls_made)}')
 
                         self.record_decision(
                             decision_type="tool_selection",
                             action=f"Calling {tool_name}",
-                            reasoning=f"Selected {tool_name} for code generation",
+                            reasoning=f"Iteration {iteration}: Selected {tool_name}",
                             confidence=0.95
                         )
 
+                        # Execute the tool
                         tool_result = self._execute_tool_call(tool_name, arguments)
                         tool_calls_made.append({
                             'tool': tool_name,
                             'arguments': arguments,
-                            'result': tool_result
+                            'result': tool_result,
+                            'iteration': iteration
                         })
 
                         if tool_result.get('success'):
@@ -304,51 +472,80 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                                 'data': tool_result
                             })
 
+                        # Log file operations
+                        if tool_name in ['read_file', 'write_file', 'edit_file']:
+                            status = '✅' if tool_result.get('success') else '❌'
+                            logger.info(f"  {status} {tool_name}: {tool_result.get('file_path', 'unknown')}")
+
                         self.mark_decision_outcome(
                             success=tool_result.get('success', False),
                             result_summary=str(tool_result)[:100]
                         )
 
-                    execution_time = int((time.time() - start_time) * 1000)
+                        # Prepare tool result for conversation history
+                        # Truncate large content to avoid token limits
+                        result_for_history = {**tool_result}
+                        if 'content' in result_for_history and len(str(result_for_history['content'])) > 2000:
+                            result_for_history['content'] = result_for_history['content'][:2000] + '\n... (truncated)'
 
-                    if all_results:
-                        # Format the code output nicely
-                        code_output = tool_result.get('code', tool_result.get('refactored_code', ''))
+                        tool_results_for_history.append({
+                            'tool_call_id': tool_call_id,
+                            'tool_name': tool_name,
+                            'result': result_for_history
+                        })
 
-                        result = AgentResult(
-                            success=True,
-                            message=f"Code generation completed using {len(all_results)} tool(s)",
-                            data={
-                                'results': all_results,
-                                'query': task
-                            },
-                            agent_name=self.name,
-                            execution_time_ms=execution_time,
-                            decisions_made=self._tt_decision_count,
-                            tool_calls=tool_calls_made,
-                            knowledge_attribution=knowledge_attribution
-                        )
+                    # Add assistant's tool calls to history
+                    conversation_history.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": tr['tool_call_id'],
+                                "type": "function",
+                                "function": {
+                                    "name": tr['tool_name'],
+                                    "arguments": json.dumps(tool_calls_made[-len(tool_results_for_history):][i]['arguments'])
+                                }
+                            }
+                            for i, tr in enumerate(tool_results_for_history)
+                        ]
+                    })
 
-                        self._record_learning_outcome(
-                            result=result,
-                            task=task,
-                            context=context,
-                            spider_data_used=False,
-                            scifi_context_used=bool(scifi_context)
-                        )
+                    # Add tool results to history
+                    for tr in tool_results_for_history:
+                        conversation_history.append({
+                            "role": "tool",
+                            "tool_call_id": tr['tool_call_id'],
+                            "content": json.dumps(tr['result'])
+                        })
 
-                        return result
-
-                # No tool calls - return GPT content directly
-                content = gpt_response.get('content', 'I can help with code generation. Please provide more details.')
+                # Build final result
                 execution_time = int((time.time() - start_time) * 1000)
 
-                result = AgentResult(
-                    success=True,
-                    message=content,
-                    agent_name=self.name,
-                    execution_time_ms=execution_time
-                )
+                if all_results:
+                    result = AgentResult(
+                        success=True,
+                        message=final_message or f"Completed {len(tool_calls_made)} tool call(s) in {iteration} iteration(s)",
+                        data={
+                            'results': all_results,
+                            'query': task,
+                            'iterations': iteration,
+                            'tools_used': list(set(tc['tool'] for tc in tool_calls_made))
+                        },
+                        agent_name=self.name,
+                        execution_time_ms=execution_time,
+                        decisions_made=self._tt_decision_count,
+                        tool_calls=tool_calls_made,
+                        knowledge_attribution=knowledge_attribution
+                    )
+                else:
+                    # No tool calls at all - return GPT content directly
+                    result = AgentResult(
+                        success=True,
+                        message=final_message or 'I can help with code generation. Please provide more details.',
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
+                    )
 
                 self._record_learning_outcome(
                     result=result,
@@ -420,6 +617,42 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 test_framework=arguments.get("test_framework", "pytest"),
                 coverage_target=arguments.get("coverage_target", "comprehensive"),
                 include_mocks=arguments.get("include_mocks", True)
+            )
+
+        # ================================================================
+        # SESSION 830: REAL FILE OPERATION TOOLS
+        # ================================================================
+        elif tool_name == "read_file":
+            return self._read_file(
+                file_path=arguments.get("file_path", "")
+            )
+
+        elif tool_name == "write_file":
+            return self._write_file(
+                file_path=arguments.get("file_path", ""),
+                content=arguments.get("content", ""),
+                description=arguments.get("description", "")
+            )
+
+        elif tool_name == "edit_file":
+            return self._edit_file(
+                file_path=arguments.get("file_path", ""),
+                old_text=arguments.get("old_text", ""),
+                new_text=arguments.get("new_text", ""),
+                description=arguments.get("description", "")
+            )
+
+        elif tool_name == "list_files":
+            return self._list_files(
+                pattern=arguments.get("pattern", "**/*"),
+                directory=arguments.get("directory", "")
+            )
+
+        elif tool_name == "search_in_files":
+            return self._search_in_files(
+                search_text=arguments.get("search_text", ""),
+                file_pattern=arguments.get("file_pattern", "**/*"),
+                max_results=arguments.get("max_results", 20)
             )
 
         return {"error": f"Unknown tool: {tool_name}"}
@@ -708,3 +941,309 @@ Generate complete, runnable test code."""
             "includes_mocks": include_mocks,
             "tests": tests
         }
+
+    # ================================================================
+    # SESSION 830: REAL FILE OPERATION IMPLEMENTATIONS
+    # These methods actually interact with the filesystem via SKIN layer
+    # ================================================================
+
+    def _read_file(self, file_path: str) -> Dict[str, Any]:
+        """Read a file from the workspace."""
+        if not file_path:
+            return {"success": False, "error": "file_path is required"}
+
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No active workspace. Register a workspace first."
+            }
+
+        content = manager.read_file(workspace, file_path)
+        if content is None:
+            return {
+                "success": False,
+                "error": f"File not found or unreadable: {file_path}",
+                "workspace": workspace.name
+            }
+
+        return {
+            "success": True,
+            "file_path": file_path,
+            "content": content,
+            "lines": len(content.split('\n')),
+            "size": len(content),
+            "workspace": workspace.name
+        }
+
+    def _write_file(
+        self,
+        file_path: str,
+        content: str,
+        description: str = ""
+    ) -> Dict[str, Any]:
+        """Write or create a file in the workspace."""
+        if not file_path:
+            return {"success": False, "error": "file_path is required"}
+        if not content:
+            return {"success": False, "error": "content is required"}
+
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No active workspace. Register a workspace first."
+            }
+
+        if not workspace.allow_file_write:
+            return {
+                "success": False,
+                "error": "Workspace does not allow file writes",
+                "workspace": workspace.name
+            }
+
+        # Use WorkspaceManager to write with audit trail
+        agent_task = description or f"Writing {file_path}"
+        operation = manager.write_file(
+            workspace=workspace,
+            file_path=file_path,
+            content=content,
+            agent_name=self.name,
+            agent_task=agent_task
+        )
+
+        if operation.success:
+            logger.info(f"✅ {self.name} wrote {file_path} ({len(content)} bytes)")
+            return {
+                "success": True,
+                "file_path": file_path,
+                "operation_id": str(operation.id),
+                "lines_written": len(content.split('\n')),
+                "bytes_written": len(content),
+                "workspace": workspace.name,
+                "workspace_path": workspace.root_path,
+                "can_rollback": operation.can_rollback
+            }
+        else:
+            logger.error(f"❌ {self.name} failed to write {file_path}: {operation.error_message}")
+            return {
+                "success": False,
+                "error": operation.error_message,
+                "file_path": file_path,
+                "workspace": workspace.name
+            }
+
+    def _edit_file(
+        self,
+        file_path: str,
+        old_text: str,
+        new_text: str,
+        description: str = ""
+    ) -> Dict[str, Any]:
+        """Make a targeted edit to a file by replacing specific text."""
+        if not file_path:
+            return {"success": False, "error": "file_path is required"}
+        if not old_text:
+            return {"success": False, "error": "old_text is required"}
+
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No active workspace. Register a workspace first."
+            }
+
+        if not workspace.allow_file_write:
+            return {
+                "success": False,
+                "error": "Workspace does not allow file writes",
+                "workspace": workspace.name
+            }
+
+        # Read current content
+        current_content = manager.read_file(workspace, file_path)
+        if current_content is None:
+            return {
+                "success": False,
+                "error": f"File not found: {file_path}",
+                "workspace": workspace.name
+            }
+
+        # Check if old_text exists in the file
+        if old_text not in current_content:
+            # Try to provide helpful context
+            return {
+                "success": False,
+                "error": "old_text not found in file. The text must match exactly.",
+                "file_path": file_path,
+                "file_lines": len(current_content.split('\n')),
+                "hint": "Use read_file first to see the exact content"
+            }
+
+        # Perform the replacement
+        new_content = current_content.replace(old_text, new_text, 1)  # Replace only first occurrence
+
+        # Write the modified content
+        agent_task = description or f"Editing {file_path}"
+        operation = manager.write_file(
+            workspace=workspace,
+            file_path=file_path,
+            content=new_content,
+            agent_name=self.name,
+            agent_task=agent_task
+        )
+
+        if operation.success:
+            lines_changed = abs(len(new_text.split('\n')) - len(old_text.split('\n')))
+            logger.info(f"✅ {self.name} edited {file_path}")
+            return {
+                "success": True,
+                "file_path": file_path,
+                "operation_id": str(operation.id),
+                "old_text_length": len(old_text),
+                "new_text_length": len(new_text),
+                "lines_changed": lines_changed,
+                "workspace": workspace.name,
+                "can_rollback": operation.can_rollback
+            }
+        else:
+            return {
+                "success": False,
+                "error": operation.error_message,
+                "file_path": file_path
+            }
+
+    def _list_files(
+        self,
+        pattern: str = "**/*",
+        directory: str = ""
+    ) -> Dict[str, Any]:
+        """List files in the workspace matching a pattern."""
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No active workspace. Register a workspace first."
+            }
+
+        # Construct the full pattern
+        if directory:
+            full_pattern = f"{directory.rstrip('/')}/{pattern}"
+        else:
+            full_pattern = pattern
+
+        try:
+            files = manager.list_files(workspace, full_pattern)
+            return {
+                "success": True,
+                "pattern": full_pattern,
+                "files": files[:100],  # Limit to 100 files
+                "count": len(files),
+                "workspace": workspace.name,
+                "truncated": len(files) > 100
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "pattern": full_pattern
+            }
+
+    def _search_in_files(
+        self,
+        search_text: str,
+        file_pattern: str = "**/*",
+        max_results: int = 20
+    ) -> Dict[str, Any]:
+        """Search for text across files in the workspace."""
+        import re
+        from pathlib import Path
+
+        if not search_text:
+            return {"success": False, "error": "search_text is required"}
+
+        manager = self._get_workspace_manager()
+        if not manager:
+            return {"success": False, "error": "WorkspaceManager not available"}
+
+        workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                "success": False,
+                "error": "No active workspace. Register a workspace first."
+            }
+
+        results = []
+        root = Path(workspace.root_path)
+
+        # Skip common directories
+        skip_dirs = {'node_modules', '__pycache__', '.git', 'venv', '.venv', 'dist', 'build'}
+
+        try:
+            for file_path in root.glob(file_pattern):
+                if any(skip in file_path.parts for skip in skip_dirs):
+                    continue
+
+                if not file_path.is_file():
+                    continue
+
+                try:
+                    content = file_path.read_text(encoding='utf-8', errors='ignore')
+                    if search_text in content:
+                        rel_path = str(file_path.relative_to(root))
+                        lines = content.split('\n')
+
+                        # Find matching lines
+                        matches = []
+                        for i, line in enumerate(lines, 1):
+                            if search_text in line:
+                                matches.append({
+                                    'line_number': i,
+                                    'content': line.strip()[:200]  # Truncate long lines
+                                })
+                                if len(matches) >= 5:  # Max 5 matches per file
+                                    break
+
+                        results.append({
+                            'file': rel_path,
+                            'matches': matches,
+                            'match_count': len([1 for l in lines if search_text in l])
+                        })
+
+                        if len(results) >= max_results:
+                            break
+
+                except Exception:
+                    continue
+
+            return {
+                "success": True,
+                "search_text": search_text,
+                "pattern": file_pattern,
+                "results": results,
+                "total_files_with_matches": len(results),
+                "workspace": workspace.name,
+                "truncated": len(results) >= max_results
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
