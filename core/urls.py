@@ -952,7 +952,7 @@ from core.auth_views_enhanced import (
     register_view, verify_email_view, login_enhanced_view,
     forgot_password_view, reset_password_view, change_password_view,
     profile_view, logout_enhanced_view, validate_token_view,
-    resend_verification_view
+    resend_verification_view, auth_debug_view
 )
 from core.profile_views import (
     upload_avatar_view, delete_avatar_view, update_profile_view, generate_avatar_view
@@ -1802,7 +1802,8 @@ urlpatterns = [
     path('api/v1/auth/logout-enhanced/', logout_enhanced_view, name='auth-logout-enhanced'),
     path('api/v1/auth/validate-token/', validate_token_view, name='auth-validate-token'),
     path('api/v1/auth/resend-verification/', resend_verification_view, name='auth-resend-verification'),
-    
+    path('api/v1/auth/debug/', auth_debug_view, name='auth-debug'),  # Session 830: Auth debugging
+
     # Core platform APIs
     path('api/v1/status/', platform_status, name='platform-status'),
     path('api/v1/info/', platform_info, name='platform-info'),
