@@ -1,50 +1,49 @@
-# Session 833 - Continue Platform Development
+# Session 834 - Continue Platform Development
 
-**Previous Session:** 832 (Recent Activity Enhancement)
+**Previous Session:** 833 (Workspace Tab Improvements)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **Enhanced Activity Feed** | Self-Healing Pipeline Complete
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **All Workspace Tabs Enhanced** | Self-Healing Pipeline Complete
 
 ---
 
-## What Was Accomplished in Session 832
+## What Was Accomplished in Session 833
 
-### 1. Enhanced Recent Activity Backend
+### 1. Shared ErrorState Component
 
-**New fields added to `_get_recent_activity()`:**
-| Field | Description |
-|-------|-------------|
-| `created_at` | When task started |
-| `input_data` | Input parameters summary |
-| `triggered_by` | User who triggered, or "system" |
+Created `frontend/src/components/ErrorState.tsx` - a reusable component for consistent error handling:
+- Error icon with red styling
+- Custom or automatic error messages
+- "Try Again" button with retry callback
 
-**Status expansion:**
-- Now shows `pending`, `in_progress`, `completed`, `failed` (was only completed/failed)
-- In-progress tasks prioritized to top
-- Limit increased from 10 to 15 items
+### 2. Error Handling for All Workspace Tabs
 
-### 2. Integrated System Activity
+Added error handling to all 10 workspace tabs (was missing in 9):
+- CommandTab, GovernanceTab, IntelligenceTab, KnowledgeTab
+- OrchestrationTab, AIConsciousnessTab, DataSourcesTab
+- ContentStudioTab, InfrastructureTab
 
-`metrics_view()` now includes `system_activity` with:
-- Dreams, Conversations, Decisions, Pilots from last 72 hours
-- Activity counts by type
+### 3. Dynamic API Data
 
-### 3. Enhanced Frontend Display
+**HiveMind Sub-Tab:** Now fetches real agent/advisor/coordinator counts
+**LLM Routing Sub-Tab:** Now fetches real provider/model/config counts
 
-**New features in Command Tab:**
-- Tabbed interface: "Agent Tasks" | "System Activity"
-- Status-aware icons (spinning loader for running, pause for pending)
-- "Running" badge with animation
-- Amber highlighting for in-progress tasks
-- Input parameters display in expanded view
-- Start and completion timestamps
-- System activity cards with color-coding by type
+### 4. Knowledge Tab Document Viewer
 
-### Files Modified (Session 832)
+Implemented document viewer modal with:
+- Markdown rendering (react-markdown + remark-gfm)
+- Loading/error/empty states
+- Metadata footer (lines, size, modified date)
+- API: `platformApi.docContent(path)`
+
+### Files Modified (Session 833)
 | File | Changes |
 |------|---------|
-| `core/views_platform_command.py` | Enhanced `_get_recent_activity()`, added `system_activity` |
-| `frontend/src/lib/api.ts` | New types: `RecentActivity`, `SystemActivityItem`, `SystemActivity` |
-| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | New components: `ActivityFeedSection`, `SystemActivityCard` |
+| `frontend/src/components/ErrorState.tsx` | NEW - Shared error component |
+| `frontend/src/lib/api.ts` | Added `platformApi.docContent()` |
+| `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | Document viewer modal |
+| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Dynamic HiveMind data |
+| `frontend/src/pages/workspace/tabs/InfrastructureTab.tsx` | Dynamic LLM Routing data |
+| 6 other workspace tabs | Error handling added |
 
 ---
 
@@ -55,10 +54,10 @@
 - Pipeline: Discover → Assign → Execute → Verify (all phases connected)
 - CodeGeneratorAgent can write files to workspaces
 
-### Recent Activity Feed
-- Shows running tasks at top with visual indicators
-- Shows input parameters and triggered by user
-- System Activity tab shows dreams, conversations, decisions, pilots
+### Workspace Tabs
+- All 11 tabs have proper error handling
+- Dynamic data fetching for HiveMind and LLM Routing
+- Document viewer for Knowledge tab canon documents
 
 ### How to Run Remediation
 1. Go to **Workspace → Governance** tab
@@ -82,9 +81,8 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Check recent activity
-# Navigate to Workspace → Command tab
-# See "Agent Tasks" and "System Activity" tabs
+# 3. Test document viewer
+# Navigate to Workspace → Knowledge → Click any Canon document
 ```
 
 ---
@@ -93,6 +91,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **833** | Workspace Improvements - Error handling, dynamic data, document viewer |
 | **832** | Recent Activity Enhancement - New fields, all statuses, system activity |
 | **831** | Remediation Pipeline + LLM Timeouts + UI Fixes |
 | **830** | Agent File Operations + Production Auth Fixes + DB Bloat Fix |
@@ -104,4 +103,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**SESSION 832 COMPLETE - Recent Activity enhanced with running tasks, input data, system activity feed**
+**SESSION 833 COMPLETE - All workspace tabs enhanced with error handling, dynamic data, and document viewer**
