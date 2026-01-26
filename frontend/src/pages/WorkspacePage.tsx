@@ -2267,15 +2267,15 @@ export default function WorkspacePage() {
                             onClick={toggleExpand}
                             className="w-full flex items-center justify-between p-3 cursor-pointer"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                               {activity.success ? (
-                                <CheckCircle size={14} className="text-accent-green" />
+                                <CheckCircle size={14} className="text-accent-green shrink-0" />
                               ) : (
-                                <XCircle size={14} className="text-accent-red" />
+                                <XCircle size={14} className="text-accent-red shrink-0" />
                               )}
-                              <div className="text-left">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-white">
+                              <div className="text-left min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm text-white font-medium">
                                     {activity.agent_name}
                                   </span>
                                   {activity.agent_category && (
@@ -2284,7 +2284,7 @@ export default function WorkspacePage() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-gray-500 truncate max-w-md">
+                                <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">
                                   {activity.task}
                                 </p>
                               </div>
