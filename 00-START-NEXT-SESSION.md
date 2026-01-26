@@ -1,8 +1,8 @@
 # Session 834 - Continue Platform Development
 
-**Previous Session:** 833 (Workspace Tab Improvements)
+**Previous Session:** 833 (Workspace Tab Improvements + Blog Approval Workflow)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **All Workspace Tabs Enhanced** | Self-Healing Pipeline Complete
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **All Workspace Tabs Enhanced** | **Blog Approval Workflow** | Self-Healing Pipeline Complete
 
 ---
 
@@ -35,14 +35,36 @@ Implemented document viewer modal with:
 - Metadata footer (lines, size, modified date)
 - API: `platformApi.docContent(path)`
 
+### 5. Blog Approval Workflow
+
+Implemented complete blog approval workflow: **Draft → Approved → Published**
+
+**Backend:**
+- Added `status` field to SelfBlog model (draft/approved/published)
+- Added `/api/v1/research/self-blog/<id>/approve/` endpoint
+- Added `/api/v1/research/self-blog/<id>/publish/` endpoint
+- Updated list endpoint with `?status=` filtering and `status_counts`
+
+**Frontend:**
+- `BlogsPage.tsx`: Status tabs, badges, quick approve/publish on hover
+- `BlogViewerPage.tsx`: Status badge, context-aware approve/publish buttons
+- `ContentStudioTab.tsx`: Status badges on BlogRow, fixed broken link
+- `api.ts`: Added `blogsApi` with approve/publish methods
+
 ### Files Modified (Session 833)
 | File | Changes |
 |------|---------|
 | `frontend/src/components/ErrorState.tsx` | NEW - Shared error component |
-| `frontend/src/lib/api.ts` | Added `platformApi.docContent()` |
+| `frontend/src/lib/api.ts` | Added `platformApi.docContent()` + `blogsApi` |
+| `frontend/src/pages/BlogsPage.tsx` | Complete rewrite with approval workflow |
+| `frontend/src/pages/BlogViewerPage.tsx` | Status badge, approve/publish buttons |
+| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Status badges, fixed link |
 | `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | Document viewer modal |
 | `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Dynamic HiveMind data |
 | `frontend/src/pages/workspace/tabs/InfrastructureTab.tsx` | Dynamic LLM Routing data |
+| `core/models_unified_system.py` | Added status field to SelfBlog |
+| `core/views_research_demo.py` | Added approve/publish endpoints |
+| `core/migrations/0190_*.py` | NEW - SelfBlog status migration |
 | 6 other workspace tabs | Error handling added |
 
 ---
@@ -83,6 +105,9 @@ open http://localhost:8000/ai-studio/
 
 # 3. Test document viewer
 # Navigate to Workspace → Knowledge → Click any Canon document
+
+# 4. Test blog approval workflow
+# Navigate to /blogs → Click status tabs → Approve/Publish blogs
 ```
 
 ---
@@ -91,7 +116,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
-| **833** | Workspace Improvements - Error handling, dynamic data, document viewer |
+| **833** | Workspace Improvements + Blog Approval Workflow (Draft → Approved → Published) |
 | **832** | Recent Activity Enhancement - New fields, all statuses, system activity |
 | **831** | Remediation Pipeline + LLM Timeouts + UI Fixes |
 | **830** | Agent File Operations + Production Auth Fixes + DB Bloat Fix |
@@ -103,4 +128,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**SESSION 833 COMPLETE - All workspace tabs enhanced with error handling, dynamic data, and document viewer**
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow (Draft → Approved → Published)**
