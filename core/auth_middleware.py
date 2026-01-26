@@ -40,6 +40,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/auth/register/',  # Registration endpoint
         '/api/v1/auth/forgot-password/',  # Password reset request
         '/api/v1/auth/reset-password/',  # Password reset confirmation
+        '/api/v1/auth/debug/',  # Session 830: Auth debugging endpoint
         '/api-auth/',  # DRF browsable API auth
 
         # Webhooks with their own verification (use secrets/signatures)
@@ -375,6 +376,12 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/audit-tracking/reports/',  # Audit reports list
     ]
 
+    # Session 830: Exact match public paths (don't use prefix matching)
+    # These specific endpoints are public, but their sub-paths require auth
+    PUBLIC_PATHS_EXACT = [
+        '/api/platform/triggers/',  # GET list is public, but /run-now/ and /toggle/ require auth
+    ]
+
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
     # These endpoints work for both authenticated and anonymous users
     # Anonymous users get limited/public data, authenticated users get full access
@@ -398,6 +405,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Skip truly public paths (no auth required at all)
         if any(request.path.startswith(path) for path in self.PUBLIC_PATHS):
+            return None
+
+        # Session 830: Check exact match public paths (for endpoints where sub-paths need auth)
+        if request.path in self.PUBLIC_PATHS_EXACT:
             return None
 
         # Session 528: Handle optional auth paths
