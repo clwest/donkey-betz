@@ -72,6 +72,19 @@ class PAKnowledgeInjector:
         'digestive', 'muscular', 'brain', 'skin', 'body systems'
     ]
 
+    # Session 829: Session awareness - what has been developed/changed
+    SESSION_TRIGGERS = [
+        'session', 'what are we working on', 'current work', 'development',
+        'what was changed', 'recent changes', 'what did we do', 'progress',
+        'what have you been doing', 'updates', 'what happened'
+    ]
+
+    # Session 829: Remediation/Self-healing awareness
+    REMEDIATION_TRIGGERS = [
+        'remediation', 'self-healing', 'fix', 'audit', 'tasks',
+        'code fixes', 'automated fixes', 'what needs fixing'
+    ]
+
     # Cache settings
     CACHE_TTL_SECONDS = 60  # 1 minute cache for body health
     AGENT_ACTIVITY_CACHE_TTL = 300  # 5 minutes for agent stats
@@ -100,6 +113,8 @@ class PAKnowledgeInjector:
             'needs_capabilities': self._matches_trigger(query, self.CAPABILITY_TRIGGERS),
             'needs_scifi': self._matches_trigger(query, self.SCIFI_TRIGGERS),
             'needs_body_systems': self._matches_trigger(query, self.BODY_SYSTEM_TRIGGERS),
+            'needs_session': self._matches_trigger(query, self.SESSION_TRIGGERS),
+            'needs_remediation': self._matches_trigger(query, self.REMEDIATION_TRIGGERS),
         }
 
     def _get_body_health_summary(self) -> Dict[str, Any]:
@@ -306,6 +321,113 @@ class PAKnowledgeInjector:
             'tool_hint': 'Use get_body_vitals tool to check current health status'
         }
 
+    def _get_session_summary(self) -> Dict[str, Any]:
+        """
+        Session 829: Get current session context from 00-START-NEXT-SESSION.md.
+
+        This makes the PA aware of what development work has been done.
+        """
+        import os
+        try:
+            session_file = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                '00-START-NEXT-SESSION.md'
+            )
+
+            if os.path.exists(session_file):
+                with open(session_file, 'r') as f:
+                    content = f.read()
+
+                # Extract key information
+                lines = content.split('\n')
+                session_num = None
+                status_line = None
+                breakthroughs = []
+
+                for i, line in enumerate(lines):
+                    if line.startswith('# Session'):
+                        session_num = line.replace('# Session ', '').split(' ')[0]
+                    if line.startswith('**Status:**'):
+                        status_line = line.replace('**Status:**', '').strip()
+                    if line.startswith('### ') and 'breakthrough' not in line.lower():
+                        # Capture section headers as progress points
+                        breakthroughs.append(line.replace('### ', '').strip())
+
+                return {
+                    'current_session': session_num,
+                    'status': status_line,
+                    'recent_work': breakthroughs[:5],  # Limit to 5
+                    'has_session_context': True,
+                    'file_updated': datetime.fromtimestamp(
+                        os.path.getmtime(session_file)
+                    ).strftime('%Y-%m-%d %H:%M')
+                }
+            else:
+                return {
+                    'has_session_context': False,
+                    'message': 'Session file not found'
+                }
+
+        except Exception as e:
+            logger.warning(f"Failed to get session summary: {e}")
+            return {
+                'has_session_context': False,
+                'error': str(e)
+            }
+
+    def _get_remediation_summary(self) -> Dict[str, Any]:
+        """
+        Session 829: Get self-healing remediation status.
+
+        Shows progress on automated code fixes.
+        """
+        try:
+            from core.models_audit_tracking import AuditRemediationTask
+            from django.db.models import Count
+
+            # Get status counts
+            status_counts = dict(
+                AuditRemediationTask.objects.values('status').annotate(
+                    c=Count('id')
+                ).values_list('status', 'c')
+            )
+
+            total = sum(status_counts.values())
+            completed = status_counts.get('completed', 0)
+            in_progress = status_counts.get('in_progress', 0)
+            pending = status_counts.get('assigned', 0) + status_counts.get('pending', 0)
+
+            # Get agents with most tasks
+            by_agent = list(
+                AuditRemediationTask.objects.filter(
+                    status__in=['assigned', 'in_progress']
+                ).values('assigned_agent').annotate(
+                    c=Count('id')
+                ).order_by('-c')[:5]
+            )
+
+            percentage = round(completed / total * 100, 1) if total > 0 else 0
+
+            return {
+                'total_tasks': total,
+                'completed': completed,
+                'in_progress': in_progress,
+                'pending': pending,
+                'percentage': percentage,
+                'top_agents': [
+                    {'agent': item['assigned_agent'], 'tasks': item['c']}
+                    for item in by_agent
+                ],
+                'has_remediation_data': True
+            }
+
+        except Exception as e:
+            logger.warning(f"Failed to get remediation summary: {e}")
+            return {
+                'has_remediation_data': False,
+                'error': str(e)
+            }
+
     def get_context_for_query(self, query: str) -> Dict[str, Any]:
         """
         Main method: Get dynamic context based on query needs.
@@ -378,8 +500,15 @@ class PAKnowledgeInjector:
             # Also get current health if asking about body systems
             context['body_health'] = self._get_body_health_summary()
 
+        # Session 829: Session and remediation awareness
+        if triggers['needs_session']:
+            context['session_info'] = self._get_session_summary()
+
+        if triggers['needs_remediation']:
+            context['remediation_info'] = self._get_remediation_summary()
+
         logger.info(
-            f"🧠 [Session 773] PA Knowledge injected: "
+            f"🧠 [Session 773/829] PA Knowledge injected: "
             f"triggers={context['triggered_by']}"
         )
 
@@ -464,6 +593,31 @@ class PAKnowledgeInjector:
             parts.append(f"\n### Body Systems ({detail.get('total_systems', 9)} systems)")
             for system in detail.get('systems', []):
                 parts.append(f"- **{system['name']}**: {system['function']}")
+
+        # Session 829: Session info section
+        if 'session_info' in context:
+            session = context['session_info']
+            if session.get('has_session_context'):
+                parts.append(f"\n### Current Development Session")
+                parts.append(f"Session: {session.get('current_session', 'Unknown')}")
+                if session.get('status'):
+                    parts.append(f"Status: {session['status']}")
+                if session.get('recent_work'):
+                    parts.append("Recent Work:")
+                    for item in session['recent_work'][:3]:
+                        parts.append(f"  - {item}")
+                parts.append(f"Last Updated: {session.get('file_updated', 'Unknown')}")
+
+        # Session 829: Remediation info section
+        if 'remediation_info' in context:
+            rem = context['remediation_info']
+            if rem.get('has_remediation_data'):
+                parts.append(f"\n### Self-Healing System Status")
+                parts.append(f"Progress: {rem.get('completed', 0)}/{rem.get('total_tasks', 0)} ({rem.get('percentage', 0)}%)")
+                parts.append(f"Completed: {rem.get('completed', 0)} | In Progress: {rem.get('in_progress', 0)} | Pending: {rem.get('pending', 0)}")
+                if rem.get('top_agents'):
+                    agent_list = ", ".join([f"{a['agent']}({a['tasks']})" for a in rem['top_agents'][:3]])
+                    parts.append(f"Top Agents: {agent_list}")
 
         return "\n".join(parts)
 

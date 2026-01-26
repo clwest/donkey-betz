@@ -2799,4 +2799,26 @@ export const platformApi = {
       success: boolean
       message: string
     }>('/platform/actions/run-self-audit/', {}),
+
+  // Session 830: Live self-healing progress for UI polling
+  selfHealingProgress: () =>
+    api.get<{
+      total_tasks: number
+      completed_tasks: number
+      progress_pct: number
+      by_agent: Array<{
+        agent: string
+        completed: number
+        total: number
+        pct: number
+        status: 'DONE' | 'RUNNING' | 'PENDING' | 'IDLE'
+      }>
+      recent_activity: {
+        completed_last_10m: number
+        in_progress: number
+        assigned: number
+        last_completed_at: string | null
+      }
+      updated_at: string
+    }>('/self-healing/progress/'),
 }

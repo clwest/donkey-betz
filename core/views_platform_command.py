@@ -1954,3 +1954,124 @@ def remediation_status_view(request):
             'success': False,
             'error': str(e),
         }, status=500)
+
+
+@require_GET
+def self_healing_progress_view(request):
+    """
+    GET /api/self-healing/progress/
+
+    Session 830: Live self-healing progress endpoint for UI polling.
+    Returns computed progress snapshot from DB (single source of truth).
+
+    Response format:
+    {
+        "total_tasks": 742,
+        "completed_tasks": 493,
+        "progress_pct": 66.4,
+        "by_agent": [
+            {"agent": "CodeReviewAgent", "completed": 40, "total": 40, "pct": 100.0, "status": "DONE"},
+            ...
+        ],
+        "recent_activity": {
+            "completed_last_10m": 7,
+            "in_progress": 3,
+            "assigned": 246,
+            "last_completed_at": "2026-01-25T23:30:00Z"
+        },
+        "updated_at": "2026-01-25T23:35:00Z"
+    }
+    """
+    try:
+        from core.models_audit_tracking import AuditRemediationTask
+        from django.db.models import Count, Q, Max
+
+        now = timezone.now()
+
+        # Get task counts by agent and status in one efficient query
+        agent_stats = AuditRemediationTask.objects.values('assigned_agent').annotate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(status='completed')),
+            in_progress=Count('id', filter=Q(status='in_progress')),
+            assigned=Count('id', filter=Q(status='assigned')),
+            failed=Count('id', filter=Q(status='failed')),
+        ).order_by('-total')
+
+        # Build by_agent list with computed fields
+        by_agent = []
+        total_tasks = 0
+        completed_tasks = 0
+        in_progress_count = 0
+        assigned_count = 0
+
+        for agent in agent_stats:
+            agent_total = agent['total']
+            agent_completed = agent['completed']
+            agent_in_progress = agent['in_progress']
+            agent_assigned = agent['assigned']
+
+            total_tasks += agent_total
+            completed_tasks += agent_completed
+            in_progress_count += agent_in_progress
+            assigned_count += agent_assigned
+
+            # Determine status
+            if agent_completed == agent_total:
+                status = "DONE"
+            elif agent_in_progress > 0:
+                status = "RUNNING"
+            elif agent_assigned > 0:
+                status = "PENDING"
+            else:
+                status = "IDLE"
+
+            pct = round((agent_completed / agent_total * 100), 1) if agent_total > 0 else 0
+
+            by_agent.append({
+                'agent': agent['assigned_agent'],
+                'completed': agent_completed,
+                'total': agent_total,
+                'pct': pct,
+                'status': status,
+            })
+
+        # Calculate overall progress
+        progress_pct = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
+
+        # Recent activity - tasks completed in last 10 minutes
+        ten_minutes_ago = now - timedelta(minutes=10)
+        completed_last_10m = AuditRemediationTask.objects.filter(
+            status='completed',
+            completed_at__gte=ten_minutes_ago
+        ).count()
+
+        # Last completed task timestamp
+        last_completed = AuditRemediationTask.objects.filter(
+            status='completed'
+        ).aggregate(last=Max('completed_at'))
+
+        return JsonResponse({
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks,
+            'progress_pct': progress_pct,
+            'by_agent': by_agent,
+            'recent_activity': {
+                'completed_last_10m': completed_last_10m,
+                'in_progress': in_progress_count,
+                'assigned': assigned_count,
+                'last_completed_at': last_completed['last'].isoformat() if last_completed['last'] else None,
+            },
+            'updated_at': now.isoformat(),
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to get self-healing progress: {e}")
+        return JsonResponse({
+            'error': str(e),
+            'total_tasks': 0,
+            'completed_tasks': 0,
+            'progress_pct': 0,
+            'by_agent': [],
+            'recent_activity': {},
+            'updated_at': timezone.now().isoformat(),
+        }, status=500)
