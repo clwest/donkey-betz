@@ -30,6 +30,7 @@ import {
   timeCapsuleApi,
   timeTravelApi,
 } from '@/lib/api'
+import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
 type ConsciousnessSubTab = 'memory' | 'orchestra' | 'mood' | 'evolution' | 'relationships' | 'social' | 'capsules' | 'travel'
@@ -85,7 +86,7 @@ export function AIConsciousnessTab() {
 // ============ Memory Palace Sub-Tab ============
 
 function MemorySubTab() {
-  const { data: overviewData, isLoading } = useQuery({
+  const { data: overviewData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['memory-palace-overview-tab'],
     queryFn: async () => {
       const res = await memoryPalaceApi.overview()
@@ -95,6 +96,10 @@ function MemorySubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load memory data" />
   }
 
   const stats = overviewData || {
@@ -131,7 +136,7 @@ function MemorySubTab() {
 // ============ Neural Orchestra Sub-Tab ============
 
 function OrchestraSubTab() {
-  const { data: statsData, isLoading } = useQuery({
+  const { data: statsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['neural-orchestra-stats-tab'],
     queryFn: async () => {
       const res = await neuralOrchestraApi.agentStats()
@@ -149,6 +154,10 @@ function OrchestraSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load neural orchestra data" />
   }
 
   const stats = statsData || { total: 74, active: 0, collaborations: 0 }
@@ -181,7 +190,7 @@ function OrchestraSubTab() {
 // ============ Mood Sub-Tab ============
 
 function MoodSubTab() {
-  const { data: overviewData, isLoading } = useQuery({
+  const { data: overviewData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['mood-overview-tab'],
     queryFn: async () => {
       const res = await moodApi.overview()
@@ -191,6 +200,10 @@ function MoodSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load mood data" />
   }
 
   const overview = overviewData || { mood_distribution: {}, agents_with_mood: 0 }
@@ -223,7 +236,7 @@ function MoodSubTab() {
 // ============ Evolution Sub-Tab ============
 
 function EvolutionSubTab() {
-  const { data: overviewData, isLoading } = useQuery({
+  const { data: overviewData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['evolution-overview-tab'],
     queryFn: async () => {
       const res = await evolutionApi.overview()
@@ -233,6 +246,10 @@ function EvolutionSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load evolution data" />
   }
 
   const overview = overviewData || { level_distribution: {}, total_xp: 0 }
@@ -268,7 +285,7 @@ function EvolutionSubTab() {
 // ============ Relationships Sub-Tab ============
 
 function RelationshipsSubTab() {
-  const { data: overviewData, isLoading } = useQuery({
+  const { data: overviewData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['relationships-overview-tab'],
     queryFn: async () => {
       const res = await relationshipsApi.overview()
@@ -278,6 +295,10 @@ function RelationshipsSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load relationships data" />
   }
 
   const overview = overviewData || { total_relationships: 0, relationship_types: {} }
@@ -309,7 +330,7 @@ function RelationshipsSubTab() {
 // ============ Social Sub-Tab ============
 
 function SocialSubTab() {
-  const { data: conversationsData, isLoading } = useQuery({
+  const { data: conversationsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['social-conversations-tab'],
     queryFn: async () => {
       // Fetch recent conversations from the API
@@ -320,6 +341,10 @@ function SocialSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load social data" />
   }
 
   // Calculate real stats from conversations data
@@ -362,7 +387,7 @@ function SocialSubTab() {
 // ============ Time Capsules Sub-Tab ============
 
 function CapsulesSubTab() {
-  const { data: overviewData, isLoading } = useQuery({
+  const { data: overviewData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['time-capsules-overview-tab'],
     queryFn: async () => {
       const res = await timeCapsuleApi.overview()
@@ -380,6 +405,10 @@ function CapsulesSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load time capsules" />
   }
 
   const overview = overviewData || { total_capsules: 0, sealed: 0, revealed: 0 }
@@ -416,7 +445,7 @@ function CapsulesSubTab() {
 // ============ Time Travel Sub-Tab ============
 
 function TimeTravelSubTab() {
-  const { data: overviewData, isLoading } = useQuery({
+  const { data: overviewData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['time-travel-overview-tab'],
     queryFn: async () => {
       const res = await timeTravelApi.overview()
@@ -426,6 +455,10 @@ function TimeTravelSubTab() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load time travel data" />
   }
 
   const overview = overviewData || { total_sessions: 0, total_decisions: 0, active_sessions: 0 }
