@@ -18,6 +18,7 @@ import {
   Play,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { api } from '@/lib/api'
 
 interface ActionResult {
   success: boolean
@@ -25,14 +26,12 @@ interface ActionResult {
   error?: string
 }
 
+// Session 830: Use api instance to include auth token
 async function runAction(endpoint: string, body?: object): Promise<ActionResult> {
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  })
-  return response.json()
+  // Strip /api prefix if present since api instance adds it
+  const path = endpoint.replace(/^\/api/, '')
+  const response = await api.post(path, body)
+  return response.data
 }
 
 interface ActionButtonProps {
