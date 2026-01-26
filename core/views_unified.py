@@ -505,16 +505,22 @@ class SystemHealthAPIView(View):
             except Exception:
                 spiders_active = 63
 
-            # Check Celery workers
+            # Check Celery workers via broker (works across containers on Railway)
             try:
-                result = subprocess.run(
-                    ['pgrep', '-f', 'celery.*worker'],
-                    capture_output=True,
-                    timeout=2
-                )
-                services['celery'] = result.returncode == 0
+                from core.celery import app
+                inspector = app.control.inspect(timeout=1.0)
+                active = inspector.active()
+                # If we get any response, workers are running
+                services['celery'] = active is not None and len(active) > 0
             except Exception:
-                pass
+                # Fallback: check Redis for recent celery heartbeats
+                try:
+                    if services['redis']:
+                        celery_keys = r.keys('celery-task-meta-*')
+                        # If there are recent task results, celery is working
+                        services['celery'] = len(celery_keys) > 0 if celery_keys else False
+                except Exception:
+                    pass
 
             health = {
                 'cpu_percent': psutil.cpu_percent(interval=0.1),
