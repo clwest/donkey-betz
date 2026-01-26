@@ -400,6 +400,14 @@ If asked to do something outside audio generation, politely explain you can only
             }
             return _execute_add_voiceover(self.user, parameters, session=None)
 
+        elif tool_name == "delegate_to_specialist":
+            # Session 833: Handle delegation properly
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
         else:
             return {
                 'success': False,

@@ -808,6 +808,14 @@ Start by researching the topic to understand trends and audience preferences.
             elif tool_name == "list_uploaded_content":
                 return self._handle_list_uploaded_content(arguments)
 
+            elif tool_name == "delegate_to_specialist":
+                # Session 833: Handle delegation properly
+                return self._handle_delegate_to_specialist(
+                    specialist_agent=arguments.get('specialist_agent', ''),
+                    task=arguments.get('task', ''),
+                    context=arguments.get('context', ''),
+                    delegation_context=getattr(self, '_current_delegation_context', {})
+                )
             else:
                 return {"error": f"Unknown tool: {tool_name}"}
 

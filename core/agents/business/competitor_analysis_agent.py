@@ -1233,6 +1233,14 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                     'error': f"Prior research lookup failed: {str(e)}"
                 }
 
+        elif tool_name == "delegate_to_specialist":
+            # Session 833: Handle delegation properly
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
         else:
             return {
                 'success': False,

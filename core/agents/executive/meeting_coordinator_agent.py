@@ -337,6 +337,14 @@ You facilitate but don't make decisions - you synthesize and document."""
                 discussion_summary=arguments.get('discussion_summary', '')
             )
 
+        elif tool_name == "delegate_to_specialist":
+            # Session 833: Handle delegation properly
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
         else:
             return {
                 'success': False,

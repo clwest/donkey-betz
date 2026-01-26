@@ -436,7 +436,15 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                 query=args.get('query', ''),
                 limit=args.get('limit', 10)
             )
-        else:
+
+        elif tool_name == "delegate_to_specialist":
+            # Session 833: Handle delegation properly
+            return self._handle_delegate_to_specialist(
+                specialist_agent=args.get('specialist_agent', ''),
+                task=args.get('task', ''),
+                context=args.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )        else:
             return {"error": f"Unknown tool: {tool_name}"}
 
     def _get_sec_filings(
