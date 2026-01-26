@@ -8,7 +8,24 @@
 
 ## BREAKTHROUGHS This Session
 
-### 1. CodeGeneratorAgent Now Has Real File System Access
+### 1. Fixed 35GB Database Bloat (pgvector 80% Warning)
+
+**Root Cause:** `core_agentsolution` table was 35GB with 156k rows because `_generate_code_snippet()` was dumping **entire spider data JSON** into every record.
+
+**The Fix:**
+1. Modified `intelligence/spider_agent_connector.py` - code_snippet now stores minimal reference only
+2. Created `python manage.py cleanup_agent_solutions` to truncate bloated records
+
+**Run on Production:**
+```bash
+# Preview what will be cleaned
+railway run python manage.py cleanup_agent_solutions --dry-run
+
+# Actually clean up (reclaims ~30GB)
+railway run python manage.py cleanup_agent_solutions
+```
+
+### 2. CodeGeneratorAgent Now Has Real File System Access
 
 **The Problem (discovered during Session 830):**
 - Self-healing tasks were completing but NOT actually modifying code
