@@ -392,6 +392,14 @@ If asked to create something new, explain you can only edit existing images."""
             }
             return _execute_search_replace(self.user, parameters, session=None)
 
+        elif tool_name == "delegate_to_specialist":
+            # Session 833: Handle delegation properly
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
         else:
             return {
                 'success': False,

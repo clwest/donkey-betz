@@ -380,7 +380,15 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                 return self._update_channel_schedule(tool_input)
             elif tool_name == "analyze_channel_performance":
                 return self._analyze_channel_performance(tool_input)
-            else:
+
+            elif tool_name == "delegate_to_specialist":
+                # Session 833: Handle delegation properly
+                return self._handle_delegate_to_specialist(
+                    specialist_agent=tool_input.get('specialist_agent', ''),
+                    task=tool_input.get('task', ''),
+                    context=tool_input.get('context', ''),
+                    delegation_context=getattr(self, '_current_delegation_context', {})
+                )            else:
                 return {"error": f"Unknown tool: {tool_name}"}
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}", exc_info=True)
