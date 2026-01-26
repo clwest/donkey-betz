@@ -1,130 +1,104 @@
-# Session 830 - CodeGeneratorAgent Gets Real File Operations
+# Session 831 - Continue Self-Healing Remediation
 
-**Previous Session:** 829 (Self-Healing UI Controls)
+**Previous Session:** 830 (Agent File Operations + Production Fixes)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **AGENTS CAN NOW EDIT CODEBASE**
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **777 OPEN FINDINGS** | Self-Healing Active
 
 ---
 
-## BREAKTHROUGHS This Session
+## What Was Accomplished in Session 830
 
 ### 1. Fixed 35GB Database Bloat (pgvector 80% Warning)
 
-**Root Cause:** `core_agentsolution` table was 35GB with 156k rows because `_generate_code_snippet()` was dumping **entire spider data JSON** into every record.
+**Result: 35GB → 108MB** (99.7% reduction)
 
-**The Fix:**
-1. Modified `intelligence/spider_agent_connector.py` - code_snippet now stores minimal reference only
-2. Created `python manage.py cleanup_agent_solutions` to truncate bloated records
+- **Root Cause:** `_generate_code_snippet()` was dumping entire spider data JSON into every `AgentSolution` record
+- **Fix:** Modified `intelligence/spider_agent_connector.py` to store minimal reference only
+- **Cleanup:** Created `python manage.py cleanup_agent_solutions` - cleaned 157,161 records
 
-**Run on Production:**
+### 2. Fixed Production 401 Auth Errors
+
+**Root Cause:** Frontend components used raw `fetch()` instead of axios `api` instance, so Authorization headers weren't being sent.
+
+**Files Fixed:**
+- `frontend/src/components/platform/TriggerRulesPanel.tsx` - Now uses `api.get/api.post`
+- `frontend/src/components/platform/ActionsPanel.tsx` - Now uses `api.post`
+
+**Endpoints Now Working:**
+- POST `/api/platform/triggers/run-now/`
+- POST `/api/platform/actions/run-remediation/`
+- POST `/api/platform/actions/run-spiders/`
+- POST `/api/platform/actions/agent-health-check/`
+- POST `/api/platform/actions/run-self-audit/`
+
+### 3. Added Auth Debug Endpoint
+
 ```bash
-# Preview what will be cleaned
-railway run python manage.py cleanup_agent_solutions --dry-run
-
-# Actually clean up (reclaims ~30GB)
-railway run python manage.py cleanup_agent_solutions
+curl https://donkey-betz-platform-production.up.railway.app/api/v1/auth/debug/ \
+  -H "Authorization: Token YOUR_TOKEN"
 ```
 
-### 2. CodeGeneratorAgent Now Has Real File System Access
+Returns token validity, user info, session status, and recommendations.
 
-**The Problem (discovered during Session 830):**
-- Self-healing tasks were completing but NOT actually modifying code
-- CodeGeneratorAgent only had tools that GENERATED code snippets
-- No tools to READ, WRITE, or EDIT actual files
-- 332/560 tasks "completed" but only wrote orphaned snippet files
+### 4. Fixed Celery Status Check
 
-**The Fix:**
-Added 5 new file operation tools to CodeGeneratorAgent that use the SKIN layer:
+Changed from `pgrep` (local only) to Celery inspector API via Redis broker - now works across Railway containers.
 
-| Tool | Purpose | Status |
-|------|---------|--------|
-| `read_file` | Read file contents from workspace | ✅ Tested |
-| `write_file` | Create/replace files with audit trail | ✅ Tested |
-| `edit_file` | Make surgical find/replace edits | ✅ Tested |
-| `list_files` | Explore workspace file structure | ✅ Tested |
-| `search_in_files` | Find text across codebase | ✅ Tested |
+### 5. CodeGeneratorAgent File Operations (from earlier in session)
 
-### 2. Multi-Turn Tool Support (Major Enhancement)
-
-**The Problem:** Agent only processed ONE round of tool calls. When asked to "read then edit", it would only read.
-
-**The Fix:** Added multi-turn loop to `execute()` method:
-- Up to 5 iterations of tool calling
-- Conversation history passed between turns
-- Agent can now: read → edit → verify
-
-**Test Results:**
-```
-Success: True
-Iterations: 3
-Tools used: ['read_file', 'edit_file']
-
-Tool calls:
-  [1] ✅ read_file: core/agents/__init__.py
-  [2] ✅ edit_file: core/agents/__init__.py
-```
-
-**All operations:**
-- Go through WorkspaceManager for full audit trail
-- Support rollback via SKIN layer
-- Log to WorkspaceOperation table
+Added 5 file operation tools + multi-turn execution:
+- `read_file`, `write_file`, `edit_file`, `list_files`, `search_in_files`
+- Up to 5 iterations of tool calling per execution
+- All operations through SKIN layer with audit trail
 
 ---
 
-## Updated System Prompt
-
-CodeGeneratorAgent now instructed to:
-1. **ALWAYS use read_file first** before making changes
-2. Use **edit_file** for surgical changes (preferred)
-3. Use **write_file** for new files
-4. **Never just output code snippets** when asked to fix something
-
----
-
-## Railway Worker Audit (Cost Savings)
-
-Discovered 2 duplicate workers running on Railway:
-- `celery-worker` - PAUSED (duplicate of celery-default)
-- `worker-default` - PAUSED (duplicate of celery-default)
-
-**Estimated savings: ~28-40% compute costs**
-
----
-
-## Remaining Work
+## Current State
 
 ### Self-Healing System
-| Agent | Status | Notes |
-|-------|--------|-------|
-| CodeReviewAgent | 40/40 ✅ | Complete |
-| TechnicalDocumentAgent | 21/21 ✅ | Complete |
-| FullStackDeveloperAgent | 37/37 ✅ | Complete |
-| DevOpsAgent | 84/84 ✅ | Complete |
-| **CodeGeneratorAgent** | 332/560 | **NOW HAS FILE TOOLS - CAN ACTUALLY FIX CODE** |
+- **777 Open Findings** visible in UI
+- Remediation cycles running via Celery
+- CodeGeneratorAgent can now actually edit code files
 
-### Next Steps
-1. Re-run CodeGeneratorAgent tasks - they can now make real changes
-2. The 211 remaining tasks documented in `/tmp/remaining_tasks.md`
-3. Many tasks have vague descriptions - may need better `affected_files` mappings
+### PRs Merged (Session 830)
+| PR | Description |
+|----|-------------|
+| #217 | CodeGeneratorAgent file tools + multi-turn |
+| #218 | Auth fix for /api/platform/actions/ |
+| #219 | Auth fix for /api/platform/triggers/ |
+| #220 | Celery status check works on Railway |
+| #221 | Database cleanup command (empty tables) |
+| #222 | Database bloat fix (AgentSolution 35GB → 108MB) |
+| #223 | Auth debug endpoint + exact path matching |
+| #224 | Frontend auth headers fix (the 401 cause) |
+| #225 | Better error logging for file operations |
 
 ---
 
-## Files Modified (Session 830)
+## Next Steps for Session 831
 
-| File | Changes |
-|------|---------|
-| `core/agents/code_generator_agent.py` | Added 5 file operation tools + implementations |
+### 1. Continue Processing 777 Open Findings
 
-### New Tools Added to CodeGeneratorAgent
+Click **"Run Remediation Cycle"** in the Workspace → Governance tab, or:
 
-```python
-# Tools now available:
-- read_file(file_path) → Read workspace file
-- write_file(file_path, content, description) → Create/replace file
-- edit_file(file_path, old_text, new_text, description) → Surgical edit
-- list_files(pattern, directory) → Glob workspace files
-- search_in_files(search_text, file_pattern, max_results) → Grep workspace
+```bash
+# Via production API
+curl -X POST https://donkey-betz-platform-production.up.railway.app/api/platform/actions/run-remediation/ \
+  -H "Authorization: Token YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 50}'
 ```
+
+### 2. Monitor Remediation Progress
+
+- Check **Live Metrics** panel for Open Findings count
+- Check Celery logs on Railway for execution details
+- Files being written to workspaces with audit trail
+
+### 3. Known Minor Issues
+
+- Some spider timeouts on opportunity analysis (falls back to Core ML)
+- Occasional LLM tool call failures (logged but not blocking)
 
 ---
 
@@ -134,44 +108,29 @@ Discovered 2 duplicate workers running on Railway:
 # 1. Start platform
 make start && make celery
 
-# 2. Test agent file operations
-python manage.py shell -c "
-from django.contrib.auth import get_user_model
-from core.agents.code_generator_agent import CodeGeneratorAgent
+# 2. Access workspace
+open http://localhost:8000/ai-studio/
 
-User = get_user_model()
-admin = User.objects.filter(is_superuser=True).first()
-
-agent = CodeGeneratorAgent()
-agent.user = admin
-
-# Test reading a file
-result = agent._read_file('core/agents/__init__.py')
-print(f'Read file: {result.get(\"success\")} - {result.get(\"lines\")} lines')
-"
-
-# 3. Run self-healing with file-capable agents
-python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 10
+# 3. Production
+open https://donkey-betz-platform-production.up.railway.app/workspace
 ```
 
 ---
 
-## Architecture Note
+## Files Modified (Session 830)
 
-The SKIN layer (Session 695) already had full file operation support:
-- `WorkspaceManager.read_file()`
-- `WorkspaceManager.write_file()`
-- Audit trail in `WorkspaceOperation` model
-- Rollback capability
-
-**The missing piece was exposing these as LLM-callable tools in CodeGeneratorAgent.**
-
-Now agents can:
-1. Receive a task ("fix the prompting system")
-2. Search codebase to find relevant files
-3. Read the actual code
-4. Make targeted edits
-5. All with full audit trail and rollback
+| File | Changes |
+|------|---------|
+| `core/agents/code_generator_agent.py` | File operation tools, multi-turn, better logging |
+| `core/auth_middleware.py` | PUBLIC_PATHS_EXACT, auth debug endpoint path |
+| `core/auth_views_enhanced.py` | Added auth_debug_view |
+| `core/urls.py` | Added auth debug route |
+| `core/views_unified.py` | Celery inspector API for status check |
+| `intelligence/spider_agent_connector.py` | Fixed code_snippet bloat |
+| `core/management/commands/cleanup_agent_solutions.py` | New cleanup command |
+| `core/management/commands/cleanup_empty_tables.py` | New cleanup command |
+| `frontend/src/components/platform/TriggerRulesPanel.tsx` | Use api instance |
+| `frontend/src/components/platform/ActionsPanel.tsx` | Use api instance |
 
 ---
 
@@ -179,7 +138,7 @@ Now agents can:
 
 | Session | Focus |
 |---------|-------|
-| **830** | **AGENT FILE OPERATIONS - Agents can now edit codebase** |
+| **830** | Agent File Operations + Production Auth Fixes + DB Bloat Fix |
 | **829** | Self-Healing UI Controls + SKIN Layer File Writing |
 | **828** | Self-Healing Execution - 514/742 tasks (69.3%) |
 | **827** | Production 502 Fix - Async Conversations |
@@ -188,4 +147,4 @@ Now agents can:
 
 ---
 
-**SESSION 830 COMPLETE - CodeGeneratorAgent now has real file system access via SKIN layer**
+**SESSION 830 COMPLETE - Production auth fixed, DB bloat resolved, self-healing active with 777 findings to process**
