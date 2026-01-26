@@ -24,6 +24,19 @@ The system is now fully controllable from the UI:
 
 **No more CLI-only execution!**
 
+### 3. Infrastructure Integration Tab Fix
+Fixed `/api/system-health/` endpoint in `core/views_unified.py`:
+- Database, Redis, Celery, WebSocket status now shows correctly
+- Workspace > Integration tab displays real service health
+
+### 4. Personal Assistant Session Awareness
+Added session and remediation awareness to PA Knowledge Injector:
+- PA now reads `00-START-NEXT-SESSION.md` for session context
+- PA knows about remediation progress when asked
+- Triggers: "session", "what are we working on", "progress", "remediation", "self-healing"
+
+**Ask the PA: "What has been happening in development sessions?"**
+
 ---
 
 ## Session 828-829 Progress
@@ -114,6 +127,8 @@ python /tmp/run_agent_tasks.py CodeGeneratorAgent --limit 20 --write-files
 | `frontend/src/lib/api.ts` | Remediation API endpoints |
 | `core/tasks.py` | `run_agent_remediation_batch` Celery task |
 | `core/views_platform_command.py` | Remediation status + run endpoints |
+| `core/views_unified.py` | Fixed SystemHealthAPIView for Integration tab |
+| `core/services/pa_knowledge_injector.py` | Session + remediation awareness for PA |
 | `/tmp/run_agent_tasks.py` | CLI batch execution script |
 | `docs/handoffs/SESSION_828_SELF_HEALING_EXECUTION.md` | Live progress tracker |
 
