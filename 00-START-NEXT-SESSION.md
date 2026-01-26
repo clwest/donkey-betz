@@ -1,48 +1,50 @@
-# Session 832 - Continue Self-Healing Remediation
+# Session 833 - Continue Platform Development
 
-**Previous Session:** 831 (Remediation Pipeline + UI Fixes)
+**Previous Session:** 832 (Recent Activity Enhancement)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **777 OPEN FINDINGS** | Self-Healing Pipeline Complete
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **Enhanced Activity Feed** | Self-Healing Pipeline Complete
 
 ---
 
-## What Was Accomplished in Session 831
+## What Was Accomplished in Session 832
 
-### 1. Remediation Pipeline Complete
+### 1. Enhanced Recent Activity Backend
 
-**Problem:** 777 open findings but "Run Remediation" said "No pending tasks"
+**New fields added to `_get_recent_activity()`:**
+| Field | Description |
+|-------|-------------|
+| `created_at` | When task started |
+| `input_data` | Input parameters summary |
+| `triggered_by` | User who triggered, or "system" |
 
-**Solution:** Modified remediation endpoint to auto-assign findings when no tasks exist:
-1. Click "Run Remediation" → Assigns open findings to agents
-2. Click again → Executes assigned tasks
+**Status expansion:**
+- Now shows `pending`, `in_progress`, `completed`, `failed` (was only completed/failed)
+- In-progress tasks prioritized to top
+- Limit increased from 10 to 15 items
 
-**New Celery Task:** `assign_findings_to_agents(limit, priority_filter)`
+### 2. Integrated System Activity
 
-### 2. LLM Timeout Fixes
+`metrics_view()` now includes `system_activity` with:
+- Dreams, Conversations, Decisions, Pilots from last 72 hours
+- Activity counts by type
 
-Added proper timeout configuration to reduce "Timeout connecting to server" errors:
+### 3. Enhanced Frontend Display
 
-| Provider | Timeout | Retries |
-|----------|---------|---------|
-| OpenAI | 60s | 2 |
-| Anthropic | 60s | 2 |
-| DeepSeek | 60s | 2 |
-| Together AI | 60s | 2 |
+**New features in Command Tab:**
+- Tabbed interface: "Agent Tasks" | "System Activity"
+- Status-aware icons (spinning loader for running, pause for pending)
+- "Running" badge with animation
+- Amber highlighting for in-progress tasks
+- Input parameters display in expanded view
+- Start and completion timestamps
+- System activity cards with color-coding by type
 
-### 3. UI Improvements
-
-- **Remediation Feedback:** Button now shows success/error messages
-- **Auto-Detect Agent:** Picks agent with most pending tasks
-- **Recent Activity:** Shows 2 lines of text (was truncating at ~40 chars)
-
-### PRs Merged (Session 831)
-| PR | Description |
-|----|-------------|
-| #228 | Remediation button feedback messages |
-| #229 | Auto-detect agent with pending tasks |
-| #230 | LLM timeout fixes (60s, 2 retries) |
-| #231 | Auto-assign open findings to agents |
-| #232 | Recent Activity text display fix |
+### Files Modified (Session 832)
+| File | Changes |
+|------|---------|
+| `core/views_platform_command.py` | Enhanced `_get_recent_activity()`, added `system_activity` |
+| `frontend/src/lib/api.ts` | New types: `RecentActivity`, `SystemActivityItem`, `SystemActivity` |
+| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | New components: `ActivityFeedSection`, `SystemActivityCard` |
 
 ---
 
@@ -52,6 +54,11 @@ Added proper timeout configuration to reduce "Timeout connecting to server" erro
 - **777 Open Findings** ready for processing
 - Pipeline: Discover → Assign → Execute → Verify (all phases connected)
 - CodeGeneratorAgent can write files to workspaces
+
+### Recent Activity Feed
+- Shows running tasks at top with visual indicators
+- Shows input parameters and triggered by user
+- System Activity tab shows dreams, conversations, decisions, pilots
 
 ### How to Run Remediation
 1. Go to **Workspace → Governance** tab
@@ -75,24 +82,10 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Run remediation via API
-curl -X POST http://localhost:8000/api/platform/actions/run-remediation/ \
-  -H "Authorization: Token YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"limit": 20}'
+# 3. Check recent activity
+# Navigate to Workspace → Command tab
+# See "Agent Tasks" and "System Activity" tabs
 ```
-
----
-
-## Files Modified (Session 831)
-
-| File | Changes |
-|------|---------|
-| `core/views_platform_command.py` | Auto-assign findings, auto-detect agent |
-| `core/tasks.py` | New `assign_findings_to_agents` task |
-| `core/services/llm_provider_registry.py` | Timeout config for all providers |
-| `frontend/src/pages/workspace/tabs/GovernanceTab.tsx` | Feedback messages |
-| `frontend/src/pages/WorkspacePage.tsx` | Recent Activity line-clamp fix |
 
 ---
 
@@ -100,6 +93,7 @@ curl -X POST http://localhost:8000/api/platform/actions/run-remediation/ \
 
 | Session | Focus |
 |---------|-------|
+| **832** | Recent Activity Enhancement - New fields, all statuses, system activity |
 | **831** | Remediation Pipeline + LLM Timeouts + UI Fixes |
 | **830** | Agent File Operations + Production Auth Fixes + DB Bloat Fix |
 | **829** | Self-Healing UI Controls + SKIN Layer File Writing |
@@ -110,4 +104,4 @@ curl -X POST http://localhost:8000/api/platform/actions/run-remediation/ \
 
 ---
 
-**SESSION 831 COMPLETE - Remediation pipeline fully connected, LLM timeouts fixed, UI improved**
+**SESSION 832 COMPLETE - Recent Activity enhanced with running tasks, input data, system activity feed**
