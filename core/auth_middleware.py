@@ -364,11 +364,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/platform/doc-content/',  # Document content viewer
         '/api/deliverables/',  # Deliverables marketplace
 
-        # Session 824: Live Metrics & Self-Execution Control APIs
+        # Session 824: Live Metrics & Self-Execution Control APIs (read-only)
         '/api/platform/live-metrics/',  # Real-time system metrics
         '/api/platform/triggers/',  # Trigger rules list + toggle + run-now
-        '/api/platform/actions/',  # Manual action endpoints (run-spiders, run-remediation, etc.)
         '/api/platform/remediation/',  # Remediation status
+        # NOTE: /api/platform/actions/ intentionally NOT in PUBLIC_PATHS - requires auth
 
         # Session 819: Audit Tracking System APIs (read-only endpoints)
         '/api/audit-tracking/findings/',  # Findings list and summary
