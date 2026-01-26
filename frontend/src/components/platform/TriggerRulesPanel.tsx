@@ -18,6 +18,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { api } from '@/lib/api'
 
 interface TriggerRule {
   name: string
@@ -44,22 +45,15 @@ interface TriggerRunResult {
   }>
 }
 
+// Session 830: Use api instance to include auth token
 async function fetchTriggers(): Promise<{ rules: TriggerRule[]; total: number }> {
-  const response = await fetch('/api/platform/triggers/', {
-    credentials: 'include',
-  })
-  if (!response.ok) throw new Error('Failed to fetch triggers')
-  return response.json()
+  const response = await api.get('/platform/triggers/')
+  return response.data
 }
 
 async function runTriggersNow(): Promise<{ result: TriggerRunResult }> {
-  const response = await fetch('/api/platform/triggers/run-now/', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-  })
-  if (!response.ok) throw new Error('Failed to run triggers')
-  return response.json()
+  const response = await api.post('/platform/triggers/run-now/')
+  return { result: response.data.result }
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
