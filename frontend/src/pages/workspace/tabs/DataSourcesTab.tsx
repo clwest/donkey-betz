@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { spiderIntegrationApi, spiderFeedApi, learningApi } from '@/lib/api'
+import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
 type DataSubTab = 'spiders' | 'feed' | 'learning'
@@ -65,7 +66,7 @@ export function DataSourcesTab() {
 // ============ Spiders Sub-Tab ============
 
 function SpidersSubTab() {
-  const { data: healthData, isLoading } = useQuery({
+  const { data: healthData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['spider-health-tab'],
     queryFn: async () => {
       const res = await spiderIntegrationApi.healthSummary()
@@ -80,6 +81,10 @@ function SpidersSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load spider data" />
   }
 
   const stats = healthData || {
@@ -170,7 +175,7 @@ function SpidersSubTab() {
 // ============ Feed Sub-Tab ============
 
 function FeedSubTab() {
-  const { data: feedData, isLoading } = useQuery({
+  const { data: feedData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['spider-feed-tab'],
     queryFn: async () => {
       const res = await spiderFeedApi.list({ per_page: 5, sort: 'newest' })
@@ -193,6 +198,10 @@ function FeedSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load feed data" />
   }
 
   const items = feedData?.items || []
@@ -253,7 +262,7 @@ function FeedSubTab() {
 // ============ Learning Sub-Tab ============
 
 function LearningSubTab() {
-  const { data: statsData, isLoading } = useQuery({
+  const { data: statsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['learning-stats-tab'],
     queryFn: async () => {
       const res = await learningApi.stats()
@@ -275,6 +284,10 @@ function LearningSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load learning data" />
   }
 
   const stats = statsData || {

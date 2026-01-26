@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { contentApi, podcastApi, distributionApi } from '@/lib/api'
+import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
 type ContentSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' | 'distribution'
@@ -70,7 +71,7 @@ export function ContentStudioTab() {
 // ============ Gallery Sub-Tab ============
 
 function GallerySubTab() {
-  const { data: galleryData, isLoading } = useQuery({
+  const { data: galleryData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['gallery-stats-tab'],
     queryFn: async () => {
       // Fetch unified gallery to get counts
@@ -94,6 +95,10 @@ function GallerySubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load gallery data" />
   }
 
   // Calculate real stats from gallery data
@@ -155,7 +160,7 @@ function GallerySubTab() {
 // ============ Channels Sub-Tab ============
 
 function ChannelsSubTab() {
-  const { data: channelsData, isLoading } = useQuery({
+  const { data: channelsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['content-channels-tab'],
     queryFn: async () => {
       const res = await contentApi.channels(5)
@@ -171,6 +176,10 @@ function ChannelsSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load channels data" />
   }
 
   return (
@@ -223,7 +232,7 @@ function ChannelsSubTab() {
 // ============ Blogs Sub-Tab ============
 
 function BlogsSubTab() {
-  const { data: blogsData, isLoading } = useQuery({
+  const { data: blogsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['blogs-tab'],
     queryFn: async () => {
       const response = await fetch('/api/v1/research/self-blog/list/?per_page=5')
@@ -240,6 +249,10 @@ function BlogsSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load blogs data" />
   }
 
   return (
@@ -281,7 +294,7 @@ function BlogsSubTab() {
 // ============ Podcast Sub-Tab ============
 
 function PodcastSubTab() {
-  const { data: podcastData, isLoading } = useQuery({
+  const { data: podcastData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['podcast-tab'],
     queryFn: async () => {
       const res = await podcastApi.list()
@@ -298,6 +311,10 @@ function PodcastSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load podcast data" />
   }
 
   return (
@@ -353,7 +370,7 @@ function PodcastSubTab() {
 // ============ Distribution Sub-Tab ============
 
 function DistributionSubTab() {
-  const { data: statsData, isLoading } = useQuery({
+  const { data: statsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['distribution-stats-tab'],
     queryFn: async () => {
       const res = await distributionApi.stats()
@@ -367,6 +384,10 @@ function DistributionSubTab() {
         <Loader2 className="animate-spin text-primary-400" size={24} />
       </div>
     )
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load distribution data" />
   }
 
   const stats = statsData || {
