@@ -2756,6 +2756,21 @@ export const platformApi = {
       filtered_count: number
     }>('/platform/audits/', { params: type ? { type } : {} }),
 
+  // Session 833: Get document content for viewer
+  docContent: (path: string) =>
+    api.get<{
+      content: string
+      metadata: {
+        path: string
+        name: string
+        title: string
+        lines: number
+        size_bytes: number
+        modified_at: string
+      }
+      error?: string
+    }>('/platform/doc-content/', { params: { path } }),
+
   // Session 818: Toggle SKIN lock
   skinLock: (action: 'lock' | 'unlock' | 'toggle' = 'toggle') =>
     api.post<{

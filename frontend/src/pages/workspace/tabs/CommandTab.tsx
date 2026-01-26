@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, humanApi } from '@/lib/api'
+import { ErrorState } from '@/components/ErrorState'
 import {
   MissionCard,
   MetricsGrid,
@@ -55,7 +56,13 @@ export function CommandTab({
   const queryClient = useQueryClient()
 
   // Queries
-  const { data: missionData, isLoading: loadingMission } = useQuery({
+  const {
+    data: missionData,
+    isLoading: loadingMission,
+    isError: missionError,
+    error: missionErrorData,
+    refetch: refetchMission,
+  } = useQuery({
     queryKey: ['platform-mission'],
     queryFn: async () => {
       const res = await platformApi.mission()
@@ -63,7 +70,11 @@ export function CommandTab({
     },
   })
 
-  const { data: metricsData } = useQuery({
+  const {
+    data: metricsData,
+    isError: metricsError,
+    refetch: refetchMetrics,
+  } = useQuery({
     queryKey: ['platform-metrics'],
     queryFn: async () => {
       const res = await platformApi.metrics()
@@ -71,13 +82,25 @@ export function CommandTab({
     },
   })
 
-  const { data: governanceData } = useQuery({
+  const {
+    data: governanceData,
+    isError: governanceError,
+    refetch: refetchGovernance,
+  } = useQuery({
     queryKey: ['platform-governance'],
     queryFn: async () => {
       const res = await platformApi.governance()
       return res.data
     },
   })
+
+  // Session 833: Combined error state
+  const hasError = missionError || metricsError || governanceError
+  const handleRetry = () => {
+    if (missionError) refetchMission()
+    if (metricsError) refetchMetrics()
+    if (governanceError) refetchGovernance()
+  }
 
   // Decision mutation
   const decisionMutation = useMutation({
@@ -90,6 +113,17 @@ export function CommandTab({
       queryClient.invalidateQueries({ queryKey: ['human-attention'] })
     },
   })
+
+  // Session 833: Show error state if any query failed
+  if (hasError) {
+    return (
+      <ErrorState
+        error={missionErrorData as Error}
+        onRetry={handleRetry}
+        message="Failed to load platform data. Please check your connection and try again."
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">

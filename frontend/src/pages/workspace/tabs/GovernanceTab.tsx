@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
 import { EmergencyControls } from '@/components/platform'
+import { ErrorState } from '@/components/ErrorState'
 
 // Session 831: Feedback message type
 interface FeedbackMessage {
@@ -37,7 +38,13 @@ export function GovernanceTab() {
   const [isPolling, setIsPolling] = useState(true) // Session 830: Polling toggle (default ON)
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null) // Session 831: User feedback
 
-  const { data: governanceData, isLoading: loadingGovernance } = useQuery({
+  const {
+    data: governanceData,
+    isLoading: loadingGovernance,
+    isError: governanceError,
+    error: governanceErrorData,
+    refetch: refetchGovernance,
+  } = useQuery({
     queryKey: ['platform-governance'],
     queryFn: async () => {
       const res = await platformApi.governance()
@@ -49,6 +56,7 @@ export function GovernanceTab() {
   const {
     data: progressData,
     isLoading: loadingProgress,
+    isError: _progressError, // Session 833: Prefixed to suppress warning - error handled at governance level
     refetch: refetchProgress,
     dataUpdatedAt,
   } = useQuery({
@@ -62,7 +70,7 @@ export function GovernanceTab() {
   })
 
   // Session 829: Remediation status (fallback/additional data)
-  const { data: remediationData, refetch: refetchRemediation } = useQuery({
+  const { data: _remediationData, refetch: refetchRemediation } = useQuery({
     queryKey: ['remediation-status'],
     queryFn: async () => {
       const res = await platformApi.remediationStatus()
@@ -151,6 +159,17 @@ export function GovernanceTab() {
       default:
         return { bg: 'bg-gray-800', text: 'text-gray-500', icon: Pause }
     }
+  }
+
+  // Session 833: Show error state if governance query failed
+  if (governanceError) {
+    return (
+      <ErrorState
+        error={governanceErrorData as Error}
+        onRetry={refetchGovernance}
+        message="Failed to load governance data. Please check your connection and try again."
+      />
+    )
   }
 
   return (
