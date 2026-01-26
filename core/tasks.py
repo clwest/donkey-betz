@@ -28621,6 +28621,206 @@ def run_autonomous_remediation_cycle():
 
 
 @shared_task
+def run_agent_remediation_batch(agent_name: str = 'CodeGeneratorAgent', limit: int = 20, write_files: bool = True):
+    """
+    Session 829: Run a batch of remediation tasks for a specific agent.
+
+    This is the Celery task version of /tmp/run_agent_tasks.py.
+    Triggered from the UI via /api/platform/actions/run-remediation/
+
+    Args:
+        agent_name: Which agent to run (default: CodeGeneratorAgent)
+        limit: Maximum number of tasks to process (default: 20)
+        write_files: Whether to write generated files to workspace (default: True)
+    """
+    import re
+    from django.utils import timezone
+    from core.models_audit_tracking import AuditRemediationTask
+    from core.agent_router import AgentRouter
+
+    logger.info(f"🔄 [REMEDIATION-BATCH] Starting {agent_name} batch (limit={limit}, write_files={write_files})")
+
+    # Setup workspace manager for file writing
+    workspace_manager = None
+    workspace = None
+
+    if write_files:
+        try:
+            from core.services.workspace_manager import WorkspaceManager
+            from core.models_skin_layer import ProjectWorkspace
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+            system_user = User.objects.filter(is_superuser=True).first()
+
+            if system_user:
+                workspace_manager = WorkspaceManager(user=system_user)
+                workspace = ProjectWorkspace.objects.filter(
+                    is_active=True,
+                    allow_file_write=True
+                ).first()
+                if workspace:
+                    logger.info(f"📁 [REMEDIATION-BATCH] Workspace enabled: {workspace.name}")
+                else:
+                    logger.warning("⚠️ [REMEDIATION-BATCH] No active workspace found - files will NOT be written")
+                    write_files = False
+            else:
+                logger.warning("⚠️ [REMEDIATION-BATCH] No system user found - files will NOT be written")
+                write_files = False
+        except Exception as e:
+            logger.warning(f"⚠️ [REMEDIATION-BATCH] Workspace setup failed: {e}")
+            write_files = False
+
+    def parse_code_from_result(result_data):
+        """Extract code blocks from agent result."""
+        files = []
+        if not result_data:
+            return files
+
+        message = result_data.get('message', '')
+        if not message:
+            return files
+
+        # Pattern: Code: filename.py followed by code block
+        code_pattern = r'Code:\s*([^\n]+\.(?:py|js|ts|json|yaml|yml|md|txt|html|css))\s*```(?:\w+)?\n(.*?)```'
+        matches = re.findall(code_pattern, message, re.DOTALL | re.IGNORECASE)
+
+        for filename, content in matches:
+            filename = filename.strip()
+            content = content.strip()
+            if filename and content:
+                files.append({
+                    'filename': filename,
+                    'content': content,
+                    'language': filename.split('.')[-1] if '.' in filename else 'txt'
+                })
+
+        # Also try generic code blocks if no specific filenames found
+        if not files:
+            generic_pattern = r'```(?:python|javascript|typescript)?\n(.*?)```'
+            matches = re.findall(generic_pattern, message, re.DOTALL)
+            for i, content in enumerate(matches):
+                if len(content.strip()) > 50:  # Only substantial code
+                    files.append({
+                        'filename': f'generated_{i+1}.py',
+                        'content': content.strip(),
+                        'language': 'python'
+                    })
+
+        return files
+
+    def write_files_to_workspace(files, task):
+        """Write generated files to the workspace."""
+        if not workspace_manager or not workspace or not files:
+            return {'written': False, 'reason': 'No workspace or files'}
+
+        written = []
+        for file_info in files:
+            try:
+                operation = workspace_manager.write_file(
+                    workspace=workspace,
+                    file_path=file_info['filename'],
+                    content=file_info['content'],
+                    agent_name=task.assigned_agent,
+                    agent_task=f"Fix finding: {task.finding.title}"
+                )
+                written.append({
+                    'filename': file_info['filename'],
+                    'operation_id': str(operation.id) if operation else None
+                })
+                logger.info(f"   📝 Wrote: {file_info['filename']}")
+            except Exception as e:
+                logger.warning(f"   ⚠️ Write failed for {file_info['filename']}: {e}")
+
+        return {'written': len(written) > 0, 'files': written}
+
+    # Get assigned tasks for this agent
+    tasks = list(AuditRemediationTask.objects.filter(
+        assigned_agent=agent_name,
+        status='assigned'
+    ).select_related('finding')[:limit])
+
+    logger.info(f"📋 [REMEDIATION-BATCH] Processing {len(tasks)} {agent_name} tasks...")
+
+    router = AgentRouter()
+    succeeded = 0
+    failed = 0
+    files_written = 0
+
+    for i, task in enumerate(tasks, 1):
+        finding = task.finding
+        logger.info(f"[{i}/{len(tasks)}] {finding.title[:55]}...")
+
+        task.status = 'in_progress'
+        task.started_at = timezone.now()
+        task.save()
+
+        task_desc = f'''Review and fix this finding:
+Title: {finding.title}
+Category: {finding.category}
+Priority: {finding.priority}
+Affected Files: {finding.affected_files}
+
+Description:
+{finding.description}
+
+Recommendation:
+{finding.recommendation}
+'''
+
+        try:
+            result = router.route(agent_name=agent_name, task=task_desc)
+
+            result_data = {}
+            if hasattr(result, 'to_dict'):
+                result_data = result.to_dict()
+            elif hasattr(result, 'message'):
+                result_data = {'message': result.message, 'success': getattr(result, 'success', True)}
+            else:
+                result_data = {'raw': str(result)[:500]}
+
+            # Write files if enabled
+            if write_files and agent_name == 'CodeGeneratorAgent':
+                parsed_files = parse_code_from_result(result_data)
+                if parsed_files:
+                    write_result = write_files_to_workspace(parsed_files, task)
+                    result_data['skin_layer'] = write_result
+                    files_written += len(write_result.get('files', []))
+
+            task.status = 'completed'
+            task.completed_at = timezone.now()
+            task.execution_result = result_data
+            task.save()
+
+            finding.status = 'resolved'
+            finding.resolved_at = timezone.now()
+            finding.save()
+
+            succeeded += 1
+            logger.info(f"   ✅ Completed")
+
+        except Exception as e:
+            task.status = 'failed'
+            task.completed_at = timezone.now()
+            task.execution_result = {'error': str(e)}
+            task.save()
+
+            failed += 1
+            logger.error(f"   ❌ Failed: {str(e)[:80]}")
+
+    logger.info(f"✅ [REMEDIATION-BATCH] {agent_name} complete: {succeeded} succeeded, {failed} failed, {files_written} files written")
+
+    return {
+        'agent': agent_name,
+        'succeeded': succeeded,
+        'failed': failed,
+        'total': len(tasks),
+        'files_written': files_written,
+        'write_files_enabled': write_files,
+    }
+
+
+@shared_task
 def get_remediation_status():
     """
     Session 820: Get current autonomous remediation status.
