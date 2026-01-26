@@ -1756,11 +1756,13 @@ def action_run_remediation_view(request):
 
     Session 829: Added agent parameter and write_files support.
     Session 831: Auto-detect agent with most pending tasks if none specified.
+    Session 831: Auto-assign open findings if no tasks exist.
 
     Parameters:
         limit: Maximum tasks to process (default: 20)
         agent: Specific agent to run (default: auto-detect from pending tasks)
         write_files: Whether to write generated files to workspace (default: true)
+        assign_first: If true, assign open findings before executing (default: auto)
     """
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Authentication required'}, status=401)
@@ -1768,12 +1770,44 @@ def action_run_remediation_view(request):
     try:
         import json
         from django.db.models import Count
-        from core.models_audit_tracking import AuditRemediationTask
+        from core.models_audit_tracking import AuditRemediationTask, AuditFinding
 
         body = json.loads(request.body) if request.body else {}
         limit = body.get('limit', 20)
         agent = body.get('agent')  # None = auto-detect
         write_files = body.get('write_files', True)
+        assign_first = body.get('assign_first')  # None = auto-detect
+
+        # Check if there are any assigned tasks
+        total_assigned = AuditRemediationTask.objects.filter(status='assigned').count()
+
+        # Session 831: If no assigned tasks, check for open findings and assign them
+        if total_assigned == 0:
+            open_findings_count = AuditFinding.objects.filter(
+                status='open',
+                assigned_agent=''
+            ).count()
+
+            if open_findings_count > 0:
+                # Run assignment phase first
+                logger.info(f"No assigned tasks, but {open_findings_count} open findings. Running assignment...")
+                from core.tasks import assign_findings_to_agents
+                assign_findings_to_agents.delay(limit=limit)
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Assigning {min(limit, open_findings_count)} of {open_findings_count} open findings to agents. Run remediation again after assignment completes.',
+                    'phase': 'assignment',
+                    'open_findings': open_findings_count,
+                    'tasks_available': 0,
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No open findings or pending tasks to process',
+                    'tasks_available': 0,
+                    'open_findings': 0,
+                })
 
         # Session 831: Auto-detect agent with most pending tasks
         if not agent:
@@ -1788,23 +1822,17 @@ def action_run_remediation_view(request):
                 agent = top_agent['assigned_agent']
                 pending_count = top_agent['count']
                 logger.info(f"Auto-selected {agent} with {pending_count} pending tasks")
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'No pending remediation tasks found',
-                    'tasks_available': 0,
-                })
 
         # Get count of tasks that will be processed
         tasks_available = AuditRemediationTask.objects.filter(
             assigned_agent=agent,
             status='assigned'
-        ).count()
+        ).count() if agent else total_assigned
 
         if tasks_available == 0:
             return JsonResponse({
                 'success': False,
-                'message': f'No pending tasks for {agent}',
+                'message': f'No pending tasks for {agent}' if agent else 'No pending tasks',
                 'agent': agent,
                 'tasks_available': 0,
             })
