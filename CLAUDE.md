@@ -128,6 +128,11 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **832** | Recent Activity Enhancement - New fields, system activity | `SESSION_832_RECENT_ACTIVITY_ENHANCEMENT.md` |
+| **831** | Remediation Pipeline + LLM Timeouts + UI Fixes | `SESSION_831_REMEDIATION_PIPELINE.md` |
+| **830** | Agent File Operations + Production Auth Fixes | `SESSION_830_AGENT_FILE_OPERATIONS.md` |
+| **829** | Self-Healing UI Controls + SKIN Layer File Writing | `SESSION_829_SELF_HEALING_UI_CONTROLS.md` |
+| **828** | Self-Healing Execution - 514/742 tasks (69.3%) | `SESSION_828_SELF_HEALING_EXECUTION.md` |
 | **827** | Production 502 Fix - Async Conversations via Celery | `SESSION_827_PRODUCTION_502_FIX.md` |
 | **826** | Goal-Driven Conversations + Workspace Real Data + CodeReviewAgent | `SESSION_826_GOAL_DRIVEN_CONVERSATIONS.md` |
 | **825** | UI Consolidation - 29 pages → 6 tabs, collapsible sidebar | `SESSION_825_UI_CONSOLIDATION_PLAN.md` |
@@ -138,14 +143,8 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **820** | Self-Healing Orchestration + Tiered Docs Injection | `SESSION_820_SELF_HEALING_ORCHESTRATION.md` |
 | **819** | Deliverables Marketplace + Audit Tracking | `SESSION_819_DELIVERABLES_MARKETPLACE.md` |
 | **817** | Autonomous Agent Behavior + Smart Tool Renderer | `SESSION_817_AUTONOMOUS_AGENTS_TOOL_RENDERER.md` |
-| **816** | Operations Panel + Playbooks + Audits Browser | `SESSION_816_OPERATIONS_PLAYBOOKS_AUDITS.md` |
-| **815** | Platform Command Center | `SESSION_815_PLATFORM_COMMAND_CENTER.md` |
-| **814** | Spider Search Fix + Blogs Page + Docs Injection | See handoffs |
-| **810** | MASSIVE Celery Beat Fix - 60 tasks restored | See handoffs |
-| **806** | Personal Assistant Context Optimization | `SESSION_806_CONTEXT_OPTIMIZATION.md` |
-| **781** | Agent Conversation Voice Fixes | `SESSION_781_AGENT_VOICE_FIXES.md` |
 
-**Older sessions:** See `docs/handoffs/` directory (Sessions 197-825)
+**Older sessions:** See `docs/handoffs/` directory (Sessions 197-831)
 
 ---
 

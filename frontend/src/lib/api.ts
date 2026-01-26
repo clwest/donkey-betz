@@ -2613,11 +2613,55 @@ export interface Playbook {
   modified_at: string
 }
 
+// Session 832: Enhanced RecentActivity with all fields from backend
 export interface RecentActivity {
+  id: string
   agent_name: string
+  agent_category: string | null
   task: string
+  task_full: string
+  created_at: string | null
   completed_at: string | null
   success: boolean
+  status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  execution_time_ms: number | null
+  tokens_used: number
+  cost: number
+  error_message: string | null
+  output_summary: string | null
+  tool_results: Array<string | { name?: string; tool?: string }>
+  input_data: Record<string, string> | null
+  triggered_by: string
+}
+
+// Session 832: System Activity types for dreams, conversations, decisions, pilots
+export interface SystemActivityItem {
+  id: string
+  type: 'dream' | 'conversation' | 'decision' | 'pilot'
+  icon: string
+  title: string
+  full_title?: string
+  subtitle: string
+  full_subtitle?: string
+  timestamp: string
+  timestamp_display: string
+  agent?: string
+  agent_name?: string
+  agents?: string[]
+  category?: string
+  content?: string
+  status?: string
+  decision_type?: string
+  kpi?: string
+}
+
+export interface SystemActivity {
+  success: boolean
+  activities: SystemActivityItem[]
+  counts: Record<string, number>
+  total: number
+  hours_back: number
+  timestamp: string
 }
 
 export const platformApi = {
@@ -2650,6 +2694,8 @@ export const platformApi = {
         by_category: Record<string, number>
       }
       recent_activity: RecentActivity[]
+      // Session 832: System activity from RecentActivityService
+      system_activity: SystemActivity
     }>('/platform/metrics/'),
 
   // Get governance status
