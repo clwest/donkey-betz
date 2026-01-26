@@ -18,6 +18,8 @@ import {
   Play,
   FileText,
   TrendingUp,
+  Clock,
+  CheckCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { contentApi, podcastApi, distributionApi } from '@/lib/api'
@@ -509,14 +511,31 @@ function ChannelRow({ channel }: { channel: any }) {
 }
 
 function BlogRow({ blog }: { blog: any }) {
+  // Status styling
+  const statusStyles: Record<string, { bg: string; text: string; icon: typeof Clock }> = {
+    draft: { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: Clock },
+    approved: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: CheckCircle },
+    published: { bg: 'bg-green-500/20', text: 'text-green-400', icon: Eye },
+  }
+  const status = blog.status || 'draft'
+  const style = statusStyles[status] || statusStyles.draft
+  const StatusIcon = style.icon
+
   return (
     <a
-      href={`/blogs/${blog.id}`}
+      href={`/blog/${blog.id}`}
       className="block py-2 border-b border-gray-800 last:border-0 hover:bg-gray-800/50 -mx-2 px-2 rounded transition-colors"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{blog.title}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-medium truncate">{blog.title}</div>
+            {/* Status badge */}
+            <span className={cn('px-1.5 py-0.5 rounded text-xs flex items-center gap-1', style.bg, style.text)}>
+              <StatusIcon size={10} />
+              {status}
+            </span>
+          </div>
           <div className="text-xs text-gray-500 line-clamp-1">{blog.intro}</div>
         </div>
         <div className="text-xs text-gray-500 ml-2 whitespace-nowrap">

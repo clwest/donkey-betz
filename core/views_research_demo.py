@@ -598,7 +598,8 @@ def self_blog_list_api(request):
     """
     Session 780: Get paginated list of all self-blog posts.
     Session 814: Added category filtering for technical documents/audits.
-    Supports pagination, search, and category filtering.
+    Session 833: Added status filtering for approval workflow.
+    Supports pagination, search, category, and status filtering.
     """
     try:
         from core.models_unified_system import SelfBlog
@@ -608,6 +609,7 @@ def self_blog_list_api(request):
         per_page = int(request.GET.get('per_page', 20))
         search = request.GET.get('search', '').strip()
         category = request.GET.get('category', '').strip()  # Session 814
+        status = request.GET.get('status', '').strip()  # Session 833
 
         # Build query
         queryset = SelfBlog.objects.all().order_by('-created_at')
@@ -619,6 +621,10 @@ def self_blog_list_api(request):
                 queryset = queryset.exclude(category='blog')
             else:
                 queryset = queryset.filter(category=category)
+
+        # Session 833: Filter by status if specified
+        if status:
+            queryset = queryset.filter(status=status)
 
         if search:
             queryset = queryset.filter(
@@ -636,6 +642,14 @@ def self_blog_list_api(request):
             'documents': SelfBlog.objects.exclude(category='blog').count(),
         }
 
+        # Session 833: Get status counts for UI tabs
+        status_counts = {
+            'all': SelfBlog.objects.count(),
+            'draft': SelfBlog.objects.filter(status='draft').count(),
+            'approved': SelfBlog.objects.filter(status='approved').count(),
+            'published': SelfBlog.objects.filter(status='published').count(),
+        }
+
         # Paginate
         start = (page - 1) * per_page
         end = start + per_page
@@ -648,6 +662,7 @@ def self_blog_list_api(request):
                     'id': str(b.id),
                     'title': b.title,
                     'category': getattr(b, 'category', 'blog'),  # Session 814
+                    'status': getattr(b, 'status', 'draft'),  # Session 833
                     'meta_description': b.meta_description,
                     'intro': b.intro[:200] + '...' if len(b.intro) > 200 else b.intro,
                     'tags': b.tags or [],
@@ -666,6 +681,7 @@ def self_blog_list_api(request):
                 'has_prev': page > 1,
             },
             'category_counts': category_counts,  # Session 814
+            'status_counts': status_counts,  # Session 833
         })
 
     except Exception as e:
@@ -677,6 +693,7 @@ def self_blog_list_api(request):
 def self_blog_by_id_api(request, blog_id):
     """
     Session 570: Get a specific self-blog by ID.
+    Session 833: Added status field for approval workflow.
     """
     try:
         from core.models_unified_system import SelfBlog
@@ -690,6 +707,7 @@ def self_blog_by_id_api(request, blog_id):
                     'id': str(blog.id),
                     'title': blog.title,
                     'category': getattr(blog, 'category', 'blog'),  # Session 814
+                    'status': getattr(blog, 'status', 'draft'),  # Session 833
                     'meta_description': blog.meta_description,
                     'intro': blog.intro,
                     'sections': blog.sections,
@@ -740,6 +758,101 @@ def delete_self_blog_api(request, blog_id):
 
     except Exception as e:
         logger.error(f"Error in delete_self_blog_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def approve_self_blog_api(request, blog_id):
+    """
+    Session 833: Approve a self-blog for publishing.
+    Changes status from 'draft' to 'approved'.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+
+        blog = SelfBlog.objects.filter(id=blog_id).first()
+
+        if blog:
+            if blog.status == 'published':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Blog is already published'
+                }, status=400)
+
+            blog.status = 'approved'
+            blog.save()
+
+            logger.info(f"Approved self-blog: {blog.title} (ID: {blog_id})")
+            return JsonResponse({
+                'success': True,
+                'message': f'Blog "{blog.title}" approved',
+                'blog': {
+                    'id': str(blog.id),
+                    'title': blog.title,
+                    'status': blog.status,
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Blog not found'
+            }, status=404)
+
+    except Exception as e:
+        logger.error(f"Error in approve_self_blog_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def publish_self_blog_api(request, blog_id):
+    """
+    Session 833: Publish an approved self-blog.
+    Changes status from 'approved' to 'published'.
+    Can also directly publish a draft if force=true.
+    """
+    try:
+        import json
+        from core.models_unified_system import SelfBlog
+
+        body = json.loads(request.body) if request.body else {}
+        force = body.get('force', False)
+
+        blog = SelfBlog.objects.filter(id=blog_id).first()
+
+        if blog:
+            if blog.status == 'published':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Blog is already published'
+                }, status=400)
+
+            if blog.status == 'draft' and not force:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Blog must be approved before publishing. Use force=true to skip approval.'
+                }, status=400)
+
+            blog.status = 'published'
+            blog.save()
+
+            logger.info(f"Published self-blog: {blog.title} (ID: {blog_id})")
+            return JsonResponse({
+                'success': True,
+                'message': f'Blog "{blog.title}" published',
+                'blog': {
+                    'id': str(blog.id),
+                    'title': blog.title,
+                    'status': blog.status,
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Blog not found'
+            }, status=404)
+
+    except Exception as e:
+        logger.error(f"Error in publish_self_blog_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
