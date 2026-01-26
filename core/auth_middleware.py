@@ -374,6 +374,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 819: Audit Tracking System APIs (read-only endpoints)
         '/api/audit-tracking/findings/',  # Findings list and summary
         '/api/audit-tracking/reports/',  # Audit reports list
+
+        # Session 830: Self-Healing Progress (read-only monitoring)
+        '/api/self-healing/progress/',  # Live remediation progress
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
