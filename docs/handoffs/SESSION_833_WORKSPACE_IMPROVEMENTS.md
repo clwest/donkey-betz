@@ -2,7 +2,7 @@
 
 **Previous Session:** 832 (Recent Activity Enhancement)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow | Operations Viewer
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow | Operations Viewer | 50 Agents Delegate Fix
 
 ---
 
@@ -112,6 +112,39 @@ Implemented complete blog approval workflow allowing review before publishing.
 
 Implemented operation content viewer modal for the Operations tab.
 
+### 7. Batch Fix: delegate_to_specialist Handling
+
+Fixed "Unknown tool: delegate_to_specialist" error across 50 agents.
+
+**Problem:**
+Agents with custom `_execute_tool` methods were returning "Unknown tool: delegate_to_specialist" because they didn't handle the delegation tool that `base_agent.py` uses for specialist routing.
+
+**Solution:**
+Created `scripts/fix_delegate_to_specialist.py` batch fix script that:
+- Detects agents with "Unknown tool" errors missing delegate handler
+- Identifies correct argument name (`arguments`, `tool_input`, `args`, etc.)
+- Handles multiple code patterns (else clause, direct return, blank lines)
+- Adds proper `_handle_delegate_to_specialist` call from base_agent
+
+**Agents Fixed (50 total):**
+- `analysis/`: market_intelligence_agent, opportunity_scoring_agent, trend_analysis_agent
+- `blockchain/`: blockchain_audit_coordinator, exploit_detector_agent, smart_contract_auditor_agent, transaction_monitor_agent, whale_watcher_agent
+- `business/`: base_business_research_agent, brand_strategy_agent, competitor_analysis_agent, customer_research_agent
+- `executive/`: coo_agent, creative_director_agent, cto_agent, meeting_coordinator_agent
+- `narrative/`: cultural_impact_agent, narrative_drift_coordinator, narrative_historian_agent, trend_break_detector_agent
+- `podcast/`: debate_advocate_agent, debate_skeptic_agent, moderator_agent, podcast_coordinator_agent
+- `security/`: content_audit_agent, memory_isolation_agent
+- `stocks/`: bear_case_agent, bull_case_agent, signal_scanner_agent, stock_analyst_agent
+- `strategy/`: brand_identity_agent, content_strategy_agent, seo_optimizer_agent, social_media_agent
+- `training/`: character_training_agent, trained_creation_agent
+- Plus: personal_assistant_agent, fullstack_developer_agent, code_review_agent, devops_agent, and others
+
+**Script Usage:**
+```bash
+python scripts/fix_delegate_to_specialist.py --dry-run  # Preview changes
+python scripts/fix_delegate_to_specialist.py            # Apply changes
+```
+
 **Features:**
 - View full operation details by clicking "View Content" button
 - Shows file path for file operations
@@ -133,6 +166,7 @@ Implemented operation content viewer modal for the Operations tab.
 |------|---------|
 | `frontend/src/components/ErrorState.tsx` | Shared error state component |
 | `core/migrations/0190_session_833_selfblog_status.py` | Add status field to SelfBlog |
+| `scripts/fix_delegate_to_specialist.py` | Batch fix script for agent delegate handling |
 
 ### Backend
 | File | Changes |
@@ -140,6 +174,22 @@ Implemented operation content viewer modal for the Operations tab.
 | `core/models_unified_system.py` | Added `status` field to SelfBlog model |
 | `core/views_research_demo.py` | Added approve/publish endpoints, status filtering |
 | `core/urls.py` | Added routes for approve/publish endpoints |
+
+### Agents (50 files fixed)
+| Directory | Files |
+|-----------|-------|
+| `core/agents/` | ai_series_workflow_agent, audio_agent, autonomous_content_studio_coordinator, campaign_orchestrator_agent, code_review_agent, devops_agent, fullstack_developer_agent, image_editing_agent, personal_assistant_agent, resolve_agent, three_d_agent, video_editing_agent, workflow_agent |
+| `core/agents/analysis/` | market_intelligence_agent, opportunity_scoring_agent, trend_analysis_agent |
+| `core/agents/blockchain/` | blockchain_audit_coordinator, exploit_detector_agent, smart_contract_auditor_agent, transaction_monitor_agent, whale_watcher_agent |
+| `core/agents/business/` | base_business_research_agent, brand_strategy_agent, competitor_analysis_agent, customer_research_agent |
+| `core/agents/executive/` | coo_agent, creative_director_agent, cto_agent, meeting_coordinator_agent |
+| `core/agents/legal/` | legal_doc_drafter_agent |
+| `core/agents/narrative/` | cultural_impact_agent, narrative_drift_coordinator, narrative_historian_agent, trend_break_detector_agent |
+| `core/agents/podcast/` | debate_advocate_agent, debate_skeptic_agent, moderator_agent, podcast_coordinator_agent |
+| `core/agents/security/` | content_audit_agent, memory_isolation_agent |
+| `core/agents/stocks/` | bear_case_agent, bull_case_agent, signal_scanner_agent, stock_analyst_agent |
+| `core/agents/strategy/` | brand_identity_agent, content_strategy_agent, seo_optimizer_agent, social_media_agent |
+| `core/agents/training/` | character_training_agent, trained_creation_agent |
 
 ### Frontend
 | File | Changes |
@@ -252,4 +302,4 @@ To verify changes:
 
 ---
 
-**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations content viewer**
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations content viewer + 50 agents delegate_to_specialist fix**
