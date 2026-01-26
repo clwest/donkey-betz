@@ -1,6 +1,7 @@
 /**
  * Session 814: Dedicated Blogs Page
  * Direct access to all AI-generated blog posts from SelfBlog model
+ * Session 833: Added approval workflow with status badges and filtering
  */
 
 import { useState } from 'react'
@@ -18,17 +19,12 @@ import {
   RefreshCw,
   Trash2,
   X,
+  CheckCircle,
+  Eye,
+  Clock,
 } from 'lucide-react'
-
-interface Blog {
-  id: string
-  title: string
-  intro: string
-  tags: string[]
-  word_count: number
-  tone: string
-  created_at: string
-}
+import { cn } from '@/lib/cn'
+import { blogsApi, Blog } from '@/lib/api'
 
 interface BlogPagination {
   page: number
@@ -37,37 +33,42 @@ interface BlogPagination {
   total_pages: number
 }
 
+// Session 833: Status badge styling
+const statusStyles: Record<string, { bg: string; text: string; icon: typeof Clock }> = {
+  draft: { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: Clock },
+  approved: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: CheckCircle },
+  published: { bg: 'bg-green-500/20', text: 'text-green-400', icon: Eye },
+}
+
 export default function BlogsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('') // Session 833
   const [deleteConfirm, setDeleteConfirm] = useState<Blog | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['blogs-page', page, search],
+    queryKey: ['blogs-page', page, search, statusFilter],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        per_page: '12',
+      const res = await blogsApi.list({
+        page,
+        per_page: 12,
         ...(search && { search }),
+        ...(statusFilter && { status: statusFilter }),
       })
-      const response = await fetch(`/api/v1/research/self-blog/list/?${params}`)
-      return response.json()
+      return res.data
     },
   })
 
   // Session 814: Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (blogId: string) => {
-      const response = await fetch(`/api/v1/research/self-blog/${blogId}/delete/`, {
-        method: 'DELETE',
-      })
-      const json = await response.json()
-      if (!json.success) {
-        throw new Error(json.error || 'Failed to delete blog')
+      const res = await blogsApi.delete(blogId)
+      if (!res.data.success) {
+        throw new Error('Failed to delete blog')
       }
-      return json
+      return res.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
@@ -75,24 +76,42 @@ export default function BlogsPage() {
     },
   })
 
-  // Session 814: Defensive handling for API response
-  const rawBlogs = data?.blogs || data?.results || []
-  const blogs: Blog[] = rawBlogs.map((blog: Record<string, unknown>) => ({
-    ...blog,
-    id: String(blog.id || ''),
-    title: String(blog.title || 'Untitled'),
-    intro: String(blog.intro || ''),
-    tags: Array.isArray(blog.tags) ? blog.tags : [],
-    word_count: Number(blog.word_count) || 0,
-    tone: String(blog.tone || ''),
-    created_at: String(blog.created_at || new Date().toISOString()),
-  }))
+  // Session 833: Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: async (blogId: string) => {
+      const res = await blogsApi.approve(blogId)
+      if (!res.data.success) {
+        throw new Error('Failed to approve blog')
+      }
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
+    },
+  })
+
+  // Session 833: Publish mutation
+  const publishMutation = useMutation({
+    mutationFn: async (blogId: string) => {
+      const res = await blogsApi.publish(blogId)
+      if (!res.data.success) {
+        throw new Error('Failed to publish blog')
+      }
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
+    },
+  })
+
+  const blogs: Blog[] = data?.blogs || []
   const pagination: BlogPagination = data?.pagination || {
     page: 1,
     per_page: 12,
     total: 0,
     total_pages: 0,
   }
+  const statusCounts = data?.status_counts || { all: 0, draft: 0, approved: 0, published: 0 }
 
   const handleSearch = () => {
     setSearch(searchInput)
@@ -115,6 +134,18 @@ export default function BlogsPage() {
     if (deleteConfirm) {
       deleteMutation.mutate(deleteConfirm.id)
     }
+  }
+
+  const handleApprove = (blogId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    approveMutation.mutate(blogId)
+  }
+
+  const handlePublish = (blogId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    publishMutation.mutate(blogId)
   }
 
   return (
@@ -188,6 +219,57 @@ export default function BlogsPage() {
         </button>
       </div>
 
+      {/* Session 833: Status Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        <button
+          onClick={() => { setStatusFilter(''); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors',
+            !statusFilter
+              ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          All ({statusCounts.all})
+        </button>
+        <button
+          onClick={() => { setStatusFilter('draft'); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            statusFilter === 'draft'
+              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <Clock size={14} />
+          Draft ({statusCounts.draft})
+        </button>
+        <button
+          onClick={() => { setStatusFilter('approved'); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            statusFilter === 'approved'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <CheckCircle size={14} />
+          Approved ({statusCounts.approved})
+        </button>
+        <button
+          onClick={() => { setStatusFilter('published'); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            statusFilter === 'published'
+              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <Eye size={14} />
+          Published ({statusCounts.published})
+        </button>
+      </div>
+
       {/* Search */}
       <div className="card">
         <div className="flex gap-2">
@@ -213,6 +295,7 @@ export default function BlogsPage() {
         <p className="text-sm text-gray-400">
           {pagination.total} blog posts
           {search && ` matching "${search}"`}
+          {statusFilter && ` (${statusFilter})`}
         </p>
         {pagination.total_pages > 1 && (
           <p className="text-sm text-gray-400">
@@ -245,61 +328,95 @@ export default function BlogsPage() {
       {/* Blog Grid */}
       {!isLoading && !error && blogs.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {blogs.map((blog) => (
-            <div key={blog.id} className="card hover:border-primary-500/50 transition-colors group relative">
-              <Link to={`/blog/${blog.id}`} className="block">
-                <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors pr-8">
-                  {blog.title}
-                </h3>
-                <p className="text-sm text-gray-400 mb-3 line-clamp-3">{blog.intro}</p>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {blog.tags.slice(0, 3).map((tag, i) => (
-                    <span
-                      key={i}
-                      className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {blog.tags.length > 3 && (
-                    <span className="text-xs text-gray-500">+{blog.tags.length - 3} more</span>
-                  )}
-                </div>
-
-                {/* Meta */}
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <FileText size={12} />
-                    {blog.word_count} words
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar size={12} />
-                    {new Date(blog.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {/* Tone badge */}
-                {blog.tone && (
-                  <div className="mt-2">
-                    <span className="text-xs px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple capitalize">
-                      {blog.tone}
+          {blogs.map((blog) => {
+            const style = statusStyles[blog.status] || statusStyles.draft
+            const StatusIcon = style.icon
+            return (
+              <div key={blog.id} className="card hover:border-primary-500/50 transition-colors group relative">
+                <Link to={`/blog/${blog.id}`} className="block">
+                  {/* Session 833: Status Badge */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={cn('text-xs px-2 py-0.5 rounded flex items-center gap-1', style.bg, style.text)}>
+                      <StatusIcon size={12} />
+                      {blog.status}
                     </span>
                   </div>
-                )}
-              </Link>
 
-              {/* Delete button */}
-              <button
-                onClick={(e) => handleDelete(blog, e)}
-                className="absolute top-4 right-4 p-1.5 rounded bg-dark-bg/80 text-gray-400 hover:text-accent-red hover:bg-accent-red/20 transition-colors opacity-0 group-hover:opacity-100"
-                title="Delete blog"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
+                  <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors pr-8">
+                    {blog.title}
+                  </h3>
+                  <p className="text-sm text-gray-400 mb-3 line-clamp-3">{blog.intro}</p>
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {blog.tags.slice(0, 3).map((tag, i) => (
+                      <span
+                        key={i}
+                        className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {blog.tags.length > 3 && (
+                      <span className="text-xs text-gray-500">+{blog.tags.length - 3} more</span>
+                    )}
+                  </div>
+
+                  {/* Meta */}
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <FileText size={12} />
+                      {blog.word_count} words
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar size={12} />
+                      {new Date(blog.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {/* Tone badge */}
+                  {blog.tone && (
+                    <div className="mt-2">
+                      <span className="text-xs px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple capitalize">
+                        {blog.tone}
+                      </span>
+                    </div>
+                  )}
+                </Link>
+
+                {/* Session 833: Action buttons */}
+                <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {blog.status === 'draft' && (
+                    <button
+                      onClick={(e) => handleApprove(blog.id, e)}
+                      className="p-1.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                      title="Approve"
+                      disabled={approveMutation.isPending}
+                    >
+                      <CheckCircle size={14} />
+                    </button>
+                  )}
+                  {blog.status === 'approved' && (
+                    <button
+                      onClick={(e) => handlePublish(blog.id, e)}
+                      className="p-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                      title="Publish"
+                      disabled={publishMutation.isPending}
+                    >
+                      <Eye size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => handleDelete(blog, e)}
+                    className="p-1.5 rounded bg-dark-bg/80 text-gray-400 hover:text-accent-red hover:bg-accent-red/20 transition-colors"
+                    title="Delete blog"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -311,6 +428,8 @@ export default function BlogsPage() {
           <p className="text-gray-400">
             {search
               ? `No blogs match "${search}"`
+              : statusFilter
+              ? `No ${statusFilter} blogs found`
               : 'No AI-generated blogs yet. The system will create them automatically.'}
           </p>
         </div>

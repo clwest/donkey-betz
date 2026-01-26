@@ -6,7 +6,8 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle, Trash2, X } from 'lucide-react'
+import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle, Trash2, X, Clock, CheckCircle, Eye, Send } from 'lucide-react'
+import { blogsApi } from '@/lib/api'
 
 interface Blog {
   id: string
@@ -21,6 +22,13 @@ interface Blog {
   word_count: number
   stats_snapshot: Record<string, unknown>
   created_at: string
+  status: 'draft' | 'approved' | 'published'
+}
+
+const statusStyles = {
+  draft: { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: Clock, label: 'Draft' },
+  approved: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: CheckCircle, label: 'Approved' },
+  published: { bg: 'bg-green-500/20', text: 'text-green-400', icon: Eye, label: 'Published' },
 }
 
 export default function BlogViewerPage() {
@@ -57,6 +65,30 @@ export default function BlogViewerPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
       navigate('/blogs')
+    },
+  })
+
+  // Session 833: Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await blogsApi.approve(blogId!)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blog', blogId] })
+      queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
+    },
+  })
+
+  // Session 833: Publish mutation
+  const publishMutation = useMutation({
+    mutationFn: async (force?: boolean) => {
+      const res = await blogsApi.publish(blogId!, force)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blog', blogId] })
+      queryClient.invalidateQueries({ queryKey: ['blogs-page'] })
     },
   })
 
@@ -158,7 +190,20 @@ export default function BlogViewerPage() {
             <FileText className="text-primary-400" size={24} />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold mb-2">{blog.title}</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-bold">{blog.title}</h1>
+              {/* Status badge */}
+              {blog.status && statusStyles[blog.status] && (() => {
+                const style = statusStyles[blog.status]
+                const Icon = style.icon
+                return (
+                  <span className={`px-2 py-1 rounded-full ${style.bg} ${style.text} text-xs font-medium flex items-center gap-1`}>
+                    <Icon size={12} />
+                    {style.label}
+                  </span>
+                )
+              })()}
+            </div>
             <p className="text-gray-400 mb-4">{blog.meta_description}</p>
 
             {/* Meta info */}
@@ -261,9 +306,43 @@ export default function BlogViewerPage() {
           Back to Blogs
         </Link>
         <div className="flex gap-2">
-          <button className="btn btn-primary">
-            Approve for Publishing
-          </button>
+          {/* Show Approve button for drafts */}
+          {blog.status === 'draft' && (
+            <button
+              onClick={() => approveMutation.mutate()}
+              disabled={approveMutation.isPending}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              {approveMutation.isPending ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <CheckCircle size={16} />
+              )}
+              Approve for Publishing
+            </button>
+          )}
+          {/* Show Publish button for approved blogs */}
+          {blog.status === 'approved' && (
+            <button
+              onClick={() => publishMutation.mutate(false)}
+              disabled={publishMutation.isPending}
+              className="btn bg-green-500/20 text-green-400 hover:bg-green-500/30 flex items-center gap-2"
+            >
+              {publishMutation.isPending ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Send size={16} />
+              )}
+              Publish
+            </button>
+          )}
+          {/* Show Published badge when already published */}
+          {blog.status === 'published' && (
+            <span className="btn bg-green-500/20 text-green-400 cursor-default flex items-center gap-2">
+              <Eye size={16} />
+              Published
+            </span>
+          )}
           <button
             onClick={handleDelete}
             className="btn bg-accent-red/20 text-accent-red hover:bg-accent-red/30 flex items-center gap-2"
@@ -273,6 +352,13 @@ export default function BlogViewerPage() {
           </button>
         </div>
       </div>
+      {/* Error messages */}
+      {(approveMutation.isError || publishMutation.isError) && (
+        <div className="text-accent-red text-sm text-right">
+          {approveMutation.error instanceof Error ? approveMutation.error.message : ''}
+          {publishMutation.error instanceof Error ? publishMutation.error.message : ''}
+        </div>
+      )}
     </div>
   )
 }

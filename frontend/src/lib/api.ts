@@ -2883,3 +2883,58 @@ export const platformApi = {
       updated_at: string
     }>('/self-healing/progress/'),
 }
+
+// Session 833: Blogs API for approval workflow
+export interface Blog {
+  id: string
+  title: string
+  category: string
+  status: 'draft' | 'approved' | 'published'
+  meta_description: string
+  intro: string
+  sections?: Array<{ title: string; content: string }>
+  conclusion?: string
+  tags: string[]
+  full_text?: string
+  tone: string
+  word_count: number
+  stats_snapshot?: Record<string, unknown>
+  created_at: string
+}
+
+export interface BlogListResponse {
+  success: boolean
+  blogs: Blog[]
+  pagination: {
+    page: number
+    per_page: number
+    total: number
+    total_pages: number
+    has_next: boolean
+    has_prev: boolean
+  }
+  category_counts: Record<string, number>
+  status_counts: Record<string, number>
+}
+
+export const blogsApi = {
+  list: (params?: { page?: number; per_page?: number; search?: string; category?: string; status?: string }) =>
+    api.get<BlogListResponse>('/v1/research/self-blog/list/', { params }),
+
+  get: (blogId: string) =>
+    api.get<{ success: boolean; blog: Blog }>(`/v1/research/self-blog/${blogId}/`),
+
+  delete: (blogId: string) =>
+    api.delete<{ success: boolean; message: string }>(`/v1/research/self-blog/${blogId}/delete/`),
+
+  approve: (blogId: string) =>
+    api.post<{ success: boolean; message: string; blog: { id: string; title: string; status: string } }>(
+      `/v1/research/self-blog/${blogId}/approve/`
+    ),
+
+  publish: (blogId: string, force?: boolean) =>
+    api.post<{ success: boolean; message: string; blog: { id: string; title: string; status: string } }>(
+      `/v1/research/self-blog/${blogId}/publish/`,
+      { force }
+    ),
+}

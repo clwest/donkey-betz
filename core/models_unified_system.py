@@ -19860,6 +19860,7 @@ class SelfBlog(models.Model):
     Stores blog posts written by the system about itself.
     A meta-demonstration of the platform's capabilities.
     Session 814: Added category field to support technical documents/audits.
+    Session 833: Added status field for approval workflow.
     """
     CATEGORY_CHOICES = [
         ('blog', 'Blog Post'),
@@ -19869,9 +19870,16 @@ class SelfBlog(models.Model):
         ('research_brief', 'Research Brief'),
     ]
 
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('approved', 'Approved'),
+        ('published', 'Published'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='blog', db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
     meta_description = models.TextField(blank=True)
     intro = models.TextField(blank=True)
     sections = models.JSONField(default=list, help_text="List of {header, content} sections")
