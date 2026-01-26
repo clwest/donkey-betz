@@ -327,28 +327,28 @@ class SpiderAgentConnector:
             logger.warning(f"Error propagating to connected agents: {e}")
 
     def _generate_code_snippet(self, data: Dict[str, Any]) -> str:
-        """Generate a code snippet based on spider data"""
-        # Create a JSON representation of the opportunity
-        snippet = f"""// Opportunity Data from Spider
-const opportunity = {json.dumps(data, indent=2)};
+        """Generate a code snippet based on spider data.
 
-// Process the opportunity
-function processOpportunity(data) {{
-    // Analyze opportunity
-    const score = analyzeOpportunity(data);
+        Session 830: Fixed to NOT dump full data JSON (was causing 35GB table bloat).
+        The spider_data_id is already stored in metrics - use that for lookups.
+        """
+        # Extract only key summary fields - NOT the full data
+        title = data.get('title', 'Untitled')[:100]
+        data_type = data.get('type', 'opportunity')
+        source = data.get('source', 'spider')
 
-    // Take action if score is high
-    if (score > 0.7) {{
-        applyToOpportunity(data);
-        trackApplication(data);
-    }}
+        # Create a minimal reference snippet (NOT the full data)
+        snippet = f"""// Opportunity Reference from Spider
+// Full data available via spider_data_id in metrics
+const opportunityRef = {{
+    title: "{title}",
+    type: "{data_type}",
+    source: "{source}",
+    // Query SpiderData model using spider_data_id from metrics for full details
+}};
 
-    return score;
-}}
-
-// Execute
-const result = processOpportunity(opportunity);
-console.log('Opportunity processed with score:', result);"""
+// To get full data:
+// const fullData = await fetchSpiderData(metrics.spider_data_id);"""
 
         return snippet
 
