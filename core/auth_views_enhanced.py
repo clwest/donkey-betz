@@ -624,3 +624,93 @@ def resend_verification_view(request):
         return Response({
             'message': 'If an unverified account exists with this email, you will receive a verification link'
         })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def auth_debug_view(request):
+    """
+    Session 830: Debug endpoint to diagnose auth issues.
+
+    GET /api/v1/auth/debug/
+
+    Returns information about the authentication state of the request.
+    """
+    from rest_framework.authtoken.models import Token
+
+    # Check Authorization header
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    has_auth_header = bool(auth_header)
+
+    # Extract token info
+    token_value = None
+    token_format = None
+    if auth_header.startswith('Token '):
+        token_value = auth_header[6:]
+        token_format = 'Token'
+    elif auth_header.startswith('Bearer '):
+        token_value = auth_header[7:]
+        token_format = 'Bearer'
+
+    # Check token validity
+    token_valid = False
+    token_user = None
+    token_error = None
+
+    if token_value:
+        try:
+            token_obj = Token.objects.select_related('user').get(key=token_value)
+            if token_obj.user.is_active:
+                token_valid = True
+                token_user = {
+                    'id': str(token_obj.user.id),
+                    'username': token_obj.user.username,
+                    'is_active': token_obj.user.is_active,
+                    'is_staff': token_obj.user.is_staff,
+                }
+            else:
+                token_error = 'User is inactive'
+        except Token.DoesNotExist:
+            token_error = 'Token not found in database'
+        except Exception as e:
+            token_error = str(e)
+
+    # Check session auth
+    session_auth = hasattr(request, 'user') and request.user.is_authenticated
+    session_user = None
+    if session_auth:
+        session_user = {
+            'id': str(request.user.id),
+            'username': request.user.username,
+        }
+
+    # Check cookies
+    has_csrf_cookie = 'csrftoken' in request.COOKIES
+    has_session_cookie = 'sessionid' in request.COOKIES
+
+    return Response({
+        'header': {
+            'has_authorization': has_auth_header,
+            'token_format': token_format,
+            'token_prefix': token_value[:8] + '...' if token_value else None,
+        },
+        'token': {
+            'valid': token_valid,
+            'user': token_user,
+            'error': token_error,
+        },
+        'session': {
+            'authenticated': session_auth,
+            'user': session_user,
+        },
+        'cookies': {
+            'has_csrf': has_csrf_cookie,
+            'has_session': has_session_cookie,
+        },
+        'recommendation': (
+            'Token is valid' if token_valid
+            else 'Session is valid' if session_auth
+            else 'Please re-login to get a fresh token' if token_error
+            else 'No authentication provided'
+        )
+    })
