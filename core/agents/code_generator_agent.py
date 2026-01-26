@@ -475,7 +475,10 @@ If you need something outside your expertise, use delegate_to_specialist:
                         # Log file operations
                         if tool_name in ['read_file', 'write_file', 'edit_file']:
                             status = '✅' if tool_result.get('success') else '❌'
-                            logger.info(f"  {status} {tool_name}: {tool_result.get('file_path', 'unknown')}")
+                            file_info = tool_result.get('file_path', 'unknown')
+                            if not tool_result.get('success'):
+                                file_info += f" - {tool_result.get('error', 'no error details')}"
+                            logger.info(f"  {status} {tool_name}: {file_info}")
 
                         self.mark_decision_outcome(
                             success=tool_result.get('success', False),
