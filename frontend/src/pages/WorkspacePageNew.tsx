@@ -24,9 +24,12 @@ import {
   Database,
   Sparkles,
   Lightbulb,
+  FileText,
+  Code,
+  Terminal,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { workspaceApi } from '@/lib/api'
+import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useAuthStore } from '@/stores/authStore'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -211,6 +214,191 @@ function RegisterWorkspaceModal({
   )
 }
 
+// Operation Content Viewer Modal
+function OperationContentModal({
+  operationId,
+  onClose,
+}: {
+  operationId: string
+  onClose: () => void
+}) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['workspace-operation-detail', operationId],
+    queryFn: async () => {
+      const res = await workspaceOperationsApi.detail(operationId)
+      return res.data
+    },
+    enabled: !!operationId,
+  })
+
+  const operation = data as any
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-dark-border flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary-500/20 flex items-center justify-center">
+              <FileText className="text-primary-400" size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Operation Details</h3>
+              {operation && (
+                <p className="text-xs text-gray-400">
+                  {operation.operation_type} • {operation.agent_name}
+                </p>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin text-primary-400" size={32} />
+            </div>
+          )}
+
+          {error && (
+            <div className="flex flex-col items-center py-12 text-center">
+              <XCircle className="text-accent-red mb-4" size={48} />
+              <p className="text-gray-400">Failed to load operation details</p>
+            </div>
+          )}
+
+          {operation && (
+            <>
+              {/* File path */}
+              {operation.file_path && (
+                <div className="card">
+                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <FileText size={14} />
+                    File Path
+                  </h4>
+                  <code className="text-sm text-primary-400">{operation.file_path}</code>
+                </div>
+              )}
+
+              {/* Diff */}
+              {operation.diff && (
+                <div className="card">
+                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Code size={14} />
+                    Changes (Diff)
+                  </h4>
+                  <pre className="text-xs bg-dark-bg p-3 rounded overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap">
+                    {operation.diff}
+                  </pre>
+                </div>
+              )}
+
+              {/* File content after (for creates/updates) */}
+              {operation.file_content_after && !operation.diff && (
+                <div className="card">
+                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Code size={14} />
+                    File Content
+                  </h4>
+                  <pre className="text-xs bg-dark-bg p-3 rounded overflow-x-auto max-h-96 overflow-y-auto font-mono whitespace-pre-wrap">
+                    {operation.file_content_after}
+                  </pre>
+                </div>
+              )}
+
+              {/* Command output (for git/command operations) */}
+              {operation.command_output && (
+                <div className="card">
+                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Terminal size={14} />
+                    Command Output
+                  </h4>
+                  <pre className="text-xs bg-dark-bg p-3 rounded overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap">
+                    {operation.command_output}
+                  </pre>
+                </div>
+              )}
+
+              {/* Command (if present) */}
+              {operation.command && (
+                <div className="card">
+                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Terminal size={14} />
+                    Command
+                  </h4>
+                  <code className="text-sm text-accent-amber">{operation.command}</code>
+                </div>
+              )}
+
+              {/* Error message */}
+              {operation.error_message && (
+                <div className="card border-accent-red/30">
+                  <h4 className="text-sm font-medium text-accent-red mb-2 flex items-center gap-2">
+                    <XCircle size={14} />
+                    Error
+                  </h4>
+                  <pre className="text-xs text-accent-red/80 whitespace-pre-wrap">
+                    {operation.error_message}
+                  </pre>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="card">
+                <h4 className="text-sm font-medium text-gray-400 mb-2">Metadata</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <span className="text-gray-500">Agent:</span>
+                    <p className="font-medium">{operation.agent_name}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Type:</span>
+                    <p className="font-medium">{operation.operation_type}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Execution Time:</span>
+                    <p className="font-medium">{operation.execution_time_ms || 0}ms</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <p className={cn('font-medium', operation.success ? 'text-accent-green' : 'text-accent-red')}>
+                      {operation.success ? 'Success' : 'Failed'}
+                    </p>
+                  </div>
+                  {operation.lines_changed !== undefined && (
+                    <div>
+                      <span className="text-gray-500">Lines Changed:</span>
+                      <p className="font-medium">{operation.lines_changed}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-gray-500">Created:</span>
+                    <p className="font-medium">{new Date(operation.created_at).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-dark-border flex-shrink-0">
+          <button onClick={onClose} className="btn btn-secondary w-full">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function WorkspacePage() {
   // Core state
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('command')
@@ -218,6 +406,7 @@ export default function WorkspacePage() {
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set())
+  const [viewingOperationId, setViewingOperationId] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
   const { isAuthenticated } = useAuthStore()
@@ -465,10 +654,7 @@ export default function WorkspacePage() {
           {activeTab === 'operations' && (
             <OperationsTab
               activeWorkspace={activeWorkspace}
-              onViewFileContent={(operationId) => {
-                console.log('View file content:', operationId)
-                // TODO: Implement file content viewer modal
-              }}
+              onViewFileContent={(operationId) => setViewingOperationId(operationId)}
               showSuccess={showSuccess}
               showError={showError}
             />
@@ -494,6 +680,13 @@ export default function WorkspacePage() {
           onClose={() => setShowRegisterModal(false)}
           onSubmit={(data) => registerMutation.mutate(data)}
           isLoading={registerMutation.isPending}
+        />
+      )}
+
+      {viewingOperationId && (
+        <OperationContentModal
+          operationId={viewingOperationId}
+          onClose={() => setViewingOperationId(null)}
         />
       )}
 
