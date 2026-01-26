@@ -28621,6 +28621,44 @@ def run_autonomous_remediation_cycle():
 
 
 @shared_task
+def assign_findings_to_agents(limit: int = 50, priority_filter: list = None):
+    """
+    Session 831: Assign open findings to appropriate agents.
+
+    This is Phase 2 of the remediation cycle - takes open findings and
+    creates AuditRemediationTask records assigned to the best agent.
+
+    Args:
+        limit: Maximum number of findings to assign (default: 50)
+        priority_filter: Only assign findings with these priorities (default: ['P0', 'P1', 'P2'])
+    """
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info(f"🎯 [ASSIGN-FINDINGS] Starting assignment (limit={limit})...")
+
+    try:
+        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=limit)
+
+        if priority_filter is None:
+            priority_filter = ['P0', 'P1', 'P2']
+
+        results = orchestrator.assign_open_findings(
+            priority_filter=priority_filter,
+            limit=limit
+        )
+
+        logger.info(
+            f"✅ [ASSIGN-FINDINGS] Assigned {results.get('assigned', 0)} findings, "
+            f"skipped {results.get('skipped', 0)}"
+        )
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [ASSIGN-FINDINGS] Assignment failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
 def run_agent_remediation_batch(agent_name: str = 'CodeGeneratorAgent', limit: int = 20, write_files: bool = True):
     """
     Session 829: Run a batch of remediation tasks for a specific agent.
