@@ -1753,6 +1753,13 @@ def action_run_remediation_view(request):
     POST /api/platform/actions/run-remediation/
 
     Trigger autonomous remediation cycle.
+
+    Session 829: Added agent parameter and write_files support.
+
+    Parameters:
+        limit: Maximum tasks to process (default: 20)
+        agent: Specific agent to run (default: CodeGeneratorAgent)
+        write_files: Whether to write generated files to workspace (default: true)
     """
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Authentication required'}, status=401)
@@ -1760,19 +1767,27 @@ def action_run_remediation_view(request):
     try:
         import json
         body = json.loads(request.body) if request.body else {}
-        limit = body.get('limit', 5)  # Default to 5 findings
+        limit = body.get('limit', 20)
+        agent = body.get('agent', 'CodeGeneratorAgent')
+        write_files = body.get('write_files', True)
 
-        from core.tasks import run_autonomous_remediation_cycle
+        from core.tasks import run_agent_remediation_batch
 
-        run_autonomous_remediation_cycle.delay(limit=limit)
+        run_agent_remediation_batch.delay(
+            agent_name=agent,
+            limit=limit,
+            write_files=write_files
+        )
 
-        message = f"Remediation cycle triggered (limit: {limit})"
+        message = f"Remediation triggered: {agent} (limit: {limit}, write_files: {write_files})"
         logger.info(f"{message} by {request.user.username}")
 
         return JsonResponse({
             'success': True,
             'message': message,
+            'agent': agent,
             'limit': limit,
+            'write_files': write_files,
         })
     except Exception as e:
         logger.error(f"Failed to run remediation: {e}")
@@ -1858,6 +1873,7 @@ def remediation_status_view(request):
     Returns detailed remediation status including findings and tasks.
 
     Session 824: Exposes remediation status to the UI.
+    Session 829: Updated format for GovernanceTab Self-Healing Controls.
     """
     try:
         from core.models_audit_tracking import AuditFinding, AuditRemediationTask
@@ -1885,7 +1901,7 @@ def remediation_status_view(request):
         )
 
         # Recent tasks
-        recent_tasks = AuditRemediationTask.objects.order_by('-created_at')[:10]
+        recent_tasks = AuditRemediationTask.objects.select_related('finding').order_by('-completed_at', '-created_at')[:10]
         recent_tasks_list = [{
             'id': str(task.id),
             'finding_title': task.finding.title if task.finding else 'Unknown',
@@ -1895,14 +1911,21 @@ def remediation_status_view(request):
             'completed_at': task.completed_at.isoformat() if task.completed_at else None,
         } for task in recent_tasks]
 
-        # Agents with assignments
-        agents_assigned = list(
-            AuditRemediationTask.objects.filter(
-                status__in=['assigned', 'in_progress']
-            ).values('assigned_agent').annotate(
+        # Agents with task counts (Session 829: for UI display)
+        agents_by_task_count = list(
+            AuditRemediationTask.objects.values('assigned_agent').annotate(
                 count=Count('id')
             ).order_by('-count')[:10]
         )
+        agents_formatted = [
+            {'agent': item['assigned_agent'], 'count': item['count']}
+            for item in agents_by_task_count
+        ]
+
+        # Calculate progress (Session 829)
+        total_tasks = sum(tasks_by_status.values())
+        completed_tasks = tasks_by_status.get('completed', 0)
+        percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
 
         return JsonResponse({
             'success': True,
@@ -1914,11 +1937,16 @@ def remediation_status_view(request):
                 'fixed': findings_by_status.get('fixed', 0),
             },
             'tasks': {
-                'total': sum(tasks_by_status.values()),
+                'total': total_tasks,
                 'by_status': tasks_by_status,
-                'recent': recent_tasks_list,
+                'by_agent': agents_formatted,
             },
-            'agents_assigned': agents_assigned,
+            'recent_tasks': recent_tasks_list,
+            'progress': {
+                'completed': completed_tasks,
+                'total': total_tasks,
+                'percentage': round(percentage, 1),
+            },
         })
     except Exception as e:
         logger.error(f"Failed to get remediation status: {e}")

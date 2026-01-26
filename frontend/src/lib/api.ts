@@ -2758,4 +2758,45 @@ export const platformApi = {
       message: string
       error?: string
     }>('/platform/audits/run/', {}),
+
+  // Session 829: Remediation Status and Control
+  remediationStatus: () =>
+    api.get<{
+      findings: {
+        total: number
+        by_status: Record<string, number>
+        by_priority: Record<string, number>
+      }
+      tasks: {
+        total: number
+        by_status: Record<string, number>
+        by_agent: Array<{ agent: string; count: number }>
+      }
+      recent_tasks: Array<{
+        id: string
+        finding_title: string
+        agent: string
+        status: string
+        created_at: string
+        completed_at: string | null
+      }>
+      progress: {
+        completed: number
+        total: number
+        percentage: number
+      }
+    }>('/platform/remediation/status/'),
+
+  runRemediation: (params: { agent?: string; limit?: number; write_files?: boolean }) =>
+    api.post<{
+      success: boolean
+      message: string
+      limit: number
+    }>('/platform/actions/run-remediation/', params),
+
+  runSelfAudit: () =>
+    api.post<{
+      success: boolean
+      message: string
+    }>('/platform/actions/run-self-audit/', {}),
 }
