@@ -2,7 +2,7 @@
 
 **Previous Session:** 832 (Recent Activity Enhancement)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow | Operations Viewer
 
 ---
 
@@ -108,6 +108,22 @@ Implemented complete blog approval workflow allowing review before publishing.
 - "Publish" button (shown for approved)
 - "Published" indicator (shown for published)
 
+### 6. Operations Tab Content Viewer
+
+Implemented operation content viewer modal for the Operations tab.
+
+**Features:**
+- View full operation details by clicking "View Content" button
+- Shows file path for file operations
+- Shows diff (code changes) with syntax highlighting
+- Shows file content for creates/updates without diff
+- Shows command output for git/terminal operations
+- Shows error messages with red styling
+- Shows metadata: agent, type, execution time, status, lines changed, timestamp
+- Click outside or close button to dismiss
+
+**Location:** `OperationContentModal` component in `WorkspacePageNew.tsx`
+
 ---
 
 ## Files Modified
@@ -131,6 +147,7 @@ Implemented complete blog approval workflow allowing review before publishing.
 | `frontend/src/lib/api.ts` | Added `platformApi.docContent()` and `blogsApi` |
 | `frontend/src/pages/BlogsPage.tsx` | Complete rewrite with approval workflow UI |
 | `frontend/src/pages/BlogViewerPage.tsx` | Status badge, approve/publish buttons |
+| `frontend/src/pages/WorkspacePageNew.tsx` | Added OperationContentModal for viewing operation details |
 | `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | Document viewer modal with markdown rendering |
 | `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Dynamic API calls for HiveMind |
 | `frontend/src/pages/workspace/tabs/InfrastructureTab.tsx` | Dynamic API calls for LLM Routing |
@@ -210,6 +227,15 @@ To verify changes:
    - Viewer shows status badge next to title
    - Approve/Publish buttons work from viewer page
 
+6. **Operations Tab Content Viewer:**
+   - Go to Workspace → Operations tab
+   - Click "View Content" on any operation
+   - Should see modal with operation details
+   - For file operations: shows file path and diff/content
+   - For command operations: shows command and output
+   - Metadata section shows agent, type, execution time, status
+   - Click outside or close button to dismiss
+
 ---
 
 ## Previous Sessions
@@ -226,4 +252,4 @@ To verify changes:
 
 ---
 
-**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow (Draft → Approved → Published)**
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations content viewer**
