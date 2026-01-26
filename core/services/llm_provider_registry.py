@@ -129,10 +129,13 @@ class OpenAIProvider(BaseLLMProvider):
     def _initialize(self):
         try:
             from openai import OpenAI
+            import httpx
             api_key = self.api_key or os.getenv('OPENAI_API_KEY')
             if api_key and api_key not in ['', 'your-key-here']:
-                self.client = OpenAI(api_key=api_key)
-                logger.info("✅ OpenAI provider initialized")
+                # Session 831: Add timeout configuration for reliability
+                timeout = httpx.Timeout(60.0, connect=20.0, read=90.0)
+                self.client = OpenAI(api_key=api_key, timeout=timeout, max_retries=2)
+                logger.info("✅ OpenAI provider initialized (timeout: 60s)")
             else:
                 logger.warning("⚠️ OpenAI API key not configured")
         except ImportError:
@@ -325,10 +328,13 @@ class AnthropicProvider(BaseLLMProvider):
     def _initialize(self):
         try:
             from anthropic import Anthropic
+            import httpx
             api_key = self.api_key or os.getenv('ANTHROPIC_API_KEY')
             if api_key and api_key not in ['', 'your-key-here']:
-                self.client = Anthropic(api_key=api_key)
-                logger.info("✅ Anthropic provider initialized")
+                # Session 831: Add timeout configuration for reliability
+                timeout = httpx.Timeout(60.0, connect=20.0, read=90.0)
+                self.client = Anthropic(api_key=api_key, timeout=timeout, max_retries=2)
+                logger.info("✅ Anthropic provider initialized (timeout: 60s)")
             else:
                 logger.warning("⚠️ Anthropic API key not configured")
         except ImportError:
@@ -469,11 +475,14 @@ class DeepSeekProvider(BaseLLMProvider):
     def _initialize(self):
         try:
             from openai import OpenAI  # DeepSeek uses OpenAI-compatible API
+            import httpx
             api_key = self.api_key or os.getenv('DEEPSEEK_API_KEY')
             base_url = self.base_url or 'https://api.deepseek.com'
             if api_key and api_key not in ['', 'your-key-here']:
-                self.client = OpenAI(api_key=api_key, base_url=base_url)
-                logger.info("✅ DeepSeek provider initialized")
+                # Session 831: Add timeout configuration for reliability
+                timeout = httpx.Timeout(60.0, connect=20.0, read=90.0)
+                self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout, max_retries=2)
+                logger.info("✅ DeepSeek provider initialized (timeout: 60s)")
             else:
                 logger.warning("⚠️ DeepSeek API key not configured")
         except ImportError:
@@ -579,11 +588,20 @@ class TogetherProvider(BaseLLMProvider):
     def _initialize(self):
         try:
             from openai import OpenAI  # Together uses OpenAI-compatible API
+            import httpx
             api_key = self.api_key or os.getenv('TOGETHER_AI_API_KEY')
             base_url = self.base_url or 'https://api.together.xyz/v1'
             if api_key and api_key not in ['', 'your-key-here']:
-                self.client = OpenAI(api_key=api_key, base_url=base_url)
-                logger.info("✅ Together AI provider initialized")
+                # Session 831: Increase timeout to 60s connect, 120s read for Together AI
+                # Together AI can be slow, especially for larger models
+                timeout = httpx.Timeout(60.0, connect=30.0, read=120.0)
+                self.client = OpenAI(
+                    api_key=api_key,
+                    base_url=base_url,
+                    timeout=timeout,
+                    max_retries=2  # Retry failed requests
+                )
+                logger.info("✅ Together AI provider initialized (timeout: 60s connect, 120s read)")
             else:
                 logger.warning("⚠️ Together AI API key not configured")
         except ImportError:
