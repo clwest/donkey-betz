@@ -224,6 +224,8 @@ function OperationContentModal({
   operationId: string
   onClose: () => void
 }) {
+  const [viewMode, setViewMode] = useState<'rendered' | 'diff'>('rendered')
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['workspace-operation-detail', operationId],
     queryFn: async () => {
@@ -234,6 +236,45 @@ function OperationContentModal({
   })
 
   const operation = data as any
+
+  // Session 833: Check if this is a markdown file
+  const isMarkdownFile = operation?.file_path?.endsWith('.md')
+
+  // Session 833: Extract actual content from diff (removes +/- prefix lines)
+  const extractContentFromDiff = (diff: string): string => {
+    if (!diff) return ''
+    const lines = diff.split('\n')
+    const contentLines: string[] = []
+
+    for (const line of lines) {
+      // Skip diff headers
+      if (line.startsWith('---') || line.startsWith('+++') || line.startsWith('@@') || line.startsWith('diff --git')) {
+        continue
+      }
+      // For added lines (new file), strip the + prefix
+      if (line.startsWith('+')) {
+        contentLines.push(line.slice(1))
+      }
+      // For context lines (no prefix), include as-is
+      else if (!line.startsWith('-')) {
+        contentLines.push(line)
+      }
+      // Skip removed lines (we want the final state)
+    }
+
+    return contentLines.join('\n')
+  }
+
+  // Get the content to display (prefer file_content_after, fallback to extracted from diff)
+  const getMarkdownContent = (): string => {
+    if (operation?.file_content_after) {
+      return operation.file_content_after
+    }
+    if (operation?.diff) {
+      return extractContentFromDiff(operation.diff)
+    }
+    return ''
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -289,16 +330,71 @@ function OperationContentModal({
                 </div>
               )}
 
-              {/* Diff */}
+              {/* Diff / Rendered Content */}
               {operation.diff && (
                 <div className="card">
-                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                    <Code size={14} />
-                    Changes (Diff)
-                  </h4>
-                  <pre className="text-xs bg-dark-bg p-3 rounded overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap">
-                    {operation.diff}
-                  </pre>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                      <Code size={14} />
+                      {isMarkdownFile ? 'Content' : 'Changes (Diff)'}
+                      {isMarkdownFile && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400">Markdown</span>
+                      )}
+                    </h4>
+                    {/* Session 833: Toggle for markdown files */}
+                    {isMarkdownFile && (
+                      <div className="flex rounded-lg border border-dark-border overflow-hidden">
+                        <button
+                          onClick={() => setViewMode('rendered')}
+                          className={cn(
+                            'px-3 py-1 text-xs transition-colors',
+                            viewMode === 'rendered'
+                              ? 'bg-primary-500/20 text-primary-400'
+                              : 'bg-dark-bg text-gray-400 hover:bg-dark-border'
+                          )}
+                        >
+                          Rendered
+                        </button>
+                        <button
+                          onClick={() => setViewMode('diff')}
+                          className={cn(
+                            'px-3 py-1 text-xs transition-colors',
+                            viewMode === 'diff'
+                              ? 'bg-primary-500/20 text-primary-400'
+                              : 'bg-dark-bg text-gray-400 hover:bg-dark-border'
+                          )}
+                        >
+                          Diff
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Session 833: Show rendered markdown or raw diff based on toggle */}
+                  {isMarkdownFile && viewMode === 'rendered' ? (
+                    <div className="prose prose-invert prose-sm max-w-none bg-dark-bg p-4 rounded overflow-y-auto max-h-96
+                      prose-headings:text-white prose-headings:font-semibold
+                      prose-h1:text-xl prose-h1:border-b prose-h1:border-gray-700 prose-h1:pb-2 prose-h1:mb-4
+                      prose-h2:text-lg prose-h2:mt-6 prose-h2:mb-3
+                      prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2
+                      prose-p:text-gray-300 prose-p:leading-relaxed
+                      prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline
+                      prose-strong:text-white prose-strong:font-semibold
+                      prose-code:text-accent-amber prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                      prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
+                      prose-ul:text-gray-300 prose-ol:text-gray-300
+                      prose-li:marker:text-gray-500
+                      prose-blockquote:border-l-primary-500 prose-blockquote:text-gray-400 prose-blockquote:italic
+                      prose-table:text-sm prose-th:text-left prose-th:text-gray-400 prose-th:font-medium prose-th:pb-2
+                      prose-td:py-1 prose-td:pr-4">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {getMarkdownContent()}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <pre className="text-xs bg-dark-bg p-3 rounded overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap">
+                      {operation.diff}
+                    </pre>
+                  )}
                 </div>
               )}
 
