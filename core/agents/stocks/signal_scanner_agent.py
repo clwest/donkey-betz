@@ -425,7 +425,9 @@ Always provide:
                 task=arguments.get('task', ''),
                 context=arguments.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
-            )        else:
+            )
+
+        else:
             return {"error": f"Unknown tool: {tool_name}"}
 
     def _scan_patterns(self, args: Dict[str, Any]) -> Dict[str, Any]:
