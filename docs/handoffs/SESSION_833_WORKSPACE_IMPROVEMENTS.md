@@ -2,7 +2,7 @@
 
 **Previous Session:** 832 (Recent Activity Enhancement)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow | Operations Viewer | 50 Agents Delegate Fix
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow | Operations Viewer | 50 Agents Delegate Fix | Blog Markdown Viewer
 
 ---
 
@@ -145,6 +145,24 @@ python scripts/fix_delegate_to_specialist.py --dry-run  # Preview changes
 python scripts/fix_delegate_to_specialist.py            # Apply changes
 ```
 
+**Post-Fix:** `workflow_agent.py` required manual correction - the batch script inserted code incorrectly due to its unique code structure (PR #244).
+
+### 8. Blog Content Viewer Fix
+
+Fixed blogs not displaying content when viewing by ID.
+
+**Problem:**
+- `full_text` field contains complete blog as markdown (3000+ chars)
+- But it was only shown as fallback when BOTH `intro` AND `sections` were empty
+- Most blogs have short intro/conclusion but actual content is in `full_text`
+- `full_text` was rendered as plain text, not markdown
+
+**Solution:**
+- Now prioritizes `full_text` and renders with ReactMarkdown + remarkGfm
+- Falls back to structured fields (intro/sections/conclusion) only if `full_text` is empty
+- Shows "No content available" if everything is empty
+- Proper prose styling for dark theme (headings, code blocks, lists)
+
 **Features:**
 - View full operation details by clicking "View Content" button
 - Shows file path for file operations
@@ -196,7 +214,7 @@ python scripts/fix_delegate_to_specialist.py            # Apply changes
 |------|---------|
 | `frontend/src/lib/api.ts` | Added `platformApi.docContent()` and `blogsApi` |
 | `frontend/src/pages/BlogsPage.tsx` | Complete rewrite with approval workflow UI |
-| `frontend/src/pages/BlogViewerPage.tsx` | Status badge, approve/publish buttons |
+| `frontend/src/pages/BlogViewerPage.tsx` | Status badge, approve/publish buttons, markdown rendering for full_text |
 | `frontend/src/pages/WorkspacePageNew.tsx` | Added OperationContentModal for viewing operation details |
 | `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | Document viewer modal with markdown rendering |
 | `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Dynamic API calls for HiveMind |
@@ -286,6 +304,11 @@ To verify changes:
    - Metadata section shows agent, type, execution time, status
    - Click outside or close button to dismiss
 
+7. **Blog Content Viewer:**
+   - Go to /blogs and click any blog title
+   - Should see full markdown content rendered (headers, code blocks, lists)
+   - If blog has no content, shows "No content available" message
+
 ---
 
 ## Previous Sessions
@@ -302,4 +325,4 @@ To verify changes:
 
 ---
 
-**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations content viewer + 50 agents delegate_to_specialist fix**
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations viewer + 50 agents delegate fix + Blog markdown viewer**
