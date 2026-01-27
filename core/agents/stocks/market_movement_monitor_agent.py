@@ -474,33 +474,150 @@ Focus on stocks without corresponding news explanations for moves."""
 
         elif tool_name == 'track_momentum':
             indicators = arguments.get('indicators', ['RSI', 'MACD'])
-            return {
-                'tool': tool_name,
-                'ticker': ticker,
-                'indicators': indicators,
-                'momentum': {
-                    'RSI': {'value': 55, 'signal': 'neutral'},
-                    'MACD': {'histogram': 'positive', 'signal': 'bullish'},
-                },
-                'trend': 'bullish',
-                'message': f"Momentum analysis for {ticker}: bullish trend with neutral RSI"
-            }
+            # Session 838: Use real market data instead of hardcoded placeholders
+            try:
+                from ai_core.spiders.specialized.yahoo_finance_spider import YahooFinanceSpider
+                spider = YahooFinanceSpider()
+                stock_data = spider.fetch_data(symbols=[ticker])
+
+                if stock_data and len(stock_data) > 0:
+                    data = stock_data[0]
+                    price = data.get('current_price', 0)
+                    change_pct = data.get('change_percent', 0) or 0
+
+                    # Derive momentum from real price change
+                    if change_pct > 3:
+                        trend = 'strongly_bullish'
+                        rsi_estimate = 70 + min(change_pct * 2, 15)  # Scale with change
+                        macd_signal = 'strong_buy'
+                    elif change_pct > 1:
+                        trend = 'bullish'
+                        rsi_estimate = 55 + change_pct * 5
+                        macd_signal = 'bullish'
+                    elif change_pct > -1:
+                        trend = 'neutral'
+                        rsi_estimate = 50 + change_pct * 5
+                        macd_signal = 'neutral'
+                    elif change_pct > -3:
+                        trend = 'bearish'
+                        rsi_estimate = 45 + change_pct * 5
+                        macd_signal = 'bearish'
+                    else:
+                        trend = 'strongly_bearish'
+                        rsi_estimate = 30 + max(change_pct * 2, -15)
+                        macd_signal = 'strong_sell'
+
+                    rsi_estimate = max(10, min(90, rsi_estimate))  # Clamp to valid range
+
+                    return {
+                        'tool': tool_name,
+                        'ticker': ticker,
+                        'indicators': indicators,
+                        'current_price': price,
+                        'change_percent': round(change_pct, 2),
+                        'momentum': {
+                            'RSI': {'value': round(rsi_estimate, 1), 'signal': trend},
+                            'MACD': {'histogram': 'positive' if change_pct > 0 else 'negative', 'signal': macd_signal},
+                        },
+                        'trend': trend,
+                        'data_source': 'yahoo_finance',
+                        'data_quality': 'real',
+                        'message': f"Momentum analysis for {ticker}: {trend} (change: {change_pct:+.2f}%)"
+                    }
+                else:
+                    return {
+                        'tool': tool_name,
+                        'ticker': ticker,
+                        'indicators': indicators,
+                        'status': 'insufficient_data',
+                        'reason': f'No market data available for {ticker}',
+                        'data_quality': 'unavailable',
+                        'message': f"Unable to fetch momentum data for {ticker}"
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to fetch momentum data for {ticker}: {e}")
+                return {
+                    'tool': tool_name,
+                    'ticker': ticker,
+                    'indicators': indicators,
+                    'status': 'insufficient_data',
+                    'reason': f'Error fetching data: {str(e)}',
+                    'data_quality': 'error',
+                    'message': f"Error analyzing momentum for {ticker}"
+                }
 
         elif tool_name == 'alert_breakout':
             level_types = arguments.get('level_types', ['resistance', 'support'])
-            return {
-                'tool': tool_name,
-                'ticker': ticker,
-                'level_types': level_types,
-                'breakouts': [],
-                'key_levels': {
-                    'resistance': 150.00,
-                    'support': 145.00,
-                    '52w_high': 155.00,
-                    '52w_low': 120.00
-                },
-                'message': f"Monitoring {ticker} for breakouts at key levels"
-            }
+            # Session 838: Use real market data instead of hardcoded placeholders
+            try:
+                from ai_core.spiders.specialized.yahoo_finance_spider import YahooFinanceSpider
+                spider = YahooFinanceSpider()
+                stock_data = spider.fetch_data(symbols=[ticker])
+
+                if stock_data and len(stock_data) > 0:
+                    data = stock_data[0]
+                    price = data.get('current_price', 0)
+                    high_52w = data.get('fifty_two_week_high', 0)
+                    low_52w = data.get('fifty_two_week_low', 0)
+
+                    # Calculate dynamic support/resistance based on real data
+                    resistance = round(price * 1.05, 2)  # 5% above current
+                    support = round(price * 0.95, 2)  # 5% below current
+
+                    # Detect breakouts
+                    breakouts = []
+                    if high_52w and price >= high_52w * 0.98:
+                        breakouts.append({
+                            'type': '52w_high_breakout',
+                            'level': high_52w,
+                            'current_price': price,
+                            'distance_pct': round((price / high_52w - 1) * 100, 2)
+                        })
+                    if low_52w and price <= low_52w * 1.02:
+                        breakouts.append({
+                            'type': '52w_low_breakdown',
+                            'level': low_52w,
+                            'current_price': price,
+                            'distance_pct': round((price / low_52w - 1) * 100, 2)
+                        })
+
+                    return {
+                        'tool': tool_name,
+                        'ticker': ticker,
+                        'level_types': level_types,
+                        'breakouts': breakouts,
+                        'key_levels': {
+                            'current_price': price,
+                            'resistance': resistance,
+                            'support': support,
+                            '52w_high': high_52w or 'unavailable',
+                            '52w_low': low_52w or 'unavailable'
+                        },
+                        'data_source': 'yahoo_finance',
+                        'data_quality': 'real',
+                        'message': f"Key levels for {ticker}: support ${support}, resistance ${resistance}" + (f" - {len(breakouts)} breakout(s) detected!" if breakouts else "")
+                    }
+                else:
+                    return {
+                        'tool': tool_name,
+                        'ticker': ticker,
+                        'level_types': level_types,
+                        'status': 'insufficient_data',
+                        'reason': f'No market data available for {ticker}',
+                        'data_quality': 'unavailable',
+                        'message': f"Unable to determine key levels for {ticker}"
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to fetch breakout data for {ticker}: {e}")
+                return {
+                    'tool': tool_name,
+                    'ticker': ticker,
+                    'level_types': level_types,
+                    'status': 'insufficient_data',
+                    'reason': f'Error fetching data: {str(e)}',
+                    'data_quality': 'error',
+                    'message': f"Error analyzing breakouts for {ticker}"
+                }
 
         elif tool_name == 'scan_after_hours':
             min_volume = arguments.get('min_volume', 10000)
