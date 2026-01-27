@@ -8532,6 +8532,11 @@ Guidelines:
 
                     dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
+                    # Session 842: Skip creating dreams with empty content
+                    if not dream_content:
+                        logger.debug(f"💭 [DREAMS] Skipping empty dream for {agent.name}")
+                        continue
+
                     # Session 356 NOTE: Dreams are intentionally NOT mythology-validated
                     # Dreams are meant to be creative, imaginative, and speculative
                     # (what-if scenarios, predictions, wild thoughts, mashups)
@@ -9034,7 +9039,12 @@ Guidelines:
                         max_completion_tokens=500  # Higher for reasoning models
                     )
 
-                    dream_content = response.choices[0].message.content.strip()
+                    dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+
+                    # Session 842: Skip creating dreams with empty content
+                    if not dream_content:
+                        logger.debug(f"🎯 [DIRECTED-DREAMS] Skipping empty dream for {agent.name}")
+                        continue
 
                     # Generate title
                     title_response = client.chat.completions.create(
