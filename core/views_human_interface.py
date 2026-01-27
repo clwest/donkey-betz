@@ -64,6 +64,61 @@ class AttentionStreamView(View):
 
 
 @method_decorator([csrf_exempt, login_required], name='dispatch')
+class AttentionDetailView(View):
+    """
+    Session 843: Get detail for a single attention item.
+    Used by DecisionDetailModal for inline viewing.
+    """
+
+    def get(self, request, item_id):
+        """GET /api/human/attention/{id}/"""
+        from core.models_human_interface import HumanAttentionItem
+
+        try:
+            item = HumanAttentionItem.objects.get(id=item_id, user=request.user)
+        except HumanAttentionItem.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)
+
+        # Mark as viewed
+        item.mark_viewed()
+
+        return JsonResponse({
+            'success': True,
+            'item': {
+                'id': str(item.id),
+                'title': item.title,
+                'summary': item.summary,
+                'urgency': item.urgency,
+                'status': item.status,
+                'item_type': item.item_type,
+                'source_type': item.source_type,
+                'source_agent': item.source_agent,
+                'source_id': item.source_id,
+                'payload': item.payload,
+                'priority_score': item.priority_score,
+                'impact_estimate': item.impact_estimate,
+                'ml_prediction': item.ml_prediction,
+                'ml_confidence': item.ml_confidence,
+                'ml_recommendation': item.ml_recommendation,
+                'decision': item.decision,
+                'decision_feedback': item.decision_feedback,
+                'decision_confidence': item.decision_confidence,
+                'decided_at': item.decided_at.isoformat() if item.decided_at else None,
+                'human_overrode_ml': item.human_overrode_ml,
+                'override_reason': item.override_reason,
+                'deferred_until': item.deferred_until.isoformat() if item.deferred_until else None,
+                'created_at': item.created_at.isoformat(),
+                'viewed_at': item.viewed_at.isoformat() if item.viewed_at else None,
+                'expires_at': item.expires_at.isoformat() if item.expires_at else None,
+                'verification_outcome': item.verification_outcome,
+                'verified_at': item.verified_at.isoformat() if item.verified_at else None,
+                'verification_profit': item.verification_profit,
+                'verification_notes': item.verification_notes,
+            }
+        })
+
+
+@method_decorator([csrf_exempt, login_required], name='dispatch')
 class AttentionStatsView(View):
     """Get attention statistics."""
 
@@ -396,6 +451,8 @@ def get_human_interface_urls():
         # Attention Stream
         path('api/human/attention/', AttentionStreamView.as_view(), name='human-attention'),
         path('api/human/attention/stats/', AttentionStatsView.as_view(), name='human-attention-stats'),
+        # Session 843: Detail endpoint for inline modal viewing
+        path('api/human/attention/<uuid:item_id>/', AttentionDetailView.as_view(), name='human-attention-detail'),
         path('api/human/attention/<uuid:item_id>/decide/', AttentionDecideView.as_view(), name='human-attention-decide'),
         path('api/human/attention/<uuid:item_id>/defer/', AttentionDeferView.as_view(), name='human-attention-defer'),
         path('api/human/attention/<uuid:item_id>/verify/', AttentionVerifyView.as_view(), name='human-attention-verify'),

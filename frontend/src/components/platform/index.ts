@@ -25,3 +25,5 @@ export { AdvisorsPanel } from './AdvisorsPanel'
 // Session 834: Detail Modals for inline viewing
 export { ConversationDetailModal } from './ConversationDetailModal'
 export { DreamDetailModal } from './DreamDetailModal'
+// Session 843: Decision Detail Modal for inline viewing
+export { DecisionDetailModal } from './DecisionDetailModal'
