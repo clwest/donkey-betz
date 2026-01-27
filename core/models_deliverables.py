@@ -105,6 +105,20 @@ class Deliverable(models.Model):
         help_text="Tags for filtering and discovery"
     )
 
+    # Session 843: Orchestration Contract fields
+    trace_id = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        help_text="Session 843: Trace ID for cross-artifact linking"
+    )
+    parent_object_type = models.CharField(
+        max_length=50, blank=True,
+        help_text="Session 843: Type of parent (agent_execution, conversation)"
+    )
+    parent_object_id = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        help_text="Session 843: ID of parent object"
+    )
+
     # Source
     source_operation = models.ForeignKey(
         'WorkspaceOperation',

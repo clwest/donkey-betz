@@ -1,73 +1,91 @@
-# Session 843 - Start Here
+# Session 844 - Start Here
 
-**Previous Session:** 842 (Agent Learning Tab Fixes + Production Cleanup + Celery Beat Investigation)
+**Previous Session:** 843 (Orchestration Contract + trace_id System)
 **Date:** January 27, 2026
 **Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **PRODUCTION HEALTHY**
 
 ---
 
-## What Was Accomplished in Session 842
+## What Was Accomplished in Session 843
 
-### Agent Learning Tab Fixes (PRs #323, #324)
+### Orchestration Contract Implementation
 
-| Issue | Root Cause | Fix |
-|-------|------------|-----|
-| **1,016 empty dreams** | LLM returned empty content but dreams still created | Skip creating when content empty |
-| **Quality showing 1%** | Returned decimal (0.87), Math.round = 1 | Multiply by 100 before returning |
-| **System Activity links** | Required 2 clicks, links navigated away | Single click opens modal for dreams/convos |
+Implemented a unified trace_id system that connects all agent outputs to their workflow context. This fixes the "floating artifacts" problem where outputs weren't linked to projects, tasks, or workflow executions.
 
-### Production Cleanup (PRs #327, #328, #331)
+**Problem:** Agents produce outputs that float in "loose artifact space" - not properly linked to projects, tasks, or workflow executions.
 
-**Problem:** 242 agent executions stuck in `in_progress` for up to 99.7 hours (4+ days).
+**Solution:** Mandatory "Orchestration Contract" with trace_id that persists across entire workflow executions.
 
-**Root Cause:** Celery Beat deployment/restart gaps caused the cleanup task to miss executions. Task was added in Session 835 (~24h prior) but only had 15 runs instead of expected 24+.
+### Phase 1: Model Field Additions
 
-**Solution:** Created debug and cleanup endpoints with database schedule monitoring:
-- `GET /api/platform/celery-debug/` - Shows Redis status, execution counts, `last_run_at`, `hours_since_last_run`
-- `POST /api/platform/cleanup-stale-executions/` - Manual cleanup of stuck tasks
+Added trace_id and project_id fields to 6 models:
 
-**Result:** All 242 stuck tasks cleaned. Production is now healthy with automatic hourly cleanup running.
+| Model | New Fields |
+|-------|------------|
+| `AgentExecution` | trace_id, project, parent_object_type, parent_object_id, owner_agent |
+| `Deliverable` | trace_id, parent_object_type, parent_object_id |
+| `ExtractedArtifact` | trace_id, project |
+| `AuditReport` | trace_id, project |
+| `SelfBlog` | trace_id, project |
+| `AgentDecisionSummary` | trace_id, project |
 
----
+### Phase 2: WiringDefect Model
 
-## PRs Merged (8 total)
+Created `WiringDefect` model in `core/models_orchestration.py` to track artifacts created without proper trace/project linkage. Enables auditing orphaned outputs and retroactive fixing.
 
-| PR | Description |
-|----|-------------|
-| #323 | Skip creating dreams with empty content |
-| #324 | System Activity cards open modals directly |
-| #327 | Add Celery debug and cleanup endpoints |
-| #328 | Add debug endpoints to PUBLIC_PATHS |
-| #329 | Update Session 842 handoff documentation |
-| #330 | Update session start file with cleanup results |
-| #331 | Enhance debug endpoint with database schedule info |
-| #332 | Complete investigation findings |
+### Phase 3: TraceAttachmentService
 
----
+Created `core/services/trace_attachment_service.py` with:
 
-## Current State
+**trace_id Fallback Rules:**
+1. Use explicit trace_id from context
+2. Inherit from parent_object's trace_id
+3. Inherit from conversation's trace_id
+4. Generate new trace_id (root execution)
 
-### Agent Learning Tab - Fixed
-- Dreams: 9,169 (all with content)
-- Conversations: Quality scores display correctly (e.g., "87%")
-- System Activity: Single-click opens modals for dreams/conversations
+**project_id Fallback Rules:**
+1. Use explicit project_id from context
+2. Inherit from parent_object
+3. Infer from user's active project
+4. Leave null (logged as WiringDefect)
 
-### Production - Healthy
-- 0 stuck executions
-- Cleanup task running hourly (15 runs so far)
-- Debug endpoints available for monitoring
+### Phase 4: Agent Execution Integration
 
----
+Updated `agent_router.py` `_create_execution_record()` and `deliverable_envelope.py` `wrap()` to automatically attach trace context to all agent outputs.
 
-## Debug Endpoints
+### Phase 5: Trace Viewer API
+
+Created API endpoints for trace debugging:
 
 ```bash
-# Check Celery Beat health (includes last_run_at, hours_since_last_run)
-curl https://donkey-betz-platform-production.up.railway.app/api/platform/celery-debug/
+# View all artifacts linked to a trace
+GET /api/traces/<trace_id>/
 
-# Manually clean stuck tasks (if needed)
-curl -X POST https://donkey-betz-platform-production.up.railway.app/api/platform/cleanup-stale-executions/
+# List wiring defects
+GET /api/wiring-defects/
+GET /api/wiring-defects/?resolved=false
+
+# Resolve a defect
+POST /api/wiring-defects/<defect_id>/resolve/
 ```
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `core/models_unified_system.py` | Added trace fields to AgentExecution, SelfBlog, AgentDecisionSummary |
+| `core/models_deliverables.py` | Added trace fields to Deliverable |
+| `core/models_conversation_artifacts.py` | Added trace fields to ExtractedArtifact |
+| `core/models_audit_tracking.py` | Added trace fields to AuditReport |
+| `core/models_orchestration.py` | Added WiringDefect model |
+| `core/services/trace_attachment_service.py` | **NEW** - Trace attachment logic |
+| `core/views_trace_viewer.py` | **NEW** - Trace viewer API |
+| `core/urls.py` | Added trace viewer URL patterns |
+| `core/agent_router.py` | Integrated trace context in execution creation |
+| `core/services/deliverable_envelope.py` | Integrated trace context in wrap() |
+| `core/migrations/0192_session_843_orchestration_contract.py` | Migration for all changes |
 
 ---
 
@@ -80,25 +98,26 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Verify production health
-curl https://donkey-betz-platform-production.up.railway.app/api/platform/celery-debug/
+# 3. Test trace viewer (requires trace_id)
+curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <token>"
 ```
 
 ---
 
 ## Potential Next Steps
 
-1. **Add execution timeout within task** - Auto-fail individual tasks if they exceed time limit during execution
-2. **Monitor dream generation** - Verify no new empty dreams created
-3. **Add decision/pilot modals** - Currently just expand inline (dreams/conversations have modals)
-4. **Celery Beat stability** - Consider alerting if cleanup tasks miss scheduled runs
+1. **Add trace_id to AgentConversation** - Allow conversations to propagate trace context
+2. **Trace visualization UI** - Frontend component to view trace timelines
+3. **Retroactive trace linking** - Script to link orphaned artifacts to traces
+4. **WiringDefect alerting** - Notify when defects exceed threshold
+5. **Add execution timeout within task** - Auto-fail individual tasks if they exceed time limit
 
 ---
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_842_AGENT_LEARNING_TAB_FIXES.md` - Detailed session handoff
-- `docs/handoffs/SESSION_841_EXPERIMENT_MONITORING_FIXES.md` - Previous session
+- `docs/handoffs/SESSION_843_ORCHESTRATION_CONTRACT.md` - Detailed session handoff
+- `docs/handoffs/SESSION_842_AGENT_LEARNING_TAB_FIXES.md` - Previous session
 - `CLAUDE.md` - System overview
 - `docs/AGENTS.md` - Agent documentation (74 agents)
 
@@ -108,6 +127,7 @@ curl https://donkey-betz-platform-production.up.railway.app/api/platform/celery-
 
 | Session | Focus |
 |---------|-------|
+| **843** | Orchestration Contract + trace_id System |
 | **842** | Agent Learning Tab + Production Cleanup (242 stuck) + Celery Beat Investigation |
 | **841** | Experiment Monitoring Fixes - Stop global halts, provider health, naming fix |
 | **840** | Workspace Tabs Complete + Agent Error Fixes + React Error #31 |
@@ -116,10 +136,7 @@ curl https://donkey-betz-platform-production.up.railway.app/api/platform/celery-
 | **837** | SignalScannerAgent placeholder fix - now uses real market data |
 | **836** | Experiment System Diagnosis + Celery Beat fix + 5 Production API Fixes |
 | **835** | Agent Output Audit (80+ agents) + 4 New Renderers + Modal Fixes |
-| **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations |
-| **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes |
-| **832** | Recent Activity Enhancement - New fields, system activity |
 
 ---
 
-**Session 842 Complete - Production healthy, 242 stuck tasks cleaned, Celery Beat investigation complete**
+**Session 843 Complete - Orchestration Contract implemented, trace_id system active**

@@ -1325,9 +1325,11 @@ class AgentRouter:
         Session 641: Added for Agent Performance Dashboard.
         Session 758: Added context_summary for integration observability.
         Session 841: Added experiment_id for proper error rate scoping.
+        Session 843: Added trace_id and project_id for orchestration contract.
         """
         try:
             from core.models_unified_system import Agent, AgentExecution
+            from core.services.trace_attachment_service import TraceAttachmentService
 
             # Get or create the Agent record (always do this for stats tracking)
             agent_record, created = Agent.objects.get_or_create(
@@ -1355,6 +1357,11 @@ class AgentRouter:
                 except Exception as e:
                     logger.debug(f"Could not resolve experiment {experiment_id}: {e}")
 
+            # Session 843: Resolve trace_id and project_id
+            context = context_summary or {}
+            trace_id = TraceAttachmentService.resolve_trace_id(context)
+            project_id = TraceAttachmentService.resolve_project_id(context, user=self.user)
+
             # Session 642: User field is now nullable - always create execution record
             # Create execution record (user can be None for Celery/API tasks)
             execution = AgentExecution.objects.create(
@@ -1364,6 +1371,12 @@ class AgentRouter:
                 status='in_progress',
                 input_data=input_data,
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
+                # Session 843: Orchestration contract fields
+                trace_id=trace_id,
+                project_id=project_id,
+                owner_agent=agent_name,
+                parent_object_type=context.get('parent_object_type', ''),
+                parent_object_id=context.get('parent_object_id'),
             )
 
             return execution
