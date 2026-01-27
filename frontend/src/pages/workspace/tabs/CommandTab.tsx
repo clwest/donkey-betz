@@ -239,6 +239,8 @@ export function CommandTab({
                   onDismiss={() =>
                     decisionMutation.mutate({ itemId: decision.id, decision: 'dismiss' })
                   }
+                  // Session 845: View details in modal instead of navigating
+                  onViewDetails={() => setSelectedDecisionId(decision.id)}
                   isLoading={decisionMutation.isPending}
                 />
               ))}
@@ -528,14 +530,16 @@ function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
 }
 
 // Decision Card sub-component
+// Session 845: Added onViewDetails for inline modal viewing
 interface DecisionCardProps {
   decision: any
   onApprove: () => void
   onDismiss: () => void
+  onViewDetails?: () => void
   isLoading: boolean
 }
 
-function DecisionCard({ decision, onApprove, onDismiss, isLoading }: DecisionCardProps) {
+function DecisionCard({ decision, onApprove, onDismiss, onViewDetails, isLoading }: DecisionCardProps) {
   return (
     <div className="p-4 bg-gray-800/50 hover:bg-gray-800/80 rounded-lg transition-colors">
       <div className="flex items-start justify-between mb-2">
@@ -565,6 +569,10 @@ function DecisionCard({ decision, onApprove, onDismiss, isLoading }: DecisionCar
           {decision.urgency}
         </span>
       </div>
+      {/* Session 845: Show summary preview if available */}
+      {decision.summary && (
+        <p className="text-xs text-gray-400 mt-2 line-clamp-2">{decision.summary}</p>
+      )}
       <div className="flex items-center gap-2 mt-3">
         <button
           onClick={onApprove}
@@ -582,13 +590,14 @@ function DecisionCard({ decision, onApprove, onDismiss, isLoading }: DecisionCar
           <X size={12} />
           Dismiss
         </button>
-        <a
-          href={`/human?tab=attention&item=${decision.id}`}
+        {/* Session 845: View details opens modal instead of navigating */}
+        <button
+          onClick={onViewDetails}
           className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 hover:text-white text-xs transition-colors ml-auto"
         >
           View Details
           <ChevronRight size={12} />
-        </a>
+        </button>
       </div>
     </div>
   )
