@@ -30,6 +30,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useAuthStore } from '@/stores/authStore'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -306,10 +308,35 @@ function OperationContentModal({
                   <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
                     <Code size={14} />
                     File Content
+                    {operation.file_path?.endsWith('.md') && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400">Markdown</span>
+                    )}
                   </h4>
-                  <pre className="text-xs bg-dark-bg p-3 rounded overflow-x-auto max-h-96 overflow-y-auto font-mono whitespace-pre-wrap">
-                    {operation.file_content_after}
-                  </pre>
+                  {operation.file_path?.endsWith('.md') ? (
+                    <div className="prose prose-invert prose-sm max-w-none bg-dark-bg p-4 rounded overflow-y-auto max-h-96
+                      prose-headings:text-white prose-headings:font-semibold
+                      prose-h1:text-xl prose-h1:border-b prose-h1:border-gray-700 prose-h1:pb-2 prose-h1:mb-4
+                      prose-h2:text-lg prose-h2:mt-6 prose-h2:mb-3
+                      prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2
+                      prose-p:text-gray-300 prose-p:leading-relaxed
+                      prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline
+                      prose-strong:text-white prose-strong:font-semibold
+                      prose-code:text-accent-amber prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                      prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
+                      prose-ul:text-gray-300 prose-ol:text-gray-300
+                      prose-li:marker:text-gray-500
+                      prose-blockquote:border-l-primary-500 prose-blockquote:text-gray-400 prose-blockquote:italic
+                      prose-table:text-sm prose-th:text-left prose-th:text-gray-400 prose-th:font-medium prose-th:pb-2
+                      prose-td:py-1 prose-td:pr-4">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {operation.file_content_after}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <pre className="text-xs bg-dark-bg p-3 rounded overflow-x-auto max-h-96 overflow-y-auto font-mono whitespace-pre-wrap">
+                      {operation.file_content_after}
+                    </pre>
+                  )}
                 </div>
               )}
 
