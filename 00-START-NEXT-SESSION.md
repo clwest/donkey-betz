@@ -1,48 +1,43 @@
-# Session 841 - Start Here
+# Session 842 - Start Here
 
-**Previous Session:** 840 (Workspace Tabs & Agent Fixes)
+**Previous Session:** 841 (Experiment Monitoring Fixes)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **ALL WORKSPACE TABS COMPLETE**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **EXPERIMENT HALTS FIXED**
 
 ---
 
-## What Was Accomplished in Session 840
+## What Was Accomplished in Session 841
 
-### 1. Workspace Tab Enhancements (PRs #312-314)
+### Experiment Monitoring Fixes (PR #320)
 
-Completed onClick handlers and real data for the final 3 workspace tabs:
+Fixed experiments being incorrectly halted with "100% error rate" due to four issues:
 
-| Tab | Changes |
-|-----|---------|
-| **IntelligenceTab** | ThoughtDetailModal, PatternDetailModal, KnowledgeDetailModal; real data (81 thoughts, 293 actions, 890 memories) |
-| **DataSourcesTab** | SpiderDetailModal, FeedItemDetailModal; real data (77 spiders, 23,888 data items) |
-| **ContentStudioTab** | ChannelDetailModal, BlogDetailModal, EpisodeDetailModal; real data (9 channels, 187 episodes, 1,078 blogs) |
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| **Global error rate** | System-wide calculation affected all experiments | Scoped to per-experiment via new FK |
+| **No minimum threshold** | 1 failure = 100% error rate | Require 10+ executions, 10+ minutes age |
+| **Provider outage cascade** | OpenAI 429s halted all experiments | Suppress metrics during provider degradation |
+| **Unknown Decision naming** | Used `.title` instead of `.topic` | Fixed to use correct field |
 
-**All 11 workspace tabs now have onClick handlers, detail modals, and real data fallbacks.**
+### Key Changes
 
-### 2. React Error #31 Fix (PR #315)
+1. **Added `experiment` FK to AgentExecution** - Links executions to specific experiments for scoped metrics
 
-Fixed console errors in AdminPage where Celery API returned objects instead of strings for task data.
+2. **ExperimentMetricsService improvements:**
+   - `MIN_EXECUTIONS_FOR_ERROR_RATE = 10`
+   - `MIN_AGE_MINUTES = 10`
+   - Filters by `experiment=self.experiment` instead of all executions
 
-### 3. Creation Agent Error Propagation (PRs #316-317)
+3. **New ProviderHealthTracker** (`core/services/provider_health_tracker.py`):
+   - Tracks errors per provider (5-minute window)
+   - 5+ errors = provider degraded
+   - Suppresses halt metrics during outages
 
-All 4 creation agents now show actual error details instead of generic messages:
-- ImageAgent: "Image generation failed: [actual error]"
-- AudioAgent: "Audio generation failed: [actual error]"
-- VideoAgent: "Video generation failed: [actual error]"
-- ThreeDAgent: "3D generation failed: [actual error]"
+4. **LLM Retry Logic** (`base_agent.py`):
+   - New `_call_llm_with_retry()` with exponential backoff
+   - Max 3 retries, jitter to prevent thundering herd
 
-### 4. AgentResult Content Alias (PR #318)
-
-Fixed "'AgentResult' object has no attribute 'content'" errors by adding `.content` property alias to `AgentResult` class.
-
-### 5. Memory Cleanup
-
-Deleted 13 failed agent memories from the database.
-
-### 6. OpenAI Credits Replenished
-
-$300 added to OpenAI account - 429 quota errors resolved.
+5. **Fixed gate_progression_pipeline.py** - `.title` → `.topic` prevents "Unknown Decision" experiments
 
 ---
 
@@ -50,33 +45,24 @@ $300 added to OpenAI account - 429 quota errors resolved.
 
 | PR | Description |
 |----|-------------|
-| #312 | IntelligenceTab onClick handlers and real data |
-| #313 | DataSourcesTab onClick handlers and real data |
-| #314 | ContentStudioTab onClick handlers and real data |
-| #315 | Fix React error #31 in AdminPage Celery rendering |
-| #316 | ImageAgent error propagation |
-| #317 | Audio/Video/3D Agent error propagation |
-| #318 | AgentResult .content alias for backwards compatibility |
+| #320 | Stop global experiment halts, provider outage handling, naming fix |
 
 ---
 
 ## Current State
 
-### Workspace Tabs - All Complete
-All 11 tabs now have:
-- ✅ onClick handlers on interactive elements
-- ✅ Detail modals for inline viewing
-- ✅ Real data fallbacks from database
-- ✅ Refresh buttons
+### Experiment Monitoring - Fixed
+- Error rate: Now per-experiment scoped
+- Minimum thresholds: 10 executions, 10 minutes
+- Provider outages: Detected and suppressed from metrics
+- New experiments: Named with actual decision topic
 
-### Creation Agents - Improved Error Reporting
-When generation fails, you'll now see the actual error (API rate limits, connection issues, etc.) instead of generic messages.
+### Existing Data
+- 79 "Unknown Decision" experiments exist (created before fix)
+- New experiments will use correct naming
 
-### Agent Execution Status
-- Recent 7 days: 1,598 executions
-- Completed: 1,574 (98.5%)
-- Failed: 23 (1.4%)
-- In Progress: 1
+### Migration Applied
+- `0191_add_experiment_fk_to_agent_execution` - Adds nullable experiment FK
 
 ---
 
@@ -89,25 +75,31 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Verify all tabs work
-# Click through each of the 11 workspace tabs and verify data displays
+# 3. Verify experiment system
+python manage.py shell -c "
+from core.models_unified_system import AgentExecution
+from core.models import Experiment
+print(f'AgentExecution has experiment FK: {hasattr(AgentExecution, \"experiment\")}')
+print(f'Running experiments: {Experiment.objects.filter(status=\"running\").count()}')
+"
 ```
 
 ---
 
 ## Potential Next Steps
 
-1. **Monitor creation agents** - Verify error messages are helpful in production
-2. **ResearchAgent improvements** - Had most failures (11), may need tool enhancements
-3. **Rate limiting** - Consider implementing retry logic with backoff for API calls
-4. **Standardize status values** - Normalize backend status conventions
+1. **Monitor experiment halts** - Verify no more false 100% error rates
+2. **Backfill experiment FK** - Link existing AgentExecutions to their experiments
+3. **Clean up Unknown Decision experiments** - 79 exist from before the fix
+4. **Add provider health alerting** - Notify when providers are degraded
+5. **ResearchAgent improvements** - Had most failures in Session 840
 
 ---
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_840_WORKSPACE_TABS_AND_AGENT_FIXES.md` - This session's details
-- `docs/handoffs/SESSION_839_UI_DATA_FLOW_FIXES.md` - Previous session
+- `docs/handoffs/SESSION_841_EXPERIMENT_MONITORING_FIXES.md` - This session's details
+- `docs/handoffs/SESSION_840_WORKSPACE_TABS_AND_AGENT_FIXES.md` - Previous session
 - `CLAUDE.md` - System overview
 - `docs/AGENTS.md` - Agent documentation (74 agents)
 
@@ -117,6 +109,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **841** | Experiment Monitoring Fixes - Stop global halts, provider health, naming fix |
 | **840** | Workspace Tabs Complete + Agent Error Fixes + React Error #31 |
 | **839** | UI Status Mismatch Fix + Workspace Output Fix + API Audit |
 | **838** | Finance Agent Audit Complete - MarketMovementMonitor, MarketAnomalyDetector |
@@ -126,9 +119,7 @@ open http://localhost:8000/ai-studio/
 | **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations |
 | **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes |
 | **832** | Recent Activity Enhancement - New fields, system activity |
-| **831** | Remediation Pipeline + LLM Timeouts + UI Fixes |
-| **830** | Agent File Operations + Production Auth Fixes |
 
 ---
 
-**Session 840 Complete - All 11 workspace tabs enhanced, agent errors now show real details**
+**Session 841 Complete - Experiments no longer halted by global errors or provider outages**
