@@ -130,6 +130,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **842** | Agent Learning Tab + Production Cleanup (242 stuck) + Celery Beat Investigation | `SESSION_842_AGENT_LEARNING_TAB_FIXES.md` |
 | **841** | Experiment Monitoring Fixes - Stop global halts, provider health tracking | `SESSION_841_EXPERIMENT_MONITORING_FIXES.md` |
 | **836** | Experiment System Diagnosis - Celery Beat fix, 251 learnings created | `SESSION_836_EXPERIMENT_SYSTEM_DIAGNOSIS.md` |
 | **835** | Agent Output Audit (80+ agents) + 4 New Renderers + Deep Linking Fix | `SESSION_835_AGENT_OUTPUT_AUDIT.md` |
@@ -144,9 +145,8 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **826** | Goal-Driven Conversations + Workspace Real Data + CodeReviewAgent | `SESSION_826_GOAL_DRIVEN_CONVERSATIONS.md` |
 | **825** | UI Consolidation - 29 pages → 6 tabs, collapsible sidebar | `SESSION_825_UI_CONSOLIDATION_PLAN.md` |
 | **824** | UI Integration Sprint - Live Metrics, Triggers, Actions | `SESSION_824_UI_INTEGRATION_SPRINT.md` |
-| **823** | Self-Execution Engine - System monitors + triggers actions | `SESSION_823_SELF_EXECUTION_ENGINE.md` |
 
-**Older sessions:** See `docs/handoffs/` directory (Sessions 197-841)
+**Older sessions:** See `docs/handoffs/` directory (Sessions 197-842)
 
 ---
 
