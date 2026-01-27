@@ -1,52 +1,33 @@
-# Session 837 - Start Here
+# Session 838 - Start Here
 
-**Previous Session:** 836 (Experiment System Diagnosis & Fix)
-**Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Experiment Learning Loop: ACTIVE**
+**Previous Session:** 837 (Finance Agent Placeholder Fix)
+**Date:** January 27, 2026
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **SignalScannerAgent: REAL DATA**
 
 ---
 
-## What Was Accomplished in Session 836
+## What Was Accomplished in Session 837
 
-### Major Achievement: Experiment System Diagnosis & Fix
+### Major Achievement: SignalScannerAgent Placeholder Data Fix
 
-Investigated ChatGPT's claim of "85% experiment failure rate" and found the **real issue was Celery Beat not running**.
+Fixed SignalScannerAgent which was returning hardcoded placeholder data instead of real market information.
 
-**Root Cause:** Celery worker was started manually (`celery -A core worker --pool=solo`) instead of via Makefile, which meant Celery Beat (the scheduler) was never started.
+**Problems Fixed (PR #292):**
+- All tickers returned identical resistance/support/target (150/145/155)
+- Same RSI=65 and MACD "recent crossover" for all tickers
+- Expired options expiry '2025-01-17' hardcoded
 
-**Impact:** 228 scheduled tasks weren't running, including:
-- `monitor_running_experiments` (every 10 mins)
-- `evaluate_and_complete_pilots` (processes experiments)
-- `update_experiment_kpis` (hourly)
-- All body system tasks (HEART, LUNGS, BRAIN, etc.)
+**Solution:**
+- `_scan_patterns`: Fetches real prices from YahooFinanceSpider
+- `_momentum_scan`: Uses real price change percentages
+- `_volume_analysis`: Fetches real volume data
+- `_options_flow`: Returns `insufficient_data` status (no options spider)
 
-### Before vs After Fix
-
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| Experiments Running | 235 | 20 | -215 processed |
-| Experiments Success | 16 | 224 | +208 |
-| ExperimentLearnings | 4 | 251 | +247 |
-| DecisionTypeSuccessPatterns | 0 | 29 | +29 patterns |
-| Celery Beat | NOT RUNNING | RUNNING | **Fixed** |
-
-### Key Insight
-
-The "85% failure rate" was from simulated agent research output, not real telemetry. Actual experiments weren't failing - they were simply **never being evaluated**.
-
-### Production API Fixes (5 PRs)
-
-After fixing the experiment system, several production issues were discovered and fixed:
-
-| PR | Issue | Fix |
-|----|-------|-----|
-| #284 | `synthesis[:500]` failed for dict type | Use `str(synthesis)[:500]` |
-| #285 | `trigger_reason` attribute not found | Changed to `trigger_type` |
-| #286 | "Invalid Date" + "0 turns" in UI | Fixed field names in ConversationDetailModal |
-| #288 | "0 Completed" + "0% Avg Quality" | Compute stats dynamically |
-| #290 | MeetingCoordinator returns placeholders | Now calls real agents via router |
-
-**All conversation and agent coordination issues now fixed.**
+**Data Quality Tracking:**
+All tool methods now return `data_quality` field:
+- `real`: Data from live market feed
+- `unavailable`: No data provider available
+- `error`: Data fetch failed
 
 ---
 
@@ -60,11 +41,13 @@ After fixing the experiment system, several production issues were discovered an
 ✅ Beat Scheduler - 228 scheduled tasks
 ```
 
-### Experiment Learning Loop (Now Active)
-- 251 experiments with learnings
-- 29 decision type success patterns
-- 89% success rate (224/251)
-- ThinkingAgent can now learn from experiment outcomes
+### Finance Agents Status
+| Agent | Status | Notes |
+|-------|--------|-------|
+| SignalScannerAgent | ✅ Fixed | Uses real YahooFinance data |
+| MarketIntelligenceAgent | ✅ Good | Already uses real spiders |
+| BullCaseAgent | ⚠️ Audit | May have placeholders |
+| BearCaseAgent | ⚠️ Audit | May have placeholders |
 
 ---
 
@@ -80,11 +63,14 @@ open http://localhost:8000/ai-studio/
 # 3. Verify Celery Beat is running
 pgrep -fl "celery.*beat"
 
-# 4. Check experiment status
+# 4. Test SignalScannerAgent with real data
 python manage.py shell -c "
-from core.models_pilot_readiness import Experiment, ExperimentLearning
-print(f'Experiments: {Experiment.objects.count()}')
-print(f'Learnings: {ExperimentLearning.objects.count()}')
+from core.agents.stocks.signal_scanner_agent import SignalScannerAgent
+agent = SignalScannerAgent()
+result = agent._scan_patterns({'tickers': ['AAPL', 'MSFT']})
+print(f'Data quality: {result.get(\"data_quality_summary\")}')
+for p in result.get('patterns', []):
+    print(f'{p.get(\"ticker\")}: {p.get(\"data_quality\")} - {p.get(\"key_levels\", {}).get(\"current_price\")}')
 "
 ```
 
@@ -92,18 +78,18 @@ print(f'Learnings: {ExperimentLearning.objects.count()}')
 
 ## Potential Next Steps
 
-1. **Monitor experiment system** - Verify stability over 24-48 hours
-2. **Review 3 failed experiments** - Understand what caused failures
-3. **Verify ThinkingAgent integration** - Confirm learnings feed into decisions
-4. **Add Celery Beat alerting** - Notify if Beat stops running
-5. **Audit finding remediation** - 799 findings, only 2 fixed
+1. **Audit remaining finance agents** - BullCaseAgent, BearCaseAgent, TrendAnalysisAgent
+2. **Add source anchoring** - EDGAR links for SEC filings, data timestamps
+3. **Implement ML confidence thresholds** - 0.0 confidence should downgrade signal
+4. **Consider options data spider** - For real options flow analysis
+5. **Monitor experiment system** - Verify stability after 836 fixes
 
 ---
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_836_EXPERIMENT_SYSTEM_DIAGNOSIS.md` - Full diagnosis report
-- `docs/handoffs/SESSION_835_AGENT_OUTPUT_AUDIT.md` - Agent output renderers
+- `docs/handoffs/SESSION_837_FINANCE_AGENT_PLACEHOLDER_FIX.md` - SignalScanner fix
+- `docs/handoffs/SESSION_836_EXPERIMENT_SYSTEM_DIAGNOSIS.md` - Experiment system fix
 - `CLAUDE.md` - System overview
 - `docs/AGENTS.md` - Agent documentation (74 agents)
 
@@ -113,7 +99,8 @@ print(f'Learnings: {ExperimentLearning.objects.count()}')
 
 | Session | Focus |
 |---------|-------|
-| **836** | Experiment System Diagnosis + Celery Beat fix + 3 Production API Fixes |
+| **837** | SignalScannerAgent placeholder fix - now uses real market data |
+| **836** | Experiment System Diagnosis + Celery Beat fix + 5 Production API Fixes |
 | **835** | Agent Output Audit (80+ agents) + 4 New Renderers + Modal Fixes |
 | **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations |
 | **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes |
@@ -126,4 +113,4 @@ print(f'Learnings: {ExperimentLearning.objects.count()}')
 
 ---
 
-**SESSION 836 COMPLETE - Experiment learning loop active (251 learnings, 29 patterns) + 5 production fixes deployed**
+**SESSION 837 IN PROGRESS - SignalScannerAgent fixed (PR #292), remaining finance agents need audit**
