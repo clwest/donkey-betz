@@ -388,7 +388,9 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                     task=tool_input.get('task', ''),
                     context=tool_input.get('context', ''),
                     delegation_context=getattr(self, '_current_delegation_context', {})
-                )            else:
+                )
+
+            else:
                 return {"error": f"Unknown tool: {tool_name}"}
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}", exc_info=True)
