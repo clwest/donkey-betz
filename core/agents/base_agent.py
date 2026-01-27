@@ -95,6 +95,12 @@ class AgentResult:
     # Session 765: Link to AgentExecution record for intelligence data
     execution_id: Optional[str] = None
 
+    # Session 840: Backwards compatibility alias for .content
+    @property
+    def content(self) -> str:
+        """Alias for message - backwards compatibility with code expecting .content."""
+        return self.message
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         result = {
