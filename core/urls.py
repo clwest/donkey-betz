@@ -31,6 +31,13 @@ from core.views_integration_health import (
     execution_quality_analysis,
 )
 
+# Session 843: Trace Viewer - Orchestration Contract
+from core.views_trace_viewer import (
+    TraceViewerView,
+    WiringDefectsListView,
+    WiringDefectResolveView,
+)
+
 # Session 237: Redirect handler for legacy broken URLs
 def legacy_portfolio_image_redirect(request, path):
     """
@@ -1455,6 +1462,11 @@ urlpatterns = [
     path('api/integration/metrics/', context_injection_metrics, name='integration-metrics'),
     path('api/integration/alerts/', IntegrationAlertView.as_view(), name='integration-alerts'),
     path('api/integration/quality/', execution_quality_analysis, name='integration-quality'),
+
+    # Session 843: Trace Viewer - Orchestration Contract
+    path('api/traces/<uuid:trace_id>/', TraceViewerView.as_view(), name='trace-viewer'),
+    path('api/wiring-defects/', WiringDefectsListView.as_view(), name='wiring-defects-list'),
+    path('api/wiring-defects/<uuid:defect_id>/resolve/', WiringDefectResolveView.as_view(), name='wiring-defect-resolve'),
 
     # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
     path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),

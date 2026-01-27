@@ -32,6 +32,18 @@ class ExtractedArtifact(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Session 843: Orchestration Contract fields
+    trace_id = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        help_text="Session 843: Trace ID for cross-artifact linking"
+    )
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='extracted_artifacts',
+        help_text="Session 843: Project this artifact belongs to"
+    )
+
     # Source conversation
     conversation = models.ForeignKey(
         'AgentConversation',
