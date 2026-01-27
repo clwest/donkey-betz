@@ -377,6 +377,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 830: Self-Healing Progress (read-only monitoring)
         '/api/self-healing/progress/',  # Live remediation progress
+
+        # Session 842: Celery Debug & Cleanup (for production debugging)
+        '/api/platform/celery-debug/',  # Celery status and stale task info
+        '/api/platform/cleanup-stale-executions/',  # Manual cleanup of stuck tasks
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
