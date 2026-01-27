@@ -1,43 +1,38 @@
-# Session 842 - Start Here
+# Session 843 - Start Here
 
-**Previous Session:** 841 (Experiment Monitoring Fixes)
+**Previous Session:** 842 (Agent Learning Tab Fixes)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **EXPERIMENT HALTS FIXED**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **AGENT LEARNING TAB FIXED**
 
 ---
 
-## What Was Accomplished in Session 841
+## What Was Accomplished in Session 842
 
-### Experiment Monitoring Fixes (PR #320)
+### Agent Learning Tab Fixes (PRs #323, #324)
 
-Fixed experiments being incorrectly halted with "100% error rate" due to four issues:
+Fixed multiple issues in the Agent Learning tab:
 
 | Issue | Root Cause | Fix |
 |-------|------------|-----|
-| **Global error rate** | System-wide calculation affected all experiments | Scoped to per-experiment via new FK |
-| **No minimum threshold** | 1 failure = 100% error rate | Require 10+ executions, 10+ minutes age |
-| **Provider outage cascade** | OpenAI 429s halted all experiments | Suppress metrics during provider degradation |
-| **Unknown Decision naming** | Used `.title` instead of `.topic` | Fixed to use correct field |
+| **1,016 empty dreams** | LLM returned empty content but dreams still created | Skip creating when content empty |
+| **Quality showing 1%** | Returned decimal (0.87), Math.round = 1 | Multiply by 100 before returning |
+| **System Activity links** | Required 2 clicks, links navigated away | Single click opens modal for dreams/convos |
 
 ### Key Changes
 
-1. **Added `experiment` FK to AgentExecution** - Links executions to specific experiments for scoped metrics
+1. **Empty Dreams Fix** (`core/tasks.py`):
+   - Added empty content check in `agent_dream_task()`
+   - Added empty content check in `generate_directed_dreams()`
+   - Deleted 1,016 existing empty dreams
 
-2. **ExperimentMetricsService improvements:**
-   - `MIN_EXECUTIONS_FOR_ERROR_RATE = 10`
-   - `MIN_AGE_MINUTES = 10`
-   - Filters by `experiment=self.experiment` instead of all executions
+2. **System Activity Modal** (`CommandTab.tsx`):
+   - `handleCardClick()` opens modal for dreams/conversations
+   - Decisions/pilots expand inline
+   - Links renamed to "Go to X Page" for clarity
 
-3. **New ProviderHealthTracker** (`core/services/provider_health_tracker.py`):
-   - Tracks errors per provider (5-minute window)
-   - 5+ errors = provider degraded
-   - Suppresses halt metrics during outages
-
-4. **LLM Retry Logic** (`base_agent.py`):
-   - New `_call_llm_with_retry()` with exponential backoff
-   - Max 3 retries, jitter to prevent thundering herd
-
-5. **Fixed gate_progression_pipeline.py** - `.title` → `.topic` prevents "Unknown Decision" experiments
+3. **Database Cleanup**:
+   - Removed 1,016 empty dreams (9,169 remaining)
+   - Cleaned 1 stuck execution (CodeGeneratorAgent)
 
 ---
 
@@ -45,24 +40,23 @@ Fixed experiments being incorrectly halted with "100% error rate" due to four is
 
 | PR | Description |
 |----|-------------|
-| #320 | Stop global experiment halts, provider outage handling, naming fix |
+| #323 | Skip creating dreams with empty content |
+| #324 | System Activity cards open modals directly |
 
 ---
 
 ## Current State
 
-### Experiment Monitoring - Fixed
-- Error rate: Now per-experiment scoped
-- Minimum thresholds: 10 executions, 10 minutes
-- Provider outages: Detected and suppressed from metrics
-- New experiments: Named with actual decision topic
+### Agent Learning Tab - Fixed
+- Dreams: 9,169 (all with content)
+- Conversations: Quality scores display correctly
+- System Activity: Single-click opens modals
 
-### Existing Data
-- 79 "Unknown Decision" experiments exist (created before fix)
-- New experiments will use correct naming
-
-### Migration Applied
-- `0191_add_experiment_fk_to_agent_execution` - Adds nullable experiment FK
+### Known Issue - Production UI
+User reported tasks "stuck for 15 hours" in production. Local DB shows:
+- Most recent executions: 1-2 hours old
+- No stuck executions
+- May need production database investigation
 
 ---
 
@@ -75,31 +69,27 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Verify experiment system
-python manage.py shell -c "
-from core.models_unified_system import AgentExecution
-from core.models import Experiment
-print(f'AgentExecution has experiment FK: {hasattr(AgentExecution, \"experiment\")}')
-print(f'Running experiments: {Experiment.objects.filter(status=\"running\").count()}')
-"
+# 3. Verify Agent Learning tab
+# - Click on Dreams → should show content
+# - Click on System Activity dream card → modal opens
+# - Check conversation quality scores → should be percentages
 ```
 
 ---
 
 ## Potential Next Steps
 
-1. **Monitor experiment halts** - Verify no more false 100% error rates
-2. **Backfill experiment FK** - Link existing AgentExecutions to their experiments
-3. **Clean up Unknown Decision experiments** - 79 exist from before the fix
-4. **Add provider health alerting** - Notify when providers are degraded
-5. **ResearchAgent improvements** - Had most failures in Session 840
+1. **Investigate production "stuck tasks"** - Compare prod vs local data
+2. **Add execution timeout mechanism** - Auto-fail after X hours
+3. **Monitor dream generation** - Verify no new empty dreams created
+4. **Add decision/pilot modals** - Currently just expand inline
 
 ---
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_841_EXPERIMENT_MONITORING_FIXES.md` - This session's details
-- `docs/handoffs/SESSION_840_WORKSPACE_TABS_AND_AGENT_FIXES.md` - Previous session
+- `docs/handoffs/SESSION_842_AGENT_LEARNING_TAB_FIXES.md` - This session's details
+- `docs/handoffs/SESSION_841_EXPERIMENT_MONITORING_FIXES.md` - Previous session
 - `CLAUDE.md` - System overview
 - `docs/AGENTS.md` - Agent documentation (74 agents)
 
@@ -109,6 +99,7 @@ print(f'Running experiments: {Experiment.objects.filter(status=\"running\").coun
 
 | Session | Focus |
 |---------|-------|
+| **842** | Agent Learning Tab Fixes - Empty dreams, quality scores, modal behavior |
 | **841** | Experiment Monitoring Fixes - Stop global halts, provider health, naming fix |
 | **840** | Workspace Tabs Complete + Agent Error Fixes + React Error #31 |
 | **839** | UI Status Mismatch Fix + Workspace Output Fix + API Audit |
@@ -122,4 +113,4 @@ print(f'Running experiments: {Experiment.objects.filter(status=\"running\").coun
 
 ---
 
-**Session 841 Complete - Experiments no longer halted by global errors or provider outages**
+**Session 842 Complete - Agent Learning tab displays correctly**
