@@ -4027,6 +4027,7 @@ from core.views_platform_command import (
     action_run_self_audit_view,
     remediation_status_view,
     self_healing_progress_view,  # Session 830
+    cleanup_stale_executions_view,  # Session 842
 )
 
 urlpatterns += [
@@ -4053,6 +4054,8 @@ urlpatterns += [
     path('api/platform/remediation/status/', remediation_status_view, name='platform-remediation-status'),
     # Session 830: Live self-healing progress for UI polling
     path('api/self-healing/progress/', self_healing_progress_view, name='self-healing-progress'),
+    # Session 842: Manual cleanup of stale executions (when Celery Beat is not running)
+    path('api/platform/cleanup-stale-executions/', cleanup_stale_executions_view, name='platform-cleanup-stale-executions'),
 ]
 
 # =========================================================================
