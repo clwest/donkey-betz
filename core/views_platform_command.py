@@ -1835,6 +1835,7 @@ def action_run_remediation_view(request):
         total_assigned = AuditRemediationTask.objects.filter(status='assigned').count()
 
         # Session 831: If no assigned tasks, check for open findings and assign them
+        # Session 833: Chain assignment with execution so user doesn't need to click twice
         if total_assigned == 0:
             open_findings_count = AuditFinding.objects.filter(
                 status='open',
@@ -1842,17 +1843,22 @@ def action_run_remediation_view(request):
             ).count()
 
             if open_findings_count > 0:
-                # Run assignment phase first
-                logger.info(f"No assigned tasks, but {open_findings_count} open findings. Running assignment...")
-                from core.tasks import assign_findings_to_agents
-                assign_findings_to_agents.delay(limit=limit)
+                # Run assignment phase first, then chain execution
+                logger.info(f"No assigned tasks, but {open_findings_count} open findings. Running assignment + execution...")
+                from core.tasks import assign_and_execute_remediation
+
+                # Session 833: Use combined task that assigns then executes
+                assign_and_execute_remediation.delay(
+                    limit=limit,
+                    write_files=write_files
+                )
 
                 return JsonResponse({
                     'success': True,
-                    'message': f'Assigning {min(limit, open_findings_count)} of {open_findings_count} open findings to agents. Run remediation again after assignment completes.',
-                    'phase': 'assignment',
+                    'message': f'Assigning {min(limit, open_findings_count)} of {open_findings_count} open findings, then executing remediation.',
+                    'phase': 'assignment_and_execution',
                     'open_findings': open_findings_count,
-                    'tasks_available': 0,
+                    'tasks_available': min(limit, open_findings_count),
                 })
             else:
                 return JsonResponse({
