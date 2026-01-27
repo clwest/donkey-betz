@@ -10289,6 +10289,8 @@ class AgentMemory(models.Model):
         - candidate: Requires validation before approved
         - approved: Safe to embed and learn from
 
+        Session 843: Added auto-assignment to Memory Palace rooms based on memory_type.
+
         Embedding is only generated for 'approved' safety_class memories.
         """
         # Detect poison risk before creating
@@ -10309,6 +10311,9 @@ class AgentMemory(models.Model):
             poison_risk_factors=risk_factors
         )
 
+        # Session 843: Auto-assign memory to appropriate room based on memory_type
+        cls._auto_assign_to_room(memory, agent, memory_type)
+
         # Session 768: Only generate embeddings for approved memories with low poison risk
         if safety_class == 'approved' and poison_risk < 0.5:
             from core.tasks import generate_memory_embedding
@@ -10321,6 +10326,88 @@ class AgentMemory(models.Model):
             generate_memory_embedding.delay(str(memory.id))
 
         return memory
+
+    @classmethod
+    def _auto_assign_to_room(cls, memory, agent, memory_type):
+        """
+        Session 843: Auto-assign memory to appropriate Memory Palace room.
+
+        Mapping:
+        - success → successes (Hall of Victories)
+        - failure → lessons (Lessons Learned)
+        - technique → techniques (Techniques Library)
+        - insight, conceptual → insights (Insight Garden)
+        - preference → preferences (User Preferences)
+        - interaction, feedback, other → general (General Archive)
+        """
+        from core.models_unified_system import MemoryPalaceRoom
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Memory type to room type mapping
+        MEMORY_TO_ROOM = {
+            'success': 'successes',
+            'failure': 'lessons',
+            'technique': 'techniques',
+            'insight': 'insights',
+            'conceptual': 'insights',
+            'preference': 'preferences',
+            'interaction': 'general',
+            'feedback': 'general',
+        }
+
+        room_type = MEMORY_TO_ROOM.get(memory_type, 'general')
+
+        try:
+            # Get or create the appropriate room for this agent
+            room, created = MemoryPalaceRoom.objects.get_or_create(
+                agent=agent,
+                room_type=room_type,
+                defaults={
+                    'name': dict(MemoryPalaceRoom.ROOM_TYPE_CHOICES).get(room_type, 'General Archive'),
+                    'description': f'Auto-created room for {room_type} memories',
+                    'icon': cls._get_room_icon(room_type),
+                    'color': cls._get_room_color(room_type),
+                }
+            )
+
+            # Assign memory to room
+            memory.rooms.add(room)
+
+            if created:
+                logger.info(f"🏠 Created room '{room.name}' for {agent.name}")
+            logger.debug(f"🧠 Memory '{memory.title[:30]}...' assigned to '{room.name}'")
+
+        except Exception as e:
+            logger.warning(f"Failed to auto-assign memory to room: {e}")
+
+    @staticmethod
+    def _get_room_icon(room_type):
+        """Get emoji icon for room type."""
+        icons = {
+            'techniques': '📚',
+            'successes': '🏆',
+            'lessons': '📖',
+            'preferences': '⭐',
+            'insights': '💡',
+            'experiments': '🧪',
+            'general': '🏠',
+        }
+        return icons.get(room_type, '🏠')
+
+    @staticmethod
+    def _get_room_color(room_type):
+        """Get color for room type."""
+        colors = {
+            'techniques': '#06b6d4',  # cyan
+            'successes': '#22c55e',   # green
+            'lessons': '#f97316',     # orange
+            'preferences': '#eab308', # yellow
+            'insights': '#8b5cf6',    # purple
+            'experiments': '#ec4899', # pink
+            'general': '#6366f1',     # indigo
+        }
+        return colors.get(room_type, '#6366f1')
 
     @classmethod
     def _detect_poison_risk(cls, title: str, content: str, context: str) -> tuple:
