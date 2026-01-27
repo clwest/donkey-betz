@@ -28581,6 +28581,8 @@ def assign_open_findings_to_agents():
 
     Matches each open finding to the best agent based on category and
     affected files. Runs every 2 hours to catch new findings.
+
+    Session 840: Updated to include P2 findings since all P0/P1 are resolved.
     """
     from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
 
@@ -28588,8 +28590,8 @@ def assign_open_findings_to_agents():
 
     try:
         orchestrator = get_remediation_orchestrator()
-        # Only auto-assign P0 and P1 findings
-        results = orchestrator.assign_open_findings(priority_filter=['P0', 'P1'])
+        # Session 840: Include P2 findings now that P0/P1 are resolved
+        results = orchestrator.assign_open_findings(priority_filter=['P0', 'P1', 'P2'])
 
         logger.info(
             f"✅ [AUTO-REMEDIATE] Assigned {results.get('assigned', 0)} findings"
@@ -28663,6 +28665,8 @@ def run_autonomous_remediation_cycle():
     Orchestrates all phases: discover → assign → execute → verify.
     This is the main entry point for the self-healing system.
     Runs daily at 2am after the audit discovery at midnight.
+
+    Session 840: Updated to include P2 findings since all P0/P1 are resolved.
     """
     from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
 
@@ -28670,7 +28674,8 @@ def run_autonomous_remediation_cycle():
 
     try:
         orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=5)
-        results = orchestrator.run_remediation_cycle(priority_filter=['P0', 'P1'])
+        # Session 840: Include P2 findings now that P0/P1 are resolved
+        results = orchestrator.run_remediation_cycle(priority_filter=['P0', 'P1', 'P2'])
 
         # Log summary
         summary = results.get('summary', {})
