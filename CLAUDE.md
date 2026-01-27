@@ -19,7 +19,7 @@
 | **Frontend Bundle** | 1,948 KB | 11 workspace tabs, collapsible sidebar |
 
 ## Key Capabilities
-- **Experiment Learning Loop (836):** 251 learnings, 29 decision patterns, 89% success rate - Celery Beat fix activated system
+- **Experiment Learning Loop (836):** 251 learnings, 29 decision patterns, 89% success rate - Celery Beat fix + 3 production API fixes
 - **Agent Output Rendering (835):** 10 output categories, 4 specialized renderers (Trends, Advisors, Investment, Security)
 - **Async Conversations (827):** Production 502 fix - conversations run via Celery, instant response with task_id
 - **Goal-Driven Conversations (826):** Objectives, success criteria, structured turn flows, topic-matched agents

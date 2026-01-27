@@ -187,9 +187,51 @@ print(f'Last run: {t.last_run_at}')
 
 ---
 
+## Production API Fixes
+
+After fixing the experiment system, several production 500 errors were discovered and fixed:
+
+### Fix 1: Non-string Synthesis Handling (PR #284)
+
+**Issue:** `session.synthesis[:500]` failed when synthesis was a dict instead of string.
+
+**Fix:** `str(session.synthesis)[:500]` to handle both types.
+
+### Fix 2: Wrong Field Name (PR #285)
+
+**Issue:** `'AgentConversation' object has no attribute 'trigger_reason'`
+
+**Fix:** Changed `conv.trigger_reason` to `conv.trigger_type` (correct field name).
+
+### Fix 3: Conversation Modal Field Names (PR #286)
+
+**Issue:** UI showed "Invalid Date" and "0 turns" despite API returning correct data.
+
+**Root Cause:** Frontend expected different field names than API returned:
+
+| Frontend Expected | API Returns |
+|-------------------|-------------|
+| `turns` array | `messages` array |
+| `created_at` | `started_at` |
+| `concluded_at` | `ended_at` |
+| `conclusion_summary` | `conclusion`/`insights` |
+
+**Fix:** Updated `ConversationDetailModal.tsx` to use correct field names.
+
+---
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `core/views_agent_learning.py` | Fixed synthesis handling, trigger_type field |
+| `frontend/src/components/platform/ConversationDetailModal.tsx` | Fixed field names to match API |
+
+---
+
 ## Session Stats
 
-- **Duration:** ~30 minutes
-- **Root Cause:** Operational (Celery Beat not running)
-- **Code Changes:** None required
-- **Impact:** Unlocked 247 experiments, created 251 learnings
+- **Duration:** ~2 hours
+- **Root Cause:** Operational (Celery Beat) + API field mismatches
+- **Code Changes:** 3 PRs merged (#284, #285, #286)
+- **Impact:** Unlocked 247 experiments, created 251 learnings, fixed production UI
