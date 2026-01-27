@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { humanApi, agentsApi, bodyApi, platformApi } from '@/lib/api'
 // Session 714: Real-time system events
@@ -826,7 +827,15 @@ function DecisionModal({
 }
 
 export default function HumanPage() {
-  const [activeTab, setActiveTab] = useState<'attention' | 'control' | 'preferences'>('attention')
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // Session 835: Parse URL parameters for deep linking
+  const urlParams = new URLSearchParams(location.search)
+  const urlTab = urlParams.get('tab') as 'attention' | 'control' | 'preferences' | null
+  const urlItemId = urlParams.get('item')
+
+  const [activeTab, setActiveTab] = useState<'attention' | 'control' | 'preferences'>(urlTab || 'attention')
   const [selectedItem, setSelectedItem] = useState<AttentionItem | null>(null)
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
   // Session 746: Add status filter to view acted/pending/all items
@@ -905,6 +914,19 @@ export default function HumanPage() {
     queryFn: () => bodyApi.vitals(),
     refetchInterval: 60000, // Refresh every 60 seconds
   })
+
+  // Session 835: Auto-select item from URL parameter when data loads
+  useEffect(() => {
+    if (urlItemId && attentionResponse?.data?.items) {
+      const items = attentionResponse.data.items as AttentionItem[]
+      const item = items.find((i) => i.id === urlItemId)
+      if (item) {
+        setSelectedItem(item)
+        // Clear URL params after selecting to clean up URL
+        navigate('/human', { replace: true })
+      }
+    }
+  }, [urlItemId, attentionResponse, navigate])
 
   // Mutations
   const decideMutation = useMutation({
