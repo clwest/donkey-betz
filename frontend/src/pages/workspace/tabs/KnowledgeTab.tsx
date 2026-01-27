@@ -1,20 +1,49 @@
 // Session 825: Knowledge Tab
 // Extracted from WorkspacePage.tsx for modular architecture
 // Session 833: Document viewer with markdown rendering
+// Session 840: Enhanced cards with metadata and onClick handlers for all sections
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BookOpen, FileText, ClipboardList, ExternalLink, Loader2, X, AlertCircle } from 'lucide-react'
+import { BookOpen, FileText, ClipboardList, ExternalLink, Loader2, X, AlertCircle, Calendar, FileCode } from 'lucide-react'
 import { platformApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
+// Session 840: Extended interfaces for full API response data
 interface Document {
   path: string
+  name?: string
   title: string
   category?: string
+  description?: string
+  summary?: string
+  audit_type?: string
+  size_bytes?: number
+  modified_at?: string
+  lines?: number
   status?: string
+}
+
+interface Playbook {
+  path: string
+  name: string
+  title: string
+  description?: string
+  category: string
+  size_bytes: number
+  modified_at: string
+}
+
+interface Audit {
+  path: string
+  name: string
+  title: string
+  summary?: string
+  audit_type: string
+  size_bytes: number
+  modified_at: string
 }
 
 export function KnowledgeTab() {
@@ -85,13 +114,16 @@ export function KnowledgeTab() {
         <div className="flex items-center gap-2 mb-4">
           <BookOpen className="text-primary-400" size={18} />
           <h3 className="text-md font-semibold uppercase">Canon Documents</h3>
+          {canonData?.documents && (
+            <span className="text-xs text-gray-500">({canonData.documents.length})</span>
+          )}
         </div>
         {loadingCanon ? (
           <div className="flex justify-center py-8">
             <Loader2 className="animate-spin text-primary-400" size={24} />
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-64 overflow-y-auto">
             {(canonData?.documents || []).slice(0, 10).map((doc: Document) => (
               <div
                 key={doc.path}
@@ -99,14 +131,35 @@ export function KnowledgeTab() {
                 onClick={() => setSelectedDoc(doc)}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText size={14} className="text-gray-400" />
-                    <span className="text-sm">{doc.title || doc.path}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText size={14} className="text-primary-400 shrink-0" />
+                      <span className="text-sm truncate">{doc.title || doc.path}</span>
+                    </div>
                   </div>
-                  {doc.category && (
-                    <span className="text-xs px-2 py-0.5 bg-primary-500/20 text-primary-400 rounded">
+                  {doc.category && doc.category !== 'root' && (
+                    <span className="text-xs px-2 py-0.5 bg-primary-500/20 text-primary-400 rounded ml-2 shrink-0">
                       {doc.category}
                     </span>
+                  )}
+                </div>
+                {/* Metadata row */}
+                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                  {doc.lines && <span>{doc.lines} lines</span>}
+                  {doc.size_bytes && (
+                    <>
+                      {doc.lines && <span>•</span>}
+                      <span>{(doc.size_bytes / 1024).toFixed(1)} KB</span>
+                    </>
+                  )}
+                  {doc.modified_at && (
+                    <>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar size={10} />
+                        {new Date(doc.modified_at).toLocaleDateString()}
+                      </span>
+                    </>
                   )}
                 </div>
               </div>
@@ -120,22 +173,51 @@ export function KnowledgeTab() {
         <div className="flex items-center gap-2 mb-4">
           <ClipboardList className="text-accent-green" size={18} />
           <h3 className="text-md font-semibold uppercase">Playbooks</h3>
+          {playbooksData?.playbooks && (
+            <span className="text-xs text-gray-500">({playbooksData.playbooks.length})</span>
+          )}
         </div>
         {loadingPlaybooks ? (
           <div className="flex justify-center py-8">
             <Loader2 className="animate-spin text-primary-400" size={24} />
           </div>
         ) : (
-          <div className="grid gap-2">
-            {(playbooksData?.playbooks || []).map((playbook: { name: string; path: string; description?: string }) => (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {(playbooksData?.playbooks || []).slice(0, 10).map((playbook: Playbook) => (
               <div
                 key={playbook.path}
-                className="p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
+                className="p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                onClick={() => setSelectedDoc({ path: playbook.path, title: playbook.title, category: playbook.category })}
               >
-                <h4 className="font-medium text-sm">{playbook.name}</h4>
-                {playbook.description && (
-                  <p className="text-xs text-gray-400 mt-1">{playbook.description}</p>
-                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileCode size={14} className="text-accent-green shrink-0" />
+                      <h4 className="font-medium text-sm truncate">{playbook.title}</h4>
+                    </div>
+                    {playbook.description && (
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{playbook.description}</p>
+                    )}
+                  </div>
+                  {playbook.category && playbook.category !== 'root' && (
+                    <span className="text-xs px-2 py-0.5 bg-accent-green/20 text-accent-green rounded ml-2 shrink-0">
+                      {playbook.category}
+                    </span>
+                  )}
+                </div>
+                {/* Metadata row */}
+                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                  <span>{(playbook.size_bytes / 1024).toFixed(1)} KB</span>
+                  {playbook.modified_at && (
+                    <>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar size={10} />
+                        {new Date(playbook.modified_at).toLocaleDateString()}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -157,17 +239,39 @@ export function KnowledgeTab() {
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {(auditsData?.audits || []).slice(0, 10).map((audit: { path: string; title: string; audit_type?: string }) => (
+            {(auditsData?.audits || []).slice(0, 10).map((audit: Audit) => (
               <div
                 key={audit.path}
-                className="p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
+                className="p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                onClick={() => setSelectedDoc({ path: audit.path, title: audit.title })}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">{audit.title}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText size={14} className="text-accent-amber shrink-0" />
+                      <span className="text-sm truncate">{audit.title}</span>
+                    </div>
+                    {audit.summary && (
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{audit.summary}</p>
+                    )}
+                  </div>
                   {audit.audit_type && (
-                    <span className="text-xs px-2 py-0.5 bg-accent-amber/20 text-accent-amber rounded">
+                    <span className="text-xs px-2 py-0.5 bg-accent-amber/20 text-accent-amber rounded ml-2 shrink-0">
                       {audit.audit_type}
                     </span>
+                  )}
+                </div>
+                {/* Metadata row */}
+                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                  <span>{(audit.size_bytes / 1024).toFixed(1)} KB</span>
+                  {audit.modified_at && (
+                    <>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar size={10} />
+                        {new Date(audit.modified_at).toLocaleDateString()}
+                      </span>
+                    </>
                   )}
                 </div>
               </div>
