@@ -66,6 +66,50 @@ GROUNDING_TERMS = {
     ]
 }
 
+# Session 840: High-value signals that indicate concrete, actionable content
+HIGH_VALUE_SIGNALS = {
+    'experiments': [
+        "experiment", "hypothesis", "test group", "control group", "a/b test",
+        "variant", "statistical significance", "sample size", "p-value",
+        "confidence interval", "null hypothesis", "test plan", "rollout"
+    ],
+    'kpis': [
+        "kpi", "okr", "metric", "baseline", "target", "benchmark", "threshold",
+        "success criteria", "acceptance criteria", "goal", "objective",
+        "measure", "indicator", "north star", "leading indicator", "lagging indicator"
+    ],
+    'owners': [
+        "owner:", "assigned to", "responsible:", "accountable:", "lead:",
+        "poc:", "point of contact", "stakeholder", "team:", "will handle",
+        "takes ownership", "owns this"
+    ],
+    'budgets': [
+        "budget", "cost", "estimate", "hours", "sprint", "timeline",
+        "deadline", "resource", "capacity", "allocation", "investment",
+        "roi", "payback", "break-even"
+    ],
+    'risks': [
+        "risk", "blocker", "dependency", "assumption", "constraint",
+        "mitigation", "contingency", "fallback", "worst case", "failure mode",
+        "single point of failure", "technical debt"
+    ],
+    'architecture': [
+        "architecture", "design", "schema", "api", "interface", "contract",
+        "component", "module", "service", "layer", "pattern", "microservice",
+        "database", "cache", "queue", "event", "message", "endpoint"
+    ]
+}
+
+# Session 840: Generic phrases that indicate low-quality summaries (penalized)
+GENERIC_SUMMARY_PENALTIES = [
+    "productive discussion", "great conversation", "valuable exchange",
+    "good points were made", "we discussed", "we talked about",
+    "interesting ideas", "food for thought", "worth considering",
+    "promising direction", "good start", "initial thoughts",
+    "more research needed", "further investigation", "to be determined",
+    "tbd", "pending", "unclear at this time", "requires more analysis"
+]
+
 
 # Session 266: Use central registry for conversation roles
 # This maintains backwards compatibility while using the single source of truth
@@ -217,11 +261,14 @@ def extract_decision_summary(text: str) -> Optional[Dict]:
     """
     Extract DecisionSummary block from message text.
 
+    Session 840: Enhanced to extract experiments, KPIs, owners, budgets, risks,
+    and technical direction as high-value signals.
+
     Args:
         text: The message text containing DecisionSummary
 
     Returns:
-        Dict with insights, proposed_feature, next_steps or None if not found
+        Dict with insights, proposed_feature, next_steps, and high_value_signals
     """
     if not text or "=== DecisionSummary ===" not in text:
         return None
@@ -235,7 +282,17 @@ def extract_decision_summary(text: str) -> Optional[Dict]:
             'insights': [],
             'proposed_feature': {},
             'next_steps': [],
-            'raw_text': summary_text
+            'raw_text': summary_text,
+            # Session 840: New high-value signal extraction
+            'high_value_signals': {
+                'experiments': [],
+                'kpis': [],
+                'owners': [],
+                'budgets': [],
+                'risks': [],
+                'architecture': []
+            },
+            'generic_penalty_count': 0
         }
 
         # Parse insights
@@ -279,6 +336,19 @@ def extract_decision_summary(text: str) -> Optional[Dict]:
                     if cleaned:
                         result['next_steps'].append(cleaned)
 
+        # Session 840: Extract high-value signals from entire summary
+        summary_lower = summary_text.lower()
+
+        for signal_type, terms in HIGH_VALUE_SIGNALS.items():
+            for term in terms:
+                if term in summary_lower:
+                    result['high_value_signals'][signal_type].append(term)
+
+        # Session 840: Count generic penalty phrases
+        for penalty_phrase in GENERIC_SUMMARY_PENALTIES:
+            if penalty_phrase in summary_lower:
+                result['generic_penalty_count'] += 1
+
         return result
 
     except Exception as e:
@@ -286,15 +356,17 @@ def extract_decision_summary(text: str) -> Optional[Dict]:
         return None
 
 
-def validate_decision_summary(summary: Optional[Dict]) -> Dict[str, bool]:
+def validate_decision_summary(summary: Optional[Dict]) -> Dict:
     """
     Validate that a DecisionSummary meets requirements.
+
+    Session 840: Enhanced to score high-value signals and penalize generic summaries.
 
     Args:
         summary: Extracted DecisionSummary dict
 
     Returns:
-        Dict with validation results
+        Dict with validation results including signal scores
     """
     if not summary:
         return {
@@ -303,12 +375,48 @@ def validate_decision_summary(summary: Optional[Dict]) -> Dict[str, bool]:
             'has_feature': False,
             'has_next_steps': False,
             'insights_count': 0,
-            'next_steps_count': 0
+            'next_steps_count': 0,
+            'high_value_score': 0,
+            'generic_penalty': 0,
+            'signal_breakdown': {}
         }
 
     insights_count = len(summary.get('insights', []))
     next_steps_count = len(summary.get('next_steps', []))
     has_feature = bool(summary.get('proposed_feature', {}).get('name'))
+
+    # Session 840: Calculate high-value signal score
+    high_value_signals = summary.get('high_value_signals', {})
+    signal_breakdown = {}
+    high_value_score = 0
+
+    # Each signal category contributes points
+    signal_weights = {
+        'experiments': 8,    # Experimental design is very high value
+        'kpis': 6,           # Measurable outcomes
+        'owners': 5,         # Clear accountability
+        'budgets': 4,        # Resource planning
+        'risks': 5,          # Risk awareness
+        'architecture': 7    # Technical direction
+    }
+
+    for signal_type, weight in signal_weights.items():
+        signals_found = high_value_signals.get(signal_type, [])
+        unique_signals = list(set(signals_found))
+        count = len(unique_signals)
+        # Cap at 3 signals per category to avoid gaming
+        capped_count = min(count, 3)
+        category_score = capped_count * weight
+        signal_breakdown[signal_type] = {
+            'count': count,
+            'signals': unique_signals[:5],  # Show up to 5 examples
+            'score': category_score
+        }
+        high_value_score += category_score
+
+    # Session 840: Apply generic summary penalty
+    generic_penalty_count = summary.get('generic_penalty_count', 0)
+    generic_penalty = generic_penalty_count * 10  # -10 points per generic phrase
 
     return {
         'is_valid': insights_count >= 3 and has_feature and next_steps_count >= 2,
@@ -316,7 +424,12 @@ def validate_decision_summary(summary: Optional[Dict]) -> Dict[str, bool]:
         'has_feature': has_feature,
         'has_next_steps': next_steps_count >= 2,
         'insights_count': insights_count,
-        'next_steps_count': next_steps_count
+        'next_steps_count': next_steps_count,
+        # Session 840: New scoring fields
+        'high_value_score': high_value_score,
+        'generic_penalty': generic_penalty,
+        'signal_breakdown': signal_breakdown,
+        'is_generic': generic_penalty_count >= 2  # Flag if too many generic phrases
     }
 
 
@@ -326,6 +439,8 @@ __all__ = [
     'TENSION_INDICATORS',
     'EMPTY_AGREEMENT_PHRASES',
     'GROUNDING_TERMS',
+    'HIGH_VALUE_SIGNALS',
+    'GENERIC_SUMMARY_PENALTIES',
     'AGENT_CONVERSATION_ROLES',
     'CONVERSATION_CONTRACT',
     'get_conversation_role',
