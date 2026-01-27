@@ -26591,11 +26591,14 @@ def _extract_agent_output_content(result, task_description: str) -> str:
         'content', 'output', 'analysis', 'code', 'research',
         'report', 'response', 'summary', 'recommendation',
         'strategy', 'plan', 'document', 'article', 'script',
-        'memo', 'brief', 'findings', 'insights', 'text'
+        'memo', 'brief', 'findings', 'insights', 'text',
+        'thesis', 'conclusion', 'explanation', 'narrative',  # Session 839: More content keys
     ]
 
     # Keys that contain arrays of results
-    ARRAY_KEYS = ['results', 'items', 'data', 'entries', 'records']
+    # Session 839: Added tool_results, opportunities, top_opportunities
+    ARRAY_KEYS = ['results', 'items', 'data', 'entries', 'records',
+                  'tool_results', 'opportunities', 'top_opportunities', 'scored_items']
 
     if not hasattr(result, 'data') or not result.data:
         # No data dict, use message or fallback
@@ -26619,10 +26622,44 @@ def _extract_agent_output_content(result, task_description: str) -> str:
             output_parts.append(f"## {key.replace('_', ' ').title()}\n")
             for i, item in enumerate(data[key][:10], 1):  # Limit to 10 items
                 if isinstance(item, dict):
-                    # Format dict item
-                    item_title = item.get('title') or item.get('name') or item.get('source') or f'Item {i}'
-                    item_content = item.get('content') or item.get('summary') or item.get('description') or ''
-                    output_parts.append(f"### {i}. {item_title}\n{item_content[:500]}\n")
+                    # Session 839: Handle tool_results format (tool, arguments, result)
+                    if 'tool' in item and 'result' in item:
+                        tool_name = item.get('tool', f'Tool {i}')
+                        tool_result = item.get('result', {})
+                        output_parts.append(f"### {i}. {tool_name}\n")
+                        # Extract content from the tool result
+                        if isinstance(tool_result, dict):
+                            # Look for key content in tool result
+                            for content_key in ['analysis', 'opportunities', 'top_opportunities',
+                                               'items_scored', 'topic', 'thesis', 'summary']:
+                                if content_key in tool_result:
+                                    val = tool_result[content_key]
+                                    if isinstance(val, str):
+                                        output_parts.append(f"**{content_key}**: {val[:500]}\n")
+                                    elif isinstance(val, (int, float)):
+                                        output_parts.append(f"**{content_key}**: {val}\n")
+                                    elif isinstance(val, list) and val:
+                                        output_parts.append(f"**{content_key}**: {len(val)} items\n")
+                                        for j, sub_item in enumerate(val[:5], 1):
+                                            if isinstance(sub_item, dict):
+                                                sub_title = sub_item.get('title') or sub_item.get('name') or f'Item {j}'
+                                                sub_score = sub_item.get('overall_score') or sub_item.get('score', '')
+                                                score_str = f" (score: {sub_score})" if sub_score else ""
+                                                output_parts.append(f"  {j}. {sub_title}{score_str}\n")
+                                            elif isinstance(sub_item, str):
+                                                output_parts.append(f"  - {sub_item[:100]}\n")
+                                    elif isinstance(val, dict):
+                                        # Nested dict - format key details
+                                        for k, v in list(val.items())[:5]:
+                                            if v and not k.startswith('_'):
+                                                output_parts.append(f"  - {k}: {str(v)[:100]}\n")
+                    else:
+                        # Standard dict item format
+                        item_title = item.get('title') or item.get('name') or item.get('source') or f'Item {i}'
+                        item_content = item.get('content') or item.get('summary') or item.get('description') or ''
+                        item_score = item.get('overall_score') or item.get('score', '')
+                        score_str = f" (score: {item_score})" if item_score else ""
+                        output_parts.append(f"### {i}. {item_title}{score_str}\n{item_content[:500]}\n")
                 elif isinstance(item, str):
                     output_parts.append(f"- {item[:200]}")
 
