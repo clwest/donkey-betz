@@ -147,7 +147,54 @@ python scripts/fix_delegate_to_specialist.py            # Apply changes
 
 **Post-Fix:** `workflow_agent.py` required manual correction - the batch script inserted code incorrectly due to its unique code structure (PR #244).
 
-### 8. Blog Content Viewer Fix
+### 8. Syntax Error Fixes from Batch Script
+
+Multiple agents had syntax errors introduced by the batch fix script that caused Celery workers to crash.
+
+**Fixes Applied:**
+
+| PR | Files | Issue |
+|----|-------|-------|
+| #244 | `workflow_agent.py` | `elif` inserted inside `if` block |
+| #246 | `market_intelligence_agent.py`, `narrative_drift_coordinator.py`, `narrative_historian_agent.py`, `cultural_impact_agent.py`, `trend_break_detector_agent.py`, `signal_scanner_agent.py` | Merged `)        else:` on one line |
+| #247 | `base_business_research_agent.py` | Code inserted in wrong method (`handle_custom_tool` instead of `_execute_tool`) |
+| #247 | `autonomous_content_studio_coordinator.py` | Merged `)            else:` on one line |
+
+### 9. SelfBlog word_count Auto-Calculation (PR #248)
+
+Fixed 67 blogs showing `word_count=0` despite having content.
+
+**Problem:**
+- `SelfBlog.word_count` field was never being set when blogs were created
+- Blogs showed "0 words" even when `full_text` had thousands of characters
+
+**Solution:**
+- Added `save()` override to `SelfBlog` model to auto-calculate word_count from full_text
+- Strips markdown formatting before counting words
+- One-time update applied to 67 existing blogs
+
+### 10. Experiment Auto-Completion Fix (PR #249)
+
+Fixed 247 experiments stuck in "pending/running" status.
+
+**Investigation Findings:**
+- 251 total experiments, 247 stuck in pending/running status
+- 10 experiments met their target KPI but weren't marked complete
+- 157 experiments had no data source mapping (stuck at 0%)
+- Agent executions have 98% success rate - system is healthy
+
+**Solution (auto_kpi_tracking.py):**
+- Added 16 new KPI_SOURCE_MAPPINGS patterns for common experiment types:
+  `huggingface`, `healthtech`, `research`, `analyze`, `competitor`, `customer`, `debate`, `educational`, `behavior`, etc.
+- Added `_check_target_met()` helper method to parse/compare KPI values
+- Added auto-completion logic that calls `exp.complete('success')` when target is met
+
+**Result:**
+- Before: 247 pending/running, 4 success
+- After: 235 pending/running, 16 success
+- **12 experiments auto-completed**
+
+### 11. Blog Content Viewer Fix
 
 Fixed blogs not displaying content when viewing by ID.
 
@@ -189,9 +236,10 @@ Fixed blogs not displaying content when viewing by ID.
 ### Backend
 | File | Changes |
 |------|---------|
-| `core/models_unified_system.py` | Added `status` field to SelfBlog model |
+| `core/models_unified_system.py` | Added `status` field to SelfBlog model, `save()` override for word_count |
 | `core/views_research_demo.py` | Added approve/publish endpoints, status filtering |
 | `core/urls.py` | Added routes for approve/publish endpoints |
+| `core/services/auto_kpi_tracking.py` | 16 new KPI mappings, `_check_target_met()`, auto-completion logic |
 
 ### Agents (50 files fixed)
 | Directory | Files |
@@ -325,4 +373,17 @@ To verify changes:
 
 ---
 
-**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations viewer + 50 agents delegate fix + Blog markdown viewer**
+## Pull Requests
+
+| PR | Description |
+|----|-------------|
+| #244 | Fix workflow_agent.py syntax error |
+| #245 | Fix 50 agent delegate_to_specialist errors |
+| #246 | Fix 6 agent syntax errors (merged lines) |
+| #247 | Fix base_business_research_agent + autonomous_content_studio_coordinator |
+| #248 | SelfBlog word_count auto-calculation |
+| #249 | Experiment auto-completion when KPI target is met |
+
+---
+
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations viewer + 50 agents delegate fix + Blog markdown viewer + Syntax fixes + Experiment auto-completion**
