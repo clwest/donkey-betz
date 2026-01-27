@@ -525,20 +525,27 @@ def get_agent_conversations(request):
                             'created_at': session.created_at.isoformat() if session.created_at else None
                         })
 
+            # Session 836: Compute values dynamically
+            actual_msg_count = session.contribution_count or len(messages_data)
+            # If session has synthesis/completed_at, it's completed
+            computed_hm_status = 'completed' if (session.synthesis or session.completed_at) else (session.status or 'active')
+            # Quality based on message count
+            computed_hm_quality = min(0.85, 0.5 + (actual_msg_count * 0.05)) if actual_msg_count > 0 else 0.0
+
             conversations_data.append({
                 'id': str(session.id),
                 'topic': session.conversation_topic or session.question or 'Agent Discussion',
                 'type': 'hivemind_conversation',
                 'type_display': 'Hive Mind Session',
                 'trigger': 'force_cycle',
-                'status': session.status or 'completed',
+                'status': computed_hm_status,
                 'initiator': participant_names[0]['name'] if participant_names else 'System',
                 'initiator_emoji': participant_names[0]['emoji'] if participant_names else '🤖',
                 'participants': participant_names,
-                'message_count': session.contribution_count or len(messages_data),
-                'quality_score': 0.85,
+                'message_count': actual_msg_count,
+                'quality_score': computed_hm_quality,
                 'conclusion': session.synthesis_summary or '',
-                'insights': session.synthesis[:500] if session.synthesis else '',
+                'insights': str(session.synthesis)[:500] if session.synthesis else '',
                 'started_at': session.created_at.isoformat() if session.created_at else None,
                 'ended_at': session.completed_at.isoformat() if session.completed_at else None,
                 'messages': messages_data,  # Session 435: Now includes parsed messages
@@ -575,21 +582,30 @@ def get_agent_conversations(request):
                     'created_at': msg.created_at.isoformat()
                 })
 
+            # Session 836: Compute values dynamically instead of using stale stored fields
+            actual_message_count = len(messages_data)
+            # Determine status: if ended_at is set or has conclusion, it's completed
+            computed_status = 'completed' if (conv.ended_at or conv.conclusion) else conv.status
+            # Compute quality score: use stored value if > 0, otherwise estimate from message count
+            computed_quality = float(conv.quality_score) if conv.quality_score and conv.quality_score > 0 else (
+                min(0.85, 0.5 + (actual_message_count * 0.05)) if actual_message_count > 0 else 0.0
+            )
+
             conversations_data.append({
                 'id': str(conv.id),
                 'topic': conv.topic,
                 'type': conv.conversation_type,
                 'type_display': conv.get_conversation_type_display(),
                 'trigger': conv.trigger_type,
-                'status': conv.status,
+                'status': computed_status,
                 'initiator': conv.initiator.name,
                 'initiator_emoji': _get_agent_emoji(conv.initiator.specialization),
                 'participants': [
                     {'name': p.name, 'emoji': _get_agent_emoji(p.specialization)}
                     for p in conv.participants.all()
                 ],
-                'message_count': conv.message_count,
-                'quality_score': conv.quality_score,
+                'message_count': actual_message_count,
+                'quality_score': computed_quality,
                 'conclusion': conv.conclusion,
                 'insights': conv.insights_generated,
                 'started_at': conv.started_at.isoformat(),
