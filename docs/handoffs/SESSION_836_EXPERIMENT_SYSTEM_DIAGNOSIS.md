@@ -229,6 +229,18 @@ After fixing the experiment system, several production 500 errors were discovere
 - `status`: 'completed' if has ended_at/conclusion/synthesis
 - `quality_score`: Estimate from message count
 
+### Fix 5: MeetingCoordinatorAgent Placeholder Bug (PR #290)
+
+**Issue:** MeetingCoordinatorAgent returned placeholder text like "CTOAgent's perspective on {topic}" instead of actual agent responses.
+
+**Root Cause:** The `_start_meeting` method used string formatting instead of actually calling other agents.
+
+**Fix:**
+- `_start_meeting`: Now routes to real agents via AgentRouter
+- `_synthesize_discussion`: Uses LLM for real synthesis
+- `_extract_action_items`: Uses LLM for real extraction
+- Meeting status: 'completed' when successful, not always 'in_progress'
+
 ---
 
 ## Files Modified
@@ -237,12 +249,13 @@ After fixing the experiment system, several production 500 errors were discovere
 |------|--------|
 | `core/views_agent_learning.py` | Fixed synthesis, trigger_type, dynamic stats computation |
 | `frontend/src/components/platform/ConversationDetailModal.tsx` | Fixed field names to match API |
+| `core/agents/executive/meeting_coordinator_agent.py` | Fixed placeholder bug - now calls real agents |
 
 ---
 
 ## Session Stats
 
-- **Duration:** ~3 hours
-- **Root Cause:** Operational (Celery Beat) + API field mismatches + stale stored values
-- **Code Changes:** 4 PRs merged (#284, #285, #286, #288)
-- **Impact:** Unlocked 247 experiments, created 251 learnings, fixed production UI completely
+- **Duration:** ~4 hours
+- **Root Cause:** Operational (Celery Beat) + API field mismatches + stale stored values + agent placeholders
+- **Code Changes:** 5 PRs merged (#284, #285, #286, #288, #290)
+- **Impact:** Unlocked 247 experiments, created 251 learnings, fixed production UI, fixed agent coordination
