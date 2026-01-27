@@ -18,6 +18,7 @@ export { DocumentViewer } from './DocumentViewer'
 export { LiveMetricsDashboard } from './LiveMetricsDashboard'
 export { TriggerRulesPanel } from './TriggerRulesPanel'
 export { ActionsPanel } from './ActionsPanel'
-// Session 834: Conversations & Dreams Panels
+// Session 834: Conversations, Dreams & Advisors Panels
 export { ConversationsPanel } from './ConversationsPanel'
 export { DreamsPanel } from './DreamsPanel'
+export { AdvisorsPanel } from './AdvisorsPanel'

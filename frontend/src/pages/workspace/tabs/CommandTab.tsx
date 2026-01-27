@@ -42,6 +42,7 @@ import {
   ActionsPanel,
   ConversationsPanel,
   DreamsPanel,
+  AdvisorsPanel,
 } from '@/components/platform'
 import type { WorkspaceTab } from '../types'
 
@@ -183,9 +184,10 @@ export function CommandTab({
       {/* Actions Panel */}
       <ActionsPanel />
 
-      {/* Session 834: Conversations & Dreams Panels */}
+      {/* Session 834: Conversations, Dreams & Advisors Panels */}
       <ConversationsPanel />
       <DreamsPanel />
+      <AdvisorsPanel />
 
       {/* Session 832: Enhanced Activity Feed with Tabs */}
       <ActivityFeedSection
