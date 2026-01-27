@@ -98,6 +98,43 @@ def validate_agent_output(agent_name: str, output: str) -> str:
         return output  # Return original if validation fails
 
 
+# ==================== SESSION 835: STALE EXECUTION CLEANUP ====================
+
+
+@shared_task
+def cleanup_stale_agent_executions(hours_threshold: int = 2):
+    """
+    Session 835: Clean up agent executions stuck in 'in_progress' status.
+
+    Tasks that have been 'in_progress' for more than the threshold are
+    marked as 'failed' since they clearly didn't complete properly.
+
+    Args:
+        hours_threshold: Mark tasks as failed after this many hours (default 2)
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentExecution
+
+    cutoff_time = timezone.now() - timedelta(hours=hours_threshold)
+
+    stale_tasks = AgentExecution.objects.filter(
+        status='in_progress',
+        created_at__lt=cutoff_time
+    )
+
+    count = stale_tasks.count()
+    if count > 0:
+        stale_tasks.update(
+            status='failed',
+            error_message=f'Task timed out after {hours_threshold} hours - marked as failed by cleanup',
+            completed_at=timezone.now()
+        )
+        logger.info(f"🧹 Cleaned up {count} stale agent executions")
+
+    return count
+
+
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
 
 
