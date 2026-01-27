@@ -442,7 +442,12 @@ Focus on transactions that diverge from normal patterns."""
         return alerts
 
     def _calculate_sentiment(self, insider_data: List[Dict]) -> Dict[str, Any]:
-        """Calculate overall insider sentiment."""
+        """
+        Calculate overall insider sentiment from transaction data.
+
+        Session 838: Replaced hardcoded discrete scores with continuous scoring
+        based on both transaction count and value weighting.
+        """
         buys = 0
         sells = 0
         buy_value = 0
@@ -460,19 +465,68 @@ Focus on transactions that diverge from normal patterns."""
                 sell_value += value
 
         total = buys + sells
+        total_value = buy_value + sell_value
+
         if total == 0:
-            return {'sentiment': 'NEUTRAL', 'score': 50, 'description': 'No insider activity'}
+            return {
+                'sentiment': 'NEUTRAL',
+                'score': 50,
+                'description': 'No insider activity detected',
+                'data_quality': 'unavailable',
+                'transactions': {'buys': 0, 'sells': 0},
+                'values': {'buy_value': 0, 'sell_value': 0}
+            }
 
+        # Session 838: Calculate continuous score based on both count and value
+        # Count-based component (0-100 scale)
         buy_pct = buys / total
+        count_score = buy_pct * 100  # 0 = all sells, 100 = all buys
 
-        if buy_pct >= 0.7:
-            return {'sentiment': 'BULLISH', 'score': 80, 'description': 'Strong insider buying'}
-        elif buy_pct >= 0.5:
-            return {'sentiment': 'SLIGHTLY_BULLISH', 'score': 60, 'description': 'More buying than selling'}
-        elif buy_pct >= 0.3:
-            return {'sentiment': 'SLIGHTLY_BEARISH', 'score': 40, 'description': 'More selling than buying'}
+        # Value-based component (0-100 scale, weighted by transaction value)
+        if total_value > 0:
+            value_score = (buy_value / total_value) * 100
+            # Blend count and value scores (value is weighted more for large transactions)
+            blended_score = (count_score * 0.4) + (value_score * 0.6)
         else:
-            return {'sentiment': 'BEARISH', 'score': 20, 'description': 'Heavy insider selling'}
+            blended_score = count_score
+
+        # Round to nearest integer
+        score = round(blended_score)
+
+        # Determine sentiment label based on continuous score
+        if score >= 75:
+            sentiment = 'STRONGLY_BULLISH'
+            description = f'Heavy insider buying ({buys} buys, ${buy_value:,.0f} value)'
+        elif score >= 60:
+            sentiment = 'BULLISH'
+            description = f'Net insider buying ({buys} buys vs {sells} sells)'
+        elif score >= 45:
+            sentiment = 'NEUTRAL'
+            description = f'Mixed insider activity ({buys} buys, {sells} sells)'
+        elif score >= 30:
+            sentiment = 'BEARISH'
+            description = f'Net insider selling ({sells} sells vs {buys} buys)'
+        else:
+            sentiment = 'STRONGLY_BEARISH'
+            description = f'Heavy insider selling ({sells} sells, ${sell_value:,.0f} value)'
+
+        return {
+            'sentiment': sentiment,
+            'score': score,
+            'description': description,
+            'data_quality': 'real',
+            'data_source': 'sec_filings',
+            'transactions': {'buys': buys, 'sells': sells, 'total': total},
+            'values': {
+                'buy_value': round(buy_value, 2),
+                'sell_value': round(sell_value, 2),
+                'net_value': round(buy_value - sell_value, 2)
+            },
+            'ratios': {
+                'buy_pct': round(buy_pct * 100, 1),
+                'value_weighted_score': round(blended_score, 1)
+            }
+        }
 
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
