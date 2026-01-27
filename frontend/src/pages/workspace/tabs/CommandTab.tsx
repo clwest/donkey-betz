@@ -411,18 +411,22 @@ function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
             )}
           </div>
 
-          {/* Session 832: Input Data */}
+          {/* Session 832: Input Data - Session 834: Fixed truncation, show full values */}
           {activity.input_data && Object.keys(activity.input_data).length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-1">
                 <FileInput size={12} />
                 Input Parameters
               </h4>
-              <div className="bg-gray-900/50 rounded p-2 text-xs font-mono space-y-1">
+              <div className="bg-gray-900/50 rounded p-2 text-xs font-mono space-y-2 max-h-64 overflow-y-auto">
                 {Object.entries(activity.input_data).map(([key, value]) => (
-                  <div key={key} className="flex gap-2">
-                    <span className="text-primary-400">{key}:</span>
-                    <span className="text-gray-300 truncate">{String(value)}</span>
+                  <div key={key} className="flex flex-col gap-1">
+                    <span className="text-primary-400 font-medium">{key}:</span>
+                    <span className="text-gray-300 whitespace-pre-wrap break-words pl-2">
+                      {typeof value === 'object' && value !== null
+                        ? JSON.stringify(value, null, 2)
+                        : String(value)}
+                    </span>
                   </div>
                 ))}
               </div>
