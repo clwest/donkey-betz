@@ -4024,6 +4024,7 @@ from core.views_platform_command import (
     mission_view,
     metrics_view,
     governance_view,
+    decision_summary_detail_view,  # Session 845
     emergency_halt_view,
     canon_view,
     canon_promote_view,  # Session 819
@@ -4051,6 +4052,8 @@ urlpatterns += [
     path('api/platform/mission/', mission_view, name='platform-mission'),
     path('api/platform/metrics/', metrics_view, name='platform-metrics'),
     path('api/platform/governance/', governance_view, name='platform-governance'),
+    # Session 845: Decision summary detail for System Activity modal
+    path('api/platform/decision-summary/<uuid:decision_id>/', decision_summary_detail_view, name='platform-decision-summary-detail'),
     path('api/platform/emergency-halt/', emergency_halt_view, name='platform-emergency-halt'),
     path('api/platform/canon/', canon_view, name='platform-canon'),
     path('api/platform/canon/promote/', canon_promote_view, name='platform-canon-promote'),  # Session 819
