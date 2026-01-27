@@ -486,16 +486,17 @@ You orchestrate. You don't create content directly."""
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Execute tool call - only delegate_to_agent is supported."""
-        if tool_name != "delegate_to_agent":
+        # Session 833: Handle delegate_to_specialist
+        if tool_name == "delegate_to_specialist":
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
 
-            elif tool_name == "delegate_to_specialist":
-                # Session 833: Handle delegation properly
-                return self._handle_delegate_to_specialist(
-                    specialist_agent=arguments.get('specialist_agent', ''),
-                    task=arguments.get('task', ''),
-                    context=arguments.get('context', ''),
-                    delegation_context=getattr(self, '_current_delegation_context', {})
-                )            return {
+        if tool_name != "delegate_to_agent":
+            return {
                 'success': False,
                 'error': f"Unknown tool: {tool_name}. WorkflowAgent only supports delegate_to_agent."
             }
