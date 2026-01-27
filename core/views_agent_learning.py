@@ -666,6 +666,158 @@ def _get_agent_emoji(specialization: str) -> str:
     return '🤖'
 
 
+@require_http_methods(["GET"])
+def get_agent_conversation_detail(request, conversation_id):
+    """
+    Session 835: Get a single agent conversation by ID.
+
+    GET /api/agent-conversations/<conversation_id>/
+
+    Returns full conversation details including all messages.
+    Searches both HiveMindSession and AgentConversation models.
+    """
+    try:
+        from core.models import AgentConversation, Agent
+        from core.models_unified_system import HiveMindSession
+        import re
+
+        # First try HiveMindSession
+        try:
+            session = HiveMindSession.objects.get(id=conversation_id)
+
+            # Get participant names
+            participant_names = []
+            agent_name_map = {}
+            if session.participant_ids:
+                try:
+                    agents = Agent.objects.filter(id__in=session.participant_ids)
+                    for a in agents:
+                        emoji = _get_agent_emoji(a.specialization)
+                        participant_names.append({'name': a.name, 'emoji': emoji})
+                        agent_name_map[a.name] = emoji
+                except Exception:
+                    pass
+
+            # Parse messages from synthesis
+            messages_data = []
+            if session.synthesis:
+                paragraphs = re.split(r'\n\n|\n(?=[A-Z][a-zA-Z]+Agent:)', session.synthesis)
+                seq = 0
+                for para in paragraphs:
+                    para = para.strip()
+                    if not para:
+                        continue
+                    match = re.match(r'^([A-Z][a-zA-Z]+(?:Agent)?):?\s*(.+)', para, re.DOTALL)
+                    if match:
+                        agent_name = match.group(1)
+                        content = match.group(2).strip()
+                        seq += 1
+                        messages_data.append({
+                            'id': f'{session.id}-{seq}',
+                            'agent': agent_name,
+                            'agent_emoji': agent_name_map.get(agent_name, '🤖'),
+                            'content': content,
+                            'type': 'contribution',
+                            'sequence': seq,
+                            'relevance': 0.8,
+                            'created_at': session.created_at.isoformat() if session.created_at else None
+                        })
+
+            return JsonResponse({
+                'success': True,
+                'conversation': {
+                    'id': str(session.id),
+                    'topic': session.conversation_topic or session.question or 'Agent Discussion',
+                    'type': 'hivemind_conversation',
+                    'type_display': 'Hive Mind Session',
+                    'status': session.status or 'completed',
+                    'initiator': participant_names[0]['name'] if participant_names else 'System',
+                    'initiator_emoji': participant_names[0]['emoji'] if participant_names else '🤖',
+                    'participants': participant_names,
+                    'message_count': session.contribution_count or len(messages_data),
+                    'quality_score': 0.85,
+                    'conclusion': session.synthesis_summary or '',
+                    'insights': session.synthesis[:500] if session.synthesis else '',
+                    'full_synthesis': session.synthesis or '',
+                    'started_at': session.created_at.isoformat() if session.created_at else None,
+                    'ended_at': session.completed_at.isoformat() if session.completed_at else None,
+                    'messages': messages_data,
+                    'source': 'hivemind',
+                    # Session 826: Goal-driven fields
+                    'objective': getattr(session, 'objective', None),
+                    'success_criteria': getattr(session, 'success_criteria', []),
+                    'conversation_type': getattr(session, 'conversation_type', 'general'),
+                }
+            })
+        except HiveMindSession.DoesNotExist:
+            pass
+
+        # Try AgentConversation
+        try:
+            conv = AgentConversation.objects.select_related('initiator').prefetch_related(
+                'participants', 'messages__agent'
+            ).get(id=conversation_id)
+
+            messages_data = []
+            for msg in conv.messages.all().order_by('sequence_number'):
+                messages_data.append({
+                    'id': str(msg.id),
+                    'agent': msg.agent.name if msg.agent else 'Unknown',
+                    'agent_emoji': _get_agent_emoji(msg.agent.specialization if msg.agent else ''),
+                    'content': msg.content,
+                    'type': msg.message_type,
+                    'sequence': msg.sequence_number,
+                    'relevance': float(msg.relevance_score) if msg.relevance_score else 0.0,
+                    'created_at': msg.created_at.isoformat() if msg.created_at else None
+                })
+
+            participant_names = []
+            for p in conv.participants.all():
+                emoji = _get_agent_emoji(p.specialization)
+                participant_names.append({'name': p.name, 'emoji': emoji})
+
+            return JsonResponse({
+                'success': True,
+                'conversation': {
+                    'id': str(conv.id),
+                    'topic': conv.topic,
+                    'type': conv.conversation_type,
+                    'type_display': conv.get_conversation_type_display() if hasattr(conv, 'get_conversation_type_display') else conv.conversation_type,
+                    'trigger': conv.trigger_reason or 'manual',
+                    'status': conv.status,
+                    'initiator': conv.initiator.name if conv.initiator else 'System',
+                    'initiator_emoji': _get_agent_emoji(conv.initiator.specialization if conv.initiator else ''),
+                    'participants': participant_names,
+                    'message_count': conv.messages.count(),
+                    'quality_score': float(conv.quality_score) if conv.quality_score else 0.0,
+                    'conclusion': conv.conclusion or '',
+                    'insights': conv.conclusion[:500] if conv.conclusion else '',
+                    'started_at': conv.started_at.isoformat() if conv.started_at else None,
+                    'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
+                    'messages': messages_data,
+                    'source': 'legacy',
+                    # Session 826: Goal-driven fields
+                    'objective': getattr(conv, 'objective', None),
+                    'success_criteria': getattr(conv, 'success_criteria', []),
+                    'conversation_type': conv.conversation_type,
+                }
+            })
+        except AgentConversation.DoesNotExist:
+            pass
+
+        return JsonResponse({
+            'success': False,
+            'error': 'Conversation not found'
+        }, status=404)
+
+    except Exception as e:
+        logger.error(f"Error fetching conversation detail: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @require_http_methods(["POST"])
 # Session 751: Removed @login_required to match get_agent_conversations (Session 564)
 # This allows the UI to trigger conversations without authentication
