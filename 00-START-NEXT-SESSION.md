@@ -1,69 +1,56 @@
-# Session 836 - Start Here
+# Session 837 - Start Here
 
-**Previous Session:** 835 (Agent Output Audit + Comprehensive Renderers)
+**Previous Session:** 836 (Experiment System Diagnosis & Fix)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **SmartOutputRenderer: 10 Output Categories**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Experiment Learning Loop: ACTIVE**
 
 ---
 
-## What Was Accomplished in Session 835
+## What Was Accomplished in Session 836
 
-### Major Achievement: Agent Output Audit
+### Major Achievement: Experiment System Diagnosis & Fix
 
-Audited **80+ core agents** and **25+ advisors** to understand output formats.
+Investigated ChatGPT's claim of "85% experiment failure rate" and found the **real issue was Celery Beat not running**.
 
-**10 Output Categories Identified:**
-| Category | Agents | Key Fields |
-|----------|--------|------------|
-| Data Synthesis | 10 | `top_trends`, `analysis`, `confidence` |
-| Content Generation | 9 | `images`, `videos`, `content`, `metadata` |
-| Investment Analysis | 9 | `thesis`, `key_points`, `risks`, `confidence` |
-| Security | 5+ | `vulnerabilities[]` with severity |
-| Advisor Guidance | 25 | `advice`, `structured_advice` |
-| Podcast/Narrative | 7 | `debate_result`, `script`, `speakers` |
-| Code/Config | 5 | `code`, `issues[]`, `review` |
-| Orchestration | 7 | `results`, `coordinated_agents` |
-| Routing | 3 | `type`, `delegated_to` |
-| Conversation | 8+ | `response`, `query` |
+**Root Cause:** Celery worker was started manually (`celery -A core worker --pool=solo`) instead of via Makefile, which meant Celery Beat (the scheduler) was never started.
 
-**4 New Specialized Renderers Added to SmartOutputRenderer (+411 lines):**
-1. `TopTrendsRenderer` - Expandable trends with nested article lists
-2. `AdvisorRenderer` - Structured sections with icons (🎯🪝✅⚠️📊)
-3. `InvestmentThesisRenderer` - Bull/bear color coding with confidence scores
-4. `VulnerabilitiesRenderer` - Severity-sorted security findings
+**Impact:** 228 scheduled tasks weren't running, including:
+- `monitor_running_experiments` (every 10 mins)
+- `evaluate_and_complete_pilots` (processes experiments)
+- `update_experiment_kpis` (hourly)
+- All body system tasks (HEART, LUNGS, BRAIN, etc.)
 
-### UI Fixes
-- **Pending Decisions** - "View Details" now opens modal (was blank screen)
-- **Conversations** - "View Full Thread" now opens modal (was redirecting to separate page)
-- **ContentStrategy** - Recommendations display with icons, keyword/style chips
+### Before vs After Fix
 
-### Session 835 PRs (5 Total)
-| PR | Description |
-|----|-------------|
-| #277 | Fix Pending Decisions deep linking - URL params in HumanPage |
-| #278 | ContentStrategy recommendations rendering with icons/chips |
-| #279 | Comprehensive agent output renderers (+411 lines) |
-| #280 | Session 835 handoff documentation |
-| #281 | Conversation thread modal instead of redirect |
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Experiments Running | 235 | 20 | -215 processed |
+| Experiments Success | 16 | 224 | +208 |
+| ExperimentLearnings | 4 | 251 | +247 |
+| DecisionTypeSuccessPatterns | 0 | 29 | +29 patterns |
+| Celery Beat | NOT RUNNING | RUNNING | **Fixed** |
+
+### Key Insight
+
+The "85% failure rate" was from simulated agent research output, not real telemetry. Actual experiments weren't failing - they were simply **never being evaluated**.
 
 ---
 
 ## Current State
 
-### SmartOutputRenderer Coverage
-All major agent output formats now render nicely instead of raw JSON:
-- ✅ Trends (TrendAnalysisAgent) - expandable with articles
-- ✅ Advisors (25 advisors) - structured guidance sections
-- ✅ Investment (Bull/Bear Case) - thesis with risks/opportunities
-- ✅ Security (Auditors) - severity-sorted vulnerabilities
-- ✅ Content Strategy - recommendations with keywords/styles
-- ✅ Research, Podcasts, Signals, Images, Code (existing)
+### Celery Services (All Running)
+```
+✅ Default Worker (4 threads) - queues: default, agents, sports, content, ml
+✅ Long-Running Worker (2 threads) - queue: long_running
+✅ Broadcast Worker (2 threads) - queue: broadcast
+✅ Beat Scheduler - 228 scheduled tasks
+```
 
-### Workspace Modals (All Working)
-- Operations detail modal with formatted output
-- Conversation detail modal (from "View Full Thread")
-- Dream detail modal
-- Pending decision modal (from deep link)
+### Experiment Learning Loop (Now Active)
+- 251 experiments with learnings
+- 29 decision type success patterns
+- 89% success rate (224/251)
+- ThinkingAgent can now learn from experiment outcomes
 
 ---
 
@@ -71,34 +58,40 @@ All major agent output formats now render nicely instead of raw JSON:
 
 ```bash
 # 1. Start platform
-make start && make celery
+make start && make celery  # IMPORTANT: Use make celery, not manual celery command
 
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Test new renderers - Go to Workspace → Operations → Click an operation
-# 4. Test conversation modal - Command → Agent Conversations → View Full Thread
-# 5. Test pending decisions - Click "View Details" on any pending decision
+# 3. Verify Celery Beat is running
+pgrep -fl "celery.*beat"
+
+# 4. Check experiment status
+python manage.py shell -c "
+from core.models_pilot_readiness import Experiment, ExperimentLearning
+print(f'Experiments: {Experiment.objects.count()}')
+print(f'Learnings: {ExperimentLearning.objects.count()}')
+"
 ```
 
 ---
 
 ## Potential Next Steps
 
-1. **Test all renderers** - Verify TrendAnalysis, Advisor, Investment, Vulnerability outputs
-2. **Backend standardization** - Consider standardizing agent output formats in Python
-3. **Additional renderers** - Code review issues, podcast scripts, debate transcripts
-4. **Performance** - Bundle at 2.2MB, consider code splitting
-5. **Agent Registry UI** - Show which output format each agent uses
+1. **Monitor experiment system** - Verify stability over 24-48 hours
+2. **Review 3 failed experiments** - Understand what caused failures
+3. **Verify ThinkingAgent integration** - Confirm learnings feed into decisions
+4. **Add Celery Beat alerting** - Notify if Beat stops running
+5. **Audit finding remediation** - 799 findings, only 2 fixed
 
 ---
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_835_AGENT_OUTPUT_AUDIT.md` - Full audit with code examples
-- `CLAUDE.md` - Updated with Session 835
+- `docs/handoffs/SESSION_836_EXPERIMENT_SYSTEM_DIAGNOSIS.md` - Full diagnosis report
+- `docs/handoffs/SESSION_835_AGENT_OUTPUT_AUDIT.md` - Agent output renderers
+- `CLAUDE.md` - System overview
 - `docs/AGENTS.md` - Agent documentation (74 agents)
-- `docs/SERVICES.md` - Services layer (120 services)
 
 ---
 
@@ -106,6 +99,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **836** | Experiment System Diagnosis - Celery Beat fix, 251 learnings created |
 | **835** | Agent Output Audit (80+ agents) + 4 New Renderers + Modal Fixes |
 | **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations |
 | **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes |
@@ -115,8 +109,7 @@ open http://localhost:8000/ai-studio/
 | **829** | Self-Healing UI Controls + SKIN Layer File Writing |
 | **828** | Self-Healing Execution - 514/742 tasks (69.3%) |
 | **827** | Production 502 Fix - Async Conversations |
-| **826** | Goal-Driven Conversations + Workspace Real Data |
 
 ---
 
-**SESSION 835 COMPLETE - SmartOutputRenderer now handles all 10 agent output categories with specialized renderers**
+**SESSION 836 COMPLETE - Experiment learning loop now active with 251 learnings and 29 decision patterns**
