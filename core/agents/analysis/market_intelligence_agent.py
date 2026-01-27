@@ -444,7 +444,9 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                 task=args.get('task', ''),
                 context=args.get('context', ''),
                 delegation_context=getattr(self, '_current_delegation_context', {})
-            )        else:
+            )
+
+        else:
             return {"error": f"Unknown tool: {tool_name}"}
 
     def _get_sec_filings(
