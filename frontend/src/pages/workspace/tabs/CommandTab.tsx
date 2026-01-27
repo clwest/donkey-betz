@@ -859,7 +859,7 @@ function SystemActivityCard({ item }: SystemActivityCardProps) {
           )}
           {item.type === 'conversation' && (
             <a
-              href="/conversations"
+              href="/conversation-contract"
               className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
             >
               View Conversations <ChevronRight size={12} />
