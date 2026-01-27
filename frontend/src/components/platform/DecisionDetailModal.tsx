@@ -19,7 +19,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { humanApi } from '@/lib/api'
+import { humanApi, platformApi } from '@/lib/api'
 
 interface DecisionDetailModalProps {
   decisionId: string
@@ -61,9 +61,20 @@ interface Decision {
 export function DecisionDetailModal({ decisionId, onClose }: DecisionDetailModalProps) {
   const queryClient = useQueryClient()
 
+  // Session 845: Try decision summary (System Activity) first, fall back to attention item
   const { data, isLoading, error } = useQuery({
     queryKey: ['decision-detail', decisionId],
     queryFn: async () => {
+      // First try decision summary (from System Activity - AgentDecisionSummary)
+      try {
+        const response = await platformApi.decisionSummaryDetail(decisionId)
+        if (response.data.success) {
+          return response.data as { item: Decision }
+        }
+      } catch {
+        // Fall through to try humanApi
+      }
+      // Fall back to attention item (HumanAttentionItem)
       const response = await humanApi.detail(decisionId)
       return response.data as { item: Decision }
     },

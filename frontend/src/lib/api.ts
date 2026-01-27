@@ -2943,6 +2943,10 @@ export const platformApi = {
       }
       updated_at: string
     }>('/self-healing/progress/'),
+
+  // Session 845: Decision summary detail for System Activity modal
+  decisionSummaryDetail: (decisionId: string) =>
+    api.get<{ success: boolean; item: Record<string, unknown> }>(`/platform/decision-summary/${decisionId}/`),
 }
 
 // Session 833: Blogs API for approval workflow
