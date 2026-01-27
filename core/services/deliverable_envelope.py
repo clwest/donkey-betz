@@ -152,7 +152,9 @@ class DeliverableEnvelopeService:
             result: The agent result dictionary
             user: Optional user who owns this deliverable
             operation: Optional WorkspaceOperation that produced this
-            **kwargs: Additional metadata
+            **kwargs: Additional metadata including:
+                - context: Dict with trace_id, project_id, parent info
+                - parent_execution: AgentExecution to inherit trace from
 
         Returns:
             Deliverable object or None if wrapping failed
@@ -189,6 +191,10 @@ class DeliverableEnvelopeService:
             llm_cost = Decimal(str(result.get('cost', 0)))
             tool_calls = result.get('tool_calls', [])
 
+            # Session 843: Get trace context from kwargs or result
+            context = kwargs.get('context', {})
+            parent_execution = kwargs.get('parent_execution')
+
             # Create the deliverable
             deliverable = Deliverable.objects.create(
                 title=title,
@@ -211,9 +217,20 @@ class DeliverableEnvelopeService:
                 metadata=kwargs.get('metadata', {}),
             )
 
+            # Session 843: Attach trace context
+            from core.services.trace_attachment_service import TraceAttachmentService
+            TraceAttachmentService.attach_to_object(
+                deliverable,
+                context,
+                parent_object=parent_execution,
+                user=user,
+                agent_name=agent_name,
+            )
+            deliverable.save()
+
             self.logger.info(
                 f"Created deliverable: {deliverable.title} "
-                f"(type={deliverable_type}, agent={agent_name})"
+                f"(type={deliverable_type}, agent={agent_name}, trace_id={deliverable.trace_id})"
             )
 
             return deliverable

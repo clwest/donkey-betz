@@ -532,3 +532,58 @@ class OrchestrationApprovalGate(models.Model):
             self.attention_item_id = item.id
         else:
             self.attention_item_id = item
+
+
+class WiringDefect(models.Model):
+    """
+    Session 843: Tracks artifacts created without proper trace/project linkage.
+
+    Enables auditing orphaned outputs and retroactive fixing.
+    Part of the Orchestration Contract system.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    DEFECT_TYPES = [
+        ('missing_project_id', 'Missing Project ID'),
+        ('missing_trace_id', 'Missing Trace ID'),
+        ('missing_parent', 'Missing Parent Object'),
+        ('orphan_artifact', 'Orphan Artifact'),
+    ]
+    defect_type = models.CharField(max_length=30, choices=DEFECT_TYPES, db_index=True)
+
+    # Reference to the problematic object
+    object_type = models.CharField(max_length=100, db_index=True)
+    object_id = models.UUIDField(db_index=True)
+
+    # Context when defect occurred
+    trace_id = models.UUIDField(null=True, blank=True, db_index=True)
+    agent_name = models.CharField(max_length=100, blank=True)
+    execution_context = models.JSONField(default=dict)
+
+    # Resolution tracking
+    is_resolved = models.BooleanField(default=False, db_index=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolution_notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'core_wiring_defect'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['defect_type', 'is_resolved']),
+            models.Index(fields=['object_type', '-created_at']),
+        ]
+        verbose_name = 'Wiring Defect'
+        verbose_name_plural = 'Wiring Defects'
+
+    def __str__(self):
+        return f"[{self.defect_type}] {self.object_type}:{self.object_id}"
+
+    def resolve(self, notes: str = ''):
+        """Mark defect as resolved."""
+        self.is_resolved = True
+        self.resolved_at = timezone.now()
+        self.resolution_notes = notes
+        self.save(update_fields=['is_resolved', 'resolved_at', 'resolution_notes'])

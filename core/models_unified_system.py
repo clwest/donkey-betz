@@ -564,6 +564,30 @@ class AgentExecution(models.Model):
         help_text="Session 841: Experiment this execution belongs to"
     )
 
+    # Session 843: Orchestration Contract fields
+    trace_id = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        help_text="Session 843: Trace ID linking this execution to a broader workflow"
+    )
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='agent_executions',
+        help_text="Session 843: Project this execution belongs to"
+    )
+    parent_object_type = models.CharField(
+        max_length=50, blank=True,
+        help_text="Session 843: Type of parent (conversation, orchestration, gate)"
+    )
+    parent_object_id = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        help_text="Session 843: ID of parent that triggered this execution"
+    )
+    owner_agent = models.CharField(
+        max_length=100, blank=True, db_index=True,
+        help_text="Session 843: Agent that owns/created this execution"
+    )
+
     task = models.TextField()
     status = models.CharField(max_length=20, choices=[
         ('pending', 'Pending'),
@@ -17207,6 +17231,18 @@ class AgentDecisionSummary(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Session 843: Orchestration Contract fields
+    trace_id = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        help_text="Session 843: Trace ID for cross-artifact linking"
+    )
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='decision_summaries',
+        help_text="Session 843: Project this decision belongs to"
+    )
+
     # Link to source conversations (one or the other)
     # Legacy AgentConversation (Session 244-246)
     conversation = models.ForeignKey(
@@ -19886,6 +19922,18 @@ class SelfBlog(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Session 843: Orchestration Contract fields
+    trace_id = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        help_text="Session 843: Trace ID for cross-artifact linking"
+    )
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='self_blogs',
+        help_text="Session 843: Project this blog belongs to"
+    )
     title = models.CharField(max_length=255)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='blog', db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
