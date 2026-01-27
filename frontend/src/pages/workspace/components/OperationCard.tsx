@@ -11,6 +11,76 @@ import { cn } from '@/lib/cn'
 import EntityLink from '@/components/EntityLink'
 import type { WorkspaceOperation } from '../types'
 
+// Session 834: Convert file path to readable title
+// e.g. "workflows/orchestration/orchestration_plan_multi-agent_collaboration_2026-01-26_19-38.md"
+// => "Orchestration Plan: Multi-agent Collaboration"
+function formatOperationTitle(filePath: string): { title: string; badge?: string } {
+  if (!filePath) return { title: '' }
+
+  // Get filename from path
+  const filename = filePath.split('/').pop() || filePath
+
+  // Determine badge based on extension
+  let badge: string | undefined
+  if (filename.endsWith('.md')) badge = 'MD'
+  else if (filename.endsWith('.json')) badge = 'JSON'
+  else if (filename.endsWith('.py')) badge = 'PY'
+  else if (filename.endsWith('.ts') || filename.endsWith('.tsx')) badge = 'TS'
+
+  // Remove extension and date suffix (e.g., _2026-01-26_19-38)
+  let name = filename
+    .replace(/\.(md|json|py|ts|tsx|js|jsx|txt|yaml|yml)$/, '')
+    .replace(/_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/, '')
+    .replace(/_\d{4}-\d{2}-\d{2}$/, '')
+
+  // Split by underscores and convert to title case
+  const words = name.split('_').map((word) => {
+    // Keep certain words lowercase or handle special cases
+    if (word.toLowerCase() === 'ai') return 'AI'
+    if (word.toLowerCase() === 'api') return 'API'
+    if (word.toLowerCase() === 'url') return 'URL'
+    if (word.toLowerCase() === 'id') return 'ID'
+    if (word.toLowerCase() === 'of') return 'of'
+    if (word.toLowerCase() === 'the') return 'the'
+    if (word.toLowerCase() === 'and') return 'and'
+    if (word.toLowerCase() === 'for') return 'for'
+    if (word.toLowerCase() === 'to') return 'to'
+    if (word.toLowerCase() === 'in') return 'in'
+    // Title case for other words
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  })
+
+  // Find a good split point for "Type: Description" format
+  // Common type words that should come before the colon
+  const typeWords = ['plan', 'report', 'analysis', 'research', 'argument', 'workflow', 'campaign', 'strategy', 'audit', 'review', 'script', 'episode', 'outline', 'brief', 'content']
+
+  let title = ''
+  for (let i = 0; i < words.length; i++) {
+    const wordLower = words[i].toLowerCase()
+    if (typeWords.includes(wordLower) && i < words.length - 1) {
+      // Found a type word - split here
+      const typePart = words.slice(0, i + 1).join(' ')
+      const descPart = words.slice(i + 1).join(' ')
+      if (descPart) {
+        title = `${typePart}: ${descPart}`
+      } else {
+        title = typePart
+      }
+      break
+    }
+  }
+
+  // If no type word found, just join all words
+  if (!title) {
+    title = words.join(' ')
+  }
+
+  // Capitalize first letter
+  title = title.charAt(0).toUpperCase() + title.slice(1)
+
+  return { title, badge }
+}
+
 interface OperationCardProps {
   operation: WorkspaceOperation
   onRollback?: () => void
@@ -68,9 +138,19 @@ export function OperationCard({
           {getOperationIcon(operation.operation_type)}
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium">
-                {operation.file_path || operation.operation_type}
-              </p>
+              {(() => {
+                const { title, badge } = formatOperationTitle(operation.file_path || operation.operation_type)
+                return (
+                  <>
+                    <p className="text-sm font-medium" title={operation.file_path}>{title}</p>
+                    {badge && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-mono">
+                        {badge}
+                      </span>
+                    )}
+                  </>
+                )
+              })()}
               {operation.rolled_back && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 flex items-center gap-1">
                   <RotateCcw size={10} />
