@@ -710,7 +710,7 @@ For absurd ideas, suggest what realistic version might work."""
             response = client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": check_prompt}],
-                max_completion_tokens=500  # Increased for improvement suggestions
+                max_completion_tokens=2000  # Session 840: Increased for reasoning model
                 # Note: gpt-5-mini reasoning models don't support temperature
             )
 
