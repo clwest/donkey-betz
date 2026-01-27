@@ -8,6 +8,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle, Trash2, X, Clock, CheckCircle, Eye, Send } from 'lucide-react'
 import { blogsApi } from '@/lib/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Blog {
   id: string
@@ -243,42 +245,55 @@ export default function BlogViewerPage() {
 
       {/* Content */}
       <div className="card space-y-6">
-        {/* Intro */}
-        {blog.intro && (
-          <div className="prose prose-invert max-w-none">
-            <p className="text-lg text-gray-300 leading-relaxed">{blog.intro}</p>
+        {/* Primary: Show full_text as markdown if available (it's the complete blog) */}
+        {blog.full_text ? (
+          <div className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-gray-300 prose-li:text-gray-300 prose-strong:text-white prose-code:text-primary-400 prose-code:bg-dark-bg prose-code:px-1 prose-code:rounded prose-pre:bg-dark-bg prose-pre:border prose-pre:border-dark-border">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {blog.full_text}
+            </ReactMarkdown>
           </div>
-        )}
+        ) : (
+          /* Fallback: Show structured content if full_text is empty */
+          <>
+            {/* Intro */}
+            {blog.intro && (
+              <div className="prose prose-invert max-w-none">
+                <p className="text-lg text-gray-300 leading-relaxed">{blog.intro}</p>
+              </div>
+            )}
 
-        {/* Sections */}
-        {blog.sections && blog.sections.length > 0 && (
-          <div className="space-y-6">
-            {blog.sections.map((section, i) => (
-              <div key={i} className="border-l-2 border-primary-500/30 pl-4">
-                <h2 className="text-xl font-semibold mb-3">{section.title}</h2>
+            {/* Sections */}
+            {blog.sections && blog.sections.length > 0 && (
+              <div className="space-y-6">
+                {blog.sections.map((section, i) => (
+                  <div key={i} className="border-l-2 border-primary-500/30 pl-4">
+                    <h2 className="text-xl font-semibold mb-3">{section.title}</h2>
+                    <div className="prose prose-invert max-w-none">
+                      <p className="text-gray-300 whitespace-pre-wrap">{section.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Conclusion */}
+            {blog.conclusion && (
+              <div className="border-t border-dark-border pt-6">
+                <h2 className="text-lg font-semibold mb-3">Conclusion</h2>
                 <div className="prose prose-invert max-w-none">
-                  <p className="text-gray-300 whitespace-pre-wrap">{section.content}</p>
+                  <p className="text-gray-300">{blog.conclusion}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {/* Conclusion */}
-        {blog.conclusion && (
-          <div className="border-t border-dark-border pt-6">
-            <h2 className="text-lg font-semibold mb-3">Conclusion</h2>
-            <div className="prose prose-invert max-w-none">
-              <p className="text-gray-300">{blog.conclusion}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Full text fallback */}
-        {!blog.sections?.length && !blog.intro && blog.full_text && (
-          <div className="prose prose-invert max-w-none">
-            <p className="text-gray-300 whitespace-pre-wrap">{blog.full_text}</p>
-          </div>
+            {/* No content at all */}
+            {!blog.intro && !blog.sections?.length && !blog.conclusion && (
+              <div className="text-center py-8 text-gray-500">
+                <AlertCircle className="mx-auto mb-2" size={32} />
+                <p>No content available for this blog.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
