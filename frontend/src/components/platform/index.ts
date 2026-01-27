@@ -18,3 +18,6 @@ export { DocumentViewer } from './DocumentViewer'
 export { LiveMetricsDashboard } from './LiveMetricsDashboard'
 export { TriggerRulesPanel } from './TriggerRulesPanel'
 export { ActionsPanel } from './ActionsPanel'
+// Session 834: Conversations & Dreams Panels
+export { ConversationsPanel } from './ConversationsPanel'
+export { DreamsPanel } from './DreamsPanel'
