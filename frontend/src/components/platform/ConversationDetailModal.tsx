@@ -23,14 +23,15 @@ interface ConversationDetailModalProps {
   onClose: () => void
 }
 
-interface Turn {
+interface Message {
   id: string
-  agent_name: string
+  agent: string
   agent_emoji?: string
   content: string
-  turn_number: number
-  timestamp: string
-  contribution_type?: string
+  sequence: number
+  type?: string
+  relevance?: number
+  created_at?: string
 }
 
 interface Conversation {
@@ -43,11 +44,11 @@ interface Conversation {
   initiator: string
   initiator_emoji?: string
   participants: Array<{ name: string; emoji?: string }>
-  turns: Turn[]
-  created_at: string
-  concluded_at?: string
-  conclusion_summary?: string
-  outcome?: string
+  messages: Message[]
+  started_at: string
+  ended_at?: string
+  conclusion?: string
+  insights?: string
 }
 
 export function ConversationDetailModal({ conversationId, onClose }: ConversationDetailModalProps) {
@@ -123,7 +124,7 @@ export function ConversationDetailModal({ conversationId, onClose }: Conversatio
                       <span className="text-gray-400 capitalize">{conversation.type}</span>
                       <span className="text-gray-500 flex items-center gap-1">
                         <Clock size={12} />
-                        {new Date(conversation.created_at).toLocaleString()}
+                        {conversation.started_at ? new Date(conversation.started_at).toLocaleString() : 'Unknown'}
                       </span>
                     </div>
                   </div>
@@ -181,41 +182,41 @@ export function ConversationDetailModal({ conversationId, onClose }: Conversatio
               <div className="bg-dark-bg rounded-lg p-4">
                 <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
                   <Sparkles size={12} />
-                  Conversation ({conversation.turns?.length || 0} turns)
+                  Conversation ({conversation.messages?.length || 0} messages)
                 </div>
                 <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {conversation.turns?.map((turn, idx) => (
+                  {conversation.messages?.map((msg, idx) => (
                     <div
-                      key={turn.id || idx}
+                      key={msg.id || idx}
                       className="pl-3 border-l-2 border-primary-500/30"
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm">{turn.agent_emoji || '🤖'}</span>
-                        <span className="text-sm font-medium text-white">{turn.agent_name}</span>
-                        <span className="text-xs text-gray-500">Turn {turn.turn_number}</span>
-                        {turn.contribution_type && (
+                        <span className="text-sm">{msg.agent_emoji || '🤖'}</span>
+                        <span className="text-sm font-medium text-white">{msg.agent}</span>
+                        <span className="text-xs text-gray-500">#{msg.sequence}</span>
+                        {msg.type && (
                           <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
-                            {turn.contribution_type}
+                            {msg.type}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-300 whitespace-pre-wrap">{turn.content}</p>
+                      <p className="text-sm text-gray-300 whitespace-pre-wrap">{msg.content}</p>
                     </div>
                   ))}
-                  {(!conversation.turns || conversation.turns.length === 0) && (
-                    <p className="text-sm text-gray-500 italic">No turns recorded</p>
+                  {(!conversation.messages || conversation.messages.length === 0) && (
+                    <p className="text-sm text-gray-500 italic">No messages recorded</p>
                   )}
                 </div>
               </div>
 
               {/* Conclusion */}
-              {conversation.conclusion_summary && (
+              {(conversation.conclusion || conversation.insights) && (
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                   <div className="flex items-center gap-2 text-xs text-green-400 mb-2">
                     <CheckCircle size={12} />
                     Conclusion
                   </div>
-                  <p className="text-sm text-gray-300">{conversation.conclusion_summary}</p>
+                  <p className="text-sm text-gray-300">{conversation.conclusion || conversation.insights}</p>
                 </div>
               )}
 
@@ -229,10 +230,10 @@ export function ConversationDetailModal({ conversationId, onClose }: Conversatio
                   <User size={12} />
                   Initiated by: {conversation.initiator_emoji || '🤖'} {conversation.initiator}
                 </span>
-                {conversation.concluded_at && (
+                {conversation.ended_at && (
                   <span className="flex items-center gap-1">
                     <Clock size={12} />
-                    Concluded: {new Date(conversation.concluded_at).toLocaleString()}
+                    Ended: {new Date(conversation.ended_at).toLocaleString()}
                   </span>
                 )}
               </div>
