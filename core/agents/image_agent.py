@@ -315,10 +315,15 @@ you already have, then call generate_image immediately. Do not delegate first.""
 
                     # Compile results from all tool calls
                     all_images = []
+                    all_errors = []
                     for tc in tool_calls_made:
                         if tc['result'].get('success'):
                             images = tc['result'].get('images', [])
                             all_images.extend(images)
+                        else:
+                            # Session 840: Collect actual errors for better error reporting
+                            error = tc['result'].get('error', 'Unknown error')
+                            all_errors.append(error)
 
                     execution_time = int((time.time() - start_time) * 1000)
 
@@ -392,9 +397,11 @@ you already have, then call generate_image immediately. Do not delegate first.""
 
                         return result
                     else:
+                        # Session 840: Include actual error details for better debugging
+                        error_detail = "; ".join(all_errors) if all_errors else "No images were generated"
                         result = AgentResult(
                             success=False,
-                            error="No images were generated",
+                            error=f"Image generation failed: {error_detail}",
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             tool_calls=tool_calls_made
