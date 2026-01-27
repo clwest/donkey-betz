@@ -750,6 +750,17 @@ interface SystemActivityCardProps {
 function SystemActivityCard({ item, onViewConversation, onViewDream }: SystemActivityCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
+  // Session 842: Handle card click - open modal for dreams/conversations, expand for others
+  const handleCardClick = () => {
+    if (item.type === 'dream' && onViewDream) {
+      onViewDream(item.id)
+    } else if (item.type === 'conversation' && onViewConversation) {
+      onViewConversation(item.id)
+    } else {
+      setIsExpanded(!isExpanded)
+    }
+  }
+
   const getTypeStyles = () => {
     switch (item.type) {
       case 'dream':
@@ -795,9 +806,9 @@ function SystemActivityCard({ item, onViewConversation, onViewDream }: SystemAct
         styles.border,
         isExpanded ? 'ring-1 ring-primary-500/50' : 'hover:border-primary-500/50 hover:bg-white/5'
       )}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={handleCardClick}
     >
-      {/* Clickable Header */}
+      {/* Clickable Header - Session 842: Opens modal for dreams/conversations */}
       <div className="w-full p-3 text-left">
         <div className="flex items-start gap-3">
           <span className={cn('text-lg', styles.iconColor)}>{item.icon || '📋'}</span>
@@ -921,20 +932,23 @@ function SystemActivityCard({ item, onViewConversation, onViewDream }: SystemAct
               View Full Conversation <ChevronRight size={12} />
             </button>
           )}
+          {/* Session 842: Added stopPropagation to prevent card click handler from firing */}
           {item.type === 'decision' && (
             <a
               href="/human?tab=attention"
+              onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
             >
-              View Decisions <ChevronRight size={12} />
+              Go to Decisions Page <ChevronRight size={12} />
             </a>
           )}
           {item.type === 'pilot' && (
             <a
               href="/pilots"
+              onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
             >
-              View Pilots <ChevronRight size={12} />
+              Go to Pilots Page <ChevronRight size={12} />
             </a>
           )}
         </div>
