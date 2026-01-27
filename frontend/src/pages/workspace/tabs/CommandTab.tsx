@@ -1,6 +1,7 @@
 // Session 825: Command Tab - Platform Command Center
 // Extracted from WorkspacePage.tsx for modular architecture
 // Session 832: Enhanced Recent Activity with system activity feed
+// Session 834: Clickable System Activity cards with expanded details
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -687,6 +688,8 @@ interface SystemActivityCardProps {
 }
 
 function SystemActivityCard({ item }: SystemActivityCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   const getTypeStyles = () => {
     switch (item.type) {
       case 'dream':
@@ -727,49 +730,151 @@ function SystemActivityCard({ item }: SystemActivityCardProps) {
   return (
     <div
       className={cn(
-        'p-3 rounded-lg border transition-colors hover:bg-opacity-80',
+        'rounded-lg border transition-colors',
         styles.bg,
-        styles.border
+        styles.border,
+        isExpanded && 'ring-1 ring-primary-500/50'
       )}
     >
-      <div className="flex items-start gap-3">
-        <span className={cn('text-lg', styles.iconColor)}>{item.icon || '📋'}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-white truncate">{item.title}</span>
-            <span className="text-xs text-gray-500 capitalize">{item.type}</span>
+      {/* Clickable Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full p-3 text-left cursor-pointer hover:bg-white/5 transition-colors rounded-lg"
+      >
+        <div className="flex items-start gap-3">
+          <span className={cn('text-lg', styles.iconColor)}>{item.icon || '📋'}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-white truncate">{item.title}</span>
+              <span className="text-xs text-gray-500 capitalize">{item.type}</span>
+            </div>
+            <p className="text-xs text-gray-400 truncate">{item.subtitle}</p>
+            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+              {item.agent_name && (
+                <span className="flex items-center gap-1">
+                  <User size={10} />
+                  {item.agent_name}
+                </span>
+              )}
+              {item.timestamp_display && (
+                <span className="flex items-center gap-1">
+                  <Clock size={10} />
+                  {item.timestamp_display}
+                </span>
+              )}
+              {item.status && (
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded',
+                    item.status === 'approved' || item.status === 'success'
+                      ? 'bg-accent-green/20 text-accent-green'
+                      : item.status === 'rejected' || item.status === 'failure'
+                      ? 'bg-accent-red/20 text-accent-red'
+                      : 'bg-gray-700 text-gray-400'
+                  )}
+                >
+                  {item.status}
+                </span>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-gray-400 truncate">{item.subtitle}</p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-            {item.agent_name && (
-              <span className="flex items-center gap-1">
-                <User size={10} />
-                {item.agent_name}
-              </span>
+          <ChevronRight
+            size={16}
+            className={cn(
+              'text-gray-500 transition-transform',
+              isExpanded && 'rotate-90'
             )}
-            {item.timestamp_display && (
-              <span className="flex items-center gap-1">
-                <Clock size={10} />
-                {item.timestamp_display}
-              </span>
-            )}
-            {item.status && (
-              <span
-                className={cn(
-                  'px-1.5 py-0.5 rounded',
-                  item.status === 'approved' || item.status === 'success'
-                    ? 'bg-accent-green/20 text-accent-green'
-                    : item.status === 'rejected' || item.status === 'failure'
-                    ? 'bg-accent-red/20 text-accent-red'
-                    : 'bg-gray-700 text-gray-400'
-                )}
-              >
-                {item.status}
-              </span>
-            )}
-          </div>
+          />
         </div>
-      </div>
+      </button>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="px-3 pb-3 pt-0 space-y-3 border-t border-gray-700/50 mt-1">
+          {/* Full Title */}
+          {item.title && item.title.length > 40 && (
+            <div className="pt-3">
+              <h4 className="text-xs font-semibold text-gray-400 uppercase mb-1">Full Title</h4>
+              <p className="text-sm text-white">{item.title}</p>
+            </div>
+          )}
+
+          {/* Full Subtitle/Description */}
+          {item.subtitle && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-400 uppercase mb-1">Description</h4>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">{item.subtitle}</p>
+            </div>
+          )}
+
+          {/* Content/Details */}
+          {item.content && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-400 uppercase mb-1">Content</h4>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">{item.content}</p>
+            </div>
+          )}
+
+          {/* Metadata */}
+          <div className="flex flex-wrap gap-4 text-xs">
+            {item.agent_name && (
+              <div className="flex items-center gap-1">
+                <User size={12} className="text-gray-500" />
+                <span className="text-gray-400">Agent:</span>
+                <span className="text-white">{item.agent_name}</span>
+              </div>
+            )}
+            {item.created_at && (
+              <div className="flex items-center gap-1">
+                <Clock size={12} className="text-gray-500" />
+                <span className="text-gray-400">Created:</span>
+                <span className="text-white">{new Date(item.created_at).toLocaleString()}</span>
+              </div>
+            )}
+            {item.id && (
+              <div className="flex items-center gap-1">
+                <Hash size={12} className="text-gray-500" />
+                <span className="text-gray-400">ID:</span>
+                <span className="text-white font-mono text-xs">{item.id.slice(0, 8)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Link to full view */}
+          {item.type === 'dream' && (
+            <a
+              href="/ai-studio/dreams"
+              className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
+            >
+              View in Dreams <ChevronRight size={12} />
+            </a>
+          )}
+          {item.type === 'conversation' && (
+            <a
+              href="/conversations"
+              className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
+            >
+              View Conversations <ChevronRight size={12} />
+            </a>
+          )}
+          {item.type === 'decision' && (
+            <a
+              href="/human?tab=attention"
+              className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
+            >
+              View Decisions <ChevronRight size={12} />
+            </a>
+          )}
+          {item.type === 'pilot' && (
+            <a
+              href="/pilots"
+              className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
+            >
+              View Pilots <ChevronRight size={12} />
+            </a>
+          )}
+        </div>
+      )}
     </div>
   )
 }
