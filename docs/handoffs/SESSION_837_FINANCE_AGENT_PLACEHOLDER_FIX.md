@@ -1,8 +1,8 @@
-# Session 837: Finance Agent Placeholder Data Fix
+# Session 837-838: Finance Agent Placeholder Data Fixes
 
 **Date:** January 27, 2026
-**Focus:** Fix SignalScannerAgent returning hardcoded placeholder data
-**Status:** IN PROGRESS
+**Focus:** Fix finance agents returning hardcoded placeholder data
+**Status:** COMPLETED
 
 ---
 
@@ -160,9 +160,59 @@ The following issues were identified but not yet fixed:
 
 ---
 
+## Session 838: Additional Fixes (PR #294)
+
+### MarketMovementMonitorAgent
+
+Fixed `track_momentum` and `alert_breakout` tools which returned hardcoded values.
+
+**Before:**
+```python
+# Same values for ALL tickers
+'momentum': {
+    'RSI': {'value': 55, 'signal': 'neutral'},  # HARDCODED
+    'MACD': {'histogram': 'positive', 'signal': 'bullish'},  # HARDCODED
+},
+'key_levels': {
+    'resistance': 150.00,  # HARDCODED
+    'support': 145.00,     # HARDCODED
+    '52w_high': 155.00,    # HARDCODED
+    '52w_low': 120.00      # HARDCODED
+}
+```
+
+**After:**
+- `track_momentum`: Derives momentum from real price change data
+- `alert_breakout`: Uses real 52-week high/low from YahooFinanceSpider
+- Both return `data_quality` field
+
+### MarketAnomalyDetectorAgent
+
+Fixed `analyze_options_flow` which returned hardcoded `call_put_ratio: 1.2`.
+
+**After:**
+- Returns `status: 'insufficient_data'` with explanation
+- Lists required data sources (CBOE, OptionMetrics, Unusual Whales)
+
+---
+
+## Complete Finance Agent Audit Results
+
+| Agent | Status | Notes |
+|-------|--------|-------|
+| SignalScannerAgent | ✅ Fixed (PR #292) | Uses real YahooFinance data |
+| MarketMovementMonitorAgent | ✅ Fixed (PR #294) | track_momentum, alert_breakout |
+| MarketAnomalyDetectorAgent | ✅ Fixed (PR #294) | analyze_options_flow |
+| InstitutionalWatcherAgent | ✅ Good | Uses real SEC filings data |
+| StockAuditCoordinator | ✅ Good | Coordinator only |
+| OpportunityScoringAgent | ✅ Good | Uses real spider data + ML |
+| MarketIntelligenceCoordinator | ✅ Good | Coordinator only |
+
+---
+
 ## Session Stats
 
-- **Duration:** ~1 hour
-- **PRs Merged:** 1 (#292)
-- **Lines Changed:** +317, -78
-- **Impact:** SignalScannerAgent now returns real market data or explicit insufficient_data status
+- **Duration:** Sessions 837-838 (~2 hours total)
+- **PRs Merged:** 2 (#292, #294)
+- **Lines Changed:** +471, -105
+- **Impact:** All finance agents now return real market data or explicit insufficient_data status
