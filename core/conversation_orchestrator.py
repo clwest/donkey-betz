@@ -1391,27 +1391,47 @@ Next Steps:
         state: ConversationState,
         summary_validation: Dict
     ) -> int:
-        """Calculate overall conversation quality score (0-100)."""
+        """
+        Calculate overall conversation quality score (0-100).
+
+        Session 840: Enhanced scoring to reward high-value signals
+        (experiments, KPIs, owners, budgets, risks, architecture)
+        and penalize generic "productive discussion" summaries.
+        """
         score = 0
 
-        # Tension contribution (30 points max)
-        tension_score = min(state.tension_count * 10, 30)
+        # Tension contribution (20 points max) - reduced from 30
+        tension_score = min(state.tension_count * 10, 20)
         score += tension_score
 
-        # Grounding contribution (30 points max)
-        grounding_score = min(state.grounding_count * 10, 30)
+        # Grounding contribution (20 points max) - reduced from 30
+        grounding_score = min(state.grounding_count * 10, 20)
         score += grounding_score
 
-        # Decision summary contribution (40 points max)
-        if summary_validation['has_insights']:
-            score += 15
-        if summary_validation['has_feature']:
-            score += 15
-        if summary_validation['has_next_steps']:
-            score += 10
+        # Decision summary contribution (20 points max) - reduced from 40
+        if summary_validation.get('has_insights'):
+            score += 8
+        if summary_validation.get('has_feature'):
+            score += 7
+        if summary_validation.get('has_next_steps'):
+            score += 5
+
+        # Session 840: High-value signals contribution (40 points max)
+        # This is now the biggest scoring factor - concrete, actionable content
+        high_value_score = summary_validation.get('high_value_score', 0)
+        # Cap at 40 points
+        score += min(high_value_score, 40)
 
         # Penalty for empty agreement
         score -= state.empty_agreement_count * 5
+
+        # Session 840: Penalty for generic summaries
+        generic_penalty = summary_validation.get('generic_penalty', 0)
+        score -= generic_penalty
+
+        # Session 840: Extra penalty if summary is flagged as generic
+        if summary_validation.get('is_generic', False):
+            score -= 15  # Additional penalty for overall generic tone
 
         return max(0, min(100, score))
 
