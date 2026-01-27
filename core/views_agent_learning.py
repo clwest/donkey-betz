@@ -737,8 +737,8 @@ def get_agent_conversation_detail(request, conversation_id):
                     'message_count': session.contribution_count or len(messages_data),
                     'quality_score': 0.85,
                     'conclusion': session.synthesis_summary or '',
-                    'insights': session.synthesis[:500] if session.synthesis else '',
-                    'full_synthesis': session.synthesis or '',
+                    'insights': str(session.synthesis)[:500] if session.synthesis else '',
+                    'full_synthesis': session.synthesis if isinstance(session.synthesis, str) else str(session.synthesis) if session.synthesis else '',
                     'started_at': session.created_at.isoformat() if session.created_at else None,
                     'ended_at': session.completed_at.isoformat() if session.completed_at else None,
                     'messages': messages_data,
@@ -791,7 +791,7 @@ def get_agent_conversation_detail(request, conversation_id):
                     'message_count': conv.messages.count(),
                     'quality_score': float(conv.quality_score) if conv.quality_score else 0.0,
                     'conclusion': conv.conclusion or '',
-                    'insights': conv.conclusion[:500] if conv.conclusion else '',
+                    'insights': str(conv.conclusion)[:500] if conv.conclusion else '',
                     'started_at': conv.started_at.isoformat() if conv.started_at else None,
                     'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
                     'messages': messages_data,
@@ -811,7 +811,9 @@ def get_agent_conversation_detail(request, conversation_id):
         }, status=404)
 
     except Exception as e:
-        logger.error(f"Error fetching conversation detail: {e}")
+        import traceback
+        logger.error(f"Error fetching conversation detail for {conversation_id}: {e}")
+        logger.error(traceback.format_exc())
         return JsonResponse({
             'success': False,
             'error': str(e)
