@@ -391,10 +391,11 @@ function AutomationSubTab() {
   // Build stats from real data
   const remediationData = remediationStatus || {}
 
+  // Session 843: Fix React Error #31 - active_tasks and scheduled_tasks are arrays, need .length
   const stats = {
     triggers: 10, // Default count for trigger rules
-    runningPilots: celeryState?.active_tasks || 0,
-    celeryTasks: celeryState?.scheduled_tasks || 235,
+    runningPilots: Array.isArray(celeryState?.active_tasks) ? celeryState.active_tasks.length : 0,
+    celeryTasks: Array.isArray(celeryState?.scheduled_tasks) ? celeryState.scheduled_tasks.length : 235,
     remediationTasks: remediationData?.tasks?.total || 0,
   }
 
