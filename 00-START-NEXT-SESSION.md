@@ -1,6 +1,6 @@
 # Session 844 - Start Here
 
-**Previous Session:** 843 (Orchestration Contract + trace_id System)
+**Previous Session:** 843 (Orchestration Contract + trace_id System + Bug Fixes)
 **Date:** January 27, 2026
 **Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **PRODUCTION HEALTHY**
 
@@ -8,7 +8,7 @@
 
 ## What Was Accomplished in Session 843
 
-### Orchestration Contract Implementation
+### 1. Orchestration Contract Implementation (PR #334)
 
 Implemented a unified trace_id system that connects all agent outputs to their workflow context. This fixes the "floating artifacts" problem where outputs weren't linked to projects, tasks, or workflow executions.
 
@@ -16,7 +16,7 @@ Implemented a unified trace_id system that connects all agent outputs to their w
 
 **Solution:** Mandatory "Orchestration Contract" with trace_id that persists across entire workflow executions.
 
-### Phase 1: Model Field Additions
+#### Model Field Additions
 
 Added trace_id and project_id fields to 6 models:
 
@@ -29,49 +29,44 @@ Added trace_id and project_id fields to 6 models:
 | `SelfBlog` | trace_id, project |
 | `AgentDecisionSummary` | trace_id, project |
 
-### Phase 2: WiringDefect Model
+#### WiringDefect Model
 
-Created `WiringDefect` model in `core/models_orchestration.py` to track artifacts created without proper trace/project linkage. Enables auditing orphaned outputs and retroactive fixing.
+Created `WiringDefect` model in `core/models_orchestration.py` to track artifacts created without proper trace/project linkage.
 
-### Phase 3: TraceAttachmentService
+#### TraceAttachmentService
 
-Created `core/services/trace_attachment_service.py` with:
+Created `core/services/trace_attachment_service.py` with fallback rules for trace_id and project_id resolution.
 
-**trace_id Fallback Rules:**
-1. Use explicit trace_id from context
-2. Inherit from parent_object's trace_id
-3. Inherit from conversation's trace_id
-4. Generate new trace_id (root execution)
-
-**project_id Fallback Rules:**
-1. Use explicit project_id from context
-2. Inherit from parent_object
-3. Infer from user's active project
-4. Leave null (logged as WiringDefect)
-
-### Phase 4: Agent Execution Integration
-
-Updated `agent_router.py` `_create_execution_record()` and `deliverable_envelope.py` `wrap()` to automatically attach trace context to all agent outputs.
-
-### Phase 5: Trace Viewer API
-
-Created API endpoints for trace debugging:
+#### Trace Viewer API
 
 ```bash
-# View all artifacts linked to a trace
-GET /api/traces/<trace_id>/
-
-# List wiring defects
-GET /api/wiring-defects/
-GET /api/wiring-defects/?resolved=false
-
-# Resolve a defect
-POST /api/wiring-defects/<defect_id>/resolve/
+GET /api/traces/<trace_id>/           # View all artifacts linked to a trace
+GET /api/wiring-defects/              # List wiring defects
+POST /api/wiring-defects/<id>/resolve/ # Resolve a defect
 ```
+
+### 2. Agent Output Extraction Fix (PR #335)
+
+Fixed `_extract_agent_output_content` in `core/tasks.py` to handle `{source, data}` format used by 15+ agents.
+
+**Problem:** PromptEngineeringAgent and others showed "Generated via SKIN Layer" placeholder instead of actual content.
+
+**Solution:** Added handling for `{source, data}` format alongside existing `{tool, result}` format.
+
+### 3. ImageAgent Error Propagation Fix (PR #336)
+
+Fixed gaps in error message propagation that caused "No images were generated" without the actual error reason.
+
+**Problem:** ImageAgent failures showed generic errors instead of actual reasons (e.g., CONTENT_FILTERED).
+
+**Solution:** Ensure `last_error` is always set in error paths:
+- When API returns success but empty images (edge case)
+- When image save fails
+- Added prompt info to error logs for debugging content moderation
 
 ---
 
-## Files Changed
+## Files Changed in Session 843
 
 | File | Change |
 |------|--------|
@@ -85,7 +80,9 @@ POST /api/wiring-defects/<defect_id>/resolve/
 | `core/urls.py` | Added trace viewer URL patterns |
 | `core/agent_router.py` | Integrated trace context in execution creation |
 | `core/services/deliverable_envelope.py` | Integrated trace context in wrap() |
-| `core/migrations/0192_session_843_orchestration_contract.py` | Migration for all changes |
+| `core/tasks.py` | Fixed agent output extraction for `{source, data}` format |
+| `core/views_image.py` | Fixed error propagation in image generation |
+| `core/migrations/0192_session_843_orchestration_contract.py` | Migration for trace fields |
 
 ---
 
@@ -110,7 +107,8 @@ curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <tok
 2. **Trace visualization UI** - Frontend component to view trace timelines
 3. **Retroactive trace linking** - Script to link orphaned artifacts to traces
 4. **WiringDefect alerting** - Notify when defects exceed threshold
-5. **Add execution timeout within task** - Auto-fail individual tasks if they exceed time limit
+5. **ImageAgent content moderation handling** - Auto-retry with modified prompts when CONTENT_FILTERED
+6. **Add execution timeout within task** - Auto-fail individual tasks if they exceed time limit
 
 ---
 
@@ -127,7 +125,7 @@ curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <tok
 
 | Session | Focus |
 |---------|-------|
-| **843** | Orchestration Contract + trace_id System |
+| **843** | Orchestration Contract + trace_id System + Agent Output Fix + ImageAgent Error Fix |
 | **842** | Agent Learning Tab + Production Cleanup (242 stuck) + Celery Beat Investigation |
 | **841** | Experiment Monitoring Fixes - Stop global halts, provider health, naming fix |
 | **840** | Workspace Tabs Complete + Agent Error Fixes + React Error #31 |
@@ -139,4 +137,4 @@ curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <tok
 
 ---
 
-**Session 843 Complete - Orchestration Contract implemented, trace_id system active**
+**Session 843 Complete - Orchestration Contract + trace_id system + 2 bug fixes merged**
