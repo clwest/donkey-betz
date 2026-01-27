@@ -783,7 +783,7 @@ def get_agent_conversation_detail(request, conversation_id):
                     'topic': conv.topic,
                     'type': conv.conversation_type,
                     'type_display': conv.get_conversation_type_display() if hasattr(conv, 'get_conversation_type_display') else conv.conversation_type,
-                    'trigger': conv.trigger_reason or 'manual',
+                    'trigger': conv.trigger_type or 'manual',
                     'status': conv.status,
                     'initiator': conv.initiator.name if conv.initiator else 'System',
                     'initiator_emoji': _get_agent_emoji(conv.initiator.specialization if conv.initiator else ''),
