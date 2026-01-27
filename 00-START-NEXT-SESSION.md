@@ -1,88 +1,79 @@
-# Session 844 - Start Here
+# Session 845 - Start Here
 
-**Previous Session:** 843 (Orchestration Contract + trace_id System + Bug Fixes)
+**Previous Session:** 844 (Memory Palace Fix + DecisionDetailModal + Console Error Fixes)
 **Date:** January 27, 2026
 **Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **PRODUCTION HEALTHY**
 
 ---
 
-## What Was Accomplished in Session 843
+## What Was Accomplished in Session 844
 
-### 1. Orchestration Contract Implementation (PR #334)
+### 1. Memory Palace Room Assignment Fix (PR #338)
 
-Implemented a unified trace_id system that connects all agent outputs to their workflow context. This fixes the "floating artifacts" problem where outputs weren't linked to projects, tasks, or workflow executions.
+Fixed 906 memories that existed in the database but weren't assigned to any Memory Palace rooms, causing "All Memories", "Hall of Victories", "Insight Garden" etc. to show no data.
 
-**Problem:** Agents produce outputs that float in "loose artifact space" - not properly linked to projects, tasks, or workflow executions.
+**Problem:** Memories were created before auto-assignment was added, so `rooms.memories` M2M relationship was empty.
 
-**Solution:** Mandatory "Orchestration Contract" with trace_id that persists across entire workflow executions.
+**Solution:**
+- Added `_auto_assign_to_room()` method to `AgentMemory.create_memory()` for future memories
+- Created `assign_memories_to_rooms` management command for retroactive assignment
+- Assigned all 906 memories: 893 to successes, 7 to lessons, 3 to techniques, 3 to insights
 
-#### Model Field Additions
+**Memory Type to Room Mapping:**
+| Memory Type | Room Type |
+|-------------|-----------|
+| success | successes (Hall of Victories) |
+| failure | lessons (Lessons Learned) |
+| technique | techniques (Techniques Library) |
+| insight, conceptual | insights (Insight Garden) |
+| preference | preferences (User Preferences) |
+| interaction, feedback | general (General Archive) |
 
-Added trace_id and project_id fields to 6 models:
+### 2. DecisionDetailModal for Inline Viewing (PR #339)
 
-| Model | New Fields |
-|-------|------------|
-| `AgentExecution` | trace_id, project, parent_object_type, parent_object_id, owner_agent |
-| `Deliverable` | trace_id, parent_object_type, parent_object_id |
-| `ExtractedArtifact` | trace_id, project |
-| `AuditReport` | trace_id, project |
-| `SelfBlog` | trace_id, project |
-| `AgentDecisionSummary` | trace_id, project |
+Added ability to view decision details inline without leaving the Workspace Command tab.
 
-#### WiringDefect Model
+**Problem:** "Go to Decisions Page" in System Activity was redirecting to a different page.
 
-Created `WiringDefect` model in `core/models_orchestration.py` to track artifacts created without proper trace/project linkage.
+**Solution:**
+- Added `GET /api/human/attention/{id}/` endpoint (`AttentionDetailView`)
+- Created `DecisionDetailModal.tsx` component with full decision details
+- Updated `CommandTab.tsx` and `SystemActivityCard` to open modal on click
+- Changed "Go to Decisions Page" to "View Decision Details" button
 
-#### TraceAttachmentService
-
-Created `core/services/trace_attachment_service.py` with fallback rules for trace_id and project_id resolution.
-
-#### Trace Viewer API
-
+**New Endpoint:**
 ```bash
-GET /api/traces/<trace_id>/           # View all artifacts linked to a trace
-GET /api/wiring-defects/              # List wiring defects
-POST /api/wiring-defects/<id>/resolve/ # Resolve a defect
+GET /api/human/attention/{id}/  # Returns full decision details for modal
 ```
 
-### 2. Agent Output Extraction Fix (PR #335)
+### 3. Console Error Fixes (PR #340)
 
-Fixed `_extract_agent_output_content` in `core/tasks.py` to handle `{source, data}` format used by 15+ agents.
+Fixed two console errors appearing in production.
 
-**Problem:** PromptEngineeringAgent and others showed "Generated via SKIN Layer" placeholder instead of actual content.
+**React Error #31 Fix:**
+- `OrchestrationTab.tsx` was passing arrays (`celeryState.active_tasks`) to StatCard values
+- Fixed by using `Array.isArray()` check and `.length` for counts
 
-**Solution:** Added handling for `{source, data}` format alongside existing `{tool, result}` format.
-
-### 3. ImageAgent Error Propagation Fix (PR #336)
-
-Fixed gaps in error message propagation that caused "No images were generated" without the actual error reason.
-
-**Problem:** ImageAgent failures showed generic errors instead of actual reasons (e.g., CONTENT_FILTERED).
-
-**Solution:** Ensure `last_error` is always set in error paths:
-- When API returns success but empty images (edge case)
-- When image save fails
-- Added prompt info to error logs for debugging content moderation
+**Dream Detail 404 Fix:**
+- `DreamDetailModal` was calling non-existent `GET /api/agent-dreams/{id}/`
+- Added `get_agent_dream_detail()` view function and URL pattern
 
 ---
 
-## Files Changed in Session 843
+## Files Changed in Session 844
 
 | File | Change |
 |------|--------|
-| `core/models_unified_system.py` | Added trace fields to AgentExecution, SelfBlog, AgentDecisionSummary |
-| `core/models_deliverables.py` | Added trace fields to Deliverable |
-| `core/models_conversation_artifacts.py` | Added trace fields to ExtractedArtifact |
-| `core/models_audit_tracking.py` | Added trace fields to AuditReport |
-| `core/models_orchestration.py` | Added WiringDefect model |
-| `core/services/trace_attachment_service.py` | **NEW** - Trace attachment logic |
-| `core/views_trace_viewer.py` | **NEW** - Trace viewer API |
-| `core/urls.py` | Added trace viewer URL patterns |
-| `core/agent_router.py` | Integrated trace context in execution creation |
-| `core/services/deliverable_envelope.py` | Integrated trace context in wrap() |
-| `core/tasks.py` | Fixed agent output extraction for `{source, data}` format |
-| `core/views_image.py` | Fixed error propagation in image generation |
-| `core/migrations/0192_session_843_orchestration_contract.py` | Migration for trace fields |
+| `core/models_unified_system.py` | Added `_auto_assign_to_room()` method to AgentMemory |
+| `core/management/commands/assign_memories_to_rooms.py` | **NEW** - Retroactive room assignment command |
+| `core/views_human_interface.py` | Added `AttentionDetailView` for decision detail endpoint |
+| `core/views_agent_learning.py` | Added `get_agent_dream_detail()` function |
+| `core/urls.py` | Added dream detail and attention detail URL patterns |
+| `frontend/src/lib/api.ts` | Added `detail()` method to humanApi |
+| `frontend/src/components/platform/DecisionDetailModal.tsx` | **NEW** - Decision detail modal |
+| `frontend/src/components/platform/index.ts` | Export DecisionDetailModal |
+| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | Integrated DecisionDetailModal |
+| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Fixed array-as-value bug |
 
 ---
 
@@ -95,8 +86,11 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Test trace viewer (requires trace_id)
-curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <token>"
+# 3. Test decision detail modal
+# Navigate to Workspace > Command tab > System Activity > click a Decision
+
+# 4. Verify Memory Palace has data
+# Navigate to Memory page - rooms should show memories now
 ```
 
 ---
@@ -114,8 +108,8 @@ curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <tok
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_843_ORCHESTRATION_CONTRACT.md` - Detailed session handoff
-- `docs/handoffs/SESSION_842_AGENT_LEARNING_TAB_FIXES.md` - Previous session
+- `docs/handoffs/SESSION_843_ORCHESTRATION_CONTRACT.md` - Orchestration Contract details
+- `docs/handoffs/SESSION_842_AGENT_LEARNING_TAB_FIXES.md` - Agent Learning Tab
 - `CLAUDE.md` - System overview
 - `docs/AGENTS.md` - Agent documentation (74 agents)
 
@@ -125,6 +119,7 @@ curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <tok
 
 | Session | Focus |
 |---------|-------|
+| **844** | Memory Palace Fix + DecisionDetailModal + Console Error Fixes (React #31, Dream 404) |
 | **843** | Orchestration Contract + trace_id System + Agent Output Fix + ImageAgent Error Fix |
 | **842** | Agent Learning Tab + Production Cleanup (242 stuck) + Celery Beat Investigation |
 | **841** | Experiment Monitoring Fixes - Stop global halts, provider health, naming fix |
@@ -133,8 +128,7 @@ curl http://localhost:8000/api/traces/<some-uuid>/ -H "Authorization: Token <tok
 | **838** | Finance Agent Audit Complete - MarketMovementMonitor, MarketAnomalyDetector |
 | **837** | SignalScannerAgent placeholder fix - now uses real market data |
 | **836** | Experiment System Diagnosis + Celery Beat fix + 5 Production API Fixes |
-| **835** | Agent Output Audit (80+ agents) + 4 New Renderers + Modal Fixes |
 
 ---
 
-**Session 843 Complete - Orchestration Contract + trace_id system + 2 bug fixes merged**
+**Session 844 Complete - Memory Palace rooms populated, inline decision viewing, console errors fixed**
