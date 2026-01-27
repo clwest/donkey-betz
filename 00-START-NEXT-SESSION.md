@@ -1,6 +1,6 @@
 # Session 846 - Start Here
 
-**Previous Session:** 845 (Agent-Spider Wiring + Memory Delete UI)
+**Previous Session:** 845 (Agent-Spider Wiring + Memory Delete UI + Decision Detail Fix)
 **Date:** January 27, 2026
 **Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **213 Agents Wired to Spiders** | **PRODUCTION HEALTHY**
 
@@ -73,6 +73,17 @@ Added ability to remove failed memories from the Memory Palace UI.
 3. Click "Show Failed" to filter to failed memories
 4. Delete individually or use "Delete All Failed" button
 
+### 3. Fix 404 Errors on System Activity Decision Cards (PR #345)
+
+Fixed 404 errors when clicking decision cards in System Activity.
+
+**Problem:** System Activity shows `AgentDecisionSummary` records, but clicking them tried to fetch from `/api/human/attention/{id}/` which expects `HumanAttentionItem` records.
+
+**Solution:**
+- Added `decision_summary_detail_view` endpoint for `AgentDecisionSummary` records
+- New endpoint: `GET /api/platform/decision-summary/<uuid>/`
+- Updated `DecisionDetailModal` to try decision summary first, fall back to attention item
+
 ---
 
 ## Files Changed in Session 845
@@ -81,6 +92,10 @@ Added ability to remove failed memories from the Memory Palace UI.
 |------|--------|
 | `core/management/commands/wire_agents_to_spiders.py` | **NEW** - Command to connect agents to spider categories |
 | `frontend/src/pages/MemoryPalacePage.tsx` | Added delete buttons and "Show Failed" filter |
+| `core/views_platform_command.py` | Added `decision_summary_detail_view` endpoint |
+| `core/urls.py` | Added decision summary detail URL pattern |
+| `frontend/src/lib/api.ts` | Added `platformApi.decisionSummaryDetail()` |
+| `frontend/src/components/platform/DecisionDetailModal.tsx` | Try decision summary first, fall back to attention |
 
 ---
 
@@ -102,6 +117,9 @@ print(f'Total connections: {AgentSpiderConnection.objects.count()}')
 
 # 4. Test Memory Delete UI
 # Navigate to Memory Palace > Select agent > Click "Show Failed" > Delete memories
+
+# 5. Test Decision Detail Modal
+# Navigate to Workspace > Command tab > System Activity > Click a Decision card
 ```
 
 ---
@@ -130,7 +148,7 @@ print(f'Total connections: {AgentSpiderConnection.objects.count()}')
 
 | Session | Focus |
 |---------|-------|
-| **845** | Agent-Spider Wiring (213 agents connected) + Memory Delete UI |
+| **845** | Agent-Spider Wiring (213 agents) + Memory Delete UI + Decision Detail Fix |
 | **844** | Memory Palace Fix + DecisionDetailModal + Console Error Fixes (React #31, Dream 404) |
 | **843** | Orchestration Contract + trace_id System + Agent Output Fix + ImageAgent Error Fix |
 | **842** | Agent Learning Tab + Production Cleanup (242 stuck) + Celery Beat Investigation |
@@ -143,4 +161,4 @@ print(f'Total connections: {AgentSpiderConnection.objects.count()}')
 
 ---
 
-**Session 845 Complete - All 213 agents wired to spider data, Memory Palace delete UI added**
+**Session 845 Complete - 213 agents wired to spiders, Memory Palace delete UI, Decision detail fix**
