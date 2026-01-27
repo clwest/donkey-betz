@@ -1,79 +1,86 @@
-# Session 845 - Start Here
+# Session 846 - Start Here
 
-**Previous Session:** 844 (Memory Palace Fix + DecisionDetailModal + Console Error Fixes)
+**Previous Session:** 845 (Agent-Spider Wiring + Memory Delete UI)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **PRODUCTION HEALTHY**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **213 Agents Wired to Spiders** | **PRODUCTION HEALTHY**
 
 ---
 
-## What Was Accomplished in Session 844
+## What Was Accomplished in Session 845
 
-### 1. Memory Palace Room Assignment Fix (PR #338)
+### 1. Wire All 213 Agents to Spider Data Sources (PR #342)
 
-Fixed 906 memories that existed in the database but weren't assigned to any Memory Palace rooms, causing "All Memories", "Hall of Victories", "Insight Garden" etc. to show no data.
+Connected ALL agents to appropriate spider data categories. Previously only 19 agents (9%) had spider connections.
 
-**Problem:** Memories were created before auto-assignment was added, so `rooms.memories` M2M relationship was empty.
+**Before:**
+- 213 total agents
+- Only 19 agents had spider connections (9%)
+- 194 agents completely disconnected from spider data
+- No "Sports Betting" category existed
 
-**Solution:**
-- Added `_auto_assign_to_room()` method to `AgentMemory.create_memory()` for future memories
-- Created `assign_memories_to_rooms` management command for retroactive assignment
-- Assigned all 906 memories: 893 to successes, 7 to lessons, 3 to techniques, 3 to insights
+**After:**
+- All 213 agents connected (100%)
+- 492 total AgentSpiderConnection records
+- 16 spider categories with agent connections
+- Average 2.3 connections per agent
 
-**Memory Type to Room Mapping:**
-| Memory Type | Room Type |
-|-------------|-----------|
-| success | successes (Hall of Victories) |
-| failure | lessons (Lessons Learned) |
-| technique | techniques (Techniques Library) |
-| insight, conceptual | insights (Insight Garden) |
-| preference | preferences (User Preferences) |
-| interaction, feedback | general (General Archive) |
+**Category Distribution:**
+| Category | Agents |
+|----------|--------|
+| Tech News & Innovation | 101 |
+| General News | 66 |
+| AI & Creative Tools | 52 |
+| Content Creation | 46 |
+| Financial Markets | 45 |
+| Freelance & Jobs | 33 |
+| Creative Assets & Design | 31 |
+| Digital Products & E-commerce | 31 |
+| Research & Academia | 28 |
+| Innovation | 16 |
+| Sports Betting & Prediction Markets | 3 |
 
-### 2. DecisionDetailModal for Inline Viewing (PR #339)
+**Sports Betting Agents (Donkey Betz):**
+- SportsOddsAnalyst: [sports_betting, financial]
+- ArbitrageDetector: [sports_betting, financial]
+- PredictionMarketAnalyst: [sports_betting, financial, news]
 
-Added ability to view decision details inline without leaving the Workspace Command tab.
-
-**Problem:** "Go to Decisions Page" in System Activity was redirecting to a different page.
-
-**Solution:**
-- Added `GET /api/human/attention/{id}/` endpoint (`AttentionDetailView`)
-- Created `DecisionDetailModal.tsx` component with full decision details
-- Updated `CommandTab.tsx` and `SystemActivityCard` to open modal on click
-- Changed "Go to Decisions Page" to "View Decision Details" button
-
-**New Endpoint:**
+**New Command:**
 ```bash
-GET /api/human/attention/{id}/  # Returns full decision details for modal
+# Preview what would be wired
+python manage.py wire_agents_to_spiders --dry-run
+
+# Wire all agents to spider categories
+python manage.py wire_agents_to_spiders
+
+# Force re-wire all agents (even those already connected)
+python manage.py wire_agents_to_spiders --force
 ```
 
-### 3. Console Error Fixes (PR #340)
+### 2. Memory Delete UI for Failed Memories (PR #343)
 
-Fixed two console errors appearing in production.
+Added ability to remove failed memories from the Memory Palace UI.
 
-**React Error #31 Fix:**
-- `OrchestrationTab.tsx` was passing arrays (`celeryState.active_tasks`) to StatCard values
-- Fixed by using `Array.isArray()` check and `.length` for counts
+**Changes:**
+- Added delete button to `MemoryCard` component
+  - Always visible (red) for failed memories
+  - Hover-visible for non-failed memories
+- Added "Show Failed" quick filter button in memory list header
+- Added "Delete All Failed" bulk action when filtering to failures
 
-**Dream Detail 404 Fix:**
-- `DreamDetailModal` was calling non-existent `GET /api/agent-dreams/{id}/`
-- Added `get_agent_dream_detail()` view function and URL pattern
+**How to Use:**
+1. Navigate to Memory Palace (`/memory-palace`)
+2. Select an agent with memories
+3. Click "Show Failed" to filter to failed memories
+4. Delete individually or use "Delete All Failed" button
 
 ---
 
-## Files Changed in Session 844
+## Files Changed in Session 845
 
 | File | Change |
 |------|--------|
-| `core/models_unified_system.py` | Added `_auto_assign_to_room()` method to AgentMemory |
-| `core/management/commands/assign_memories_to_rooms.py` | **NEW** - Retroactive room assignment command |
-| `core/views_human_interface.py` | Added `AttentionDetailView` for decision detail endpoint |
-| `core/views_agent_learning.py` | Added `get_agent_dream_detail()` function |
-| `core/urls.py` | Added dream detail and attention detail URL patterns |
-| `frontend/src/lib/api.ts` | Added `detail()` method to humanApi |
-| `frontend/src/components/platform/DecisionDetailModal.tsx` | **NEW** - Decision detail modal |
-| `frontend/src/components/platform/index.ts` | Export DecisionDetailModal |
-| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | Integrated DecisionDetailModal |
-| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Fixed array-as-value bug |
+| `core/management/commands/wire_agents_to_spiders.py` | **NEW** - Command to connect agents to spider categories |
+| `frontend/src/pages/MemoryPalacePage.tsx` | Added delete buttons and "Show Failed" filter |
 
 ---
 
@@ -86,11 +93,15 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Test decision detail modal
-# Navigate to Workspace > Command tab > System Activity > click a Decision
+# 3. Verify agent-spider connections
+python manage.py shell -c "
+from core.models_unified_system import Agent, AgentSpiderConnection
+print(f'Agents with connections: {Agent.objects.filter(spider_connections__isnull=False).distinct().count()}/213')
+print(f'Total connections: {AgentSpiderConnection.objects.count()}')
+"
 
-# 4. Verify Memory Palace has data
-# Navigate to Memory page - rooms should show memories now
+# 4. Test Memory Delete UI
+# Navigate to Memory Palace > Select agent > Click "Show Failed" > Delete memories
 ```
 
 ---
@@ -119,6 +130,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **845** | Agent-Spider Wiring (213 agents connected) + Memory Delete UI |
 | **844** | Memory Palace Fix + DecisionDetailModal + Console Error Fixes (React #31, Dream 404) |
 | **843** | Orchestration Contract + trace_id System + Agent Output Fix + ImageAgent Error Fix |
 | **842** | Agent Learning Tab + Production Cleanup (242 stuck) + Celery Beat Investigation |
@@ -131,4 +143,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**Session 844 Complete - Memory Palace rooms populated, inline decision viewing, console errors fixed**
+**Session 845 Complete - All 213 agents wired to spider data, Memory Palace delete UI added**
