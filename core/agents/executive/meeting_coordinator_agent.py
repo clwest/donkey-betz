@@ -357,95 +357,311 @@ You facilitate but don't make decisions - you synthesize and document."""
         participants: List[str],
         meeting_type: str
     ) -> Dict[str, Any]:
-        """Start a meeting between agents."""
+        """Start a meeting between agents - ACTUALLY calls each agent."""
         logger.info(f"Starting {meeting_type} meeting on: {topic}")
 
-        # Simulate collecting perspectives from each participant
+        # Session 836: Actually call each participant agent to get real perspectives
         perspectives = []
         for participant in participants:
-            perspectives.append({
-                'agent': participant,
-                'perspective': f"{participant}'s perspective on {topic}",
-                'recommendations': [f'Recommendation from {participant}'],
-                'concerns': []
-            })
+            perspective = self._get_agent_perspective(participant, topic, meeting_type)
+            perspectives.append(perspective)
+
+        # Determine status based on whether we got real perspectives
+        has_real_content = any(
+            p.get('perspective') and
+            not p['perspective'].startswith(f"{p['agent']}'s perspective on")
+            for p in perspectives
+        )
 
         meeting = {
             'topic': topic,
             'meeting_type': meeting_type,
             'participants': participants,
             'perspectives': perspectives,
-            'status': 'in_progress',
-            'notes': 'Meeting started, perspectives collected'
+            'status': 'completed' if has_real_content else 'failed',
+            'notes': 'Meeting completed with real agent perspectives' if has_real_content else 'Failed to get agent perspectives'
         }
 
         return {
-            'success': True,
+            'success': has_real_content,
             'meeting': meeting
         }
+
+    def _get_agent_perspective(
+        self,
+        agent_name: str,
+        topic: str,
+        meeting_type: str
+    ) -> Dict[str, Any]:
+        """Get a real perspective from an agent by actually calling it."""
+        try:
+            from core.agent_router import AgentRouter
+
+            router = AgentRouter(user=self.user)
+
+            # Build a specific prompt for this agent's perspective
+            perspective_task = f"""As a participant in a {meeting_type} meeting about "{topic}", provide your expert perspective.
+
+Include:
+1. Your key insights and analysis on this topic
+2. Specific recommendations (with rationale)
+3. Any concerns or risks you see
+4. Suggested action items
+
+Be concrete and specific - no placeholder text."""
+
+            # Route to the specific agent
+            result = router.route(
+                agent_name=agent_name,
+                task=perspective_task,
+                context={'meeting_topic': topic, 'meeting_type': meeting_type}
+            )
+
+            if result and result.success:
+                # Parse the response to extract structured data
+                content = result.message or result.data.get('content', '')
+                return {
+                    'agent': agent_name,
+                    'perspective': content,
+                    'recommendations': self._extract_recommendations(content),
+                    'concerns': self._extract_concerns(content),
+                    'raw_response': result.data
+                }
+            else:
+                logger.warning(f"Agent {agent_name} failed to provide perspective: {result.error if result else 'No result'}")
+                return {
+                    'agent': agent_name,
+                    'perspective': f"[Agent {agent_name} unavailable]",
+                    'recommendations': [],
+                    'concerns': ['Agent did not respond'],
+                    'error': result.error if result else 'No response'
+                }
+
+        except Exception as e:
+            logger.error(f"Error getting perspective from {agent_name}: {e}")
+            return {
+                'agent': agent_name,
+                'perspective': f"[Error calling {agent_name}]",
+                'recommendations': [],
+                'concerns': [f'Error: {str(e)}'],
+                'error': str(e)
+            }
+
+    def _extract_recommendations(self, content: str) -> List[str]:
+        """Extract recommendations from agent response."""
+        recommendations = []
+        lines = content.split('\n')
+        in_recommendations = False
+
+        for line in lines:
+            line_lower = line.lower().strip()
+            if 'recommendation' in line_lower or 'suggest' in line_lower or 'action' in line_lower:
+                in_recommendations = True
+            if in_recommendations and line.strip().startswith(('-', '•', '*', '1', '2', '3')):
+                recommendations.append(line.strip().lstrip('-•*0123456789. '))
+            if len(recommendations) >= 5:
+                break
+
+        return recommendations[:5] if recommendations else ['See full perspective for recommendations']
+
+    def _extract_concerns(self, content: str) -> List[str]:
+        """Extract concerns/risks from agent response."""
+        concerns = []
+        lines = content.split('\n')
+        in_concerns = False
+
+        for line in lines:
+            line_lower = line.lower().strip()
+            if 'concern' in line_lower or 'risk' in line_lower or 'challenge' in line_lower:
+                in_concerns = True
+            if in_concerns and line.strip().startswith(('-', '•', '*', '1', '2', '3')):
+                concerns.append(line.strip().lstrip('-•*0123456789. '))
+            if len(concerns) >= 5:
+                break
+
+        return concerns[:5] if concerns else []
 
     def _synthesize_discussion(
         self,
         perspectives: List[Dict[str, Any]],
         topic: str
     ) -> Dict[str, Any]:
-        """Synthesize perspectives from multiple agents."""
+        """Synthesize perspectives from multiple agents using LLM."""
         logger.info(f"Synthesizing discussion on: {topic}")
 
-        synthesis = {
-            'topic': topic,
-            'perspectives_count': len(perspectives),
-            'areas_of_agreement': [
-                'Focus on quality',
-                'Incremental progress',
-                'Clear documentation'
-            ],
-            'areas_of_discussion': [
-                'Prioritization of features',
-                'Resource allocation'
-            ],
-            'recommended_approach': 'Proceed with phased implementation',
-            'consensus_level': 'high'
+        # Session 836: Use LLM to actually synthesize the perspectives
+        try:
+            # Build a prompt with all perspectives
+            perspectives_text = "\n\n".join([
+                f"**{p.get('agent', 'Unknown')}:**\n{p.get('perspective', 'No perspective provided')}"
+                for p in perspectives
+            ])
+
+            synthesis_prompt = f"""Synthesize the following perspectives from a meeting about "{topic}":
+
+{perspectives_text}
+
+Provide a structured synthesis with:
+1. Areas of Agreement (specific points all participants agree on)
+2. Areas of Discussion/Debate (where there are different views)
+3. Recommended Approach (synthesized recommendation)
+4. Consensus Level (high/medium/low with explanation)
+
+Be specific and concrete - reference actual points from the perspectives."""
+
+            # Call OpenAI for synthesis
+            response = self._call_openai(synthesis_prompt)
+            content = response.get('content', '')
+
+            synthesis = {
+                'topic': topic,
+                'perspectives_count': len(perspectives),
+                'synthesis_text': content,
+                'areas_of_agreement': self._extract_section(content, 'agreement'),
+                'areas_of_discussion': self._extract_section(content, 'discussion'),
+                'recommended_approach': self._extract_section(content, 'recommended', single=True),
+                'consensus_level': self._determine_consensus(content)
+            }
+
+            return {
+                'success': True,
+                'synthesis': synthesis
+            }
+
+        except Exception as e:
+            logger.error(f"Error synthesizing discussion: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'synthesis': {'topic': topic, 'perspectives_count': len(perspectives)}
+            }
+
+    def _extract_section(self, content: str, section_type: str, single: bool = False) -> Any:
+        """Extract a section from synthesized content."""
+        items = []
+        lines = content.split('\n')
+
+        keywords = {
+            'agreement': ['agree', 'consensus', 'alignment', 'common'],
+            'discussion': ['debate', 'discuss', 'differ', 'tension', 'concern'],
+            'recommended': ['recommend', 'approach', 'suggest', 'propose']
         }
 
-        return {
-            'success': True,
-            'synthesis': synthesis
-        }
+        in_section = False
+        for line in lines:
+            line_lower = line.lower()
+            if any(kw in line_lower for kw in keywords.get(section_type, [])):
+                in_section = True
+                continue
+            if in_section:
+                if line.strip().startswith(('-', '•', '*', '1', '2', '3')):
+                    items.append(line.strip().lstrip('-•*0123456789. '))
+                elif line.strip() and not line.startswith('#'):
+                    items.append(line.strip())
+                if len(items) >= 5:
+                    break
+
+        if single:
+            return items[0] if items else 'See full synthesis'
+        return items if items else ['See full synthesis for details']
+
+    def _determine_consensus(self, content: str) -> str:
+        """Determine consensus level from content."""
+        content_lower = content.lower()
+        if 'high consensus' in content_lower or 'strong agreement' in content_lower:
+            return 'high'
+        elif 'low consensus' in content_lower or 'significant disagreement' in content_lower:
+            return 'low'
+        return 'medium'
 
     def _extract_action_items(
         self,
         discussion_summary: str
     ) -> Dict[str, Any]:
-        """Extract action items from a discussion."""
+        """Extract action items from a discussion using LLM."""
         logger.info("Extracting action items from discussion")
 
-        action_items = [
-            {
-                'item': 'Complete current phase implementation',
-                'owner': 'CTOAgent',
-                'priority': 'high',
-                'status': 'pending'
-            },
-            {
-                'item': 'Update project roadmap',
-                'owner': 'COOAgent',
-                'priority': 'medium',
-                'status': 'pending'
-            },
-            {
-                'item': 'Review creative direction',
-                'owner': 'CreativeDirectorAgent',
-                'priority': 'medium',
-                'status': 'pending'
-            }
-        ]
+        # Session 836: Use LLM to extract real action items
+        try:
+            extraction_prompt = f"""From the following discussion summary, extract specific action items:
 
-        return {
-            'success': True,
-            'action_items': action_items,
-            'total_items': len(action_items)
-        }
+{discussion_summary}
+
+For each action item, provide:
+1. Item: Clear, specific action (not vague)
+2. Owner: Who should do this (agent name or role)
+3. Priority: high/medium/low
+4. Due: Suggested timeframe
+
+Format as a numbered list. Be specific - no placeholder text like "Complete current phase" or "Update project"."""
+
+            response = self._call_openai(extraction_prompt)
+            content = response.get('content', '')
+
+            # Parse the response into structured action items
+            action_items = self._parse_action_items(content)
+
+            return {
+                'success': True,
+                'action_items': action_items,
+                'total_items': len(action_items),
+                'raw_extraction': content
+            }
+
+        except Exception as e:
+            logger.error(f"Error extracting action items: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'action_items': [],
+                'total_items': 0
+            }
+
+    def _parse_action_items(self, content: str) -> List[Dict[str, Any]]:
+        """Parse action items from LLM response."""
+        import re
+        action_items = []
+        lines = content.split('\n')
+
+        current_item = {}
+        for line in lines:
+            line = line.strip()
+            if not line:
+                if current_item.get('item'):
+                    action_items.append(current_item)
+                    current_item = {}
+                continue
+
+            # Check for numbered item
+            if re.match(r'^\d+[\.\)]\s*', line):
+                if current_item.get('item'):
+                    action_items.append(current_item)
+                item_text = re.sub(r'^\d+[\.\)]\s*', '', line)
+                # Check for "Item:" prefix
+                if item_text.lower().startswith('item:'):
+                    item_text = item_text[5:].strip()
+                current_item = {
+                    'item': item_text,
+                    'owner': 'Unassigned',
+                    'priority': 'medium',
+                    'status': 'pending'
+                }
+            elif 'owner:' in line.lower():
+                owner = line.split(':', 1)[1].strip()
+                current_item['owner'] = owner
+            elif 'priority:' in line.lower():
+                priority = line.split(':', 1)[1].strip().lower()
+                if priority in ['high', 'medium', 'low']:
+                    current_item['priority'] = priority
+            elif 'due:' in line.lower() or 'timeframe:' in line.lower():
+                due = line.split(':', 1)[1].strip()
+                current_item['due'] = due
+
+        # Don't forget last item
+        if current_item.get('item'):
+            action_items.append(current_item)
+
+        return action_items[:10]  # Limit to 10 items
 
     def _validate_task(self, task: str) -> bool:
         """Validate the task is appropriate for meeting coordination."""
