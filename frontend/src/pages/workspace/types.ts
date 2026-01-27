@@ -63,6 +63,7 @@ export interface WorkspaceOperation {
   operation_type: string
   file_path: string
   agent_name: string
+  agent_task?: string  // Session 834: Task description for grouping related operations
   description?: string
   success: boolean
   pending_review: boolean
