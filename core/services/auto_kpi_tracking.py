@@ -35,6 +35,7 @@ class AutoKPITrackingService:
     """
 
     # KPI type patterns and their data source mappings
+    # Session 833: Expanded mappings to cover more experiment types
     KPI_SOURCE_MAPPINGS = {
         # Pattern in experiment name/KPI -> (source_type, calculation_method)
         'mit tech review': ('spider', 'mit_tech_review'),
@@ -44,6 +45,24 @@ class AutoKPITrackingService:
         'synthesis': ('decision', 'synthesis'),
         'market': ('spider', 'market'),
         'trading': ('spider', 'financial'),
+        # Session 833: Spider intelligence patterns
+        'huggingface': ('spider', 'tech'),
+        'healthtech': ('spider', 'tech'),
+        'mobihealthnews': ('spider', 'tech'),
+        'venturebeat': ('spider', 'tech'),
+        'crunchbase': ('spider', 'tech'),
+        'securityweek': ('spider', 'tech'),
+        'indiehackers': ('spider', 'tech'),
+        'discord': ('spider', 'tech'),
+        'investment tracker': ('spider', 'financial'),
+        # Session 833: Research and analysis patterns
+        'research': ('agent', 'research'),
+        'analyze': ('agent', 'research'),
+        'competitor': ('agent', 'research'),
+        'customer': ('agent', 'research'),
+        'debate': ('agent', 'content'),
+        'educational': ('agent', 'content'),
+        'behavior': ('agent', 'content'),
     }
 
     # Time windows for calculations
@@ -124,6 +143,20 @@ class AutoKPITrackingService:
                     f"(source: {source_type}:{source_id})"
                 )
 
+                # Session 833: Auto-complete experiments that meet their target
+                if self._check_target_met(exp, new_value):
+                    exp.complete(
+                        status='success',
+                        result_summary=f"Target KPI reached: {new_value} >= {exp.target_value}",
+                        outcome_classification='pass'
+                    )
+                    results.setdefault('completed', []).append({
+                        'id': str(exp.id),
+                        'name': exp.name[:50],
+                        'final_value': str(new_value),
+                    })
+                    self.logger.info(f"🎉 Auto-completed experiment {exp.name[:40]} - target met!")
+
             except Exception as e:
                 self.logger.error(f"Error updating KPI for {exp.name}: {e}")
                 results['errors'].append({
@@ -137,9 +170,32 @@ class AutoKPITrackingService:
             'updated_count': len(results['updated']),
             'skipped_count': len(results['skipped']),
             'error_count': len(results['errors']),
+            'completed_count': len(results.get('completed', [])),
         }
 
         return results
+
+    def _check_target_met(self, exp, current_value) -> bool:
+        """
+        Session 833: Check if experiment has met its target KPI.
+
+        Handles various value formats: percentages, numbers, etc.
+        """
+        try:
+            # Parse current value
+            current_str = str(current_value).replace('%', '').strip()
+            current = float(current_str) if current_str else 0
+
+            # Parse target value
+            target_str = str(exp.target_value or '100').replace('%', '').strip()
+            target = float(target_str) if target_str else 100
+
+            # Check if target is met (with small tolerance for floating point)
+            return current >= target and target > 0
+
+        except (ValueError, TypeError) as e:
+            self.logger.debug(f"Could not parse values for {exp.name}: {e}")
+            return False
 
     def _get_data_source(self, exp) -> Tuple[Optional[str], Optional[str]]:
         """
