@@ -1,3 +1,4 @@
+// Session 834: Cleaned up sidebar - consolidated items moved to Workspace tabs
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
@@ -5,42 +6,18 @@ import {
   LayoutDashboard,
   MessageSquare,
   Bot,
-  Brain,
   Palette,
   Settings,
   LogOut,
   User,
   TrendingUp,
   Scale,
-  Radio,
   DollarSign,
   Shield,
   FolderCog,
-  Cpu,
-  Activity,
-  Users,
-  Castle,
-  Trophy,
-  Smile,
-  Gift,
-  History,
-  Crown,
-  Heart,
-  Sparkles,
-  Bug,
   FileText,
   Beaker,
-  Share2,
-  BookOpen,
-  Workflow,
-  Newspaper,
-  Lightbulb,
   Mic,
-  CreditCard,
-  GraduationCap,
-  BarChart3,
-  Stethoscope,
-  GitBranch,
   Book,
   PanelLeftClose,
   PanelLeft,
@@ -53,49 +30,37 @@ import {
   useCriticalGatesCount,
 } from '@/stores/unifiedStore'
 
+// Session 834: Streamlined navigation
+// Consolidated items are now in Workspace tabs:
+// - Infrastructure tab: Body Health, Integration, LLM Routing, Analytics, Billing
+// - Orchestration tab: Agent Monitor, Hive Mind, Autonomous
+// - Consciousness tab: Memory Palace, Orchestra, Mood, Evolution, Relationships, Capsules, Time Travel
+// - Intelligence tab: Reasoning, Collective
+// - DataSources tab: Spiders, Spider Feed, Learning
+// - Content Studio tab: Podcast, Channels, Blogs, Distribution
+// - Command tab: Conversations, Dreams, Advisors
 const navItems = [
+  // Core Navigation
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/assistant', label: 'AI Assistant', icon: MessageSquare },
   { path: '/human', label: 'Human', icon: User },
   { path: '/agents', label: 'Agents', icon: Bot },
-  { path: '/intelligence', label: 'Intelligence', icon: Brain },
-  { path: '/body-health', label: 'Body Health', icon: Activity },
-  { path: '/integration-health', label: 'Integration', icon: Stethoscope },
-  { path: '/orchestration', label: 'Orchestration', icon: GitBranch },
-  { path: '/agent-monitor', label: 'Agent Monitor', icon: Activity },
-  { path: '/hive-mind', label: 'Hive Mind', icon: Users },
-  { path: '/memory-palace', label: 'Memory Palace', icon: Castle },
-  { path: '/evolution', label: 'Evolution', icon: Trophy },
-  { path: '/agent-mood', label: 'Mood', icon: Smile },
-  { path: '/time-capsules', label: 'Capsules', icon: Gift },
-  { path: '/time-travel', label: 'Time Travel', icon: History },
-  // Session 834: Dreams and Conversations moved to Workspace Command Tab
-  { path: '/advisors', label: 'Advisors', icon: Crown },
-  { path: '/relationships', label: 'Bonds', icon: Heart },
-  { path: '/neural-orchestra', label: 'Orchestra', icon: Sparkles },
-  { path: '/spiders', label: 'Spiders', icon: Bug },
-  { path: '/spider-feed', label: 'Spider Feed', icon: Newspaper },
-  { path: '/documents', label: 'Documents', icon: FileText },
-  { path: '/docs-index', label: 'Docs Index', icon: Book },
-  { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
+
+  // Main Hub - All consolidated features
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
+
+  // Standalone Features
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },
   { path: '/legal', label: 'Legal', icon: Scale },
-  { path: '/podcast', label: 'Podcast', icon: Radio },
-  { path: '/content-channels', label: 'Channels', icon: Radio },
-  { path: '/blogs', label: 'Blogs', icon: BookOpen },
   { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
-  { path: '/distribution', label: 'Distribution', icon: Share2 },
-  { path: '/autonomous', label: 'Autonomous', icon: Workflow },
-  { path: '/reasoning', label: 'Reasoning', icon: Lightbulb },
+  { path: '/documents', label: 'Documents', icon: FileText },
+  { path: '/docs-index', label: 'Docs Index', icon: Book },
+  { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
   { path: '/voice-marketplace', label: 'Voices', icon: Mic },
-  { path: '/billing', label: 'Billing', icon: CreditCard },
-  { path: '/learning-journey', label: 'Learning', icon: GraduationCap },
-  { path: '/collective', label: 'Collective', icon: Brain },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+
+  // Admin & Settings
   { path: '/admin', label: 'Admin', icon: Shield },
-  { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -135,7 +100,8 @@ export default function Sidebar() {
     switch (path) {
       case '/human':
         return pendingDecisions > 0 ? pendingDecisions : null
-      case '/intelligence':
+      case '/workspace':
+        // Show badge if there are running pilots or critical gates
         return runningPilots > 0 || criticalGates > 0
           ? runningPilots + criticalGates
           : null
