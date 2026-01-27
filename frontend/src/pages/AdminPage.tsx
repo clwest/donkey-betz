@@ -680,28 +680,33 @@ export default function AdminPage() {
                 <h3 className="text-lg font-semibold mb-4">Active Tasks</h3>
                 {Array.isArray(celeryStatus.active_tasks) && celeryStatus.active_tasks.length > 0 ? (
                   <div className="space-y-3">
-                    {celeryStatus.active_tasks.map((task: { task_id: string; task_name: string; worker: string; started: number }) => (
-                      <div
-                        key={task.task_id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-accent-green/20 flex items-center justify-center">
-                            <Play size={14} className="text-accent-green" />
+                    {celeryStatus.active_tasks.map((task: { task_id: string; task_name: string | object; worker: string | object; started: number; args?: unknown }) => {
+                      // Safely extract string values - API may return objects
+                      const taskName = typeof task.task_name === 'string' ? task.task_name : String(task.task_name || 'Unknown')
+                      const workerName = typeof task.worker === 'string' ? task.worker : String(task.worker || 'Unknown')
+                      return (
+                        <div
+                          key={task.task_id}
+                          className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-accent-green/20 flex items-center justify-center">
+                              <Play size={14} className="text-accent-green" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{taskName.split('.').pop()}</p>
+                              <p className="text-xs text-gray-500">{workerName.split('@')[0]}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-sm">{task.task_name.split('.').pop()}</p>
-                            <p className="text-xs text-gray-500">{task.worker.split('@')[0]}</p>
+                          <div className="text-right">
+                            <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green">Running</span>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {task.started ? `${Math.round((Date.now() / 1000 - task.started) / 60)}m ago` : ''}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green">Running</span>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {task.started ? `${Math.round((Date.now() / 1000 - task.started) / 60)}m ago` : ''}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-400">
@@ -719,10 +724,18 @@ export default function AdminPage() {
                 </p>
                 {Array.isArray(celeryStatus.scheduled_tasks) && celeryStatus.scheduled_tasks.length > 0 ? (
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                    {celeryStatus.scheduled_tasks.map((task: { name: string; task: string; schedule: string }) => {
+                    {celeryStatus.scheduled_tasks.map((task: { name: string | object; task: string | object; schedule: string | object }) => {
+                      // Safely extract string values - API may return objects
+                      const taskName = typeof task.name === 'string' ? task.name : String(task.name || 'Unknown')
+                      const taskPath = typeof task.task === 'string' ? task.task : String(task.task || 'Unknown')
+                      const taskSchedule = typeof task.schedule === 'string' ? task.schedule : String(task.schedule || '')
+
                       // Check if this task is currently running
                       const isRunning = Array.isArray(celeryStatus.active_tasks) &&
-                        celeryStatus.active_tasks.some((active: { task_name: string }) => active.task_name === task.task)
+                        celeryStatus.active_tasks.some((active: { task_name: string | object }) => {
+                          const activeName = typeof active.task_name === 'string' ? active.task_name : String(active.task_name || '')
+                          return activeName === taskPath
+                        })
 
                       // Parse schedule to show human-readable format
                       const getScheduleDisplay = (schedule: string) => {
@@ -758,7 +771,7 @@ export default function AdminPage() {
 
                       return (
                         <div
-                          key={task.name}
+                          key={taskName}
                           className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -773,13 +786,13 @@ export default function AdminPage() {
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm truncate">{task.name}</p>
-                              <p className="text-xs text-gray-500 truncate">{task.task}</p>
+                              <p className="font-medium text-sm truncate">{taskName}</p>
+                              <p className="text-xs text-gray-500 truncate">{taskPath}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                             <span className="text-xs text-accent-cyan whitespace-nowrap">
-                              {getScheduleDisplay(task.schedule)}
+                              {getScheduleDisplay(taskSchedule)}
                             </span>
                             <span className={cn(
                               'text-xs px-2 py-1 rounded whitespace-nowrap',
