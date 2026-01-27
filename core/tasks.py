@@ -101,10 +101,11 @@ def validate_agent_output(agent_name: str, output: str) -> str:
 # ==================== SESSION 835: STALE EXECUTION CLEANUP ====================
 
 
-@shared_task
-def cleanup_stale_agent_executions(hours_threshold: int = 2):
+@shared_task(bind=True)
+def cleanup_stale_agent_executions(self, hours_threshold: int = 2):
     """
     Session 835: Clean up agent executions stuck in 'in_progress' status.
+    Session 842: Added detailed logging for debugging.
 
     Tasks that have been 'in_progress' for more than the threshold are
     marked as 'failed' since they clearly didn't complete properly.
@@ -116,23 +117,50 @@ def cleanup_stale_agent_executions(hours_threshold: int = 2):
     from datetime import timedelta
     from core.models_unified_system import AgentExecution
 
-    cutoff_time = timezone.now() - timedelta(hours=hours_threshold)
+    task_id = self.request.id if self.request else 'unknown'
+    logger.info(f"🧹 [CLEANUP] Task {task_id} STARTED - threshold: {hours_threshold} hours")
 
-    stale_tasks = AgentExecution.objects.filter(
-        status='in_progress',
-        created_at__lt=cutoff_time
-    )
+    try:
+        now = timezone.now()
+        cutoff_time = now - timedelta(hours=hours_threshold)
+        logger.info(f"🧹 [CLEANUP] Current time: {now.isoformat()}, cutoff: {cutoff_time.isoformat()}")
 
-    count = stale_tasks.count()
-    if count > 0:
-        stale_tasks.update(
-            status='failed',
-            error_message=f'Task timed out after {hours_threshold} hours - marked as failed by cleanup',
-            completed_at=timezone.now()
+        # First, count all in_progress tasks for debugging
+        all_in_progress = AgentExecution.objects.filter(status='in_progress').count()
+        logger.info(f"🧹 [CLEANUP] Total in_progress executions: {all_in_progress}")
+
+        # Find stale tasks
+        stale_tasks = AgentExecution.objects.filter(
+            status='in_progress',
+            created_at__lt=cutoff_time
         )
-        logger.info(f"🧹 Cleaned up {count} stale agent executions")
 
-    return count
+        count = stale_tasks.count()
+        logger.info(f"🧹 [CLEANUP] Stale executions (>{hours_threshold}h old): {count}")
+
+        if count > 0:
+            # Log details of what we're cleaning up
+            sample_tasks = list(stale_tasks.values('id', 'agent__name', 'created_at')[:5])
+            for task in sample_tasks:
+                age_hours = (now - task['created_at']).total_seconds() / 3600
+                logger.info(f"🧹 [CLEANUP] Marking stale: {task['agent__name']} - {age_hours:.1f}h old - ID: {task['id']}")
+
+            # Perform the cleanup
+            updated = stale_tasks.update(
+                status='failed',
+                error_message=f'Task timed out after {hours_threshold} hours - marked as failed by cleanup',
+                completed_at=now
+            )
+            logger.info(f"🧹 [CLEANUP] SUCCESS - Cleaned up {updated} stale agent executions")
+        else:
+            logger.info(f"🧹 [CLEANUP] No stale executions found - nothing to clean")
+
+        logger.info(f"🧹 [CLEANUP] Task {task_id} COMPLETED - cleaned: {count}")
+        return {'cleaned': count, 'total_in_progress': all_in_progress, 'task_id': task_id}
+
+    except Exception as e:
+        logger.error(f"🧹 [CLEANUP] Task {task_id} FAILED with error: {e}", exc_info=True)
+        raise
 
 
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================

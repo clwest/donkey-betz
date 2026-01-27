@@ -2203,6 +2203,111 @@ def self_healing_progress_view(request):
         }, status=500)
 
 
+@require_GET
+def celery_debug_view(request):
+    """
+    GET /api/platform/celery-debug/
+
+    Session 842: Debug endpoint to check Celery status and recent task activity.
+    """
+    from django.conf import settings
+    from core.models_unified_system import AgentExecution
+    from datetime import timedelta
+
+    try:
+        # Check Redis connection
+        redis_ok = False
+        redis_error = None
+        try:
+            from django.core.cache import cache
+            cache.set('celery_debug_test', 'ok', 10)
+            redis_ok = cache.get('celery_debug_test') == 'ok'
+        except Exception as e:
+            redis_error = str(e)
+
+        # Get execution status breakdown
+        now = timezone.now()
+        one_hour_ago = now - timedelta(hours=1)
+        two_hours_ago = now - timedelta(hours=2)
+
+        total_in_progress = AgentExecution.objects.filter(status='in_progress').count()
+        stale_2h = AgentExecution.objects.filter(
+            status='in_progress',
+            created_at__lt=two_hours_ago
+        ).count()
+
+        # Recent completions (evidence worker is working)
+        recent_completions = AgentExecution.objects.filter(
+            status='completed',
+            completed_at__gte=one_hour_ago
+        ).count()
+
+        recent_failures = AgentExecution.objects.filter(
+            status='failed',
+            completed_at__gte=one_hour_ago
+        ).count()
+
+        # Get oldest in_progress task
+        oldest_in_progress = AgentExecution.objects.filter(
+            status='in_progress'
+        ).order_by('created_at').first()
+
+        oldest_age_hours = None
+        if oldest_in_progress:
+            oldest_age_hours = (now - oldest_in_progress.created_at).total_seconds() / 3600
+
+        # Check Celery Beat schedule
+        beat_schedule = {}
+        try:
+            schedule = getattr(settings, 'CELERY_BEAT_SCHEDULE', {})
+            for name, config in schedule.items():
+                if 'cleanup' in name.lower() or 'stale' in name.lower():
+                    beat_schedule[name] = {
+                        'task': config.get('task'),
+                        'schedule_seconds': config.get('schedule'),
+                    }
+        except Exception as e:
+            beat_schedule = {'error': str(e)}
+
+        return JsonResponse({
+            'success': True,
+            'timestamp': now.isoformat(),
+            'redis': {
+                'connected': redis_ok,
+                'error': redis_error,
+            },
+            'executions': {
+                'total_in_progress': total_in_progress,
+                'stale_over_2h': stale_2h,
+                'completed_last_hour': recent_completions,
+                'failed_last_hour': recent_failures,
+                'oldest_in_progress_hours': round(oldest_age_hours, 1) if oldest_age_hours else None,
+            },
+            'celery_beat': {
+                'cleanup_schedules': beat_schedule,
+            },
+            'diagnosis': {
+                'worker_active': recent_completions > 0 or recent_failures > 0,
+                'cleanup_needed': stale_2h > 0,
+                'possible_issues': [
+                    issue for issue in [
+                        'Redis not connected' if not redis_ok else None,
+                        f'{stale_2h} tasks stuck >2h (cleanup not running?)' if stale_2h > 0 else None,
+                        'No task completions in last hour' if recent_completions == 0 and recent_failures == 0 else None,
+                    ] if issue
+                ]
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Celery debug failed: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@csrf_exempt
 @require_http_methods(["POST"])
 def cleanup_stale_executions_view(request):
     """
