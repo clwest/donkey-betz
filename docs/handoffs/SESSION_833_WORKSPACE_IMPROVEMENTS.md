@@ -2,7 +2,7 @@
 
 **Previous Session:** 832 (Recent Activity Enhancement)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow | Operations Viewer | 50 Agents Delegate Fix | Blog Markdown Viewer
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | All Workspace Tabs Enhanced | Blog Approval Workflow | Operations Viewer | Run Remediation Fix | 50 Agents Delegate Fix | Blog Markdown Viewer | 12 PRs
 
 ---
 
@@ -248,6 +248,118 @@ Enhanced the Operations content viewer to render markdown files with proper form
 
 **Location:** `OperationContentModal` in `frontend/src/pages/WorkspacePageNew.tsx`
 
+### 13. Run Remediation Chain Fix (PR #253)
+
+Fixed "Run Remediation" requiring two clicks - first to assign, then to execute.
+
+**Problem:**
+- Clicking "Run Remediation" showed toast "assigning 20/240 tasks"
+- But "In Progress" count wasn't updating - tasks stayed in "assigned" status
+- Users had to click again to actually execute the remediation
+
+**Root Cause:**
+- Assignment and execution were separate operations in `action_run_remediation_view`
+- When no tasks were assigned, it would assign findings but not execute them
+- User had to click again when tasks were in "assigned" status
+
+**Solution:**
+- Created new `assign_and_execute_remediation` Celery task in `core/tasks.py`
+- Task chains both operations: assign open findings → execute remediation
+- Updated `action_run_remediation_view` to call combined task when no tasks assigned
+
+**Code Changes:**
+
+```python
+# core/tasks.py - New combined task
+@shared_task
+def assign_and_execute_remediation(limit: int = 20, write_files: bool = True):
+    """Session 833: Combined task that assigns findings then executes remediation."""
+    # Phase 1: Assign open findings to agents
+    orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=limit)
+    assignment_result = orchestrator.assign_open_findings(...)
+
+    # Phase 2: Find agent with most assigned tasks and execute
+    top_agent = AuditRemediationTask.objects.filter(status='assigned')...
+    if top_agent:
+        execution_result = run_agent_remediation_batch(...)
+    return results
+```
+
+### 14. Operations Markdown Rendered/Diff Toggle (PR #254)
+
+Added toggle to switch between rendered markdown and raw diff view.
+
+**Problem:**
+- Markdown files in Operations viewer showed raw diff format with `+`, `-`, `@@` prefixes
+- Content was unreadable with diff markup
+
+**Solution:**
+- Added `viewMode` state: `'rendered'` or `'diff'`
+- Added `extractContentFromDiff()` helper to strip diff prefixes from content
+- Added toggle buttons (Rendered | Diff) for markdown files
+
+**Code Changes:**
+
+```typescript
+const [viewMode, setViewMode] = useState<'rendered' | 'diff'>('rendered')
+
+const extractContentFromDiff = (diff: string): string => {
+  const lines = diff.split('\n')
+  const contentLines: string[] = []
+  for (const line of lines) {
+    if (line.startsWith('---') || line.startsWith('+++') || line.startsWith('@@')) continue
+    if (line.startsWith('+')) contentLines.push(line.slice(1))
+    else if (!line.startsWith('-')) contentLines.push(line)
+  }
+  return contentLines.join('\n')
+}
+```
+
+**Features:**
+- Default view is "Rendered" - shows clean markdown
+- "Diff" view shows raw diff with syntax highlighting
+- Toggle only appears for markdown files
+
+### 15. Operation Card Display Improvements (PR #255)
+
+Improved operation card display with readable titles instead of raw file paths.
+
+**Problem:**
+- Operation cards showed full paths like `campaigns/orchestration/campaign_plan_quarterly_content_campaign_2026-01-26_18-24.md`
+- Cards were visually cluttered and hard to scan
+
+**Solution:**
+- Added `getDisplayInfo()` function to `OperationsPanel.tsx`
+- Extracts human-readable title from snake_case filenames
+- Shows directory as subtitle
+- Adds file type badge (MD, JSON, PY)
+
+**Display Patterns:**
+
+| Before | After |
+|--------|-------|
+| `campaign_plan_quarterly_content_campaign_2026-01-26_18-24.md` | **Campaign Plan: Quarterly Content Campaign** [MD] |
+| `seo_audit_website_performance.md` | **SEO Audit: Website Performance** [MD] |
+| `market_research_ai_trends.md` | **Market Research: AI Trends** [MD] |
+| `config_settings.json` | **Config Settings** [JSON] |
+
+**Code Changes:**
+
+```typescript
+const getDisplayInfo = () => {
+  let title = filename
+  if (isMarkdown) {
+    let name = filename.replace(/\.md$/, '').replace(/_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/, '')
+    const words = name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    if (words[0] === 'Campaign' && words[1] === 'Plan') {
+      title = `Campaign Plan: ${words.slice(2).join(' ')}`
+    }
+    // ... more patterns
+  }
+  return { title, subtitle: directory, isMarkdown }
+}
+```
+
 ---
 
 ## Files Modified
@@ -266,6 +378,8 @@ Enhanced the Operations content viewer to render markdown files with proper form
 | `core/views_research_demo.py` | Added approve/publish endpoints, status filtering |
 | `core/urls.py` | Added routes for approve/publish endpoints |
 | `core/services/auto_kpi_tracking.py` | 16 new KPI mappings, `_check_target_met()`, auto-completion logic |
+| `core/tasks.py` | Added `assign_and_execute_remediation` combined Celery task |
+| `core/views_platform_command.py` | Updated `action_run_remediation_view` to chain assignment with execution |
 
 ### Agents (50 files fixed)
 | Directory | Files |
@@ -289,7 +403,8 @@ Enhanced the Operations content viewer to render markdown files with proper form
 | `frontend/src/lib/api.ts` | Added `platformApi.docContent()` and `blogsApi` |
 | `frontend/src/pages/BlogsPage.tsx` | Complete rewrite with approval workflow UI |
 | `frontend/src/pages/BlogViewerPage.tsx` | Status badge, approve/publish buttons, markdown rendering for full_text |
-| `frontend/src/pages/WorkspacePageNew.tsx` | Added OperationContentModal for viewing operation details |
+| `frontend/src/pages/WorkspacePageNew.tsx` | Added OperationContentModal for viewing operation details, Rendered/Diff toggle, extractContentFromDiff helper |
+| `frontend/src/components/workspace/OperationsPanel.tsx` | Added getDisplayInfo() for readable operation card titles |
 | `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | Document viewer modal with markdown rendering |
 | `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Dynamic API calls for HiveMind |
 | `frontend/src/pages/workspace/tabs/InfrastructureTab.tsx` | Dynamic API calls for LLM Routing |
@@ -411,7 +526,11 @@ To verify changes:
 | #249 | Experiment auto-completion when KPI target is met |
 | #250 | Handoff documentation update |
 | #251 | Render markdown files in Operations viewer |
+| #252 | Handoff documentation update (experiment auto-completion) |
+| #253 | Run Remediation chain fix - assign and execute in one click |
+| #254 | Operations markdown Rendered/Diff toggle |
+| #255 | Operation card display improvements with readable titles |
 
 ---
 
-**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations markdown viewer + 50 agents delegate fix + Syntax fixes + Experiment auto-completion**
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations markdown viewer + Run Remediation fix + 50 agents delegate fix + Syntax fixes + Experiment auto-completion**
