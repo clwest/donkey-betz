@@ -87,6 +87,7 @@ interface OperationCardProps {
   onReview?: (approved: boolean) => void
   onViewContent?: () => void
   isReviewing?: boolean
+  compact?: boolean  // Session 834: Compact mode for nested display in groups
 }
 
 export function OperationCard({
@@ -95,6 +96,7 @@ export function OperationCard({
   onReview,
   onViewContent,
   isReviewing,
+  compact = false,
 }: OperationCardProps) {
   const [showDiff, setShowDiff] = useState(false)
 
@@ -126,10 +128,13 @@ export function OperationCard({
   return (
     <div
       className={cn(
-        'border rounded-lg p-3 space-y-2',
+        'border rounded-lg space-y-2',
+        compact ? 'p-2' : 'p-3',
         operation.rolled_back
           ? 'border-gray-600 bg-dark-bg/50 opacity-70'
-          : 'border-dark-border'
+          : compact
+            ? 'border-dark-border/50 bg-dark-card/50'
+            : 'border-dark-border'
       )}
     >
       {/* Header */}
