@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { conversationsApi, type TimeRange } from '@/lib/api'
+import { ConversationDetailModal } from './ConversationDetailModal'
 
 interface Conversation {
   id: string
@@ -55,6 +56,8 @@ export function ConversationsPanel() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<TimeRange>('7d')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  // Session 835: View conversation in modal instead of redirecting
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['conversations-panel', timeRange],
@@ -222,6 +225,7 @@ export function ConversationsPanel() {
               conversation={conv}
               isExpanded={expandedId === conv.id}
               onToggle={() => setExpandedId(expandedId === conv.id ? null : conv.id)}
+              onViewFull={(id) => setSelectedConversationId(id)}
             />
           ))}
           {conversations.length > 20 && (
@@ -231,6 +235,14 @@ export function ConversationsPanel() {
           )}
         </div>
       )}
+
+      {/* Session 835: Conversation Detail Modal */}
+      {selectedConversationId && (
+        <ConversationDetailModal
+          conversationId={selectedConversationId}
+          onClose={() => setSelectedConversationId(null)}
+        />
+      )}
     </div>
   )
 }
@@ -239,9 +251,11 @@ interface ConversationCardProps {
   conversation: Conversation
   isExpanded: boolean
   onToggle: () => void
+  // Session 835: Callback to view full conversation in modal
+  onViewFull: (id: string) => void
 }
 
-function ConversationCard({ conversation, isExpanded, onToggle }: ConversationCardProps) {
+function ConversationCard({ conversation, isExpanded, onToggle, onViewFull }: ConversationCardProps) {
   const participants = conversation.participants?.map(p => p.name).join(' + ') || 'Unknown participants'
 
   const getStatusBadge = () => {
@@ -365,13 +379,16 @@ function ConversationCard({ conversation, isExpanded, onToggle }: ConversationCa
             </div>
           )}
 
-          <a
-            href={`/conversation-contract?id=${conversation.id}`}
-            onClick={(e) => e.stopPropagation()}
+          {/* Session 835: Open modal instead of redirecting */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewFull(conversation.id)
+            }}
             className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
           >
             View Full Thread <ChevronRight size={12} />
-          </a>
+          </button>
         </div>
       )}
     </div>
