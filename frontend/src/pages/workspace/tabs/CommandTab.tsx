@@ -266,17 +266,25 @@ interface ActivityCardProps {
   onToggle: () => void
 }
 
+// Session 839: Helper to check if activity is in running state
+// Backend uses 'running', some legacy code uses 'in_progress'
+const isRunningStatus = (status: string) => status === 'running' || status === 'in_progress'
+
 function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
   // Session 832: Status-aware icon and styling
+  // Session 839: Handle both 'running' (backend) and 'in_progress' (legacy)
   const getStatusIcon = () => {
     switch (activity.status) {
       case 'in_progress':
+      case 'running':
         return <Loader2 size={14} className="text-accent-amber animate-spin" />
       case 'pending':
+      case 'initializing':
         return <PauseCircle size={14} className="text-gray-400" />
       case 'completed':
         return <CheckCircle size={14} className="text-accent-green" />
       case 'failed':
+      case 'cancelled':
         return <XCircle size={14} className="text-accent-red" />
       default:
         return <PlayCircle size={14} className="text-gray-400" />
@@ -286,12 +294,14 @@ function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
   const getStatusBadge = () => {
     switch (activity.status) {
       case 'in_progress':
+      case 'running':
         return (
           <span className="text-xs px-1.5 py-0.5 bg-accent-amber/20 text-accent-amber rounded animate-pulse">
             Running
           </span>
         )
       case 'pending':
+      case 'initializing':
         return (
           <span className="text-xs px-1.5 py-0.5 bg-gray-600/50 text-gray-400 rounded">
             Pending
@@ -322,7 +332,8 @@ function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
     <div
       className={cn(
         'rounded-lg transition-all',
-        activity.status === 'in_progress'
+        // Session 839: Handle both 'running' (backend) and 'in_progress' (legacy)
+        isRunningStatus(activity.status)
           ? 'bg-accent-amber/10 border border-accent-amber/30'
           : isExpanded
           ? 'bg-gray-800'
@@ -353,8 +364,9 @@ function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
           {activity.execution_time_ms && (
             <span className="text-xs text-gray-500">{activity.execution_time_ms}ms</span>
           )}
-          {/* Session 832: Show time since start for in_progress, or completion time */}
-          {activity.status === 'in_progress' && activity.created_at ? (
+          {/* Session 832: Show time since start for running, or completion time */}
+          {/* Session 839: Handle both 'running' and 'in_progress' */}
+          {isRunningStatus(activity.status) && activity.created_at ? (
             <span className="text-xs text-accent-amber">
               Started {formatTimeAgo(activity.created_at)}
             </span>
@@ -600,7 +612,8 @@ function ActivityFeedSection({
   }
 
   // Count in-progress executions for badge
-  const inProgressCount = recentActivity.filter((a) => a.status === 'in_progress').length
+  // Session 839: Handle both 'running' (backend) and 'in_progress' (legacy)
+  const inProgressCount = recentActivity.filter((a) => isRunningStatus(a.status)).length
 
   return (
     <div className="card">

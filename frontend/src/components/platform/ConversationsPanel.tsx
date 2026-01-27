@@ -71,19 +71,30 @@ export function ConversationsPanel() {
   const allConversations: Conversation[] = data?.results || data?.conversations || []
 
   // Filter by status
+  // Session 839: Handle backend status values ('concluded'/'active') AND frontend filter values
   const conversations = useMemo(() => {
     if (statusFilter === 'all') return allConversations
-    return allConversations.filter(c => c.status === statusFilter)
+    return allConversations.filter(c => {
+      // Map frontend filter values to backend status values
+      if (statusFilter === 'completed') {
+        return c.status === 'completed' || c.status === 'concluded'
+      }
+      if (statusFilter === 'in_progress') {
+        return c.status === 'in_progress' || c.status === 'active'
+      }
+      return c.status === statusFilter
+    })
   }, [allConversations, statusFilter])
 
   // Calculate stats
+  // Session 839: Handle backend status values ('concluded'/'active')
   const stats = useMemo(() => {
-    const completed = allConversations.filter(c => c.status === 'completed')
+    const completed = allConversations.filter(c => c.status === 'completed' || c.status === 'concluded')
     const avgQuality = completed.length > 0
       ? Math.round(completed.reduce((sum, c) => sum + (c.quality_score || 0), 0) / completed.length)
       : 0
     const totalMessages = allConversations.reduce((sum, c) => sum + (c.message_count || 0), 0)
-    const inProgress = allConversations.filter(c => c.status === 'in_progress').length
+    const inProgress = allConversations.filter(c => c.status === 'in_progress' || c.status === 'active').length
 
     return {
       total: allConversations.length,
@@ -258,11 +269,14 @@ interface ConversationCardProps {
 function ConversationCard({ conversation, isExpanded, onToggle, onViewFull }: ConversationCardProps) {
   const participants = conversation.participants?.map(p => p.name).join(' + ') || 'Unknown participants'
 
+  // Session 839: Handle backend status values ('concluded'/'active')
   const getStatusBadge = () => {
     switch (conversation.status) {
       case 'completed':
+      case 'concluded':
         return <span className="text-xs px-1.5 py-0.5 bg-accent-green/20 text-accent-green rounded">Completed</span>
       case 'in_progress':
+      case 'active':
         return <span className="text-xs px-1.5 py-0.5 bg-accent-amber/20 text-accent-amber rounded animate-pulse">In Progress</span>
       case 'failed':
         return <span className="text-xs px-1.5 py-0.5 bg-accent-red/20 text-accent-red rounded">Failed</span>
