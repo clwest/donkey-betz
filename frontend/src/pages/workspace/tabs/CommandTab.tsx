@@ -45,6 +45,7 @@ import {
   AdvisorsPanel,
   ConversationDetailModal,
   DreamDetailModal,
+  DecisionDetailModal,
 } from '@/components/platform'
 import type { WorkspaceTab } from '../types'
 
@@ -62,8 +63,10 @@ export function CommandTab({
   const queryClient = useQueryClient()
 
   // Session 834: Modal state for viewing conversations and dreams inline
+  // Session 843: Added decision modal state
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [selectedDreamId, setSelectedDreamId] = useState<string | null>(null)
+  const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
 
   // Queries
   const {
@@ -203,6 +206,7 @@ export function CommandTab({
         toggleActivityExpanded={toggleActivityExpanded}
         onViewConversation={(id) => setSelectedConversationId(id)}
         onViewDream={(id) => setSelectedDreamId(id)}
+        onViewDecision={(id) => setSelectedDecisionId(id)}
       />
 
       {/* Pending Decisions Preview */}
@@ -253,6 +257,13 @@ export function CommandTab({
         <DreamDetailModal
           dreamId={selectedDreamId}
           onClose={() => setSelectedDreamId(null)}
+        />
+      )}
+      {/* Session 843: Decision detail modal for inline viewing */}
+      {selectedDecisionId && (
+        <DecisionDetailModal
+          decisionId={selectedDecisionId}
+          onClose={() => setSelectedDecisionId(null)}
         />
       )}
     </div>
@@ -590,8 +601,10 @@ interface ActivityFeedSectionProps {
   expandedActivityIds: Set<string>
   toggleActivityExpanded: (id: string) => void
   // Session 834: Callbacks for viewing details in modals
+  // Session 843: Added onViewDecision for inline decision viewing
   onViewConversation?: (id: string) => void
   onViewDream?: (id: string) => void
+  onViewDecision?: (id: string) => void
 }
 
 function ActivityFeedSection({
@@ -601,6 +614,7 @@ function ActivityFeedSection({
   toggleActivityExpanded,
   onViewConversation,
   onViewDream,
+  onViewDecision,
 }: ActivityFeedSectionProps) {
   const [activeTab, setActiveTab] = useState<'executions' | 'system'>('executions')
 
@@ -714,6 +728,7 @@ function ActivityFeedSection({
                 item={item}
                 onViewConversation={onViewConversation}
                 onViewDream={onViewDream}
+                onViewDecision={onViewDecision}
               />
             ))
           )}
@@ -743,19 +758,24 @@ function getSystemActivityIcon(type: string) {
 interface SystemActivityCardProps {
   item: any
   // Session 834: Callbacks for viewing details in modals
+  // Session 843: Added onViewDecision for inline decision viewing
   onViewConversation?: (id: string) => void
   onViewDream?: (id: string) => void
+  onViewDecision?: (id: string) => void
 }
 
-function SystemActivityCard({ item, onViewConversation, onViewDream }: SystemActivityCardProps) {
+function SystemActivityCard({ item, onViewConversation, onViewDream, onViewDecision }: SystemActivityCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   // Session 842: Handle card click - open modal for dreams/conversations, expand for others
+  // Session 843: Added decision modal support
   const handleCardClick = () => {
     if (item.type === 'dream' && onViewDream) {
       onViewDream(item.id)
     } else if (item.type === 'conversation' && onViewConversation) {
       onViewConversation(item.id)
+    } else if (item.type === 'decision' && onViewDecision) {
+      onViewDecision(item.id)
     } else {
       setIsExpanded(!isExpanded)
     }
@@ -932,15 +952,17 @@ function SystemActivityCard({ item, onViewConversation, onViewDream }: SystemAct
               View Full Conversation <ChevronRight size={12} />
             </button>
           )}
-          {/* Session 842: Added stopPropagation to prevent card click handler from firing */}
-          {item.type === 'decision' && (
-            <a
-              href="/human?tab=attention"
-              onClick={(e) => e.stopPropagation()}
+          {/* Session 843: Decision now opens inline modal instead of redirecting */}
+          {item.type === 'decision' && onViewDecision && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewDecision(item.id)
+              }}
               className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
             >
-              Go to Decisions Page <ChevronRight size={12} />
-            </a>
+              View Decision Details <ChevronRight size={12} />
+            </button>
           )}
           {item.type === 'pilot' && (
             <a
