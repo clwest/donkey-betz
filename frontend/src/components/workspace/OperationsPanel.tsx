@@ -415,6 +415,51 @@ function EnhancedOperationRow({ operation, onRollback, onViewContent, isRollingB
   const isCommandOp = operation.operation_type === 'command_exec'
   const isFileOp = ['file_create', 'file_modify', 'file_delete', 'file_rename'].includes(operation.operation_type)
 
+  // Session 833: Extract readable display name from file path
+  const getDisplayInfo = () => {
+    if (!operation.file_path) {
+      return {
+        title: operation.command?.slice(0, 50) || opType.label,
+        subtitle: null,
+        isMarkdown: false,
+      }
+    }
+
+    const path = operation.file_path
+    const parts = path.split('/')
+    const filename = parts.pop() || path
+    const directory = parts.join('/') || ''
+    const isMarkdown = filename.endsWith('.md')
+
+    // Try to make a human-readable title from the filename
+    // e.g., "campaign_plan_quarterly_content_campaign_2026-01-26_18-24.md"
+    // becomes "Campaign Plan: Quarterly Content Campaign"
+    let title = filename
+    if (isMarkdown) {
+      // Remove extension and date suffix
+      let name = filename.replace(/\.md$/, '').replace(/_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/, '')
+      // Convert snake_case to Title Case
+      const words = name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      // Group common patterns
+      if (words[0] === 'Campaign' && words[1] === 'Plan') {
+        title = `Campaign Plan: ${words.slice(2).join(' ')}`
+      } else if (words[0] === 'Research' || words[0] === 'Analysis') {
+        title = `${words[0]}: ${words.slice(1).join(' ')}`
+      } else {
+        title = words.join(' ')
+      }
+    }
+
+    return {
+      title,
+      subtitle: directory ? `${directory}/` : null,
+      filename,
+      isMarkdown,
+    }
+  }
+
+  const displayInfo = getDisplayInfo()
+
   // Calculate lines changed for file operations
   const linesChanged = useMemo(() => {
     if (!isFileOp) return null
@@ -465,12 +510,15 @@ function EnhancedOperationRow({ operation, onRollback, onViewContent, isRollingB
             {/* Type Icon */}
             <Icon className={cn("w-4 h-4 flex-shrink-0", opType.color)} />
 
-            {/* Main Info */}
+            {/* Main Info - Session 833: Enhanced display */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-sm truncate">
-                  {operation.file_path || operation.command?.slice(0, 50) || opType.label}
+                <span className="font-medium text-sm text-white">
+                  {displayInfo.title}
                 </span>
+                {displayInfo.isMarkdown && (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">MD</span>
+                )}
                 {operation.rolled_back && (
                   <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 flex items-center gap-1">
                     <RotateCcw className="w-3 h-3" />
@@ -485,17 +533,17 @@ function EnhancedOperationRow({ operation, onRollback, onViewContent, isRollingB
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
-                <EntityLink type="agent" id={operation.agent_name} label={operation.agent_name} iconSize={10} className="text-xs" />
-                <span>•</span>
-                <Clock className="w-3 h-3" />
-                <span>{new Date(operation.created_at).toLocaleString()}</span>
-                {operation.execution_time_ms !== undefined && (
+              {/* Session 833: Show directory path and agent on separate line */}
+              <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                {displayInfo.subtitle && (
                   <>
+                    <span className="truncate max-w-[200px]" title={operation.file_path}>{displayInfo.subtitle}</span>
                     <span>•</span>
-                    <span>{operation.execution_time_ms}ms</span>
                   </>
                 )}
+                <EntityLink type="agent" id={operation.agent_name} label={operation.agent_name} iconSize={10} className="text-xs" />
+                <span>•</span>
+                <span>{new Date(operation.created_at).toLocaleTimeString()}</span>
               </div>
             </div>
           </div>
