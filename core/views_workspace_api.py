@@ -166,6 +166,7 @@ class WorkspaceOperationListSerializer(serializers.ModelSerializer):
             'workspace',
             'workspace_name',
             'agent_name',
+            'agent_task',  # Session 834: Added for grouping related operations
             'operation_type',
             'file_path',
             'success',
