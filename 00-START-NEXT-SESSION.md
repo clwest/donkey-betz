@@ -1,45 +1,39 @@
-# Session 839 - Start Here
+# Session 840 - Start Here
 
-**Previous Session:** 838 (Complete Agent Audit)
+**Previous Session:** 839 (UI Status Mismatch Fix)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **ALL AGENTS AUDITED: REAL DATA**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **UI DATA FLOW FIXED**
 
 ---
 
-## What Was Accomplished in Sessions 837-838
+## What Was Accomplished in Session 839
 
-### Major Achievement: Complete 74-Agent Placeholder Data Audit
+### UI Status Field Mismatch Fix (PR #298)
 
-Audited ALL 74 agents for placeholder/hardcoded data issues. Fixed 5 agents, verified 69+ as clean.
+Fixed critical frontend-backend status mismatch that was preventing data from displaying in UI panels.
 
-**PRs Merged:**
-- #292: SignalScannerAgent - real market data
-- #294: MarketMovementMonitorAgent, MarketAnomalyDetectorAgent fixes
-- #296: InstitutionalWatcherAgent, BookmakerAgent, scan_after_hours fixes
+**Problem Discovered:**
+- Frontend expected status values: `completed`, `in_progress`
+- Backend returned different values:
+  - Conversations: `concluded` (legacy AgentConversation), `active`
+  - Executions: `running` (agents_registry model), `initializing`
 
-**Agents Fixed:**
-| Agent | PR | Issue Fixed |
-|-------|-----|-------------|
-| SignalScannerAgent | #292 | Hardcoded price levels, RSI, MACD |
-| MarketMovementMonitorAgent | #294, #296 | track_momentum, alert_breakout, scan_after_hours |
-| MarketAnomalyDetectorAgent | #294 | analyze_options_flow |
-| InstitutionalWatcherAgent | #296 | Discrete sentiment scores → continuous 0-100 |
-| BookmakerAgent | #296 | Hardcoded confidence → data-driven calculation |
+**Files Fixed:**
+| File | Change |
+|------|--------|
+| `ConversationsPanel.tsx` | Handle both `completed`/`concluded` and `in_progress`/`active` |
+| `CommandTab.tsx` | Handle both `running`/`in_progress` and `initializing`/`pending` |
 
-**Agents Verified Clean (69+):**
-| Category | Count | Notes |
-|----------|-------|-------|
-| Blockchain | 5 | Use LLM analysis |
-| Business Research | 6+ | Real spider data |
-| Content/Creation | 8+ | Real APIs |
-| Strategy | 6 | Real aggregation |
-| Executive/Coordinators | 6+ | Orchestrators only |
+**Key Changes:**
+```typescript
+// Session 839: Handle both status conventions
+const isRunningStatus = (status: string) =>
+  status === 'running' || status === 'in_progress'
 
-**Data Quality Tracking:**
-All tool methods now return `data_quality` field:
-- `real`: Data from live market feed
-- `unavailable`: No data provider available
-- `error`: Data fetch failed
+// Stats now count both status values
+const completed = allConversations.filter(c =>
+  c.status === 'completed' || c.status === 'concluded')
+```
 
 ---
 
@@ -53,11 +47,13 @@ All tool methods now return `data_quality` field:
 ✅ Beat Scheduler - 228 scheduled tasks
 ```
 
+### UI Data Flow - Fixed
+- ConversationsPanel: Now shows conversations with correct status filtering
+- CommandTab: Activity feed correctly highlights running tasks
+- Status badges display correctly for all backend status values
+
 ### Finance Agents - All Verified
-All finance agents now return real data or explicit `insufficient_data` status:
-- No more hardcoded RSI/MACD/key levels
-- No more fake call_put_ratio
-- Options flow correctly returns "requires data provider"
+All finance agents return real data or explicit `insufficient_data` status.
 
 ---
 
@@ -73,26 +69,21 @@ open http://localhost:8000/ai-studio/
 # 3. Verify Celery Beat is running
 pgrep -fl "celery.*beat"
 
-# 4. Test finance agents with real data
-python manage.py shell -c "
-from core.agents.stocks.market_movement_monitor_agent import MarketMovementMonitorAgent
-agent = MarketMovementMonitorAgent()
-result = agent._execute_tool_call('track_momentum', {'ticker': 'AAPL'})
-print(f'Data quality: {result.get(\"data_quality\")}')
-print(f'Trend: {result.get(\"trend\")}')
-print(f'Change %: {result.get(\"change_percent\")}')
-"
+# 4. Test conversations panel shows data
+# Navigate to Workspace > Command tab and verify:
+# - Conversations display with correct status badges
+# - Activity feed shows running tasks (if any)
 ```
 
 ---
 
 ## Potential Next Steps
 
-1. **Add source anchoring** - EDGAR links for SEC filings, data timestamps
-2. **Implement ML confidence thresholds** - 0.0 confidence should downgrade signal
-3. **Consider options data spider** - For real options flow analysis (CBOE, Unusual Whales)
-4. **Monitor experiment system** - Verify stability after 836 fixes
-5. **Audit other agent categories** - Similar placeholder audit for content/blockchain agents
+1. **Verify other UI panels** - Check if similar status mismatches exist elsewhere
+2. **Add source anchoring** - EDGAR links for SEC filings, data timestamps
+3. **Implement ML confidence thresholds** - 0.0 confidence should downgrade signal
+4. **Consider options data spider** - For real options flow analysis (CBOE, Unusual Whales)
+5. **Monitor experiment system** - Verify stability after 836 fixes
 
 ---
 
@@ -109,6 +100,7 @@ print(f'Change %: {result.get(\"change_percent\")}')
 
 | Session | Focus |
 |---------|-------|
+| **839** | UI Status Mismatch Fix - ConversationsPanel, CommandTab |
 | **838** | Finance Agent Audit Complete - MarketMovementMonitor, MarketAnomalyDetector |
 | **837** | SignalScannerAgent placeholder fix - now uses real market data |
 | **836** | Experiment System Diagnosis + Celery Beat fix + 5 Production API Fixes |
@@ -124,4 +116,4 @@ print(f'Change %: {result.get(\"change_percent\")}')
 
 ---
 
-**Finance Agent Audit COMPLETE - All agents verified to use real data or return insufficient_data status**
+**UI Data Flow FIXED - Frontend now correctly handles all backend status values**
