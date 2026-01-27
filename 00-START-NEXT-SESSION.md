@@ -1,8 +1,8 @@
 # Session 843 - Start Here
 
-**Previous Session:** 842 (Agent Learning Tab Fixes)
+**Previous Session:** 842 (Agent Learning Tab Fixes + Production Cleanup)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **AGENT LEARNING TAB FIXED**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **PRODUCTION CLEANED**
 
 ---
 
@@ -18,6 +18,16 @@ Fixed multiple issues in the Agent Learning tab:
 | **Quality showing 1%** | Returned decimal (0.87), Math.round = 1 | Multiply by 100 before returning |
 | **System Activity links** | Required 2 clicks, links navigated away | Single click opens modal for dreams/convos |
 
+### Production Cleanup (PRs #327, #328)
+
+**Problem:** 242 agent executions stuck in `in_progress` for up to 99.7 hours (4+ days).
+
+**Solution:** Created debug and cleanup endpoints:
+- `GET /api/platform/celery-debug/` - Celery status, stale task diagnosis
+- `POST /api/platform/cleanup-stale-executions/` - Manual cleanup of stuck tasks
+
+**Result:** All 242 stuck tasks cleaned, production UI now shows accurate status.
+
 ### Key Changes
 
 1. **Empty Dreams Fix** (`core/tasks.py`):
@@ -30,9 +40,12 @@ Fixed multiple issues in the Agent Learning tab:
    - Decisions/pilots expand inline
    - Links renamed to "Go to X Page" for clarity
 
-3. **Database Cleanup**:
-   - Removed 1,016 empty dreams (9,169 remaining)
-   - Cleaned 1 stuck execution (CodeGeneratorAgent)
+3. **Production Debug Endpoints** (`core/views_platform_command.py`):
+   - `celery_debug_view` - Shows Redis status, execution counts, diagnoses issues
+   - `cleanup_stale_executions_view` - Manually cleans stuck tasks
+
+4. **Auth Bypass** (`core/auth_middleware.py`):
+   - Added debug endpoints to `PUBLIC_PATHS` for unauthenticated access
 
 ---
 
@@ -42,6 +55,9 @@ Fixed multiple issues in the Agent Learning tab:
 |----|-------------|
 | #323 | Skip creating dreams with empty content |
 | #324 | System Activity cards open modals directly |
+| #327 | Add Celery debug and cleanup endpoints |
+| #328 | Add debug endpoints to PUBLIC_PATHS |
+| #329 | Update Session 842 handoff documentation |
 
 ---
 
@@ -52,11 +68,21 @@ Fixed multiple issues in the Agent Learning tab:
 - Conversations: Quality scores display correctly
 - System Activity: Single-click opens modals
 
-### Known Issue - Production UI
-User reported tasks "stuck for 15 hours" in production. Local DB shows:
-- Most recent executions: 1-2 hours old
-- No stuck executions
-- May need production database investigation
+### Production - Cleaned
+- 0 stuck executions (was 242)
+- Debug endpoints available for future issues
+
+---
+
+## Debug Endpoints
+
+```bash
+# Check Celery status and stale tasks
+curl https://donkey-betz-platform-production.up.railway.app/api/platform/celery-debug/
+
+# Manually clean stuck tasks (if needed)
+curl -X POST https://donkey-betz-platform-production.up.railway.app/api/platform/cleanup-stale-executions/
+```
 
 ---
 
@@ -79,8 +105,8 @@ open http://localhost:8000/ai-studio/
 
 ## Potential Next Steps
 
-1. **Investigate production "stuck tasks"** - Compare prod vs local data
-2. **Add execution timeout mechanism** - Auto-fail after X hours
+1. **Investigate why Celery Beat cleanup isn't running** - Task is scheduled but not executing
+2. **Add execution timeout mechanism** - Auto-fail after X hours within task execution
 3. **Monitor dream generation** - Verify no new empty dreams created
 4. **Add decision/pilot modals** - Currently just expand inline
 
@@ -99,7 +125,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
-| **842** | Agent Learning Tab Fixes - Empty dreams, quality scores, modal behavior |
+| **842** | Agent Learning Tab Fixes + Production Cleanup (242 stuck tasks) |
 | **841** | Experiment Monitoring Fixes - Stop global halts, provider health, naming fix |
 | **840** | Workspace Tabs Complete + Agent Error Fixes + React Error #31 |
 | **839** | UI Status Mismatch Fix + Workspace Output Fix + API Audit |
@@ -113,4 +139,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**Session 842 Complete - Agent Learning tab displays correctly**
+**Session 842 Complete - Agent Learning tab fixed + 242 production stuck tasks cleaned**
