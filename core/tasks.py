@@ -28659,6 +28659,74 @@ def assign_findings_to_agents(limit: int = 50, priority_filter: list = None):
 
 
 @shared_task
+def assign_and_execute_remediation(limit: int = 20, write_files: bool = True):
+    """
+    Session 833: Combined task that assigns findings then executes remediation.
+
+    This solves the UX issue where users had to click "Run Remediation" twice:
+    1. First click assigned findings to agents
+    2. Second click executed the assigned tasks
+
+    Now this single task does both in sequence.
+
+    Args:
+        limit: Maximum number of findings to assign/tasks to execute
+        write_files: Whether to write generated files to workspace
+    """
+    from django.db.models import Count
+    from core.models_audit_tracking import AuditRemediationTask
+    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
+
+    logger.info(f"🔄 [ASSIGN-AND-EXECUTE] Starting combined remediation (limit={limit})...")
+
+    results = {
+        'assignment': {},
+        'execution': {},
+    }
+
+    try:
+        # Phase 1: Assign open findings to agents
+        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=limit)
+        assignment_result = orchestrator.assign_open_findings(
+            priority_filter=['P0', 'P1', 'P2'],
+            limit=limit
+        )
+        results['assignment'] = assignment_result
+        logger.info(f"✅ [ASSIGN-AND-EXECUTE] Assigned {assignment_result.get('assigned', 0)} findings")
+
+        # Phase 2: Find agent with most assigned tasks and execute
+        top_agent = AuditRemediationTask.objects.filter(
+            status='assigned'
+        ).values('assigned_agent').annotate(
+            count=Count('id')
+        ).order_by('-count').first()
+
+        if top_agent:
+            agent_name = top_agent['assigned_agent']
+            pending_count = top_agent['count']
+            logger.info(f"🎯 [ASSIGN-AND-EXECUTE] Executing {agent_name} with {pending_count} tasks...")
+
+            # Execute the remediation batch synchronously (we're already in a Celery task)
+            from core.tasks import run_agent_remediation_batch
+            execution_result = run_agent_remediation_batch(
+                agent_name=agent_name,
+                limit=limit,
+                write_files=write_files
+            )
+            results['execution'] = execution_result
+            logger.info(f"✅ [ASSIGN-AND-EXECUTE] Execution complete")
+        else:
+            logger.info("ℹ️ [ASSIGN-AND-EXECUTE] No assigned tasks to execute")
+            results['execution'] = {'skipped': True, 'reason': 'No assigned tasks'}
+
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [ASSIGN-AND-EXECUTE] Failed: {e}")
+        return {'error': str(e), **results}
+
+
+@shared_task
 def run_agent_remediation_batch(agent_name: str = 'CodeGeneratorAgent', limit: int = 20, write_files: bool = True):
     """
     Session 829: Run a batch of remediation tasks for a specific agent.
