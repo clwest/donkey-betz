@@ -218,20 +218,31 @@ After fixing the experiment system, several production 500 errors were discovere
 
 **Fix:** Updated `ConversationDetailModal.tsx` to use correct field names.
 
+### Fix 4: Conversation Stats Computed Dynamically (PR #288)
+
+**Issue:** Conversations Panel showed "0 Completed" and "0% Avg Quality" despite 243 messages.
+
+**Root Cause:** API used stale stored fields that were never updated after conversation creation.
+
+**Fix:** Compute values dynamically at query time:
+- `message_count`: Use actual count from messages array
+- `status`: 'completed' if has ended_at/conclusion/synthesis
+- `quality_score`: Estimate from message count
+
 ---
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `core/views_agent_learning.py` | Fixed synthesis handling, trigger_type field |
+| `core/views_agent_learning.py` | Fixed synthesis, trigger_type, dynamic stats computation |
 | `frontend/src/components/platform/ConversationDetailModal.tsx` | Fixed field names to match API |
 
 ---
 
 ## Session Stats
 
-- **Duration:** ~2 hours
-- **Root Cause:** Operational (Celery Beat) + API field mismatches
-- **Code Changes:** 3 PRs merged (#284, #285, #286)
-- **Impact:** Unlocked 247 experiments, created 251 learnings, fixed production UI
+- **Duration:** ~3 hours
+- **Root Cause:** Operational (Celery Beat) + API field mismatches + stale stored values
+- **Code Changes:** 4 PRs merged (#284, #285, #286, #288)
+- **Impact:** Unlocked 247 experiments, created 251 learnings, fixed production UI completely
