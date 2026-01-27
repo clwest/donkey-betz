@@ -14,7 +14,7 @@ import {
   BookOpen, Mic, Lightbulb, BarChart3, Signal,
   Image as ImageIcon, Wrench, ChevronDown, ChevronRight, ExternalLink,
   Clock, Users, TrendingUp, AlertCircle, CheckCircle, XCircle,
-  Brain, Sparkles, ListChecks, Newspaper, Radio
+  Brain, Sparkles, ListChecks, Newspaper, Radio, AlertTriangle
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -208,6 +208,64 @@ interface DebateResult {
   arguments?: { side: string; points: string[] }[]
 }
 
+// Session 835: Additional interfaces for comprehensive agent output support
+
+// TrendAnalysisAgent top_trends format
+interface TopTrendItem {
+  topic?: string
+  mentions?: number
+  sources?: string[]
+  source_count?: number
+  score?: number
+  type?: string
+  articles?: Array<{
+    title?: string
+    url?: string
+    source?: string
+    description?: string
+    tags?: string[]
+  }>
+}
+
+// Advisor output format
+interface AdvisorOutput {
+  advice?: string
+  structured_advice?: {
+    key_angles?: string
+    unique_hook?: string
+    must_include_points?: string
+    potential_pitfalls?: string
+    success_metrics?: string
+    [key: string]: string | undefined
+  }
+  persona_name?: string
+  advice_type?: string
+  spider_data_used?: number
+}
+
+// Investment thesis format (Bull/Bear case agents)
+interface InvestmentThesis {
+  thesis?: string
+  key_points?: string[]
+  risks?: string[]
+  opportunities?: string[]
+  confidence?: number
+  timeframe?: string
+  price_target?: number | string
+  recommendation?: string
+}
+
+// Security vulnerability format
+interface VulnerabilityItem {
+  type?: string
+  severity?: 'critical' | 'high' | 'medium' | 'low' | string
+  location?: string
+  description?: string
+  remediation?: string
+  line?: number
+  code?: string
+}
+
 // Session 820: Trend and Discussion interfaces for TopicMiner/TrendAnalysis output
 interface TrendItem {
   topic?: string
@@ -241,16 +299,18 @@ interface SpecialistResult {
   }
 }
 
-// Session 820: Helper to unwrap nested specialist delegation patterns
+// Session 820 + 835: Helper to unwrap nested specialist delegation patterns and extract top_trends
 function unwrapSpecialistData(data: OutputData): {
   trends: TrendItem[]
   discussions: DiscussionItem[]
   delegations: { specialist: string; task: string }[]
+  topTrends: TopTrendItem[]
   unwrappedTask?: string
 } {
   const trends: TrendItem[] = []
   const discussions: DiscussionItem[] = []
   const delegations: { specialist: string; task: string }[] = []
+  const topTrends: TopTrendItem[] = []
   let unwrappedTask: string | undefined
 
   // Check for direct trends/discussions
@@ -261,7 +321,12 @@ function unwrapSpecialistData(data: OutputData): {
     discussions.push(...data.discussions)
   }
 
-  // Check tool_results for specialist delegations
+  // Session 835: Check for direct top_trends (TrendAnalysisAgent format)
+  if (data.top_trends && Array.isArray(data.top_trends)) {
+    topTrends.push(...data.top_trends as TopTrendItem[])
+  }
+
+  // Check tool_results for specialist delegations and top_trends
   if (data.tool_results && Array.isArray(data.tool_results)) {
     for (const tr of data.tool_results) {
       const toolResult = tr as SpecialistResult
@@ -285,6 +350,10 @@ function unwrapSpecialistData(data: OutputData): {
             if (result.discussions && Array.isArray(result.discussions)) {
               discussions.push(...result.discussions)
             }
+            // Session 835: Extract top_trends from nested results
+            if (result.top_trends && Array.isArray(result.top_trends)) {
+              topTrends.push(...result.top_trends as TopTrendItem[])
+            }
           }
         }
         // Get the task from specialist_data
@@ -302,11 +371,15 @@ function unwrapSpecialistData(data: OutputData): {
         if (directResult.discussions && Array.isArray(directResult.discussions)) {
           discussions.push(...directResult.discussions)
         }
+        // Session 835: Extract top_trends from direct tool results
+        if (directResult.top_trends && Array.isArray(directResult.top_trends)) {
+          topTrends.push(...directResult.top_trends as TopTrendItem[])
+        }
       }
     }
   }
 
-  return { trends, discussions, delegations, unwrappedTask }
+  return { trends, discussions, delegations, topTrends, unwrappedTask }
 }
 
 interface SmartOutputRendererProps {
@@ -949,6 +1022,310 @@ function GenericToolCard({ toolName, result }: { toolName: string; result: ToolR
   )
 }
 
+// Session 835: Top Trends with Articles (TrendAnalysisAgent format)
+function TopTrendsRenderer({ trends }: { trends: TopTrendItem[] }) {
+  const [expandedTrend, setExpandedTrend] = useState<number | null>(null)
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-medium text-accent-amber flex items-center gap-2">
+        <TrendingUp className="w-4 h-4" />
+        Top Trends ({trends.length})
+      </h4>
+      <div className="space-y-2">
+        {trends.slice(0, 10).map((trend, i) => (
+          <div key={i} className="bg-dark-card rounded-lg border border-dark-border overflow-hidden">
+            <button
+              onClick={() => setExpandedTrend(expandedTrend === i ? null : i)}
+              className="w-full p-3 flex items-center justify-between hover:bg-dark-lighter transition-colors text-left"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white font-medium">{trend.topic}</span>
+                  {trend.type && (
+                    <span className="px-1.5 py-0.5 text-xs bg-accent-purple/20 text-accent-purple rounded">
+                      {trend.type}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                  {trend.mentions !== undefined && (
+                    <span className="flex items-center gap-1">
+                      <span className="text-accent-amber font-medium">{trend.mentions}</span> mentions
+                    </span>
+                  )}
+                  {trend.sources && trend.sources.length > 0 && (
+                    <span>{trend.sources.join(', ')}</span>
+                  )}
+                  {trend.score !== undefined && (
+                    <span className="text-accent-green">Score: {trend.score.toFixed(0)}</span>
+                  )}
+                </div>
+              </div>
+              {trend.articles && trend.articles.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <span>{trend.articles.length} articles</span>
+                  {expandedTrend === i ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </div>
+              )}
+            </button>
+            {expandedTrend === i && trend.articles && trend.articles.length > 0 && (
+              <div className="border-t border-dark-border bg-dark-bg p-3 space-y-2">
+                {trend.articles.slice(0, 5).map((article, j) => (
+                  <div key={j} className="p-2 bg-dark-card/50 rounded">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-accent-cyan hover:underline line-clamp-1"
+                    >
+                      {article.title}
+                    </a>
+                    {article.description && (
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{article.description}</p>
+                    )}
+                    {article.tags && article.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {article.tags.slice(0, 4).map((tag, k) => (
+                          <span key={k} className="px-1.5 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {trend.articles.length > 5 && (
+                  <p className="text-xs text-gray-500 text-center">+ {trend.articles.length - 5} more articles</p>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Session 835: Advisor Output Renderer
+function AdvisorRenderer({ data }: { data: AdvisorOutput }) {
+  const sectionIcons: Record<string, string> = {
+    key_angles: '🎯',
+    unique_hook: '🪝',
+    must_include_points: '✅',
+    potential_pitfalls: '⚠️',
+    success_metrics: '📊',
+    recommendations: '💡',
+    analysis: '🔍',
+    strategy: '📋',
+  }
+
+  const formatSectionName = (key: string) => {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-accent-purple flex items-center gap-2">
+          <Brain className="w-4 h-4" />
+          {data.persona_name || 'Advisor'} Guidance
+        </h4>
+        {data.advice_type && (
+          <span className="px-2 py-0.5 text-xs bg-accent-purple/20 text-accent-purple rounded">
+            {data.advice_type.replace(/_/g, ' ')}
+          </span>
+        )}
+      </div>
+
+      {/* Structured advice sections */}
+      {data.structured_advice && Object.keys(data.structured_advice).length > 0 ? (
+        <div className="space-y-3">
+          {Object.entries(data.structured_advice).map(([key, value]) => {
+            if (!value) return null
+            return (
+              <div key={key} className="p-3 bg-dark-card rounded-lg border border-dark-border">
+                <h5 className="text-sm font-medium text-white flex items-center gap-2 mb-2">
+                  <span>{sectionIcons[key] || '📌'}</span>
+                  {formatSectionName(key)}
+                </h5>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">{value}</p>
+              </div>
+            )
+          })}
+        </div>
+      ) : data.advice ? (
+        /* Fallback to full advice text */
+        <div className="p-3 bg-dark-card rounded-lg border border-dark-border">
+          <p className="text-sm text-gray-300 whitespace-pre-wrap">{data.advice}</p>
+        </div>
+      ) : null}
+
+      {/* Metadata */}
+      {data.spider_data_used !== undefined && data.spider_data_used > 0 && (
+        <div className="text-xs text-gray-500 flex items-center gap-1">
+          <span>📡</span>
+          <span>Used {data.spider_data_used} live data sources</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Session 835: Investment Thesis Renderer (Bull/Bear Case Agents)
+function InvestmentThesisRenderer({ data }: { data: InvestmentThesis }) {
+  const isBullish = (data.recommendation?.toLowerCase().includes('buy') ||
+    data.thesis?.toLowerCase().includes('bullish') ||
+    (data.confidence && data.confidence > 0.6))
+
+  return (
+    <div className="space-y-3">
+      <h4 className={cn(
+        "text-sm font-medium flex items-center gap-2",
+        isBullish ? "text-accent-green" : "text-accent-red"
+      )}>
+        {isBullish ? <TrendingUp className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+        Investment Thesis
+        {data.confidence !== undefined && (
+          <span className="ml-auto text-xs px-2 py-0.5 bg-dark-card rounded">
+            {(data.confidence * 100).toFixed(0)}% confidence
+          </span>
+        )}
+      </h4>
+
+      {/* Main Thesis */}
+      {data.thesis && (
+        <div className={cn(
+          "p-3 rounded-lg border",
+          isBullish ? "bg-accent-green/10 border-accent-green/30" : "bg-accent-red/10 border-accent-red/30"
+        )}>
+          <p className="text-sm text-white">{data.thesis}</p>
+        </div>
+      )}
+
+      {/* Key Points */}
+      {data.key_points && data.key_points.length > 0 && (
+        <div className="space-y-2">
+          <h5 className="text-xs text-gray-400 uppercase tracking-wide">Key Points</h5>
+          {data.key_points.map((point, i) => (
+            <div key={i} className="flex items-start gap-2 p-2 bg-dark-card/50 rounded">
+              <CheckCircle className="w-4 h-4 text-accent-green flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-300">{point}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Risks */}
+      {data.risks && data.risks.length > 0 && (
+        <div className="space-y-2">
+          <h5 className="text-xs text-gray-400 uppercase tracking-wide">Risks</h5>
+          {data.risks.map((risk, i) => (
+            <div key={i} className="flex items-start gap-2 p-2 bg-accent-red/5 rounded">
+              <AlertCircle className="w-4 h-4 text-accent-red flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-300">{risk}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Opportunities */}
+      {data.opportunities && data.opportunities.length > 0 && (
+        <div className="space-y-2">
+          <h5 className="text-xs text-gray-400 uppercase tracking-wide">Opportunities</h5>
+          {data.opportunities.map((opp, i) => (
+            <div key={i} className="flex items-start gap-2 p-2 bg-accent-green/5 rounded">
+              <Sparkles className="w-4 h-4 text-accent-green flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-300">{opp}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Additional Info */}
+      <div className="flex flex-wrap gap-3 text-xs text-gray-400">
+        {data.timeframe && <span>⏱️ {data.timeframe}</span>}
+        {data.price_target && <span>🎯 Target: ${data.price_target}</span>}
+        {data.recommendation && (
+          <span className={cn(
+            "px-2 py-0.5 rounded",
+            data.recommendation.toLowerCase().includes('buy') ? "bg-accent-green/20 text-accent-green" :
+            data.recommendation.toLowerCase().includes('sell') ? "bg-accent-red/20 text-accent-red" :
+            "bg-gray-700 text-gray-300"
+          )}>
+            {data.recommendation}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Session 835: Vulnerabilities Renderer (Security Agents)
+function VulnerabilitiesRenderer({ vulnerabilities }: { vulnerabilities: VulnerabilityItem[] }) {
+  const severityConfig: Record<string, { color: string; bg: string }> = {
+    critical: { color: 'text-accent-red', bg: 'bg-accent-red/20' },
+    high: { color: 'text-accent-orange', bg: 'bg-accent-orange/20' },
+    medium: { color: 'text-accent-amber', bg: 'bg-accent-amber/20' },
+    low: { color: 'text-gray-400', bg: 'bg-gray-600/20' },
+  }
+
+  const sortedVulns = [...vulnerabilities].sort((a, b) => {
+    const order = { critical: 0, high: 1, medium: 2, low: 3 }
+    const aOrder = order[(a.severity?.toLowerCase() || 'low') as keyof typeof order] ?? 4
+    const bOrder = order[(b.severity?.toLowerCase() || 'low') as keyof typeof order] ?? 4
+    return aOrder - bOrder
+  })
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-medium text-accent-red flex items-center gap-2">
+        <AlertTriangle className="w-4 h-4" />
+        Security Vulnerabilities ({vulnerabilities.length})
+      </h4>
+      <div className="space-y-2">
+        {sortedVulns.map((vuln, i) => {
+          const severity = (vuln.severity?.toLowerCase() || 'low') as keyof typeof severityConfig
+          const config = severityConfig[severity] || severityConfig.low
+          return (
+            <div key={i} className="p-3 bg-dark-card rounded-lg border border-dark-border">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-sm font-medium", config.color)}>
+                      {vuln.type || `Vulnerability ${i + 1}`}
+                    </span>
+                    <span className={cn("px-1.5 py-0.5 text-xs rounded uppercase", config.bg, config.color)}>
+                      {vuln.severity || 'unknown'}
+                    </span>
+                  </div>
+                  {vuln.description && (
+                    <p className="text-sm text-gray-300 mt-1">{vuln.description}</p>
+                  )}
+                  {vuln.location && (
+                    <p className="text-xs text-gray-500 mt-1">📍 {vuln.location}{vuln.line ? `:${vuln.line}` : ''}</p>
+                  )}
+                </div>
+              </div>
+              {vuln.remediation && (
+                <div className="mt-2 p-2 bg-accent-green/10 border border-accent-green/20 rounded">
+                  <p className="text-xs text-gray-400 mb-1">Remediation:</p>
+                  <p className="text-sm text-accent-green">{vuln.remediation}</p>
+                </div>
+              )}
+              {vuln.code && (
+                <pre className="mt-2 p-2 bg-dark-bg rounded text-xs text-gray-300 overflow-auto">
+                  {vuln.code}
+                </pre>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // Session 820: Trending Topics
 function TrendsRenderer({ trends }: { trends: TrendItem[] }) {
   return (
@@ -1238,11 +1615,12 @@ export function SmartOutputRenderer({
 
   const outputData = parsedData
 
-  // Session 820: Unwrap specialist delegation patterns to extract trends/discussions
-  const { trends, discussions, delegations, unwrappedTask } = unwrapSpecialistData(outputData)
+  // Session 820 + 835: Unwrap specialist delegation patterns to extract trends/discussions/topTrends
+  const { trends, discussions, delegations, topTrends, unwrappedTask } = unwrapSpecialistData(outputData)
   const hasTrends = trends.length > 0
   const hasDiscussions = discussions.length > 0
   const hasDelegations = delegations.length > 0
+  const hasTopTrends = topTrends.length > 0
 
   // Determine what type of content we have
   const hasBlog = outputData.content && typeof outputData.content === 'object' &&
@@ -1252,8 +1630,8 @@ export function SmartOutputRenderer({
   const hasRecommendations = outputData.recommendations && Array.isArray(outputData.recommendations) && outputData.recommendations.length > 0
   const hasAnalysis = outputData.analysis && typeof outputData.analysis === 'object'
   const hasSignals = outputData.signals && Array.isArray(outputData.signals) && outputData.signals.length > 0
-  // Don't show raw tool_results if we've already extracted trends/discussions from them
-  const hasToolResults = !hasTrends && !hasDiscussions &&
+  // Don't show raw tool_results if we've already extracted trends/discussions/topTrends from them
+  const hasToolResults = !hasTrends && !hasDiscussions && !hasTopTrends &&
     outputData.tool_results && Array.isArray(outputData.tool_results) && outputData.tool_results.length > 0
   const hasImages = outputData.images && Array.isArray(outputData.images) && outputData.images.length > 0
   const hasThinking = outputData.thinking_result && typeof outputData.thinking_result === 'object'
@@ -1262,10 +1640,21 @@ export function SmartOutputRenderer({
   const hasInsights = (outputData.insights && Array.isArray(outputData.insights) && outputData.insights.length > 0) ||
     (outputData.key_insights && Array.isArray(outputData.key_insights) && outputData.key_insights.length > 0)
 
+  // Session 835: Detect advisor output
+  const hasAdvisorOutput = !!(outputData.advice || outputData.structured_advice || outputData.persona_name)
+
+  // Session 835: Detect investment thesis (Bull/Bear Case agents)
+  const hasInvestmentThesis = !!(outputData.thesis ||
+    (outputData.key_points && Array.isArray(outputData.key_points)) ||
+    (outputData.risks && Array.isArray(outputData.risks)))
+
+  // Session 835: Detect vulnerabilities (Security agents)
+  const hasVulnerabilities = outputData.vulnerabilities && Array.isArray(outputData.vulnerabilities) && outputData.vulnerabilities.length > 0
+
   // Check if we have any structured content
   const hasStructuredContent = hasBlog || hasResearch || hasPodcast || hasRecommendations ||
     hasAnalysis || hasSignals || hasToolResults || hasImages || hasThinking || hasMetrics || hasInsights ||
-    hasTrends || hasDiscussions
+    hasTrends || hasDiscussions || hasTopTrends || hasAdvisorOutput || hasInvestmentThesis || hasVulnerabilities
 
   return (
     <div className={cn("space-y-4", className)} style={{ maxHeight, overflowY: 'auto' }}>
@@ -1310,6 +1699,18 @@ export function SmartOutputRenderer({
 
           {/* Session 820: Related Discussions (unwrapped from specialist data) */}
           {hasDiscussions && <DiscussionsRenderer discussions={discussions} />}
+
+          {/* Session 835: Top Trends with Articles (TrendAnalysisAgent) */}
+          {hasTopTrends && <TopTrendsRenderer trends={topTrends} />}
+
+          {/* Session 835: Advisor Output */}
+          {hasAdvisorOutput && <AdvisorRenderer data={outputData as AdvisorOutput} />}
+
+          {/* Session 835: Investment Thesis (Bull/Bear Case agents) */}
+          {hasInvestmentThesis && <InvestmentThesisRenderer data={outputData as InvestmentThesis} />}
+
+          {/* Session 835: Security Vulnerabilities */}
+          {hasVulnerabilities && <VulnerabilitiesRenderer vulnerabilities={outputData.vulnerabilities as VulnerabilityItem[]} />}
 
           {/* Summary */}
           {outputData.summary && !hasAnalysis && (
