@@ -43,6 +43,8 @@ import {
   ConversationsPanel,
   DreamsPanel,
   AdvisorsPanel,
+  ConversationDetailModal,
+  DreamDetailModal,
 } from '@/components/platform'
 import type { WorkspaceTab } from '../types'
 
@@ -58,6 +60,10 @@ export function CommandTab({
   toggleActivityExpanded,
 }: CommandTabProps) {
   const queryClient = useQueryClient()
+
+  // Session 834: Modal state for viewing conversations and dreams inline
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const [selectedDreamId, setSelectedDreamId] = useState<string | null>(null)
 
   // Queries
   const {
@@ -195,6 +201,8 @@ export function CommandTab({
         systemActivity={metricsData?.system_activity || { activities: [], counts: {} }}
         expandedActivityIds={expandedActivityIds}
         toggleActivityExpanded={toggleActivityExpanded}
+        onViewConversation={(id) => setSelectedConversationId(id)}
+        onViewDream={(id) => setSelectedDreamId(id)}
       />
 
       {/* Pending Decisions Preview */}
@@ -233,6 +241,20 @@ export function CommandTab({
             </div>
           </div>
         )}
+
+      {/* Session 834: Detail Modals for inline viewing */}
+      {selectedConversationId && (
+        <ConversationDetailModal
+          conversationId={selectedConversationId}
+          onClose={() => setSelectedConversationId(null)}
+        />
+      )}
+      {selectedDreamId && (
+        <DreamDetailModal
+          dreamId={selectedDreamId}
+          onClose={() => setSelectedDreamId(null)}
+        />
+      )}
     </div>
   )
 }
@@ -555,6 +577,9 @@ interface ActivityFeedSectionProps {
   systemActivity: { activities: any[]; counts: Record<string, number>; total?: number }
   expandedActivityIds: Set<string>
   toggleActivityExpanded: (id: string) => void
+  // Session 834: Callbacks for viewing details in modals
+  onViewConversation?: (id: string) => void
+  onViewDream?: (id: string) => void
 }
 
 function ActivityFeedSection({
@@ -562,6 +587,8 @@ function ActivityFeedSection({
   systemActivity,
   expandedActivityIds,
   toggleActivityExpanded,
+  onViewConversation,
+  onViewDream,
 }: ActivityFeedSectionProps) {
   const [activeTab, setActiveTab] = useState<'executions' | 'system'>('executions')
 
@@ -669,7 +696,12 @@ function ActivityFeedSection({
             <p className="text-sm text-gray-500 text-center py-4">No recent system activity</p>
           ) : (
             systemActivity?.activities?.map((item: any) => (
-              <SystemActivityCard key={item.id} item={item} />
+              <SystemActivityCard
+                key={item.id}
+                item={item}
+                onViewConversation={onViewConversation}
+                onViewDream={onViewDream}
+              />
             ))
           )}
         </div>
@@ -697,9 +729,12 @@ function getSystemActivityIcon(type: string) {
 // System Activity Card for dreams, conversations, decisions, pilots
 interface SystemActivityCardProps {
   item: any
+  // Session 834: Callbacks for viewing details in modals
+  onViewConversation?: (id: string) => void
+  onViewDream?: (id: string) => void
 }
 
-function SystemActivityCard({ item }: SystemActivityCardProps) {
+function SystemActivityCard({ item, onViewConversation, onViewDream }: SystemActivityCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const getTypeStyles = () => {
@@ -850,22 +885,28 @@ function SystemActivityCard({ item }: SystemActivityCardProps) {
             )}
           </div>
 
-          {/* Link to full view */}
-          {item.type === 'dream' && (
-            <a
-              href="/ai-studio/dreams"
+          {/* Session 834: View Details - Modal for dreams/conversations, links for others */}
+          {item.type === 'dream' && onViewDream && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewDream(item.id)
+              }}
               className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
             >
-              View in Dreams <ChevronRight size={12} />
-            </a>
+              View Full Dream <ChevronRight size={12} />
+            </button>
           )}
-          {item.type === 'conversation' && (
-            <a
-              href="/conversation-contract"
+          {item.type === 'conversation' && onViewConversation && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewConversation(item.id)
+              }}
               className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
             >
-              View Conversations <ChevronRight size={12} />
-            </a>
+              View Full Conversation <ChevronRight size={12} />
+            </button>
           )}
           {item.type === 'decision' && (
             <a

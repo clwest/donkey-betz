@@ -22,3 +22,6 @@ export { ActionsPanel } from './ActionsPanel'
 export { ConversationsPanel } from './ConversationsPanel'
 export { DreamsPanel } from './DreamsPanel'
 export { AdvisorsPanel } from './AdvisorsPanel'
+// Session 834: Detail Modals for inline viewing
+export { ConversationDetailModal } from './ConversationDetailModal'
+export { DreamDetailModal } from './DreamDetailModal'
