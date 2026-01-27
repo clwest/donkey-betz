@@ -678,6 +678,67 @@ def governance_view(request):
     })
 
 
+@require_GET
+def decision_summary_detail_view(request, decision_id):
+    """
+    GET /api/platform/decision-summary/<uuid:decision_id>/
+
+    Session 845: Get detail for a single AgentDecisionSummary.
+    Used by DecisionDetailModal for System Activity items.
+    """
+    from core.models_unified_system import AgentDecisionSummary
+
+    try:
+        decision = AgentDecisionSummary.objects.get(id=decision_id)
+    except AgentDecisionSummary.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Decision not found'}, status=404)
+
+    # Build rich response
+    return JsonResponse({
+        'success': True,
+        'item': {
+            'id': str(decision.id),
+            'title': decision.topic or 'Untitled Decision',
+            'summary': decision.reasoning or decision.final_decision or '',
+            'urgency': 'medium',  # Default since AgentDecisionSummary doesn't have urgency
+            'status': getattr(decision, 'status', 'pending'),
+            'item_type': 'decision_summary',
+            'source_type': 'boardroom',
+            'source_agent': decision.lead_agent or 'Multiple Agents',
+            'source_id': str(decision.conversation_id) if decision.conversation_id else None,
+            'payload': {
+                'decision_type': decision.decision_type,
+                'impact_area': decision.impact_area,
+                'confidence_level': decision.confidence_level,
+                'dissenting_views': decision.dissenting_views,
+                'key_factors': decision.key_factors,
+                'next_steps': decision.next_steps,
+                'contributing_agents': decision.contributing_agents,
+                'final_decision': decision.final_decision,
+            },
+            'priority_score': decision.confidence_level or 0.5,
+            'impact_estimate': None,
+            'ml_prediction': None,
+            'ml_confidence': decision.confidence_level,
+            'ml_recommendation': decision.final_decision,
+            'decision': getattr(decision, 'status', None),
+            'decision_feedback': None,
+            'decision_confidence': decision.confidence_level,
+            'decided_at': decision.created_at.isoformat() if decision.created_at else None,
+            'human_overrode_ml': False,
+            'override_reason': None,
+            'deferred_until': None,
+            'created_at': decision.created_at.isoformat() if decision.created_at else None,
+            'viewed_at': None,
+            'expires_at': None,
+            'verification_outcome': None,
+            'verified_at': None,
+            'verification_profit': None,
+            'verification_notes': None,
+        }
+    })
+
+
 @csrf_exempt
 @require_POST
 def emergency_halt_view(request):
