@@ -34,6 +34,18 @@ Investigated ChatGPT's claim of "85% experiment failure rate" and found the **re
 
 The "85% failure rate" was from simulated agent research output, not real telemetry. Actual experiments weren't failing - they were simply **never being evaluated**.
 
+### Production API Fixes (3 PRs)
+
+After fixing the experiment system, several production 500 errors were discovered and fixed:
+
+| PR | Issue | Fix |
+|----|-------|-----|
+| #284 | `synthesis[:500]` failed for dict type | Use `str(synthesis)[:500]` |
+| #285 | `trigger_reason` attribute not found | Changed to `trigger_type` |
+| #286 | "Invalid Date" + "0 turns" in UI | Fixed field names in ConversationDetailModal |
+
+**Root Cause (PR #286):** Frontend expected `turns`, `created_at` but API returns `messages`, `started_at`.
+
 ---
 
 ## Current State
@@ -99,7 +111,7 @@ print(f'Learnings: {ExperimentLearning.objects.count()}')
 
 | Session | Focus |
 |---------|-------|
-| **836** | Experiment System Diagnosis - Celery Beat fix, 251 learnings created |
+| **836** | Experiment System Diagnosis + Celery Beat fix + 3 Production API Fixes |
 | **835** | Agent Output Audit (80+ agents) + 4 New Renderers + Modal Fixes |
 | **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations |
 | **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes |
@@ -112,4 +124,4 @@ print(f'Learnings: {ExperimentLearning.objects.count()}')
 
 ---
 
-**SESSION 836 COMPLETE - Experiment learning loop now active with 251 learnings and 29 decision patterns**
+**SESSION 836 COMPLETE - Experiment learning loop active (251 learnings, 29 patterns) + 3 production fixes deployed**
