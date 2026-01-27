@@ -206,7 +206,11 @@ If asked to do something outside 3D generation, politely explain you can only cr
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 840: Collect actual errors for better error reporting
                     successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
+                    failed_calls = [tc for tc in tool_calls_made if not tc['result'].get('success')]
+                    all_errors = [tc['result'].get('error', 'Unknown error') for tc in failed_calls]
+
                     if successful_calls:
                         result = AgentResult(
                             success=True,
@@ -231,9 +235,11 @@ If asked to do something outside 3D generation, politely explain you can only cr
 
                         return result
                     else:
+                        # Session 840: Include actual error details for better debugging
+                        error_detail = "; ".join(all_errors) if all_errors else "No 3D model was generated"
                         result = AgentResult(
                             success=False,
-                            error="3D generation failed",
+                            error=f"3D generation failed: {error_detail}",
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             tool_calls=tool_calls_made
