@@ -3,9 +3,17 @@
  *
  * Shows recent agent dreams with ability to trigger new dreams and react.
  * Replaces the need for the separate Dreams page.
+ *
+ * Features:
+ * - Time range filter (24h, 7d, 30d)
+ * - Dream type filter
+ * - Stats overview (total, by type, unread)
+ * - Trigger new dreams
+ * - React to dreams (love, insightful, like)
+ * - Expandable dream content
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Sparkles,
@@ -19,9 +27,13 @@ import {
   ThumbsUp,
   Lightbulb,
   RefreshCw,
+  Filter,
+  Zap,
+  Eye,
+  Star,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { dreamsApi } from '@/lib/api'
+import { dreamsApi, type TimeRange } from '@/lib/api'
 
 interface Dream {
   id: string
@@ -34,16 +46,21 @@ interface Dream {
   inspiration_source?: string
   shown_to_user?: boolean
   reactions?: Record<string, number>
+  rating?: number
 }
+
+type DreamTypeFilter = 'all' | 'insight' | 'creative' | 'reflection' | 'synthesis'
 
 export function DreamsPanel() {
   const queryClient = useQueryClient()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d')
+  const [typeFilter, setTypeFilter] = useState<DreamTypeFilter>('all')
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ['dreams-panel'],
+    queryKey: ['dreams-panel', timeRange],
     queryFn: async () => {
-      const res = await dreamsApi.list({ limit: 10, timeRange: '7d' })
+      const res = await dreamsApi.list({ limit: 50, timeRange })
       return res.data
     },
     staleTime: 60000,
@@ -59,9 +76,36 @@ export function DreamsPanel() {
     },
   })
 
-  const dreams: Dream[] = data?.dreams || []
+  const allDreams: Dream[] = data?.dreams || []
   const todayCount = data?.today_count || 0
   const unreadCount = data?.unread_count || 0
+
+  // Filter by type
+  const dreams = useMemo(() => {
+    if (typeFilter === 'all') return allDreams
+    return allDreams.filter(d => d.dream_type === typeFilter)
+  }, [allDreams, typeFilter])
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    const byType: Record<string, number> = {}
+    allDreams.forEach(d => {
+      const type = d.dream_type || 'other'
+      byType[type] = (byType[type] || 0) + 1
+    })
+
+    const avgRating = allDreams.filter(d => d.rating).length > 0
+      ? (allDreams.reduce((sum, d) => sum + (d.rating || 0), 0) / allDreams.filter(d => d.rating).length).toFixed(1)
+      : null
+
+    return {
+      total: allDreams.length,
+      unread: unreadCount,
+      today: todayCount,
+      byType,
+      avgRating,
+    }
+  }, [allDreams, unreadCount, todayCount])
 
   if (error) {
     return (
@@ -78,14 +122,14 @@ export function DreamsPanel() {
         <div className="flex items-center gap-2">
           <Cloud className="text-accent-purple" size={18} />
           <h3 className="text-md font-semibold uppercase">Agent Dreams</h3>
-          {todayCount > 0 && (
+          {stats.today > 0 && (
             <span className="text-xs px-1.5 py-0.5 bg-accent-purple/20 text-accent-purple rounded">
-              {todayCount} today
+              {stats.today} today
             </span>
           )}
-          {unreadCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 bg-accent-amber/20 text-accent-amber rounded">
-              {unreadCount} new
+          {stats.unread > 0 && (
+            <span className="text-xs px-1.5 py-0.5 bg-accent-amber/20 text-accent-amber rounded animate-pulse">
+              {stats.unread} new
             </span>
           )}
         </div>
@@ -93,7 +137,7 @@ export function DreamsPanel() {
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+            className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
             <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
           </button>
@@ -112,6 +156,71 @@ export function DreamsPanel() {
         </div>
       </div>
 
+      {/* Stats Row */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="card py-3 text-center">
+          <div className="text-xl font-bold text-white">{stats.total}</div>
+          <div className="text-xs text-gray-400">Total</div>
+        </div>
+        <div className="card py-3 text-center">
+          <div className="text-xl font-bold text-accent-amber">{stats.unread}</div>
+          <div className="text-xs text-gray-400">Unread</div>
+        </div>
+        <div className="card py-3 text-center">
+          <div className="text-xl font-bold text-accent-purple">{stats.today}</div>
+          <div className="text-xs text-gray-400">Today</div>
+        </div>
+        <div className="card py-3 text-center">
+          <div className="text-xl font-bold text-accent-green">
+            {stats.avgRating || '-'}
+          </div>
+          <div className="text-xs text-gray-400">Avg Rating</div>
+        </div>
+      </div>
+
+      {/* Type Distribution */}
+      {Object.keys(stats.byType).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(stats.byType).map(([type, count]) => (
+            <button
+              key={type}
+              onClick={() => setTypeFilter(typeFilter === type ? 'all' : type as DreamTypeFilter)}
+              className={cn(
+                'text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors',
+                typeFilter === type
+                  ? 'bg-accent-purple/30 text-accent-purple border border-accent-purple/50'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              )}
+            >
+              {getDreamTypeIcon(type)}
+              <span className="capitalize">{type}</span>
+              <span className="text-gray-500">{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <Filter size={14} className="text-gray-500" />
+          <span className="text-xs text-gray-500">Time:</span>
+        </div>
+        <select
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+          className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs focus:border-primary-500 focus:outline-none"
+        >
+          <option value="24h">Last 24h</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="all">All time</option>
+        </select>
+        <span className="text-xs text-gray-500 ml-auto">
+          Showing {dreams.length} of {allDreams.length}
+        </span>
+      </div>
+
       {/* Dreams List */}
       {isLoading ? (
         <div className="space-y-2">
@@ -122,12 +231,15 @@ export function DreamsPanel() {
       ) : dreams.length === 0 ? (
         <div className="card text-center py-8">
           <Cloud className="mx-auto text-gray-600 mb-3" size={32} />
-          <p className="text-gray-400">No recent dreams</p>
-          <p className="text-xs text-gray-500 mt-1">Click "Trigger Dreams" to generate agent dreams</p>
+          <p className="text-gray-400">No dreams found</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {typeFilter !== 'all' ? 'Try changing the filter or ' : ''}
+            Click "Trigger Dreams" to generate agent dreams
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {dreams.map((dream) => (
+        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+          {dreams.slice(0, 20).map((dream) => (
             <DreamCard
               key={dream.id}
               dream={dream}
@@ -135,10 +247,30 @@ export function DreamsPanel() {
               onToggle={() => setExpandedId(expandedId === dream.id ? null : dream.id)}
             />
           ))}
+          {dreams.length > 20 && (
+            <div className="text-center py-2 text-xs text-gray-500">
+              + {dreams.length - 20} more dreams
+            </div>
+          )}
         </div>
       )}
     </div>
   )
+}
+
+function getDreamTypeIcon(type: string) {
+  switch (type) {
+    case 'insight':
+      return <Lightbulb size={12} className="text-accent-amber" />
+    case 'creative':
+      return <Sparkles size={12} className="text-accent-purple" />
+    case 'reflection':
+      return <Eye size={12} className="text-accent-blue" />
+    case 'synthesis':
+      return <Zap size={12} className="text-accent-green" />
+    default:
+      return <Cloud size={12} className="text-gray-400" />
+  }
 }
 
 interface DreamCardProps {
@@ -157,16 +289,12 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
     },
   })
 
-  const getDreamTypeIcon = () => {
-    switch (dream.dream_type) {
-      case 'insight':
-        return <Lightbulb size={14} className="text-accent-amber" />
-      case 'creative':
-        return <Sparkles size={14} className="text-accent-purple" />
-      default:
-        return <Cloud size={14} className="text-accent-blue" />
-    }
-  }
+  const rateMutation = useMutation({
+    mutationFn: (rating: number) => dreamsApi.rate(dream.id, rating),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dreams-panel'] })
+    },
+  })
 
   const formatTimeAgo = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -181,6 +309,8 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
     return `${diffDays}d ago`
   }
 
+  const totalReactions = Object.values(dream.reactions || {}).reduce((sum, n) => sum + n, 0)
+
   return (
     <div
       className={cn(
@@ -193,11 +323,16 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            {getDreamTypeIcon()}
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            {getDreamTypeIcon(dream.dream_type || 'other')}
             <span className="text-sm font-medium text-white truncate">{dream.title}</span>
             {!dream.shown_to_user && (
               <span className="text-[10px] px-1.5 py-0.5 bg-accent-purple/20 text-accent-purple rounded">NEW</span>
+            )}
+            {dream.dream_type && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded capitalize">
+                {dream.dream_type}
+              </span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -209,9 +344,16 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
               <Clock size={12} />
               {formatTimeAgo(dream.dreamed_at)}
             </span>
-            {dream.dream_type && (
-              <span className="px-1.5 py-0.5 bg-gray-700 rounded capitalize">
-                {dream.dream_type}
+            {totalReactions > 0 && (
+              <span className="flex items-center gap-1 text-accent-red">
+                <Heart size={12} />
+                {totalReactions}
+              </span>
+            )}
+            {dream.rating && (
+              <span className="flex items-center gap-1 text-accent-amber">
+                <Star size={12} />
+                {dream.rating}
               </span>
             )}
           </div>
@@ -230,8 +372,8 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
           <div>
             <h4 className="text-xs font-semibold text-gray-400 uppercase mb-1">Dream Content</h4>
             <p className="text-sm text-gray-300 whitespace-pre-wrap">
-              {dream.content?.slice(0, 500)}
-              {dream.content && dream.content.length > 500 && '...'}
+              {dream.content?.slice(0, 800)}
+              {dream.content && dream.content.length > 800 && '...'}
             </p>
           </div>
 
@@ -242,6 +384,31 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
               <p className="text-sm text-gray-400 italic">{dream.inspiration_source}</p>
             </div>
           )}
+
+          {/* Rating */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">Rate:</span>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((rating) => (
+                <button
+                  key={rating}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    rateMutation.mutate(rating)
+                  }}
+                  disabled={rateMutation.isPending}
+                  className={cn(
+                    'p-1 rounded transition-colors',
+                    dream.rating && rating <= dream.rating
+                      ? 'text-accent-amber'
+                      : 'text-gray-600 hover:text-accent-amber'
+                  )}
+                >
+                  <Star size={16} fill={dream.rating && rating <= dream.rating ? 'currentColor' : 'none'} />
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Reactions */}
           <div className="flex items-center gap-2 pt-2">
@@ -290,13 +457,19 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
             </button>
           </div>
 
-          <a
-            href="/agent-social"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
-          >
-            View All Dreams <ChevronRight size={12} />
-          </a>
+          {/* Metadata */}
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span>Dreamed: {new Date(dream.dreamed_at).toLocaleString()}</span>
+            {dream.agent_id && (
+              <a
+                href={`/agents?id=${dream.agent_id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-primary-400 hover:text-primary-300"
+              >
+                View Agent
+              </a>
+            )}
+          </div>
         </div>
       )}
     </div>
