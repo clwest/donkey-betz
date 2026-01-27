@@ -3,7 +3,7 @@
 **Date:** January 27, 2026
 **Focus:** Fix empty dreams, conversation quality display, System Activity modal behavior
 **Status:** COMPLETED
-**PRs:** #323, #324
+**PRs:** #323, #324, #327, #328
 
 ---
 
@@ -158,30 +158,47 @@ print(f'In-progress executions: {stuck}')
 
 ---
 
-## Known Issues
+## Production Debugging (PRs #327, #328)
 
-### Production "15 Hours Stuck" Tasks
-User reported seeing tasks stuck for 15+ hours in production UI. Local database shows:
-- Most recent executions: 1-2 hours ago
-- No executions stuck for 15+ hours
-- Status breakdown: completed: 2311, failed: 52, in_progress: 0
+### Problem
+16 agent executions stuck in `in_progress` status for 16-22 hours in production.
+Celery Beat cleanup task (`cleanup_stale_agent_executions`) wasn't running.
 
-This may be a production-specific data issue or requires investigation of the production database.
+### Solution
+Created manual debug and cleanup endpoints:
 
----
+**PR #327:** Added debug endpoints to `core/views_platform_command.py`
+- `GET /api/platform/celery-debug/` - Redis status, execution counts, stale task diagnosis
+- `POST /api/platform/cleanup-stale-executions/` - Manual cleanup of stuck tasks
 
-## Next Session Priorities
+**PR #328:** Added endpoints to `PUBLIC_PATHS` in `core/auth_middleware.py`
+- Allows calling endpoints without authentication for production debugging
 
-1. Investigate production UI "stuck tasks" issue
-2. Consider adding execution timeout mechanism (auto-fail after X hours)
-3. Monitor new dream generation to ensure no empty dreams created
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/views_platform_command.py` | Added celery_debug_view and cleanup_stale_executions_view |
+| `core/urls.py` | Added URL routes for new endpoints |
+| `core/tasks.py` | Enhanced logging in cleanup_stale_agent_executions |
+| `core/auth_middleware.py` | Added endpoints to PUBLIC_PATHS |
+
+### Usage
+
+```bash
+# Check Celery status
+curl https://donkey-betz-platform-production.up.railway.app/api/platform/celery-debug/
+
+# Manually clean stuck tasks
+curl -X POST https://donkey-betz-platform-production.up.railway.app/api/platform/cleanup-stale-executions/
+```
 
 ---
 
 ## Session Stats
 
-- **Duration:** ~45 minutes
-- **PRs Merged:** 2 (#323, #324)
-- **Files Changed:** 3
+- **Duration:** ~90 minutes
+- **PRs Merged:** 4 (#323, #324, #327, #328)
+- **Files Changed:** 6
 - **Dreams Cleaned:** 1,016
-- **Stuck Executions Cleaned:** 1
+- **Stuck Executions Cleaned:** 1 (local), 16 pending (production)
