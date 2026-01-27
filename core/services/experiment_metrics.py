@@ -37,6 +37,10 @@ class ExperimentMetricsService:
     BIAS_DETECTION_WINDOW_HOURS = 2
     ANOMALY_DETECTION_WINDOW_HOURS = 6
 
+    # Session 841: Minimum thresholds to prevent premature halt decisions
+    MIN_EXECUTIONS_FOR_ERROR_RATE = 10  # Need at least 10 executions before calculating error rate
+    MIN_AGE_MINUTES = 10  # Experiment must be at least 10 minutes old
+
     def __init__(self, experiment):
         """
         Initialize with an experiment to gather metrics for.
@@ -52,6 +56,10 @@ class ExperimentMetricsService:
         """
         Gather all metrics needed for halt condition checks.
 
+        Session 841: Now checks provider health before returning metrics.
+        If any provider is degraded, suppress error_rate and integrity_anomaly
+        to prevent cascading halts during provider outages.
+
         Returns:
             dict with keys:
                 - error_rate: % of failed operations in window
@@ -61,6 +69,14 @@ class ExperimentMetricsService:
                 - telemetry_kill_switch: Boolean if external kill signal
         """
         try:
+            # Session 841: Check provider health first
+            provider_degraded = False
+            try:
+                from core.services.provider_health_tracker import is_any_provider_degraded
+                provider_degraded = is_any_provider_degraded()
+            except ImportError:
+                pass  # Health tracker not available
+
             metrics = {
                 'error_rate': self._calculate_error_rate(),
                 'user_trust_index': self._calculate_user_trust_index(),
@@ -68,6 +84,16 @@ class ExperimentMetricsService:
                 'integrity_anomaly': self._detect_integrity_anomaly(),
                 'telemetry_kill_switch': self._check_kill_switch(),
             }
+
+            # Session 841: Suppress halt-triggering metrics during provider outages
+            if provider_degraded:
+                logger.warning(
+                    f"[Session 841] Provider degraded - suppressing error metrics for experiment {self.experiment.id}. "
+                    f"Original error_rate: {metrics['error_rate']}%, integrity_anomaly: {metrics['integrity_anomaly']}"
+                )
+                metrics['error_rate'] = 0.0
+                metrics['integrity_anomaly'] = False
+                metrics['_provider_degraded'] = True  # Flag for debugging
 
             logger.debug(
                 f"[Session 600] Gathered metrics for experiment {self.experiment.id}: {metrics}"
@@ -90,8 +116,11 @@ class ExperimentMetricsService:
         """
         Calculate error rate from agent executions and Celery task results.
 
+        Session 841: Now scoped to THIS experiment only, not system-wide.
+        Also enforces minimum sample size and age before making halt decisions.
+
         Looks at:
-        1. Agent executions with status='failed'
+        1. Agent executions with status='failed' FOR THIS EXPERIMENT
         2. Celery task results with status='FAILURE'
 
         Returns:
@@ -102,21 +131,42 @@ class ExperimentMetricsService:
         window_start = timezone.now() - timedelta(hours=self.ERROR_RATE_WINDOW_HOURS)
         experiment_start = self.experiment.started_at
 
+        # Session 841: Check minimum experiment age before calculating error rate
+        experiment_age_minutes = (timezone.now() - experiment_start).total_seconds() / 60
+        if experiment_age_minutes < self.MIN_AGE_MINUTES:
+            logger.debug(
+                f"[Session 841] Experiment {self.experiment.id} is only {experiment_age_minutes:.1f} min old, "
+                f"skipping error rate calculation (min: {self.MIN_AGE_MINUTES} min)"
+            )
+            return 0.0
+
         # Use the later of window_start or experiment_start
         effective_start = max(window_start, experiment_start)
 
         try:
-            # Count agent executions in window
+            # Session 841: Filter by THIS experiment only, not all executions
             executions = AgentExecution.objects.filter(
-                created_at__gte=effective_start
+                created_at__gte=effective_start,
+                experiment=self.experiment  # Scope to this experiment
             )
 
             total = executions.count()
-            if total == 0:
+
+            # Session 841: Require minimum sample size before calculating error rate
+            if total < self.MIN_EXECUTIONS_FOR_ERROR_RATE:
+                logger.debug(
+                    f"[Session 841] Experiment {self.experiment.id} has only {total} executions, "
+                    f"skipping error rate calculation (min: {self.MIN_EXECUTIONS_FOR_ERROR_RATE})"
+                )
                 return 0.0
 
             failed = executions.filter(status='failed').count()
             error_rate = (failed / total) * 100
+
+            logger.debug(
+                f"[Session 841] Experiment {self.experiment.id} error rate: "
+                f"{failed}/{total} = {error_rate:.1f}%"
+            )
 
             return round(error_rate, 2)
 

@@ -909,8 +909,10 @@ class AgentRouter:
 
         try:
             # Create execution record with context tracking
+            # Session 841: Pass experiment_id for proper error rate scoping
+            experiment_id = context.get('experiment_id')
             execution_record = self._create_execution_record(
-                agent_name, task, context_summary=context_summary
+                agent_name, task, context_summary=context_summary, experiment_id=experiment_id
             )
 
             result = agent.execute(
@@ -1317,11 +1319,12 @@ class AgentRouter:
             logger.warning(f"Failed to get docs context: {e}")
             return {}
 
-    def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None):
+    def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None, experiment_id=None):
         """
         Create an execution record for tracking.
         Session 641: Added for Agent Performance Dashboard.
         Session 758: Added context_summary for integration observability.
+        Session 841: Added experiment_id for proper error rate scoping.
         """
         try:
             from core.models_unified_system import Agent, AgentExecution
@@ -1343,6 +1346,15 @@ class AgentRouter:
                 'context_injected': context_summary or {},
             }
 
+            # Session 841: Resolve experiment from ID if provided
+            experiment = None
+            if experiment_id:
+                try:
+                    from core.models import Experiment
+                    experiment = Experiment.objects.filter(id=experiment_id).first()
+                except Exception as e:
+                    logger.debug(f"Could not resolve experiment {experiment_id}: {e}")
+
             # Session 642: User field is now nullable - always create execution record
             # Create execution record (user can be None for Celery/API tasks)
             execution = AgentExecution.objects.create(
@@ -1350,7 +1362,8 @@ class AgentRouter:
                 user=self.user,  # Can be None now
                 task=task[:500],  # Truncate long tasks
                 status='in_progress',
-                input_data=input_data
+                input_data=input_data,
+                experiment=experiment,  # Session 841: Link to experiment for scoped metrics
             )
 
             return execution

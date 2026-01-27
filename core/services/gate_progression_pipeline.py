@@ -426,7 +426,8 @@ class GateProgressionPipeline:
                 return
 
             # Session 794: Actually CREATE a PilotExecution (gate.start_pilot only sets timestamp)
-            decision_topic = getattr(gate.decision, 'title', 'Unknown Decision')[:100]
+            # Session 841: Fix - Decision model has 'topic' not 'title' (see models_unified_system.py:17222)
+            decision_topic = (gate.decision.topic or f"Gate-{str(gate.id)[:8]}")[:100]
             pilot = PilotExecution.objects.create(
                 gate=gate,
                 name=f"Auto-pilot: {decision_topic}",
