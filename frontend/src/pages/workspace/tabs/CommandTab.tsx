@@ -40,6 +40,8 @@ import {
   LiveMetricsDashboard,
   TriggerRulesPanel,
   ActionsPanel,
+  ConversationsPanel,
+  DreamsPanel,
 } from '@/components/platform'
 import type { WorkspaceTab } from '../types'
 
@@ -180,6 +182,10 @@ export function CommandTab({
 
       {/* Actions Panel */}
       <ActionsPanel />
+
+      {/* Session 834: Conversations & Dreams Panels */}
+      <ConversationsPanel />
+      <DreamsPanel />
 
       {/* Session 832: Enhanced Activity Feed with Tabs */}
       <ActivityFeedSection
