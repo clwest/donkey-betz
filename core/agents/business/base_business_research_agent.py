@@ -564,6 +564,15 @@ Research Type: {self.research_type}""")
         elif tool_name == f"synthesize_{self.research_type}":
             return {"success": True, "message": "Synthesis recorded"}
 
+        elif tool_name == "delegate_to_specialist":
+            # Session 833: Handle delegation properly
+            return self._handle_delegate_to_specialist(
+                specialist_agent=arguments.get('specialist_agent', ''),
+                task=arguments.get('task', ''),
+                context=arguments.get('context', ''),
+                delegation_context=getattr(self, '_current_delegation_context', {})
+            )
+
         else:
             # Check for custom tool handler in child class
             return self.handle_custom_tool(tool_name, arguments)
@@ -574,15 +583,7 @@ Research Type: {self.research_type}""")
 
         Default implementation returns an error.
         """
-
-        elif tool_name == "delegate_to_specialist":
-            # Session 833: Handle delegation properly
-            return self._handle_delegate_to_specialist(
-                specialist_agent=arguments.get('specialist_agent', ''),
-                task=arguments.get('task', ''),
-                context=arguments.get('context', ''),
-                delegation_context=getattr(self, '_current_delegation_context', {})
-            )        return {"success": False, "error": f"Unknown tool: {tool_name}"}
+        return {"success": False, "error": f"Unknown tool: {tool_name}"}
 
     def _handle_get_project_research(self, arguments: Dict, project_context: Dict) -> Dict:
         """Get existing research from project."""
