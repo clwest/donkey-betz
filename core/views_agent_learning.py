@@ -530,7 +530,9 @@ def get_agent_conversations(request):
             # If session has synthesis/completed_at, it's completed
             computed_hm_status = 'completed' if (session.synthesis or session.completed_at) else (session.status or 'active')
             # Quality based on message count
-            computed_hm_quality = min(0.85, 0.5 + (actual_msg_count * 0.05)) if actual_msg_count > 0 else 0.0
+            # Session 841: Return as percentage (0-100) not decimal (0-1) for frontend compatibility
+            raw_hm_quality = min(0.85, 0.5 + (actual_msg_count * 0.05)) if actual_msg_count > 0 else 0.0
+            computed_hm_quality = round(raw_hm_quality * 100, 1)  # Convert to percentage
 
             conversations_data.append({
                 'id': str(session.id),
@@ -587,9 +589,11 @@ def get_agent_conversations(request):
             # Determine status: if ended_at is set or has conclusion, it's completed
             computed_status = 'completed' if (conv.ended_at or conv.conclusion) else conv.status
             # Compute quality score: use stored value if > 0, otherwise estimate from message count
-            computed_quality = float(conv.quality_score) if conv.quality_score and conv.quality_score > 0 else (
+            # Session 841: Return as percentage (0-100) not decimal (0-1) for frontend compatibility
+            raw_quality = float(conv.quality_score) if conv.quality_score and conv.quality_score > 0 else (
                 min(0.85, 0.5 + (actual_message_count * 0.05)) if actual_message_count > 0 else 0.0
             )
+            computed_quality = round(raw_quality * 100, 1)  # Convert to percentage
 
             conversations_data.append({
                 'id': str(conv.id),
