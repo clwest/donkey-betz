@@ -2820,6 +2820,65 @@ export const platformApi = {
       error?: string
     }>('/platform/audits/run/', {}),
 
+  // Session 840: Audit Tracking System
+  auditFindingsSummary: () =>
+    api.get<{
+      success: boolean
+      summary: {
+        total_reports: number
+        total_findings: number
+        by_status: Record<string, number>
+        by_priority: Record<string, number>
+        by_category: Record<string, number>
+        open_p0: number
+        open_p1: number
+      }
+    }>('/audit-tracking/findings/summary/'),
+
+  auditFindings: (params?: {
+    status?: string
+    priority?: string
+    category?: string
+    limit?: number
+  }) =>
+    api.get<{
+      success: boolean
+      count: number
+      findings: Array<{
+        id: string
+        title: string
+        description: string
+        priority: string
+        category: string
+        status: string
+        impact: string
+        audit_report: {
+          id: string
+          title: string
+        }
+        recommendation: string
+        assigned_agent: string
+        fixed_by: string
+        created_at: string
+        updated_at: string
+      }>
+    }>('/audit-tracking/findings/', { params }),
+
+  auditFindingUpdateStatus: (findingId: string, data: {
+    status: string
+    notes?: string
+    fixed_by?: string
+  }) =>
+    api.post<{
+      success: boolean
+      finding: {
+        id: string
+        status: string
+        updated_at: string
+      }
+      error?: string
+    }>(`/audit-tracking/findings/${findingId}/status/`, data),
+
   // Session 829: Remediation Status and Control
   remediationStatus: () =>
     api.get<{
