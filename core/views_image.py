@@ -8437,7 +8437,9 @@ def _execute_generate_image(user, parameters, session=None):
             # Get the generated image
             images = result.images
             if not images:
-                logger.error(f"❌ Image {i + 1}: No image returned")
+                # Session 843: Set last_error even when success=True but images empty
+                last_error = result.error_message or "API returned success but no images"
+                logger.error(f"❌ Image {i + 1}: No image returned - {last_error}")
                 continue
 
             image_data = images[0]
@@ -8509,13 +8511,17 @@ def _execute_generate_image(user, parameters, session=None):
                 logger.info(f"✅ Image {i + 1}/{count} generated successfully: {saved_url}")
 
             except Exception as img_error:
+                # Session 843: Track save errors in last_error for better debugging
+                last_error = f"Save failed: {str(img_error)}"
                 logger.error(f"❌ Error saving image {i + 1}: {str(img_error)}")
                 continue
 
         # Check if we generated any images
         # Session 806: Include the actual error message for better debugging
+        # Session 843: Add prompt info to help debug content moderation issues
         if not generated_images:
             error_detail = last_error or "No images were generated"
+            logger.error(f"❌ All {count} image(s) failed. Prompt: {prompt[:100]}... Error: {error_detail}")
             raise Exception(f"Image generation failed: {error_detail}")
 
         # Use the first image for backwards compatibility
