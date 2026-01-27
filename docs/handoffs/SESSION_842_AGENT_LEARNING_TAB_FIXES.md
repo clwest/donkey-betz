@@ -3,7 +3,7 @@
 **Date:** January 27, 2026
 **Focus:** Fix empty dreams, conversation quality display, System Activity modal behavior
 **Status:** COMPLETED
-**PRs:** #323, #324, #327, #328
+**PRs:** #323, #324, #327, #328, #329, #330, #331
 
 ---
 
@@ -158,11 +158,14 @@ print(f'In-progress executions: {stuck}')
 
 ---
 
-## Production Debugging (PRs #327, #328)
+## Production Debugging (PRs #327, #328, #331)
 
 ### Problem
-16 agent executions stuck in `in_progress` status for 16-22 hours in production.
-Celery Beat cleanup task (`cleanup_stale_agent_executions`) wasn't running.
+242 agent executions stuck in `in_progress` status for up to 99.7 hours (4+ days).
+Celery Beat cleanup task (`cleanup_stale_agent_executions`) wasn't executing consistently.
+
+### Root Cause Analysis
+The cleanup task was added in Session 835 (Jan 26, ~24h before investigation), but production showed only 15 runs instead of expected 24+. This indicates Celery Beat deployment/restart issues caused execution gaps, allowing tasks to accumulate.
 
 ### Solution
 Created manual debug and cleanup endpoints:
@@ -174,19 +177,31 @@ Created manual debug and cleanup endpoints:
 **PR #328:** Added endpoints to `PUBLIC_PATHS` in `core/auth_middleware.py`
 - Allows calling endpoints without authentication for production debugging
 
+**PR #331:** Enhanced debug endpoint to show database schedule info
+- Shows `last_run_at`, `total_run_count`, `hours_since_last_run` from django_celery_beat
+- Detects when cleanup tasks haven't run recently
+
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `core/views_platform_command.py` | Added celery_debug_view and cleanup_stale_executions_view |
+| `core/views_platform_command.py` | Debug endpoint with database schedule info |
 | `core/urls.py` | Added URL routes for new endpoints |
 | `core/tasks.py` | Enhanced logging in cleanup_stale_agent_executions |
 | `core/auth_middleware.py` | Added endpoints to PUBLIC_PATHS |
 
+### Cleanup Result
+
+| Metric | Before | After |
+|--------|--------|-------|
+| In-progress tasks | 242 | 0 |
+| Stale tasks (>2h) | 242 | 0 |
+| Oldest stuck task | 99.7 hours | None |
+
 ### Usage
 
 ```bash
-# Check Celery status
+# Check Celery Beat status (shows last_run_at, hours_since_last_run)
 curl https://donkey-betz-platform-production.up.railway.app/api/platform/celery-debug/
 
 # Manually clean stuck tasks
@@ -197,8 +212,8 @@ curl -X POST https://donkey-betz-platform-production.up.railway.app/api/platform
 
 ## Session Stats
 
-- **Duration:** ~90 minutes
-- **PRs Merged:** 4 (#323, #324, #327, #328)
-- **Files Changed:** 6
+- **Duration:** ~2 hours
+- **PRs Merged:** 7 (#323, #324, #327, #328, #329, #330, #331)
+- **Files Changed:** 7
 - **Dreams Cleaned:** 1,016
-- **Stuck Executions Cleaned:** 1 (local), 16 pending (production)
+- **Stuck Executions Cleaned:** 242 (production)
