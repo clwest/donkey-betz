@@ -932,29 +932,68 @@ export default function MemoryPalacePage() {
           ) : selectedAgent ? (
             // Memory List View
             <div className="bg-dark-card rounded-lg border border-dark-border">
-              <div className="p-4 border-b border-dark-border flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold text-white">
-                    {searchResults.length > 0
-                      ? `Search Results (${searchResults.length})`
-                      : selectedRoom
-                        ? `${selectedRoom.name}`
-                        : 'All Memories'}
-                  </h2>
-                  {searchResults.length > 0 && (
+              <div className="p-4 border-b border-dark-border">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h2 className="font-semibold text-white">
+                      {searchResults.length > 0
+                        ? `Search Results (${searchResults.length})`
+                        : selectedRoom
+                          ? `${selectedRoom.name}`
+                          : 'All Memories'}
+                    </h2>
+                    {searchResults.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setSearchResults([])
+                          setSearchQuery('')
+                        }}
+                        className="text-xs text-purple-400 hover:underline mt-1"
+                      >
+                        Clear search
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {displayMemories.length} memories
+                  </div>
+                </div>
+                {/* Session 845: Quick filter buttons for failed memories */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setFilterOutcome(filterOutcome === 'failure' ? '' : 'failure')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5',
+                      filterOutcome === 'failure'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                    )}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    {filterOutcome === 'failure' ? 'Showing Failed' : 'Show Failed'}
+                  </button>
+                  {filterOutcome === 'failure' && displayMemories.length > 0 && (
                     <button
                       onClick={() => {
-                        setSearchResults([])
-                        setSearchQuery('')
+                        if (confirm(`Delete all ${displayMemories.length} failed memories?`)) {
+                          displayMemories.forEach(m => deleteMutation.mutate(m.id))
+                        }
                       }}
-                      className="text-xs text-purple-400 hover:underline mt-1"
+                      disabled={deleteMutation.isPending}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors flex items-center gap-1.5"
                     >
-                      Clear search
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete All Failed ({displayMemories.length})
                     </button>
                   )}
-                </div>
-                <div className="text-sm text-gray-400">
-                  {displayMemories.length} memories
+                  {filterOutcome && (
+                    <button
+                      onClick={() => setFilterOutcome('')}
+                      className="px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white transition-colors"
+                    >
+                      Clear Filter
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -980,6 +1019,9 @@ export default function MemoryPalacePage() {
                       onClick={() => setSelectedMemory(memory.id)}
                       // Session 754: Phase 2 - Tag click handler
                       onTagClick={(tag) => setFilterTag(tag)}
+                      // Session 845: Delete handler for removing memories
+                      onDelete={(id) => deleteMutation.mutate(id)}
+                      isDeleting={deleteMutation.isPending}
                     />
                   ))}
                 </div>
@@ -1766,7 +1808,14 @@ function ClustersTabContent({
 
 // Memory Card Component
 // Session 754: Added onTagClick prop for clickable tags
-function MemoryCard({ memory, onClick, onTagClick }: { memory: Memory; onClick: () => void; onTagClick?: (tag: string) => void }) {
+// Session 845: Added onDelete prop for removing memories (especially failed ones) from the UI
+function MemoryCard({ memory, onClick, onTagClick, onDelete, isDeleting }: {
+  memory: Memory;
+  onClick: () => void;
+  onTagClick?: (tag: string) => void;
+  onDelete?: (memoryId: string) => void;
+  isDeleting?: boolean;
+}) {
   const config = MEMORY_TYPE_CONFIG[memory.memory_type] || MEMORY_TYPE_CONFIG.default
   const Icon = config.icon
   const valenceColor = VALENCE_COLORS[memory.valence] || VALENCE_COLORS.neutral
@@ -1791,7 +1840,7 @@ function MemoryCard({ memory, onClick, onTagClick }: { memory: Memory; onClick: 
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
       className={cn(
-        'w-full p-4 text-left hover:bg-dark-bg transition-colors border-l-4 cursor-pointer',
+        'w-full p-4 text-left hover:bg-dark-bg transition-colors border-l-4 cursor-pointer group',
         valenceColor
       )}
     >
@@ -1815,6 +1864,29 @@ function MemoryCard({ memory, onClick, onTagClick }: { memory: Memory; onClick: 
               <span className="text-xs text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded">
                 {((memory.importance_score ?? 0) * 100).toFixed(0)}%
               </span>
+              {/* Session 845: Delete button - more prominent for failed memories */}
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete(memory.id)
+                  }}
+                  disabled={isDeleting}
+                  className={cn(
+                    'p-1 rounded transition-colors',
+                    memory.memory_outcome === 'failure'
+                      ? 'text-red-400 hover:bg-red-500/30 bg-red-500/10'
+                      : 'text-gray-500 hover:text-red-400 hover:bg-red-500/20 opacity-0 group-hover:opacity-100'
+                  )}
+                  title="Delete memory"
+                >
+                  {isDeleting ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
           <p className="text-sm text-gray-400 mt-1 line-clamp-2">{memory.content}</p>
