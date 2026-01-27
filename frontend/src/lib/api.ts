@@ -1056,6 +1056,8 @@ export const humanApi = {
     return api.get(`/human/attention/?${searchParams.toString()}`)
   },
   attentionStats: () => api.get('/human/attention/stats/'),
+  // Session 843: Get single attention item detail for inline modal viewing
+  detail: (itemId: string) => api.get(`/human/attention/${itemId}/`),
   decide: (itemId: string, decision: string, feedback?: string, confidence?: number) =>
     api.post(`/human/attention/${itemId}/decide/`, { decision, feedback, confidence }),
   // Session 796: Batch decision support
