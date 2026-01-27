@@ -35,6 +35,7 @@ import remarkGfm from 'remark-gfm'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useAuthStore } from '@/stores/authStore'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
+import SmartOutputRenderer from '@/components/SmartOutputRenderer'
 
 // Import modular workspace components
 import {
@@ -470,6 +471,24 @@ function OperationContentModal({
                   <pre className="text-xs text-accent-red/80 whitespace-pre-wrap">
                     {operation.error_message}
                   </pre>
+                </div>
+              )}
+
+              {/* Session 834: Agent Output Data - rendered nicely */}
+              {operation.output_data && (
+                <div className="card">
+                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Sparkles size={14} />
+                    Agent Output
+                  </h4>
+                  <div className="bg-dark-bg rounded p-3 overflow-hidden">
+                    <SmartOutputRenderer
+                      data={operation.output_data}
+                      agentName={operation.agent_name}
+                      maxHeight="max-h-96"
+                      showRawToggle={true}
+                    />
+                  </div>
                 </div>
               )}
 
