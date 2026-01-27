@@ -19906,6 +19906,15 @@ class SelfBlog(models.Model):
     def __str__(self):
         return f"{self.title} ({self.created_at.strftime('%Y-%m-%d')})"
 
+    def save(self, *args, **kwargs):
+        """Session 833: Auto-calculate word_count from full_text on save."""
+        if self.full_text and not self.word_count:
+            # Count words in full_text (strip markdown formatting)
+            import re
+            text = re.sub(r'[#*`\[\]()_~>-]', ' ', self.full_text)
+            self.word_count = len(text.split())
+        super().save(*args, **kwargs)
+
 
 # =============================================================================
 # AUTONOMOUS REASONING ENGINE - Session 544
