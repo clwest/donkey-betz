@@ -306,7 +306,9 @@ from core.views_agent_learning import (
     trigger_agent_conversation,
     get_conversation_task_status,  # Session 827: Async task status
     # Session 247: Agent Dreams
+    # Session 843: Added get_agent_dream_detail
     get_agent_dreams,
+    get_agent_dream_detail,
     trigger_agent_dreams,
     mark_dreams_shown,
     react_to_dream,
@@ -2989,7 +2991,9 @@ urlpatterns = [
     path('api/conversation-contract/<uuid:conversation_id>/', get_conversation_contract_detail, name='conversation-contract-detail'),
 
     # Session 247: Agent Dreams API
+    # Session 843: Added dream detail endpoint
     path('api/agent-dreams/', get_agent_dreams, name='agent-dreams'),
+    path('api/agent-dreams/<uuid:dream_id>/', get_agent_dream_detail, name='agent-dream-detail'),
     path('api/agent-dreams/trigger/', trigger_agent_dreams, name='trigger-agent-dreams'),
     path('api/agent-dreams/mark-shown/', mark_dreams_shown, name='mark-dreams-shown'),
     path('api/agent-dreams/<uuid:dream_id>/react/', react_to_dream, name='react-to-dream'),

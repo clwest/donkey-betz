@@ -1235,6 +1235,93 @@ def get_agent_dreams(request):
         }, status=500)
 
 
+def get_agent_dream_detail(request, dream_id):
+    """
+    Session 843: Get detail for a single agent dream.
+
+    GET /api/agent-dreams/{dream_id}/
+    """
+    try:
+        from core.models import AgentDream
+
+        dream = AgentDream.objects.select_related('agent').get(id=dream_id)
+
+        # Mark as shown when viewing detail
+        if not dream.shown_to_user:
+            from django.utils import timezone
+            dream.shown_to_user = True
+            dream.shown_at = timezone.now()
+            dream.save(update_fields=['shown_to_user', 'shown_at'])
+
+        dream_data = {
+            'id': str(dream.id),
+            'agent_id': str(dream.agent.id) if dream.agent else None,
+            'agent_name': dream.agent.name if dream.agent else 'Unknown',
+            'agent_emoji': getattr(dream.agent, 'emoji', None) if dream.agent else None,
+            'title': dream.title,
+            'content': dream.content,
+            'dream_type': dream.dream_type,
+            'inspiration': dream.inspiration_source,
+            'interpretation': dream.inspiration_source,  # Use inspiration as interpretation
+            'related_topics': dream.related_topics or [],
+            'key_symbols': dream.related_topics or [],  # Use related_topics as key_symbols
+            'potential_insights': [],  # Could be populated from content analysis
+            # Scores
+            'vividness_score': dream.vividness_score,
+            'creativity_score': dream.creativity_score,
+            'novelty_score': dream.vividness_score,  # Map vividness as novelty
+            'coherence_score': dream.actionability_score,  # Map actionability as coherence
+            'emotional_valence': None,  # Not tracked in model
+            'actionability_score': dream.actionability_score,
+            'relevance_score': dream.relevance_score,
+            'composite_score': dream.composite_score,
+            # User interaction
+            'shown_to_user': dream.shown_to_user,
+            'shown_at': dream.shown_at.isoformat() if dream.shown_at else None,
+            'user_reaction': dream.user_reaction,
+            'user_feedback': dream.user_feedback,
+            'rating': None,  # Convert reaction to rating if exists
+            'reactions': {},  # Not tracked per-dream in current model
+            # Productization
+            'promoted_to_decision': dream.promoted_to_decision,
+            'promoted_at': dream.promoted_at.isoformat() if dream.promoted_at else None,
+            'decision_outcome': dream.decision_outcome,
+            # Metadata
+            'origin': dream.origin,
+            'is_directed': dream.is_directed,
+            'directed_topic': dream.directed_topic,
+            'created_at': dream.dreamed_at.isoformat(),
+            'dreamed_at': dream.dreamed_at.isoformat(),
+        }
+
+        # Convert reaction to rating for frontend compatibility
+        if dream.user_reaction:
+            reaction_to_rating = {
+                'loved': 5,
+                'interesting': 4,
+                'meh': 2,
+                'dismissed': 1,
+            }
+            dream_data['rating'] = reaction_to_rating.get(dream.user_reaction)
+
+        return JsonResponse({
+            'success': True,
+            'dream': dream_data,
+        })
+
+    except AgentDream.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Dream not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching dream detail: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @require_http_methods(["POST"])
 def trigger_agent_dreams(request):
     """
