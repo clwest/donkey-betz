@@ -44,7 +44,8 @@ class YouTubeSpider:
                  subscribers: list = None, redis_config: dict = None, **kwargs):
         """Initialize spider with optional network parameters."""
         self.spider_id = spider_id or self.name
-        self.api_key = os.getenv('GOOGLE_API_KEY', '')
+        # Session 840: Use YOUTUBE_API_KEY first, fallback to GOOGLE_API_KEY
+        self.api_key = os.getenv('YOUTUBE_API_KEY', '') or os.getenv('GOOGLE_API_KEY', '')
 
     def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
         """
