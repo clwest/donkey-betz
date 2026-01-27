@@ -620,15 +620,23 @@ Focus on stocks without corresponding news explanations for moves."""
                 }
 
         elif tool_name == 'scan_after_hours':
+            # Session 838: Return insufficient_data status - no after-hours data provider configured
             min_volume = arguments.get('min_volume', 10000)
             min_change = arguments.get('min_change_pct', 2.0)
             return {
                 'tool': tool_name,
                 'min_volume': min_volume,
                 'min_change_pct': min_change,
-                'after_hours_movers': [],
-                'pre_market_movers': [],
-                'message': f"Scanning after-hours activity (min volume: {min_volume}, min change: {min_change}%)"
+                'status': 'insufficient_data',
+                'reason': 'No real-time after-hours/pre-market data provider configured',
+                'required_data_sources': [
+                    'Nasdaq TotalView ITCH',
+                    'NYSE Arca after-hours feed',
+                    'Alpha Vantage Extended Hours',
+                    'Polygon.io extended hours API'
+                ],
+                'data_quality': 'unavailable',
+                'message': f"After-hours scanning unavailable - requires extended hours data provider"
             }
 
         return {'error': f'Unknown tool: {tool_name}'}
