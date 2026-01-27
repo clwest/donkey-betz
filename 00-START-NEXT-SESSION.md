@@ -1,80 +1,83 @@
-# Session 834 - Continue Platform Development
+# Session 835 - Continue Platform Development
 
-**Previous Session:** 833 (Workspace Improvements + Blog Approval + Operations Viewer + 50 Agent Fixes + Run Remediation Fix)
+**Previous Session:** 834 (Sidebar Cleanup + Advisors Panel + Grouped Operations + Data Verification)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **12 PRs in Session 833** | Self-Healing Pipeline Complete
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **Sidebar: 44→15 items** | Workspace = Central Hub
 
 ---
 
-## What Was Accomplished in Session 833
+## What Was Accomplished in Session 834
 
-### Major Features
+### Major UI Consolidation
 
-1. **Shared ErrorState Component** - Consistent error handling across all 10 workspace tabs
-2. **Dynamic API Data** - HiveMind and LLM Routing now fetch real counts
-3. **Knowledge Tab Document Viewer** - Markdown rendering with metadata
-4. **Blog Approval Workflow** - Draft → Approved → Published with status filtering
-5. **Operations Content Viewer** - View file diffs, command output, errors
+1. **Sidebar Cleanup (44 → 15 items)** - Removed 29 items now consolidated in Workspace tabs
+   - Infrastructure tab: Body Health, Integration, LLM Routing, Analytics, Billing
+   - Orchestration tab: Agent Monitor, Hive Mind, Autonomous
+   - Consciousness tab: Memory Palace, Orchestra, Mood, Evolution, Relationships, Capsules, Time Travel
+   - Intelligence tab: Reasoning, Collective
+   - DataSources tab: Spiders, Spider Feed, Learning
+   - Content Studio tab: Podcast, Channels, Blogs, Distribution
+   - Command tab: Conversations, Dreams, Advisors
 
-### Bug Fixes (50 Agents + Syntax Errors)
+2. **Advisors Panel** - Added to Command Tab with:
+   - Top 5 advisors with category badges (Finance, Tech, Strategy, etc.)
+   - Quick consultation form with inline responses
+   - Consultations count and influence score display
 
-6. **delegate_to_specialist Fix** - Fixed "Unknown tool" error in 50 agents via batch script
-7. **Syntax Error Fixes** - Fixed 8 agents with syntax errors from batch script (PRs #244, #246, #247)
-8. **SelfBlog word_count** - Auto-calculates from full_text, fixed 67 blogs showing 0
+3. **Grouped Operations View** - Operations page now groups related tasks:
+   - Groups by `agent_task` field (task description)
+   - Collapsible groups showing file count, success/fail stats
+   - Toggle between "Grouped" and "Flat" views
+   - Stats row with total operations and task groups
 
-### Experiment & Remediation Fixes
+4. **Bug Fixes**:
+   - Fixed conversation link going to black screen (`/conversations` → `/conversation-contract`)
+   - Fixed Input Parameters truncation in Agent Tasks
 
-9. **Experiment Auto-Completion** - 12 experiments auto-completed when KPI target met (247→235 pending)
-10. **Run Remediation Chain Fix** - Now assigns AND executes in single click (was requiring 2 clicks)
-
-### Operations Viewer Enhancements
-
-11. **Markdown Rendering** - Operations viewer renders .md files with proper formatting
-12. **Rendered/Diff Toggle** - Switch between clean markdown and raw diff view
-13. **Readable Card Titles** - `campaign_plan_quarterly_...md` → "Campaign Plan: Quarterly..." [MD]
-
-### Session 833 PRs (12 Total)
+### Session 834 PRs (3 Total)
 | PR | Description |
 |----|-------------|
-| #244 | Fix workflow_agent.py syntax error |
-| #245 | Fix 50 agent delegate_to_specialist errors |
-| #246 | Fix 6 agent syntax errors (merged lines) |
-| #247 | Fix base_business_research_agent + autonomous_content_studio_coordinator |
-| #248 | SelfBlog word_count auto-calculation |
-| #249 | Experiment auto-completion when KPI target is met |
-| #250-252 | Handoff documentation updates |
-| #253 | Run Remediation chain fix - assign and execute in one click |
-| #254 | Operations markdown Rendered/Diff toggle |
-| #255 | Operation card display improvements with readable titles |
-| #256 | Final handoff documentation update |
+| #267 | Fix conversation link going to black screen |
+| #268 | Grouped operations by task with collapsible view |
+| #269 | Add Advisors panel & clean up sidebar (44→15 items) |
+
+### Data Verification Complete
+All 11 Workspace tabs verified returning real data:
+- ✅ 212 agents, 25 advisors, 821 memories, 334 learnings
+- ✅ 6 LLM providers, 77 spiders, 98.6% health score
+- ✅ All API endpoints tested and confirmed working
 
 ---
 
 ## Current State
 
+### Sidebar (Streamlined)
+```
+Core:        Dashboard, AI Assistant, Human, Agents
+Hub:         Workspace (consolidated features)
+Standalone:  Betting, Content, Legal, Portfolio, Documents, Docs Index, Mythology Lab, Voices
+Admin:       Admin, Settings
+```
+
+### Workspace Tabs (All Data-Connected)
+| Tab | Features |
+|-----|----------|
+| **Command** | Mission, Metrics, Conversations, Dreams, Advisors, Live Metrics, Triggers, Actions |
+| **Infrastructure** | Body Health (9 systems), Integration, LLM Routing, Analytics, Billing |
+| **Orchestration** | Agent Monitor, Workflows, Automation, HiveMind |
+| **Consciousness** | Memory Palace, Orchestra, Mood, Evolution, Relationships, Capsules, Time Travel |
+| **Intelligence** | Reasoning, Mythology/Safety, Collective |
+| **DataSources** | Spiders, Feed, Learning |
+| **Content Studio** | Gallery, Channels, Blogs, Podcast, Distribution |
+| **Governance** | Self-healing, Remediation controls |
+| **Knowledge** | Canon, Playbooks, Audits |
+| **Files** | File browser, Git status |
+| **Operations** | Grouped by task, rollback, review |
+
 ### Self-Healing System
 - **777 Open Findings** ready for processing
-- Pipeline: Discover → Assign → Execute → Verify (all phases connected)
-- **Run Remediation now single-click** - assigns AND executes automatically
-
-### Experiments
-- **235 pending/running** (down from 247)
-- **16 successful** (up from 4)
-- Auto-completion triggers when KPI target is met
-
-### Workspace Tabs
-- All 11 tabs have proper error handling
-- Operations viewer with markdown rendering and Rendered/Diff toggle
-- Document viewer for Knowledge tab canon documents
-
-### How to Run Remediation
-1. Go to **Workspace → Governance** tab
-2. Click **"Run Remediation"** (single click now does both assign + execute)
-3. Watch progress in "Progress By Agent" table
-
-### Production URLs
-- **App:** https://donkey-betz-platform-production.up.railway.app/workspace
-- **Auth Debug:** https://donkey-betz-platform-production.up.railway.app/api/v1/auth/debug/
+- Pipeline: Discover → Assign → Execute → Verify (all connected)
+- Single-click "Run Remediation" assigns AND executes
 
 ---
 
@@ -84,25 +87,25 @@
 # 1. Start platform
 make start && make celery
 
-# 2. Access workspace
+# 2. Access workspace (the main hub)
 open http://localhost:8000/ai-studio/
 
-# 3. Test Operations viewer
-# Navigate to Workspace → Operations → Click "View Content" on any operation
-# Toggle between "Rendered" and "Diff" views for markdown files
+# 3. Test grouped operations
+# Navigate to Workspace → Operations → Toggle between Grouped/Flat views
 
-# 4. Test Run Remediation
-# Navigate to Workspace → Governance → Click "Run Remediation"
+# 4. Test Advisors panel
+# Navigate to Workspace → Command → Scroll to Advisors panel → Click consult icon
 ```
 
 ---
 
 ## Potential Next Steps
 
-1. **More Experiment KPI Mappings** - Still 235 experiments pending, could add more mappings
-2. **Operations Filtering** - Filter by agent, status, file type
-3. **Blog Publishing Integration** - Connect published blogs to website/RSS
-4. **Self-Healing Metrics Dashboard** - Visualize success rates over time
+1. **Workspace Tab Deep Links** - Allow direct links to specific sub-tabs
+2. **Operations Batch Actions** - Approve/reject multiple operations at once
+3. **Advisor Consultation History** - Show recent consultations in panel
+4. **Dashboard Widgets** - Add key Workspace metrics to Dashboard page
+5. **Mobile Responsiveness** - Improve Workspace layout on smaller screens
 
 ---
 
@@ -110,6 +113,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations + Data Verification |
 | **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes + Run Remediation Fix |
 | **832** | Recent Activity Enhancement - New fields, all statuses, system activity |
 | **831** | Remediation Pipeline + LLM Timeouts + UI Fixes |
@@ -122,4 +126,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**SESSION 833 COMPLETE - 12 PRs: Workspace tabs + Blog approval + Operations viewer + 50 agent fixes + Run Remediation single-click**
+**SESSION 834 COMPLETE - Sidebar streamlined from 44→15 items, Workspace is now the central hub with all features consolidated**
