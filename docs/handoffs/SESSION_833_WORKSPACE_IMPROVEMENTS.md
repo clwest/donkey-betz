@@ -222,6 +222,32 @@ Fixed blogs not displaying content when viewing by ID.
 
 **Location:** `OperationContentModal` component in `WorkspacePageNew.tsx`
 
+### 12. Operations Markdown Viewer (PR #251)
+
+Enhanced the Operations content viewer to render markdown files with proper formatting instead of raw text.
+
+**Problem:**
+- When viewing `.md` files in the Operations viewer, markdown syntax was displayed as raw text
+- Headers showed as `# Title` instead of formatted headings
+- Code blocks, tables, and lists displayed without styling
+
+**Solution:**
+- Added ReactMarkdown + remarkGfm to OperationContentModal
+- Detect `.md` files by extension and render with prose styling
+- Non-markdown files continue to display as raw code
+
+**Features:**
+- "Markdown" badge displayed in header when viewing `.md` files
+- Proper heading styles (h1, h2, h3 with appropriate sizes)
+- Code blocks with syntax highlighting background
+- Tables with proper alignment and borders
+- Lists with correct markers and indentation
+- Blockquotes with left border styling
+- Links styled and clickable
+- Full dark theme support
+
+**Location:** `OperationContentModal` in `frontend/src/pages/WorkspacePageNew.tsx`
+
 ---
 
 ## Files Modified
@@ -383,7 +409,9 @@ To verify changes:
 | #247 | Fix base_business_research_agent + autonomous_content_studio_coordinator |
 | #248 | SelfBlog word_count auto-calculation |
 | #249 | Experiment auto-completion when KPI target is met |
+| #250 | Handoff documentation update |
+| #251 | Render markdown files in Operations viewer |
 
 ---
 
-**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations viewer + 50 agents delegate fix + Blog markdown viewer + Syntax fixes + Experiment auto-completion**
+**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow + Operations markdown viewer + 50 agents delegate fix + Syntax fixes + Experiment auto-completion**
