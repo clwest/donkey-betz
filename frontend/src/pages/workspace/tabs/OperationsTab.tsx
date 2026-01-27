@@ -30,9 +30,11 @@ interface OperationsTabProps {
   showError: (message: string) => void
 }
 
-// Group operations by task
+// Session 835: Group operations by directory path for better organization
 interface OperationGroup {
-  task: string
+  groupKey: string
+  displayName: string
+  category: string // Top-level category (financial, content, campaigns, etc.)
   operations: WorkspaceOperation[]
   agents: string[]
   totalSuccess: number
@@ -41,27 +43,89 @@ interface OperationGroup {
   earliestTime: string
 }
 
-function groupOperationsByTask(operations: WorkspaceOperation[]): OperationGroup[] {
+// Extract directory path from file_path for grouping
+function getGroupKey(op: WorkspaceOperation): string {
+  if (!op.file_path) {
+    // Fall back to agent name for operations without file paths
+    return `agent/${op.agent_name.toLowerCase().replace(/\s+/g, '_')}`
+  }
+
+  // Extract directory path (e.g., "financial/stocks" from "financial/stocks/report_xyz.md")
+  const parts = op.file_path.split('/')
+  if (parts.length <= 1) {
+    return 'root'
+  }
+
+  // Use first 2 levels of directory for grouping
+  // e.g., "financial/stocks", "content/podcasts", "campaigns/orchestration"
+  return parts.slice(0, Math.min(2, parts.length - 1)).join('/')
+}
+
+// Format directory path into readable display name
+function formatGroupName(groupKey: string): { displayName: string; category: string } {
+  if (groupKey === 'root') {
+    return { displayName: 'Root Files', category: 'other' }
+  }
+
+  if (groupKey.startsWith('agent/')) {
+    const agentName = groupKey
+      .replace('agent/', '')
+      .split('_')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ')
+    return { displayName: `${agentName} Operations`, category: 'agents' }
+  }
+
+  const parts = groupKey.split('/')
+  const category = parts[0]
+
+  // Format the full path nicely
+  const formatted = parts
+    .map((part) =>
+      part
+        .split(/[-_]/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ')
+    )
+    .join(' > ')
+
+  return { displayName: formatted, category }
+}
+
+// Category icons/colors for visual distinction
+const categoryStyles: Record<string, { color: string; icon: string }> = {
+  financial: { color: 'text-green-400', icon: '💰' },
+  content: { color: 'text-purple-400', icon: '📝' },
+  campaigns: { color: 'text-blue-400', icon: '📢' },
+  research: { color: 'text-yellow-400', icon: '🔬' },
+  analysis: { color: 'text-orange-400', icon: '📊' },
+  agents: { color: 'text-cyan-400', icon: '🤖' },
+  other: { color: 'text-gray-400', icon: '📁' },
+}
+
+function groupOperationsByDirectory(operations: WorkspaceOperation[]): OperationGroup[] {
   const groups: Record<string, WorkspaceOperation[]> = {}
 
   operations.forEach((op) => {
-    // Use agent_task if available, otherwise create a key from agent + time window
-    const taskKey = op.agent_task || `${op.agent_name}_${op.created_at.substring(0, 13)}` // Group by agent + hour
-    if (!groups[taskKey]) {
-      groups[taskKey] = []
+    const groupKey = getGroupKey(op)
+    if (!groups[groupKey]) {
+      groups[groupKey] = []
     }
-    groups[taskKey].push(op)
+    groups[groupKey].push(op)
   })
 
   return Object.entries(groups)
-    .map(([task, ops]) => {
+    .map(([groupKey, ops]) => {
+      const { displayName, category } = formatGroupName(groupKey)
       const agents = [...new Set(ops.map((op) => op.agent_name))]
       const successCount = ops.filter((op) => op.success).length
       const failedCount = ops.filter((op) => !op.success).length
       const times = ops.map((op) => new Date(op.created_at).getTime())
 
       return {
-        task,
+        groupKey,
+        displayName,
+        category,
         operations: ops.sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         ),
@@ -73,25 +137,6 @@ function groupOperationsByTask(operations: WorkspaceOperation[]): OperationGroup
       }
     })
     .sort((a, b) => new Date(b.latestTime).getTime() - new Date(a.latestTime).getTime())
-}
-
-// Format task title for display
-function formatTaskTitle(task: string): string {
-  if (!task) return 'Unknown Task'
-
-  // If it's an auto-generated key (agent_timestamp), format it nicely
-  if (task.includes('_202')) {
-    const parts = task.split('_')
-    const agentName = parts.slice(0, -1).join(' ').replace(/([A-Z])/g, ' $1').trim()
-    return `${agentName} Operations`
-  }
-
-  // Truncate long task descriptions
-  if (task.length > 100) {
-    return task.substring(0, 100) + '...'
-  }
-
-  return task
 }
 
 // Collapsible operation group component
@@ -118,6 +163,8 @@ function OperationGroupCard({
     return `${Math.floor(seconds / 86400)}d ago`
   }
 
+  const style = categoryStyles[group.category] || categoryStyles.other
+
   return (
     <div className="bg-dark-card border border-dark-border rounded-lg overflow-hidden">
       {/* Group Header - Clickable */}
@@ -130,10 +177,17 @@ function OperationGroupCard({
           {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
         </div>
 
-        {/* Task Info */}
+        {/* Category Icon */}
+        <span className="text-lg" title={group.category}>
+          {style.icon}
+        </span>
+
+        {/* Group Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-sm truncate">{formatTaskTitle(group.task)}</h3>
+            <h3 className={cn('font-medium text-sm truncate', style.color)}>
+              {group.displayName}
+            </h3>
             <span className="px-2 py-0.5 bg-primary-600/20 text-primary-400 text-xs rounded-full">
               {group.operations.length} {group.operations.length === 1 ? 'file' : 'files'}
             </span>
@@ -142,7 +196,7 @@ function OperationGroupCard({
           {/* Agents involved */}
           <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
             <Bot size={12} />
-            <span>{group.agents.join(', ')}</span>
+            <span className="truncate">{group.agents.slice(0, 3).join(', ')}{group.agents.length > 3 && ` +${group.agents.length - 3} more`}</span>
           </div>
         </div>
 
@@ -252,7 +306,7 @@ export function OperationsTab({
   }, [operations, operationFilter])
 
   const groupedOperations = useMemo(
-    () => groupOperationsByTask(filteredOperations),
+    () => groupOperationsByDirectory(filteredOperations),
     [filteredOperations]
   )
 
@@ -349,7 +403,7 @@ export function OperationsTab({
         <div className="space-y-3">
           {groupedOperations.map((group) => (
             <OperationGroupCard
-              key={group.task}
+              key={group.groupKey}
               group={group}
               onRollback={(id) => rollbackMutation.mutate(id)}
               onReview={handleReview}

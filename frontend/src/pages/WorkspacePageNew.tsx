@@ -27,6 +27,7 @@ import {
   FileText,
   Code,
   Terminal,
+  ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -217,6 +218,52 @@ function RegisterWorkspaceModal({
   )
 }
 
+// Session 835: Format file path to readable title
+function formatFilePathTitle(filePath: string): { title: string; category: string; badge?: string } {
+  if (!filePath) return { title: 'Operation', category: '' }
+
+  const parts = filePath.split('/')
+  const filename = parts.pop() || filePath
+  const directory = parts.join(' > ')
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+    .replace(/ > /g, ' › ')
+
+  // Get badge from extension
+  let badge: string | undefined
+  if (filename.endsWith('.md')) badge = 'MD'
+  else if (filename.endsWith('.json')) badge = 'JSON'
+  else if (filename.endsWith('.py')) badge = 'PY'
+  else if (filename.endsWith('.ts') || filename.endsWith('.tsx')) badge = 'TS'
+
+  // Format filename
+  let name = filename
+    .replace(/\.(md|json|py|ts|tsx|js|jsx|txt|yaml|yml)$/, '')
+    .replace(/_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/, '')
+    .replace(/_\d{4}-\d{2}-\d{2}$/, '')
+
+  const words = name.split(/[-_]/).map((word) => {
+    if (word.toLowerCase() === 'ai') return 'AI'
+    if (word.toLowerCase() === 'api') return 'API'
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  })
+
+  // Find type word for "Type: Description" format
+  const typeWords = ['plan', 'report', 'analysis', 'research', 'argument', 'workflow', 'campaign', 'strategy', 'audit', 'review', 'script', 'episode', 'outline', 'brief', 'content']
+
+  let title = ''
+  for (let i = 0; i < words.length; i++) {
+    if (typeWords.includes(words[i].toLowerCase()) && i < words.length - 1) {
+      title = `${words.slice(0, i + 1).join(' ')}: ${words.slice(i + 1).join(' ')}`
+      break
+    }
+  }
+  if (!title) title = words.join(' ')
+
+  return { title, category: directory, badge }
+}
+
 // Operation Content Viewer Modal
 function OperationContentModal({
   operationId,
@@ -226,6 +273,7 @@ function OperationContentModal({
   onClose: () => void
 }) {
   const [viewMode, setViewMode] = useState<'rendered' | 'diff'>('rendered')
+  const [showRawPath, setShowRawPath] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['workspace-operation-detail', operationId],
@@ -240,6 +288,9 @@ function OperationContentModal({
 
   // Session 833: Check if this is a markdown file
   const isMarkdownFile = operation?.file_path?.endsWith('.md')
+
+  // Session 835: Format title from file path
+  const { title: formattedTitle, category, badge } = formatFilePathTitle(operation?.file_path || '')
 
   // Session 833: Extract actual content from diff (removes +/- prefix lines)
   const extractContentFromDiff = (diff: string): string => {
@@ -290,9 +341,17 @@ function OperationContentModal({
               <FileText className="text-primary-400" size={20} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Operation Details</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold">{formattedTitle || 'Operation Details'}</h3>
+                {badge && (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-mono">
+                    {badge}
+                  </span>
+                )}
+              </div>
               {operation && (
                 <p className="text-xs text-gray-400">
+                  {category && <span className="text-gray-500">{category} • </span>}
                   {operation.operation_type} • {operation.agent_name}
                 </p>
               )}
@@ -320,14 +379,25 @@ function OperationContentModal({
 
           {operation && (
             <>
-              {/* File path */}
+              {/* File path - collapsible */}
               {operation.file_path && (
                 <div className="card">
-                  <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  <button
+                    onClick={() => setShowRawPath(!showRawPath)}
+                    className="w-full text-sm font-medium text-gray-400 flex items-center gap-2 hover:text-gray-300 transition-colors"
+                  >
                     <FileText size={14} />
-                    File Path
-                  </h4>
-                  <code className="text-sm text-primary-400">{operation.file_path}</code>
+                    <span>Full Path</span>
+                    <ChevronRight
+                      size={14}
+                      className={cn('transition-transform', showRawPath && 'rotate-90')}
+                    />
+                  </button>
+                  {showRawPath && (
+                    <code className="block mt-2 text-xs text-primary-400 bg-dark-bg p-2 rounded break-all">
+                      {operation.file_path}
+                    </code>
+                  )}
                 </div>
               )}
 
