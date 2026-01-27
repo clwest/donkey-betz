@@ -16,6 +16,12 @@ import {
   Loader2,
   CheckCircle,
   AlertTriangle,
+  X,
+  ChevronRight,
+  Target,
+  Activity,
+  Settings,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
@@ -30,6 +36,10 @@ interface TriggerRule {
   action_type: string
   enabled: boolean
   in_cooldown: boolean
+  cooldown_minutes?: number
+  last_triggered?: string
+  trigger_count?: number
+  condition?: string
 }
 
 interface TriggerRunResult {
@@ -75,6 +85,7 @@ export function TriggerRulesPanel() {
   const queryClient = useQueryClient()
   const [lastRunResult, setLastRunResult] = useState<TriggerRunResult | null>(null)
   const [showResults, setShowResults] = useState(false)
+  const [selectedRule, setSelectedRule] = useState<TriggerRule | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['trigger-rules'],
@@ -189,10 +200,11 @@ export function TriggerRulesPanel() {
       ) : data ? (
         <div className="space-y-2">
           {data.rules.map((rule) => (
-            <div
+            <button
               key={rule.name}
+              onClick={() => setSelectedRule(rule)}
               className={cn(
-                'card flex items-center justify-between py-3',
+                'card flex items-center justify-between py-3 w-full text-left cursor-pointer hover:bg-gray-800/80 transition-colors',
                 !rule.enabled && 'opacity-60',
                 rule.in_cooldown && 'border-accent-amber/30'
               )}
@@ -220,11 +232,178 @@ export function TriggerRulesPanel() {
                 ) : (
                   <ToggleLeft size={24} className="text-gray-500" />
                 )}
+                <ChevronRight size={16} className="text-gray-500" />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       ) : null}
+
+      {/* Session 834: Trigger Detail Modal */}
+      {selectedRule && (
+        <TriggerDetailModal rule={selectedRule} onClose={() => setSelectedRule(null)} />
+      )}
+    </div>
+  )
+}
+
+// Session 834: Trigger Detail Modal Component
+interface TriggerDetailModalProps {
+  rule: TriggerRule
+  onClose: () => void
+}
+
+function TriggerDetailModal({ rule, onClose }: TriggerDetailModalProps) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-gray-900 border border-gray-700 rounded-xl max-w-2xl w-full max-h-[85vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <div className="flex items-center gap-3">
+            <Zap className="text-accent-amber" size={20} />
+            <div>
+              <h2 className="text-lg font-semibold text-white">{rule.name}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <PriorityBadge priority={rule.priority} />
+                {rule.enabled ? (
+                  <span className="text-xs px-2 py-0.5 bg-accent-green/20 text-accent-green rounded">
+                    Enabled
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-0.5 bg-gray-600 text-gray-400 rounded">
+                    Disabled
+                  </span>
+                )}
+                {rule.in_cooldown && (
+                  <span className="text-xs px-2 py-0.5 bg-accent-amber/20 text-accent-amber rounded flex items-center gap-1">
+                    <Clock size={10} /> In Cooldown
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(85vh-80px)]">
+          {/* Description */}
+          <div className="card bg-gray-800/50">
+            <p className="text-sm text-gray-300">{rule.description}</p>
+          </div>
+
+          {/* Trigger Condition */}
+          <div className="card">
+            <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3 flex items-center gap-2">
+              <Target size={14} />
+              Trigger Condition
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-xs text-gray-500">Metric</span>
+                <p className="text-sm text-white font-mono bg-gray-800 px-2 py-1 rounded mt-1">
+                  {rule.metric}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Threshold</span>
+                <p className="text-sm text-accent-amber font-mono bg-gray-800 px-2 py-1 rounded mt-1">
+                  {rule.threshold}
+                </p>
+              </div>
+            </div>
+            {rule.condition && (
+              <div className="mt-3">
+                <span className="text-xs text-gray-500">Full Condition</span>
+                <p className="text-xs text-gray-300 font-mono bg-gray-800 px-2 py-1 rounded mt-1">
+                  {rule.condition}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Action Details */}
+          <div className="card">
+            <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3 flex items-center gap-2">
+              <Activity size={14} />
+              Action
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-xs text-gray-500">Action Name</span>
+                <p className="text-sm text-white">{rule.action}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Action Type</span>
+                <p className="text-sm text-primary-400">{rule.action_type}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Settings */}
+          <div className="card">
+            <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3 flex items-center gap-2">
+              <Settings size={14} />
+              Settings
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-xs text-gray-500">Cooldown Period</span>
+                <p className="text-sm text-white">{rule.cooldown_minutes || 60} minutes</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Priority</span>
+                <p className="text-sm text-white">{rule.priority}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* History (if available) */}
+          {(rule.last_triggered || rule.trigger_count !== undefined) && (
+            <div className="card">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3 flex items-center gap-2">
+                <History size={14} />
+                History
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {rule.last_triggered && (
+                  <div>
+                    <span className="text-xs text-gray-500">Last Triggered</span>
+                    <p className="text-sm text-white">
+                      {new Date(rule.last_triggered).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                {rule.trigger_count !== undefined && (
+                  <div>
+                    <span className="text-xs text-gray-500">Total Triggers</span>
+                    <p className="text-sm text-white">{rule.trigger_count} times</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* How It Works */}
+          <div className="card bg-primary-500/10 border-primary-500/30">
+            <h3 className="text-sm font-semibold text-primary-400 mb-2">How This Trigger Works</h3>
+            <p className="text-xs text-gray-400">
+              When <span className="text-white font-mono">{rule.metric}</span> meets the threshold{' '}
+              <span className="text-accent-amber font-mono">{rule.threshold}</span>, the system
+              automatically executes <span className="text-primary-400">{rule.action}</span>.
+              After triggering, a cooldown period prevents repeated execution.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
