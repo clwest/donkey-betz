@@ -730,17 +730,15 @@ function SystemActivityCard({ item }: SystemActivityCardProps) {
   return (
     <div
       className={cn(
-        'rounded-lg border transition-colors',
+        'rounded-lg border transition-all cursor-pointer',
         styles.bg,
         styles.border,
-        isExpanded && 'ring-1 ring-primary-500/50'
+        isExpanded ? 'ring-1 ring-primary-500/50' : 'hover:border-primary-500/50 hover:bg-white/5'
       )}
+      onClick={() => setIsExpanded(!isExpanded)}
     >
       {/* Clickable Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-3 text-left cursor-pointer hover:bg-white/5 transition-colors rounded-lg"
-      >
+      <div className="w-full p-3 text-left">
         <div className="flex items-start gap-3">
           <span className={cn('text-lg', styles.iconColor)}>{item.icon || '📋'}</span>
           <div className="flex-1 min-w-0">
@@ -781,12 +779,12 @@ function SystemActivityCard({ item }: SystemActivityCardProps) {
           <ChevronRight
             size={16}
             className={cn(
-              'text-gray-500 transition-transform',
+              'text-gray-500 transition-transform flex-shrink-0',
               isExpanded && 'rotate-90'
             )}
           />
         </div>
-      </button>
+      </div>
 
       {/* Expanded Content */}
       {isExpanded && (
