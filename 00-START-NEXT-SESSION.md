@@ -34,7 +34,7 @@ Investigated ChatGPT's claim of "85% experiment failure rate" and found the **re
 
 The "85% failure rate" was from simulated agent research output, not real telemetry. Actual experiments weren't failing - they were simply **never being evaluated**.
 
-### Production API Fixes (4 PRs)
+### Production API Fixes (5 PRs)
 
 After fixing the experiment system, several production issues were discovered and fixed:
 
@@ -43,9 +43,10 @@ After fixing the experiment system, several production issues were discovered an
 | #284 | `synthesis[:500]` failed for dict type | Use `str(synthesis)[:500]` |
 | #285 | `trigger_reason` attribute not found | Changed to `trigger_type` |
 | #286 | "Invalid Date" + "0 turns" in UI | Fixed field names in ConversationDetailModal |
-| #288 | "0 Completed" + "0% Avg Quality" | Compute stats dynamically instead of stale stored fields |
+| #288 | "0 Completed" + "0% Avg Quality" | Compute stats dynamically |
+| #290 | MeetingCoordinator returns placeholders | Now calls real agents via router |
 
-**All conversation display issues now fixed.**
+**All conversation and agent coordination issues now fixed.**
 
 ---
 
@@ -125,4 +126,4 @@ print(f'Learnings: {ExperimentLearning.objects.count()}')
 
 ---
 
-**SESSION 836 COMPLETE - Experiment learning loop active (251 learnings, 29 patterns) + 4 production fixes deployed**
+**SESSION 836 COMPLETE - Experiment learning loop active (251 learnings, 29 patterns) + 5 production fixes deployed**
