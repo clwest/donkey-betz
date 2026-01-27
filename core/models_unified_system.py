@@ -554,6 +554,15 @@ class AgentExecution(models.Model):
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='executions')
     # Session 642: Made nullable to allow Celery task executions without user context
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    # Session 841: Track which experiment this execution belongs to for proper error rate scoping
+    experiment = models.ForeignKey(
+        'core.Experiment',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agent_executions',
+        help_text="Session 841: Experiment this execution belongs to"
+    )
 
     task = models.TextField()
     status = models.CharField(max_length=20, choices=[

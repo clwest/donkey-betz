@@ -255,6 +255,16 @@ def execute_agent_task(
         # Create execution record
         agent_obj = Agent.objects.filter(name=agent_name).first()
 
+        # Session 841: Resolve experiment for proper error rate scoping
+        experiment = None
+        experiment_id = context.get('experiment_id')
+        if experiment_id:
+            try:
+                from core.models import Experiment
+                experiment = Experiment.objects.filter(id=experiment_id).first()
+            except Exception:
+                pass
+
         execution_record = None
         if agent_obj:
             execution_record = AgentExecution.objects.create(
@@ -265,7 +275,8 @@ def execute_agent_task(
                     'task': task,
                     'context': context,
                     'source': 'conversation_action_dispatch',
-                }
+                },
+                experiment=experiment,  # Session 841: Link to experiment for scoped metrics
             )
 
         # Route to agent

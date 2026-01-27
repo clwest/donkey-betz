@@ -177,7 +177,27 @@ class OpenAIProvider(BaseLLMProvider):
             return response
 
         except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
+            # Session 841: Record errors for provider health tracking
+            error_type = 'server_error'
+            try:
+                from openai import RateLimitError, APIStatusError, APITimeoutError, APIConnectionError
+                from core.services.provider_health_tracker import record_provider_error
+
+                if isinstance(e, RateLimitError):
+                    error_type = 'rate_limit'
+                elif isinstance(e, APITimeoutError):
+                    error_type = 'timeout'
+                elif isinstance(e, APIConnectionError):
+                    error_type = 'connection_error'
+                elif isinstance(e, APIStatusError) and hasattr(e, 'status_code'):
+                    if e.status_code >= 500:
+                        error_type = 'server_error'
+
+                record_provider_error('openai', error_type)
+            except ImportError:
+                pass  # Health tracker not available
+
+            logger.error(f"OpenAI API error ({error_type}): {e}")
             return LLMResponse(
                 success=False,
                 content='',
@@ -426,7 +446,27 @@ class AnthropicProvider(BaseLLMProvider):
             )
 
         except Exception as e:
-            logger.error(f"Anthropic API error: {e}")
+            # Session 841: Record errors for provider health tracking
+            error_type = 'server_error'
+            try:
+                from anthropic import RateLimitError, APIStatusError, APITimeoutError, APIConnectionError
+                from core.services.provider_health_tracker import record_provider_error
+
+                if isinstance(e, RateLimitError):
+                    error_type = 'rate_limit'
+                elif isinstance(e, APITimeoutError):
+                    error_type = 'timeout'
+                elif isinstance(e, APIConnectionError):
+                    error_type = 'connection_error'
+                elif isinstance(e, APIStatusError) and hasattr(e, 'status_code'):
+                    if e.status_code >= 500:
+                        error_type = 'server_error'
+
+                record_provider_error('anthropic', error_type)
+            except ImportError:
+                pass  # Health tracker not available
+
+            logger.error(f"Anthropic API error ({error_type}): {e}")
             return LLMResponse(
                 success=False,
                 content='',
