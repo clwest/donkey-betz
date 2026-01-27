@@ -85,9 +85,11 @@ class YouTubeSpider:
         return all_items[:max_results]
 
     def _fetch_youtube_api(self) -> List[Dict[str, Any]]:
-        """Fetch videos from YouTube API."""
+        """Fetch videos from YouTube API with full statistics."""
         items = []
+        video_ids = []
 
+        # Step 1: Search for videos
         for query in self.SEARCH_QUERIES[:3]:  # Limit queries to conserve quota
             try:
                 search_url = f"{self.BASE_URL}/search"
@@ -108,6 +110,7 @@ class YouTubeSpider:
                         snippet = item.get('snippet', {})
 
                         if video_id:
+                            video_ids.append(video_id)
                             items.append({
                                 'id': video_id,
                                 'title': snippet.get('title', ''),
@@ -129,7 +132,75 @@ class YouTubeSpider:
             except Exception as e:
                 logger.warning(f"Error searching '{query}': {e}")
 
+        # Step 2: Fetch statistics for all videos in one batch call
+        if video_ids:
+            stats = self._fetch_video_statistics(video_ids)
+            # Merge statistics into items
+            for item in items:
+                video_id = item['id']
+                if video_id in stats:
+                    item.update(stats[video_id])
+
         return items
+
+    def _fetch_video_statistics(self, video_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """
+        Fetch video statistics from YouTube Videos API.
+
+        Session 840: Added to get view counts, likes, comments - fixes "no YouTube metrics" issue.
+
+        Args:
+            video_ids: List of YouTube video IDs
+
+        Returns:
+            Dict mapping video_id to statistics
+        """
+        stats = {}
+
+        # YouTube API allows up to 50 video IDs per request
+        for i in range(0, len(video_ids), 50):
+            batch = video_ids[i:i + 50]
+            try:
+                videos_url = f"{self.BASE_URL}/videos"
+                params = {
+                    'part': 'statistics,contentDetails',
+                    'id': ','.join(batch),
+                    'key': self.api_key,
+                }
+
+                response = requests.get(videos_url, params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    for item in data.get('items', []):
+                        video_id = item.get('id')
+                        statistics = item.get('statistics', {})
+                        content_details = item.get('contentDetails', {})
+
+                        # Parse view/like/comment counts as integers
+                        view_count = int(statistics.get('viewCount', 0))
+                        like_count = int(statistics.get('likeCount', 0))
+                        comment_count = int(statistics.get('commentCount', 0))
+
+                        # Calculate engagement rate (likes + comments) / views
+                        engagement_rate = 0.0
+                        if view_count > 0:
+                            engagement_rate = round((like_count + comment_count) / view_count * 100, 4)
+
+                        stats[video_id] = {
+                            'view_count': view_count,
+                            'like_count': like_count,
+                            'comment_count': comment_count,
+                            'engagement_rate': engagement_rate,
+                            'duration': content_details.get('duration', ''),  # ISO 8601 format
+                            'definition': content_details.get('definition', ''),  # hd or sd
+                            'has_statistics': True,
+                            'statistics_fetched_at': datetime.now().isoformat(),
+                        }
+
+            except Exception as e:
+                logger.warning(f"Error fetching video statistics: {e}")
+
+        return stats
 
     def _get_category_links(self) -> List[Dict[str, Any]]:
         """Return YouTube category links."""
