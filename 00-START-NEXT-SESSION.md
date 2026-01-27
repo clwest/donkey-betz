@@ -30,16 +30,23 @@
    - Toggle between "Grouped" and "Flat" views
    - Stats row with total operations and task groups
 
-4. **Bug Fixes**:
+4. **Detail Modals** - View conversations and dreams inline without redirect:
+   - ConversationDetailModal: Full thread, participants, turns, conclusions
+   - DreamDetailModal: Content, interpretation, scores, ratings, reactions
+   - System Activity cards now use modals instead of redirecting
+
+5. **Bug Fixes**:
    - Fixed conversation link going to black screen (`/conversations` → `/conversation-contract`)
    - Fixed Input Parameters truncation in Agent Tasks
 
-### Session 834 PRs (3 Total)
+### Session 834 PRs (5 Total)
 | PR | Description |
 |----|-------------|
 | #267 | Fix conversation link going to black screen |
 | #268 | Grouped operations by task with collapsible view |
 | #269 | Add Advisors panel & clean up sidebar (44→15 items) |
+| #270 | Update handoff documentation |
+| #271 | Add modals for viewing conversations and dreams inline |
 
 ### Data Verification Complete
 All 11 Workspace tabs verified returning real data:
