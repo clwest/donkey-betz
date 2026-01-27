@@ -26702,6 +26702,38 @@ def _extract_agent_output_content(result, task_description: str) -> str:
                                         for k, v in list(val.items())[:5]:
                                             if v and not k.startswith('_'):
                                                 output_parts.append(f"  - {k}: {str(v)[:100]}\n")
+
+                    # Session 843: Handle {source, data} format used by 15+ agents
+                    # (PromptEngineeringAgent, ResearchAgent, CodeGeneratorAgent, etc.)
+                    elif 'source' in item and 'data' in item:
+                        source_name = item.get('source', f'Tool {i}')
+                        source_data = item.get('data', {})
+                        output_parts.append(f"### {i}. {source_name}\n")
+
+                        if isinstance(source_data, dict):
+                            # Session 843: Extended content keys for various agent output types
+                            content_keys = [
+                                'prompt_library', 'prompt_template', 'optimized_result',
+                                'system_prompt', 'analysis', 'code', 'review', 'output',
+                                'research', 'findings', 'recommendations', 'report',
+                                'content', 'document', 'summary', 'result'
+                            ]
+                            found_content = False
+                            for content_key in content_keys:
+                                if content_key in source_data and source_data[content_key]:
+                                    val = source_data[content_key]
+                                    if isinstance(val, str) and len(val) > 20:
+                                        output_parts.append(f"{val}\n")
+                                        found_content = True
+                                        break  # Use first substantial content found
+
+                            # If no main content found, show key metadata
+                            if not found_content:
+                                meta_keys = ['domain', 'target_model', 'agent_name', 'task_description']
+                                for mk in meta_keys:
+                                    if mk in source_data and source_data[mk]:
+                                        output_parts.append(f"**{mk.replace('_', ' ').title()}**: {source_data[mk]}\n")
+
                     else:
                         # Standard dict item format
                         item_title = item.get('title') or item.get('name') or item.get('source') or f'Item {i}'
