@@ -128,9 +128,11 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations + Detail Modals | `SESSION_834_UI_CONSOLIDATION.md` |
+| **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes | `SESSION_833_WORKSPACE_IMPROVEMENTS.md` |
 | **832** | Recent Activity Enhancement - New fields, system activity | `SESSION_832_RECENT_ACTIVITY_ENHANCEMENT.md` |
 | **831** | Remediation Pipeline + LLM Timeouts + UI Fixes | `SESSION_831_REMEDIATION_PIPELINE.md` |
-| **830** | Agent File Operations + Production Auth Fixes | `SESSION_830_AGENT_FILE_OPERATIONS.md` |
+| **830** | Agent File Operations + Production Auth Fixes | `SESSION_830_PRODUCTION_FIXES.md` |
 | **829** | Self-Healing UI Controls + SKIN Layer File Writing | `SESSION_829_SELF_HEALING_UI_CONTROLS.md` |
 | **828** | Self-Healing Execution - 514/742 tasks (69.3%) | `SESSION_828_SELF_HEALING_EXECUTION.md` |
 | **827** | Production 502 Fix - Async Conversations via Celery | `SESSION_827_PRODUCTION_502_FIX.md` |
@@ -141,10 +143,8 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **822** | SKIN Layer Autonomous Remediation | `SESSION_822_SKIN_REMEDIATION.md` |
 | **821** | Staleness Validation - Filters old audit findings | `SESSION_821_STALENESS_VALIDATION.md` |
 | **820** | Self-Healing Orchestration + Tiered Docs Injection | `SESSION_820_SELF_HEALING_ORCHESTRATION.md` |
-| **819** | Deliverables Marketplace + Audit Tracking | `SESSION_819_DELIVERABLES_MARKETPLACE.md` |
-| **817** | Autonomous Agent Behavior + Smart Tool Renderer | `SESSION_817_AUTONOMOUS_AGENTS_TOOL_RENDERER.md` |
 
-**Older sessions:** See `docs/handoffs/` directory (Sessions 197-831)
+**Older sessions:** See `docs/handoffs/` directory (Sessions 197-834)
 
 ---
 
