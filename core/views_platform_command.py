@@ -2256,8 +2256,30 @@ def celery_debug_view(request):
         if oldest_in_progress:
             oldest_age_hours = (now - oldest_in_progress.created_at).total_seconds() / 3600
 
-        # Check Celery Beat schedule
+        # Check Celery Beat schedule from database (DatabaseScheduler)
         beat_schedule = {}
+        beat_db_tasks = {}
+        try:
+            from django_celery_beat.models import PeriodicTask
+            # Get cleanup-related tasks from database
+            cleanup_tasks = PeriodicTask.objects.filter(name__icontains='cleanup')
+            for task in cleanup_tasks:
+                beat_db_tasks[task.name] = {
+                    'task': task.task,
+                    'enabled': task.enabled,
+                    'last_run_at': task.last_run_at.isoformat() if task.last_run_at else None,
+                    'total_run_count': task.total_run_count,
+                    'interval': str(task.interval) if task.interval else None,
+                    'one_off': task.one_off,
+                }
+                # Calculate hours since last run
+                if task.last_run_at:
+                    hours_since_run = (now - task.last_run_at).total_seconds() / 3600
+                    beat_db_tasks[task.name]['hours_since_last_run'] = round(hours_since_run, 1)
+        except Exception as e:
+            beat_db_tasks = {'error': str(e)}
+
+        # Also get settings schedule for reference
         try:
             schedule = getattr(settings, 'CELERY_BEAT_SCHEDULE', {})
             for name, config in schedule.items():
@@ -2284,7 +2306,8 @@ def celery_debug_view(request):
                 'oldest_in_progress_hours': round(oldest_age_hours, 1) if oldest_age_hours else None,
             },
             'celery_beat': {
-                'cleanup_schedules': beat_schedule,
+                'settings_schedule': beat_schedule,
+                'database_tasks': beat_db_tasks,
             },
             'diagnosis': {
                 'worker_active': recent_completions > 0 or recent_failures > 0,
@@ -2294,6 +2317,12 @@ def celery_debug_view(request):
                         'Redis not connected' if not redis_ok else None,
                         f'{stale_2h} tasks stuck >2h (cleanup not running?)' if stale_2h > 0 else None,
                         'No task completions in last hour' if recent_completions == 0 and recent_failures == 0 else None,
+                        # Check if cleanup task hasn't run in over 2 hours
+                        next((
+                            f"cleanup task '{name}' hasn't run in {info.get('hours_since_last_run', 'unknown')} hours"
+                            for name, info in beat_db_tasks.items()
+                            if isinstance(info, dict) and info.get('hours_since_last_run', 0) > 2
+                        ), None) if isinstance(beat_db_tasks, dict) and 'error' not in beat_db_tasks else None,
                     ] if issue
                 ]
             }
