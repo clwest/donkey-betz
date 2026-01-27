@@ -37,7 +37,7 @@ from django.db.models import Sum, Count
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 logger = logging.getLogger(__name__)
 
@@ -2200,4 +2200,64 @@ def self_healing_progress_view(request):
             'by_agent': [],
             'recent_activity': {},
             'updated_at': timezone.now().isoformat(),
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def cleanup_stale_executions_view(request):
+    """
+    POST /api/platform/cleanup-stale-executions/
+
+    Session 842: Manually trigger cleanup of stale agent executions.
+    Useful when Celery Beat is not running and tasks are stuck.
+
+    Query params:
+        hours_threshold: Hours before marking as stale (default 2)
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models_unified_system import AgentExecution
+
+        hours_threshold = int(request.GET.get('hours_threshold', 2))
+        cutoff_time = timezone.now() - timedelta(hours=hours_threshold)
+
+        stale_tasks = AgentExecution.objects.filter(
+            status='in_progress',
+            created_at__lt=cutoff_time
+        )
+
+        count = stale_tasks.count()
+
+        if count > 0:
+            # Get details before updating
+            stale_details = list(stale_tasks.values('id', 'agent__name', 'task', 'created_at')[:20])
+
+            stale_tasks.update(
+                status='failed',
+                error_message=f'Session 842: Task timed out after {hours_threshold} hours - marked as failed by manual cleanup',
+                completed_at=timezone.now()
+            )
+            logger.info(f"🧹 [SESSION 842] Manually cleaned up {count} stale agent executions")
+
+            return JsonResponse({
+                'success': True,
+                'cleaned_count': count,
+                'hours_threshold': hours_threshold,
+                'sample_tasks': stale_details,
+                'message': f'Cleaned up {count} stale executions older than {hours_threshold} hours',
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'cleaned_count': 0,
+                'hours_threshold': hours_threshold,
+                'message': f'No stale executions found older than {hours_threshold} hours',
+            })
+
+    except Exception as e:
+        logger.error(f"Failed to cleanup stale executions: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
         }, status=500)
