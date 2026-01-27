@@ -593,6 +593,9 @@ Focus on patterns that suggest informed trading or manipulation."""
             }
 
         elif tool_name == 'analyze_options_flow':
+            # Session 838: Return insufficient_data instead of hardcoded placeholder values
+            # Options flow analysis requires specialized options data providers (CBOE, OptionMetrics, Unusual Whales)
+            # that are not currently configured in the spider network
             option_type = arguments.get('option_type', 'ALL')
             min_premium = arguments.get('min_premium', 100000)
             return {
@@ -600,9 +603,16 @@ Focus on patterns that suggest informed trading or manipulation."""
                 'ticker': ticker,
                 'option_type': option_type,
                 'min_premium': min_premium,
-                'unusual_activity': [],
-                'call_put_ratio': 1.2,
-                'message': f"Analyzed options flow for {ticker}"
+                'status': 'insufficient_data',
+                'reason': 'No real-time options flow data provider configured',
+                'required_data_sources': [
+                    'CBOE Options Exchange feed',
+                    'OptionMetrics API',
+                    'Unusual Whales API',
+                    'Market Chameleon'
+                ],
+                'data_quality': 'unavailable',
+                'message': f"Options flow analysis for {ticker} unavailable - requires options data provider integration"
             }
 
         elif tool_name == 'flag_manipulation':
