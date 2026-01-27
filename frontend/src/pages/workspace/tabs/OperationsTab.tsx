@@ -1,11 +1,26 @@
 // Session 825: Operations Tab
 // Extracted from WorkspacePage.tsx for modular architecture
+// Session 834: Added grouped view to link related operations
 
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Loader2, History } from 'lucide-react'
+import {
+  Search,
+  Loader2,
+  History,
+  ChevronDown,
+  ChevronRight,
+  Layers,
+  List,
+  CheckCircle,
+  XCircle,
+  Clock,
+  FileText,
+  Bot,
+} from 'lucide-react'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
 import { OperationCard } from '../components/OperationCard'
+import { cn } from '@/lib/cn'
 import type { Workspace, WorkspaceOperation } from '../types'
 
 interface OperationsTabProps {
@@ -13,6 +28,163 @@ interface OperationsTabProps {
   onViewFileContent: (operationId: string) => void
   showSuccess: (message: string) => void
   showError: (message: string) => void
+}
+
+// Group operations by task
+interface OperationGroup {
+  task: string
+  operations: WorkspaceOperation[]
+  agents: string[]
+  totalSuccess: number
+  totalFailed: number
+  latestTime: string
+  earliestTime: string
+}
+
+function groupOperationsByTask(operations: WorkspaceOperation[]): OperationGroup[] {
+  const groups: Record<string, WorkspaceOperation[]> = {}
+
+  operations.forEach((op) => {
+    // Use agent_task if available, otherwise create a key from agent + time window
+    const taskKey = op.agent_task || `${op.agent_name}_${op.created_at.substring(0, 13)}` // Group by agent + hour
+    if (!groups[taskKey]) {
+      groups[taskKey] = []
+    }
+    groups[taskKey].push(op)
+  })
+
+  return Object.entries(groups)
+    .map(([task, ops]) => {
+      const agents = [...new Set(ops.map((op) => op.agent_name))]
+      const successCount = ops.filter((op) => op.success).length
+      const failedCount = ops.filter((op) => !op.success).length
+      const times = ops.map((op) => new Date(op.created_at).getTime())
+
+      return {
+        task,
+        operations: ops.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ),
+        agents,
+        totalSuccess: successCount,
+        totalFailed: failedCount,
+        latestTime: new Date(Math.max(...times)).toISOString(),
+        earliestTime: new Date(Math.min(...times)).toISOString(),
+      }
+    })
+    .sort((a, b) => new Date(b.latestTime).getTime() - new Date(a.latestTime).getTime())
+}
+
+// Format task title for display
+function formatTaskTitle(task: string): string {
+  if (!task) return 'Unknown Task'
+
+  // If it's an auto-generated key (agent_timestamp), format it nicely
+  if (task.includes('_202')) {
+    const parts = task.split('_')
+    const agentName = parts.slice(0, -1).join(' ').replace(/([A-Z])/g, ' $1').trim()
+    return `${agentName} Operations`
+  }
+
+  // Truncate long task descriptions
+  if (task.length > 100) {
+    return task.substring(0, 100) + '...'
+  }
+
+  return task
+}
+
+// Collapsible operation group component
+function OperationGroupCard({
+  group,
+  onRollback,
+  onReview,
+  onViewContent,
+  reviewingOperationId,
+}: {
+  group: OperationGroup
+  onRollback: (id: string) => void
+  onReview: (id: string, approved: boolean) => void
+  onViewContent: (id: string) => void
+  reviewingOperationId: string | null
+}) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const timeAgo = (date: string) => {
+    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+    if (seconds < 60) return 'just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    return `${Math.floor(seconds / 86400)}d ago`
+  }
+
+  return (
+    <div className="bg-dark-card border border-dark-border rounded-lg overflow-hidden">
+      {/* Group Header - Clickable */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-dark-border/30 transition-colors text-left"
+      >
+        {/* Expand/Collapse Icon */}
+        <div className="text-gray-400">
+          {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+        </div>
+
+        {/* Task Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-sm truncate">{formatTaskTitle(group.task)}</h3>
+            <span className="px-2 py-0.5 bg-primary-600/20 text-primary-400 text-xs rounded-full">
+              {group.operations.length} {group.operations.length === 1 ? 'file' : 'files'}
+            </span>
+          </div>
+
+          {/* Agents involved */}
+          <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+            <Bot size={12} />
+            <span>{group.agents.join(', ')}</span>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="flex items-center gap-4 text-xs">
+          {group.totalSuccess > 0 && (
+            <span className="flex items-center gap-1 text-green-400">
+              <CheckCircle size={14} />
+              {group.totalSuccess}
+            </span>
+          )}
+          {group.totalFailed > 0 && (
+            <span className="flex items-center gap-1 text-red-400">
+              <XCircle size={14} />
+              {group.totalFailed}
+            </span>
+          )}
+          <span className="flex items-center gap-1 text-gray-400">
+            <Clock size={14} />
+            {timeAgo(group.latestTime)}
+          </span>
+        </div>
+      </button>
+
+      {/* Expanded Content - Individual Operations */}
+      {isExpanded && (
+        <div className="border-t border-dark-border bg-dark-bg/50 p-3 space-y-2">
+          {group.operations.map((operation) => (
+            <OperationCard
+              key={operation.id}
+              operation={operation}
+              onRollback={() => onRollback(operation.id)}
+              onReview={(approved) => onReview(operation.id, approved)}
+              onViewContent={() => onViewContent(operation.id)}
+              isReviewing={reviewingOperationId === operation.id}
+              compact
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function OperationsTab({
@@ -24,11 +196,12 @@ export function OperationsTab({
   const queryClient = useQueryClient()
   const [operationFilter, setOperationFilter] = useState('')
   const [reviewingOperationId, setReviewingOperationId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped')
 
   // Operations query
   const { data: operationsData, isLoading: loadingOperations } = useQuery({
     queryKey: ['workspace-operations', activeWorkspace?.id],
-    queryFn: () => activeWorkspace ? workspaceApi.operations(activeWorkspace.id) : null,
+    queryFn: () => (activeWorkspace ? workspaceApi.operations(activeWorkspace.id) : null),
     enabled: !!activeWorkspace?.id,
   })
 
@@ -61,8 +234,11 @@ export function OperationsTab({
     },
   })
 
-  // Filter operations
-  const operations = (operationsData?.data?.results || operationsData?.data || []) as WorkspaceOperation[]
+  // Filter and group operations
+  const operations = (operationsData?.data?.results ||
+    operationsData?.data ||
+    []) as WorkspaceOperation[]
+
   const filteredOperations = useMemo(() => {
     if (!operationFilter) return operations
     const filter = operationFilter.toLowerCase()
@@ -70,9 +246,15 @@ export function OperationsTab({
       (op) =>
         op.file_path?.toLowerCase().includes(filter) ||
         op.agent_name?.toLowerCase().includes(filter) ||
-        op.operation_type?.toLowerCase().includes(filter)
+        op.operation_type?.toLowerCase().includes(filter) ||
+        op.agent_task?.toLowerCase().includes(filter)
     )
   }, [operations, operationFilter])
+
+  const groupedOperations = useMemo(
+    () => groupOperationsByTask(filteredOperations),
+    [filteredOperations]
+  )
 
   const handleReview = (operationId: string, approved: boolean) => {
     setReviewingOperationId(operationId)
@@ -81,17 +263,71 @@ export function OperationsTab({
 
   return (
     <div className="space-y-4">
-      {/* Filter */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-        <input
-          type="text"
-          placeholder="Filter operations..."
-          value={operationFilter}
-          onChange={(e) => setOperationFilter(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm focus:border-primary-500 focus:outline-none"
-        />
+      {/* Filter & View Toggle */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input
+            type="text"
+            placeholder="Filter operations..."
+            value={operationFilter}
+            onChange={(e) => setOperationFilter(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm focus:border-primary-500 focus:outline-none"
+          />
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex items-center bg-dark-bg border border-dark-border rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('grouped')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
+              viewMode === 'grouped'
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-400 hover:text-white'
+            )}
+            title="Group related operations"
+          >
+            <Layers size={14} />
+            Grouped
+          </button>
+          <button
+            onClick={() => setViewMode('flat')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
+              viewMode === 'flat' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-white'
+            )}
+            title="Show all operations"
+          >
+            <List size={14} />
+            Flat
+          </button>
+        </div>
       </div>
+
+      {/* Stats Row */}
+      {filteredOperations.length > 0 && (
+        <div className="flex items-center gap-4 text-xs text-gray-400">
+          <span className="flex items-center gap-1">
+            <FileText size={12} />
+            {filteredOperations.length} operations
+          </span>
+          {viewMode === 'grouped' && (
+            <span className="flex items-center gap-1">
+              <Layers size={12} />
+              {groupedOperations.length} task groups
+            </span>
+          )}
+          <span className="flex items-center gap-1 text-green-400">
+            <CheckCircle size={12} />
+            {filteredOperations.filter((op) => op.success).length} successful
+          </span>
+          <span className="flex items-center gap-1 text-red-400">
+            <XCircle size={12} />
+            {filteredOperations.filter((op) => !op.success).length} failed
+          </span>
+        </div>
+      )}
 
       {/* Operations List */}
       {loadingOperations ? (
@@ -108,7 +344,22 @@ export function OperationsTab({
             Agent file operations will appear here
           </p>
         </div>
+      ) : viewMode === 'grouped' ? (
+        // Grouped View
+        <div className="space-y-3">
+          {groupedOperations.map((group) => (
+            <OperationGroupCard
+              key={group.task}
+              group={group}
+              onRollback={(id) => rollbackMutation.mutate(id)}
+              onReview={handleReview}
+              onViewContent={onViewFileContent}
+              reviewingOperationId={reviewingOperationId}
+            />
+          ))}
+        </div>
       ) : (
+        // Flat View
         <div className="space-y-3">
           {filteredOperations.map((operation) => (
             <OperationCard
