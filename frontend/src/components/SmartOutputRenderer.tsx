@@ -130,6 +130,17 @@ interface Recommendation {
   description?: string
   priority?: 'high' | 'medium' | 'low'
   action?: string
+  // Session 835: ContentStrategy extended fields
+  content_type?: string
+  name?: string
+  trending_keywords?: string[]
+  style_suggestions?: string[]
+  best_for?: string[]
+  // Opportunity fields
+  topic?: string
+  opportunity?: string
+  urgency?: string
+  suggested_style?: string
 }
 
 interface AnalysisResult {
@@ -483,33 +494,122 @@ function PodcastRenderer({ data }: { data: OutputData }) {
 }
 
 // Recommendations
+// Session 835: Content type icons for ContentStrategy recommendations
+const contentTypeIcons: Record<string, string> = {
+  youtube_thumbnail: '🎬',
+  logo: '🎨',
+  social_post: '📱',
+  blog: '📝',
+  video: '🎥',
+  podcast: '🎙️',
+  infographic: '📊',
+  default: '💡'
+}
+
 function RecommendationsRenderer({ recommendations }: { recommendations: (string | Recommendation)[] }) {
+  // Session 835: Check if this is a ContentStrategy-style output with content_type
+  const hasContentTypes = recommendations.some(rec => typeof rec === 'object' && rec.content_type)
+  const hasOpportunities = recommendations.some(rec => typeof rec === 'object' && rec.topic && rec.opportunity)
+
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-medium text-accent-purple flex items-center gap-2">
         <Lightbulb className="w-4 h-4" />
-        Recommendations ({recommendations.length})
+        {hasContentTypes ? 'Content Recommendations' : hasOpportunities ? 'Opportunities' : 'Recommendations'} ({recommendations.length})
       </h4>
       <div className="space-y-2">
         {recommendations.map((rec, i) => (
-          <div key={i} className="p-3 bg-dark-card rounded-lg border border-dark-border flex items-start gap-3">
-            <span className="text-accent-purple font-mono text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
+          <div key={i} className="p-3 bg-dark-card rounded-lg border border-dark-border">
             {typeof rec === 'string' ? (
-              <p className="text-sm text-gray-300">{rec}</p>
-            ) : (
-              <div className="flex-1">
-                {rec.title && <p className="text-sm text-white font-medium">{rec.title}</p>}
-                {rec.description && <p className="text-xs text-gray-400 mt-1">{rec.description}</p>}
-                {rec.priority && (
-                  <span className={cn(
-                    "inline-block mt-2 px-2 py-0.5 text-xs rounded",
-                    rec.priority === 'high' ? 'bg-accent-red/20 text-accent-red' :
-                    rec.priority === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
-                    'bg-gray-600/20 text-gray-400'
-                  )}>
-                    {rec.priority}
+              <div className="flex items-start gap-3">
+                <span className="text-accent-purple font-mono text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
+                <p className="text-sm text-gray-300">{rec}</p>
+              </div>
+            ) : rec.content_type ? (
+              // Session 835: ContentStrategy content type recommendation
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{contentTypeIcons[rec.content_type] || contentTypeIcons.default}</span>
+                  <span className="text-sm font-medium text-white">{rec.name || rec.content_type.replace(/_/g, ' ')}</span>
+                  {rec.priority && (
+                    <span className={cn(
+                      "ml-auto px-2 py-0.5 text-xs rounded",
+                      rec.priority === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                      rec.priority === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                      'bg-gray-600/20 text-gray-400'
+                    )}>
+                      {rec.priority}
+                    </span>
+                  )}
+                </div>
+                {rec.description && <p className="text-xs text-gray-400">{rec.description}</p>}
+                {rec.best_for && rec.best_for.length > 0 && (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-xs text-gray-500">Best for:</span>
+                    {rec.best_for.map((item, j) => (
+                      <span key={j} className="px-1.5 py-0.5 bg-accent-cyan/10 text-accent-cyan text-xs rounded">{item}</span>
+                    ))}
+                  </div>
+                )}
+                {rec.trending_keywords && rec.trending_keywords.length > 0 && (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-xs text-gray-500">Keywords:</span>
+                    {rec.trending_keywords.map((kw, j) => (
+                      <span key={j} className="px-1.5 py-0.5 bg-accent-purple/10 text-accent-purple text-xs rounded">{kw}</span>
+                    ))}
+                  </div>
+                )}
+                {rec.style_suggestions && rec.style_suggestions.length > 0 && (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-xs text-gray-500">Styles:</span>
+                    {rec.style_suggestions.map((style, j) => (
+                      <span key={j} className="px-1.5 py-0.5 bg-accent-green/10 text-accent-green text-xs rounded">{style}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : rec.topic && rec.opportunity ? (
+              // Session 835: Opportunity-style recommendation
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-accent-green" />
+                  <span className="text-sm font-medium text-white">{rec.topic}</span>
+                  {rec.urgency && (
+                    <span className={cn(
+                      "ml-auto px-2 py-0.5 text-xs rounded",
+                      rec.urgency === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                      rec.urgency === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                      'bg-gray-600/20 text-gray-400'
+                    )}>
+                      {rec.urgency}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">{rec.opportunity}</p>
+                {rec.suggested_style && (
+                  <span className="inline-block px-1.5 py-0.5 bg-accent-purple/10 text-accent-purple text-xs rounded">
+                    Style: {rec.suggested_style}
                   </span>
                 )}
+              </div>
+            ) : (
+              // Default recommendation format
+              <div className="flex items-start gap-3">
+                <span className="text-accent-purple font-mono text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
+                <div className="flex-1">
+                  {rec.title && <p className="text-sm text-white font-medium">{rec.title}</p>}
+                  {rec.description && <p className="text-xs text-gray-400 mt-1">{rec.description}</p>}
+                  {rec.priority && (
+                    <span className={cn(
+                      "inline-block mt-2 px-2 py-0.5 text-xs rounded",
+                      rec.priority === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                      rec.priority === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                      'bg-gray-600/20 text-gray-400'
+                    )}>
+                      {rec.priority}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
