@@ -1,79 +1,52 @@
 # Session 834 - Continue Platform Development
 
-**Previous Session:** 833 (Workspace Tab Improvements + Blog Approval Workflow + Operations Viewer)
+**Previous Session:** 833 (Workspace Improvements + Blog Approval + Operations Viewer + 50 Agent Fixes + Run Remediation Fix)
 **Date:** January 26, 2026
-**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **All Workspace Tabs Enhanced** | **Blog Approval Workflow** | **Operations Viewer** | Self-Healing Pipeline Complete
+**Status:** 74 Agents | 77 Spiders | 235 Celery Tasks | **12 PRs in Session 833** | Self-Healing Pipeline Complete
 
 ---
 
 ## What Was Accomplished in Session 833
 
-### 1. Shared ErrorState Component
+### Major Features
 
-Created `frontend/src/components/ErrorState.tsx` - a reusable component for consistent error handling:
-- Error icon with red styling
-- Custom or automatic error messages
-- "Try Again" button with retry callback
+1. **Shared ErrorState Component** - Consistent error handling across all 10 workspace tabs
+2. **Dynamic API Data** - HiveMind and LLM Routing now fetch real counts
+3. **Knowledge Tab Document Viewer** - Markdown rendering with metadata
+4. **Blog Approval Workflow** - Draft → Approved → Published with status filtering
+5. **Operations Content Viewer** - View file diffs, command output, errors
 
-### 2. Error Handling for All Workspace Tabs
+### Bug Fixes (50 Agents + Syntax Errors)
 
-Added error handling to all 10 workspace tabs (was missing in 9):
-- CommandTab, GovernanceTab, IntelligenceTab, KnowledgeTab
-- OrchestrationTab, AIConsciousnessTab, DataSourcesTab
-- ContentStudioTab, InfrastructureTab
+6. **delegate_to_specialist Fix** - Fixed "Unknown tool" error in 50 agents via batch script
+7. **Syntax Error Fixes** - Fixed 8 agents with syntax errors from batch script (PRs #244, #246, #247)
+8. **SelfBlog word_count** - Auto-calculates from full_text, fixed 67 blogs showing 0
 
-### 3. Dynamic API Data
+### Experiment & Remediation Fixes
 
-**HiveMind Sub-Tab:** Now fetches real agent/advisor/coordinator counts
-**LLM Routing Sub-Tab:** Now fetches real provider/model/config counts
+9. **Experiment Auto-Completion** - 12 experiments auto-completed when KPI target met (247→235 pending)
+10. **Run Remediation Chain Fix** - Now assigns AND executes in single click (was requiring 2 clicks)
 
-### 4. Knowledge Tab Document Viewer
+### Operations Viewer Enhancements
 
-Implemented document viewer modal with:
-- Markdown rendering (react-markdown + remark-gfm)
-- Loading/error/empty states
-- Metadata footer (lines, size, modified date)
-- API: `platformApi.docContent(path)`
+11. **Markdown Rendering** - Operations viewer renders .md files with proper formatting
+12. **Rendered/Diff Toggle** - Switch between clean markdown and raw diff view
+13. **Readable Card Titles** - `campaign_plan_quarterly_...md` → "Campaign Plan: Quarterly..." [MD]
 
-### 5. Blog Approval Workflow
-
-Implemented complete blog approval workflow: **Draft → Approved → Published**
-
-**Backend:**
-- Added `status` field to SelfBlog model (draft/approved/published)
-- Added `/api/v1/research/self-blog/<id>/approve/` endpoint
-- Added `/api/v1/research/self-blog/<id>/publish/` endpoint
-- Updated list endpoint with `?status=` filtering and `status_counts`
-
-**Frontend:**
-- `BlogsPage.tsx`: Status tabs, badges, quick approve/publish on hover
-- `BlogViewerPage.tsx`: Status badge, context-aware approve/publish buttons
-- `ContentStudioTab.tsx`: Status badges on BlogRow, fixed broken link
-- `api.ts`: Added `blogsApi` with approve/publish methods
-
-### 6. Operations Tab Content Viewer
-
-Added modal to view full operation details in the Operations tab:
-- Shows file path, diff, file content, command output
-- Shows error messages and metadata (agent, type, execution time, status)
-- Click "View Content" on any operation to open modal
-
-### Files Modified (Session 833)
-| File | Changes |
-|------|---------|
-| `frontend/src/components/ErrorState.tsx` | NEW - Shared error component |
-| `frontend/src/lib/api.ts` | Added `platformApi.docContent()` + `blogsApi` |
-| `frontend/src/pages/BlogsPage.tsx` | Complete rewrite with approval workflow |
-| `frontend/src/pages/BlogViewerPage.tsx` | Status badge, approve/publish buttons |
-| `frontend/src/pages/WorkspacePageNew.tsx` | Added OperationContentModal |
-| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Status badges, fixed link |
-| `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | Document viewer modal |
-| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Dynamic HiveMind data |
-| `frontend/src/pages/workspace/tabs/InfrastructureTab.tsx` | Dynamic LLM Routing data |
-| `core/models_unified_system.py` | Added status field to SelfBlog |
-| `core/views_research_demo.py` | Added approve/publish endpoints |
-| `core/migrations/0190_*.py` | NEW - SelfBlog status migration |
-| 6 other workspace tabs | Error handling added |
+### Session 833 PRs (12 Total)
+| PR | Description |
+|----|-------------|
+| #244 | Fix workflow_agent.py syntax error |
+| #245 | Fix 50 agent delegate_to_specialist errors |
+| #246 | Fix 6 agent syntax errors (merged lines) |
+| #247 | Fix base_business_research_agent + autonomous_content_studio_coordinator |
+| #248 | SelfBlog word_count auto-calculation |
+| #249 | Experiment auto-completion when KPI target is met |
+| #250-252 | Handoff documentation updates |
+| #253 | Run Remediation chain fix - assign and execute in one click |
+| #254 | Operations markdown Rendered/Diff toggle |
+| #255 | Operation card display improvements with readable titles |
+| #256 | Final handoff documentation update |
 
 ---
 
@@ -82,18 +55,21 @@ Added modal to view full operation details in the Operations tab:
 ### Self-Healing System
 - **777 Open Findings** ready for processing
 - Pipeline: Discover → Assign → Execute → Verify (all phases connected)
-- CodeGeneratorAgent can write files to workspaces
+- **Run Remediation now single-click** - assigns AND executes automatically
+
+### Experiments
+- **235 pending/running** (down from 247)
+- **16 successful** (up from 4)
+- Auto-completion triggers when KPI target is met
 
 ### Workspace Tabs
 - All 11 tabs have proper error handling
-- Dynamic data fetching for HiveMind and LLM Routing
+- Operations viewer with markdown rendering and Rendered/Diff toggle
 - Document viewer for Knowledge tab canon documents
 
 ### How to Run Remediation
 1. Go to **Workspace → Governance** tab
-2. Click **"Run Remediation"**
-   - First click: Assigns findings to agents
-   - Second click: Executes assigned tasks
+2. Click **"Run Remediation"** (single click now does both assign + execute)
 3. Watch progress in "Progress By Agent" table
 
 ### Production URLs
@@ -111,12 +87,22 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Test document viewer
-# Navigate to Workspace → Knowledge → Click any Canon document
+# 3. Test Operations viewer
+# Navigate to Workspace → Operations → Click "View Content" on any operation
+# Toggle between "Rendered" and "Diff" views for markdown files
 
-# 4. Test blog approval workflow
-# Navigate to /blogs → Click status tabs → Approve/Publish blogs
+# 4. Test Run Remediation
+# Navigate to Workspace → Governance → Click "Run Remediation"
 ```
+
+---
+
+## Potential Next Steps
+
+1. **More Experiment KPI Mappings** - Still 235 experiments pending, could add more mappings
+2. **Operations Filtering** - Filter by agent, status, file type
+3. **Blog Publishing Integration** - Connect published blogs to website/RSS
+4. **Self-Healing Metrics Dashboard** - Visualize success rates over time
 
 ---
 
@@ -124,7 +110,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
-| **833** | Workspace Improvements + Blog Approval Workflow (Draft → Approved → Published) |
+| **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes + Run Remediation Fix |
 | **832** | Recent Activity Enhancement - New fields, all statuses, system activity |
 | **831** | Remediation Pipeline + LLM Timeouts + UI Fixes |
 | **830** | Agent File Operations + Production Auth Fixes + DB Bloat Fix |
@@ -136,4 +122,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**SESSION 833 COMPLETE - Workspace tabs enhanced + Blog approval workflow (Draft → Approved → Published)**
+**SESSION 833 COMPLETE - 12 PRs: Workspace tabs + Blog approval + Operations viewer + 50 agent fixes + Run Remediation single-click**
