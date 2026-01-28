@@ -1,129 +1,93 @@
-# Session 848 - Start Here
+# Session 849 - Start Here
 
-**Previous Session:** 847 (Initiative Pipeline Implementation)
+**Previous Session:** 848 (Initiative Pipeline Testing & Fixes)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Initiative Pipeline ACTIVE** | **Citation Gate Active**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Initiative Pipeline ACTIVE** | **17 Initiatives Created**
 
 ---
 
-## What Was Accomplished in Session 847
+## What Was Accomplished in Session 848
 
-### Initiative Pipeline - The "Missing Middle"
+### Initiative Pipeline Testing
 
-ChatGPT feedback: "You're missing the middle. ThinkingAgent → Initiative → Stages → Documents → Actions"
+Executed ChatGPT's 7-point verification checklist:
 
-**Implemented:**
+| Test | Result |
+|------|--------|
+| Idempotency | ✅ PASS - Second populate creates 0 duplicates |
+| Golden IDs | ✅ PASS - Reverse lookup works |
+| Stage Mapping | ✅ PASS - Uses stats_snapshot.stage |
+| Promotion State Machine | ✅ PASS - Can't skip/regress |
+| Populate Button | ⚠️ 1035 old-format blogs not linked |
+| Gate Lockout | ✅ PASS - Initiative gates blocked |
+| Health Status | ✅ FIXED - API now returns health |
+| UI Affordances | ⚠️ Document link works; conversation/agent-run TBD |
 
-1. **InitiativeIntegrationService** (NEW)
-   - Auto-creates initiatives when ThinkingAgent triggers actions
-   - Auto-links documents to appropriate stages (1-5)
-   - Stage promotion state machine
-   - Health tracking (healthy/stale/blocked)
+### Bugs Fixed
 
-2. **AutonomousActionExecutor Integration**
-   - Every action now links to an Initiative
-   - New actions: `promote_initiative_stage`, `review_initiatives`
-   - Returns `initiative_id` in action results
+1. **Health Missing from API** - Added `get_initiative_health()` to `initiatives_api`
+2. **Document Button Non-Functional** - Added navigation link in InitiativesTab
 
-3. **Initiative Dashboard UI** (NEW)
-   - Tab in Workspace showing all initiatives
-   - Progress bars (Stage 1-5)
-   - Health indicators
-   - Detail modal with stage breakdown
-   - "Populate from Deliverables" button
-
-4. **Stricter Gate Waiving**
-   - Gates linked to initiatives cannot be auto-waived
-   - Addresses 96% waiving concern
-   - Requires human review for structured projects
-
-**Migration:** `0194_session_847_initiative_pipeline.py`
+**PRs Merged:** #353 (Session 847 feature), #354 (Session 848 fixes)
 
 ---
 
-## Files Changed in Session 847
+## Files Changed in Session 848
 
 | File | Change |
 |------|--------|
-| `core/services/initiative_integration_service.py` | **NEW** - Initiative pipeline integration |
-| `core/services/autonomous_action_executor.py` | Added Initiative linking + 2 new action handlers |
-| `core/agents/thinking_agent.py` | Added 2 new actions + Initiative context |
-| `core/models_pilot_readiness.py` | Added `initiative` FK + stricter waive() logic |
-| `core/migrations/0194_session_847_initiative_pipeline.py` | **NEW** - Migration |
-| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | **NEW** - Initiative Dashboard |
-| `frontend/src/pages/workspace/tabs/index.ts` | Export InitiativesTab |
-| `frontend/src/pages/workspace/types.ts` | Added 'initiatives' WorkspaceTab |
-| `frontend/src/pages/WorkspacePageNew.tsx` | Added Initiatives tab |
-| `frontend/src/lib/api.ts` | Added `initiatives()` and `populateInitiatives()` |
+| `core/views_research_demo.py` | Added health calculation to initiatives_api |
+| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added document navigation link |
+| `docs/handoffs/SESSION_848_INITIATIVE_TESTING.md` | **NEW** - Session handoff |
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Apply the new migration
-python manage.py migrate
-
-# 2. Start platform
+# 1. Start platform
 make start && make celery
 
-# 3. Access Initiatives tab
+# 2. Access Initiatives tab
 open http://localhost:8000/ai-studio/
 # → Workspace → Initiatives tab
 
-# 4. Populate from existing deliverables (if needed)
-curl -X POST http://localhost:8000/api/v1/initiatives/populate/
+# 3. Check initiative health (should show 17 healthy)
+curl http://localhost:8000/api/v1/initiatives/ | python -m json.tool | head -50
 
-# 5. Check initiative health
-curl http://localhost:8000/api/v1/initiatives/
+# 4. (If needed) Populate from existing deliverables
+curl -X POST http://localhost:8000/api/v1/initiatives/populate/
 ```
 
 ---
 
-## The 5-Stage Initiative Pipeline
+## Current System Stats
 
-Every ThinkingAgent action now creates/links to an Initiative:
-
-| Stage | Name | Document Types |
-|-------|------|----------------|
-| 1 | Research Brief | research_brief, research, investigation |
-| 2 | Prototype Plan | prototype_plan, proposal, design_doc |
-| 3 | Evaluation Protocol | evaluation, audit, assessment |
-| 4 | Technical Design | technical_document, specification |
-| 5 | Pilot Execution | pilot, report, blog |
-
-**Key Principle:** Documents are no longer "floating" - they belong to structured projects.
+| Component | Count |
+|-----------|-------|
+| Initiatives | 17 (all healthy) |
+| SelfBlogs | 1,091 (56 linked to initiatives) |
+| Gates | 572 (0 linked to initiatives) |
+| Agents | 74 |
+| Spiders | 77 |
 
 ---
 
-## Priority Next Steps
+## Known Limitations
 
-1. **Apply migration to production**
-   ```bash
-   python manage.py migrate
-   ```
-
-2. **Run populate_initiatives** to link existing deliverables
-   ```bash
-   curl -X POST http://localhost:8000/api/v1/initiatives/populate/
-   ```
-
-3. **Monitor initiative health** - Watch Initiatives tab for stale/blocked items
-
-4. **Test ThinkingAgent → Initiative flow**
-   - Trigger a research request
-   - Check that Initiative is created
-   - Check that document is linked to Stage 1
+1. **Old-format SelfBlogs** (`[Report]`, `[Research]`) not linked to initiatives
+2. **Non-ThinkingAgent workflows** bypass initiative linking
+3. **UI missing** conversation/agent-run links in detail modal
 
 ---
 
-## Potential Enhancements
+## Potential Next Steps
 
-1. **Manual stage promotion UI** - Add "Promote" button in detail modal
-2. **Initiative creation form** - Manual initiative creation
-3. **Enhanced health logic** - More sophisticated stale detection
-4. **Stage deadline tracking** - Set expected completion dates
-5. **Initiative notifications** - Alert when blocked for too long
+1. **Add conversation link** to Initiative detail modal
+2. **Add agent-run link** to Initiative detail modal
+3. **Monitor initiative health** - Watch for stale/blocked
+4. **Test ThinkingAgent flow** - Trigger research, verify initiative creation
+5. **Link gates to initiatives** - Currently 0/572 gates linked
 
 ---
 
@@ -131,22 +95,22 @@ Every ThinkingAgent action now creates/links to an Initiative:
 
 | Session | Focus |
 |---------|-------|
+| **848** | Initiative Pipeline Testing - 7-point verification, 2 bug fixes |
 | **847** | Initiative Pipeline - ThinkingAgent → Initiative → Stages → Documents |
 | **846** | Citation Gate + Serper News API + Stuck Conversations Fix |
 | **845** | Agent-Spider Wiring (213 agents) + Memory Delete UI |
 | **844** | Memory Palace Fix + DecisionDetailModal |
 | **843** | Orchestration Contract + trace_id System |
-| **842** | Agent Learning Tab + Production Cleanup |
-| **841** | Experiment Monitoring Fixes |
 
 ---
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_847_INITIATIVE_PIPELINE.md` - Full implementation details
+- `docs/handoffs/SESSION_848_INITIATIVE_TESTING.md` - Testing details
+- `docs/handoffs/SESSION_847_INITIATIVE_PIPELINE.md` - Implementation details
+- `core/services/initiative_integration_service.py` - The integration service
 - `CLAUDE.md` - System overview
-- `core/services/initiative_integration_service.py` - The new integration service
 
 ---
 
-**Session 847 Complete - Initiative Pipeline creates the "project spine" for autonomous operations**
+**Session 848 Complete - Initiative Pipeline tested, verified, and bugs fixed**
