@@ -14,24 +14,37 @@ Executed ChatGPT's 7-point verification checklist:
 
 | Test | Result |
 |------|--------|
-| Idempotency | ✅ PASS - Second populate creates 0 duplicates |
-| Golden IDs | ✅ PASS - Reverse lookup works |
-| Stage Mapping | ✅ PASS - Uses stats_snapshot.stage |
-| Promotion State Machine | ✅ PASS - Can't skip/regress |
-| Populate Button | ⚠️ 1035 old-format blogs not linked |
-| Gate Lockout | ✅ PASS - Initiative gates blocked |
-| Health Status | ✅ FIXED - API now returns health |
-| UI Affordances | ⚠️ Document link works; conversation/agent-run TBD |
+| Idempotency | PASS - Second populate creates 0 duplicates |
+| Golden IDs | PASS - Reverse lookup works |
+| Stage Mapping | PASS - Uses stats_snapshot.stage |
+| Promotion State Machine | PASS - Can't skip/regress |
+| Populate Button | 1035 old-format blogs not linked |
+| Gate Lockout | PASS - Initiative gates blocked |
+| Health Status | FIXED - API now returns health |
+| UI Affordances | Document link works; conversation/agent-run TBD |
 
-### Bugs Fixed
+### Bugs Fixed (6 Total)
 
-1. **Health Missing from API** - Added `get_initiative_health()` to `initiatives_api`
-2. **Document Button Non-Functional** - Added navigation link in InitiativesTab
-3. **Decision Card 500 Error** - Fixed field name mismatches in `decision_summary_detail_view`
-4. **Pending Decisions Not Updating** - Filtered by user so users only see items they can act on
+| # | Bug | Fix |
+|---|-----|-----|
+| 1 | Health Missing from API | Added `get_initiative_health()` to initiatives_api |
+| 2 | Document Button Non-Functional | Added navigation link in InitiativesTab |
+| 3 | Decision Card 500 Error | Fixed field name mismatches in decision_summary_detail_view |
+| 4 | Pending Decisions Not Updating | Filtered by user so users only see items they can act on |
+| 5 | Stock Agent Outputs Raw JSON | Added StockAnalysisRenderer in SmartOutputRenderer |
+| 6 | Podcast Agents "1. Item 1" | Added 'text' key extraction in _extract_agent_output_content |
 
-**PRs Merged:** #353 (Session 847), #354 (Initiative fixes), #355 (Docs), #356 (Decision Card fix)
-**PR Pending:** #358 (Pending decisions user filter)
+### PRs Merged (7 Total)
+
+```
+#353 - feat(Session 847): Initiative Pipeline
+#354 - fix(Session 848): Health API + document navigation
+#355 - docs: Session 848 handoff
+#356 - fix(Session 848): Decision Card 500 error
+#358 - fix(Session 848): Pending decisions user filter
+#359 - fix(Session 848): StockAnalysisRenderer
+#360 - fix(Session 848): Agent output text key extraction
+```
 
 ---
 
@@ -43,7 +56,8 @@ Executed ChatGPT's 7-point verification checklist:
 | `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added document navigation link |
 | `core/views_platform_command.py` | Fixed field mismatches + user filter for pending decisions |
 | `frontend/src/pages/workspace/tabs/CommandTab.tsx` | Added error feedback for failed decisions |
-| `docs/handoffs/SESSION_848_INITIATIVE_TESTING.md` | **NEW** - Session handoff |
+| `frontend/src/components/SmartOutputRenderer.tsx` | Added StockAnalysisRenderer |
+| `core/tasks.py` | Added 'text' key extraction for podcast agents |
 
 ---
 
@@ -53,9 +67,8 @@ Executed ChatGPT's 7-point verification checklist:
 # 1. Start platform
 make start && make celery
 
-# 2. Access Initiatives tab
+# 2. Access Workspace
 open http://localhost:8000/ai-studio/
-# → Workspace → Initiatives tab
 
 # 3. Check initiative health (should show 17 healthy)
 curl http://localhost:8000/api/v1/initiatives/ | python -m json.tool | head -50
@@ -93,6 +106,7 @@ curl -X POST http://localhost:8000/api/v1/initiatives/populate/
 3. **Monitor initiative health** - Watch for stale/blocked
 4. **Test ThinkingAgent flow** - Trigger research, verify initiative creation
 5. **Link gates to initiatives** - Currently 0/572 gates linked
+6. **Deploy to production** - All Session 848 fixes ready
 
 ---
 
@@ -100,8 +114,8 @@ curl -X POST http://localhost:8000/api/v1/initiatives/populate/
 
 | Session | Focus |
 |---------|-------|
-| **848** | Initiative Pipeline Testing - 7-point verification, 3 bug fixes (health API, doc link, decision 500) |
-| **847** | Initiative Pipeline - ThinkingAgent → Initiative → Stages → Documents |
+| **848** | Initiative Pipeline Testing - 7-point verification, 6 bug fixes |
+| **847** | Initiative Pipeline - ThinkingAgent -> Initiative -> Stages -> Documents |
 | **846** | Citation Gate + Serper News API + Stuck Conversations Fix |
 | **845** | Agent-Spider Wiring (213 agents) + Memory Delete UI |
 | **844** | Memory Palace Fix + DecisionDetailModal |
@@ -118,4 +132,4 @@ curl -X POST http://localhost:8000/api/v1/initiatives/populate/
 
 ---
 
-**Session 848 Complete - Initiative Pipeline tested, verified, and bugs fixed**
+**Session 848 Complete - Initiative Pipeline tested, verified, and 6 bugs fixed**
