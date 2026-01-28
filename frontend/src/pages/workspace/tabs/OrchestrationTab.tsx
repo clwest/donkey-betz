@@ -404,7 +404,7 @@ function AutomationSubTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Autonomous Systems</h3>
-        <a href="/governance" className="btn btn-secondary flex items-center gap-2 text-sm">
+        <a href="/workspace?tab=governance" className="btn btn-secondary flex items-center gap-2 text-sm">
           Full View
           <ExternalLink size={14} />
         </a>
@@ -417,7 +417,7 @@ function AutomationSubTab() {
           value={stats.triggers}
           icon={Zap}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/governance?tab=triggers'}
+          onClick={() => window.location.href = '/autonomous?tab=triggers'}
         />
         <StatCard
           label="Active Tasks"
@@ -438,7 +438,7 @@ function AutomationSubTab() {
           value={stats.remediationTasks}
           icon={RefreshCw}
           color="text-accent-cyan"
-          onClick={() => window.location.href = '/governance?tab=self-healing'}
+          onClick={() => window.location.href = '/workspace?tab=governance'}
         />
       </div>
 
@@ -450,19 +450,19 @@ function AutomationSubTab() {
             label="Metrics Action Triggers"
             status="active"
             description={`${stats.triggers} rules monitoring system`}
-            onClick={() => window.location.href = '/governance?tab=triggers'}
+            onClick={() => window.location.href = '/autonomous?tab=triggers'}
           />
           <FeatureRow
             label="Autonomous Remediation"
             status="active"
             description="4-phase self-healing cycle"
-            onClick={() => window.location.href = '/governance?tab=self-healing'}
+            onClick={() => window.location.href = '/workspace?tab=governance'}
           />
           <FeatureRow
             label="Auto-Gate Approval"
             status="active"
             description="AI-powered gate validation"
-            onClick={() => window.location.href = '/governance?tab=gates'}
+            onClick={() => window.location.href = '/mythology-lab'}
           />
           <FeatureRow
             label="Spider Network"
