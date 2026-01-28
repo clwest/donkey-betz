@@ -1,6 +1,7 @@
 // Session 825: Content Studio Tab
 // Consolidates: Gallery, Channels, Blogs, Podcast, Distribution
 // Session 840: Enhanced with onClick handlers, detail modals, refresh buttons, and real data fallbacks
+// Session 857: Refactored for inline content viewing - removed external navigation
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -11,7 +12,6 @@ import {
   Mic,
   Share2,
   Loader2,
-  ExternalLink,
   Calendar,
   Eye,
   BarChart2,
@@ -22,9 +22,12 @@ import {
   RefreshCw,
   X,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Video,
   Music,
   Box,
+  List,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { contentApi, podcastApi, distributionApi } from '@/lib/api'
@@ -77,21 +80,54 @@ export function ContentStudioTab() {
 
 // ============ Gallery Sub-Tab ============
 
+interface GalleryItem {
+  id: string
+  title: string
+  type: 'image' | 'video' | 'audio' | '3d'
+  created_at: string
+  url?: string
+  thumbnail_url?: string
+}
+
+interface AISeries {
+  id: string
+  name: string
+  episode_count: number
+  created_at: string
+}
+
 function GallerySubTab() {
-  const { data: galleryData, isLoading, isError, error, refetch } = useQuery({
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState<Record<string, number>>({
+    images: 5,
+    videos: 5,
+    audio: 5,
+    models3d: 5,
+    series: 5,
+  })
+  const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
+  const [selectedSeries, setSelectedSeries] = useState<AISeries | null>(null)
+
+  const { data: galleryData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['gallery-stats-tab'],
     queryFn: async () => {
-      // Fetch unified gallery to get counts
-      const response = await fetch('/api/v1/gallery/all/?limit=1')
+      const response = await fetch('/api/v1/gallery/all/?limit=50')
       return response.json()
     },
   })
 
-  // Also fetch video count separately
   const { data: videoData } = useQuery({
     queryKey: ['gallery-video-stats-tab'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/gallery/videos/?limit=1')
+      const response = await fetch('/api/v1/gallery/videos/?limit=50')
+      return response.json()
+    },
+  })
+
+  const { data: seriesData } = useQuery({
+    queryKey: ['gallery-series-tab'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/gallery/series/?limit=50')
       return response.json()
     },
   })
@@ -104,107 +140,204 @@ function GallerySubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load gallery data" />
   }
 
-  // Calculate real stats from gallery data - fallback to AI Series counts (44 series, 49 episodes)
   const totalImages = galleryData?.count || 0
   const totalVideos = videoData?.count || 0
+  const images = galleryData?.results || []
+  const videos = videoData?.results || []
+  const series = seriesData?.results || []
 
   const stats = {
     images: totalImages,
     videos: totalVideos,
-    audio: 45, // Audio generation is a separate system
-    models3d: 8, // 3D models are a separate system
+    audio: 45,
+    models3d: 8,
+  }
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
+  const loadMore = (section: string) => {
+    setVisibleCount((prev) => ({ ...prev, [section]: prev[section] + 10 }))
   }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
-        title="Content Gallery"
-        linkHref="/content"
-        linkText="Open Gallery"
-        onRefresh={refetch}
-      />
+      <InlineHeaderRow title="Content Gallery" onRefresh={refetch} isFetching={isFetching} />
 
-      {/* Media Stats */}
+      {/* Media Stats - Expandable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Images"
           value={stats.images}
           icon={Image}
           color="text-accent-cyan"
-          onClick={() => window.location.href = '/content?type=image'}
+          onClick={() => toggleSection('images')}
+          isExpanded={expandedSection === 'images'}
         />
         <StatCard
           label="Videos"
           value={stats.videos}
           icon={Video}
           color="text-accent-purple"
-          onClick={() => window.location.href = '/content?type=video'}
+          onClick={() => toggleSection('videos')}
+          isExpanded={expandedSection === 'videos'}
         />
         <StatCard
           label="Audio"
           value={stats.audio}
           icon={Music}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/content?type=audio'}
+          onClick={() => toggleSection('audio')}
+          isExpanded={expandedSection === 'audio'}
         />
         <StatCard
           label="3D Models"
           value={stats.models3d}
           icon={Box}
           color="text-accent-green"
-          onClick={() => window.location.href = '/content?type=3d'}
+          onClick={() => toggleSection('models3d')}
+          isExpanded={expandedSection === 'models3d'}
         />
       </div>
 
-      {/* AI Series */}
+      {/* Expanded Images List */}
+      {expandedSection === 'images' && (
+        <ExpandedListCard
+          title="Images"
+          icon={Image}
+          items={images}
+          visibleCount={visibleCount.images}
+          onLoadMore={() => loadMore('images')}
+          renderItem={(item: GalleryItem) => (
+            <GalleryItemRow
+              key={item.id}
+              item={{ ...item, type: 'image' }}
+              onClick={() => setSelectedItem({ ...item, type: 'image' })}
+            />
+          )}
+        />
+      )}
+
+      {/* Expanded Videos List */}
+      {expandedSection === 'videos' && (
+        <ExpandedListCard
+          title="Videos"
+          icon={Video}
+          items={videos}
+          visibleCount={visibleCount.videos}
+          onLoadMore={() => loadMore('videos')}
+          renderItem={(item: GalleryItem) => (
+            <GalleryItemRow
+              key={item.id}
+              item={{ ...item, type: 'video' }}
+              onClick={() => setSelectedItem({ ...item, type: 'video' })}
+            />
+          )}
+        />
+      )}
+
+      {/* Expanded Audio List */}
+      {expandedSection === 'audio' && (
+        <ExpandedListCard
+          title="Audio Files"
+          icon={Music}
+          items={[]}
+          visibleCount={visibleCount.audio}
+          onLoadMore={() => loadMore('audio')}
+          emptyMessage="Audio content is managed separately"
+          renderItem={() => null}
+        />
+      )}
+
+      {/* Expanded 3D Models List */}
+      {expandedSection === 'models3d' && (
+        <ExpandedListCard
+          title="3D Models"
+          icon={Box}
+          items={[]}
+          visibleCount={visibleCount.models3d}
+          onLoadMore={() => loadMore('models3d')}
+          emptyMessage="3D models are managed separately"
+          renderItem={() => null}
+        />
+      )}
+
+      {/* AI Series - Expandable */}
       <div className="card">
-        <div className="flex items-center justify-between mb-3">
+        <div
+          className="flex items-center justify-between mb-3 cursor-pointer"
+          onClick={() => toggleSection('series')}
+        >
           <h4 className="text-sm font-medium text-gray-400">AI Series</h4>
-          <a href="/content?tab=series" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            View All <ChevronRight size={12} />
-          </a>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-primary-400">{series.length || 44} series</span>
+            {expandedSection === 'series' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div
-            className="p-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
-            onClick={() => window.location.href = '/content?tab=series'}
+            className={cn(
+              'p-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors',
+              expandedSection === 'series' && 'ring-1 ring-primary-500/50'
+            )}
+            onClick={() => toggleSection('series')}
           >
             <p className="text-xs text-gray-500 mb-1">Total Series</p>
-            <p className="text-xl font-bold">44</p>
+            <p className="text-xl font-bold">{series.length || 44}</p>
           </div>
-          <div
-            className="p-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
-            onClick={() => window.location.href = '/content?tab=episodes'}
-          >
+          <div className="p-3 bg-gray-800/50 rounded-lg">
             <p className="text-xs text-gray-500 mb-1">Episodes</p>
             <p className="text-xl font-bold">49</p>
           </div>
         </div>
+
+        {/* Expanded Series List */}
+        {expandedSection === 'series' && series.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
+            {series.slice(0, visibleCount.series).map((s: AISeries) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between py-2 px-2 -mx-2 hover:bg-gray-800/50 rounded cursor-pointer transition-colors"
+                onClick={() => setSelectedSeries(s)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-primary-500/20 flex items-center justify-center">
+                    <Play size={14} className="text-primary-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{s.name}</p>
+                    <p className="text-xs text-gray-500">{s.episode_count} episodes</p>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-gray-500" />
+              </div>
+            ))}
+            {series.length > visibleCount.series && (
+              <button
+                onClick={() => loadMore('series')}
+                className="w-full py-2 text-sm text-primary-400 hover:text-primary-300"
+              >
+                Load more ({series.length - visibleCount.series} remaining)
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Quick Actions */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Create</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <a href="/content?action=image" className="btn btn-secondary text-sm py-3">
-            <Image size={16} className="mr-2" />
-            New Image
-          </a>
-          <a href="/content?action=video" className="btn btn-secondary text-sm py-3">
-            <Play size={16} className="mr-2" />
-            New Video
-          </a>
-          <a href="/content?action=audio" className="btn btn-secondary text-sm py-3">
-            <Mic size={16} className="mr-2" />
-            New Audio
-          </a>
-          <a href="/content?action=blog" className="btn btn-secondary text-sm py-3">
-            <BookOpen size={16} className="mr-2" />
-            New Blog
-          </a>
-        </div>
-      </div>
+      {/* Gallery Item Detail Modal */}
+      {selectedItem && (
+        <GalleryItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      )}
+
+      {/* Series Detail Modal */}
+      {selectedSeries && (
+        <SeriesDetailModal series={selectedSeries} onClose={() => setSelectedSeries(null)} />
+      )}
     </div>
   )
 }
@@ -222,11 +355,13 @@ interface ContentChannel {
 
 function ChannelsSubTab() {
   const [selectedChannel, setSelectedChannel] = useState<ContentChannel | null>(null)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState(10)
 
-  const { data: channelsData, isLoading, isError, error, refetch } = useQuery({
+  const { data: channelsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['content-channels-tab'],
     queryFn: async () => {
-      const res = await contentApi.channels(5)
+      const res = await contentApi.channels(50)
       return res.data
     },
   })
@@ -239,70 +374,97 @@ function ChannelsSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load channels data" />
   }
 
-  // Real data fallbacks: 9 channels, 187 episodes
   const channels = channelsData?.channels || []
   const totalEpisodes = channelsData?.total_episodes || 187
 
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
-        title="Content Channels"
-        linkHref="/content-channels"
-        linkText="All Channels"
-        onRefresh={refetch}
-      />
+      <InlineHeaderRow title="Content Channels" onRefresh={refetch} isFetching={isFetching} />
 
-      {/* Channel Stats */}
+      {/* Channel Stats - Expandable */}
       <div className="grid grid-cols-3 gap-3">
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/content-channels'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'channels' && 'border-primary-500/50'
+          )}
+          onClick={() => toggleSection('channels')}
         >
-          <div className="text-2xl font-bold text-primary-400">{channels.length || 9}</div>
-          <div className="text-xs text-gray-500">Active Channels</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-primary-400">{channels.length || 9}</div>
+              <div className="text-xs text-gray-500">Active Channels</div>
+            </div>
+            {expandedSection === 'channels' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
-        <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/content-channels?tab=episodes'}
-        >
+        <div className="card">
           <div className="text-2xl font-bold text-accent-green">{totalEpisodes}</div>
           <div className="text-xs text-gray-500">Total Episodes</div>
         </div>
-        <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/content-channels?tab=types'}
-        >
+        <div className="card">
           <div className="text-2xl font-bold text-accent-amber">3</div>
           <div className="text-xs text-gray-500">Content Types</div>
         </div>
       </div>
 
-      {/* Channel List */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-400">Recent Channels</h4>
-          <a href="/content-channels" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            View All <ChevronRight size={12} />
-          </a>
+      {/* Expanded Channels List */}
+      {expandedSection === 'channels' && (
+        <ExpandedListCard
+          title="All Channels"
+          icon={MessageSquare}
+          items={channels}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(channel: ContentChannel) => (
+            <ChannelRow
+              key={channel.id}
+              channel={channel}
+              onClick={() => setSelectedChannel(channel)}
+            />
+          )}
+        />
+      )}
+
+      {/* Recent Channels - Always Visible */}
+      {expandedSection !== 'channels' && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Recent Channels</h4>
+            <button
+              onClick={() => toggleSection('channels')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
+          </div>
+          {channels.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <MessageSquare className="mx-auto mb-2" size={24} />
+              <p className="text-sm">No channels yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {channels.slice(0, 4).map((channel: ContentChannel) => (
+                <ChannelRow
+                  key={channel.id}
+                  channel={channel}
+                  onClick={() => setSelectedChannel(channel)}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        {channels.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            <MessageSquare className="mx-auto mb-2" size={24} />
-            <p className="text-sm">No channels yet</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {channels.slice(0, 4).map((channel: ContentChannel) => (
-              <ChannelRow
-                key={channel.id}
-                channel={channel}
-                onClick={() => setSelectedChannel(channel)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Channel Detail Modal */}
       {selectedChannel && (
@@ -329,12 +491,14 @@ interface BlogPost {
 
 function BlogsSubTab() {
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState(10)
 
-  const { data: blogsData, isLoading, isError, error, refetch } = useQuery({
+  const { data: blogsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['blogs-tab'],
     queryFn: async () => {
       // Session 852: Filter by category=blog to exclude audits/research/technical docs
-      const response = await fetch('/api/v1/research/self-blog/list/?per_page=5&category=blog')
+      const response = await fetch('/api/v1/research/self-blog/list/?per_page=50&category=blog')
       return response.json()
     },
   })
@@ -347,78 +511,157 @@ function BlogsSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load blogs data" />
   }
 
-  // Session 852: Use category_counts.blog for blog-only count (excludes audits/research/tech docs)
   const blogs = blogsData?.blogs || blogsData?.results || []
   const total = blogsData?.category_counts?.blog || blogsData?.pagination?.total || 1004
+  const publishedCount = blogs.filter((b: BlogPost) => b.status === 'published').length
+  const draftCount = blogs.filter((b: BlogPost) => b.status === 'draft' || !b.status).length
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
+      <InlineHeaderRow
         title="AI Blogs"
-        badge={`${total.toLocaleString()} posts`}
-        linkHref="/blogs"
-        linkText="All Blogs"
+        subtitle={`${total.toLocaleString()} posts`}
         onRefresh={refetch}
+        isFetching={isFetching}
       />
 
-      {/* Blog Stats */}
+      {/* Blog Stats - Expandable */}
       <div className="grid grid-cols-3 gap-3">
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/blogs'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'all' && 'border-primary-500/50'
+          )}
+          onClick={() => toggleSection('all')}
         >
-          <div className="text-2xl font-bold text-primary-400">{total.toLocaleString()}</div>
-          <div className="text-xs text-gray-500">Total Posts</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-primary-400">{total.toLocaleString()}</div>
+              <div className="text-xs text-gray-500">Total Posts</div>
+            </div>
+            {expandedSection === 'all' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/blogs?status=published'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'published' && 'border-accent-green/50'
+          )}
+          onClick={() => toggleSection('published')}
         >
-          <div className="text-2xl font-bold text-accent-green">0</div>
-          <div className="text-xs text-gray-500">Published</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-accent-green">{publishedCount}</div>
+              <div className="text-xs text-gray-500">Published</div>
+            </div>
+            {expandedSection === 'published' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/blogs?status=draft'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'drafts' && 'border-accent-amber/50'
+          )}
+          onClick={() => toggleSection('drafts')}
         >
-          <div className="text-2xl font-bold text-accent-amber">{total.toLocaleString()}</div>
-          <div className="text-xs text-gray-500">Drafts</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-accent-amber">{draftCount}</div>
+              <div className="text-xs text-gray-500">Drafts</div>
+            </div>
+            {expandedSection === 'drafts' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Recent Blogs */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-400">Recent Posts</h4>
-          <a href="/blogs" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            View All <ChevronRight size={12} />
-          </a>
+      {/* Expanded Blog Lists */}
+      {expandedSection === 'all' && (
+        <ExpandedListCard
+          title="All Blog Posts"
+          icon={BookOpen}
+          items={blogs}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(blog: BlogPost) => (
+            <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'published' && (
+        <ExpandedListCard
+          title="Published Posts"
+          icon={Eye}
+          items={blogs.filter((b: BlogPost) => b.status === 'published')}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No published posts yet"
+          renderItem={(blog: BlogPost) => (
+            <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'drafts' && (
+        <ExpandedListCard
+          title="Draft Posts"
+          icon={Clock}
+          items={blogs.filter((b: BlogPost) => b.status === 'draft' || !b.status)}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(blog: BlogPost) => (
+            <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
+          )}
+        />
+      )}
+
+      {/* Recent Blogs - Always Visible */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Recent Posts</h4>
+            <button
+              onClick={() => toggleSection('all')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
+          </div>
+          {blogs.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <BookOpen className="mx-auto mb-2" size={24} />
+              <p className="text-sm">No blogs generated yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {blogs.slice(0, 4).map((blog: BlogPost) => (
+                <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
+              ))}
+            </div>
+          )}
         </div>
-        {blogs.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            <BookOpen className="mx-auto mb-2" size={24} />
-            <p className="text-sm">No blogs generated yet</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {blogs.slice(0, 4).map((blog: BlogPost) => (
-              <BlogRow
-                key={blog.id}
-                blog={blog}
-                onClick={() => setSelectedBlog(blog)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Blog Detail Modal */}
       {selectedBlog && (
-        <BlogDetailModal
-          blog={selectedBlog}
-          onClose={() => setSelectedBlog(null)}
-        />
+        <BlogDetailModal blog={selectedBlog} onClose={() => setSelectedBlog(null)} />
       )}
     </div>
   )
@@ -437,8 +680,11 @@ interface PodcastEpisode {
 
 function PodcastSubTab() {
   const [selectedEpisode, setSelectedEpisode] = useState<PodcastEpisode | null>(null)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState(10)
+  const [showVoiceModal, setShowVoiceModal] = useState(false)
 
-  const { data: podcastData, isLoading, isError, error, refetch } = useQuery({
+  const { data: podcastData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['podcast-tab'],
     queryFn: async () => {
       const res = await podcastApi.list()
@@ -454,56 +700,135 @@ function PodcastSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load podcast data" />
   }
 
-  // Real data fallbacks: 3 episodes, 1 voice profile
   const episodes = podcastData?.episodes || podcastData?.results || []
   const stats = podcastData?.stats || { total: 3, published: 0, draft: 3 }
+  const publishedEpisodes = episodes.filter((e: PodcastEpisode) => e.status === 'published')
+  const draftEpisodes = episodes.filter((e: PodcastEpisode) => e.status === 'draft' || !e.status)
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
-        title="Podcast Studio"
-        linkHref="/podcast"
-        linkText="Full Studio"
-        onRefresh={refetch}
-      />
+      <InlineHeaderRow title="Podcast Studio" onRefresh={refetch} isFetching={isFetching} />
 
-      {/* Stats */}
+      {/* Stats - Expandable */}
       <div className="grid grid-cols-3 gap-3">
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/podcast'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'all' && 'border-primary-500/50'
+          )}
+          onClick={() => toggleSection('all')}
         >
-          <div className="text-2xl font-bold text-primary-400">{stats.total || episodes.length || 3}</div>
-          <div className="text-xs text-gray-500">Total Episodes</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-primary-400">{stats.total || episodes.length || 3}</div>
+              <div className="text-xs text-gray-500">Total Episodes</div>
+            </div>
+            {expandedSection === 'all' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/podcast?status=published'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'published' && 'border-accent-green/50'
+          )}
+          onClick={() => toggleSection('published')}
         >
-          <div className="text-2xl font-bold text-accent-green">{stats.published || 0}</div>
-          <div className="text-xs text-gray-500">Published</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-accent-green">{stats.published || publishedEpisodes.length}</div>
+              <div className="text-xs text-gray-500">Published</div>
+            </div>
+            {expandedSection === 'published' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/podcast?status=draft'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'drafts' && 'border-accent-amber/50'
+          )}
+          onClick={() => toggleSection('drafts')}
         >
-          <div className="text-2xl font-bold text-accent-amber">{stats.draft || 3}</div>
-          <div className="text-xs text-gray-500">Drafts</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-accent-amber">{stats.draft || draftEpisodes.length}</div>
+              <div className="text-xs text-gray-500">Drafts</div>
+            </div>
+            {expandedSection === 'drafts' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Voice Profile */}
+      {/* Expanded Episode Lists */}
+      {expandedSection === 'all' && (
+        <ExpandedListCard
+          title="All Episodes"
+          icon={Mic}
+          items={episodes}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(episode: PodcastEpisode) => (
+            <EpisodeRow key={episode.id} episode={episode} onClick={() => setSelectedEpisode(episode)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'published' && (
+        <ExpandedListCard
+          title="Published Episodes"
+          icon={Eye}
+          items={publishedEpisodes}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No published episodes yet"
+          renderItem={(episode: PodcastEpisode) => (
+            <EpisodeRow key={episode.id} episode={episode} onClick={() => setSelectedEpisode(episode)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'drafts' && (
+        <ExpandedListCard
+          title="Draft Episodes"
+          icon={Clock}
+          items={draftEpisodes}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(episode: PodcastEpisode) => (
+            <EpisodeRow key={episode.id} episode={episode} onClick={() => setSelectedEpisode(episode)} />
+          )}
+        />
+      )}
+
+      {/* Voice Profile - Show inline */}
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-sm font-medium text-gray-400">Voice Profiles</h4>
-          <a href="/podcast?tab=voices" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            Manage <ChevronRight size={12} />
-          </a>
+          <button
+            onClick={() => setShowVoiceModal(true)}
+            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+          >
+            Manage
+          </button>
         </div>
         <div
           className="p-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
-          onClick={() => window.location.href = '/podcast?tab=voices'}
+          onClick={() => setShowVoiceModal(true)}
         >
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-accent-purple/20 flex items-center justify-center">
@@ -517,41 +842,42 @@ function PodcastSubTab() {
         </div>
       </div>
 
-      {/* Recent Episodes */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-400">Recent Episodes</h4>
-          <a href="/podcast" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            View All <ChevronRight size={12} />
-          </a>
+      {/* Recent Episodes - Always Visible */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Recent Episodes</h4>
+            <button
+              onClick={() => toggleSection('all')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
+          </div>
+          {episodes.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <Mic className="mx-auto mb-2" size={24} />
+              <p className="text-sm">No episodes yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {episodes.slice(0, 4).map((episode: PodcastEpisode) => (
+                <EpisodeRow key={episode.id} episode={episode} onClick={() => setSelectedEpisode(episode)} />
+              ))}
+            </div>
+          )}
         </div>
-        {episodes.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            <Mic className="mx-auto mb-2" size={24} />
-            <p className="text-sm">No episodes yet</p>
-            <a href="/podcast?action=create" className="btn btn-primary mt-3 text-sm">
-              Create Episode
-            </a>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {episodes.slice(0, 4).map((episode: PodcastEpisode) => (
-              <EpisodeRow
-                key={episode.id}
-                episode={episode}
-                onClick={() => setSelectedEpisode(episode)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Episode Detail Modal */}
       {selectedEpisode && (
-        <EpisodeDetailModal
-          episode={selectedEpisode}
-          onClose={() => setSelectedEpisode(null)}
-        />
+        <EpisodeDetailModal episode={selectedEpisode} onClose={() => setSelectedEpisode(null)} />
+      )}
+
+      {/* Voice Profile Modal */}
+      {showVoiceModal && (
+        <VoiceProfileModal onClose={() => setShowVoiceModal(false)} />
       )}
     </div>
   )
@@ -559,8 +885,17 @@ function PodcastSubTab() {
 
 // ============ Distribution Sub-Tab ============
 
+interface Platform {
+  name: string
+  status: 'connected' | 'not_connected'
+  icon?: string
+}
+
 function DistributionSubTab() {
-  const { data: statsData, isLoading, isError, error, refetch } = useQuery({
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null)
+
+  const { data: statsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['distribution-stats-tab'],
     queryFn: async () => {
       const res = await distributionApi.stats()
@@ -583,89 +918,149 @@ function DistributionSubTab() {
     revenue: 0,
   }
 
+  const platforms: Platform[] = [
+    { name: 'YouTube', status: 'not_connected' },
+    { name: 'Spotify', status: 'not_connected' },
+    { name: 'Medium', status: 'not_connected' },
+    { name: 'Substack', status: 'not_connected' },
+  ]
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
-        title="Distribution"
-        linkHref="/distribution"
-        linkText="Full Dashboard"
-        onRefresh={refetch}
-      />
+      <InlineHeaderRow title="Distribution" onRefresh={refetch} isFetching={isFetching} />
 
-      {/* Stats */}
+      {/* Stats - Expandable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Platforms"
-          value={stats.platforms || 0}
+          value={stats.platforms || platforms.filter((p) => p.status === 'connected').length}
           icon={Share2}
           color="text-primary-400"
-          onClick={() => window.location.href = '/distribution?tab=platforms'}
+          onClick={() => toggleSection('platforms')}
+          isExpanded={expandedSection === 'platforms'}
         />
         <StatCard
           label="Published"
           value={stats.published || 0}
           icon={Eye}
           color="text-accent-green"
-          onClick={() => window.location.href = '/distribution?tab=published'}
+          onClick={() => toggleSection('published')}
+          isExpanded={expandedSection === 'published'}
         />
         <StatCard
           label="Pending"
           value={stats.pending || 0}
           icon={Calendar}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/distribution?tab=pending'}
+          onClick={() => toggleSection('pending')}
+          isExpanded={expandedSection === 'pending'}
         />
         <StatCard
           label="Revenue"
           value={`$${stats.revenue || 0}`}
           icon={TrendingUp}
           color="text-accent-cyan"
-          onClick={() => window.location.href = '/distribution?tab=revenue'}
+          onClick={() => toggleSection('revenue')}
+          isExpanded={expandedSection === 'revenue'}
         />
       </div>
 
-      {/* Platform Integration */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Platform Integration</h4>
-        <div className="space-y-2">
-          <PlatformRow
-            name="YouTube"
-            status="not_connected"
-            onClick={() => window.location.href = '/distribution?platform=youtube'}
-          />
-          <PlatformRow
-            name="Spotify"
-            status="not_connected"
-            onClick={() => window.location.href = '/distribution?platform=spotify'}
-          />
-          <PlatformRow
-            name="Medium"
-            status="not_connected"
-            onClick={() => window.location.href = '/distribution?platform=medium'}
-          />
-          <PlatformRow
-            name="Substack"
-            status="not_connected"
-            onClick={() => window.location.href = '/distribution?platform=substack'}
-          />
+      {/* Expanded Platforms List */}
+      {expandedSection === 'platforms' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">All Platforms</h4>
+          <div className="space-y-2">
+            {platforms.map((platform) => (
+              <PlatformRow
+                key={platform.name}
+                name={platform.name}
+                status={platform.status}
+                onClick={() => setSelectedPlatform(platform)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Quick Actions */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Actions</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <a href="/distribution?tab=platforms" className="btn btn-secondary text-sm py-3">
-            <Share2 size={16} className="mr-2" />
-            Manage Platforms
-          </a>
-          <a href="/distribution?tab=revenue" className="btn btn-secondary text-sm py-3">
-            <BarChart2 size={16} className="mr-2" />
-            Revenue Dashboard
-          </a>
+      {/* Expanded Published Content */}
+      {expandedSection === 'published' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Published Content</h4>
+          <div className="text-center py-6 text-gray-500">
+            <Eye className="mx-auto mb-2" size={24} />
+            <p className="text-sm">No published content yet</p>
+            <p className="text-xs text-gray-600 mt-1">Connect a platform to start publishing</p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Expanded Pending Content */}
+      {expandedSection === 'pending' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Pending Content</h4>
+          <div className="text-center py-6 text-gray-500">
+            <Calendar className="mx-auto mb-2" size={24} />
+            <p className="text-sm">No pending content</p>
+            <p className="text-xs text-gray-600 mt-1">Schedule content for future publishing</p>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Revenue */}
+      {expandedSection === 'revenue' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Revenue Overview</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Revenue</p>
+              <p className="text-xl font-bold text-accent-cyan">${stats.revenue || 0}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">This Month</p>
+              <p className="text-xl font-bold">$0</p>
+            </div>
+          </div>
+          <div className="mt-3 text-center text-sm text-gray-500">
+            <BarChart2 className="inline mr-2" size={14} />
+            Connect platforms to track revenue
+          </div>
+        </div>
+      )}
+
+      {/* Platform Integration - Always visible when no section expanded */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Platform Integration</h4>
+            <button
+              onClick={() => toggleSection('platforms')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
+          </div>
+          <div className="space-y-2">
+            {platforms.slice(0, 4).map((platform) => (
+              <PlatformRow
+                key={platform.name}
+                name={platform.name}
+                status={platform.status}
+                onClick={() => setSelectedPlatform(platform)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Platform Detail Modal */}
+      {selectedPlatform && (
+        <PlatformDetailModal platform={selectedPlatform} onClose={() => setSelectedPlatform(null)} />
+      )}
     </div>
   )
 }
@@ -680,66 +1075,64 @@ function LoadingState() {
   )
 }
 
-// Session 840: Header row with refresh button
-function HeaderRow({
+// Session 857: Inline header row without external navigation
+function InlineHeaderRow({
   title,
-  badge,
-  linkHref,
-  linkText,
+  subtitle,
   onRefresh,
+  isFetching,
 }: {
   title: string
-  badge?: string
-  linkHref: string
-  linkText: string
-  onRefresh: () => void
+  subtitle?: string
+  onRefresh?: () => void
+  isFetching?: boolean
 }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
         <h3 className="text-lg font-semibold">{title}</h3>
-        {badge && (
+        {subtitle && (
           <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
-            {badge}
+            {subtitle}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      {onRefresh && (
         <button
           onClick={onRefresh}
-          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          disabled={isFetching}
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
           title="Refresh data"
         >
-          <RefreshCw size={14} className="text-gray-400" />
+          <RefreshCw size={14} className={cn('text-gray-400', isFetching && 'animate-spin')} />
         </button>
-        <a href={linkHref} className="btn btn-secondary flex items-center gap-2 text-sm">
-          {linkText}
-          <ExternalLink size={14} />
-        </a>
-      </div>
+      )}
     </div>
   )
 }
 
-// Session 840: Clickable StatCard
+// Session 857: StatCard with isExpanded indicator
 function StatCard({
   label,
   value,
   icon: Icon,
   color,
   onClick,
+  isExpanded,
 }: {
   label: string
   value: number | string
   icon: typeof Image
   color: string
   onClick?: () => void
+  isExpanded?: boolean
 }) {
   return (
     <div
       className={cn(
         'card',
-        onClick && 'cursor-pointer hover:border-primary-500/50 transition-colors'
+        onClick && 'cursor-pointer hover:border-primary-500/50 transition-colors',
+        isExpanded && 'border-primary-500/50 bg-primary-500/5'
       )}
       onClick={onClick}
     >
@@ -748,10 +1141,97 @@ function StatCard({
           <p className="text-sm text-gray-400">{label}</p>
           <p className="text-2xl font-bold mt-1">{value}</p>
         </div>
-        <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-gray-800">
-          <Icon size={20} className={color} />
+        <div className="flex items-center gap-2">
+          <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-gray-800">
+            <Icon size={20} className={color} />
+          </div>
+          {onClick && (
+            isExpanded ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Session 857: Expanded list card for inline content viewing
+function ExpandedListCard<T>({
+  title,
+  icon: Icon,
+  items,
+  visibleCount,
+  onLoadMore,
+  renderItem,
+  emptyMessage,
+}: {
+  title: string
+  icon: typeof Image
+  items: T[]
+  visibleCount: number
+  onLoadMore: () => void
+  renderItem: (item: T) => React.ReactNode
+  emptyMessage?: string
+}) {
+  return (
+    <div className="card">
+      <div className="flex items-center gap-2 mb-3">
+        <Icon size={16} className="text-primary-400" />
+        <h4 className="text-sm font-medium text-gray-400">{title}</h4>
+        <span className="text-xs text-gray-500">({items.length})</span>
+      </div>
+      {items.length === 0 ? (
+        <div className="text-center py-6 text-gray-500">
+          <Icon className="mx-auto mb-2" size={24} />
+          <p className="text-sm">{emptyMessage || `No ${title.toLowerCase()} found`}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.slice(0, visibleCount).map(renderItem)}
+          {items.length > visibleCount && (
+            <button
+              onClick={onLoadMore}
+              className="w-full py-2 text-sm text-primary-400 hover:text-primary-300"
+            >
+              Load more ({items.length - visibleCount} remaining)
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Session 857: Gallery item row for inline display
+function GalleryItemRow({ item, onClick }: { item: GalleryItem; onClick: () => void }) {
+  const typeIcons = {
+    image: Image,
+    video: Video,
+    audio: Music,
+    '3d': Box,
+  }
+  const TypeIcon = typeIcons[item.type] || Image
+
+  return (
+    <div
+      className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/50 -mx-2 px-2 rounded transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-lg bg-primary-500/20 flex items-center justify-center">
+          <TypeIcon size={14} className="text-primary-400" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">{item.title || `${item.type} ${item.id}`}</p>
+          <p className="text-xs text-gray-500">
+            {new Date(item.created_at).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+      <ChevronRight size={14} className="text-gray-500" />
     </div>
   )
 }
@@ -890,7 +1370,114 @@ function PlatformRow({ name, status, onClick }: { name: string; status: string; 
 
 // ============ Detail Modals ============
 
-// Session 840: Channel Detail Modal
+// Session 857: Gallery Item Detail Modal
+function GalleryItemDetailModal({ item, onClose }: { item: GalleryItem; onClose: () => void }) {
+  const typeIcons = {
+    image: Image,
+    video: Video,
+    audio: Music,
+    '3d': Box,
+  }
+  const TypeIcon = typeIcons[item.type] || Image
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div className="flex items-center gap-3">
+            <TypeIcon size={20} className="text-primary-400" />
+            <div>
+              <h3 className="font-semibold">{item.title || `${item.type} ${item.id}`}</h3>
+              <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400 capitalize">
+                {item.type}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {item.thumbnail_url && (
+            <div className="rounded-lg overflow-hidden bg-gray-800">
+              <img src={item.thumbnail_url} alt={item.title} className="w-full h-auto" />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Type</p>
+              <p className="text-lg font-bold capitalize">{item.type}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Created</p>
+              <p className="text-sm">{new Date(item.created_at).toLocaleDateString()}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-dark-border flex justify-end">
+          <button onClick={onClose} className="btn btn-primary text-sm">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 857: Series Detail Modal
+function SeriesDetailModal({ series, onClose }: { series: AISeries; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div className="flex items-center gap-3">
+            <Play size={20} className="text-primary-400" />
+            <h3 className="font-semibold">{series.name}</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Episodes</p>
+              <p className="text-xl font-bold">{series.episode_count}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Created</p>
+              <p className="text-sm">{new Date(series.created_at).toLocaleDateString()}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-dark-border flex justify-end">
+          <button onClick={onClose} className="btn btn-primary text-sm">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 857: Channel Detail Modal (updated - removed external link)
 function ChannelDetailModal({ channel, onClose }: { channel: ContentChannel; onClose: () => void }) {
   return (
     <div
@@ -939,13 +1526,7 @@ function ChannelDetailModal({ channel, onClose }: { channel: ContentChannel; onC
           </div>
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end gap-2">
-          <a
-            href={`/content-channels/${channel.id}`}
-            className="btn btn-secondary text-sm"
-          >
-            View Channel
-          </a>
+        <div className="p-4 border-t border-dark-border flex justify-end">
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
@@ -955,7 +1536,7 @@ function ChannelDetailModal({ channel, onClose }: { channel: ContentChannel; onC
   )
 }
 
-// Session 840: Blog Detail Modal
+// Session 857: Blog Detail Modal (updated - removed external link)
 function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => void }) {
   const statusStyles: Record<string, { bg: string; text: string }> = {
     draft: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
@@ -1020,13 +1601,7 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
           )}
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end gap-2">
-          <a
-            href={`/blog/${blog.id}`}
-            className="btn btn-secondary text-sm"
-          >
-            View Blog
-          </a>
+        <div className="p-4 border-t border-dark-border flex justify-end">
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
@@ -1036,7 +1611,7 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
   )
 }
 
-// Session 840: Episode Detail Modal
+// Session 857: Episode Detail Modal (updated - removed external link)
 function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onClose: () => void }) {
   const statusColors: Record<string, { color: string; bg: string }> = {
     published: { color: 'text-green-400', bg: 'bg-green-500/20' },
@@ -1091,13 +1666,136 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
           </div>
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end gap-2">
-          <a
-            href={`/podcast/${episode.id}`}
-            className="btn btn-secondary text-sm"
-          >
-            View Episode
-          </a>
+        <div className="p-4 border-t border-dark-border flex justify-end">
+          <button onClick={onClose} className="btn btn-primary text-sm">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 857: Voice Profile Modal
+function VoiceProfileModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div className="flex items-center gap-3">
+            <Mic size={20} className="text-accent-purple" />
+            <h3 className="font-semibold">Voice Profiles</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="p-4 bg-gray-800/50 rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-12 w-12 rounded-full bg-accent-purple/20 flex items-center justify-center">
+                <Mic size={24} className="text-accent-purple" />
+              </div>
+              <div>
+                <p className="font-medium">Default Voice</p>
+                <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green">
+                  Active
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-gray-500">Type</p>
+                <p>AI Generated</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Language</p>
+                <p>English</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center text-sm text-gray-500">
+            <p>Voice profiles are used for podcast episode generation</p>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-dark-border flex justify-end">
+          <button onClick={onClose} className="btn btn-primary text-sm">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 857: Platform Detail Modal
+function PlatformDetailModal({ platform, onClose }: { platform: Platform; onClose: () => void }) {
+  const isConnected = platform.status === 'connected'
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div className="flex items-center gap-3">
+            <Share2 size={20} className={isConnected ? 'text-accent-green' : 'text-gray-400'} />
+            <div>
+              <h3 className="font-semibold">{platform.name}</h3>
+              <span className={cn(
+                'text-xs px-2 py-0.5 rounded',
+                isConnected ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+              )}>
+                {isConnected ? 'Connected' : 'Not Connected'}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {isConnected ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-gray-800/50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Published</p>
+                  <p className="text-xl font-bold">0</p>
+                </div>
+                <div className="p-3 bg-gray-800/50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Pending</p>
+                  <p className="text-xl font-bold">0</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Share2 className="mx-auto mb-3 text-gray-500" size={32} />
+              <p className="text-sm text-gray-400 mb-4">
+                Connect your {platform.name} account to start publishing content
+              </p>
+              <p className="text-xs text-gray-500">
+                Platform integration coming soon
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-dark-border flex justify-end">
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
