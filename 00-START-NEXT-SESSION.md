@@ -1,78 +1,45 @@
-# Session 853 - Start Here
+# Session 854 - Start Here
 
-**Previous Session:** 852 (Artifact Classification & Decision Card Fixes)
+**Previous Session:** 853 (CulturalImpactAgent Output Fix + Broken Links)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Category Filtering Complete**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Agent Output Rendering Improved**
 
 ---
 
-## What Was Accomplished in Session 852
+## What Was Accomplished in Session 853
 
-Session 852 fixed artifact misclassification and UI interaction issues with PRs #374-377.
+Session 853 fixed the "1. Item 1" output bug for CulturalImpactAgent and similar agents, plus fixed broken /governance links.
 
-### 1. Backend Artifact Category Fix (PR #374)
+### 1. CulturalImpactAgent Output Fix (PR #379)
 
-Fixed auto-generated content being misclassified as 'blog' when it should be audit/research/technical.
-
-| Problem | Solution |
-|---------|----------|
-| `autonomous_action_executor.py` defaulted all content to `category='blog'` | Set correct categories based on content type |
-
-**Category Mapping:**
-- Reports (`[Report]` titles) → `category='audit'`
-- Research (`[Research]` titles) → `category='research_brief'`
-- Deliverables (`[S1-`, `[S2-` etc.) → `category='technical_document'`
-
-**Data Migration:** Fixed 88 existing misclassified entries (59 reports, 29 research)
-
-### 2. BlogsPage Category Filter UI (PR #375)
-
-Added category filtering to the dedicated Blogs page.
+Extended `_extract_agent_output_content()` to handle structured tool outputs from CulturalImpactAgent and similar agents.
 
 | Problem | Solution |
 |---------|----------|
-| BlogsPage showed ALL SelfBlog entries mixed together | Added category filter tabs with 'blog' as default |
+| CulturalImpactAgent tool_results showed "1. Item 1" | Added handling for `impact_analysis`, `predicted_effects`, `recommendations`, `affected_domains` |
 
-**New Features:**
-- Category tabs: Blog Posts | Audits | Research | Technical Docs | All
-- Dynamic header title/description based on selected category
-- Category badge on non-blog content cards
-- Default filter to `category='blog'`
+**New Output Keys Handled:**
+- `impact_analysis` - dict with impact_score, timeline, confidence, affected_domains
+- `predicted_effects` - list of effect predictions
+- `recommendations` - list of action recommendations
+- `affected_domains` - list of domain objects/strings with connection_strength
+- `parallels` - historical parallel objects
 
-### 3. Workspace BlogsSubTab Filter (PR #376)
+**Expanded Fallback Keys:**
+- Sub-item titles: `domain`, `topic`, `source`, `type`, `category`, `shift_summary`, `recommendation`, `effect`
+- Main item titles: `domain`, `shift_summary`, `analysis_type`, `narrative`
+- Content: `note`, `shift_summary`, `assumption`
 
-Fixed the Workspace → Content Studio → Blogs tab showing mixed content.
+### 2. Fixed Broken /governance Links (PR #379)
 
-| Problem | Solution |
-|---------|----------|
-| BlogsSubTab fetched all categories without filtering | Added `category=blog` filter to API call |
+Fixed 5 broken links in OrchestrationTab.tsx that pointed to non-existent `/governance` route.
 
-### 4. GovernanceTab Decision Card onClick (PR #377)
-
-Fixed non-interactive pending decision cards in the Governance tab.
-
-| Problem | Solution |
-|---------|----------|
-| Decision cards had no click handlers | Added onClick to open DecisionDetailModal |
-
-**New Features:**
-- Click handlers open `DecisionDetailModal`
-- Hover effects (background change, cursor pointer)
-- Eye icon indicator showing clickability
-- Title highlights on hover
-
----
-
-## Current Category Distribution
-
-```
-SelfBlog entries: 1,092 total
-  - blog: 1,004
-  - audit: 59
-  - research_brief: 29
-  - technical_document: 0
-  - prototype_plan: 0
-```
+| Broken Link | Fixed To |
+|-------------|----------|
+| `/governance?tab=triggers` | `/autonomous?tab=triggers` |
+| `/governance?tab=self-healing` | `/workspace?tab=governance` |
+| `/governance` | `/workspace?tab=governance` |
+| `/governance?tab=gates` | `/mythology-lab` |
 
 ---
 
@@ -86,9 +53,8 @@ make start && make celery
 open http://localhost:8000/ai-studio/
 
 # 3. Verify fixes
-# - /blogs: Check category tabs filter correctly
-# - Workspace → Content Studio → Blogs: Should show only blog posts
-# - Workspace → Governance: Click pending decisions to open modal
+# - Run CulturalImpactAgent and verify proper output (not "1. Item 1")
+# - Check Orchestration tab Quick Actions - all links should work
 ```
 
 ---
@@ -97,22 +63,29 @@ open http://localhost:8000/ai-studio/
 
 | File | Change |
 |------|--------|
-| `core/services/autonomous_action_executor.py` | Set correct categories for auto-generated content |
-| `core/migrations/0196_session_852_fix_artifact_categories.py` | Data migration for existing entries |
-| `frontend/src/pages/BlogsPage.tsx` | Category filter tabs UI |
-| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Blog-only API filter |
-| `frontend/src/pages/workspace/tabs/GovernanceTab.tsx` | Decision card onClick + modal |
+| `core/tasks.py` | Added CulturalImpactAgent output handling + expanded fallback keys |
+| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Fixed 5 broken /governance links |
+| `templates/frontend_index.html` | Updated JS bundle |
 
 ---
 
-## Session 852 PRs
+## Session 853 PRs
 
 | PR | Fix |
 |----|-----|
-| #374 | Backend artifact category classification |
-| #375 | BlogsPage category filter tabs |
-| #376 | Workspace BlogsSubTab blog-only filter |
-| #377 | GovernanceTab decision card onClick handlers |
+| #379 | CulturalImpactAgent output fix + broken /governance links |
+
+---
+
+## Agent Output Rendering History
+
+| Session | Fix |
+|---------|-----|
+| **853** | CulturalImpactAgent + fallback key expansion |
+| **851** | DebateAdvocateAgent, DebateSkepticAgent |
+| **848** | ModeratorAgent, Podcast agents (added `text` key) |
+| **839** | tool_results, opportunities, top_opportunities |
+| **835** | TrendsRenderer, AdvisorsRenderer, InvestmentRenderer, SecurityRenderer |
 
 ---
 
@@ -120,8 +93,8 @@ open http://localhost:8000/ai-studio/
 
 1. **Fix orphaned podcast episodes** - 3 episodes have no associated PodcastShow (from Session 851)
 2. **Enable channel view tracking** - 190 episodes have 0 views
-3. **Add more category types** - technical_document and prototype_plan have 0 entries
-4. **Audit other UI areas** - Check for other non-clickable cards
+3. **Test other agents** - Verify no more "Item X" fallback issues
+4. **Add more category types** - technical_document and prototype_plan have 0 entries
 
 ---
 
@@ -129,6 +102,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **853** | CulturalImpactAgent output fix + broken links |
 | **852** | Artifact Classification Fix - 4 PRs (#374-377) |
 | **851** | Multiple Integration Fixes - 5 PRs (#367-371) |
 | **850** | Inbox View + Smart Truncate + Docs Framing Fix |
@@ -141,10 +115,10 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_852_ARTIFACT_CLASSIFICATION.md` - Full session details
-- `docs/handoffs/SESSION_851_INPUT_DATA_RENDER_FIX.md` - Previous session
+- `docs/handoffs/SESSION_853_CULTURAL_IMPACT_FIX.md` - Full session details
+- `docs/handoffs/SESSION_852_ARTIFACT_CLASSIFICATION.md` - Previous session
 - `CLAUDE.md` - System overview
 
 ---
 
-**Session 852 Complete - Artifact classification and UI interaction fixes deployed**
+**Session 853 Complete - Agent output rendering improved for CulturalImpactAgent and similar agents**
