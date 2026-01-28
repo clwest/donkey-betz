@@ -29,6 +29,8 @@ from core.services.agent_learning_service import (
     InteractionType,
     PreferenceCategory
 )
+# Session 850: Smart truncation for cleaner synthesis display
+from core.api_helpers import smart_truncate
 
 logger = logging.getLogger(__name__)
 
@@ -547,7 +549,7 @@ def get_agent_conversations(request):
                 'message_count': actual_msg_count,
                 'quality_score': computed_hm_quality,
                 'conclusion': session.synthesis_summary or '',
-                'insights': str(session.synthesis)[:500] if session.synthesis else '',
+                'insights': smart_truncate(session.synthesis, 500) if session.synthesis else '',
                 'started_at': session.created_at.isoformat() if session.created_at else None,
                 'ended_at': session.completed_at.isoformat() if session.completed_at else None,
                 'messages': messages_data,  # Session 435: Now includes parsed messages
@@ -757,7 +759,7 @@ def get_agent_conversation_detail(request, conversation_id):
                     'message_count': session.contribution_count or len(messages_data),
                     'quality_score': 0.85,
                     'conclusion': session.synthesis_summary or '',
-                    'insights': str(session.synthesis)[:500] if session.synthesis else '',
+                    'insights': smart_truncate(session.synthesis, 500) if session.synthesis else '',
                     'full_synthesis': session.synthesis if isinstance(session.synthesis, str) else str(session.synthesis) if session.synthesis else '',
                     'started_at': session.created_at.isoformat() if session.created_at else None,
                     'ended_at': session.completed_at.isoformat() if session.completed_at else None,
@@ -811,7 +813,7 @@ def get_agent_conversation_detail(request, conversation_id):
                     'message_count': conv.messages.count(),
                     'quality_score': float(conv.quality_score) if conv.quality_score else 0.0,
                     'conclusion': conv.conclusion or '',
-                    'insights': str(conv.conclusion)[:500] if conv.conclusion else '',
+                    'insights': smart_truncate(conv.conclusion, 500) if conv.conclusion else '',
                     'started_at': conv.started_at.isoformat() if conv.started_at else None,
                     'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
                     'messages': messages_data,

@@ -1,8 +1,43 @@
-# Session 850 - Start Here
+# Session 851 - Start Here
 
-**Previous Session:** 849 (Decision-Initiative Linking)
+**Previous Session:** 850 (Inbox View + Smart Truncate)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Decision-Initiative Auto-Linking ACTIVE**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Initiative Pipeline COMPLETE**
+
+---
+
+## What Was Accomplished in Session 850
+
+### ChatGPT Feedback Implementation Complete
+
+Implemented remaining items from the Initiative Pipeline feedback:
+
+| Feature | Implementation |
+|---------|----------------|
+| **Inbox View** | Groups System Activity by initiative_id |
+| **Smart Truncate** | Truncates text at sentence boundaries instead of mid-word |
+
+### Inbox View (PR #363)
+- Added `initiative_id` and `initiative_name` to decision activity items
+- Recent/Inbox view toggle in System Activity section
+- Collapsible initiative folders with item counts
+- Unlinked items shown separately
+
+### Smart Truncate (PR #364)
+- Added `smart_truncate()` helper to `core/api_helpers.py`
+- Truncates at sentence boundaries (. ! ?) when possible
+- Falls back to word boundaries
+- Applied to synthesis display and Discord notifications
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/services/recent_activity.py` | Added initiative_id/name to decisions |
+| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | Inbox view UI |
+| `core/api_helpers.py` | Added smart_truncate() |
+| `core/views_agent_learning.py` | Use smart_truncate |
+| `core/tasks.py` | Use smart_truncate for HiveMind |
 
 ---
 
@@ -85,14 +120,22 @@ for d in AgentDecisionSummary.objects.filter(initiative__isnull=False)[:5]:
 
 ---
 
-## Potential Next Steps (from ChatGPT feedback)
+## ChatGPT Feedback Implementation Status
 
-1. **UI "Trace" panel** - Show conversation → initiative → stage docs → pilots → results
-2. **UI "Inbox" view** - Group items by initiative_id
-3. **"Needs decision" badge** - For synthesis items with questions
-4. **Fix synthesis template** - String slicing and deduplication issues
-5. **Add conversation link** to Initiative detail modal
-6. **Deploy to production** - All Session 848/849 fixes ready
+| Item | Status | Session |
+|------|--------|---------|
+| UI "Trace" panel | ✅ Done | 849 (PR #363) |
+| UI "Inbox" view | ✅ Done | 850 (PR #364) |
+| "Needs decision" badge | ✅ Done | 849 (PR #363) |
+| Fix synthesis template | ✅ Done | 850 (PR #364) |
+| Add conversation link | ✅ Done | 849 (PR #363) |
+| Deploy to production | 🔲 Ready | - |
+
+## Potential Next Steps
+
+1. **Deploy to production** - All ChatGPT feedback fixes ready
+2. **Test full Initiative flow** - Create decision with suggested_feature, verify auto-initiative creation
+3. **Monitor synthesis quality** - Verify smart_truncate improves readability
 
 ---
 
