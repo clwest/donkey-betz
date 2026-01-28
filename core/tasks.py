@@ -6273,21 +6273,74 @@ Guidelines:
                         user_content = f"Respond to {other_speaker.name}. IMPORTANT: {diversity_hint} - add something NEW they didn't mention."
 
                 try:
-                    # Use chat.completions for gpt-5-mini with high max_completion_tokens
-                    # GPT-5 reasoning models use tokens for internal reasoning first,
-                    # so we need ~500+ tokens to ensure room for reasoning + actual output
-                    # Session 413: Added timeout=120 for reasoning model thinking time
-                    response = client.chat.completions.create(
-                        model="gpt-5-mini",
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_content}
-                        ],
-                        max_completion_tokens=1000,  # Session 413: Increased for reasoning models
-                        timeout=120,  # Session 413: 2 min timeout for reasoning model
-                    )
+                    # Session 856: Retry logic with exponential backoff and Claude fallback
+                    # Handles rate limits (429) gracefully instead of abandoning conversations
+                    content = ""
+                    last_error = None
 
-                    content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+                    for retry_attempt in range(3):
+                        try:
+                            # Use chat.completions for gpt-5-mini with high max_completion_tokens
+                            # GPT-5 reasoning models use tokens for internal reasoning first,
+                            # so we need ~500+ tokens to ensure room for reasoning + actual output
+                            # Session 413: Added timeout=120 for reasoning model thinking time
+                            response = client.chat.completions.create(
+                                model="gpt-5-mini",
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_content}
+                                ],
+                                max_completion_tokens=1000,  # Session 413: Increased for reasoning models
+                                timeout=120,  # Session 413: 2 min timeout for reasoning model
+                            )
+                            content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+                            break  # Success, exit retry loop
+
+                        except Exception as api_error:
+                            last_error = api_error
+                            error_str = str(api_error).lower()
+
+                            # Check if it's a rate limit error
+                            is_rate_limit = '429' in error_str or 'rate' in error_str or 'quota' in error_str
+
+                            if is_rate_limit and retry_attempt < 2:
+                                # Exponential backoff: 2s, 4s
+                                backoff_time = 2 ** (retry_attempt + 1)
+                                logger.warning(f"💬 [CONVERSATIONS] Rate limit hit, retrying in {backoff_time}s (attempt {retry_attempt + 1}/3)")
+                                import time
+                                time.sleep(backoff_time)
+                                continue
+                            elif is_rate_limit and retry_attempt == 2:
+                                # Final attempt: fallback to Claude
+                                logger.warning(f"💬 [CONVERSATIONS] OpenAI rate limit persists, falling back to Claude")
+                                try:
+                                    from anthropic import Anthropic
+                                    anthropic_client = Anthropic()
+                                    claude_response = anthropic_client.messages.create(
+                                        model="claude-sonnet-4-20250514",
+                                        max_tokens=1000,
+                                        system=system_prompt,
+                                        messages=[{"role": "user", "content": user_content}]
+                                    )
+                                    # Extract text from Claude's response content blocks
+                                    if claude_response.content:
+                                        content = ""
+                                        for block in claude_response.content:
+                                            if hasattr(block, 'text'):
+                                                content += block.text
+                                        content = content.strip()
+                                    logger.info(f"💬 [CONVERSATIONS] Claude fallback successful")
+                                    break
+                                except Exception as claude_error:
+                                    logger.warning(f"💬 [CONVERSATIONS] Claude fallback also failed: {claude_error}")
+                                    raise last_error  # Re-raise original error
+                            else:
+                                # Non-rate-limit error, don't retry
+                                raise
+
+                    # If we exhausted retries without content, raise the last error
+                    if not content and last_error:
+                        raise last_error
 
                     # Session 356: Validate output for mythology violations
                     # Prevents agents from hallucinating unrealistic claims to each other
@@ -6393,17 +6446,59 @@ Next Steps:
 
 OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
 
-                    # Session 413: GPT-5 reasoning models need higher token limits + timeout
-                    conclusion_response = client.chat.completions.create(
-                        model="gpt-5-mini",
-                        messages=[
-                            {"role": "system", "content": "You are a conversation synthesizer. You MUST include the DecisionSummary block with === DecisionSummary === marker."},
-                            {"role": "user", "content": conclusion_prompt}
-                        ],
-                        max_completion_tokens=1200,  # Session 786: Increased for DecisionSummary
-                        timeout=120,  # Session 786: Increased timeout for longer output
-                    )
-                    conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
+                    # Session 856: Retry logic for conclusion generation with Claude fallback
+                    conclusion = None
+                    conclusion_system = "You are a conversation synthesizer. You MUST include the DecisionSummary block with === DecisionSummary === marker."
+
+                    for retry_attempt in range(3):
+                        try:
+                            # Session 413: GPT-5 reasoning models need higher token limits + timeout
+                            conclusion_response = client.chat.completions.create(
+                                model="gpt-5-mini",
+                                messages=[
+                                    {"role": "system", "content": conclusion_system},
+                                    {"role": "user", "content": conclusion_prompt}
+                                ],
+                                max_completion_tokens=1200,  # Session 786: Increased for DecisionSummary
+                                timeout=120,  # Session 786: Increased timeout for longer output
+                            )
+                            conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else None
+                            if conclusion:
+                                break
+                        except Exception as api_error:
+                            error_str = str(api_error).lower()
+                            is_rate_limit = '429' in error_str or 'rate' in error_str or 'quota' in error_str
+
+                            if is_rate_limit and retry_attempt < 2:
+                                import time
+                                backoff_time = 2 ** (retry_attempt + 1)
+                                logger.warning(f"💬 [CONVERSATIONS] Rate limit on conclusion, retrying in {backoff_time}s")
+                                time.sleep(backoff_time)
+                            elif is_rate_limit and retry_attempt == 2:
+                                # Fallback to Claude
+                                try:
+                                    from anthropic import Anthropic
+                                    anthropic_client = Anthropic()
+                                    claude_response = anthropic_client.messages.create(
+                                        model="claude-sonnet-4-20250514",
+                                        max_tokens=1200,
+                                        system=conclusion_system,
+                                        messages=[{"role": "user", "content": conclusion_prompt}]
+                                    )
+                                    if claude_response.content:
+                                        conclusion = ""
+                                        for block in claude_response.content:
+                                            if hasattr(block, 'text'):
+                                                conclusion += block.text
+                                        conclusion = conclusion.strip()
+                                    logger.info(f"💬 [CONVERSATIONS] Conclusion via Claude fallback")
+                                except Exception:
+                                    pass
+                            else:
+                                break
+
+                    if not conclusion:
+                        conclusion = f"Productive discussion about {topic}"
                     # Session 359: Validate conclusion for mythology violations
                     conclusion = validate_agent_output("ConversationSynthesizer", conclusion)
 
@@ -6969,32 +7064,74 @@ VOICE RULES (Session 781):
                         user_prompt = f"Recent discussion:\n{recent_context}\n\nNow respond: {user_prompt}"
 
                     try:
-                        # Session 364: Retry up to 2 times if empty response
+                        # Session 856: Retry with exponential backoff and Claude fallback for rate limits
                         content = ""
-                        for retry in range(2):
-                            # Session 413: Added timeout for reasoning model thinking time
-                            response = client.chat.completions.create(
-                                model="gpt-5-mini",
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": user_prompt}
-                                ],
-                                max_completion_tokens=2000,  # Session 364: Increased from 500 for reasoning models
-                                timeout=120,  # Session 413: 2 min timeout for reasoning model
-                            )
+                        last_api_error = None
 
-                            content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+                        for retry_attempt in range(3):
+                            try:
+                                # Session 413: Added timeout for reasoning model thinking time
+                                response = client.chat.completions.create(
+                                    model="gpt-5-mini",
+                                    messages=[
+                                        {"role": "system", "content": system_prompt},
+                                        {"role": "user", "content": user_prompt}
+                                    ],
+                                    max_completion_tokens=2000,  # Session 364: Increased from 500 for reasoning models
+                                    timeout=120,  # Session 413: 2 min timeout for reasoning model
+                                )
 
-                            # Session 360: Validate output for mythology violations
-                            content = validate_agent_output(current_agent.name, content)
+                                content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
-                            # Clean up content
-                            if content.startswith(f"{current_agent.name}:"):
-                                content = content[len(current_agent.name)+1:].strip()
+                                # Session 360: Validate output for mythology violations
+                                content = validate_agent_output(current_agent.name, content)
 
-                            if content:
-                                break  # Got content, exit retry loop
-                            logger.warning(f"👥 [MULTI-AGENT] Empty response from {current_agent.name}, retry {retry + 1}/2")
+                                # Clean up content
+                                if content.startswith(f"{current_agent.name}:"):
+                                    content = content[len(current_agent.name)+1:].strip()
+
+                                if content:
+                                    break  # Got content, exit retry loop
+                                logger.warning(f"👥 [MULTI-AGENT] Empty response from {current_agent.name}, retry {retry_attempt + 1}/3")
+
+                            except Exception as api_error:
+                                last_api_error = api_error
+                                error_str = str(api_error).lower()
+                                is_rate_limit = '429' in error_str or 'rate' in error_str or 'quota' in error_str
+
+                                if is_rate_limit and retry_attempt < 2:
+                                    import time
+                                    backoff_time = 2 ** (retry_attempt + 1)
+                                    logger.warning(f"👥 [MULTI-AGENT] Rate limit hit for {current_agent.name}, retrying in {backoff_time}s")
+                                    time.sleep(backoff_time)
+                                elif is_rate_limit and retry_attempt == 2:
+                                    # Fallback to Claude
+                                    logger.warning(f"👥 [MULTI-AGENT] OpenAI rate limit persists, falling back to Claude")
+                                    try:
+                                        from anthropic import Anthropic
+                                        anthropic_client = Anthropic()
+                                        claude_response = anthropic_client.messages.create(
+                                            model="claude-sonnet-4-20250514",
+                                            max_tokens=2000,
+                                            system=system_prompt,
+                                            messages=[{"role": "user", "content": user_prompt}]
+                                        )
+                                        if claude_response.content:
+                                            content = ""
+                                            for block in claude_response.content:
+                                                if hasattr(block, 'text'):
+                                                    content += block.text
+                                            content = content.strip()
+                                            # Validate and clean up
+                                            content = validate_agent_output(current_agent.name, content)
+                                            if content.startswith(f"{current_agent.name}:"):
+                                                content = content[len(current_agent.name)+1:].strip()
+                                        logger.info(f"👥 [MULTI-AGENT] Claude fallback successful for {current_agent.name}")
+                                    except Exception as claude_error:
+                                        logger.warning(f"👥 [MULTI-AGENT] Claude fallback failed: {claude_error}")
+                                else:
+                                    # Non-rate-limit error, break and let outer handler deal with it
+                                    raise
 
                         if not content:
                             logger.warning(f"👥 [MULTI-AGENT] Empty content from {current_agent.name} after retries, skipping")

@@ -228,6 +228,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
     ]
 
     # Session 763: Mission Control configuration
+    # Session 856: Enhanced payload_fields to include actionable insights for human review
     actionable_config = ActionableOutputConfig(
         enabled=True,
         item_type='insight',
@@ -239,7 +240,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             {'id': 'archive', 'label': 'Archive', 'style': 'secondary', 'description': 'Save for later'},
             {'id': 'dismiss', 'label': 'Dismiss', 'style': 'danger', 'description': 'Not relevant'},
         ],
-        payload_fields=['sources_count', 'topics', 'sentiment'],
+        # Session 856: Include fields that DecisionDetailModal can render
+        payload_fields=['key_insights', 'sources_count', 'topics', 'sentiment', 'recommended_stance', 'rationale'],
         max_items_per_hour=5
     )
 
@@ -497,7 +499,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                         result_data = {
                             'results': all_results,
-                            'query': task
+                            'query': task,
+                            'sources_count': len(all_results),
                         }
 
                         # Add ML analysis if performed
@@ -509,10 +512,42 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                                 'sentiment': ml_analysis.get('sentiment', 'unknown'),
                                 'ml_insights': ml_analysis.get('ml_insights', ''),
                             }
+                            # Session 856: Surface ML insights for human review
+                            result_data['topics'] = ml_analysis.get('topics_detected', [])
+                            result_data['sentiment'] = ml_analysis.get('sentiment', 'unknown')
+
+                        # Session 856: Extract key insights for human review
+                        # Build a list of key findings from the results
+                        key_insights = []
+                        for r in all_results[:5]:  # Top 5 results
+                            data = r.get('data', r)
+                            if isinstance(data, dict):
+                                # Try to get title or summary from the result
+                                title = data.get('title') or data.get('headline') or data.get('query', '')
+                                if title:
+                                    key_insights.append(str(title)[:200])
+                            elif isinstance(data, str) and data:
+                                key_insights.append(data[:200])
+
+                        # Add ML insights as a key insight if available
+                        if ml_analysis.get('ml_insights'):
+                            key_insights.insert(0, ml_analysis['ml_insights'][:300])
+
+                        result_data['key_insights'] = key_insights[:5]  # Max 5 insights
+
+                        # Session 856: Build a meaningful summary for human review
+                        summary_parts = [f"Research on: {task[:100]}"]
+                        summary_parts.append(f"Found {len(all_results)} source(s)")
+                        if key_insights:
+                            summary_parts.append(f"Key finding: {key_insights[0][:150]}")
+                        if ml_analysis.get('sentiment') and ml_analysis['sentiment'] != 'unknown':
+                            summary_parts.append(f"Sentiment: {ml_analysis['sentiment']}")
+
+                        research_summary = ". ".join(summary_parts)
 
                         result = AgentResult(
                             success=True,
-                            message=f"Research completed from {len(all_results)} source(s)",
+                            message=research_summary,
                             data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
