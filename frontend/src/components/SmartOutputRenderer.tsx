@@ -266,6 +266,31 @@ interface VulnerabilityItem {
   code?: string
 }
 
+// Session 848: Stock analysis format (Bull/Bear Case agents actual output)
+interface StockAnalysisOutput {
+  analysis?: string
+  ticker?: string
+  conviction?: 'HIGH' | 'MEDIUM' | 'LOW' | string
+  target_upside?: string
+  tool_calls?: Array<{ tool: string; args?: Record<string, unknown>; result?: unknown }>
+  collected_data?: Record<string, unknown>
+  bull_cases?: Array<{
+    ticker: string
+    conviction: string
+    target_upside?: string
+    arguments?: string[]
+    catalysts?: string[]
+    risks_acknowledged?: string[]
+  }>
+  bear_cases?: Array<{
+    ticker: string
+    conviction: string
+    downside_risk?: string
+    arguments?: string[]
+    risks?: string[]
+  }>
+}
+
 // Session 820: Trend and Discussion interfaces for TopicMiner/TrendAnalysis output
 interface TrendItem {
   topic?: string
@@ -1326,6 +1351,159 @@ function VulnerabilitiesRenderer({ vulnerabilities }: { vulnerabilities: Vulnera
   )
 }
 
+// Session 848: Stock Analysis Renderer (Bull/Bear Case agents)
+function StockAnalysisRenderer({ data }: { data: StockAnalysisOutput }) {
+  const [expanded, setExpanded] = useState(false)
+
+  // Determine if this is bullish or bearish based on content
+  const isBullish = data.conviction?.toUpperCase() === 'HIGH' ||
+    data.analysis?.toLowerCase().includes('bullish') ||
+    !!data.bull_cases?.length
+
+  const convictionColor = {
+    'HIGH': 'text-accent-green bg-accent-green/20',
+    'MEDIUM': 'text-accent-amber bg-accent-amber/20',
+    'LOW': 'text-gray-400 bg-gray-600/20',
+  }[data.conviction?.toUpperCase() || 'MEDIUM'] || 'text-gray-400 bg-gray-600/20'
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className={cn(
+          "text-sm font-medium flex items-center gap-2",
+          isBullish ? "text-accent-green" : "text-accent-red"
+        )}>
+          {isBullish ? <TrendingUp className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          Stock Analysis {data.ticker && `- ${data.ticker}`}
+        </h4>
+        {data.conviction && (
+          <span className={cn("px-2 py-0.5 text-xs rounded uppercase font-medium", convictionColor)}>
+            {data.conviction} Conviction
+          </span>
+        )}
+      </div>
+
+      {/* Target Upside */}
+      {data.target_upside && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-400">Target:</span>
+          <span className={cn("font-medium", isBullish ? "text-accent-green" : "text-accent-red")}>
+            {data.target_upside}
+          </span>
+        </div>
+      )}
+
+      {/* Main Analysis */}
+      {data.analysis && (
+        <div className={cn(
+          "p-3 rounded-lg border",
+          isBullish ? "bg-accent-green/5 border-accent-green/20" : "bg-accent-red/5 border-accent-red/20"
+        )}>
+          <p className="text-sm text-gray-300 whitespace-pre-wrap">
+            {expanded ? data.analysis : data.analysis.slice(0, 500)}
+            {!expanded && data.analysis.length > 500 && '...'}
+          </p>
+          {data.analysis.length > 500 && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="mt-2 text-xs text-accent-cyan hover:underline flex items-center gap-1"
+            >
+              {expanded ? (
+                <>Show less <ChevronDown className="w-3 h-3" /></>
+              ) : (
+                <>Read full analysis <ChevronRight className="w-3 h-3" /></>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Bull Cases */}
+      {data.bull_cases && data.bull_cases.length > 0 && (
+        <div className="space-y-2">
+          <h5 className="text-xs text-gray-400 uppercase tracking-wide">Bull Cases ({data.bull_cases.length})</h5>
+          {data.bull_cases.slice(0, 5).map((bc, i) => (
+            <div key={i} className="p-3 bg-accent-green/5 border border-accent-green/20 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white">{bc.ticker}</span>
+                <span className={cn(
+                  "px-1.5 py-0.5 text-xs rounded",
+                  bc.conviction === 'HIGH' ? 'bg-accent-green/20 text-accent-green' :
+                  bc.conviction === 'MEDIUM' ? 'bg-accent-amber/20 text-accent-amber' :
+                  'bg-gray-600/20 text-gray-400'
+                )}>{bc.conviction}</span>
+              </div>
+              {bc.target_upside && (
+                <p className="text-xs text-accent-green mb-2">Target: {bc.target_upside}</p>
+              )}
+              {bc.arguments && bc.arguments.length > 0 && (
+                <ul className="space-y-1">
+                  {bc.arguments.slice(0, 3).map((arg, j) => (
+                    <li key={j} className="text-xs text-gray-400 flex items-start gap-1">
+                      <span className="text-accent-green">•</span> {arg}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Bear Cases */}
+      {data.bear_cases && data.bear_cases.length > 0 && (
+        <div className="space-y-2">
+          <h5 className="text-xs text-gray-400 uppercase tracking-wide">Bear Cases ({data.bear_cases.length})</h5>
+          {data.bear_cases.slice(0, 5).map((bc, i) => (
+            <div key={i} className="p-3 bg-accent-red/5 border border-accent-red/20 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white">{bc.ticker}</span>
+                <span className={cn(
+                  "px-1.5 py-0.5 text-xs rounded",
+                  bc.conviction === 'HIGH' ? 'bg-accent-red/20 text-accent-red' :
+                  bc.conviction === 'MEDIUM' ? 'bg-accent-amber/20 text-accent-amber' :
+                  'bg-gray-600/20 text-gray-400'
+                )}>{bc.conviction}</span>
+              </div>
+              {bc.downside_risk && (
+                <p className="text-xs text-accent-red mb-2">Risk: {bc.downside_risk}</p>
+              )}
+              {bc.risks && bc.risks.length > 0 && (
+                <ul className="space-y-1">
+                  {bc.risks.slice(0, 3).map((risk, j) => (
+                    <li key={j} className="text-xs text-gray-400 flex items-start gap-1">
+                      <span className="text-accent-red">•</span> {risk}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tool Calls (collapsed by default) */}
+      {data.tool_calls && data.tool_calls.length > 0 && (
+        <details className="text-xs">
+          <summary className="text-gray-500 cursor-pointer hover:text-gray-300">
+            {data.tool_calls.length} tool calls made
+          </summary>
+          <div className="mt-2 space-y-1 pl-2 border-l border-dark-border">
+            {data.tool_calls.map((tc, i) => (
+              <div key={i} className="text-gray-500">
+                <span className="text-accent-amber">{tc.tool}</span>
+                {tc.args && Object.keys(tc.args).length > 0 && (
+                  <span className="text-gray-600"> ({Object.keys(tc.args).join(', ')})</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  )
+}
+
 // Session 820: Trending Topics
 function TrendsRenderer({ trends }: { trends: TrendItem[] }) {
   return (
@@ -1648,13 +1826,22 @@ export function SmartOutputRenderer({
     (outputData.key_points && Array.isArray(outputData.key_points)) ||
     (outputData.risks && Array.isArray(outputData.risks)))
 
+  // Session 848: Detect stock analysis output (Bull/Bear Case agents actual format)
+  const hasStockAnalysis = !!(
+    (outputData.analysis && outputData.conviction) ||
+    (outputData.analysis && outputData.ticker) ||
+    (outputData.bull_cases && Array.isArray(outputData.bull_cases)) ||
+    (outputData.bear_cases && Array.isArray(outputData.bear_cases))
+  )
+
   // Session 835: Detect vulnerabilities (Security agents)
   const hasVulnerabilities = outputData.vulnerabilities && Array.isArray(outputData.vulnerabilities) && outputData.vulnerabilities.length > 0
 
   // Check if we have any structured content
   const hasStructuredContent = hasBlog || hasResearch || hasPodcast || hasRecommendations ||
     hasAnalysis || hasSignals || hasToolResults || hasImages || hasThinking || hasMetrics || hasInsights ||
-    hasTrends || hasDiscussions || hasTopTrends || hasAdvisorOutput || hasInvestmentThesis || hasVulnerabilities
+    hasTrends || hasDiscussions || hasTopTrends || hasAdvisorOutput || hasInvestmentThesis || hasVulnerabilities ||
+    hasStockAnalysis
 
   return (
     <div className={cn("space-y-4", className)} style={{ maxHeight, overflowY: 'auto' }}>
@@ -1708,6 +1895,9 @@ export function SmartOutputRenderer({
 
           {/* Session 835: Investment Thesis (Bull/Bear Case agents) */}
           {hasInvestmentThesis && <InvestmentThesisRenderer data={outputData as InvestmentThesis} />}
+
+          {/* Session 848: Stock Analysis (Bull/Bear Case agents actual format) */}
+          {hasStockAnalysis && !hasInvestmentThesis && <StockAnalysisRenderer data={outputData as StockAnalysisOutput} />}
 
           {/* Session 835: Security Vulnerabilities */}
           {hasVulnerabilities && <VulnerabilitiesRenderer vulnerabilities={outputData.vulnerabilities as VulnerabilityItem[]} />}
