@@ -43,6 +43,7 @@ async function fetchJobs(): Promise<{
   completed: Job[]
 }> {
   // Session 860: Fixed to use correct endpoint /api/workspace-operations/
+  // Note: This is a DRF ViewSet, returns { count, next, previous, results }
   const response = await workspaceOperationsApi.list({
     status: 'pending,running,completed,failed',
     limit: 50
@@ -50,7 +51,8 @@ async function fetchJobs(): Promise<{
   const data = response.data
 
   // Transform operations into jobs format
-  const operations = data.operations || []
+  // DRF ViewSet returns results array, not operations
+  const operations = data?.results || data?.operations || []
   const running: Job[] = []
   const queued: Job[] = []
   const completed: Job[] = []
