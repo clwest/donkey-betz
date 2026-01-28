@@ -15,6 +15,9 @@ import {
   FileText,
   ArrowRight,
   Sparkles,
+  MessageSquare,
+  GitBranch,
+  Lightbulb,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
@@ -26,6 +29,17 @@ const STAGE_NAMES: Record<number, string> = {
   3: 'Evaluation',
   4: 'Tech Design',
   5: 'Pilot Execution',
+}
+
+// Session 849: Source decision for trace view
+interface SourceDecision {
+  id: string
+  topic: string
+  artifact_type: string
+  suggested_feature: string
+  conversation_id: string | null
+  hive_session_id: string | null
+  created_at: string
 }
 
 interface Initiative {
@@ -41,6 +55,10 @@ interface Initiative {
     document_id: string | null
     approved_at: string | null
   }>
+  // Session 849: Trace data
+  source_decision_id: string | null
+  parent_topic: string
+  source_decisions: SourceDecision[]
   created_at: string
   updated_at: string
 }
@@ -273,6 +291,90 @@ function InitiativeDetailModal({
               )
             })}
           </div>
+
+          {/* Session 849: Trace Panel - Show origin of this initiative */}
+          {(initiative.source_decisions?.length > 0 || initiative.parent_topic) && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                <GitBranch size={14} />
+                Origin Trace
+              </h4>
+
+              {/* Parent Topic */}
+              {initiative.parent_topic && (
+                <div className="p-3 rounded-lg bg-dark-bg border border-dark-border">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                    <Lightbulb size={12} />
+                    Parent Topic
+                  </div>
+                  <div className="text-sm">{initiative.parent_topic}</div>
+                </div>
+              )}
+
+              {/* Source Decisions */}
+              {initiative.source_decisions?.map((decision) => (
+                <div
+                  key={decision.id}
+                  className="p-3 rounded-lg bg-dark-bg border border-dark-border"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare size={14} className="text-primary-400" />
+                      <span className="text-sm font-medium truncate max-w-xs">
+                        {decision.topic}
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-xs bg-primary-500/20 text-primary-400">
+                      {decision.artifact_type}
+                    </span>
+                  </div>
+
+                  {/* Suggested Feature Preview */}
+                  {decision.suggested_feature && (
+                    <div className="text-xs text-gray-400 mb-2 line-clamp-2">
+                      {decision.suggested_feature}
+                    </div>
+                  )}
+
+                  {/* Links to conversation */}
+                  <div className="flex items-center gap-3 text-xs">
+                    {decision.conversation_id && (
+                      <a
+                        href={`/ai-studio/conversations?id=${decision.conversation_id}`}
+                        className="flex items-center gap-1 text-primary-400 hover:text-primary-300"
+                      >
+                        <MessageSquare size={12} />
+                        View Conversation
+                      </a>
+                    )}
+                    {decision.hive_session_id && (
+                      <a
+                        href={`/ai-studio/hive-mind?id=${decision.hive_session_id}`}
+                        className="flex items-center gap-1 text-primary-400 hover:text-primary-300"
+                      >
+                        <MessageSquare size={12} />
+                        View Hive Session
+                      </a>
+                    )}
+                    <span className="text-gray-500">
+                      {new Date(decision.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Trace Summary */}
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>Conversation</span>
+                <ArrowRight size={10} />
+                <span>Decision</span>
+                <ArrowRight size={10} />
+                <span className="text-primary-400">Initiative</span>
+                <ArrowRight size={10} />
+                <span>Stage Documents</span>
+              </div>
+            </div>
+          )}
 
           {/* Metadata */}
           <div className="flex items-center gap-4 text-xs text-gray-400 pt-2 border-t border-dark-border">

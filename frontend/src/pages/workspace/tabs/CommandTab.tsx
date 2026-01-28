@@ -30,6 +30,8 @@ import {
   Lightbulb,
   Building2,
   FlaskConical,
+  // Session 849: Help icon for "Needs Input" badge
+  HelpCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, humanApi } from '@/lib/api'
@@ -552,8 +554,28 @@ function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
   )
 }
 
+// Session 849: Helper to detect if a decision needs human input (contains questions)
+function needsHumanDecision(decision: any): boolean {
+  // Check title, summary, and key_insights for question marks
+  const title = decision.title || ''
+  const summary = decision.summary || ''
+  const keyInsights = decision.key_insights || []
+
+  if (title.includes('?') || summary.includes('?')) {
+    return true
+  }
+
+  // Check key_insights array for questions
+  if (Array.isArray(keyInsights)) {
+    return keyInsights.some((insight: string) => insight.includes('?'))
+  }
+
+  return false
+}
+
 // Decision Card sub-component
 // Session 845: Added onViewDetails for inline modal viewing
+// Session 849: Added "Needs Decision" badge for items with questions
 interface DecisionCardProps {
   decision: any
   onApprove: () => void
@@ -563,11 +585,22 @@ interface DecisionCardProps {
 }
 
 function DecisionCard({ decision, onApprove, onDismiss, onViewDetails, isLoading }: DecisionCardProps) {
+  const needsInput = needsHumanDecision(decision)
+
   return (
     <div className="p-4 bg-gray-800/50 hover:bg-gray-800/80 rounded-lg transition-colors">
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-white truncate">{decision.title}</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-medium text-white truncate">{decision.title}</h4>
+            {/* Session 849: "Needs Decision" badge for items with questions */}
+            {needsInput && (
+              <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-accent-purple/20 text-accent-purple flex-shrink-0">
+                <HelpCircle size={10} />
+                Needs Input
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-xs text-gray-500">
               {decision.source_agent || decision.source_type}
