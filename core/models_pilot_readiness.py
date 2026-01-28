@@ -888,7 +888,9 @@ class Experiment(models.Model):
             'user_trust_index_min': 3.8,          # Minimum score before halt
             'integrity_anomaly_detected': True,   # Any anomaly triggers halt
             'telemetry_kill_switch': True,        # External kill signal support
-            'error_rate_max': 25.0,               # % errors in 1-hour window
+            # Session 855: Raised from 25% to 35% - prevents premature halts
+            # Combined with MIN_EXECUTIONS_FOR_ERROR_RATE=20 in experiment_metrics.py
+            'error_rate_max': 35.0,               # % errors in 1-hour window
             'enabled': True,                      # Master switch for auto-halt
         }
 
