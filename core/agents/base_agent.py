@@ -2009,6 +2009,82 @@ Consider these trends when crafting the response to maximize relevance and engag
         # Should not reach here, but just in case
         raise last_exception
 
+    def _call_completion_with_retry(
+        self,
+        messages: List[Dict[str, str]],
+        model: str = "gpt-4o-mini",
+        max_completion_tokens: int = 6000,
+        max_retries: int = 3,
+        base_delay: float = 1.0,
+        max_delay: float = 30.0,
+    ):
+        """
+        Session 857: Call OpenAI completion with retry logic for simple prompts.
+
+        This method is for agents that need to make simple completion calls without
+        the full tool framework. It provides exponential backoff retry for:
+        - Rate limit errors (429)
+        - Server errors (5xx)
+        - Connection errors
+
+        Args:
+            messages: List of message dicts (role, content)
+            model: Model to use (default: gpt-4o-mini)
+            max_completion_tokens: Max tokens for response
+            max_retries: Maximum retry attempts (default: 3)
+            base_delay: Initial delay in seconds (default: 1.0)
+            max_delay: Maximum delay cap in seconds (default: 30.0)
+
+        Returns:
+            OpenAI ChatCompletion response object
+
+        Raises:
+            Exception: If all retries exhausted
+        """
+        import random
+
+        last_exception = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                return self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_completion_tokens=max_completion_tokens,
+                )
+            except Exception as e:
+                last_exception = e
+                error_str = str(e).lower()
+
+                # Check if this is a retryable error
+                is_rate_limit = '429' in str(e) or 'rate limit' in error_str
+                is_server_error = any(code in str(e) for code in ['500', '502', '503', '504'])
+                is_connection_error = 'connection' in error_str or 'timeout' in error_str
+
+                is_retryable = is_rate_limit or is_server_error or is_connection_error
+
+                if not is_retryable or attempt >= max_retries:
+                    # Not retryable or out of retries
+                    logger.error(
+                        f"[Session 857] {self.name} completion call failed after {attempt + 1} attempts: {e}"
+                    )
+                    raise
+
+                # Calculate exponential backoff with jitter
+                delay = min(base_delay * (2 ** attempt), max_delay)
+                delay += delay * 0.1 * random.random()  # Add 0-10% jitter
+
+                error_type = 'rate_limit' if is_rate_limit else 'server_error' if is_server_error else 'connection'
+                logger.warning(
+                    f"[Session 857] {self.name} completion call failed ({error_type}), "
+                    f"retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries}): {e}"
+                )
+
+                time.sleep(delay)
+
+        # Should not reach here, but just in case
+        raise last_exception
+
     def _track_llm_analytics(self, response, start_time: float) -> None:
         """
         Session 536: Track LLM call analytics - cost, tokens, performance.

@@ -667,9 +667,7 @@ If asked to create content, explain you can only research and suggest using the 
             Dict with viability_score (0-100), assessment, improvement_suggestions, pivot_ideas
         """
         try:
-            from openai import OpenAI
-            client = OpenAI()
-
+            # Session 857: Use inherited client with retry logic
             check_prompt = f"""Evaluate this business idea/research request for basic viability.
 
 Business Idea: {task}
@@ -707,11 +705,11 @@ Be constructive! Even bad ideas often have a kernel of something useful.
 For questionable ideas, help them become viable.
 For absurd ideas, suggest what realistic version might work."""
 
-            response = client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry-enabled completion call
+            response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": check_prompt}],
-                max_completion_tokens=2000  # Session 840: Increased for reasoning model
-                # Note: gpt-5-mini reasoning models don't support temperature
+                model="gpt-4o-mini",  # Session 857: Fixed model name
+                max_completion_tokens=2000
             )
 
             result = json.loads(response.choices[0].message.content)
@@ -1566,11 +1564,11 @@ Generate a detailed persona with:
 Return as JSON with these keys."""
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry-enabled completion call
+            response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": persona_prompt}],
+                model="gpt-4o-mini",  # Session 857: Fixed model name
                 max_completion_tokens=1000,
-                reasoning_effort="medium",
             )
 
             content = response.choices[0].message.content
@@ -1749,12 +1747,11 @@ Based on this data, provide a comprehensive CUSTOMER RESEARCH REPORT with:
 Be specific and reference actual data points. This analysis will be used for product development and marketing."""
 
         try:
-            # Session 294: gpt-5-mini uses tokens for internal reasoning first
-            # Need 6000+ tokens to ensure room for reasoning + visible output
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry-enabled completion call
+            response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": synthesis_prompt}],
-                max_completion_tokens=6000,  # High enough for reasoning + output
+                model="gpt-4o-mini",  # Session 857: Fixed model name
+                max_completion_tokens=6000,
             )
 
             analysis_text = response.choices[0].message.content
