@@ -576,10 +576,18 @@ function OperationContentModal({
                     <span className="text-gray-500">Type:</span>
                     <p className="font-medium">{operation.operation_type}</p>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Execution Time:</span>
-                    <p className="font-medium">{operation.execution_time_ms || 0}ms</p>
-                  </div>
+                  {/* Session 855: Show agent execution time prominently if available */}
+                  {operation.agent_execution_time_ms ? (
+                    <div>
+                      <span className="text-gray-500">Agent Time:</span>
+                      <p className="font-medium text-primary-400">{operation.agent_execution_time_ms}ms</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-gray-500">File Op Time:</span>
+                      <p className="font-medium">{operation.execution_time_ms || 0}ms</p>
+                    </div>
+                  )}
                   <div>
                     <span className="text-gray-500">Status:</span>
                     <p className={cn('font-medium', operation.success ? 'text-accent-green' : 'text-accent-red')}>

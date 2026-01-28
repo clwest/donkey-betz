@@ -409,6 +409,32 @@ class WorkspaceOperation(models.Model):
         after_lines = len(self.file_content_after.split('\n')) if self.file_content_after else 0
         return abs(after_lines - before_lines)
 
+    @property
+    def agent_execution_time_ms(self):
+        """
+        Session 855: Get the agent execution time from the related AgentExecution.
+
+        Looks up the AgentExecution by matching agent_name and created_at
+        within a reasonable time window (operation created during execution).
+        """
+        try:
+            from core.models_unified_system import AgentExecution
+            from datetime import timedelta
+
+            # Find execution that started before this operation and completed after
+            # or within a 5-minute window of this operation
+            execution = AgentExecution.objects.filter(
+                agent__name=self.agent_name,
+                created_at__lte=self.created_at,
+                created_at__gte=self.created_at - timedelta(minutes=5)
+            ).order_by('-created_at').first()
+
+            if execution and execution.execution_time_ms:
+                return execution.execution_time_ms
+            return None
+        except Exception:
+            return None
+
     def get_diff(self):
         """Get a unified diff of the file changes."""
         import difflib
