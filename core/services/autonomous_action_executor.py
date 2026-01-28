@@ -1117,21 +1117,63 @@ The document should:
     def _execute_triage_dreams(self, name: str, params: Dict, reasoning: str) -> Dict[str, Any]:
         """
         Session 564: Autonomous Dream Triage Pipeline
+        Session 855: Enhanced with adaptive thresholds based on backlog size
 
         Evaluates pending dreams and routes them:
         - HIGH VALUE (composite >= 0.65, actionability >= 0.6) -> Boardroom
         - INSPIRATION (composite >= 0.5, actionability < 0.5) -> Mark as shown
-        - STALE LOW (older than 14 days, composite < 0.4) -> Archive
+        - STALE (older than freshness threshold) -> Archive
+        - LOW SCORE (below threshold) -> Archive
+
+        Session 855: When backlog exceeds 100 dreams or oldest > 48h,
+        automatically uses more aggressive thresholds to clear the backlog.
         """
         from core.models_unified_system import AgentDream
 
+        # Session 855: Check backlog health to determine if aggressive mode needed
+        pending_count = AgentDream.objects.filter(
+            promoted_to_decision=False,
+            shown_to_user=False
+        ).count()
+
+        oldest_pending = AgentDream.objects.filter(
+            promoted_to_decision=False,
+            shown_to_user=False
+        ).order_by('dreamed_at').first()
+
+        oldest_age_hours = 0
+        if oldest_pending:
+            oldest_age_hours = (timezone.now() - oldest_pending.dreamed_at).total_seconds() / 3600
+
+        # Session 855: Determine if aggressive mode needed
+        aggressive_mode = pending_count > 100 or oldest_age_hours > 48
+
+        if aggressive_mode:
+            logger.info(
+                f"[Session 855] Dream triage AGGRESSIVE mode activated: "
+                f"{pending_count} pending, oldest {oldest_age_hours:.1f}h"
+            )
+
         # Get thresholds from params or use defaults
-        boardroom_threshold = params.get('boardroom_threshold', 0.65)
-        boardroom_action_threshold = params.get('boardroom_action_threshold', 0.6)
-        inspiration_threshold = params.get('inspiration_threshold', 0.5)
-        archive_age_days = params.get('archive_age_days', 14)
-        archive_score_threshold = params.get('archive_score_threshold', 0.4)
-        max_to_process = params.get('max_to_process', 50)
+        # Session 855: More aggressive defaults when backlog is large
+        if aggressive_mode:
+            boardroom_threshold = params.get('boardroom_threshold', 0.60)  # Was 0.65
+            boardroom_action_threshold = params.get('boardroom_action_threshold', 0.5)  # Was 0.6
+            inspiration_threshold = params.get('inspiration_threshold', 0.45)  # Was 0.5
+            archive_age_hours = params.get('archive_age_hours', 48)  # 48h freshness threshold
+            archive_score_threshold = params.get('archive_score_threshold', 0.5)  # Was 0.4
+            max_to_process = params.get('max_to_process', 200)  # Was 50
+        else:
+            boardroom_threshold = params.get('boardroom_threshold', 0.65)
+            boardroom_action_threshold = params.get('boardroom_action_threshold', 0.6)
+            inspiration_threshold = params.get('inspiration_threshold', 0.5)
+            archive_age_hours = params.get('archive_age_hours', 336)  # 14 days in hours
+            archive_score_threshold = params.get('archive_score_threshold', 0.4)
+            max_to_process = params.get('max_to_process', 50)
+
+        # Support legacy archive_age_days param
+        if 'archive_age_days' in params:
+            archive_age_hours = params['archive_age_days'] * 24
 
         now = timezone.now()
         results = {
@@ -1148,13 +1190,14 @@ The document should:
         ).select_related('agent').order_by('-composite_score')[:max_to_process]
 
         for dream in pending:
-            age_days = (now - dream.dreamed_at).days
+            age_hours = (now - dream.dreamed_at).total_seconds() / 3600
 
             # Route 1: HIGH VALUE -> Boardroom
             if (dream.composite_score >= boardroom_threshold and
                 dream.actionability_score >= boardroom_action_threshold):
                 dream.promoted_to_decision = True
                 dream.promoted_at = now
+                dream.decision_outcome = 'pending'  # Session 855: Set initial outcome
                 dream.save()
                 results['promoted_to_boardroom'].append({
                     'id': str(dream.id),
@@ -1163,8 +1206,9 @@ The document should:
                     'agent': dream.agent.name if dream.agent else 'Unknown'
                 })
 
-            # Route 2: STALE LOW -> Archive (mark as shown)
-            elif age_days >= archive_age_days and dream.composite_score < archive_score_threshold:
+            # Route 2: STALE -> Archive (past freshness threshold)
+            # Session 855: In aggressive mode, stale alone is enough reason to archive
+            elif age_hours >= archive_age_hours:
                 dream.shown_to_user = True
                 dream.shown_at = now
                 dream.user_feedback = 'auto_archived_stale'
@@ -1172,12 +1216,30 @@ The document should:
                 results['archived'].append({
                     'id': str(dream.id),
                     'title': dream.title[:50],
-                    'age_days': age_days,
-                    'score': dream.composite_score
+                    'age_hours': round(age_hours, 1),
+                    'score': dream.composite_score,
+                    'reason': 'stale'
                 })
 
-            # Route 3: INSPIRATION (creative but not actionable)
-            elif (dream.composite_score >= inspiration_threshold and
+            # Route 3: LOW SCORE -> Archive (below quality threshold)
+            # Session 855: Archive low-score dreams regardless of age
+            elif dream.composite_score < archive_score_threshold:
+                dream.shown_to_user = True
+                dream.shown_at = now
+                dream.user_feedback = 'auto_archived_low_score'
+                dream.save()
+                results['archived'].append({
+                    'id': str(dream.id),
+                    'title': dream.title[:50],
+                    'age_hours': round(age_hours, 1),
+                    'score': dream.composite_score,
+                    'reason': 'low_score'
+                })
+
+            # Route 4: INSPIRATION (creative but not actionable)
+            # Session 855: In aggressive mode, skip inspiration route - be decisive
+            elif (not aggressive_mode and
+                  dream.composite_score >= inspiration_threshold and
                   dream.actionability_score < boardroom_action_threshold):
                 dream.shown_to_user = True
                 dream.shown_at = now
@@ -1190,6 +1252,8 @@ The document should:
                     'creativity': dream.creativity_score
                 })
             else:
+                # Session 855: In aggressive mode, good dreams below boardroom threshold
+                # still get skipped for now (they'll be promoted eventually or age out)
                 results['skipped'] += 1
 
         # Summary
@@ -1199,8 +1263,9 @@ The document should:
             len(results['archived'])
         )
 
+        mode_label = "AGGRESSIVE" if aggressive_mode else "normal"
         logger.info(
-            f"Dream triage complete: {len(results['promoted_to_boardroom'])} to boardroom, "
+            f"Dream triage ({mode_label}): {len(results['promoted_to_boardroom'])} to boardroom, "
             f"{len(results['marked_as_inspiration'])} to inspiration, "
             f"{len(results['archived'])} archived, {results['skipped']} skipped"
         )
@@ -1211,8 +1276,9 @@ The document should:
             'marked_as_inspiration': len(results['marked_as_inspiration']),
             'archived': len(results['archived']),
             'skipped': results['skipped'],
+            'aggressive_mode': aggressive_mode,
             'details': results,
-            'message': f"Triaged {total_processed} dreams: {len(results['promoted_to_boardroom'])} to Boardroom"
+            'message': f"Triaged {total_processed} dreams ({mode_label} mode): {len(results['promoted_to_boardroom'])} to Boardroom, {len(results['archived'])} archived"
         }
 
     # =========================================================================
