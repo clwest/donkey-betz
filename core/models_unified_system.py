@@ -17330,6 +17330,28 @@ class AgentDecisionSummary(models.Model):
         help_text="Session 843: Project this decision belongs to"
     )
 
+    # Session 849: Link to Initiative for tracking decisions with proposed features
+    initiative = models.ForeignKey(
+        'core.Initiative',
+        null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='source_decisions',
+        help_text="Session 849: Initiative created from this decision's proposed feature"
+    )
+
+    # Session 849: Artifact type classification
+    artifact_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('learning', 'Learning'),
+            ('initiative_stage_doc', 'Initiative Stage Document'),
+            ('report', 'Report'),
+            ('playbook', 'Playbook'),
+            ('decision', 'Decision'),
+        ],
+        default='decision',
+        help_text="Session 849: Type of artifact this decision represents"
+    )
+
     # Link to source conversations (one or the other)
     # Legacy AgentConversation (Session 244-246)
     conversation = models.ForeignKey(
