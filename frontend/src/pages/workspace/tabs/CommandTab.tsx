@@ -811,7 +811,7 @@ function ActivityFeedSection({
   onViewDecision,
   setActiveTab,
 }: ActivityFeedSectionProps) {
-  const [activeTab, setActiveTab] = useState<'executions' | 'system'>('executions')
+  const [feedTab, setFeedTab] = useState<'executions' | 'system'>('executions')
   // Session 850: Sub-view for system activity - chronological or inbox (grouped by initiative)
   const [systemView, setSystemView] = useState<'chrono' | 'inbox'>('chrono')
   // Session 850: Track expanded initiative groups in inbox view
@@ -872,10 +872,10 @@ function ActivityFeedSection({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setActiveTab('executions')}
+            onClick={() => setFeedTab('executions')}
             className={cn(
               'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              activeTab === 'executions'
+              feedTab === 'executions'
                 ? 'bg-primary-500/20 text-primary-400'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
             )}
@@ -894,10 +894,10 @@ function ActivityFeedSection({
             )}
           </button>
           <button
-            onClick={() => setActiveTab('system')}
+            onClick={() => setFeedTab('system')}
             className={cn(
               'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors',
-              activeTab === 'system'
+              feedTab === 'system'
                 ? 'bg-primary-500/20 text-primary-400'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
             )}
@@ -924,7 +924,7 @@ function ActivityFeedSection({
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'executions' && (
+      {feedTab === 'executions' && (
         <div className="space-y-2">
           {recentActivity.length === 0 ? (
             <p className="text-sm text-gray-500 text-center py-4">No recent agent executions</p>
@@ -941,7 +941,7 @@ function ActivityFeedSection({
         </div>
       )}
 
-      {activeTab === 'system' && (
+      {feedTab === 'system' && (
         <div className="space-y-2">
           {/* Session 850: View toggle - Chronological vs Inbox */}
           <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-700/50">
