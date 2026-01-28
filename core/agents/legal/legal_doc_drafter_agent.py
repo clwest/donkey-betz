@@ -36,7 +36,7 @@ import re
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from core.agents.legal.motion_context import (
     MotionContext,
     clean_motion_text,
@@ -964,6 +964,22 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             }
         }
     ]
+
+    # Session 856: Mission Control configuration for legal document review
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='review',
+        default_urgency='high',  # Legal documents need careful review
+        min_confidence=0.0,
+        actions=[
+            {'id': 'approve', 'label': 'Approve', 'style': 'success', 'description': 'Approve document for filing'},
+            {'id': 'revise', 'label': 'Request Revision', 'style': 'warning', 'description': 'Request changes before filing'},
+            {'id': 'reject', 'label': 'Reject', 'style': 'danger', 'description': 'Do not use this document'},
+            {'id': 'consult', 'label': 'Consult Attorney', 'style': 'primary', 'description': 'Mark for attorney review'},
+        ],
+        payload_fields=['type', 'documents_generated', 'jurisdiction', 'focus_area'],
+        max_items_per_hour=5
+    )
 
     def __init__(self, user=None, case_id: str = None):
         super().__init__(user)

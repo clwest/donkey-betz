@@ -208,7 +208,7 @@ Always delegate tasks you cannot perform yourself rather than refusing or making
             {'id': 'edit', 'label': 'Request Edit', 'style': 'warning', 'description': 'Flag for editing'},
             {'id': 'reject', 'label': 'Reject', 'style': 'danger', 'description': 'Do not publish'},
         ],
-        payload_fields=['content_type', 'word_count', 'quality_score'],
+        payload_fields=['title', 'content_type', 'word_count', 'tone', 'target_audience'],
         max_items_per_hour=5
     )
 
@@ -489,17 +489,46 @@ For this {content_type}, ensure:
 
                 execution_time = int((time.time() - start_time) * 1000)
 
+                # Session 856: Extract content details for descriptive message
+                content_title = (
+                    generated_content.get('title') or
+                    generated_content.get('headline') or
+                    topic or
+                    self._extract_topic(research, task) or
+                    'Untitled'
+                ) if isinstance(generated_content, dict) else 'Content'
+
+                actual_word_count = (
+                    len(generated_content.get('full_text', '').split())
+                    if isinstance(generated_content, dict) else len(str(generated_content).split())
+                )
+
+                # Session 856: Build descriptive message for content review UI
+                content_type_display = content_config['name']
+                message_parts = [f"{content_type_display}: \"{content_title[:80]}\""]
+                message_parts.append(f"{actual_word_count:,} words")
+                if tone:
+                    message_parts.append(f"{tone} tone")
+                if target_audience:
+                    message_parts.append(f"for {target_audience}")
+
+                descriptive_message = " | ".join(message_parts)
+
                 result = AgentResult(
                     success=True,
-                    message=f"Successfully created {content_config['name']}",
+                    message=descriptive_message,
                     data={
                         'content_type': content_type,
+                        'title': content_title,
+                        'word_count': actual_word_count,
+                        'tone': tone,
+                        'target_audience': target_audience,
                         'content': generated_content,
                         'metadata': {
                             'tone': tone,
                             'target_audience': target_audience,
                             'word_count_target': word_count,
-                            'actual_word_count': len(generated_content.get('full_text', '').split()) if isinstance(generated_content, dict) else len(str(generated_content).split()),
+                            'actual_word_count': actual_word_count,
                             'topic': topic or self._extract_topic(research, task),
                         }
                     },
