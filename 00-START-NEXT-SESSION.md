@@ -1,45 +1,29 @@
-# Session 854 - Start Here
+# Session 855 - Start Here
 
-**Previous Session:** 853 (CulturalImpactAgent Output Fix + Broken Links)
+**Previous Session:** 854 (Flagship Content Voice System)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Agent Output Rendering Improved**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Distinctive Donkey Betz Voice**
 
 ---
 
-## What Was Accomplished in Session 853
+## What Was Accomplished in Session 854
 
-Session 853 fixed the "1. Item 1" output bug for CulturalImpactAgent and similar agents, plus fixed broken /governance links.
+Session 854 implemented the complete content evolution system based on ChatGPT feedback that blogs were "Gen-1 Polished Generic."
 
-### 1. CulturalImpactAgent Output Fix (PR #379)
+### Flagship Content Voice System (PR #381)
 
-Extended `_extract_agent_output_content()` to handle structured tool outputs from CulturalImpactAgent and similar agents.
+Created `core/services/content_voice_system.py` with four components:
 
-| Problem | Solution |
-|---------|----------|
-| CulturalImpactAgent tool_results showed "1. Item 1" | Added handling for `impact_analysis`, `predicted_effects`, `recommendations`, `affected_domains` |
+| Component | Purpose |
+|-----------|---------|
+| **VoiceProfile** | Donkey Betz brand identity - origin story, tone, signature phrases, anti-patterns |
+| **NarrativeInjectionService** | Pulls real incidents from system logs (spiders, dreams, decisions, learnings) |
+| **CTALibrary** | Strong CTAs for demo, early_access, newsletter, investor, pilot, github |
+| **FlagshipBlogTemplate** | Combines all into 3600+ char prompt injection |
 
-**New Output Keys Handled:**
-- `impact_analysis` - dict with impact_score, timeline, confidence, affected_domains
-- `predicted_effects` - list of effect predictions
-- `recommendations` - list of action recommendations
-- `affected_domains` - list of domain objects/strings with connection_strength
-- `parallels` - historical parallel objects
-
-**Expanded Fallback Keys:**
-- Sub-item titles: `domain`, `topic`, `source`, `type`, `category`, `shift_summary`, `recommendation`, `effect`
-- Main item titles: `domain`, `shift_summary`, `analysis_type`, `narrative`
-- Content: `note`, `shift_summary`, `assumption`
-
-### 2. Fixed Broken /governance Links (PR #379)
-
-Fixed 5 broken links in OrchestrationTab.tsx that pointed to non-existent `/governance` route.
-
-| Broken Link | Fixed To |
-|-------------|----------|
-| `/governance?tab=triggers` | `/autonomous?tab=triggers` |
-| `/governance?tab=self-healing` | `/workspace?tab=governance` |
-| `/governance` | `/workspace?tab=governance` |
-| `/governance?tab=gates` | `/mythology-lab` |
+**Integration:**
+- ContentWriterAgent: Flagship injection defaults to True for blog_post, article, newsletter
+- write_self_blog command: --flagship/--no-flagship and --cta-type options
 
 ---
 
@@ -52,9 +36,8 @@ make start && make celery
 # 2. Access Workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Verify fixes
-# - Run CulturalImpactAgent and verify proper output (not "1. Item 1")
-# - Check Orchestration tab Quick Actions - all links should work
+# 3. Test flagship blog generation
+python manage.py write_self_blog --cta-type demo
 ```
 
 ---
@@ -63,37 +46,25 @@ open http://localhost:8000/ai-studio/
 
 | File | Change |
 |------|--------|
-| `core/tasks.py` | Added CulturalImpactAgent output handling + expanded fallback keys |
-| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Fixed 5 broken /governance links |
-| `templates/frontend_index.html` | Updated JS bundle |
+| `core/services/content_voice_system.py` | NEW - Complete voice/narrative/CTA system |
+| `core/agents/content_writer_agent.py` | Flagship injection for blog content |
+| `core/management/commands/write_self_blog.py` | --flagship and --cta-type options |
 
 ---
 
-## Session 853 PRs
+## Session 854 PRs
 
-| PR | Fix |
-|----|-----|
-| #379 | CulturalImpactAgent output fix + broken /governance links |
-
----
-
-## Agent Output Rendering History
-
-| Session | Fix |
-|---------|-----|
-| **853** | CulturalImpactAgent + fallback key expansion |
-| **851** | DebateAdvocateAgent, DebateSkepticAgent |
-| **848** | ModeratorAgent, Podcast agents (added `text` key) |
-| **839** | tool_results, opportunities, top_opportunities |
-| **835** | TrendsRenderer, AdvisorsRenderer, InvestmentRenderer, SecurityRenderer |
+| PR | Feature |
+|----|---------|
+| #381 | Flagship Content Voice System |
 
 ---
 
 ## Potential Next Steps
 
-1. **Fix orphaned podcast episodes** - 3 episodes have no associated PodcastShow (from Session 851)
-2. **Enable channel view tracking** - 190 episodes have 0 views
-3. **Test other agents** - Verify no more "Item X" fallback issues
+1. **Test flagship blog in production** - Generate blog and verify distinctive voice
+2. **Fix orphaned podcast episodes** - 3 episodes have no associated PodcastShow
+3. **Enable channel view tracking** - 190 episodes have 0 views
 4. **Add more category types** - technical_document and prototype_plan have 0 entries
 
 ---
@@ -102,23 +73,23 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **854** | Flagship Content Voice System |
 | **853** | CulturalImpactAgent output fix + broken links |
 | **852** | Artifact Classification Fix - 4 PRs (#374-377) |
 | **851** | Multiple Integration Fixes - 5 PRs (#367-371) |
 | **850** | Inbox View + Smart Truncate + Docs Framing Fix |
-| **849** | Decision-Initiative Linking - Auto-create Initiative from Proposed Feature |
-| **848** | Initiative Pipeline Testing - 7-point verification, 6 bug fixes |
+| **849** | Decision-Initiative Linking |
+| **848** | Initiative Pipeline Testing - 7-point verification |
 | **847** | Initiative Pipeline - ThinkingAgent -> Initiative -> Stages -> Documents |
-| **846** | Citation Gate + Serper News API + Stuck Conversations Fix |
 
 ---
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_853_CULTURAL_IMPACT_FIX.md` - Full session details
-- `docs/handoffs/SESSION_852_ARTIFACT_CLASSIFICATION.md` - Previous session
+- `docs/handoffs/SESSION_854_FLAGSHIP_CONTENT_VOICE.md` - Full session details
+- `docs/handoffs/SESSION_853_CULTURAL_IMPACT_FIX.md` - Previous session
 - `CLAUDE.md` - System overview
 
 ---
 
-**Session 853 Complete - Agent output rendering improved for CulturalImpactAgent and similar agents**
+**Session 854 Complete - Blogs now have distinctive Donkey Betz voice**
