@@ -301,6 +301,112 @@ export function CommandTab({
   )
 }
 
+// Session 851: Helper component for rendering input parameter values cleanly
+// Avoids raw JSON display by formatting objects into readable key-value pairs
+function InputParamRow({ name, value }: { name: string; value: unknown }) {
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-primary-400 font-medium font-mono">{name}:</span>
+        <span className="text-gray-500 italic">null</span>
+      </div>
+    )
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return (
+        <div className="flex items-start gap-2">
+          <span className="text-primary-400 font-medium font-mono">{name}:</span>
+          <span className="text-gray-500 italic">empty array</span>
+        </div>
+      )
+    }
+    // Simple array of primitives
+    if (value.every(v => typeof v !== 'object' || v === null)) {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-primary-400 font-medium font-mono">{name}:</span>
+          <div className="pl-3 flex flex-wrap gap-1">
+            {value.map((item, idx) => (
+              <span key={idx} className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-300">
+                {String(item)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    // Array of objects - show count with summary
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-primary-400 font-medium font-mono">{name}:</span>
+        <span className="pl-3 text-gray-400">{value.length} item{value.length !== 1 ? 's' : ''}</span>
+      </div>
+    )
+  }
+
+  // Handle objects
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (entries.length === 0) {
+      return (
+        <div className="flex items-start gap-2">
+          <span className="text-primary-400 font-medium font-mono">{name}:</span>
+          <span className="text-gray-500 italic">empty object</span>
+        </div>
+      )
+    }
+    // Show nested key-value pairs (max 5, then truncate)
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-primary-400 font-medium font-mono">{name}:</span>
+        <div className="pl-3 space-y-1">
+          {entries.slice(0, 5).map(([k, v]) => (
+            <div key={k} className="flex items-start gap-2 text-gray-300">
+              <span className="text-gray-500">{k}:</span>
+              <span className="break-words">
+                {typeof v === 'object' && v !== null
+                  ? Array.isArray(v)
+                    ? `[${v.length} items]`
+                    : `{${Object.keys(v).length} fields}`
+                  : String(v)}
+              </span>
+            </div>
+          ))}
+          {entries.length > 5 && (
+            <span className="text-gray-500 text-[10px]">+{entries.length - 5} more fields</span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Handle booleans
+  if (typeof value === 'boolean') {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-primary-400 font-medium font-mono">{name}:</span>
+        <span className={value ? 'text-accent-green' : 'text-accent-red'}>
+          {value ? 'true' : 'false'}
+        </span>
+      </div>
+    )
+  }
+
+  // Handle primitives (string, number)
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-primary-400 font-medium font-mono">{name}:</span>
+      <span className="text-gray-300 break-words whitespace-pre-wrap">
+        {String(value)}
+      </span>
+    </div>
+  )
+}
+
 // Session 832: Enhanced Activity Card with status-aware icons and new fields
 interface ActivityCardProps {
   activity: any
@@ -490,22 +596,16 @@ function ActivityCard({ activity, isExpanded, onToggle }: ActivityCardProps) {
           </div>
 
           {/* Session 832: Input Data - Session 834: Fixed truncation, show full values */}
+          {/* Session 851: Improved object value rendering to avoid raw JSON display */}
           {activity.input_data && Object.keys(activity.input_data).length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-1">
                 <FileInput size={12} />
                 Input Parameters
               </h4>
-              <div className="bg-gray-900/50 rounded p-2 text-xs font-mono space-y-2 max-h-64 overflow-y-auto">
+              <div className="bg-gray-900/50 rounded p-2 text-xs space-y-2 max-h-64 overflow-y-auto">
                 {Object.entries(activity.input_data).map(([key, value]) => (
-                  <div key={key} className="flex flex-col gap-1">
-                    <span className="text-primary-400 font-medium">{key}:</span>
-                    <span className="text-gray-300 whitespace-pre-wrap break-words pl-2">
-                      {typeof value === 'object' && value !== null
-                        ? JSON.stringify(value, null, 2)
-                        : String(value)}
-                    </span>
-                  </div>
+                  <InputParamRow key={key} name={key} value={value} />
                 ))}
               </div>
             </div>
