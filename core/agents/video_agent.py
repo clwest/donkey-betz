@@ -26,7 +26,7 @@ import logging
 import time
 from typing import Dict, Any
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,12 @@ class VideoAgent(BaseAgent):
     """
 
     name = "VideoAgent"
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'prompt', 'duration', 'task_id', 'status']
+    )
 
     system_prompt = """You are VideoAgent, a specialist in creating videos.
 
@@ -277,13 +283,36 @@ and call generate_video immediately. Do not delegate for research first."""
                     all_errors = [tc['result'].get('error', 'Unknown error') for tc in failed_calls]
 
                     if successful_calls:
+                        # Session 856: Build descriptive message based on tool used
+                        tool_used = successful_calls[0]['tool']
+                        args = successful_calls[0].get('arguments', {})
+                        if tool_used == 'generate_video':
+                            prompt_preview = args.get('prompt', '')[:100]
+                            duration = args.get('duration', 6)
+                            descriptive_msg = f"Video generation started: {duration}s video from prompt '{prompt_preview}...'"
+                        elif tool_used == 'animate_image':
+                            image_id = args.get('image_id', 'unknown')
+                            motion = args.get('motion_prompt', 'natural motion')[:50]
+                            descriptive_msg = f"Image animation started: animating image {image_id} with '{motion}'"
+                        elif tool_used == 'extend_video':
+                            video_id = args.get('video_id', 'unknown')
+                            extension = args.get('extension_seconds', 4)
+                            descriptive_msg = f"Video extension started: extending video {video_id} by {extension}s"
+                        elif tool_used == 'chain_videos':
+                            video_ids = args.get('video_ids', [])
+                            descriptive_msg = f"Video chaining started: concatenating {len(video_ids)} videos"
+                        else:
+                            descriptive_msg = f"Video operation '{tool_used}' started"
+
                         result = AgentResult(
                             success=True,
-                            message=f"Video operation started",
+                            message=descriptive_msg,
                             data={
                                 'task_id': successful_calls[0]['result'].get('task_id'),
                                 'status': 'processing',
-                                'tool_used': successful_calls[0]['tool']
+                                'tool_used': tool_used,
+                                'prompt': args.get('prompt', args.get('motion_prompt', '')),
+                                'duration': args.get('duration', 6)
                             },
                             agent_name=self.name,
                             execution_time_ms=execution_time,
