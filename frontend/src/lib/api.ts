@@ -720,6 +720,9 @@ export const learningApi = {
   activity: () => api.get('/agent-learning/activity/'),
   stats: () => api.get('/agent-learning/stats/'),
   velocity: () => api.get('/learning/velocity/'),
+  // Session 860: Added patterns and insights endpoints
+  patterns: (limit = 50) => api.get('/learning/patterns/', { params: { limit } }),
+  insights: (limit = 20) => api.get('/learning/insights/', { params: { limit } }),
 }
 
 // Session 745: Research API for network graph
