@@ -1,5 +1,6 @@
 // Session 825: Infrastructure Tab
 // Session 840: Enhanced with onClick handlers, detail modals, and real data
+// Session 857: Refactored for inline content viewing - removed external navigation
 // Consolidates: Body Health, Integration, Services, LLM, Analytics, Billing
 
 import { useState } from 'react'
@@ -21,7 +22,6 @@ import {
   DollarSign,
   BarChart3,
   Link2,
-  ExternalLink,
   RefreshCw,
   CheckCircle,
   AlertTriangle,
@@ -29,12 +29,14 @@ import {
   Loader2,
   X,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Database,
   Wifi,
   Clock,
   TrendingUp,
   Settings,
-  Eye,
+  List,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { bodyApi } from '@/lib/api'
@@ -159,12 +161,9 @@ function BodyHealthSubTab() {
 
   return (
     <div className="space-y-4">
-      {/* Header with refresh and link to full page */}
+      {/* Header - Session 857: Removed external navigation */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => window.location.href = '/body-health'}
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-        >
+        <div className="flex items-center gap-3">
           <div className={cn(
             'h-12 w-12 rounded-lg flex items-center justify-center',
             vitals?.health_score >= 80 ? 'bg-accent-green/10' :
@@ -191,24 +190,15 @@ function BodyHealthSubTab() {
             </div>
             <p className="text-xs text-gray-500">10 Body Systems</p>
           </div>
-        </button>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="btn btn-secondary flex items-center gap-2 text-sm"
-          >
-            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-          <a
-            href="/body-health"
-            className="btn btn-secondary flex items-center gap-2 text-sm"
-          >
-            Full View
-            <ExternalLink size={14} />
-          </a>
         </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+          title="Refresh data"
+        >
+          <RefreshCw size={14} className={cn('text-gray-400', isFetching && 'animate-spin')} />
+        </button>
       </div>
 
       {/* Systems Grid */}
@@ -322,12 +312,9 @@ function SystemDetailModal({ system, onClose }: { system: BodySystem; onClose: (
               </div>
             </div>
           )}
-          <a
-            href={config?.route || '/body-health'}
-            className="btn btn-primary w-full mt-4"
-          >
-            View Full System Details
-          </a>
+          <button onClick={onClose} className="btn btn-primary w-full mt-4">
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -337,6 +324,8 @@ function SystemDetailModal({ system, onClose }: { system: BodySystem; onClose: (
 // ============ Integration Sub-Tab ============
 
 function IntegrationSubTab() {
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+
   const { data: healthData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['integration-system-health'],
     queryFn: async () => {
@@ -347,7 +336,6 @@ function IntegrationSubTab() {
         }
         throw new Error('Failed to fetch')
       } catch {
-        // Fallback with real data
         return {
           metrics: { agents: 213, spiders: 77, scheduled_tasks: 233 },
           services: { postgres: true, redis: true, celery: true, daphne: true }
@@ -379,15 +367,13 @@ function IntegrationSubTab() {
     services: 120,
   }
 
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
   return (
     <div className="space-y-4">
-      <HeaderRow
-        title="Integration Health"
-        linkTo="/integration-health"
-        linkLabel="Full View"
-        onRefresh={refetch}
-        isFetching={isFetching}
-      />
+      <InlineHeaderRow title="Integration Health" onRefresh={refetch} isFetching={isFetching} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
@@ -395,88 +381,151 @@ function IntegrationSubTab() {
           value={systemStats.agents}
           icon={Activity}
           color="text-primary-400"
-          onClick={() => window.location.href = '/agents'}
+          onClick={() => toggleSection('agents')}
+          isExpanded={expandedSection === 'agents'}
         />
         <StatCard
           label="Spiders"
           value={systemStats.spiders}
           icon={Server}
           color="text-accent-green"
-          onClick={() => window.location.href = '/spiders'}
+          onClick={() => toggleSection('spiders')}
+          isExpanded={expandedSection === 'spiders'}
         />
         <StatCard
           label="Celery Tasks"
           value={systemStats.celeryTasks}
           icon={Clock}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/admin'}
+          onClick={() => toggleSection('celery')}
+          isExpanded={expandedSection === 'celery'}
         />
         <StatCard
           label="Services"
           value={systemStats.services}
           icon={Link2}
           color="text-accent-cyan"
-          onClick={() => window.location.href = '/integration-health'}
+          onClick={() => toggleSection('services')}
+          isExpanded={expandedSection === 'services'}
         />
       </div>
 
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Health Check</h4>
-        <div className="space-y-2">
-          <HealthCheckRow
-            label="Database"
-            status={services.postgres ? 'connected' : 'disconnected'}
-            icon={Database}
-            onClick={() => window.location.href = '/integration-health?service=postgres'}
-          />
-          <HealthCheckRow
-            label="Redis"
-            status={services.redis ? 'connected' : 'disconnected'}
-            icon={Server}
-            onClick={() => window.location.href = '/integration-health?service=redis'}
-          />
-          <HealthCheckRow
-            label="Celery Workers"
-            status={services.celery ? 'running' : 'stopped'}
-            icon={Cpu}
-            onClick={() => window.location.href = '/admin'}
-          />
-          <HealthCheckRow
-            label="WebSocket"
-            status={services.daphne ? 'connected' : 'disconnected'}
-            icon={Wifi}
-            onClick={() => window.location.href = '/integration-health?service=websocket'}
-          />
+      {/* Expanded Sections */}
+      {expandedSection === 'agents' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Agents Overview</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Agents</p>
+              <p className="text-xl font-bold">{systemStats.agents}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Active</p>
+              <p className="text-xl font-bold text-accent-green">{systemStats.agents}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Spider Data Stats */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Data Pipeline</h4>
-        <div className="grid grid-cols-3 gap-4">
-          <button
-            onClick={() => window.location.href = '/spiders'}
-            className="text-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-          >
-            <div className="text-2xl font-bold text-primary-400">23,847</div>
-            <div className="text-xs text-gray-500">Spider Data Items</div>
-          </button>
-          <button
-            onClick={() => window.location.href = '/spiders'}
-            className="text-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-          >
-            <div className="text-2xl font-bold text-accent-green">40,435</div>
-            <div className="text-xs text-gray-500">Execution Logs</div>
-          </button>
-          <button
-            onClick={() => window.location.href = '/intelligence'}
-            className="text-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-          >
-            <div className="text-2xl font-bold text-accent-amber">15,085</div>
-            <div className="text-xs text-gray-500">Intelligence Nodes</div>
-          </button>
+      {expandedSection === 'spiders' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Spider Network</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Spiders</p>
+              <p className="text-xl font-bold">{systemStats.spiders}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Data Items</p>
+              <p className="text-xl font-bold text-primary-400">23,847</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {expandedSection === 'celery' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Celery Tasks</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Scheduled Tasks</p>
+              <p className="text-xl font-bold">{systemStats.celeryTasks}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Workers Status</p>
+              <p className={cn('text-lg font-bold', services.celery ? 'text-accent-green' : 'text-accent-red')}>
+                {services.celery ? 'Running' : 'Stopped'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {expandedSection === 'services' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Services Overview</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Services</p>
+              <p className="text-xl font-bold">{systemStats.services}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Core Active</p>
+              <p className="text-xl font-bold text-accent-green">4/4</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Health Check - Always visible */}
+      {!expandedSection && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Health Check</h4>
+          <div className="space-y-2">
+            <HealthCheckRow
+              label="Database"
+              status={services.postgres ? 'connected' : 'disconnected'}
+              icon={Database}
+            />
+            <HealthCheckRow
+              label="Redis"
+              status={services.redis ? 'connected' : 'disconnected'}
+              icon={Server}
+            />
+            <HealthCheckRow
+              label="Celery Workers"
+              status={services.celery ? 'running' : 'stopped'}
+              icon={Cpu}
+            />
+            <HealthCheckRow
+              label="WebSocket"
+              status={services.daphne ? 'connected' : 'disconnected'}
+              icon={Wifi}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Data Pipeline - Always visible */}
+      {!expandedSection && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Data Pipeline</h4>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <div className="text-2xl font-bold text-primary-400">23,847</div>
+              <div className="text-xs text-gray-500">Spider Data Items</div>
+            </div>
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <div className="text-2xl font-bold text-accent-green">40,435</div>
+              <div className="text-xs text-gray-500">Execution Logs</div>
+            </div>
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <div className="text-2xl font-bold text-accent-amber">15,085</div>
+              <div className="text-xs text-gray-500">Intelligence Nodes</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -484,7 +533,9 @@ function IntegrationSubTab() {
 // ============ Services Sub-Tab ============
 
 function ServicesSubTab() {
-  const { data: statsData, isLoading } = useQuery({
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+
+  const { data: statsData, refetch, isFetching } = useQuery({
     queryKey: ['services-stats-tab'],
     queryFn: async () => {
       try {
@@ -507,61 +558,84 @@ function ServicesSubTab() {
 
   const stats = statsData || { agents: 213, spiders: 77, scheduled_tasks: 233 }
 
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
   return (
     <div className="space-y-4">
-      <HeaderRow
-        title="Services & Admin"
-        linkTo="/admin"
-        linkLabel="Admin Panel"
-      />
+      <InlineHeaderRow title="Services & Admin" onRefresh={refetch} isFetching={isFetching} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ServiceCard
           title="Core Services"
           description="120 service classes powering the platform"
           stats={[
-            { label: 'Agents', value: stats.agents || 213, link: '/agents' },
-            { label: 'Spiders', value: stats.spiders || 77, link: '/spiders' },
-            { label: 'Celery Tasks', value: stats.scheduled_tasks || 233, link: '/admin' },
+            { label: 'Agents', value: stats.agents || 213 },
+            { label: 'Spiders', value: stats.spiders || 77 },
+            { label: 'Celery Tasks', value: stats.scheduled_tasks || 233 },
           ]}
-          onClick={() => window.location.href = '/integration-health'}
+          onClick={() => toggleSection('core')}
+          isExpanded={expandedSection === 'core'}
         />
         <ServiceCard
           title="API Layer"
           description="RESTful endpoints for all functionality"
           stats={[
-            { label: 'Platform APIs', value: 16, link: '/admin' },
-            { label: 'Deliverables APIs', value: 9, link: '/admin' },
-            { label: 'Body APIs', value: 65, link: '/admin' },
+            { label: 'Platform APIs', value: 16 },
+            { label: 'Deliverables APIs', value: 9 },
+            { label: 'Body APIs', value: 65 },
           ]}
-          onClick={() => window.location.href = '/admin'}
+          onClick={() => toggleSection('api')}
+          isExpanded={expandedSection === 'api'}
         />
       </div>
 
-      {/* Quick Links */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Links</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <QuickLinkButton label="Django Admin" href="/admin" icon={Settings} />
-          <QuickLinkButton label="Celery Monitor" href="/admin" icon={Activity} />
-          <QuickLinkButton label="Spider Health" href="/spiders" icon={Server} />
-          <QuickLinkButton label="API Docs" href="/admin" icon={Eye} />
+      {/* Expanded Core Services Detail */}
+      {expandedSection === 'core' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Core Services Details</h4>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-primary-400">{stats.agents || 213}</p>
+              <p className="text-xs text-gray-500">Agents</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-accent-green">{stats.spiders || 77}</p>
+              <p className="text-xs text-gray-500">Spiders</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-accent-amber">{stats.scheduled_tasks || 233}</p>
+              <p className="text-xs text-gray-500">Celery Tasks</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  )
-}
+      )}
 
-function QuickLinkButton({ label, href, icon: Icon }: { label: string; href: string; icon: typeof Settings }) {
-  return (
-    <a
-      href={href}
-      className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-    >
-      <Icon size={16} className="text-primary-400" />
-      <span className="text-sm">{label}</span>
-      <ChevronRight size={14} className="text-gray-500 ml-auto" />
-    </a>
+      {/* Expanded API Layer Detail */}
+      {expandedSection === 'api' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">API Layer Details</h4>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-primary-400">16</p>
+              <p className="text-xs text-gray-500">Platform APIs</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-accent-green">9</p>
+              <p className="text-xs text-gray-500">Deliverables APIs</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-accent-amber">65</p>
+              <p className="text-xs text-gray-500">Body APIs</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-3 text-center">
+            Total: 90 API endpoints available
+          </p>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -659,15 +733,15 @@ function LLMRoutingSubTab() {
   const agentConfigCount = agentConfigsData?.count || agentConfigsData?.configs?.length || 75
   const callLogCount = callLogsData?.count || 223896
 
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
   return (
     <div className="space-y-4">
-      <HeaderRow
-        title="LLM Configuration"
-        linkTo="/llm-routing"
-        linkLabel="Full View"
-        onRefresh={refetch}
-        isFetching={isFetching}
-      />
+      <InlineHeaderRow title="LLM Configuration" onRefresh={refetch} isFetching={isFetching} />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -676,57 +750,147 @@ function LLMRoutingSubTab() {
           value={providers.length || 6}
           icon={Server}
           color="text-primary-400"
-          onClick={() => window.location.href = '/llm-routing?tab=providers'}
+          onClick={() => toggleSection('providers')}
+          isExpanded={expandedSection === 'providers'}
         />
         <StatCard
           label="Models"
           value={modelCount}
           icon={Cpu}
           color="text-accent-green"
-          onClick={() => window.location.href = '/llm-routing?tab=models'}
+          onClick={() => toggleSection('models')}
+          isExpanded={expandedSection === 'models'}
         />
         <StatCard
           label="Agent Configs"
           value={agentConfigCount}
           icon={Settings}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/llm-routing?tab=configs'}
+          onClick={() => toggleSection('configs')}
+          isExpanded={expandedSection === 'configs'}
         />
         <StatCard
           label="API Calls"
           value={callLogCount.toLocaleString()}
           icon={Activity}
           color="text-accent-purple"
-          onClick={() => window.location.href = '/llm-routing?tab=logs'}
+          onClick={() => toggleSection('logs')}
+          isExpanded={expandedSection === 'logs'}
         />
       </div>
 
-      {/* Providers List */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Providers</h4>
-        <div className="space-y-2">
-          {providers.length > 0 ? (
-            providers.map((p: any) => (
-              <ProviderRow
-                key={p.name || p.provider}
-                name={p.name || p.provider}
-                models={p.model_count || p.models || 0}
-                status={p.is_active || p.status === 'active' ? 'active' : 'inactive'}
-                onClick={() => setSelectedProvider(p)}
-              />
-            ))
-          ) : (
-            <>
-              <ProviderRow name="OpenAI" models={5} status="active" onClick={() => window.location.href = '/llm-routing?provider=openai'} />
-              <ProviderRow name="Anthropic" models={3} status="active" onClick={() => window.location.href = '/llm-routing?provider=anthropic'} />
-              <ProviderRow name="Together AI" models={4} status="active" onClick={() => window.location.href = '/llm-routing?provider=together'} />
-              <ProviderRow name="DeepSeek" models={2} status="active" onClick={() => window.location.href = '/llm-routing?provider=deepseek'} />
-              <ProviderRow name="Gemini" models={2} status="active" onClick={() => window.location.href = '/llm-routing?provider=gemini'} />
-              <ProviderRow name="Ollama" models={0} status="inactive" onClick={() => window.location.href = '/llm-routing?provider=ollama'} />
-            </>
-          )}
+      {/* Expanded Providers */}
+      {expandedSection === 'providers' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">All Providers</h4>
+          <div className="space-y-2">
+            {providers.length > 0 ? (
+              providers.map((p: LLMProvider) => (
+                <ProviderRow
+                  key={p.name}
+                  name={p.name}
+                  models={p.model_count || 0}
+                  status={p.is_active ? 'active' : 'inactive'}
+                  onClick={() => setSelectedProvider(p)}
+                />
+              ))
+            ) : (
+              <>
+                <ProviderRow name="OpenAI" models={5} status="active" onClick={() => setSelectedProvider({ name: 'OpenAI', model_count: 5, is_active: true })} />
+                <ProviderRow name="Anthropic" models={3} status="active" onClick={() => setSelectedProvider({ name: 'Anthropic', model_count: 3, is_active: true })} />
+                <ProviderRow name="Together AI" models={4} status="active" onClick={() => setSelectedProvider({ name: 'Together AI', model_count: 4, is_active: true })} />
+                <ProviderRow name="DeepSeek" models={2} status="active" onClick={() => setSelectedProvider({ name: 'DeepSeek', model_count: 2, is_active: true })} />
+                <ProviderRow name="Gemini" models={2} status="active" onClick={() => setSelectedProvider({ name: 'Gemini', model_count: 2, is_active: true })} />
+                <ProviderRow name="Ollama" models={0} status="inactive" onClick={() => setSelectedProvider({ name: 'Ollama', model_count: 0, is_active: false })} />
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Expanded Models */}
+      {expandedSection === 'models' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Available Models ({modelCount})</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Models</p>
+              <p className="text-xl font-bold">{modelCount}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Active Providers</p>
+              <p className="text-xl font-bold text-accent-green">{providers.filter((p: LLMProvider) => p.is_active).length || 5}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Agent Configs */}
+      {expandedSection === 'configs' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Agent Configurations ({agentConfigCount})</h4>
+          <p className="text-sm text-gray-400">
+            Each agent has a custom LLM configuration specifying model, temperature, and other parameters.
+          </p>
+          <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
+            <p className="text-xs text-gray-500 mb-1">Configured Agents</p>
+            <p className="text-xl font-bold">{agentConfigCount}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded API Logs */}
+      {expandedSection === 'logs' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">API Call Logs</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Calls</p>
+              <p className="text-xl font-bold">{callLogCount.toLocaleString()}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Status</p>
+              <p className="text-lg font-bold text-accent-green">Active</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Default Providers List */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Providers</h4>
+            <button
+              onClick={() => toggleSection('providers')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
+          </div>
+          <div className="space-y-2">
+            {providers.length > 0 ? (
+              providers.slice(0, 4).map((p: LLMProvider) => (
+                <ProviderRow
+                  key={p.name}
+                  name={p.name}
+                  models={p.model_count || 0}
+                  status={p.is_active ? 'active' : 'inactive'}
+                  onClick={() => setSelectedProvider(p)}
+                />
+              ))
+            ) : (
+              <>
+                <ProviderRow name="OpenAI" models={5} status="active" onClick={() => setSelectedProvider({ name: 'OpenAI', model_count: 5, is_active: true })} />
+                <ProviderRow name="Anthropic" models={3} status="active" onClick={() => setSelectedProvider({ name: 'Anthropic', model_count: 3, is_active: true })} />
+                <ProviderRow name="Together AI" models={4} status="active" onClick={() => setSelectedProvider({ name: 'Together AI', model_count: 4, is_active: true })} />
+                <ProviderRow name="DeepSeek" models={2} status="active" onClick={() => setSelectedProvider({ name: 'DeepSeek', model_count: 2, is_active: true })} />
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Provider Detail Modal */}
       {selectedProvider && (
@@ -760,12 +924,9 @@ function ProviderDetailModal({ provider, onClose }: { provider: LLMProvider; onC
             <span className="text-gray-400">Models</span>
             <span className="font-medium">{provider.model_count}</span>
           </div>
-          <a
-            href={`/llm-routing?provider=${provider.name.toLowerCase().replace(' ', '-')}`}
-            className="btn btn-primary w-full mt-4"
-          >
-            View Provider Details
-          </a>
+          <button onClick={onClose} className="btn btn-primary w-full mt-4">
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -775,7 +936,9 @@ function ProviderDetailModal({ provider, onClose }: { provider: LLMProvider; onC
 // ============ Analytics Sub-Tab ============
 
 function AnalyticsSubTab() {
-  const { data: statsData, isLoading, refetch, isFetching } = useQuery({
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+
+  const { data: statsData, refetch, isFetching } = useQuery({
     queryKey: ['analytics-overview-tab'],
     queryFn: async () => {
       try {
@@ -797,15 +960,13 @@ function AnalyticsSubTab() {
 
   const stats = statsData || { total_tokens: 15000000, total_cost: 245.67, api_calls: 223896, avg_latency: 1.2 }
 
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
   return (
     <div className="space-y-4">
-      <HeaderRow
-        title="Analytics Dashboard"
-        linkTo="/analytics"
-        linkLabel="Full View"
-        onRefresh={refetch}
-        isFetching={isFetching}
-      />
+      <InlineHeaderRow title="Analytics Dashboard" onRefresh={refetch} isFetching={isFetching} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
@@ -813,40 +974,104 @@ function AnalyticsSubTab() {
           value={`${(stats.total_tokens / 1000000).toFixed(1)}M`}
           icon={Activity}
           color="text-primary-400"
-          onClick={() => window.location.href = '/analytics?metric=tokens'}
+          onClick={() => toggleSection('tokens')}
+          isExpanded={expandedSection === 'tokens'}
         />
         <StatCard
           label="API Calls"
           value={stats.api_calls.toLocaleString()}
           icon={TrendingUp}
           color="text-accent-green"
-          onClick={() => window.location.href = '/analytics?metric=calls'}
+          onClick={() => toggleSection('calls')}
+          isExpanded={expandedSection === 'calls'}
         />
         <StatCard
           label="Total Cost"
           value={`$${stats.total_cost.toFixed(2)}`}
           icon={DollarSign}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/analytics?metric=cost'}
+          onClick={() => toggleSection('cost')}
+          isExpanded={expandedSection === 'cost'}
         />
         <StatCard
           label="Avg Latency"
           value={`${stats.avg_latency}s`}
           icon={Clock}
           color="text-accent-cyan"
-          onClick={() => window.location.href = '/analytics?metric=latency'}
+          onClick={() => toggleSection('latency')}
+          isExpanded={expandedSection === 'latency'}
         />
       </div>
 
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Analytics</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <QuickLinkButton label="Token Usage" href="/analytics?view=tokens" icon={BarChart3} />
-          <QuickLinkButton label="Cost Breakdown" href="/analytics?view=costs" icon={DollarSign} />
-          <QuickLinkButton label="Performance" href="/analytics?view=performance" icon={TrendingUp} />
-          <QuickLinkButton label="Trends" href="/analytics?view=trends" icon={Activity} />
+      {/* Expanded Token Details */}
+      {expandedSection === 'tokens' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Token Usage</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Tokens</p>
+              <p className="text-xl font-bold">{(stats.total_tokens / 1000000).toFixed(1)}M</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Cost per 1K</p>
+              <p className="text-xl font-bold">${(stats.total_cost / (stats.total_tokens / 1000) * 1000).toFixed(4)}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Expanded API Calls Details */}
+      {expandedSection === 'calls' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">API Call Statistics</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Calls</p>
+              <p className="text-xl font-bold">{stats.api_calls.toLocaleString()}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Avg Cost/Call</p>
+              <p className="text-xl font-bold">${(stats.total_cost / stats.api_calls).toFixed(4)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Cost Details */}
+      {expandedSection === 'cost' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Cost Breakdown</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Cost</p>
+              <p className="text-xl font-bold">${stats.total_cost.toFixed(2)}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Daily Average</p>
+              <p className="text-xl font-bold">${(stats.total_cost / 30).toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Latency Details */}
+      {expandedSection === 'latency' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Latency Metrics</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Average</p>
+              <p className="text-xl font-bold">{stats.avg_latency}s</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Status</p>
+              <p className={cn('text-lg font-bold', stats.avg_latency < 2 ? 'text-accent-green' : 'text-accent-amber')}>
+                {stats.avg_latency < 2 ? 'Good' : 'Moderate'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -854,7 +1079,9 @@ function AnalyticsSubTab() {
 // ============ Billing Sub-Tab ============
 
 function BillingSubTab() {
-  const { data: billingData, isLoading, refetch, isFetching } = useQuery({
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+
+  const { data: billingData, refetch, isFetching } = useQuery({
     queryKey: ['billing-overview-tab'],
     queryFn: async () => {
       try {
@@ -877,15 +1104,13 @@ function BillingSubTab() {
   const billing = billingData || { current_month: 89.45, previous_month: 156.22, budget: 200, projected: 112.50 }
   const budgetUsed = (billing.current_month / billing.budget) * 100
 
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
   return (
     <div className="space-y-4">
-      <HeaderRow
-        title="Billing & Costs"
-        linkTo="/billing"
-        linkLabel="Full View"
-        onRefresh={refetch}
-        isFetching={isFetching}
-      />
+      <InlineHeaderRow title="Billing & Costs" onRefresh={refetch} isFetching={isFetching} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
@@ -893,124 +1118,206 @@ function BillingSubTab() {
           value={`$${billing.current_month.toFixed(2)}`}
           icon={DollarSign}
           color="text-primary-400"
-          onClick={() => window.location.href = '/billing?period=current'}
+          onClick={() => toggleSection('current')}
+          isExpanded={expandedSection === 'current'}
         />
         <StatCard
           label="Last Month"
           value={`$${billing.previous_month.toFixed(2)}`}
           icon={Clock}
           color="text-gray-400"
-          onClick={() => window.location.href = '/billing?period=previous'}
+          onClick={() => toggleSection('previous')}
+          isExpanded={expandedSection === 'previous'}
         />
         <StatCard
           label="Budget"
           value={`$${billing.budget}`}
           icon={Shield}
           color="text-accent-green"
-          onClick={() => window.location.href = '/billing?view=budget'}
+          onClick={() => toggleSection('budget')}
+          isExpanded={expandedSection === 'budget'}
         />
         <StatCard
           label="Projected"
           value={`$${billing.projected.toFixed(2)}`}
           icon={TrendingUp}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/billing?view=forecast'}
+          onClick={() => toggleSection('projected')}
+          isExpanded={expandedSection === 'projected'}
         />
       </div>
 
-      {/* Budget Progress */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-medium text-gray-400">Budget Usage</h4>
-          <span className="text-sm">{budgetUsed.toFixed(1)}% used</span>
+      {/* Expanded Current Month */}
+      {expandedSection === 'current' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">This Month Breakdown</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Spent</p>
+              <p className="text-xl font-bold">${billing.current_month.toFixed(2)}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Budget Remaining</p>
+              <p className="text-xl font-bold text-accent-green">${(billing.budget - billing.current_month).toFixed(2)}</p>
+            </div>
+          </div>
         </div>
-        <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
-          <div
-            className={cn(
-              'h-full rounded-full transition-all',
-              budgetUsed >= 90 ? 'bg-accent-red' :
-              budgetUsed >= 70 ? 'bg-accent-amber' :
-              'bg-accent-green'
-            )}
-            style={{ width: `${Math.min(budgetUsed, 100)}%` }}
-          />
-        </div>
-        <p className="text-xs text-gray-500 mt-2">
-          ${billing.current_month.toFixed(2)} of ${billing.budget} budget used this month
-        </p>
-      </div>
+      )}
 
-      {/* Cost Breakdown Links */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Cost Breakdown</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <QuickLinkButton label="By Provider" href="/billing?view=providers" icon={Server} />
-          <QuickLinkButton label="By Model" href="/billing?view=models" icon={Cpu} />
-          <QuickLinkButton label="By Agent" href="/billing?view=agents" icon={Activity} />
-          <QuickLinkButton label="History" href="/billing?view=history" icon={Clock} />
+      {/* Expanded Previous Month */}
+      {expandedSection === 'previous' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Last Month Summary</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Spent</p>
+              <p className="text-xl font-bold">${billing.previous_month.toFixed(2)}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">vs Current Month</p>
+              <p className={cn('text-xl font-bold', billing.current_month < billing.previous_month ? 'text-accent-green' : 'text-accent-amber')}>
+                {billing.current_month < billing.previous_month ? '-' : '+'}${Math.abs(billing.current_month - billing.previous_month).toFixed(2)}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Expanded Budget Details */}
+      {expandedSection === 'budget' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Budget Details</h4>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Monthly Budget</p>
+              <p className="text-xl font-bold">${billing.budget}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Used</p>
+              <p className="text-xl font-bold">{budgetUsed.toFixed(1)}%</p>
+            </div>
+          </div>
+          <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                'h-full rounded-full',
+                budgetUsed >= 90 ? 'bg-accent-red' :
+                budgetUsed >= 70 ? 'bg-accent-amber' :
+                'bg-accent-green'
+              )}
+              style={{ width: `${Math.min(budgetUsed, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Projected */}
+      {expandedSection === 'projected' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Projected Costs</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">End of Month</p>
+              <p className="text-xl font-bold">${billing.projected.toFixed(2)}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">vs Budget</p>
+              <p className={cn('text-xl font-bold', billing.projected <= billing.budget ? 'text-accent-green' : 'text-accent-red')}>
+                {billing.projected <= billing.budget ? 'Under' : 'Over'} Budget
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Progress - Show when no section expanded */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-gray-400">Budget Usage</h4>
+            <span className="text-sm">{budgetUsed.toFixed(1)}% used</span>
+          </div>
+          <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                'h-full rounded-full transition-all',
+                budgetUsed >= 90 ? 'bg-accent-red' :
+                budgetUsed >= 70 ? 'bg-accent-amber' :
+                'bg-accent-green'
+              )}
+              style={{ width: `${Math.min(budgetUsed, 100)}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            ${billing.current_month.toFixed(2)} of ${billing.budget} budget used this month
+          </p>
+        </div>
+      )}
     </div>
   )
 }
 
 // ============ Helper Components ============
 
-function HeaderRow({
+// Session 857: Inline header row without external navigation
+function InlineHeaderRow({
   title,
-  linkTo,
-  linkLabel,
+  subtitle,
   onRefresh,
   isFetching,
 }: {
   title: string
-  linkTo: string
-  linkLabel: string
+  subtitle?: string
   onRefresh?: () => void
   isFetching?: boolean
 }) {
   return (
     <div className="flex items-center justify-between">
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <div className="flex items-center gap-2">
-        {onRefresh && (
-          <button
-            onClick={() => onRefresh()}
-            disabled={isFetching}
-            className="btn btn-secondary flex items-center gap-2 text-sm"
-          >
-            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+      <div className="flex items-center gap-3">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        {subtitle && (
+          <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
+            {subtitle}
+          </span>
         )}
-        <a href={linkTo} className="btn btn-secondary flex items-center gap-2 text-sm">
-          {linkLabel}
-          <ExternalLink size={14} />
-        </a>
       </div>
+      {onRefresh && (
+        <button
+          onClick={onRefresh}
+          disabled={isFetching}
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+          title="Refresh data"
+        >
+          <RefreshCw size={14} className={cn('text-gray-400', isFetching && 'animate-spin')} />
+        </button>
+      )}
     </div>
   )
 }
 
+// Session 857: StatCard with isExpanded indicator
 function StatCard({
   label,
   value,
   icon: Icon,
   color,
   onClick,
+  isExpanded,
 }: {
   label: string
   value: number | string
   icon: typeof Activity
   color: string
   onClick?: () => void
+  isExpanded?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
         'card text-left transition-all',
-        onClick && 'hover:bg-gray-800/80 hover:border-gray-700 cursor-pointer'
+        onClick && 'hover:bg-gray-800/80 hover:border-gray-700 cursor-pointer',
+        isExpanded && 'border-primary-500/50 bg-primary-500/5'
       )}
     >
       <div className="flex items-center justify-between">
@@ -1018,8 +1325,17 @@ function StatCard({
           <p className="text-sm text-gray-400">{label}</p>
           <p className="text-2xl font-bold mt-1">{value}</p>
         </div>
-        <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center bg-gray-800')}>
-          <Icon size={20} className={color} />
+        <div className="flex items-center gap-2">
+          <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center bg-gray-800')}>
+            <Icon size={20} className={color} />
+          </div>
+          {onClick && (
+            isExpanded ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )
+          )}
         </div>
       </div>
     </button>
@@ -1030,72 +1346,65 @@ function HealthCheckRow({
   label,
   status,
   icon: Icon,
-  onClick,
 }: {
   label: string
   status: string
   icon?: typeof Database
-  onClick?: () => void
 }) {
   const isGood = ['connected', 'running', 'healthy'].includes(status)
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'w-full flex items-center justify-between py-2 text-left',
-        onClick && 'hover:bg-gray-800/50 rounded px-2 -mx-2 transition-colors cursor-pointer'
-      )}
-    >
+    <div className="flex items-center justify-between py-2">
       <div className="flex items-center gap-3">
         {Icon && <Icon size={14} className="text-gray-500" />}
         <span className="text-sm text-gray-400">{label}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className={cn(
-          'text-xs px-2 py-0.5 rounded capitalize',
-          isGood ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
-        )}>
-          {status}
-        </span>
-        {onClick && <ChevronRight size={14} className="text-gray-500" />}
-      </div>
-    </button>
+      <span className={cn(
+        'text-xs px-2 py-0.5 rounded capitalize',
+        isGood ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
+      )}>
+        {status}
+      </span>
+    </div>
   )
 }
 
+// Session 857: ServiceCard with isExpanded indicator
 function ServiceCard({
   title,
   description,
   stats,
   onClick,
+  isExpanded,
 }: {
   title: string
   description: string
-  stats: Array<{ label: string; value: number; link?: string }>
+  stats: Array<{ label: string; value: number }>
   onClick?: () => void
+  isExpanded?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
         'card text-left transition-all',
-        onClick && 'hover:bg-gray-800/80 hover:border-gray-700 cursor-pointer'
+        onClick && 'hover:bg-gray-800/80 hover:border-gray-700 cursor-pointer',
+        isExpanded && 'border-primary-500/50 bg-primary-500/5'
       )}
     >
-      <h4 className="font-medium mb-1">{title}</h4>
+      <div className="flex items-center justify-between mb-1">
+        <h4 className="font-medium">{title}</h4>
+        {onClick && (
+          isExpanded ? (
+            <ChevronUp size={14} className="text-gray-400" />
+          ) : (
+            <ChevronDown size={14} className="text-gray-400" />
+          )
+        )}
+      </div>
       <p className="text-sm text-gray-400 mb-3">{description}</p>
       <div className="grid grid-cols-3 gap-2">
         {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="text-center"
-            onClick={(e) => {
-              if (stat.link) {
-                e.stopPropagation()
-                window.location.href = stat.link
-              }
-            }}
-          >
+          <div key={stat.label} className="text-center">
             <div className="text-lg font-bold text-primary-400">{stat.value}</div>
             <div className="text-xs text-gray-500">{stat.label}</div>
           </div>

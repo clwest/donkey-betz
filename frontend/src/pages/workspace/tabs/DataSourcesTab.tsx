@@ -1,6 +1,7 @@
 // Session 825: Data Sources Tab
 // Consolidates: Spiders, Feed, Learning
 // Session 840: Enhanced with onClick handlers, detail modals, refresh buttons, and real data fallbacks
+// Session 857: Refactored for inline content viewing - removed external navigation
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -9,7 +10,6 @@ import {
   Rss,
   GraduationCap,
   Loader2,
-  ExternalLink,
   CheckCircle,
   Clock,
   TrendingUp,
@@ -19,10 +19,12 @@ import {
   RefreshCw,
   X,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Eye,
   BookOpen,
   FileText,
-  Settings,
+  List,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { spiderIntegrationApi, spiderFeedApi, learningApi } from '@/lib/api'
@@ -81,23 +83,52 @@ interface SpiderInfo {
   success_rate: number
 }
 
+interface SpiderExecution {
+  id: string
+  spider_name: string
+  status: string
+  items_count: number
+  created_at: string
+}
+
+const SPIDER_CATEGORIES = [
+  { name: 'News/Media', count: 10 },
+  { name: 'Financial', count: 9 },
+  { name: 'Tech', count: 8 },
+  { name: 'Legal', count: 6 },
+  { name: 'Education', count: 5 },
+  { name: 'Community', count: 4 },
+  { name: 'Entertainment', count: 4 },
+  { name: 'Other', count: 31 },
+]
+
 function SpidersSubTab() {
   const [selectedSpider, setSelectedSpider] = useState<SpiderInfo | null>(null)
+  const [selectedExecution, setSelectedExecution] = useState<SpiderExecution | null>(null)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState(10)
 
-  const { data: healthData, isLoading, isError, error, refetch } = useQuery({
+  const { data: healthData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['spider-health-tab'],
     queryFn: async () => {
       const res = await spiderIntegrationApi.healthSummary()
       return res.data
     },
-    refetchInterval: 30000, // Refresh every 30s
+    refetchInterval: 30000,
   })
 
-  // Fetch recent spider executions
   const { data: executionsData } = useQuery({
     queryKey: ['spider-executions-recent'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/spider-integration/executions/recent/?limit=5')
+      const res = await fetch('/api/v1/spider-integration/executions/recent/?limit=50')
+      return res.json()
+    },
+  })
+
+  const { data: spidersData } = useQuery({
+    queryKey: ['spider-list-tab'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/spider-integration/spiders/?limit=100')
       return res.json()
     },
   })
@@ -110,7 +141,6 @@ function SpidersSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load spider data" />
   }
 
-  // Real data fallbacks: 77 spiders, 23,888 data items, 40,512 execution logs
   const stats = healthData || {
     total_spiders: 77,
     healthy: 72,
@@ -121,111 +151,242 @@ function SpidersSubTab() {
   }
 
   const executions = executionsData?.executions || []
+  const spiders = spidersData?.spiders || spidersData?.results || []
+  const healthySpiders = spiders.filter((s: SpiderInfo) => s.status === 'healthy')
+  const needsApiSpiders = spiders.filter((s: SpiderInfo) => s.status === 'needs_api_key')
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
+      <InlineHeaderRow
         title="Spider Network"
-        badge={`${stats.healthy || 72} active`}
-        linkHref="/spider-integration"
-        linkText="Full Dashboard"
+        subtitle={`${stats.healthy || 72} active`}
         onRefresh={refetch}
+        isFetching={isFetching}
       />
 
-      {/* Health Stats */}
+      {/* Health Stats - Expandable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Total Spiders"
           value={stats.total_spiders || 77}
           icon={Globe}
           color="text-primary-400"
-          onClick={() => window.location.href = '/spider-integration?tab=spiders'}
+          onClick={() => toggleSection('all')}
+          isExpanded={expandedSection === 'all'}
         />
         <StatCard
           label="Healthy"
           value={stats.healthy || 72}
           icon={CheckCircle}
           color="text-accent-green"
-          onClick={() => window.location.href = '/spider-integration?tab=spiders&status=healthy'}
+          onClick={() => toggleSection('healthy')}
+          isExpanded={expandedSection === 'healthy'}
         />
         <StatCard
           label="Need API Keys"
           value={stats.needs_api_key || 5}
           icon={Clock}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/spider-integration?tab=spiders&status=needs_api_key'}
+          onClick={() => toggleSection('needs_api')}
+          isExpanded={expandedSection === 'needs_api'}
         />
         <StatCard
           label="Data Items"
           value={(stats.total_entries || 23888).toLocaleString()}
           icon={Database}
           color="text-accent-cyan"
-          onClick={() => window.location.href = '/spider-feed'}
+          onClick={() => toggleSection('data')}
+          isExpanded={expandedSection === 'data'}
         />
       </div>
 
+      {/* Expanded Spider Lists */}
+      {expandedSection === 'all' && (
+        <ExpandedListCard
+          title="All Spiders"
+          icon={Globe}
+          items={spiders}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(spider: SpiderInfo) => (
+            <SpiderRow key={spider.id} spider={spider} onClick={() => setSelectedSpider(spider)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'healthy' && (
+        <ExpandedListCard
+          title="Healthy Spiders"
+          icon={CheckCircle}
+          items={healthySpiders}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(spider: SpiderInfo) => (
+            <SpiderRow key={spider.id} spider={spider} onClick={() => setSelectedSpider(spider)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'needs_api' && (
+        <ExpandedListCard
+          title="Spiders Needing API Keys"
+          icon={Clock}
+          items={needsApiSpiders}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="All spiders have API keys configured"
+          renderItem={(spider: SpiderInfo) => (
+            <SpiderRow key={spider.id} spider={spider} onClick={() => setSelectedSpider(spider)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'data' && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Data Statistics</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Data Items</p>
+              <p className="text-xl font-bold">{(stats.total_entries || 23888).toLocaleString()}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Execution Logs</p>
+              <p className="text-xl font-bold">{(stats.execution_logs || 40512).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recent Executions */}
-      {executions.length > 0 && (
+      {executions.length > 0 && !expandedSection && (
         <div className="card">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-400">Recent Executions</h4>
-            <a href="/spider-integration?tab=executions" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-              View All <ChevronRight size={12} />
-            </a>
+            <button
+              onClick={() => toggleSection('executions')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
           </div>
           <div className="space-y-2">
-            {executions.slice(0, 4).map((exec: any) => (
+            {executions.slice(0, 4).map((exec: SpiderExecution) => (
               <ExecutionRow
                 key={exec.id}
                 execution={exec}
-                onClick={() => window.location.href = `/spider-integration?execution=${exec.id}`}
+                onClick={() => setSelectedExecution(exec)}
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Spider Categories */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Categories</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <CategoryBadge name="News/Media" count={10} onClick={() => window.location.href = '/spider-integration?category=news'} />
-          <CategoryBadge name="Financial" count={9} onClick={() => window.location.href = '/spider-integration?category=financial'} />
-          <CategoryBadge name="Tech" count={8} onClick={() => window.location.href = '/spider-integration?category=tech'} />
-          <CategoryBadge name="Legal" count={6} onClick={() => window.location.href = '/spider-integration?category=legal'} />
-          <CategoryBadge name="Education" count={5} onClick={() => window.location.href = '/spider-integration?category=education'} />
-          <CategoryBadge name="Community" count={4} onClick={() => window.location.href = '/spider-integration?category=community'} />
-          <CategoryBadge name="Entertainment" count={4} onClick={() => window.location.href = '/spider-integration?category=entertainment'} />
-          <CategoryBadge name="Other" count={31} onClick={() => window.location.href = '/spider-integration?category=other'} />
-        </div>
-      </div>
+      {expandedSection === 'executions' && (
+        <ExpandedListCard
+          title="All Executions"
+          icon={Zap}
+          items={executions}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(exec: SpiderExecution) => (
+            <ExecutionRow key={exec.id} execution={exec} onClick={() => setSelectedExecution(exec)} />
+          )}
+        />
+      )}
 
-      {/* Quick Actions */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Actions</h4>
-        <div className="flex flex-wrap gap-2">
-          <a href="/spider-integration?action=run" className="btn btn-primary text-sm">
-            <Zap size={14} className="mr-2" />
-            Run All Spiders
-          </a>
-          <a href="/spider-feed" className="btn btn-secondary text-sm">
-            <Rss size={14} className="mr-2" />
-            View Feed
-          </a>
-          <a href="/spider-integration?tab=settings" className="btn btn-secondary text-sm">
-            <Settings size={14} className="mr-2" />
-            Settings
-          </a>
+      {/* Spider Categories - Expandable */}
+      {!expandedSection && (
+        <div className="card">
+          <div
+            className="flex items-center justify-between mb-3 cursor-pointer"
+            onClick={() => toggleSection('categories')}
+          >
+            <h4 className="text-sm font-medium text-gray-400">Categories</h4>
+            <ChevronDown size={14} className="text-gray-400" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {SPIDER_CATEGORIES.map((cat) => (
+              <CategoryBadge
+                key={cat.name}
+                name={cat.name}
+                count={cat.count}
+                onClick={() => toggleSection(`category_${cat.name}`)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {expandedSection === 'categories' && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">All Categories</h4>
+            <button
+              onClick={() => setExpandedSection(null)}
+              className="text-xs text-gray-400 hover:text-white"
+            >
+              Collapse
+            </button>
+          </div>
+          <div className="space-y-2">
+            {SPIDER_CATEGORIES.map((cat) => (
+              <div
+                key={cat.name}
+                className="flex items-center justify-between py-2 px-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
+                onClick={() => toggleSection(`category_${cat.name}`)}
+              >
+                <span className="text-sm">{cat.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{cat.count} spiders</span>
+                  <ChevronRight size={14} className="text-gray-500" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Category Detail */}
+      {expandedSection?.startsWith('category_') && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">
+              {expandedSection.replace('category_', '')} Spiders
+            </h4>
+            <button
+              onClick={() => setExpandedSection(null)}
+              className="text-xs text-gray-400 hover:text-white"
+            >
+              Back
+            </button>
+          </div>
+          <div className="space-y-2">
+            {spiders
+              .filter((s: SpiderInfo) => s.category === expandedSection.replace('category_', '').toLowerCase())
+              .slice(0, visibleCount)
+              .map((spider: SpiderInfo) => (
+                <SpiderRow key={spider.id} spider={spider} onClick={() => setSelectedSpider(spider)} />
+              ))}
+            {spiders.filter((s: SpiderInfo) => s.category === expandedSection.replace('category_', '').toLowerCase()).length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">No spiders in this category</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Spider Detail Modal */}
       {selectedSpider && (
-        <SpiderDetailModal
-          spider={selectedSpider}
-          onClose={() => setSelectedSpider(null)}
-        />
+        <SpiderDetailModal spider={selectedSpider} onClose={() => setSelectedSpider(null)} />
+      )}
+
+      {/* Execution Detail Modal */}
+      {selectedExecution && (
+        <ExecutionDetailModal execution={selectedExecution} onClose={() => setSelectedExecution(null)} />
       )}
     </div>
   )
@@ -245,20 +406,22 @@ interface FeedItem {
 
 function FeedSubTab() {
   const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState(10)
 
-  const { data: feedData, isLoading, isError, error, refetch } = useQuery({
+  const { data: feedData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['spider-feed-tab'],
     queryFn: async () => {
-      const res = await spiderFeedApi.list({ per_page: 5, sort: 'newest' })
+      const res = await spiderFeedApi.list({ per_page: 50, sort: 'newest' })
       return res.data
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
   })
 
   const { data: trendingData } = useQuery({
     queryKey: ['spider-feed-trending-tab'],
     queryFn: async () => {
-      const res = await spiderFeedApi.trending({ limit: 3 })
+      const res = await spiderFeedApi.trending({ limit: 20 })
       return res.data
     },
   })
@@ -271,112 +434,191 @@ function FeedSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load feed data" />
   }
 
-  // Real data fallbacks: 23,888 data items
   const items = feedData?.items || []
   const trending = trendingData?.items || []
   const total = feedData?.pagination?.total || 23888
+  const annotatedItems = items.filter((i: FeedItem) => i.annotation_count > 0)
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
+      <InlineHeaderRow
         title="Data Feed"
-        badge={`${total.toLocaleString()} items`}
-        linkHref="/spider-feed"
-        linkText="Full Feed"
+        subtitle={`${total.toLocaleString()} items`}
         onRefresh={refetch}
+        isFetching={isFetching}
       />
 
-      {/* Feed Stats */}
+      {/* Feed Stats - Expandable */}
       <div className="grid grid-cols-3 gap-3">
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/spider-feed'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'all' && 'border-primary-500/50'
+          )}
+          onClick={() => toggleSection('all')}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <Database size={14} className="text-primary-400" />
-            <span className="text-xs text-gray-500">Total Items</span>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Database size={14} className="text-primary-400" />
+                <span className="text-xs text-gray-500">Total Items</span>
+              </div>
+              <div className="text-2xl font-bold">{total.toLocaleString()}</div>
+            </div>
+            {expandedSection === 'all' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
           </div>
-          <div className="text-2xl font-bold">{total.toLocaleString()}</div>
         </div>
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/spider-feed?filter=trending'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'trending' && 'border-accent-amber/50'
+          )}
+          onClick={() => toggleSection('trending')}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={14} className="text-accent-amber" />
-            <span className="text-xs text-gray-500">Trending</span>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp size={14} className="text-accent-amber" />
+                <span className="text-xs text-gray-500">Trending</span>
+              </div>
+              <div className="text-2xl font-bold">{trending.length}</div>
+            </div>
+            {expandedSection === 'trending' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
           </div>
-          <div className="text-2xl font-bold">{trending.length}</div>
         </div>
         <div
-          className="card cursor-pointer hover:border-primary-500/50 transition-colors"
-          onClick={() => window.location.href = '/spider-feed?filter=annotated'}
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'annotated' && 'border-accent-green/50'
+          )}
+          onClick={() => toggleSection('annotated')}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <FileText size={14} className="text-accent-green" />
-            <span className="text-xs text-gray-500">Annotated</span>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <FileText size={14} className="text-accent-green" />
+                <span className="text-xs text-gray-500">Annotated</span>
+              </div>
+              <div className="text-2xl font-bold">{annotatedItems.length}</div>
+            </div>
+            {expandedSection === 'annotated' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
           </div>
-          <div className="text-2xl font-bold">{items.filter((i: any) => i.annotation_count > 0).length}</div>
         </div>
       </div>
 
-      {/* Trending */}
-      {trending.length > 0 && (
+      {/* Expanded Feed Lists */}
+      {expandedSection === 'all' && (
+        <ExpandedListCard
+          title="All Feed Items"
+          icon={Database}
+          items={items}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(item: FeedItem) => (
+            <FeedItemRow key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'trending' && (
+        <ExpandedListCard
+          title="Trending Items"
+          icon={TrendingUp}
+          items={trending}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No trending items right now"
+          renderItem={(item: FeedItem) => (
+            <FeedItemRow key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'annotated' && (
+        <ExpandedListCard
+          title="Annotated Items"
+          icon={FileText}
+          items={annotatedItems}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No annotated items yet"
+          renderItem={(item: FeedItem) => (
+            <FeedItemRow key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+          )}
+        />
+      )}
+
+      {/* Trending Preview - Show when no section expanded */}
+      {trending.length > 0 && !expandedSection && (
         <div className="card">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <TrendingUp size={14} className="text-accent-amber" />
               <h4 className="text-sm font-medium text-gray-400">Trending Now</h4>
             </div>
-            <a href="/spider-feed?filter=trending" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-              View All <ChevronRight size={12} />
-            </a>
+            <button
+              onClick={() => toggleSection('trending')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
           </div>
           <div className="space-y-2">
-            {trending.map((item: FeedItem) => (
-              <FeedItemRow
-                key={item.id}
-                item={item}
-                onClick={() => setSelectedItem(item)}
-              />
+            {trending.slice(0, 3).map((item: FeedItem) => (
+              <FeedItemRow key={item.id} item={item} onClick={() => setSelectedItem(item)} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Recent Feed */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-400">Recent Data</h4>
-          <a href="/spider-feed" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            View All <ChevronRight size={12} />
-          </a>
+      {/* Recent Feed - Show when no section expanded */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Recent Data</h4>
+            <button
+              onClick={() => toggleSection('all')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
+          </div>
+          {items.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <Database className="mx-auto mb-2" size={24} />
+              <p className="text-sm">No feed data yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {items.slice(0, 4).map((item: FeedItem) => (
+                <FeedItemRow key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+              ))}
+            </div>
+          )}
         </div>
-        {items.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            <Database className="mx-auto mb-2" size={24} />
-            <p className="text-sm">No feed data yet</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {items.slice(0, 4).map((item: FeedItem) => (
-              <FeedItemRow
-                key={item.id}
-                item={item}
-                onClick={() => setSelectedItem(item)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Feed Item Detail Modal */}
       {selectedItem && (
-        <FeedItemDetailModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-        />
+        <FeedItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
       )}
     </div>
   )
@@ -394,10 +636,19 @@ interface LearningPattern {
   created_at: string
 }
 
+interface LearningInsight {
+  id: string
+  title: string
+  description: string
+  created_at: string
+}
+
 function LearningSubTab() {
   const [selectedPattern, setSelectedPattern] = useState<LearningPattern | null>(null)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState(10)
 
-  const { data: statsData, isLoading, isError, error, refetch } = useQuery({
+  const { data: statsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['learning-stats-tab'],
     queryFn: async () => {
       const res = await learningApi.stats()
@@ -413,11 +664,18 @@ function LearningSubTab() {
     },
   })
 
-  // Fetch recent patterns
   const { data: patternsData } = useQuery({
     queryKey: ['learning-patterns-recent'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/learning/patterns/?limit=5')
+      const res = await fetch('/api/v1/learning/patterns/?limit=50')
+      return res.json()
+    },
+  })
+
+  const { data: insightsData } = useQuery({
+    queryKey: ['learning-insights-tab'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/learning/insights/?limit=20')
       return res.json()
     },
   })
@@ -430,7 +688,6 @@ function LearningSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load learning data" />
   }
 
-  // Real data fallbacks: 113 patterns, 4 insights
   const stats = statsData || {
     total_learnings: 113,
     approved: 100,
@@ -446,143 +703,220 @@ function LearningSubTab() {
   }
 
   const patterns = patternsData?.results || patternsData?.patterns || []
+  const insights = insightsData?.results || insightsData?.insights || []
+  const pendingPatterns = patterns.filter((p: LearningPattern) => p.pattern_type === 'pending')
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <HeaderRow
-        title="Learning System"
-        linkHref="/learning-journey"
-        linkText="Full Journey"
-        onRefresh={refetch}
-      />
+      <InlineHeaderRow title="Learning System" onRefresh={refetch} isFetching={isFetching} />
 
-      {/* Stats */}
+      {/* Stats - Expandable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Learning Patterns"
           value={stats.total_learnings || 113}
           icon={BookOpen}
           color="text-primary-400"
-          onClick={() => window.location.href = '/learning-journey?tab=patterns'}
+          onClick={() => toggleSection('patterns')}
+          isExpanded={expandedSection === 'patterns'}
         />
         <StatCard
           label="Insights"
           value={stats.insights || 4}
           icon={CheckCircle}
           color="text-accent-green"
-          onClick={() => window.location.href = '/learning-journey?tab=insights'}
+          onClick={() => toggleSection('insights')}
+          isExpanded={expandedSection === 'insights'}
         />
         <StatCard
           label="Pending Review"
           value={stats.pending || 13}
           icon={Clock}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/learning-journey?tab=pending'}
+          onClick={() => toggleSection('pending')}
+          isExpanded={expandedSection === 'pending'}
         />
         <StatCard
           label="Agents Learning"
           value={stats.agents_learning || 74}
           icon={Activity}
           color="text-accent-cyan"
-          onClick={() => window.location.href = '/agents?filter=learning'}
+          onClick={() => toggleSection('agents')}
+          isExpanded={expandedSection === 'agents'}
         />
       </div>
 
-      {/* Velocity */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-400">Learning Velocity</h4>
-          <a href="/learning-journey?tab=velocity" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-            Details <ChevronRight size={12} />
-          </a>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div
-            className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
-            onClick={() => window.location.href = '/learning-journey?filter=today'}
-          >
-            <div className="h-10 w-10 rounded-lg bg-primary-500/20 flex items-center justify-center">
-              <TrendingUp size={18} className="text-primary-400" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{velocity.today || 0}</div>
-              <div className="text-xs text-gray-500">Today</div>
-            </div>
-          </div>
-          <div
-            className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
-            onClick={() => window.location.href = '/learning-journey?filter=week'}
-          >
-            <div className="h-10 w-10 rounded-lg bg-accent-green/20 flex items-center justify-center">
-              <Activity size={18} className="text-accent-green" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{velocity.week || 0}</div>
-              <div className="text-xs text-gray-500">This Week</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Expanded Learning Lists */}
+      {expandedSection === 'patterns' && (
+        <ExpandedListCard
+          title="All Patterns"
+          icon={BookOpen}
+          items={patterns}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          renderItem={(pattern: LearningPattern) => (
+            <PatternRow key={pattern.id} pattern={pattern} onClick={() => setSelectedPattern(pattern)} />
+          )}
+        />
+      )}
 
-      {/* Recent Patterns */}
-      {patterns.length > 0 && (
+      {expandedSection === 'insights' && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle size={16} className="text-accent-green" />
+            <h4 className="text-sm font-medium text-gray-400">Insights ({insights.length})</h4>
+          </div>
+          {insights.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <CheckCircle className="mx-auto mb-2" size={24} />
+              <p className="text-sm">No insights generated yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {insights.slice(0, visibleCount).map((insight: LearningInsight) => (
+                <div
+                  key={insight.id}
+                  className="p-3 bg-gray-800/50 rounded-lg"
+                >
+                  <p className="text-sm font-medium">{insight.title}</p>
+                  <p className="text-xs text-gray-500 mt-1">{insight.description}</p>
+                </div>
+              ))}
+              {insights.length > visibleCount && (
+                <button
+                  onClick={() => setVisibleCount((v) => v + 10)}
+                  className="w-full py-2 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Load more ({insights.length - visibleCount} remaining)
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {expandedSection === 'pending' && (
+        <ExpandedListCard
+          title="Pending Review"
+          icon={Clock}
+          items={pendingPatterns}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No patterns pending review"
+          renderItem={(pattern: LearningPattern) => (
+            <PatternRow key={pattern.id} pattern={pattern} onClick={() => setSelectedPattern(pattern)} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'agents' && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <Activity size={16} className="text-accent-cyan" />
+            <h4 className="text-sm font-medium text-gray-400">Agents Learning</h4>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Total Learning Agents</p>
+              <p className="text-xl font-bold">{stats.agents_learning || 74}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Active Today</p>
+              <p className="text-xl font-bold">{velocity.today || 0}</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-3 text-center">
+            Learning is distributed across all 74 agents
+          </p>
+        </div>
+      )}
+
+      {/* Velocity - Show when no section expanded */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Learning Velocity</h4>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
+              <div className="h-10 w-10 rounded-lg bg-primary-500/20 flex items-center justify-center">
+                <TrendingUp size={18} className="text-primary-400" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{velocity.today || 0}</div>
+                <div className="text-xs text-gray-500">Today</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
+              <div className="h-10 w-10 rounded-lg bg-accent-green/20 flex items-center justify-center">
+                <Activity size={18} className="text-accent-green" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{velocity.week || 0}</div>
+                <div className="text-xs text-gray-500">This Week</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Patterns - Show when no section expanded */}
+      {patterns.length > 0 && !expandedSection && (
         <div className="card">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-400">Recent Patterns</h4>
-            <a href="/learning-journey?tab=patterns" className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1">
-              View All <ChevronRight size={12} />
-            </a>
+            <button
+              onClick={() => toggleSection('patterns')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
           </div>
           <div className="space-y-2">
             {patterns.slice(0, 4).map((pattern: LearningPattern) => (
-              <PatternRow
-                key={pattern.id}
-                pattern={pattern}
-                onClick={() => setSelectedPattern(pattern)}
-              />
+              <PatternRow key={pattern.id} pattern={pattern} onClick={() => setSelectedPattern(pattern)} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Learning Pipeline */}
-      <div className="card">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">Learning Pipeline</h4>
-        <div className="space-y-2">
-          <PipelineRow
-            label="Spider Data Ingestion"
-            status="active"
-            description="77 spiders feeding data"
-            onClick={() => window.location.href = '/spider-integration'}
-          />
-          <PipelineRow
-            label="Agent Memory Formation"
-            status="active"
-            description="74 agents processing"
-            onClick={() => window.location.href = '/memory-palace'}
-          />
-          <PipelineRow
-            label="Pattern Recognition"
-            status="active"
-            description="113 patterns identified"
-            onClick={() => window.location.href = '/learning-journey?tab=patterns'}
-          />
-          <PipelineRow
-            label="Knowledge Synthesis"
-            status="active"
-            description="4 insights generated"
-            onClick={() => window.location.href = '/collective-intelligence?tab=insights'}
-          />
+      {/* Learning Pipeline - Show when no section expanded */}
+      {!expandedSection && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Learning Pipeline</h4>
+          <div className="space-y-2">
+            <PipelineRow
+              label="Spider Data Ingestion"
+              status="active"
+              description="77 spiders feeding data"
+            />
+            <PipelineRow
+              label="Agent Memory Formation"
+              status="active"
+              description="74 agents processing"
+            />
+            <PipelineRow
+              label="Pattern Recognition"
+              status="active"
+              description="113 patterns identified"
+            />
+            <PipelineRow
+              label="Knowledge Synthesis"
+              status="active"
+              description="4 insights generated"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Pattern Detail Modal */}
       {selectedPattern && (
-        <PatternDetailModal
-          pattern={selectedPattern}
-          onClose={() => setSelectedPattern(null)}
-        />
+        <PatternDetailModal pattern={selectedPattern} onClose={() => setSelectedPattern(null)} />
       )}
     </div>
   )
@@ -598,66 +932,64 @@ function LoadingState() {
   )
 }
 
-// Session 840: Header row with refresh button
-function HeaderRow({
+// Session 857: Inline header row without external navigation
+function InlineHeaderRow({
   title,
-  badge,
-  linkHref,
-  linkText,
+  subtitle,
   onRefresh,
+  isFetching,
 }: {
   title: string
-  badge?: string
-  linkHref: string
-  linkText: string
-  onRefresh: () => void
+  subtitle?: string
+  onRefresh?: () => void
+  isFetching?: boolean
 }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
         <h3 className="text-lg font-semibold">{title}</h3>
-        {badge && (
+        {subtitle && (
           <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green">
-            {badge}
+            {subtitle}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      {onRefresh && (
         <button
           onClick={onRefresh}
-          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          disabled={isFetching}
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
           title="Refresh data"
         >
-          <RefreshCw size={14} className="text-gray-400" />
+          <RefreshCw size={14} className={cn('text-gray-400', isFetching && 'animate-spin')} />
         </button>
-        <a href={linkHref} className="btn btn-secondary flex items-center gap-2 text-sm">
-          {linkText}
-          <ExternalLink size={14} />
-        </a>
-      </div>
+      )}
     </div>
   )
 }
 
-// Session 840: Clickable StatCard
+// Session 857: StatCard with isExpanded indicator
 function StatCard({
   label,
   value,
   icon: Icon,
   color,
   onClick,
+  isExpanded,
 }: {
   label: string
   value: number | string
   icon: typeof Globe
   color: string
   onClick?: () => void
+  isExpanded?: boolean
 }) {
   return (
     <div
       className={cn(
         'card',
-        onClick && 'cursor-pointer hover:border-primary-500/50 transition-colors'
+        onClick && 'cursor-pointer hover:border-primary-500/50 transition-colors',
+        isExpanded && 'border-primary-500/50 bg-primary-500/5'
       )}
       onClick={onClick}
     >
@@ -666,10 +998,96 @@ function StatCard({
           <p className="text-sm text-gray-400">{label}</p>
           <p className="text-2xl font-bold mt-1">{value}</p>
         </div>
-        <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-gray-800">
-          <Icon size={20} className={color} />
+        <div className="flex items-center gap-2">
+          <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-gray-800">
+            <Icon size={20} className={color} />
+          </div>
+          {onClick && (
+            isExpanded ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Session 857: Expanded list card for inline content viewing
+function ExpandedListCard<T>({
+  title,
+  icon: Icon,
+  items,
+  visibleCount,
+  onLoadMore,
+  renderItem,
+  emptyMessage,
+}: {
+  title: string
+  icon: typeof Globe
+  items: T[]
+  visibleCount: number
+  onLoadMore: () => void
+  renderItem: (item: T) => React.ReactNode
+  emptyMessage?: string
+}) {
+  return (
+    <div className="card">
+      <div className="flex items-center gap-2 mb-3">
+        <Icon size={16} className="text-primary-400" />
+        <h4 className="text-sm font-medium text-gray-400">{title}</h4>
+        <span className="text-xs text-gray-500">({items.length})</span>
+      </div>
+      {items.length === 0 ? (
+        <div className="text-center py-6 text-gray-500">
+          <Icon className="mx-auto mb-2" size={24} />
+          <p className="text-sm">{emptyMessage || `No ${title.toLowerCase()} found`}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.slice(0, visibleCount).map(renderItem)}
+          {items.length > visibleCount && (
+            <button
+              onClick={onLoadMore}
+              className="w-full py-2 text-sm text-primary-400 hover:text-primary-300"
+            >
+              Load more ({items.length - visibleCount} remaining)
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Session 857: Spider row for inline display
+function SpiderRow({ spider, onClick }: { spider: SpiderInfo; onClick: () => void }) {
+  const statusColors: Record<string, { bg: string; text: string }> = {
+    healthy: { bg: 'bg-accent-green/20', text: 'text-accent-green' },
+    needs_api_key: { bg: 'bg-accent-amber/20', text: 'text-accent-amber' },
+    failed: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  }
+  const style = statusColors[spider.status] || statusColors.healthy
+
+  return (
+    <div
+      className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/50 -mx-2 px-2 rounded transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-lg bg-primary-500/20 flex items-center justify-center">
+          <Globe size={14} className="text-primary-400" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">{spider.name}</p>
+          <p className="text-xs text-gray-500">{spider.category}</p>
+        </div>
+      </div>
+      <span className={cn('text-xs px-2 py-0.5 rounded capitalize', style.bg, style.text)}>
+        {spider.status.replace('_', ' ')}
+      </span>
     </div>
   )
 }
@@ -823,7 +1241,7 @@ function PipelineRow({
 
 // ============ Detail Modals ============
 
-// Session 840: Spider Detail Modal
+// Session 857: Spider Detail Modal (updated - removed external link)
 function SpiderDetailModal({ spider, onClose }: { spider: SpiderInfo; onClose: () => void }) {
   return (
     <div
@@ -852,19 +1270,19 @@ function SpiderDetailModal({ spider, onClose }: { spider: SpiderInfo; onClose: (
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Status</p>
               <p className={cn(
-                'text-sm font-medium',
+                'text-sm font-medium capitalize',
                 spider.status === 'healthy' ? 'text-accent-green' : 'text-accent-amber'
               )}>
-                {spider.status}
+                {spider.status.replace('_', ' ')}
               </p>
             </div>
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Items Collected</p>
-              <p className="text-xl font-bold">{spider.items_count.toLocaleString()}</p>
+              <p className="text-xl font-bold">{spider.items_count?.toLocaleString() || 0}</p>
             </div>
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Success Rate</p>
-              <p className="text-xl font-bold">{spider.success_rate}%</p>
+              <p className="text-xl font-bold">{spider.success_rate || 0}%</p>
             </div>
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Last Run</p>
@@ -873,13 +1291,7 @@ function SpiderDetailModal({ spider, onClose }: { spider: SpiderInfo; onClose: (
           </div>
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end gap-2">
-          <a
-            href={`/spider-integration?spider=${spider.id}`}
-            className="btn btn-secondary text-sm"
-          >
-            View Details
-          </a>
+        <div className="p-4 border-t border-dark-border flex justify-end">
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
@@ -889,7 +1301,63 @@ function SpiderDetailModal({ spider, onClose }: { spider: SpiderInfo; onClose: (
   )
 }
 
-// Session 840: Feed Item Detail Modal
+// Session 857: Execution Detail Modal
+function ExecutionDetailModal({ execution, onClose }: { execution: SpiderExecution; onClose: () => void }) {
+  const statusColors: Record<string, { bg: string; text: string }> = {
+    success: { bg: 'bg-accent-green/20', text: 'text-accent-green' },
+    failed: { bg: 'bg-red-500/20', text: 'text-red-400' },
+    running: { bg: 'bg-accent-amber/20', text: 'text-accent-amber' },
+  }
+  const style = statusColors[execution.status] || statusColors.success
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div className="flex items-center gap-3">
+            <Zap size={20} className="text-primary-400" />
+            <div>
+              <h3 className="font-semibold">{execution.spider_name}</h3>
+              <span className={cn('text-xs px-2 py-0.5 rounded capitalize', style.bg, style.text)}>
+                {execution.status}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Items Collected</p>
+              <p className="text-xl font-bold">{execution.items_count || 0}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Executed At</p>
+              <p className="text-sm">{new Date(execution.created_at).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-dark-border flex justify-end">
+          <button onClick={onClose} className="btn btn-primary text-sm">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 857: Feed Item Detail Modal (updated - removed external link)
 function FeedItemDetailModal({ item, onClose }: { item: FeedItem; onClose: () => void }) {
   return (
     <div
@@ -925,32 +1393,23 @@ function FeedItemDetailModal({ item, onClose }: { item: FeedItem; onClose: () =>
           {item.url && (
             <div>
               <h4 className="text-sm font-medium text-gray-400 mb-2">Source URL</h4>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary-400 hover:text-primary-300 break-all"
-              >
-                {item.url}
-              </a>
+              <p className="text-sm text-gray-300 break-all">{item.url}</p>
             </div>
           )}
 
-          <div className="flex flex-wrap gap-4 text-xs text-gray-500 pt-4 border-t border-dark-border">
-            <span>Created: {new Date(item.created_at).toLocaleString()}</span>
-            {item.annotation_count > 0 && (
-              <span>{item.annotation_count} annotations</span>
-            )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Created</p>
+              <p className="text-sm">{new Date(item.created_at).toLocaleString()}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Annotations</p>
+              <p className="text-xl font-bold">{item.annotation_count || 0}</p>
+            </div>
           </div>
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end gap-2">
-          <a
-            href={`/spider-feed?item=${item.id}`}
-            className="btn btn-secondary text-sm"
-          >
-            View in Feed
-          </a>
+        <div className="p-4 border-t border-dark-border flex justify-end">
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
@@ -960,7 +1419,7 @@ function FeedItemDetailModal({ item, onClose }: { item: FeedItem; onClose: () =>
   )
 }
 
-// Session 840: Pattern Detail Modal
+// Session 857: Pattern Detail Modal (updated - removed external link)
 function PatternDetailModal({ pattern, onClose }: { pattern: LearningPattern; onClose: () => void }) {
   return (
     <div
@@ -1001,7 +1460,7 @@ function PatternDetailModal({ pattern, onClose }: { pattern: LearningPattern; on
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Confidence</p>
-              <p className="text-xl font-bold">{Math.round(pattern.confidence * 100)}%</p>
+              <p className="text-xl font-bold">{Math.round((pattern.confidence || 0) * 100)}%</p>
             </div>
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Created</p>
@@ -1010,13 +1469,7 @@ function PatternDetailModal({ pattern, onClose }: { pattern: LearningPattern; on
           </div>
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end gap-2">
-          <a
-            href={`/learning-journey?pattern=${pattern.id}`}
-            className="btn btn-secondary text-sm"
-          >
-            View in Learning Journey
-          </a>
+        <div className="p-4 border-t border-dark-border flex justify-end">
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
