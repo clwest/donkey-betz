@@ -49,6 +49,9 @@ interface Initiative {
   status: string
   current_stage: number
   completion_percentage: number
+  // Session 857: Additional progress metrics
+  approved_percentage?: number
+  stages_with_work?: number
   stages: Record<number, {
     status: string
     stage_name: string
@@ -181,7 +184,13 @@ function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative;
       <div className="flex items-center justify-between">
         <StageProgress initiative={initiative} />
         <div className="flex items-center gap-3 text-xs text-gray-400">
-          <span>{initiative.completion_percentage}% complete</span>
+          {/* Session 857: Show weighted progress and approved count */}
+          <span>
+            {initiative.completion_percentage}% progress
+            {initiative.approved_percentage !== undefined && initiative.approved_percentage > 0 && (
+              <span className="text-green-400 ml-1">({initiative.approved_percentage}% approved)</span>
+            )}
+          </span>
           <ChevronRight size={14} />
         </div>
       </div>
@@ -217,17 +226,38 @@ function InitiativeDetailModal({
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto max-h-96">
-          {/* Progress bar */}
+          {/* Progress bar - Session 857: Show both progress and approved metrics */}
           <div>
             <div className="flex justify-between text-sm mb-2">
               <span className="text-gray-400">Overall Progress</span>
-              <span className="font-medium">{initiative.completion_percentage}%</span>
+              <span className="font-medium">
+                {initiative.completion_percentage}%
+                {initiative.approved_percentage !== undefined && initiative.approved_percentage > 0 && (
+                  <span className="text-green-400 text-xs ml-1">
+                    ({initiative.approved_percentage}% approved)
+                  </span>
+                )}
+              </span>
             </div>
-            <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+            <div className="h-2 bg-dark-border rounded-full overflow-hidden relative">
+              {/* Approved progress (green) */}
+              {initiative.approved_percentage !== undefined && initiative.approved_percentage > 0 && (
+                <div
+                  className="absolute h-full bg-green-500 transition-all"
+                  style={{ width: `${initiative.approved_percentage}%` }}
+                />
+              )}
+              {/* Overall progress (primary color) */}
               <div
-                className="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all"
+                className="h-full bg-gradient-to-r from-primary-500/50 to-primary-400/50 transition-all"
                 style={{ width: `${initiative.completion_percentage}%` }}
               />
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Stage {initiative.current_stage} of 5</span>
+              {initiative.stages_with_work !== undefined && (
+                <span>{initiative.stages_with_work} stages with documents</span>
+              )}
             </div>
           </div>
 
