@@ -308,14 +308,14 @@ function InitiativeDetailModal({
                           : 'No document yet'}
                     </div>
                   </div>
+                  {/* Session 857: Show document indicator inline instead of external link */}
                   {stage?.document_id && (
-                    <a
-                      href={`/ai-studio/workspace?tab=deliverables&id=${stage.document_id}`}
-                      className="p-2 hover:bg-dark-border rounded-lg transition-colors"
-                      title="Open document"
+                    <div
+                      className="p-2 bg-primary-500/10 rounded-lg"
+                      title="Document available"
                     >
-                      <FileText size={16} className="text-gray-400 hover:text-primary-400" />
-                    </a>
+                      <FileText size={16} className="text-primary-400" />
+                    </div>
                   )}
                 </div>
               )
@@ -366,25 +366,19 @@ function InitiativeDetailModal({
                     </div>
                   )}
 
-                  {/* Links to conversation */}
+                  {/* Session 857: Show source info inline instead of external links */}
                   <div className="flex items-center gap-3 text-xs">
                     {decision.conversation_id && (
-                      <a
-                        href={`/ai-studio/conversations?id=${decision.conversation_id}`}
-                        className="flex items-center gap-1 text-primary-400 hover:text-primary-300"
-                      >
+                      <span className="flex items-center gap-1 text-primary-400">
                         <MessageSquare size={12} />
-                        View Conversation
-                      </a>
+                        From Conversation
+                      </span>
                     )}
                     {decision.hive_session_id && (
-                      <a
-                        href={`/ai-studio/hive-mind?id=${decision.hive_session_id}`}
-                        className="flex items-center gap-1 text-primary-400 hover:text-primary-300"
-                      >
+                      <span className="flex items-center gap-1 text-primary-400">
                         <MessageSquare size={12} />
-                        View Hive Session
-                      </a>
+                        From Hive Session
+                      </span>
                     )}
                     <span className="text-gray-500">
                       {new Date(decision.created_at).toLocaleDateString()}
