@@ -227,6 +227,51 @@ export function OperationCard({
         </div>
       </div>
 
+      {/* Session 855: File path and workspace info */}
+      {operation.file_path && (
+        <div className="flex items-center gap-2 text-xs bg-dark-bg/50 px-2 py-1.5 rounded font-mono">
+          <File size={12} className="text-gray-500 flex-shrink-0" />
+          <span className="text-gray-300 truncate" title={operation.file_path}>
+            {operation.file_path}
+          </span>
+          {operation.workspace_name && (
+            <>
+              <span className="text-gray-600">in</span>
+              <span className="text-primary-400">{operation.workspace_name}</span>
+            </>
+          )}
+          {operation.lines_changed !== undefined && operation.lines_changed > 0 && (
+            <span className="text-gray-500 ml-auto">
+              {operation.lines_changed} lines
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Session 855: Content preview for file operations */}
+      {operation.success && (operation.file_content_after || operation.content_after) && (
+        <div className="text-xs bg-dark-bg/30 border border-dark-border/50 rounded overflow-hidden">
+          <div className="px-2 py-1 bg-dark-border/30 text-gray-400 flex items-center justify-between">
+            <span>Content Preview</span>
+            {onViewContent && (
+              <button
+                onClick={onViewContent}
+                className="text-primary-400 hover:text-primary-300 flex items-center gap-1"
+              >
+                <Eye size={10} />
+                View Full
+              </button>
+            )}
+          </div>
+          <pre className="p-2 text-gray-300 font-mono overflow-x-auto max-h-32 overflow-y-auto whitespace-pre-wrap">
+            {((operation.file_content_after || operation.content_after) || '').slice(0, 500)}
+            {((operation.file_content_after || operation.content_after) || '').length > 500 && (
+              <span className="text-gray-500">... (truncated)</span>
+            )}
+          </pre>
+        </div>
+      )}
+
       {/* Description */}
       {operation.description && (
         <p className="text-xs text-gray-400">{operation.description}</p>
