@@ -2,6 +2,7 @@
 // Session 829: Added Self-Healing Remediation Controls
 // Session 830: Live polling with pause toggle, by-agent progress table
 // Session 831: Added error handling and success feedback for mutations
+// Session 852: Added clickable decision cards with modal
 // Extracted from WorkspacePage.tsx for modular architecture
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -19,10 +20,11 @@ import {
   Activity,
   XCircle,
   AlertCircle,
+  Eye,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
-import { EmergencyControls } from '@/components/platform'
+import { EmergencyControls, DecisionDetailModal } from '@/components/platform'
 import { ErrorState } from '@/components/ErrorState'
 
 // Session 831: Feedback message type
@@ -37,6 +39,7 @@ export function GovernanceTab() {
   const [remediationLimit, setRemediationLimit] = useState(20)
   const [isPolling, setIsPolling] = useState(true) // Session 830: Polling toggle (default ON)
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null) // Session 831: User feedback
+  const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null) // Session 852: Decision modal
 
   const {
     data: governanceData,
@@ -439,36 +442,50 @@ export function GovernanceTab() {
               {governanceData.pending_decisions.map((decision: any) => (
                 <div
                   key={decision.id}
-                  className="p-4 bg-gray-800/50 rounded-lg"
+                  onClick={() => setSelectedDecisionId(decision.id)}
+                  className="p-4 bg-gray-800/50 hover:bg-gray-800/80 rounded-lg cursor-pointer transition-colors group"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-medium">{decision.title}</h4>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium group-hover:text-primary-400 transition-colors">
+                        {decision.title}
+                      </h4>
                       <p className="text-xs text-gray-400 mt-1">
                         {decision.source_agent || decision.source_type}
                       </p>
                     </div>
-                    <span
-                      className={cn(
-                        'text-xs px-2 py-0.5 rounded',
-                        decision.urgency === 'critical'
-                          ? 'bg-accent-red/20 text-accent-red'
-                          : decision.urgency === 'high'
-                          ? 'bg-accent-amber/20 text-accent-amber'
-                          : 'bg-gray-700 text-gray-400'
-                      )}
-                    >
-                      {decision.urgency}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'text-xs px-2 py-0.5 rounded',
+                          decision.urgency === 'critical'
+                            ? 'bg-accent-red/20 text-accent-red'
+                            : decision.urgency === 'high'
+                            ? 'bg-accent-amber/20 text-accent-amber'
+                            : 'bg-gray-700 text-gray-400'
+                        )}
+                      >
+                        {decision.urgency}
+                      </span>
+                      <Eye size={14} className="text-gray-500 group-hover:text-primary-400 transition-colors" />
+                    </div>
                   </div>
                   {decision.description && (
-                    <p className="text-sm text-gray-400">{decision.description}</p>
+                    <p className="text-sm text-gray-400 line-clamp-2">{decision.description}</p>
                   )}
                 </div>
               ))}
             </div>
           )}
         </div>
+      )}
+
+      {/* Session 852: Decision Detail Modal */}
+      {selectedDecisionId && (
+        <DecisionDetailModal
+          decisionId={selectedDecisionId}
+          onClose={() => setSelectedDecisionId(null)}
+        />
       )}
     </div>
   )
