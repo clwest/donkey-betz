@@ -302,8 +302,42 @@ Use these insights to personalize and improve the content.""")
             except Exception as e:
                 logger.debug(f"Could not fetch memories: {e}")
 
-        # Add user preferences if available
-        if self.user:
+        # Session 858: Use injected user context (from AgentRouter) instead of DB query
+        user_context = getattr(self, '_user_context', {})
+        if user_context and user_context.get('has_user_context'):
+            pref_items = []
+
+            # User's name for personalization
+            user_name = user_context.get('name', '')
+            if user_name:
+                pref_items.append(f"- Writing for: {user_name}")
+
+            # Communication style
+            comm_style = user_context.get('communication_style', '')
+            if comm_style:
+                pref_items.append(f"- Preferred tone: {comm_style}")
+
+            # User's goals (influences content direction)
+            goals = user_context.get('goals', [])
+            if goals:
+                goals_text = ", ".join(goals[:3]) if isinstance(goals, list) else str(goals)
+                pref_items.append(f"- User's goals: {goals_text}")
+
+            # Memory summary (past preferences and patterns)
+            memory_summary = user_context.get('memory_summary', '')
+            if memory_summary:
+                pref_items.append(f"- Past patterns: {memory_summary[:200]}...")
+
+            if pref_items:
+                prompt_parts.append(f"""
+
+## USER CONTEXT (Session 858)
+{chr(10).join(pref_items)}
+
+Tailor the content to match this user's preferences and goals.""")
+
+        # Fallback to DB query if no injected context
+        elif self.user:
             try:
                 from core.models_unified_system import UserPreferences
                 prefs = UserPreferences.objects.filter(user=self.user).first()
@@ -373,6 +407,11 @@ For this {content_type}, ensure:
                 - word_count: Approximate word count
                 - topic: Main topic (extracted from research if not provided)
                 - keywords: SEO keywords to include
+                Session 858: User context available:
+                - user: Full user context dict
+                - user_name: User's name
+                - user_communication_style: Preferred communication style
+                - user_goals: User's goals
             scifi_context: Sci-fi features context
             spider_context: Spider intelligence context
 
@@ -382,6 +421,10 @@ For this {content_type}, ensure:
         start_time = time.time()
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
+
+        # Session 858: Extract user context for personalization
+        user_context = context.get('user', {})
+        self._user_context = user_context  # Store for use in prompt building
 
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
@@ -403,7 +446,11 @@ For this {content_type}, ensure:
                 # Extract parameters
                 content_type = context.get('content_type', 'blog_post')
                 research = context.get('research', '')
-                tone = context.get('tone', 'professional')
+
+                # Session 858: Use user's preferred communication style as default tone
+                default_tone = user_context.get('communication_style', 'professional')
+                tone = context.get('tone', default_tone)
+
                 target_audience = context.get('target_audience', 'general audience')
                 word_count = context.get('word_count', CONTENT_TYPES.get(content_type, {}).get('default_word_count', 1500))
                 topic = context.get('topic', '')

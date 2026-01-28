@@ -144,6 +144,36 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
         context = context or {}
         spider_context = spider_context or {}
 
+        # Session 858: Extract user context for personalized betting analysis
+        user_context = context.get('user', {})
+        self._user_context = user_context
+
+        # Session 858: Enhance task with user's betting preferences
+        if user_context and user_context.get('has_user_context'):
+            user_name = user_context.get('name', '')
+            betting_prefs = user_context.get('betting_preferences', {})
+            risk_tolerance = user_context.get('risk_tolerance', 'moderate')
+
+            # Build user context addition to task
+            user_context_parts = []
+            if user_name:
+                user_context_parts.append(f"Analyzing for: {user_name}")
+            if betting_prefs:
+                if betting_prefs.get('enabled'):
+                    favorite_sports = betting_prefs.get('favorite_sports', [])
+                    if favorite_sports:
+                        sports_text = ", ".join(favorite_sports[:3]) if isinstance(favorite_sports, list) else str(favorite_sports)
+                        user_context_parts.append(f"Favorite sports: {sports_text}")
+                    bet_risk = betting_prefs.get('risk_level', risk_tolerance)
+                    user_context_parts.append(f"Betting risk level: {bet_risk}")
+                    bankroll = betting_prefs.get('bankroll')
+                    if bankroll:
+                        user_context_parts.append(f"Bankroll: ${bankroll}")
+
+            if user_context_parts:
+                task = f"{task}\n\n[Bettor Profile: {'; '.join(user_context_parts)}]"
+                logger.info(f"🏈 Session 858: Enhanced sports analysis with betting profile for {user_name or 'user'}")
+
         # Session 750: Time Travel integration
         with self.time_travel_session("sports_odds_analysis", task, input_data=context):
             self.record_decision(
