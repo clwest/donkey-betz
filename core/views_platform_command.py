@@ -310,13 +310,23 @@ def _get_emergency_status() -> Dict[str, Any]:
     }
 
 
-def _get_pending_decisions() -> List[Dict[str, Any]]:
-    """Get pending human decisions."""
+def _get_pending_decisions(user=None) -> List[Dict[str, Any]]:
+    """
+    Get pending human decisions.
+
+    Session 848: Filter by user to ensure users only see items they can act on.
+    Without user filter, the list would show all users' items, but record_decision
+    only allows users to decide on their own items, creating a mismatch.
+    """
     from core.models_human_interface import HumanAttentionItem
 
-    pending = HumanAttentionItem.objects.filter(
-        status='pending'
-    ).order_by('-urgency', '-priority_score', '-created_at')[:20]
+    queryset = HumanAttentionItem.objects.filter(status='pending')
+
+    # Session 848: Filter by user if provided to match record_decision behavior
+    if user and user.is_authenticated:
+        queryset = queryset.filter(user=user)
+
+    pending = queryset.order_by('-urgency', '-priority_score', '-created_at')[:20]
 
     return [{
         'id': str(item.id),
@@ -663,7 +673,8 @@ def governance_view(request):
     """
     owner = _get_system_owner()
     emergency = _get_emergency_status()
-    decisions = _get_pending_decisions()
+    # Session 848: Pass user to filter decisions to only those they can act on
+    decisions = _get_pending_decisions(user=request.user)
 
     return JsonResponse({
         'owner': owner,
