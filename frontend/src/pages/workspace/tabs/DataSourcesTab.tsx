@@ -117,19 +117,20 @@ function SpidersSubTab() {
     refetchInterval: 30000,
   })
 
+  // Session 860: Fixed incorrect API endpoints - use spiderIntegrationApi
   const { data: executionsData } = useQuery({
     queryKey: ['spider-executions-recent'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/spider-integration/executions/recent/?limit=50')
-      return res.json()
+      const res = await spiderIntegrationApi.executionLogs({ limit: 50 })
+      return res.data
     },
   })
 
   const { data: spidersData } = useQuery({
     queryKey: ['spider-list-tab'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/spider-integration/spiders/?limit=100')
-      return res.json()
+      const res = await spiderIntegrationApi.registry()
+      return res.data
     },
   })
 
@@ -150,7 +151,8 @@ function SpidersSubTab() {
     execution_logs: 40512,
   }
 
-  const executions = executionsData?.executions || []
+  // Session 860: Fixed data extraction to match actual API response structures
+  const executions = executionsData?.logs || executionsData?.executions || []
   const spiders = spidersData?.spiders || spidersData?.results || []
   const healthySpiders = spiders.filter((s: SpiderInfo) => s.status === 'healthy')
   const needsApiSpiders = spiders.filter((s: SpiderInfo) => s.status === 'needs_api_key')
