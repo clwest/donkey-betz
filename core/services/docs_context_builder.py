@@ -378,6 +378,12 @@ class DocsContextBuilder:
         """
         parts = [
             "## Critical System Context (Session 814)",
+            "",
+            "**IMPORTANT: This documentation describes what has ALREADY been built.**",
+            "Use this as REFERENCE MATERIAL to understand existing capabilities.",
+            "Do NOT treat this as a to-do list or work that needs to be done.",
+            "Your task will be given separately below.",
+            "",
             "The following documentation provides essential system context:",
             ""
         ]
@@ -500,6 +506,9 @@ class DocsContextBuilder:
 
             summary_parts.extend([
                 f"## Additional Documentation Context",
+                f"",
+                f"**These docs describe EXISTING features - use as reference, not as tasks.**",
+                f"",
                 f"Total system docs: {len(documents)}",
                 f"",
                 f"### Relevant Documentation ({len(relevant_docs)} docs):",
