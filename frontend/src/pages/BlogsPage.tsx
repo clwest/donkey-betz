@@ -468,15 +468,20 @@ export default function BlogsPage() {
                     )}
                   </div>
 
-                  {/* Meta */}
+                  {/* Meta - Session 855: Added timestamp with time for ordering */}
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span className="flex items-center gap-1">
                       <FileText size={12} />
                       {blog.word_count} words
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1" title={new Date(blog.created_at).toLocaleString()}>
                       <Calendar size={12} />
-                      {new Date(blog.created_at).toLocaleDateString()}
+                      {new Date(blog.created_at).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </span>
                   </div>
 
