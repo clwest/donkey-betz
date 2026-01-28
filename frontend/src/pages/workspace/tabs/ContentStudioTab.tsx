@@ -108,11 +108,20 @@ function GallerySubTab() {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
   const [selectedSeries, setSelectedSeries] = useState<AISeries | null>(null)
 
+  // Session 860: Added error handling - endpoint may require authentication
   const { data: galleryData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['gallery-stats-tab'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/gallery/all/?limit=50')
-      return response.json()
+      try {
+        const response = await fetch('/api/v1/gallery/all/?limit=50')
+        if (!response.ok) {
+          // Return empty data on 401/403 - user not authenticated
+          return { results: [], count: 0 }
+        }
+        return response.json()
+      } catch {
+        return { results: [], count: 0 }
+      }
     },
   })
 
@@ -506,12 +515,20 @@ function BlogsSubTab() {
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
 
+  // Session 860: Added error handling for API responses
   const { data: blogsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['blogs-tab'],
     queryFn: async () => {
-      // Session 852: Filter by category=blog to exclude audits/research/technical docs
-      const response = await fetch('/api/v1/research/self-blog/list/?per_page=50&category=blog')
-      return response.json()
+      try {
+        // Session 852: Filter by category=blog to exclude audits/research/technical docs
+        const response = await fetch('/api/v1/research/self-blog/list/?per_page=50&category=blog')
+        if (!response.ok) {
+          return { blogs: [], pagination: { total: 0 } }
+        }
+        return response.json()
+      } catch {
+        return { blogs: [], pagination: { total: 0 } }
+      }
     },
   })
 
