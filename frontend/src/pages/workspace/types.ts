@@ -10,6 +10,7 @@ export type WorkspaceTab =
   | 'intelligence'
   | 'datasources'
   | 'governance'
+  | 'initiatives'  // Session 847: Initiative Pipeline Dashboard
   | 'knowledge'
   | 'files'
   | 'operations'

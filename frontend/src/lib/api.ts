@@ -2947,6 +2947,38 @@ export const platformApi = {
   // Session 845: Decision summary detail for System Activity modal
   decisionSummaryDetail: (decisionId: string) =>
     api.get<{ success: boolean; item: Record<string, unknown> }>(`/platform/decision-summary/${decisionId}/`),
+
+  // Session 847: Initiative Pipeline Dashboard
+  initiatives: () =>
+    api.get<{
+      success: boolean
+      count: number
+      initiatives: Array<{
+        id: string
+        name: string
+        description: string
+        status: string
+        current_stage: number
+        completion_percentage: number
+        stages: Record<number, {
+          status: string
+          stage_name: string
+          document_id: string | null
+          approved_at: string | null
+        }>
+        created_at: string
+        updated_at: string
+      }>
+    }>('/v1/initiatives/'),
+
+  // Session 847: Auto-populate initiatives from existing deliverables
+  populateInitiatives: () =>
+    api.post<{
+      success: boolean
+      created_count: number
+      created_initiatives: Array<{ name: string; stages_linked: number }>
+      message: string
+    }>('/v1/initiatives/populate/'),
 }
 
 // Session 833: Blogs API for approval workflow

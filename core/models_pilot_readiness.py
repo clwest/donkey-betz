@@ -43,6 +43,17 @@ class PilotReadinessGate(models.Model):
         help_text="The Boardroom decision this gate controls"
     )
 
+    # Session 847: Link to Initiative for stricter governance
+    # Gates linked to initiatives require human review, not auto-waiving
+    initiative = models.ForeignKey(
+        'core.Initiative',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='gates',
+        help_text="If linked to an initiative, stricter rules apply"
+    )
+
     # Gate status
     GATE_STATUS_CHOICES = [
         ('not_started', 'Not Started'),
@@ -182,8 +193,19 @@ class PilotReadinessGate(models.Model):
         self.save()
         return True
 
-    def waive(self, reason: str = 'Low risk - auto-waived', waived_by: str = 'ThinkingAgent'):
-        """Waive the gate for low-risk decisions."""
+    def waive(self, reason: str = 'Low risk - auto-waived', waived_by: str = 'ThinkingAgent', force: bool = False):
+        """
+        Waive the gate for low-risk decisions.
+
+        Session 847: Gates linked to initiatives cannot be auto-waived unless force=True.
+        This addresses the 96% gate waiving concern from ChatGPT feedback.
+        Initiative-linked gates represent structured projects that need human oversight.
+        """
+        # Session 847: Stricter rules for initiative-linked gates
+        if self.initiative_id and not force:
+            # Initiative-linked gates require human review
+            return False
+
         if self.risk_level == 'low':
             self.status = 'waived'
             self.approved_by = waived_by  # Session 654: Track who waived
