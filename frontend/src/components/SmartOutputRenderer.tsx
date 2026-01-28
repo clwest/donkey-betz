@@ -1504,6 +1504,291 @@ function StockAnalysisRenderer({ data }: { data: StockAnalysisOutput }) {
   )
 }
 
+// Session 851: Debate Agent Output Renderer (DebateAdvocateAgent, DebateSkepticAgent)
+interface DebateToolResult {
+  // Research results
+  research_findings?: Array<{ title?: string; source?: string; summary?: string; url?: string }>
+  research_summary?: string
+  suggested_angles?: string[]
+  suggested_concerns?: string[]
+  topic?: string
+  focus_areas?: string[]
+  concern_areas?: string[]
+  // Argument structure
+  argument_structure?: {
+    thesis?: string
+    evidence?: string[]
+    counterargument_handling?: string
+    conclusion?: string
+  }
+  critique_structure?: {
+    main_concern?: string
+    evidence?: string[]
+    probing_questions?: string[]
+    fair_acknowledgment?: string
+  }
+  argument_strength?: string
+  critique_strength?: string
+  debate_ready?: boolean
+  // Statements
+  statements?: {
+    opening?: string
+    key_points?: string[]
+    key_concerns?: string[]
+    rebuttals?: string[]
+    tough_questions?: string[]
+    closing?: string
+  }
+  role?: string
+  voice_id?: string
+  speaking_style?: string
+  word_count_estimate?: number
+}
+
+interface DebateAgentOutput {
+  role?: 'ADVOCATE' | 'SKEPTIC' | string
+  voice_id?: string
+  tool_results?: DebateToolResult[]
+}
+
+function DebateRenderer({ data }: { data: DebateAgentOutput }) {
+  const isAdvocate = data.role === 'ADVOCATE'
+  const toolResults = data.tool_results || []
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h4 className={cn(
+          "text-sm font-medium flex items-center gap-2",
+          isAdvocate ? "text-accent-green" : "text-accent-amber"
+        )}>
+          <Users className="w-4 h-4" />
+          {isAdvocate ? 'Debate Advocate' : 'Debate Skeptic'}
+        </h4>
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          {data.voice_id && <span>🎙️ {data.voice_id}</span>}
+          <span className={cn(
+            "px-2 py-0.5 rounded",
+            isAdvocate ? "bg-accent-green/20 text-accent-green" : "bg-accent-amber/20 text-accent-amber"
+          )}>
+            {isAdvocate ? 'FOR' : 'AGAINST'}
+          </span>
+        </div>
+      </div>
+
+      {/* Tool Results */}
+      {toolResults.map((tr, i) => (
+        <div key={i} className="space-y-3">
+          {/* Research Section */}
+          {(tr.research_summary || tr.research_findings) && (
+            <div className="p-3 bg-dark-card rounded-lg border border-dark-border">
+              <h5 className="text-sm font-medium text-accent-cyan mb-2 flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                Research: {tr.topic || 'Topic Analysis'}
+              </h5>
+              {tr.research_summary && (
+                <p className="text-sm text-gray-300 mb-2">{tr.research_summary}</p>
+              )}
+              {(tr.suggested_angles || tr.suggested_concerns) && (
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-400">
+                    {tr.suggested_angles ? 'Suggested Angles:' : 'Suggested Concerns:'}
+                  </span>
+                  <ul className="space-y-1">
+                    {(tr.suggested_angles || tr.suggested_concerns || []).slice(0, 5).map((item, j) => (
+                      <li key={j} className="text-xs text-gray-400 flex items-start gap-1">
+                        <span className={isAdvocate ? "text-accent-green" : "text-accent-amber"}>•</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {tr.research_findings && tr.research_findings.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <span className="text-xs text-gray-400">Sources ({tr.research_findings.length}):</span>
+                  {tr.research_findings.slice(0, 3).map((finding, j) => (
+                    <div key={j} className="text-xs p-2 bg-dark-bg rounded">
+                      {finding.url ? (
+                        <a href={finding.url} target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline">
+                          {finding.title || 'Untitled'}
+                        </a>
+                      ) : (
+                        <span className="text-white">{finding.title || 'Untitled'}</span>
+                      )}
+                      {finding.source && <span className="text-gray-500 ml-2">({finding.source})</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Argument/Critique Structure */}
+          {(tr.argument_structure || tr.critique_structure) && (
+            <div className={cn(
+              "p-3 rounded-lg border",
+              isAdvocate ? "bg-accent-green/5 border-accent-green/20" : "bg-accent-amber/5 border-accent-amber/20"
+            )}>
+              <div className="flex items-center justify-between mb-2">
+                <h5 className="text-sm font-medium text-white flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4" />
+                  {tr.argument_structure ? 'Argument' : 'Critique'}
+                </h5>
+                {(tr.argument_strength || tr.critique_strength) && (
+                  <span className={cn(
+                    "text-xs px-2 py-0.5 rounded capitalize",
+                    (tr.argument_strength || tr.critique_strength) === 'strong'
+                      ? "bg-accent-green/20 text-accent-green"
+                      : "bg-accent-amber/20 text-accent-amber"
+                  )}>
+                    {tr.argument_strength || tr.critique_strength}
+                  </span>
+                )}
+              </div>
+
+              {/* Main thesis/concern */}
+              {(tr.argument_structure?.thesis || tr.critique_structure?.main_concern) && (
+                <div className="mb-2">
+                  <span className="text-xs text-gray-400">Main Point:</span>
+                  <p className="text-sm text-white font-medium">
+                    {tr.argument_structure?.thesis || tr.critique_structure?.main_concern}
+                  </p>
+                </div>
+              )}
+
+              {/* Evidence */}
+              {(tr.argument_structure?.evidence || tr.critique_structure?.evidence) && (
+                <div className="mb-2">
+                  <span className="text-xs text-gray-400">Evidence:</span>
+                  <ul className="space-y-1 mt-1">
+                    {(tr.argument_structure?.evidence || tr.critique_structure?.evidence || []).slice(0, 5).map((point, j) => (
+                      <li key={j} className="text-sm text-gray-300 flex items-start gap-2">
+                        <CheckCircle className={cn("w-3 h-3 flex-shrink-0 mt-1", isAdvocate ? "text-accent-green" : "text-accent-amber")} />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Counter handling / Probing questions */}
+              {tr.argument_structure?.counterargument_handling && (
+                <div className="mb-2">
+                  <span className="text-xs text-gray-400">Counter-response:</span>
+                  <p className="text-sm text-gray-300 italic">"{tr.argument_structure.counterargument_handling}"</p>
+                </div>
+              )}
+              {tr.critique_structure?.probing_questions && (
+                <div className="mb-2">
+                  <span className="text-xs text-gray-400">Probing Questions:</span>
+                  <ul className="space-y-1 mt-1">
+                    {tr.critique_structure.probing_questions.slice(0, 3).map((q, j) => (
+                      <li key={j} className="text-sm text-gray-300 flex items-start gap-1">
+                        <span className="text-accent-amber">?</span> {q}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Conclusion / Acknowledgment */}
+              {tr.argument_structure?.conclusion && (
+                <div className="p-2 bg-accent-green/10 rounded mt-2">
+                  <span className="text-xs text-accent-green">Conclusion:</span>
+                  <p className="text-sm text-white">{tr.argument_structure.conclusion}</p>
+                </div>
+              )}
+              {tr.critique_structure?.fair_acknowledgment && (
+                <div className="p-2 bg-accent-amber/10 rounded mt-2">
+                  <span className="text-xs text-accent-amber">Fair Acknowledgment:</span>
+                  <p className="text-sm text-gray-300 italic">{tr.critique_structure.fair_acknowledgment}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Statements Section */}
+          {tr.statements && (
+            <div className="p-3 bg-dark-card rounded-lg border border-dark-border">
+              <h5 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                <Mic className="w-4 h-4" />
+                Debate Statements
+              </h5>
+
+              {/* Opening */}
+              {tr.statements.opening && (
+                <div className="mb-3">
+                  <span className="text-xs text-gray-400 uppercase tracking-wide">Opening Statement</span>
+                  <p className="text-sm text-gray-300 mt-1 whitespace-pre-wrap">{tr.statements.opening}</p>
+                </div>
+              )}
+
+              {/* Key points/concerns */}
+              {(tr.statements.key_points || tr.statements.key_concerns) && (
+                <div className="mb-3">
+                  <span className="text-xs text-gray-400 uppercase tracking-wide">
+                    {tr.statements.key_points ? 'Key Points' : 'Key Concerns'}
+                  </span>
+                  <ul className="space-y-1 mt-1">
+                    {(tr.statements.key_points || tr.statements.key_concerns || []).map((point, j) => (
+                      <li key={j} className="text-sm text-gray-300 flex items-start gap-2">
+                        <span className={cn(
+                          "w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0",
+                          isAdvocate ? "bg-accent-green/20 text-accent-green" : "bg-accent-amber/20 text-accent-amber"
+                        )}>
+                          {j + 1}
+                        </span>
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Rebuttals/Questions */}
+              {(tr.statements.rebuttals || tr.statements.tough_questions) && (
+                <div className="mb-3">
+                  <span className="text-xs text-gray-400 uppercase tracking-wide">
+                    {tr.statements.rebuttals ? 'Prepared Rebuttals' : 'Tough Questions'}
+                  </span>
+                  <ul className="space-y-1 mt-1">
+                    {(tr.statements.rebuttals || tr.statements.tough_questions || []).map((item, j) => (
+                      <li key={j} className="text-sm text-gray-400 flex items-start gap-1">
+                        <span className="text-gray-500">→</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Closing */}
+              {tr.statements.closing && (
+                <div className={cn(
+                  "p-2 rounded",
+                  isAdvocate ? "bg-accent-green/10 border-l-2 border-accent-green" : "bg-accent-amber/10 border-l-2 border-accent-amber"
+                )}>
+                  <span className="text-xs text-gray-400 uppercase tracking-wide">Closing Statement</span>
+                  <p className="text-sm text-white mt-1">{tr.statements.closing}</p>
+                </div>
+              )}
+
+              {/* Meta */}
+              {(tr.speaking_style || tr.word_count_estimate) && (
+                <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                  {tr.speaking_style && <span>Style: {tr.speaking_style}</span>}
+                  {tr.word_count_estimate && <span>~{tr.word_count_estimate} words</span>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // Session 820: Trending Topics
 function TrendsRenderer({ trends }: { trends: TrendItem[] }) {
   return (
@@ -1808,8 +2093,13 @@ export function SmartOutputRenderer({
   const hasRecommendations = outputData.recommendations && Array.isArray(outputData.recommendations) && outputData.recommendations.length > 0
   const hasAnalysis = outputData.analysis && typeof outputData.analysis === 'object'
   const hasSignals = outputData.signals && Array.isArray(outputData.signals) && outputData.signals.length > 0
-  // Don't show raw tool_results if we've already extracted trends/discussions/topTrends from them
-  const hasToolResults = !hasTrends && !hasDiscussions && !hasTopTrends &&
+  // Session 851: Detect debate agent output (DebateAdvocateAgent, DebateSkepticAgent)
+  // Check this before hasToolResults so we can skip raw rendering for debate output
+  const isDebateAgentOutput = (outputData.role === 'ADVOCATE' || outputData.role === 'SKEPTIC') &&
+    outputData.tool_results && Array.isArray(outputData.tool_results) && outputData.tool_results.length > 0
+
+  // Don't show raw tool_results if we've already extracted trends/discussions/topTrends or debate output from them
+  const hasToolResults = !hasTrends && !hasDiscussions && !hasTopTrends && !isDebateAgentOutput &&
     outputData.tool_results && Array.isArray(outputData.tool_results) && outputData.tool_results.length > 0
   const hasImages = outputData.images && Array.isArray(outputData.images) && outputData.images.length > 0
   const hasThinking = outputData.thinking_result && typeof outputData.thinking_result === 'object'
@@ -1837,11 +2127,14 @@ export function SmartOutputRenderer({
   // Session 835: Detect vulnerabilities (Security agents)
   const hasVulnerabilities = outputData.vulnerabilities && Array.isArray(outputData.vulnerabilities) && outputData.vulnerabilities.length > 0
 
+  // Session 851: Use the already-detected debate agent output
+  const hasDebateOutput = !!isDebateAgentOutput
+
   // Check if we have any structured content
   const hasStructuredContent = hasBlog || hasResearch || hasPodcast || hasRecommendations ||
     hasAnalysis || hasSignals || hasToolResults || hasImages || hasThinking || hasMetrics || hasInsights ||
     hasTrends || hasDiscussions || hasTopTrends || hasAdvisorOutput || hasInvestmentThesis || hasVulnerabilities ||
-    hasStockAnalysis
+    hasStockAnalysis || hasDebateOutput
 
   return (
     <div className={cn("space-y-4", className)} style={{ maxHeight, overflowY: 'auto' }}>
@@ -1901,6 +2194,9 @@ export function SmartOutputRenderer({
 
           {/* Session 835: Security Vulnerabilities */}
           {hasVulnerabilities && <VulnerabilitiesRenderer vulnerabilities={outputData.vulnerabilities as VulnerabilityItem[]} />}
+
+          {/* Session 851: Debate Agent Output (DebateAdvocateAgent, DebateSkepticAgent) */}
+          {hasDebateOutput && <DebateRenderer data={outputData as DebateAgentOutput} />}
 
           {/* Summary */}
           {outputData.summary && !hasAnalysis && (
