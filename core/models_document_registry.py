@@ -94,9 +94,44 @@ class Initiative(models.Model):
 
     @property
     def completion_percentage(self):
-        """Calculate how complete the initiative is based on approved stages."""
+        """
+        Session 857: Calculate completion based on stages with actual work.
+
+        Progress is weighted by status:
+        - APPROVED: 100% for that stage (1.0)
+        - IN_REVIEW: 80% for that stage (0.8)
+        - DRAFT: 60% for that stage (0.6)
+        - PENDING/REJECTED/SUPERSEDED: 0% (0.0)
+
+        This fixes the issue where initiatives showed 0% even when
+        documents existed but weren't approved yet.
+        """
+        status_weights = {
+            'APPROVED': 1.0,
+            'IN_REVIEW': 0.8,
+            'DRAFT': 0.6,
+            'PENDING': 0.0,
+            'REJECTED': 0.0,
+            'SUPERSEDED': 0.0,
+        }
+
+        total_weight = 0.0
+        for stage in self.stages.all():
+            total_weight += status_weights.get(stage.status, 0.0)
+
+        # 5 stages, max weight = 5.0 (all approved)
+        return int((total_weight / 5.0) * 100)
+
+    @property
+    def approved_percentage(self):
+        """Session 857: Percentage of stages that are fully APPROVED."""
         approved = self.stages.filter(status='APPROVED').count()
         return int((approved / 5) * 100)
+
+    @property
+    def stages_with_work(self):
+        """Session 857: Count of stages with documents (any status except PENDING)."""
+        return self.stages.exclude(status='PENDING').count()
 
     def get_stage_document(self, stage_number):
         """Get the document for a specific stage."""

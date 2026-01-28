@@ -1158,6 +1158,9 @@ def initiatives_api(request):
                 'status': init.status,
                 'current_stage': init.current_stage,
                 'completion_percentage': init.completion_percentage,
+                # Session 857: Additional progress metrics
+                'approved_percentage': init.approved_percentage,
+                'stages_with_work': init.stages_with_work,
                 'stages': stages,
                 'health': health_data.get('health', 'unknown'),
                 'health_issues': health_data.get('health_issues', []),
