@@ -1,62 +1,60 @@
-# Session 859 - Start Here
+# Session 860 - Start Here
 
-**Previous Session:** 858 (User Context Injection)
+**Previous Session:** 859 (Documentation Update for Session 857)
 **Date:** January 28, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **User Context Active**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **User Context Active** | **Workspace Inline**
 
 ---
 
-## What Was Accomplished in Session 858
+## What Was Accomplished in Session 857/859
 
-Session 858 implemented User Context Injection - teaching the system about the User so agents can provide personalized responses.
+Session 857 refactored all Workspace tabs to show content inline instead of navigating to external pages. Session 859 completed the documentation.
 
-### User Context Injection
+### Workspace Inline Refactor
 
-**Problem Identified:** The platform had rich user profile infrastructure (6 models, 100+ fields) but agents never received this data. They operated "blind" to who the user was.
+**Problem:** Workspace tabs contained 181 external links that navigated users away from the command center.
 
-**Solution Implemented:**
+**Solution:** Replaced all external navigation with inline content display.
 
-| Component | What It Does |
-|-----------|--------------|
-| `_get_user_context()` | Retrieves user profile + memory context from middleware |
-| `_apply_injection_policy()` | Filters context based on agent category (avoids prompt bloat) |
-| `_record_user_learning()` | Records success patterns for learning loop |
-| `_ensure_personal_workspace()` | Auto-creates workspace for any user |
+| Tab | Links Removed | Pattern |
+|-----|---------------|---------|
+| CommandTab | 6 | MetricsGrid, Quick Actions, Activity Feed |
+| OrchestrationTab | 25 | Monitor, Workflows, Automation, HiveMind |
+| InfrastructureTab | 25+ | Spiders, Memory, Integration, Status |
+| AnalyticsTab | 20+ | Charts, metrics, drill-downs |
+| GovernanceTab | 15+ | Policies, compliance, audits |
+| ContentTab | 20+ | Documents, media, publishing |
+| InitiativesTab | 3 | Document, conversation, hive session |
+| KnowledgeTab | 1 | docs-index |
 
-**Agent Category Injection Policy:**
+**Key Patterns:**
+- `StatCard` with `isExpanded` prop for visual state
+- `ExpandedListCard` for inline lists
+- `setActiveTab` for internal workspace navigation
 
-| Category | Agents | Data Injected |
-|----------|--------|---------------|
-| career | OpportunityPipelineAgent | skills, job_preferences, salary_range, success_patterns |
-| content | ContentWriterAgent, SEOOptimizerAgent | communication_style, tone_preferences, goals |
-| financial | StockAnalystAgent, SportsOddsAnalyst | risk_tolerance, betting_preferences |
-| development | CodeGeneratorAgent, DevOpsAgent | skills, tech_stack, github_username |
-| research | ResearchAgent, TrendAnalysisAgent | interests, learning_goals |
-| default | All other agents | name, goals, communication_style |
+### Publish Action Fix
 
-**How Agents Access User Context:**
+**Problem:** ContentWriterAgent decisions said "Successfully created Blog Post" but no blog was saved.
+
+**Solution:** `mission_control_executor.py` now creates Deliverable from content when no content_id exists:
 
 ```python
-def execute(self, task, context, scifi_context, spider_context):
-    user = context.get('user', {})           # Full user context dict
-    user_name = context.get('user_name', '') # Quick access
-    user_skills = context.get('user_skills', [])
-    user_goals = context.get('user_goals', [])
+# In _execute_publish()
+if not content_id and result_data.get('content'):
+    deliverable = Deliverable.objects.create(
+        user=user,
+        title=content['title'],
+        content=body,  # Built from intro + sections
+        content_type=content_type,
+        status='published'
+    )
 ```
 
-### Workspace Auto-Creation
+### Initiative Modal Fix
 
-**Fixed:** "No active workspace. Register a workspace first." errors
-
-Now when ANY user calls an agent, a personal workspace is auto-created at:
-`generated_content/users/{username}/`
-
-### Learning Feedback Loop
-
-When agents succeed, a `UserMemoryContext` record is created:
-- `memory_type='success_pattern'`
-- `source='agent:{agent_name}'`
-- Contains task summary for future retrieval
+Fixed content cutoff by changing modal from fixed height to flex layout:
+- Modal: `max-w-3xl`, `90vh`, `flex flex-col`
+- Content: `flex-1` instead of `max-h-96`
 
 ---
 
@@ -66,29 +64,22 @@ When agents succeed, a `UserMemoryContext` record is created:
 # 1. Start platform
 make start && make celery
 
-# 2. Test user context injection
-python manage.py shell -c "
-from django.contrib.auth import get_user_model
-from core.agent_router import get_agent_router
-user = get_user_model().objects.filter(is_staff=True).first()
-router = get_agent_router(user)
-context = router._get_user_context('ContentWriterAgent', 'test')
-print('User context:', list(context.keys()))
-"
-
-# 3. Access Workspace
+# 2. Access Workspace
 open http://localhost:8000/ai-studio/
+
+# 3. Test inline content
+# Click any StatCard in Workspace tabs - content expands inline
 ```
 
 ---
 
-## Files Modified in Session 858
+## Files Modified in Session 857
 
 | File | Changes |
 |------|---------|
-| `core/agent_router.py` | Added `_get_user_context()`, `_apply_injection_policy()`, `_record_user_learning()`, injection mappings |
-| `core/services/workspace_manager.py` | Added `_ensure_personal_workspace()`, updated `get_active_workspace()` |
-| `docs/handoffs/SESSION_858_USER_CONTEXT_INJECTION.md` | Full documentation |
+| `frontend/src/pages/workspace/tabs/*.tsx` | 8 tabs refactored (181 links removed) |
+| `core/services/mission_control_executor.py` | Publish action creates Deliverable from content |
+| `docs/handoffs/SESSION_857_WORKSPACE_INLINE_REFACTOR.md` | Full documentation |
 
 ---
 
@@ -102,6 +93,6 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 858 Handoff
+## Session 857 Handoff
 
-See: `docs/handoffs/SESSION_858_USER_CONTEXT_INJECTION.md`
+See: `docs/handoffs/SESSION_857_WORKSPACE_INLINE_REFACTOR.md`
