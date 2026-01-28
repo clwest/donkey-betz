@@ -67,6 +67,8 @@ export function CommandTab({
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [selectedDreamId, setSelectedDreamId] = useState<string | null>(null)
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
+  // Session 848: Decision error feedback
+  const [decisionError, setDecisionError] = useState<string | null>(null)
 
   // Queries
   const {
@@ -116,14 +118,22 @@ export function CommandTab({
   }
 
   // Decision mutation
+  // Session 848: Added error handling to surface failures to user
   const decisionMutation = useMutation({
     mutationFn: async ({ itemId, decision }: { itemId: string; decision: string }) => {
       const res = await humanApi.decide(itemId, decision)
       return res.data
     },
     onSuccess: () => {
+      setDecisionError(null)
       queryClient.invalidateQueries({ queryKey: ['platform-governance'] })
       queryClient.invalidateQueries({ queryKey: ['human-attention'] })
+    },
+    onError: (error: any) => {
+      // Session 848: Show error feedback when decision fails
+      const message = error?.response?.data?.error || error?.message || 'Failed to record decision'
+      setDecisionError(message)
+      console.error('Decision error:', error)
     },
   })
 
@@ -245,6 +255,19 @@ export function CommandTab({
                 />
               ))}
             </div>
+            {/* Session 848: Show error feedback when decision fails */}
+            {decisionError && (
+              <div className="mt-3 flex items-center gap-2 p-3 bg-accent-red/10 border border-accent-red/30 rounded-lg text-sm text-accent-red">
+                <XCircle size={16} />
+                <span>{decisionError}</span>
+                <button
+                  onClick={() => setDecisionError(null)}
+                  className="ml-auto text-current opacity-60 hover:opacity-100"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
