@@ -26761,11 +26761,79 @@ def _extract_agent_output_content(result, task_description: str) -> str:
                                     if mk in source_data and source_data[mk]:
                                         output_parts.append(f"**{mk.replace('_', ' ').title()}**: {source_data[mk]}\n")
 
+                    # Session 851: Handle debate agent formats (research_findings, argument_structure, statements)
+                    elif 'research_summary' in item or 'research_findings' in item:
+                        # Research output from DebateAdvocateAgent/DebateSkepticAgent
+                        topic = item.get('topic', 'Research')
+                        output_parts.append(f"### {i}. Research: {topic}\n")
+                        if item.get('research_summary'):
+                            output_parts.append(f"{item['research_summary']}\n")
+                        if item.get('suggested_angles'):
+                            output_parts.append(f"**Suggested Angles:**\n")
+                            for angle in item['suggested_angles'][:5]:
+                                output_parts.append(f"  - {angle}\n")
+                        if item.get('suggested_concerns'):
+                            output_parts.append(f"**Suggested Concerns:**\n")
+                            for concern in item['suggested_concerns'][:5]:
+                                output_parts.append(f"  - {concern}\n")
+                        if item.get('research_findings'):
+                            output_parts.append(f"**Sources ({len(item['research_findings'])}):**\n")
+                            for finding in item['research_findings'][:5]:
+                                if isinstance(finding, dict):
+                                    title = finding.get('title', 'Untitled')
+                                    source = finding.get('source', '')
+                                    output_parts.append(f"  - {title} ({source})\n")
+
+                    elif 'argument_structure' in item or 'critique_structure' in item:
+                        # Argument/critique output from DebateAdvocateAgent/DebateSkepticAgent
+                        structure = item.get('argument_structure') or item.get('critique_structure', {})
+                        strength = item.get('argument_strength') or item.get('critique_strength', 'moderate')
+                        output_parts.append(f"### {i}. Argument ({strength})\n")
+                        if structure.get('thesis') or structure.get('main_concern'):
+                            output_parts.append(f"**Main Point:** {structure.get('thesis') or structure.get('main_concern')}\n")
+                        if structure.get('evidence'):
+                            output_parts.append(f"**Evidence:**\n")
+                            for point in structure['evidence'][:5]:
+                                output_parts.append(f"  - {point}\n")
+                        if structure.get('counterargument_handling'):
+                            output_parts.append(f"**Counter-response:** {structure['counterargument_handling']}\n")
+                        if structure.get('probing_questions'):
+                            output_parts.append(f"**Probing Questions:**\n")
+                            for q in structure['probing_questions'][:3]:
+                                output_parts.append(f"  - {q}\n")
+                        if structure.get('conclusion'):
+                            output_parts.append(f"**Conclusion:** {structure['conclusion']}\n")
+
+                    elif 'statements' in item and isinstance(item.get('statements'), dict):
+                        # Debate statements from DebateAdvocateAgent/DebateSkepticAgent
+                        role = item.get('role', 'Speaker')
+                        statements = item['statements']
+                        output_parts.append(f"### {i}. {role} Statements\n")
+                        if statements.get('opening'):
+                            output_parts.append(f"**Opening:** {statements['opening']}\n")
+                        if statements.get('key_points') or statements.get('key_concerns'):
+                            points = statements.get('key_points') or statements.get('key_concerns', [])
+                            output_parts.append(f"**Key Points:**\n")
+                            for point in points[:5]:
+                                output_parts.append(f"  - {point}\n")
+                        if statements.get('rebuttals') or statements.get('tough_questions'):
+                            items_list = statements.get('rebuttals') or statements.get('tough_questions', [])
+                            label = 'Rebuttals' if statements.get('rebuttals') else 'Tough Questions'
+                            output_parts.append(f"**{label}:**\n")
+                            for item_text in items_list[:5]:
+                                output_parts.append(f"  - {item_text}\n")
+                        if statements.get('closing'):
+                            output_parts.append(f"**Closing:** {statements['closing']}\n")
+
                     else:
                         # Standard dict item format
                         # Session 848: Added 'text' key for podcast agents (ModeratorAgent, etc.)
-                        item_title = item.get('title') or item.get('name') or item.get('source') or item.get('segment') or f'Item {i}'
-                        item_content = item.get('content') or item.get('summary') or item.get('description') or item.get('text') or ''
+                        # Session 851: Added more keys for diverse agent outputs
+                        item_title = (item.get('title') or item.get('name') or item.get('source') or
+                                      item.get('segment') or item.get('topic') or item.get('role') or f'Item {i}')
+                        item_content = (item.get('content') or item.get('summary') or item.get('description') or
+                                        item.get('text') or item.get('message') or item.get('output') or
+                                        item.get('analysis') or '')
                         item_score = item.get('overall_score') or item.get('score', '')
                         score_str = f" (score: {item_score})" if item_score else ""
                         output_parts.append(f"### {i}. {item_title}{score_str}\n{item_content[:500]}\n")
