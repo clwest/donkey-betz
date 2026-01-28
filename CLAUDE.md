@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 28, 2026 - Session 859
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 46 Pages | **Modular Workspace** | Self-Executing | **Initiative Pipeline: ACTIVE** | **Citation Gate: ACTIVE** | **Diagnostic Pipeline: ACTIVE** | **User Context: ACTIVE** | **Workspace Inline: ACTIVE**
+**Last Updated:** January 28, 2026 - Session 860
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 46 Pages | **Modular Workspace** | Self-Executing | **Initiative Pipeline: FIXED** | **Citation Gate: ACTIVE** | **Diagnostic Pipeline: ACTIVE** | **User Context: ACTIVE** | **Workspace Inline: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
@@ -19,6 +19,7 @@
 | **Frontend Bundle** | 1,948 KB | 11 workspace tabs, collapsible sidebar |
 
 ## Key Capabilities
+- **Initiative Pipeline Fix (860):** Documents now properly link to initiatives - added parent_topic to Reports/Research, backfilled 25 unlinked docs
 - **Workspace Inline Refactor (857):** 181 external links removed - all content displays inline, publish action creates Deliverables
 - **User Context Injection (858):** All agents receive personalized user data (skills, goals, preferences) via context dict with category-based injection policy
 - **Diagnostic Pipeline (856):** Detection → Diagnosis → Prescription system for failure analysis with evidence gathering
@@ -133,6 +134,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **860** | Initiative Pipeline Fix - Documents now link properly, backfilled 25 docs | `SESSION_860_INITIATIVE_PIPELINE_FIXES.md` |
 | **858** | User Context Injection - Agents receive personalized user data | `SESSION_858_USER_CONTEXT_INJECTION.md` |
 | **857** | Workspace Inline Refactor - 181 external links removed, publish fix | `SESSION_857_WORKSPACE_INLINE_REFACTOR.md` |
 | **856** | Diagnostic Pipeline + Agent Content Review Fixes (12 agents) | `SESSION_856_DIAGNOSTIC_PIPELINE.md` |
@@ -147,10 +149,8 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **832** | Recent Activity Enhancement - New fields, system activity | `SESSION_832_RECENT_ACTIVITY_ENHANCEMENT.md` |
 | **831** | Remediation Pipeline + LLM Timeouts + UI Fixes | `SESSION_831_REMEDIATION_PIPELINE.md` |
 | **830** | Agent File Operations + Production Auth Fixes | `SESSION_830_PRODUCTION_FIXES.md` |
-| **829** | Self-Healing UI Controls + SKIN Layer File Writing | `SESSION_829_SELF_HEALING_UI_CONTROLS.md` |
-| **828** | Self-Healing Execution - 514/742 tasks (69.3%) | `SESSION_828_SELF_HEALING_EXECUTION.md` |
 
-**Older sessions:** See `docs/handoffs/` directory (Sessions 197-859)
+**Older sessions:** See `docs/handoffs/` directory (Sessions 197-860)
 
 ---
 
