@@ -1,101 +1,92 @@
-# Session 846 - Start Here
+# Session 847 - Start Here
 
-**Previous Session:** 845 (Agent-Spider Wiring + Memory Delete UI + Decision Detail Fix)
+**Previous Session:** 846 (Citation Gate + News Search Fix + Stuck Conversations Fix)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **213 Agents Wired to Spiders** | **PRODUCTION HEALTHY**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Citation Gate Active** | **PRODUCTION HEALTHY**
 
 ---
 
-## What Was Accomplished in Session 845
+## What Was Accomplished in Session 846
 
-### 1. Wire All 213 Agents to Spider Data Sources (PR #342)
+### 1. Citation Gate for Research/Financial/Strategy Agents (PR #350)
 
-Connected ALL agents to appropriate spider data categories. Previously only 19 agents (9%) had spider connections.
+Implemented citation requirements to prevent hallucination in critical agents. Research, Financial, and Strategy agents must now include proper source citations.
 
-**Before:**
-- 213 total agents
-- Only 19 agents had spider connections (9%)
-- 194 agents completely disconnected from spider data
-- No "Sports Betting" category existed
+**New Components:**
+- `CitationViolation` model - Tracks outputs that fail citation requirements
+- `CitationGateService` - Validates sources, URLs, freshness, synthetic ratio
+- Integration with `DeliverableEnvelopeService` - Auto-validates on `wrap()`
+- API endpoints for viewing violations
 
-**After:**
-- All 213 agents connected (100%)
-- 492 total AgentSpiderConnection records
-- 16 spider categories with agent connections
-- Average 2.3 connections per agent
+**Citation Requirements by Category:**
+| Category | Min Sources | URLs Required | Data Freshness |
+|----------|-------------|---------------|----------------|
+| Research | 2 | Yes | - |
+| Analytics | 2 | Yes | - |
+| Finance | 2 | Yes | 24 hours |
+| Strategy | 1 | No | - |
+| Marketing | 1 | No | - |
 
-**Category Distribution:**
-| Category | Agents |
-|----------|--------|
-| Tech News & Innovation | 101 |
-| General News | 66 |
-| AI & Creative Tools | 52 |
-| Content Creation | 46 |
-| Financial Markets | 45 |
-| Freelance & Jobs | 33 |
-| Creative Assets & Design | 31 |
-| Digital Products & E-commerce | 31 |
-| Research & Academia | 28 |
-| Innovation | 16 |
-| Sports Betting & Prediction Markets | 3 |
+**Agents Covered:**
+- Research: ResearchAgent, CustomerResearchAgent
+- Analytics: TrendAnalysisAgent, MarketIntelligenceAgent, CompetitorAnalysisAgent
+- Finance: StockAnalystAgent, BullCaseAgent, BearCaseAgent, ValuationAgent, etc.
+- Strategy: ContentStrategyAgent, BrandIdentityAgent, BrandStrategyAgent
+- Marketing: MarketingStrategyAgent, SEOOptimizerAgent
 
-**Sports Betting Agents (Donkey Betz):**
-- SportsOddsAnalyst: [sports_betting, financial]
-- ArbitrageDetector: [sports_betting, financial]
-- PredictionMarketAnalyst: [sports_betting, financial, news]
-
-**New Command:**
+**API Endpoints:**
 ```bash
-# Preview what would be wired
-python manage.py wire_agents_to_spiders --dry-run
+# List violations with stats
+GET /api/citation-violations/
+GET /api/citation-violations/?resolved=false
+GET /api/citation-violations/?agent=ResearchAgent
 
-# Wire all agents to spider categories
-python manage.py wire_agents_to_spiders
-
-# Force re-wire all agents (even those already connected)
-python manage.py wire_agents_to_spiders --force
+# Resolve a violation
+POST /api/citation-violations/<uuid>/resolve/
 ```
 
-### 2. Memory Delete UI for Failed Memories (PR #343)
+**Current Mode:** Running in `warn` mode - violations are tracked but outputs proceed.
 
-Added ability to remove failed memories from the Memory Palace UI.
+### 2. Serper News API Fallback (PR #348)
 
-**Changes:**
-- Added delete button to `MemoryCard` component
-  - Always visible (red) for failed memories
-  - Hover-visible for non-failed memories
-- Added "Show Failed" quick filter button in memory list header
-- Added "Delete All Failed" bulk action when filtering to failures
+Fixed ResearchAgent "Research returned no results" errors caused by DuckDuckGo rate limiting.
 
-**How to Use:**
-1. Navigate to Memory Palace (`/memory-palace`)
-2. Select an agent with memories
-3. Click "Show Failed" to filter to failed memories
-4. Delete individually or use "Delete All Failed" button
+**Problem:** When LLM chose `search_type='news'`, the `_search_news()` method only used DuckDuckGo which returns 202 Ratelimit errors.
 
-### 3. Fix 404 Errors on System Activity Decision Cards (PR #345)
+**Solution:** Added Serper News API (`google.serper.dev/news`) as primary method with DuckDuckGo as fallback.
 
-Fixed 404 errors when clicking decision cards in System Activity.
+**Search Priority (News):**
+1. Serper News API (Google News via API - reliable)
+2. DuckDuckGo news (free, rate-limited)
+3. Synthetic fallback (development only)
 
-**Problem:** System Activity shows `AgentDecisionSummary` records, but clicking them tried to fetch from `/api/human/attention/{id}/` which expects `HumanAttentionItem` records.
+### 3. Stuck Conversations Fix (PR #349)
 
-**Solution:**
-- Added `decision_summary_detail_view` endpoint for `AgentDecisionSummary` records
-- New endpoint: `GET /api/platform/decision-summary/<uuid>/`
-- Updated `DecisionDetailModal` to try decision summary first, fall back to attention item
+Fixed root cause of conversations getting stuck with 0 messages on production.
+
+**Problem:** 2,585 conversations were stuck with `status='active'` but 0 messages. The `if messages:` block had no `else` clause to handle empty message generation.
+
+**Solution:** Added else clauses in 3 locations:
+- `run_agent_conversations` - Marks as 'abandoned' if no messages
+- `run_multi_agent_conversation` - Marks panel conversations as 'abandoned'
+- `trigger_spider_conversations` - Deletes conversation if OpenAI returns empty
+
+**Cleanup:** 2,565 stuck conversations marked as abandoned on production.
 
 ---
 
-## Files Changed in Session 845
+## Files Changed in Session 846
 
 | File | Change |
 |------|--------|
-| `core/management/commands/wire_agents_to_spiders.py` | **NEW** - Command to connect agents to spider categories |
-| `frontend/src/pages/MemoryPalacePage.tsx` | Added delete buttons and "Show Failed" filter |
-| `core/views_platform_command.py` | Added `decision_summary_detail_view` endpoint |
-| `core/urls.py` | Added decision summary detail URL pattern |
-| `frontend/src/lib/api.ts` | Added `platformApi.decisionSummaryDetail()` |
-| `frontend/src/components/platform/DecisionDetailModal.tsx` | Try decision summary first, fall back to attention |
+| `core/services/citation_gate_service.py` | **NEW** - Citation validation service |
+| `core/models_orchestration.py` | Added `CitationViolation` model |
+| `core/services/deliverable_envelope.py` | Integrated citation gate validation |
+| `core/views_trace_viewer.py` | Added citation violations API endpoints |
+| `core/urls.py` | Added citation violations URL patterns |
+| `core/migrations/0193_session_846_citation_gate.py` | **NEW** - Migration |
+| `core/tools/web_search.py` | Added Serper News API to `_search_news()` |
+| `core/tasks.py` | Fixed stuck conversations in 3 locations |
 
 ---
 
@@ -108,30 +99,35 @@ make start && make celery
 # 2. Access workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Verify agent-spider connections
+# 3. Check citation violations
+curl http://localhost:8000/api/citation-violations/ -H "Authorization: Token <token>"
+
+# Or via Django shell
 python manage.py shell -c "
-from core.models_unified_system import Agent, AgentSpiderConnection
-print(f'Agents with connections: {Agent.objects.filter(spider_connections__isnull=False).distinct().count()}/213')
-print(f'Total connections: {AgentSpiderConnection.objects.count()}')
+from core.models_orchestration import CitationViolation
+print(f'Total violations: {CitationViolation.objects.count()}')
+print(f'Unresolved: {CitationViolation.objects.filter(is_resolved=False).count()}')
 "
 
-# 4. Test Memory Delete UI
-# Navigate to Memory Palace > Select agent > Click "Show Failed" > Delete memories
-
-# 5. Test Decision Detail Modal
-# Navigate to Workspace > Command tab > System Activity > Click a Decision card
+# 4. Test citation gate
+python manage.py shell -c "
+from core.services.citation_gate_service import get_citation_gate_service
+gate = get_citation_gate_service()
+print(f'ResearchAgent requires citations: {gate.requires_citations(\"ResearchAgent\")}')
+print(f'ImageAgent requires citations: {gate.requires_citations(\"ImageAgent\")}')
+"
 ```
 
 ---
 
 ## Potential Next Steps
 
-1. **Add trace_id to AgentConversation** - Allow conversations to propagate trace context
-2. **Trace visualization UI** - Frontend component to view trace timelines
-3. **Retroactive trace linking** - Script to link orphaned artifacts to traces
-4. **WiringDefect alerting** - Notify when defects exceed threshold
-5. **ImageAgent content moderation handling** - Auto-retry with modified prompts when CONTENT_FILTERED
-6. **Add execution timeout within task** - Auto-fail individual tasks if they exceed time limit
+1. **Enable strict citation mode** - Block outputs without citations (currently warn mode)
+2. **Dataset Card implementation** - Universal metadata block for reports
+3. **Spider → Serper → Enrichment pipeline** - Auto-chain data enrichment
+4. **Standardized confidence scores** - Consistent calculation across all agents
+5. **Add trace_id to AgentConversation** - Allow conversations to propagate trace context
+6. **Trace visualization UI** - Frontend component to view trace timelines
 
 ---
 
@@ -148,6 +144,7 @@ print(f'Total connections: {AgentSpiderConnection.objects.count()}')
 
 | Session | Focus |
 |---------|-------|
+| **846** | Citation Gate + Serper News API + Stuck Conversations Fix (2,585 cleaned) |
 | **845** | Agent-Spider Wiring (213 agents) + Memory Delete UI + Decision Detail Fix |
 | **844** | Memory Palace Fix + DecisionDetailModal + Console Error Fixes (React #31, Dream 404) |
 | **843** | Orchestration Contract + trace_id System + Agent Output Fix + ImageAgent Error Fix |
@@ -157,8 +154,7 @@ print(f'Total connections: {AgentSpiderConnection.objects.count()}')
 | **839** | UI Status Mismatch Fix + Workspace Output Fix + API Audit |
 | **838** | Finance Agent Audit Complete - MarketMovementMonitor, MarketAnomalyDetector |
 | **837** | SignalScannerAgent placeholder fix - now uses real market data |
-| **836** | Experiment System Diagnosis + Celery Beat fix + 5 Production API Fixes |
 
 ---
 
-**Session 845 Complete - 213 agents wired to spiders, Memory Palace delete UI, Decision detail fix**
+**Session 846 Complete - Citation Gate active, News search fixed, 2,585 stuck conversations cleaned**
