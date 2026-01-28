@@ -666,19 +666,20 @@ function LearningSubTab() {
     },
   })
 
+  // Session 860: Fixed incorrect API paths - use /api/learning/ not /api/v1/learning/
   const { data: patternsData } = useQuery({
     queryKey: ['learning-patterns-recent'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/learning/patterns/?limit=50')
-      return res.json()
+      const res = await learningApi.patterns()
+      return res.data
     },
   })
 
   const { data: insightsData } = useQuery({
     queryKey: ['learning-insights-tab'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/learning/insights/?limit=20')
-      return res.json()
+      const res = await learningApi.insights()
+      return res.data
     },
   })
 

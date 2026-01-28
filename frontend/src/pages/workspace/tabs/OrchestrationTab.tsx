@@ -27,7 +27,7 @@ import {
   List,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { orchestrationApi, adminApi } from '@/lib/api'
+import { orchestrationApi, adminApi, agentsApi, advisorsApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
@@ -805,26 +805,28 @@ function HiveMindSubTab() {
   }
 
   // Session 840: Fetch real agent/advisor counts
+  // Session 860: Use API methods instead of hardcoded fetch
   const { data: agentsData, isLoading: loadingAgents, refetch: refetchAgents, isFetching: fetchingAgents } = useQuery({
     queryKey: ['hivemind-agents-tab'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/agents/list/')
-      if (!response.ok) {
-        // Fallback to known count
+      try {
+        const response = await agentsApi.list()
+        return response.data
+      } catch {
         return { agents: [], count: 74 }
       }
-      return response.json()
     },
   })
 
   const { data: advisorsData, isLoading: loadingAdvisors } = useQuery({
     queryKey: ['hivemind-advisors-tab'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/advisors/list/')
-      if (!response.ok) {
+      try {
+        const response = await advisorsApi.list()
+        return response.data
+      } catch {
         return { advisors: [], count: 25 }
       }
-      return response.json()
     },
   })
 
@@ -832,8 +834,8 @@ function HiveMindSubTab() {
     queryKey: ['hivemind-coordinators-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/agents/list/')
-        const data = await response.json()
+        const response = await agentsApi.list()
+        const data = response.data
         const coordinators = (data.agents || []).filter((a: any) =>
           a.name?.includes('Coordinator') || a.agent_name?.includes('Coordinator')
         )

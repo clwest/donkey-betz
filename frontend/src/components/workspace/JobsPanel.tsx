@@ -16,6 +16,7 @@ import {
   StopCircle, RotateCcw, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { workspaceOperationsApi } from '@/lib/api'
 
 interface Job {
   id: string
@@ -41,11 +42,12 @@ async function fetchJobs(): Promise<{
   queued: Job[]
   completed: Job[]
 }> {
-  // Fetch from workspace operations that are running/pending
-  const response = await fetch('/api/workspace/operations/?status=pending,running,completed,failed&limit=50', {
-    credentials: 'include'
+  // Session 860: Fixed to use correct endpoint /api/workspace-operations/
+  const response = await workspaceOperationsApi.list({
+    status: 'pending,running,completed,failed',
+    limit: 50
   })
-  const data = await response.json()
+  const data = response.data
 
   // Transform operations into jobs format
   const operations = data.operations || []
