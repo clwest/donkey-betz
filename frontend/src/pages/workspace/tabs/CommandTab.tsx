@@ -694,15 +694,12 @@ function ActivityFeedSection({
   const hasExecutions = recentActivity && recentActivity.length > 0
   const hasSystemActivity = systemActivity?.activities && systemActivity.activities.length > 0
 
-  if (!hasExecutions && !hasSystemActivity) {
-    return null
-  }
-
   // Count in-progress executions for badge
   // Session 839: Handle both 'running' (backend) and 'in_progress' (legacy)
   const inProgressCount = recentActivity.filter((a) => isRunningStatus(a.status)).length
 
   // Session 850: Group activities by initiative for inbox view
+  // Session 851: Moved useMemo BEFORE early return to avoid React hook order violation
   const groupedByInitiative = useMemo(() => {
     if (!systemActivity?.activities) return { linked: {}, unlinked: [] }
 
@@ -725,6 +722,11 @@ function ActivityFeedSection({
 
   // Session 850: Count initiatives with items
   const initiativeCount = Object.keys(groupedByInitiative.linked).length
+
+  // Session 851: Early return moved AFTER all hooks to satisfy React rules
+  if (!hasExecutions && !hasSystemActivity) {
+    return null
+  }
 
   const toggleInitiativeExpanded = (id: string) => {
     setExpandedInitiatives((prev) => {
