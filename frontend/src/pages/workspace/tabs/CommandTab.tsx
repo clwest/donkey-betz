@@ -161,17 +161,17 @@ export function CommandTab({
       {/* Mission Card */}
       <MissionCard mission={missionData?.mission} isLoading={loadingMission} />
 
-      {/* Metrics Grid */}
+      {/* Metrics Grid - Session 857: Removed external navigation, cards are informational or navigate within workspace */}
       <MetricsGrid
         metrics={missionData?.metrics_summary}
         isLoading={loadingMission}
-        onRevenueClick={() => (window.location.href = '/human?tab=revenue')}
-        onCostClick={() => (window.location.href = '/analytics')}
+        onRevenueClick={() => setActiveTab('governance')}
+        onCostClick={() => setActiveTab('infrastructure')}
         onCanonClick={() => setActiveTab('knowledge')}
         onPlaybooksClick={() => setActiveTab('knowledge')}
       />
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Session 857: All actions navigate within workspace */}
       <div className="card">
         <div className="flex items-center gap-2 mb-4">
           <Zap className="text-accent-amber" size={18} />
@@ -185,13 +185,13 @@ export function CommandTab({
             <Shield size={16} className="text-accent-blue" />
             View Governance
           </button>
-          <a
-            href="/human"
+          <button
+            onClick={() => setActiveTab('infrastructure')}
             className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
           >
             <Heart size={16} className="text-accent-red" />
             System Health
-          </a>
+          </button>
           <button
             onClick={() => setActiveTab('knowledge')}
             className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
@@ -225,6 +225,7 @@ export function CommandTab({
         onViewConversation={(id) => setSelectedConversationId(id)}
         onViewDream={(id) => setSelectedDreamId(id)}
         onViewDecision={(id) => setSelectedDecisionId(id)}
+        setActiveTab={setActiveTab}
       />
 
       {/* Pending Decisions Preview */}
@@ -249,11 +250,12 @@ export function CommandTab({
                     {showAllDecisions ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                   </button>
                 )}
+                {/* Session 857: Navigate to governance tab instead of external page */}
                 <button
-                  onClick={() => window.location.href = '/human?tab=attention'}
+                  onClick={() => setActiveTab('governance')}
                   className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1 cursor-pointer"
                 >
-                  Open in Human
+                  View in Governance
                   <ChevronRight size={12} />
                 </button>
               </div>
@@ -795,6 +797,8 @@ interface ActivityFeedSectionProps {
   onViewConversation?: (id: string) => void
   onViewDream?: (id: string) => void
   onViewDecision?: (id: string) => void
+  // Session 857: Navigate within workspace instead of external navigation
+  setActiveTab?: (tab: WorkspaceTab) => void
 }
 
 function ActivityFeedSection({
@@ -805,6 +809,7 @@ function ActivityFeedSection({
   onViewConversation,
   onViewDream,
   onViewDecision,
+  setActiveTab,
 }: ActivityFeedSectionProps) {
   const [activeTab, setActiveTab] = useState<'executions' | 'system'>('executions')
   // Session 850: Sub-view for system activity - chronological or inbox (grouped by initiative)
@@ -906,13 +911,16 @@ function ActivityFeedSection({
             )}
           </button>
         </div>
-        <a
-          href="/agents"
-          className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
-        >
-          View All Agents
-          <ChevronRight size={12} />
-        </a>
+        {/* Session 857: Navigate to intelligence tab instead of external page */}
+        {setActiveTab && (
+          <button
+            onClick={() => setActiveTab('intelligence')}
+            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+          >
+            View All Agents
+            <ChevronRight size={12} />
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -1320,14 +1328,11 @@ function SystemActivityCard({ item, onViewConversation, onViewDream, onViewDecis
               View Decision Details <ChevronRight size={12} />
             </button>
           )}
+          {/* Session 857: Removed external link - pilot details shown inline */}
           {item.type === 'pilot' && (
-            <a
-              href="/autonomous"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
-            >
-              View Autonomous Systems <ChevronRight size={12} />
-            </a>
+            <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+              Pilot Experiment
+            </span>
           )}
         </div>
       )}
