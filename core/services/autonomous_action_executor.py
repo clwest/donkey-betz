@@ -411,6 +411,7 @@ class AutonomousActionExecutor:
         intro += "Review recommended actions below."
 
         # Session 852: Set category='audit' so reports don't appear as blogs
+        # Session 860: Added parent_topic for Initiative linking
         blog = SelfBlog.objects.create(
             id=uuid.uuid4(),
             title=f"[Report] {topic}",
@@ -421,6 +422,7 @@ class AutonomousActionExecutor:
             tone="analytical",
             stats_snapshot={
                 'auto_generated': True,
+                'parent_topic': topic,  # Session 860: Required for Initiative linking
                 'reasoning': reasoning,
                 'insights_count': len(insights),
                 'patterns_count': len(patterns),
@@ -602,6 +604,7 @@ class AutonomousActionExecutor:
 """
 
                 # Session 852: Set category='research_brief' so research doesn't appear as blogs
+                # Session 860: Added parent_topic for Initiative linking
                 blog = SelfBlog.objects.create(
                     id=uuid.uuid4(),
                     title=f"[Research] {topic[:100]}",
@@ -612,6 +615,7 @@ class AutonomousActionExecutor:
                     tone="analytical",
                     stats_snapshot={
                         'auto_generated': True,
+                        'parent_topic': topic,  # Session 860: Required for Initiative linking
                         'action_type': 'request_research',
                         'deliverables': deliverables,
                         'owner_agent': owner_agent,

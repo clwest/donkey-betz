@@ -220,15 +220,25 @@ class InitiativeIntegrationService:
             stage_num = force_stage or self._determine_stage(document)
 
             # Get or create the stage record
-            stage, _ = InitiativeStage.objects.get_or_create(
+            stage, stage_created = InitiativeStage.objects.get_or_create(
                 initiative=initiative,
                 stage=stage_num,
                 defaults={'status': InitiativeStage.StageStatus.PENDING}
             )
 
+            # Session 860: Check if stage already has a document
+            old_document_id = stage.document_id
+            if old_document_id and old_document_id != document.id:
+                self.logger.info(
+                    f"[Session 860] Replacing existing document {old_document_id} "
+                    f"with {document.id} for Stage {stage_num}"
+                )
+
             # Link the document
             stage.document = document
-            stage.status = InitiativeStage.StageStatus.DRAFT
+            # Session 860: Don't downgrade status if stage was already APPROVED
+            if stage.status != InitiativeStage.StageStatus.APPROVED:
+                stage.status = InitiativeStage.StageStatus.DRAFT
             stage.save()
 
             self.logger.info(
@@ -595,6 +605,101 @@ class InitiativeIntegrationService:
             self.logger.warning(f"[Session 847] Document {blog_id} not found")
         except Exception as e:
             self.logger.error(f"[Session 847] Error linking document {blog_id}: {e}")
+
+    def backfill_unlinked_documents(self, dry_run: bool = True) -> Dict[str, Any]:
+        """
+        Session 860: Backfill unlinked documents that have parent_topic.
+
+        Finds all SelfBlog documents with parent_topic in stats_snapshot
+        that are not yet linked to any InitiativeStage, and links them.
+
+        Args:
+            dry_run: If True, only report what would be done without making changes
+
+        Returns:
+            Summary of backfill results
+        """
+        from core.models_unified_system import SelfBlog
+        from core.models_document_registry import InitiativeStage
+        from django.db.models import Q
+
+        results = {
+            'total_unlinked': 0,
+            'linked': [],
+            'skipped': [],
+            'errors': [],
+            'dry_run': dry_run,
+        }
+
+        # Find documents with parent_topic that are not linked to any stage
+        # Using raw SQL-style filter since stats_snapshot is JSONField
+        all_docs_with_parent = SelfBlog.objects.filter(
+            stats_snapshot__parent_topic__isnull=False
+        ).exclude(
+            stats_snapshot__parent_topic=''
+        )
+
+        # Filter out those already linked
+        linked_doc_ids = InitiativeStage.objects.filter(
+            document__isnull=False
+        ).values_list('document_id', flat=True)
+
+        unlinked_docs = all_docs_with_parent.exclude(id__in=linked_doc_ids)
+        results['total_unlinked'] = unlinked_docs.count()
+
+        self.logger.info(
+            f"[Session 860] Found {results['total_unlinked']} unlinked documents with parent_topic"
+        )
+
+        for doc in unlinked_docs:
+            parent_topic = doc.stats_snapshot.get('parent_topic')
+            stage = doc.stats_snapshot.get('stage')
+
+            try:
+                if dry_run:
+                    results['linked'].append({
+                        'doc_id': str(doc.id),
+                        'title': doc.title[:60],
+                        'parent_topic': parent_topic,
+                        'stage': stage,
+                        'action': 'would_link'
+                    })
+                else:
+                    result = self.link_document_to_stage(
+                        document=doc,
+                        topic=parent_topic,
+                        force_stage=stage
+                    )
+                    if result:
+                        results['linked'].append({
+                            'doc_id': str(doc.id),
+                            'title': doc.title[:60],
+                            'parent_topic': parent_topic,
+                            'stage': stage,
+                            'action': 'linked'
+                        })
+                    else:
+                        results['skipped'].append({
+                            'doc_id': str(doc.id),
+                            'title': doc.title[:60],
+                            'reason': 'link_document_to_stage returned None'
+                        })
+
+            except Exception as e:
+                self.logger.error(f"[Session 860] Error backfilling document {doc.id}: {e}")
+                results['errors'].append({
+                    'doc_id': str(doc.id),
+                    'title': doc.title[:60],
+                    'error': str(e)
+                })
+
+        self.logger.info(
+            f"[Session 860] Backfill {'preview' if dry_run else 'complete'}: "
+            f"{len(results['linked'])} linked, {len(results['skipped'])} skipped, "
+            f"{len(results['errors'])} errors"
+        )
+
+        return results
 
 
 # Singleton instance
