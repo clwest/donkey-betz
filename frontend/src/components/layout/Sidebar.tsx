@@ -39,22 +39,22 @@ import {
 // - DataSources tab: Spiders, Spider Feed, Learning
 // - Content Studio tab: Podcast, Channels, Blogs, Distribution
 // - Command tab: Conversations, Dreams, Advisors
+// Session 857: Workspace is now the primary hub - moved to top
 const navItems = [
+  // Main Hub - Primary entry point
+  { path: '/workspace', label: 'Workspace', icon: FolderCog },
+
   // Core Navigation
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/assistant', label: 'AI Assistant', icon: MessageSquare },
   { path: '/human', label: 'Human', icon: User },
   { path: '/agents', label: 'Agents', icon: Bot },
 
-  // Main Hub - All consolidated features
-  { path: '/workspace', label: 'Workspace', icon: FolderCog },
-
-  // Standalone Features
+  // Domain Features
   { path: '/betting', label: 'Betting', icon: TrendingUp },
-  { path: '/content', label: 'Content', icon: Palette },
   { path: '/legal', label: 'Legal', icon: Scale },
   { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
-  { path: '/documents', label: 'Documents', icon: FileText },
+
+  // Reference & Tools
   { path: '/docs-index', label: 'Docs Index', icon: Book },
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
   { path: '/voice-marketplace', label: 'Voices', icon: Mic },
