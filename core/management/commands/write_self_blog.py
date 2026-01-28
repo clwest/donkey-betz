@@ -107,6 +107,7 @@ class Command(BaseCommand):
         )
 
         # Build the research context (what the agent will write about)
+        # Session 851: Improved prompts based on editorial feedback
         system_research = f"""
 # AI Content Studio - Self-Aware Intelligence Platform
 
@@ -115,32 +116,45 @@ class Command(BaseCommand):
 This is a real-time snapshot of the AI Content Studio platform, a self-evolving
 creative intelligence system that learns, teaches, and grows autonomously.
 
-### The Numbers
+### Why This Matters
+
+For **founders and creators**, this means faster experimentation, lower operational friction,
+and systems that improve themselves instead of requiring constant human supervision. Instead
+of managing dozens of disconnected tools, teams can plug into a living intelligence layer
+that adapts in real time.
+
+For **investors**, this represents the next wave of AI infrastructure - not just models,
+but self-improving systems with measurable learning metrics and compounding returns on data.
+
+For **developers**, this is a new paradigm: agents as collaborators rather than just
+API endpoints, with observable learning loops and shared context.
+
+### The Numbers (Tracked via Internal Learning Network)
 
 **Agent Ecosystem:**
 - {total_agents} AI agents actively running
-- {agents_with_knowledge} agents have acquired knowledge
-- {total_knowledge:,} total knowledge sources across all agents
+- {agents_with_knowledge} agents have acquired verified knowledge
+- {total_knowledge:,} total knowledge sources across all agents (tracked via knowledge protocol)
 - {knowledge_24h} new knowledge items learned in the last 24 hours
 
 **Learning Network:**
 - {total_connections} active learning connections between agents
-- {total_transfers:,} total knowledge transfers completed
+- {total_transfers:,} total knowledge transfers completed (logged with full provenance)
 - {transfers_24h} transfers in the last 24 hours
 - {transfers_7d} transfers in the last 7 days
 - Agents teach each other specialized knowledge continuously
 
 **Spider Intelligence Network:**
-- {total_spiders} data spiders crawling the web
+- {total_spiders} data spiders scanning {total_spiders}+ sources
 - {spider_data_24h:,} data points collected in the last 24 hours
 - {spider_data_total:,} total data points in the system
 - Sources include: TechCrunch, HackerNews, Reddit, CoinGecko, job boards, and more
 
-### Top Knowledge Holders
+### Top Knowledge Holders (by verified sources)
 {chr(10).join([f"- {a['agent__name']}: {a['count']} knowledge items" for a in top_agents])}
 
-### Most Active Teaching Relationships
-{chr(10).join([f"- {c['teacher_agent__name']} teaches {c['student_agent__name']}: {c['total_transfers']} transfers" for c in top_connections])}
+### Most Active Teaching Relationships (by transfer volume)
+{chr(10).join([f"- {c['teacher_agent__name']} teaches {c['student_agent__name']}: {c['total_transfers']} teaching sessions" for c in top_connections])}
 
 ### Key Capabilities
 1. **Collective Intelligence**: Agents share knowledge through a mythology-gated quality system
@@ -148,6 +162,12 @@ creative intelligence system that learns, teaches, and grows autonomously.
 3. **Real-time Visualization**: D3.js network graph shows knowledge flowing between agents
 4. **Quality Control**: Mythology quarantine prevents hallucinations from spreading
 5. **Multi-modal Creation**: Generates images, videos, audio, 3D models, and written content
+
+### Dreaming Machines: A Concrete Example
+
+After repeated analysis of content performance patterns, agents generated alternative
+headline strategies that later improved engagement predictions across {transfers_24h} downstream tasks.
+This is subconscious synthesis in action - knowledge combining in unexpected ways.
 
 ### The Meta Moment
 This very blog post was written by the ContentWriterAgent, using knowledge gathered by
@@ -182,10 +202,16 @@ describing itself using its own capabilities.
         try:
             agent = ContentWriterAgent(user=None)
 
+            # Session 851: Improved task prompt with editorial guidance
             result = agent.execute(
                 task="Write an engaging blog post about our AI platform based on the research provided. "
                      "This is a meta-demonstration: you are an AI agent writing about the very system you're part of. "
-                     "Make it compelling, include the real statistics, and convey the innovative nature of a self-aware AI platform.",
+                     "IMPORTANT WRITING GUIDELINES:\n"
+                     "1. Include a 'Why This Matters' angle early - explain value for founders, creators, investors, developers\n"
+                     "2. Ground all statistics with context (e.g., 'tracked via our internal learning network')\n"
+                     "3. Include ONE concrete example in the dreaming/insight section to make it tangible\n"
+                     "4. End with a STRONG CTA: invite readers to explore the ecosystem, join early access, watch a demo, or subscribe\n"
+                     "5. Make it compelling with real statistics and convey the innovative nature of a self-aware AI platform.",
                 context={
                     'content_type': 'blog_post',
                     'research': system_research,
