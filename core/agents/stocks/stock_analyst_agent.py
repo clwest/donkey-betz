@@ -206,6 +206,30 @@ Alert on:
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 858: Extract user context for personalized financial analysis
+        user_context = context.get('user', {})
+        self._user_context = user_context
+
+        # Session 858: Enhance task with user's risk tolerance and investment goals
+        if user_context and user_context.get('has_user_context'):
+            user_name = user_context.get('name', '')
+            risk_tolerance = user_context.get('risk_tolerance', 'moderate')
+            goals = user_context.get('goals', [])
+
+            # Build user context addition to task
+            user_context_parts = []
+            if user_name:
+                user_context_parts.append(f"Analyzing for: {user_name}")
+            if risk_tolerance:
+                user_context_parts.append(f"Risk tolerance: {risk_tolerance}")
+            if goals:
+                goals_text = ", ".join(goals[:3]) if isinstance(goals, list) else str(goals)
+                user_context_parts.append(f"Investment goals: {goals_text}")
+
+            if user_context_parts:
+                task = f"{task}\n\n[Investor Profile: {'; '.join(user_context_parts)}]"
+                logger.info(f"📈 Session 858: Enhanced stock analysis with user profile for {user_name or 'user'}")
+
         # Session 750: Time Travel integration
         with self.time_travel_session("stock_analysis", task, input_data=context):
             # Handle simple diagnostic/identification queries

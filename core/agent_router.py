@@ -611,6 +611,7 @@ class AgentRouter:
         knowledge_context = self._get_knowledge_context(agent_name, task)
         workspace_context = self._get_workspace_context(agent_name, task)  # Session 798
         docs_context = self._get_docs_context(agent_name, task)  # Session 798
+        user_context = self._get_user_context(agent_name, task)  # Session 858
 
         # Merge contexts (same logic as in route())
         if learning_context and learning_context.get('has_patterns'):
@@ -665,6 +666,7 @@ class AgentRouter:
             'knowledge_context': knowledge_context,
             'workspace_context': workspace_context,  # Session 798
             'docs_context': docs_context,  # Session 798
+            'user_context': user_context,  # Session 858
             'gathered': True,
         }
 
@@ -722,6 +724,7 @@ class AgentRouter:
             knowledge_context = pre_gathered_context.get('knowledge_context', {})
             workspace_context = pre_gathered_context.get('workspace_context', {})  # Session 798
             docs_context = pre_gathered_context.get('docs_context', {})  # Session 798
+            user_context = pre_gathered_context.get('user_context', {})  # Session 858
             logger.info(f"Using pre-gathered context for {agent_name} (context gathering done outside timeout)")
         else:
             # Gather context (original behavior)
@@ -740,6 +743,8 @@ class AgentRouter:
             workspace_context = self._get_workspace_context(agent_name, task)
             # Session 798: Get documentation context for system awareness
             docs_context = self._get_docs_context(agent_name, task)
+            # Session 858: Get user context for personalization
+            user_context = self._get_user_context(agent_name, task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -885,6 +890,20 @@ class AgentRouter:
                 f"{len(docs_context.get('relevant_docs', []))} docs"
             )
 
+        # Session 858: Inject user context into context dict
+        # This makes user data available to ALL agents without changing execute() signature
+        if user_context and user_context.get('has_user_context'):
+            context['user'] = user_context
+            context['user_name'] = user_context.get('name', '')
+            context['user_goals'] = user_context.get('goals', [])
+            context['user_skills'] = user_context.get('skills', [])
+            context['user_communication_style'] = user_context.get('communication_style', 'professional')
+            logger.debug(
+                f"👤 [Session 858] Injected user context for {agent_name}: "
+                f"user={user_context.get('username', 'Unknown')}, "
+                f"style={user_context.get('communication_style', 'professional')}"
+            )
+
         # Execute the agent with tracking
         start_time = timezone.now()
         execution_record = None
@@ -901,6 +920,7 @@ class AgentRouter:
             'workspace': bool(spider_context.get('workspace')),  # Session 798
             'docs': bool(spider_context.get('docs')),  # Session 798
             'scifi_context': bool(scifi_context),
+            'user_context': bool(context.get('user')),  # Session 858
         }
         logger.info(
             f"🔌 [Session 758] Context injection for {agent_name}: "
@@ -908,8 +928,9 @@ class AgentRouter:
             f"learning={context_summary['learning_patterns']}, "
             f"advisor={context_summary['advisor_insights']}, "
             f"feedback={context_summary['performance_feedback']}, "
-            f"workspace={context_summary['workspace']}, "  # Session 798
-            f"docs={context_summary['docs']}, "  # Session 798
+            f"workspace={context_summary['workspace']}, "
+            f"docs={context_summary['docs']}, "
+            f"user={context_summary['user_context']}, "  # Session 858
             f"scifi={context_summary['scifi_context']}"
         )
 
@@ -969,6 +990,10 @@ class AgentRouter:
                 f"{agent_name} completed: success={result.success}, "
                 f"time={result.execution_time_ms}ms, execution_id={result.execution_id}"
             )
+
+            # Session 858: Record success for user learning feedback loop
+            if result.success:
+                self._record_user_learning(agent_name, task, result, context.get('user', {}))
 
             return result
 
@@ -1324,6 +1349,265 @@ class AgentRouter:
         except Exception as e:
             logger.warning(f"Failed to get docs context: {e}")
             return {}
+
+    # ==================== Session 858: User Context Injection ====================
+
+    # Agent category mappings for injection policy
+    # Controls what user data each agent type receives to avoid prompt bloat
+    AGENT_INJECTION_POLICIES = {
+        # Career/Job agents get full professional context
+        'career': ['skills', 'job_preferences', 'salary_range', 'work_history', 'success_patterns'],
+
+        # Content agents get tone/style preferences
+        'content': ['communication_style', 'tone_preferences', 'goals'],
+
+        # Financial agents get risk tolerance and betting preferences
+        'financial': ['risk_tolerance', 'betting_preferences', 'investment_goals'],
+
+        # Development agents get tech stack and skills
+        'development': ['skills', 'tech_stack', 'github_username'],
+
+        # Research agents get interests and learning goals
+        'research': ['interests', 'learning_goals', 'preferred_topics'],
+
+        # Default: minimal context for all others
+        'default': ['name', 'goals', 'communication_style']
+    }
+
+    AGENT_CATEGORY_MAP = {
+        # Career agents
+        'OpportunityPipelineAgent': 'career',
+        'CustomerResearchAgent': 'career',
+        'OpportunityScoringAgent': 'career',
+
+        # Content agents
+        'ContentWriterAgent': 'content',
+        'ContentStrategyAgent': 'content',
+        'PodcastCoordinatorAgent': 'content',
+        'AutonomousContentStudioCoordinator': 'content',
+        'TopicMinerAgent': 'content',
+        'VoiceCriticAgent': 'content',
+        'BrandIdentityAgent': 'content',
+        'SEOOptimizerAgent': 'content',
+        'SocialMediaAgent': 'content',
+
+        # Financial agents
+        'StockAnalystAgent': 'financial',
+        'StockAuditCoordinator': 'financial',
+        'SportsOddsAnalyst': 'financial',
+        'PredictionMarketAnalyst': 'financial',
+        'ArbitrageDetector': 'financial',
+        'BullCaseAgent': 'financial',
+        'BearCaseAgent': 'financial',
+        'MarketIntelligenceAgent': 'financial',
+        'MarketIntelligenceCoordinator': 'financial',
+
+        # Development agents
+        'CodeGeneratorAgent': 'development',
+        'FullStackDeveloperAgent': 'development',
+        'CodeReviewAgent': 'development',
+        'DevOpsAgent': 'development',
+        'TechnicalDocumentAgent': 'development',
+
+        # Research agents
+        'ResearchAgent': 'research',
+        'TrendAnalysisAgent': 'research',
+        'CompetitorAnalysisAgent': 'research',
+        'MarketIntelligenceAgent': 'research',
+    }
+
+    def _get_user_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 858: Get user context for personalized agent execution.
+
+        Uses AgentContextMiddleware for structured profile data and
+        MemoryContextService for dynamic memory/preferences.
+
+        Returns minimal context by default, with agent-specific enrichment
+        based on the injection policy.
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task description
+
+        Returns:
+            Dict with user context, or empty dict if no user
+        """
+        try:
+            # Skip for system tasks (no user)
+            if self.user is None:
+                logger.debug(f"👤 [Session 858] Skipping user context for {agent_name} (no user)")
+                return {}
+
+            from core.agent_context_middleware import get_user_context_for_agent
+            from core.services.memory_context_service import get_memory_context_service
+
+            # Get structured profile context
+            profile_context = get_user_context_for_agent(self.user)
+
+            # Get memory context (preferences, goals, decisions)
+            memory_service = get_memory_context_service(self.user)
+            memory_context = memory_service.get_prompt_context(self.user)
+
+            # Build user context with injection policy
+            user_context = self._apply_injection_policy(
+                agent_name=agent_name,
+                task=task,
+                profile_context=profile_context,
+                memory_context=memory_context
+            )
+
+            user_context['has_user_context'] = True
+
+            logger.debug(
+                f"👤 [Session 858] Built user context for {agent_name}: "
+                f"user={self.user.username}, fields={list(user_context.keys())}"
+            )
+
+            return user_context
+
+        except Exception as e:
+            logger.warning(f"Failed to get user context for {agent_name}: {e}")
+            return {}
+
+    def _apply_injection_policy(
+        self,
+        agent_name: str,
+        task: str,
+        profile_context: Dict[str, Any],
+        memory_context: str
+    ) -> Dict[str, Any]:
+        """
+        Session 858: Apply injection policy to avoid prompt bloat.
+
+        Different agents get different slices of user data based on
+        their category and needs.
+
+        Args:
+            agent_name: Name of the agent
+            task: Current task
+            profile_context: Full profile from AgentContextMiddleware
+            memory_context: Memory string from MemoryContextService
+
+        Returns:
+            Dict with filtered user context for this agent
+        """
+        # Always include (small footprint)
+        prof = profile_context.get('professional_profile', {})
+        basic = profile_context.get('basic_profile', {})
+        prefs = basic.get('preferences', {})
+
+        user_context = {
+            'name': prof.get('full_name', '') or profile_context.get('first_name', ''),
+            'username': profile_context.get('username', ''),
+            'communication_style': prefs.get('content_tone', 'professional'),
+            'memory_summary': memory_context[:500] if memory_context else '',
+        }
+
+        # Get agent category
+        category = self.AGENT_CATEGORY_MAP.get(agent_name, 'default')
+        policy_fields = self.AGENT_INJECTION_POLICIES.get(category, self.AGENT_INJECTION_POLICIES['default'])
+
+        # Conditionally add based on policy
+        if 'skills' in policy_fields:
+            skills_data = profile_context.get('skills', {})
+            user_context['skills'] = skills_data.get('skills_list', [])[:10]
+            user_context['top_skills'] = skills_data.get('top_skills', [])[:5]
+
+        if 'job_preferences' in policy_fields:
+            user_context['job_preferences'] = profile_context.get('job_preferences', {})
+
+        if 'salary_range' in policy_fields:
+            user_context['salary_range'] = prof.get('salary_range', {})
+
+        if 'work_history' in policy_fields:
+            background = profile_context.get('background', {})
+            user_context['work_history'] = background.get('work_history', [])[:3]
+            user_context['education'] = background.get('education', [])[:2]
+
+        if 'goals' in policy_fields:
+            personalization = profile_context.get('personalization', {})
+            user_context['goals'] = personalization.get('goals', [])[:3]
+
+        if 'success_patterns' in policy_fields:
+            patterns = profile_context.get('success_patterns', {})
+            user_context['success_patterns'] = patterns.get('success_patterns', [])[:3]
+            user_context['application_success_patterns'] = patterns.get('application_success_patterns', [])[:3]
+
+        if 'risk_tolerance' in policy_fields:
+            user_context['risk_tolerance'] = prefs.get('risk_tolerance', 'moderate')
+
+        if 'betting_preferences' in policy_fields:
+            # Extended profile has betting data
+            user_context['betting_preferences'] = {
+                'enabled': prof.get('sports_betting_enabled', False),
+                'favorite_sports': prof.get('favorite_sports', []),
+                'risk_level': prof.get('betting_risk_level', 'conservative'),
+                'bankroll': prof.get('betting_bankroll'),
+            }
+
+        if 'tech_stack' in policy_fields:
+            user_context['github_username'] = prof.get('github_username', '')
+            user_context['portfolio_url'] = prof.get('portfolio_url', '')
+
+        if 'tone_preferences' in policy_fields:
+            user_context['preferred_ai_model'] = prefs.get('ai_model', 'gpt-5-mini')
+            user_context['dark_mode'] = prefs.get('dark_mode', True)
+
+        if 'interests' in policy_fields or 'learning_goals' in policy_fields:
+            # Would come from EnhancedUserProfile
+            user_context['research_interests'] = basic.get('research_topics', [])
+
+        return user_context
+
+    def _record_user_learning(
+        self,
+        agent_name: str,
+        task: str,
+        result: 'AgentResult',
+        user_context: Dict[str, Any]
+    ) -> None:
+        """
+        Session 858: Record successful patterns for user learning.
+
+        This creates UserMemoryContext entries when agents succeed,
+        enabling the system to learn what works for this user.
+
+        Args:
+            agent_name: Name of the agent that executed
+            task: The task that was performed
+            result: The AgentResult from execution
+            user_context: The user context that was used
+        """
+        if not self.user or not result.success:
+            return
+
+        try:
+            from core.models import UserMemoryContext, EnhancedUserProfile
+
+            # Get or create enhanced profile
+            profile, _ = EnhancedUserProfile.objects.get_or_create(user=self.user)
+
+            # Record success pattern
+            UserMemoryContext.objects.create(
+                user=self.user,
+                profile=profile,
+                memory_type='success_pattern',
+                content=f"Successfully used {agent_name} for: {task[:200]}",
+                source=f'agent:{agent_name}',
+                importance=7,
+                context_metadata={
+                    'agent_name': agent_name,
+                    'task_summary': task[:500],
+                    'execution_time_ms': result.execution_time_ms,
+                    'tokens_used': result.tokens_used,
+                }
+            )
+
+            logger.debug(f"📝 [Session 858] Recorded success pattern for {self.user.username}: {agent_name}")
+
+        except Exception as e:
+            logger.debug(f"Could not record user learning (non-critical): {e}")
 
     def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None, experiment_id=None):
         """

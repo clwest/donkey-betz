@@ -412,11 +412,41 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         scifi_context: Dict[str, Any],
         spider_context: Dict[str, Any]
     ) -> AgentResult:
-        """Execute research based on the task."""
+        """
+        Execute research based on the task.
+
+        Session 858: Now receives user context via context['user'] for personalized research.
+        - User's interests and learning goals influence search priorities
+        - Memory summary provides past research patterns
+        """
         start_time = time.time()
         tool_calls_made = []
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
+
+        # Session 858: Extract user context for personalized research
+        user_context = context.get('user', {})
+        self._user_context = user_context
+
+        # Session 858: Enhance task with user context for personalized research
+        if user_context and user_context.get('has_user_context'):
+            user_name = user_context.get('name', '')
+            research_interests = user_context.get('research_interests', [])
+            memory_summary = user_context.get('memory_summary', '')
+
+            # Build user context addition to task
+            user_context_parts = []
+            if user_name:
+                user_context_parts.append(f"Researching for: {user_name}")
+            if research_interests:
+                interests_text = ", ".join(research_interests[:5]) if isinstance(research_interests, list) else str(research_interests)
+                user_context_parts.append(f"User's research interests: {interests_text}")
+            if memory_summary:
+                user_context_parts.append(f"Past research patterns: {memory_summary[:150]}...")
+
+            if user_context_parts:
+                task = f"{task}\n\n[User Context: {'; '.join(user_context_parts)}]"
+                logger.info(f"📚 Session 858: Enhanced research task with user context for {user_name or 'user'}")
 
         # Session 529: Build intelligent prompt with full context
         self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
