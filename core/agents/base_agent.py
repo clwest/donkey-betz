@@ -3350,6 +3350,7 @@ Consider this current data when formulating your response."""
     def _get_workspace_manager(self, user=None):
         """
         Session 695: Get WorkspaceManager for file operations.
+        Session 855: Added system user fallback for autonomous operations.
 
         The SKIN layer enables agents to write generated code to real project
         workspaces with full audit trail and rollback capability.
@@ -3361,6 +3362,13 @@ Consider this current data when formulating your response."""
             WorkspaceManager instance or None if unavailable
         """
         target_user = user or self.user
+
+        # Session 855: Fall back to system user for autonomous operations (Celery tasks)
+        if not target_user:
+            target_user = self._get_system_user()
+            if target_user:
+                logger.debug(f"🤖 Using system_autonomous user for workspace operations")
+
         if not target_user:
             return None
 
@@ -3369,6 +3377,39 @@ Consider this current data when formulating your response."""
             return WorkspaceManager(user=target_user)
         except Exception as e:
             logger.warning(f"Could not initialize WorkspaceManager: {e}")
+            return None
+
+    def _get_system_user(self):
+        """
+        Session 855: Get or create system user for autonomous operations.
+
+        When agents execute autonomously (via Celery tasks), there's no
+        authenticated user. This provides a system user so workspace
+        operations can still be tracked properly.
+
+        Returns:
+            User: The system user for autonomous operations, or None if failed
+        """
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            system_user, created = User.objects.get_or_create(
+                username='system_autonomous',
+                defaults={
+                    'email': 'system@autonomous.internal',
+                    'is_active': True,
+                    'first_name': 'System',
+                    'last_name': 'Autonomous',
+                }
+            )
+
+            if created:
+                logger.info("🤖 Created system_autonomous user for autonomous operations")
+
+            return system_user
+        except Exception as e:
+            logger.warning(f"Could not get system user: {e}")
             return None
 
     def _write_files_to_workspace(
