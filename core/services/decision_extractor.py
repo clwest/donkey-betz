@@ -309,6 +309,9 @@ class DecisionExtractor:
             # Session 593: Auto-create Pilot Readiness Gate for safety-sensitive decisions
             auto_create_gate_for_decision(summary)
 
+            # Session 849: Auto-create Initiative if decision has a suggested feature
+            auto_link_initiative_for_decision(summary)
+
             return summary
 
         except Exception as e:
@@ -447,6 +450,9 @@ class DecisionExtractor:
             # Session 593: Auto-create Pilot Readiness Gate for safety-sensitive decisions
             auto_create_gate_for_decision(summary)
 
+            # Session 849: Auto-create Initiative if decision has a suggested feature
+            auto_link_initiative_for_decision(summary)
+
             return summary
 
         except Exception as e:
@@ -574,6 +580,84 @@ def auto_create_gate_for_decision(decision) -> Optional['PilotReadinessGate']:
         return gate
     except Exception as e:
         logger.error(f"Session 593: Failed to create gate for decision {decision.id}: {e}")
+        return None
+
+
+# =============================================================================
+# Session 849: Auto-Initiative Creation for Decisions with Proposed Features
+# =============================================================================
+
+def auto_link_initiative_for_decision(decision) -> Optional['Initiative']:
+    """
+    Session 849: Auto-create and link an Initiative when a decision has a suggested_feature.
+
+    ChatGPT feedback: "When a Learning has Proposed Feature, auto-create/link an Initiative"
+
+    This creates the crucial link:
+    Conversation → Decision (with suggested_feature) → Initiative → Stage 1 doc
+
+    Args:
+        decision: AgentDecisionSummary instance
+
+    Returns:
+        The created/linked Initiative, or None if no feature was suggested
+    """
+    # Only create initiative if there's a suggested feature
+    if not decision.suggested_feature or len(decision.suggested_feature.strip()) < 10:
+        logger.debug(f"Session 849: No suggested_feature for decision '{decision.topic[:50]}...'")
+        return None
+
+    # Skip if already linked to an initiative
+    if decision.initiative_id:
+        logger.debug(f"Session 849: Decision already linked to Initiative {decision.initiative_id}")
+        return decision.initiative
+
+    try:
+        from core.services.initiative_integration_service import get_initiative_integration_service
+        from core.models_document_registry import Initiative
+
+        service = get_initiative_integration_service()
+
+        # Extract feature name from suggested_feature
+        # Format: "Name: X" or just use the first line
+        feature_text = decision.suggested_feature.strip()
+        feature_name = feature_text.split('\n')[0]
+
+        # Try to extract name if it follows "Name: X" pattern
+        if 'Name:' in feature_name:
+            feature_name = feature_name.split('Name:')[1].strip()
+        elif '-' in feature_name:
+            # Handle "- Name: X" bullet format
+            feature_name = feature_name.split('-', 1)[1].strip()
+            if 'Name:' in feature_name:
+                feature_name = feature_name.split('Name:')[1].strip()
+
+        # Fallback to topic if feature name extraction failed
+        if not feature_name or len(feature_name) < 3:
+            feature_name = decision.topic
+
+        # Create/get the initiative
+        initiative, created = service.get_or_create_initiative(
+            topic=feature_name,
+            description=f"Auto-created from conversation decision.\n\nSuggested Feature:\n{feature_text}\n\nRationale:\n{decision.rationale}",
+            source_decision_id=str(decision.id),
+            created_by="DecisionExtractor"
+        )
+
+        # Link the decision to the initiative
+        decision.initiative = initiative
+        decision.artifact_type = 'learning'  # Mark as learning since it proposes a feature
+        decision.save(update_fields=['initiative', 'artifact_type'])
+
+        if created:
+            logger.info(f"Session 849: Created Initiative '{initiative.name}' from decision '{decision.topic[:50]}...'")
+        else:
+            logger.info(f"Session 849: Linked decision to existing Initiative '{initiative.name}'")
+
+        return initiative
+
+    except Exception as e:
+        logger.error(f"Session 849: Failed to create Initiative for decision {decision.id}: {e}")
         return None
 
 
