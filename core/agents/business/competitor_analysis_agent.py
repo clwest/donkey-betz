@@ -592,9 +592,7 @@ If asked to create content, explain you can only research and suggest using the 
             Dict with viability_score (0-100), assessment, improvement_suggestions, pivot_ideas
         """
         try:
-            from openai import OpenAI
-            client = OpenAI()
-
+            # Session 857: Use inherited client with retry logic
             check_prompt = f"""Evaluate this business idea/research request for basic viability.
 
 Business Idea: {task}
@@ -632,11 +630,11 @@ Be constructive! Even bad ideas often have a kernel of something useful.
 For questionable ideas, help them become viable.
 For absurd ideas, suggest what realistic version might work."""
 
-            response = client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry-enabled completion call
+            response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": check_prompt}],
-                max_completion_tokens=2000  # Session 840: Increased for reasoning model
-                # Note: gpt-5-mini reasoning models don't support temperature
+                model="gpt-4o-mini",  # Session 857: Fixed model name
+                max_completion_tokens=2000
             )
 
             result = json.loads(response.choices[0].message.content)
@@ -1410,11 +1408,11 @@ Generate a structured SWOT analysis with:
 Return as JSON with keys: strengths, weaknesses, opportunities, threats (each an array of strings)."""
 
         try:
-            # Session 293: gpt-5-mini uses tokens for internal reasoning first
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry-enabled completion call
+            response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": swot_prompt}],
-                max_completion_tokens=4000,  # High enough for reasoning + output
+                model="gpt-4o-mini",  # Session 857: Fixed model name
+                max_completion_tokens=4000,
             )
 
             content = response.choices[0].message.content
@@ -1545,12 +1543,11 @@ Based on this data, provide a comprehensive competitive analysis with:
 Be specific and reference actual data points where possible. This analysis will be used for business planning."""
 
         try:
-            # Session 293: gpt-5-mini uses tokens for internal reasoning first
-            # Need 4000+ tokens to ensure room for reasoning + visible output
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry-enabled completion call
+            response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": analysis_prompt}],
-                max_completion_tokens=6000,  # High enough for reasoning + output
+                model="gpt-4o-mini",  # Session 857: Fixed model name
+                max_completion_tokens=6000,
             )
 
             analysis_text = response.choices[0].message.content
