@@ -112,6 +112,29 @@ if user and user.is_authenticated:
     queryset = queryset.filter(user=user)
 ```
 
+### Bug 5: Stock Agent Outputs Showing Raw JSON
+
+**Problem:** BullCaseAgent, BearCaseAgent outputs displayed as raw JSON instead of formatted cards.
+
+**Root Cause:** `SmartOutputRenderer` expected `thesis`, `key_points`, `risks` keys but stock agents return `analysis`, `conviction`, `ticker`.
+
+**Fix:** Added `StockAnalysisRenderer` component with:
+- Conviction badges (HIGH=green, MEDIUM=amber, LOW=gray)
+- Expandable analysis text
+- Bull/Bear case cards
+- Collapsible tool calls
+
+### Bug 6: Podcast Agents Showing "1. Item 1" Placeholder
+
+**Problem:** ModeratorAgent and other podcast agents wrote "1. Item 1" to workspace files instead of actual content.
+
+**Root Cause:** `_extract_agent_output_content()` checked for `content`/`summary`/`description` keys but podcast agents return `text` key:
+```python
+{"role": "HOST", "voice_id": "Antoni", "segment": "intro", "text": "Welcome to..."}
+```
+
+**Fix:** Added `text` to `CONTENT_KEYS` list and array item extraction in `core/tasks.py`.
+
 ---
 
 ## Known Limitations (Acceptable)
@@ -144,8 +167,10 @@ The Initiative detail modal is missing:
 |------|--------|
 | `core/views_research_demo.py` | Added health calculation to initiatives_api |
 | `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added document navigation link |
-| `core/views_platform_command.py` | Fixed field name mismatches in decision_summary_detail_view + user filter for pending decisions |
+| `core/views_platform_command.py` | Fixed field name mismatches + user filter for pending decisions |
 | `frontend/src/pages/workspace/tabs/CommandTab.tsx` | Added error feedback for failed decisions |
+| `frontend/src/components/SmartOutputRenderer.tsx` | Added StockAnalysisRenderer for Bull/Bear case outputs |
+| `core/tasks.py` | Added 'text' key extraction for podcast agents |
 
 ---
 
@@ -165,14 +190,14 @@ The health calculation in `InitiativeIntegrationService.get_initiative_health()`
 
 ### Merged to Main
 ```
+67e4e5ab fix(Session 848): Extract 'text' key from agent output for podcast agents (#360)
+4bba2cc1 fix(Session 848): Add StockAnalysisRenderer for Bull/Bear case agent outputs (#359)
+4d490bfc fix(Session 848): Filter pending decisions by user to enable approve/dismiss (#358)
 4cdea0d9 fix(Session 848): Fix 500 error on decision-summary endpoint (#356)
 dfc1b7df docs: Session 848 handoff - Initiative Pipeline testing & fixes (#355)
 a461fefb fix(Session 848): Add health to Initiatives API + document navigation (#354)
 1f879be9 feat(Session 847): Initiative Pipeline - Wire ThinkingAgent to 5-stage workflow (#353)
 ```
-
-### Pending PR
-- **#358** - fix(Session 848): Filter pending decisions by user to enable approve/dismiss
 
 ### Production Deployment
 ```bash
