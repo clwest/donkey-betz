@@ -236,18 +236,9 @@ class Command(BaseCommand):
         self.stdout.write(f'\n=== Executing Triage ===')
 
         # Waive low-risk gates
-        low_ids = [g['id'] for g in results['waived_low']]
-        if low_ids:
-            # Use the waive() method for proper status tracking
-            waived_count = 0
-            for gate in PilotReadinessGate.objects.filter(id__in=[
-                g['id'] for g in results['waived_low']
-            ]):
-                # Get full UUID from short ID
-                pass  # We'll update directly instead
-
-            # Direct update for efficiency
-            PilotReadinessGate.objects.filter(
+        if results['waived_low']:
+            # Direct bulk update for efficiency (avoids ID issues)
+            updated = PilotReadinessGate.objects.filter(
                 status='not_started',
                 risk_level='low',
                 initiative__isnull=True
@@ -257,11 +248,12 @@ class Command(BaseCommand):
                 waived_by='clear_gate_backlog_command',
                 waive_reason='Auto-waived: low-risk gate cleared by Session 855 backlog triage'
             )
-            self.stdout.write(self.style.SUCCESS(f'Waived {len(low_ids)} low-risk gates'))
+            self.stdout.write(self.style.SUCCESS(f'Waived {updated} low-risk gates'))
 
         # Waive stale medium-risk gates
+        stale_medium_updated = 0
         if results['waived_stale_medium']:
-            PilotReadinessGate.objects.filter(
+            stale_medium_updated = PilotReadinessGate.objects.filter(
                 status='not_started',
                 risk_level='medium',
                 created_at__lt=stale_threshold,
@@ -273,12 +265,13 @@ class Command(BaseCommand):
                 waive_reason=f'Auto-waived: stale medium-risk gate (>{options["stale_hours"]}h) cleared by Session 855 backlog triage'
             )
             self.stdout.write(self.style.SUCCESS(
-                f'Waived {len(results["waived_stale_medium"])} stale medium-risk gates'
+                f'Waived {stale_medium_updated} stale medium-risk gates'
             ))
 
         # Flag high-risk gates
+        high_flagged = 0
         if results['flagged_high']:
-            PilotReadinessGate.objects.filter(
+            high_flagged = PilotReadinessGate.objects.filter(
                 status='not_started',
                 risk_level__in=['high', 'critical']
             ).update(
@@ -286,7 +279,7 @@ class Command(BaseCommand):
                 blocked_reason='Flagged for human review by Session 855 backlog triage'
             )
             self.stdout.write(self.style.SUCCESS(
-                f'Flagged {len(results["flagged_high"])} high-risk gates for review'
+                f'Flagged {high_flagged} high-risk gates for review'
             ))
 
         total_processed = (
