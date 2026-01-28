@@ -32,7 +32,7 @@ import time
 import requests
 from typing import Dict, Any, List, Optional
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -330,6 +330,22 @@ If asked to do something outside your scope, politely explain you can only handl
         }
     ]
 
+    # Session 856: Mission Control configuration for human review
+    actionable_config = ActionableOutputConfig(
+        enabled=True,
+        item_type='insight',
+        default_urgency='medium',
+        min_confidence=0.0,
+        actions=[
+            {'id': 'approve', 'label': 'Render', 'style': 'primary', 'description': 'Start the render'},
+            {'id': 'review', 'label': 'Review Settings', 'style': 'secondary', 'description': 'Check render settings'},
+            {'id': 'dismiss', 'label': 'Cancel', 'style': 'danger', 'description': 'Cancel this operation'},
+        ],
+        # Include fields that DecisionDetailModal can render
+        payload_fields=['recommended_grade', 'recommendations', 'trending_styles', 'template', 'job_id', 'progress', 'task'],
+        max_items_per_hour=10
+    )
+
     def __init__(self, user=None):
         super().__init__(user=user)
         self._resolve_client = None
@@ -419,14 +435,61 @@ If asked to do something outside your scope, politely explain you can only handl
                     # Check if any tool call succeeded
                     successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
                     if successful_calls:
+                        # Session 856: Build meaningful message based on tool used
+                        first_call = successful_calls[0]
+                        tool_used = first_call['tool']
+                        tool_result = first_call['result']
+
+                        # Build descriptive message
+                        if tool_used == 'get_trending_grades':
+                            recommended = tool_result.get('recommended_grade', 'unknown')
+                            recommendations = tool_result.get('recommendations', [])
+                            trending_styles = tool_result.get('trending_styles', [])
+                            message = f"Trending color grades analysis complete. "
+                            message += f"Top recommendation: {recommended}. "
+                            if recommendations:
+                                other_grades = [r['preset'] for r in recommendations[:3] if r['preset'] != recommended]
+                                if other_grades:
+                                    message += f"Also trending: {', '.join(other_grades)}. "
+                            if trending_styles:
+                                message += f"Based on trends: {', '.join(trending_styles[:3])}."
+                        elif tool_used == 'render_video':
+                            job_id = tool_result.get('job_id', 'unknown')
+                            template = tool_result.get('template', 'default')
+                            color_grade = tool_result.get('color_grade', 'auto')
+                            message = f"Render job started (ID: {job_id[:8] if job_id else 'pending'}). "
+                            message += f"Using {template} template with {color_grade} color grading."
+                        elif tool_used == 'apply_color_grade':
+                            grade = tool_result.get('color_grade', 'unknown')
+                            desc = tool_result.get('grade_description', '')
+                            message = f"Color grading with '{grade}' preset started. "
+                            if desc:
+                                message += f"Effect: {desc}"
+                        elif tool_used == 'get_render_status':
+                            status = tool_result.get('status', 'unknown')
+                            progress = tool_result.get('progress', 0)
+                            message = f"Render status: {status} ({progress:.0f}% complete)."
+                            if tool_result.get('download_url'):
+                                message += " Video ready for download."
+                        else:
+                            message = tool_result.get('message', 'Resolve operation completed.')
+
                         result = AgentResult(
                             success=True,
-                            message="Resolve operation started",
+                            message=message,
                             data={
-                                'job_id': successful_calls[0]['result'].get('job_id'),
-                                'status': successful_calls[0]['result'].get('status', 'processing'),
-                                'color_grade': successful_calls[0]['result'].get('color_grade'),
-                                'tool_used': successful_calls[0]['tool']
+                                'job_id': tool_result.get('job_id'),
+                                'status': tool_result.get('status', 'processing'),
+                                'color_grade': tool_result.get('color_grade'),
+                                'tool_used': tool_used,
+                                # Session 856: Include human-readable details
+                                'task': task[:200],
+                                'recommendations': tool_result.get('recommendations', []),
+                                'trending_styles': tool_result.get('trending_styles', []),
+                                'recommended_grade': tool_result.get('recommended_grade'),
+                                'template': tool_result.get('template'),
+                                'progress': tool_result.get('progress'),
+                                'download_url': tool_result.get('download_url'),
                             },
                             agent_name=self.name,
                             execution_time_ms=execution_time,
