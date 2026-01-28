@@ -190,6 +190,8 @@ class WorkspaceOperationDetailSerializer(serializers.ModelSerializer):
     lines_changed = serializers.SerializerMethodField()
     is_file_operation = serializers.SerializerMethodField()
     is_git_operation = serializers.SerializerMethodField()
+    # Session 855: Add agent execution time from related AgentExecution
+    agent_execution_time_ms = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkspaceOperation
@@ -213,6 +215,7 @@ class WorkspaceOperationDetailSerializer(serializers.ModelSerializer):
             'success',
             'error_message',
             'execution_time_ms',
+            'agent_execution_time_ms',  # Session 855
             'requires_review',
             'reviewed_by_human',
             'human_approved',
@@ -244,6 +247,10 @@ class WorkspaceOperationDetailSerializer(serializers.ModelSerializer):
 
     def get_is_git_operation(self, obj):
         return obj.is_git_operation
+
+    def get_agent_execution_time_ms(self, obj):
+        """Session 855: Get agent execution time from related AgentExecution"""
+        return obj.agent_execution_time_ms
 
 
 class WorkspaceRegisterSerializer(serializers.Serializer):

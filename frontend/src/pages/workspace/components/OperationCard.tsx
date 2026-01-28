@@ -174,10 +174,16 @@ export function OperationCard({
               <span>•</span>
               <Clock size={12} />
               <span>{new Date(operation.created_at).toLocaleString()}</span>
-              {operation.execution_time_ms !== undefined && (
+              {/* Session 855: Show agent execution time if available, otherwise file operation time */}
+              {operation.agent_execution_time_ms ? (
                 <>
                   <span>•</span>
-                  <span>{operation.execution_time_ms}ms</span>
+                  <span title="Agent execution time">{operation.agent_execution_time_ms}ms</span>
+                </>
+              ) : operation.execution_time_ms !== undefined && (
+                <>
+                  <span>•</span>
+                  <span title="File operation time">{operation.execution_time_ms}ms</span>
                 </>
               )}
             </div>
