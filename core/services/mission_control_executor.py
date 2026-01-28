@@ -205,16 +205,78 @@ class MissionControlExecutor:
     def _execute_publish(self, attention_item, user, feedback, extra_data) -> ExecutionResult:
         """Publish content immediately."""
         payload = attention_item.payload or {}
-        content_id = payload.get('content_id') or payload.get('result_data', {}).get('content_id')
+        result_data = payload.get('result_data', {})
+        content_id = payload.get('content_id') or result_data.get('content_id')
+        content_type = payload.get('content_type') or result_data.get('content_type', 'blog_post')
+
+        # Session 857: If no content_id but we have content data, create the blog post first
+        if not content_id and result_data.get('content'):
+            try:
+                from core.models import Deliverable
+                content = result_data['content']
+
+                # Extract title and body from content structure
+                title = content.get('title', attention_item.title[:100])
+
+                # Build body from sections
+                body_parts = []
+                if content.get('intro'):
+                    body_parts.append(content['intro'])
+                for section in content.get('sections', []):
+                    if section.get('header'):
+                        body_parts.append(f"\n\n## {section['header']}\n\n")
+                    if section.get('content'):
+                        body_parts.append(section['content'])
+                if content.get('conclusion'):
+                    body_parts.append(f"\n\n## Conclusion\n\n{content['conclusion']}")
+
+                body = '\n'.join(body_parts)
+
+                # Create the deliverable
+                deliverable = Deliverable.objects.create(
+                    user=user,
+                    title=title,
+                    content=body,
+                    content_type=content_type,
+                    status='published',
+                    metadata={
+                        'tags': content.get('tags', []),
+                        'sources': content.get('sources', []),
+                        'meta_description': content.get('meta_description', ''),
+                        'source_agent': attention_item.source_agent,
+                        'attention_item_id': str(attention_item.id),
+                    }
+                )
+                content_id = str(deliverable.id)
+                logger.info(f"Created deliverable {content_id} from attention item {attention_item.id}")
+
+                return ExecutionResult(
+                    action_id='publish',
+                    status=ActionResult.SUCCESS,
+                    message=f"Blog post '{title}' published successfully",
+                    data={
+                        'content_id': content_id,
+                        'title': title,
+                        'content_type': content_type,
+                        'published_by': user.username
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Failed to create deliverable from content: {e}", exc_info=True)
+                return ExecutionResult(
+                    action_id='publish',
+                    status=ActionResult.FAILED,
+                    message=f"Failed to create content: {str(e)}"
+                )
 
         if not content_id:
             return ExecutionResult(
                 action_id='publish',
                 status=ActionResult.FAILED,
-                message="No content ID found in payload"
+                message="No content ID or content data found in payload"
             )
 
-        # Queue publish task
+        # Queue publish task for existing content
         try:
             from core.tasks import publish_content_task
             publish_content_task.delay(content_id, user.id)
