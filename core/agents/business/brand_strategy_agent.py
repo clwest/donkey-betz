@@ -976,9 +976,10 @@ name the exact styles from the library (e.g., "minimalist", "pixar", "vector") a
 provide specific hex color codes."""
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry-enabled completion call
+            response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": strategy_prompt}],
+                model="gpt-4o-mini",  # Session 857: Fixed model name
                 max_completion_tokens=6000,
             )
 

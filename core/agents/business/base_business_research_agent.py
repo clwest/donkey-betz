@@ -26,6 +26,7 @@ Child agents only need to define:
 import logging
 import json
 import time
+import random
 from typing import Dict, Any, List
 from abc import abstractmethod
 
@@ -209,6 +210,73 @@ class BaseBusinessResearchAgent(BaseAgent):
             from core.services.unified_intelligence_search import get_unified_intelligence_search
             self._unified_search = get_unified_intelligence_search()
         return self._unified_search
+
+    def _call_openai_with_retry(
+        self,
+        messages: List[Dict],
+        model: str = "gpt-4o-mini",
+        tools: List = None,
+        tool_choice: str = "auto",
+        max_completion_tokens: int = 6000,
+        max_retries: int = 3,
+        base_delay: float = 1.0,
+        max_delay: float = 30.0
+    ):
+        """
+        Session 857: Call OpenAI with retry logic for rate limits and transient errors.
+
+        Handles:
+        - Rate limit errors (429)
+        - Server errors (5xx)
+        - Connection errors
+
+        Uses exponential backoff with jitter.
+        """
+        last_exception = None
+
+        for attempt in range(max_retries):
+            try:
+                kwargs = {
+                    'model': model,
+                    'messages': messages,
+                    'max_completion_tokens': max_completion_tokens,
+                }
+                if tools:
+                    kwargs['tools'] = tools
+                    kwargs['tool_choice'] = tool_choice
+
+                return self.client.chat.completions.create(**kwargs)
+
+            except Exception as e:
+                last_exception = e
+                error_str = str(e).lower()
+
+                # Check if retryable
+                is_rate_limit = '429' in str(e) or 'rate limit' in error_str or 'quota' in error_str
+                is_server_error = any(code in str(e) for code in ['500', '502', '503', '504'])
+                is_connection_error = 'connection' in error_str or 'timeout' in error_str
+
+                is_retryable = is_rate_limit or is_server_error or is_connection_error
+
+                if not is_retryable or attempt >= max_retries - 1:
+                    logger.error(
+                        f"[Session 857] {self.name} LLM call failed after {attempt + 1} attempts: {e}"
+                    )
+                    raise
+
+                # Calculate exponential backoff with jitter
+                delay = min(base_delay * (2 ** attempt), max_delay)
+                delay = delay * (0.5 + random.random())  # Add jitter
+
+                error_type = 'rate_limit' if is_rate_limit else 'server_error' if is_server_error else 'connection'
+                logger.warning(
+                    f"[Session 857] {self.name} LLM call failed ({error_type}), "
+                    f"retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries}): {e}"
+                )
+
+                time.sleep(delay)
+
+        raise last_exception
 
     def _build_intelligent_prompt(
         self,
@@ -484,11 +552,11 @@ Research Type: {self.research_type}""")
         for iteration in range(max_iterations):
             logger.debug(f"{self.name}: GPT iteration {iteration + 1}")
 
-            # Session 338: Use gpt-5-mini for cost efficiency
-            # Reasoning models need max_completion_tokens (not max_tokens)
-            response = self.client.chat.completions.create(
-                model="gpt-5-mini",
+            # Session 857: Use retry wrapper for rate limit handling
+            # Session 338: Use gpt-4o-mini for cost efficiency
+            response = self._call_openai_with_retry(
                 messages=messages,
+                model="gpt-4o-mini",
                 tools=self.tools,
                 tool_choice="auto",
                 max_completion_tokens=6000,  # High for reasoning + output
