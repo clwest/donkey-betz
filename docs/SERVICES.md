@@ -1,8 +1,8 @@
 # Services Reference
 
-**Last Updated:** Session 702 (January 6, 2026)
+**Last Updated:** Session 858 (January 28, 2026)
 **Location:** `core/services/`
-**Total Services:** 99 service classes across 83 files
+**Total Services:** 124 service classes across 95 files
 
 ---
 
@@ -30,7 +30,62 @@ The services layer contains business logic separated from views and models. Serv
 | Event System | 3 | Event bus, handlers |
 | Chief of Staff | 5 | Reviews, decisions, concerns |
 | **System Health** | **2** | **HEART + LUNGS services (Sessions 701-702)** |
+| **Workspace & User Context** | **3** | **Workspace management, user context injection (Session 858)** |
 | Utility Services | 16 | Various specialized services |
+
+---
+
+## Workspace & User Context (Session 858)
+
+### WorkspaceManager
+**File:** `workspace_manager.py`
+**Purpose:** Central orchestrator for agent-to-filesystem operations (SKIN Layer)
+
+```python
+from core.services.workspace_manager import get_workspace_manager
+
+manager = get_workspace_manager(user)
+workspace = manager.get_active_workspace()  # Auto-creates personal workspace if none exists
+
+# Write files with audit trail
+operation = manager.write_file(
+    workspace=workspace,
+    relative_path='generated/report.md',
+    content='# Report...',
+    agent_name='ResearchAgent'
+)
+```
+
+**Session 858 Addition:** `get_active_workspace()` now auto-creates personal workspaces at `generated_content/users/{username}/` for any user without one. This eliminates "No active workspace" errors.
+
+### MemoryContextService
+**File:** `memory_context_service.py`
+**Purpose:** Builds personalized memory blocks for agent prompts
+
+```python
+from core.services.memory_context_service import get_memory_context_service
+
+service = get_memory_context_service(user)
+memory_context = service.get_prompt_context(user)
+# Returns: String with user's preferences, goals, decisions, success patterns
+```
+
+### AgentContextMiddleware
+**File:** `core/agent_context_middleware.py`
+**Purpose:** Extracts comprehensive user context for agent personalization
+
+```python
+from core.agent_context_middleware import get_user_context_for_agent
+
+user_context = get_user_context_for_agent(user)
+# Returns: {
+#   'professional_profile': {...},
+#   'skills': {...},
+#   'job_preferences': {...},
+#   'success_patterns': {...},
+#   ...
+# }
+```
 
 ---
 
