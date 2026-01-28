@@ -1,7 +1,7 @@
 # System Architecture
 
 **Platform:** Unified Donkey Betz - AI Content Creation Empire
-**Last Updated:** December 12, 2025 (Session 432)
+**Last Updated:** January 28, 2026 (Session 858)
 **Total Lines of Code:** 200,000+
 
 ---
@@ -355,6 +355,84 @@ The Discord-First platform provides an alternative interface to the web app.
 
 ---
 
+## User Context Injection (Session 858)
+
+**Location:** `core/agent_router.py`, `core/agent_context_middleware.py`
+
+All 74 agents now receive personalized user context for tailored responses.
+
+### How It Works
+
+```
+User Request
+    │
+    ▼
+AgentRouter._get_user_context()
+    │
+    ├─► AgentContextMiddleware.get_user_context_for_agent(user)
+    │       └─► ExtendedUserProfile (skills, job_preferences, salary)
+    │       └─► EnhancedUserProfile (goals, routines, learning style)
+    │       └─► UserPreferences (AI model, automation level)
+    │
+    ├─► MemoryContextService.get_prompt_context(user)
+    │       └─► UserMemoryContext (decisions, preferences, patterns)
+    │
+    └─► _apply_injection_policy(agent_category)
+            └─► Filters context based on agent type
+    │
+    ▼
+context['user'] = user_context
+    │
+    ▼
+Agent.execute(task, context, scifi_context, spider_context)
+```
+
+### Injection Policy by Agent Category
+
+| Category | Agents | Data Injected |
+|----------|--------|---------------|
+| **career** | OpportunityPipelineAgent, CustomerResearchAgent | skills, job_preferences, salary_range, success_patterns |
+| **content** | ContentWriterAgent, SEOOptimizerAgent | communication_style, tone_preferences, goals |
+| **financial** | StockAnalystAgent, SportsOddsAnalyst | risk_tolerance, betting_preferences, investment_goals |
+| **development** | CodeGeneratorAgent, DevOpsAgent | skills, tech_stack, github_username |
+| **research** | ResearchAgent, TrendAnalysisAgent | interests, learning_goals, preferred_topics |
+| **default** | All other agents | name, goals, communication_style |
+
+### Accessing User Context in Agents
+
+```python
+def execute(self, task, context, scifi_context, spider_context):
+    # Session 858: Extract user context
+    user_context = context.get('user', {})
+
+    # Quick access fields
+    user_name = context.get('user_name', '')
+    user_skills = context.get('user_skills', [])
+    user_goals = context.get('user_goals', [])
+    user_communication_style = context.get('user_communication_style', 'professional')
+
+    # Full user context dict
+    if user_context.get('has_user_context'):
+        risk_tolerance = user_context.get('risk_tolerance', 'moderate')
+        memory_summary = user_context.get('memory_summary', '')
+```
+
+### Learning Feedback Loop
+
+When agents succeed, patterns are recorded for future personalization:
+
+```python
+# In AgentRouter after successful execution
+UserMemoryContext.objects.create(
+    user=self.user,
+    memory_type='success_pattern',
+    content=f"Successfully used {agent_name} for: {task[:200]}",
+    source=f'agent:{agent_name}',
+)
+```
+
+---
+
 ## Request Flow
 
 ### Example: "Create a cyberpunk logo"
@@ -371,12 +449,14 @@ The Discord-First platform provides an alternative interface to the web app.
 3. AgentRouter.route("ImageAgent", task)
    │ - Injects sci-fi context (mood, memories)
    │ - Injects spider context (trends)
+   │ - Injects user context (Session 858)
    │
    ▼
 4. ImageAgent.execute()
    │ - _get_relevant_knowledge_for_task()
    │ - _get_fresh_spider_intelligence(['creative'])
    │ - _build_prompt() with injected context
+   │ - Uses context['user'] for personalization
    │
    ▼
 5. GPT-5-mini Function Call
