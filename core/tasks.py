@@ -26763,7 +26763,13 @@ def _extract_agent_output_content(result, task_description: str) -> str:
                                         output_parts.append(f"**{content_key}**: {len(val)} items\n")
                                         for j, sub_item in enumerate(val[:5], 1):
                                             if isinstance(sub_item, dict):
-                                                sub_title = sub_item.get('title') or sub_item.get('name') or f'Item {j}'
+                                                # Session 853: Expanded keys for sub-item title extraction
+                                                sub_title = (sub_item.get('title') or sub_item.get('name') or
+                                                             sub_item.get('domain') or sub_item.get('topic') or
+                                                             sub_item.get('source') or sub_item.get('type') or
+                                                             sub_item.get('category') or sub_item.get('shift_summary', '')[:40] or
+                                                             sub_item.get('recommendation', '')[:40] or
+                                                             sub_item.get('effect', '')[:40] or f'Item {j}')
                                                 sub_score = sub_item.get('overall_score') or sub_item.get('score', '')
                                                 score_str = f" (score: {sub_score})" if sub_score else ""
                                                 output_parts.append(f"  {j}. {sub_title}{score_str}\n")
@@ -26870,15 +26876,85 @@ def _extract_agent_output_content(result, task_description: str) -> str:
                         if statements.get('closing'):
                             output_parts.append(f"**Closing:** {statements['closing']}\n")
 
+                    # Session 853: Handle CulturalImpactAgent and similar structured tool outputs
+                    elif 'impact_analysis' in item or 'predicted_effects' in item or 'recommendations' in item or 'affected_domains' in item:
+                        # Cultural/Analysis agent outputs (CulturalImpactAgent, etc.)
+                        analysis_type = item.get('analysis_type', 'Analysis')
+                        domain = item.get('domain') or item.get('primary_domain', '')
+                        title_suffix = f" ({domain})" if domain else ""
+                        output_parts.append(f"### {i}. {analysis_type.replace('_', ' ').title()}{title_suffix}\n")
+
+                        # Impact analysis (nested dict with impact_score, affected_domains, etc.)
+                        if item.get('impact_analysis') and isinstance(item['impact_analysis'], dict):
+                            ia = item['impact_analysis']
+                            if ia.get('impact_score'):
+                                output_parts.append(f"**Impact Score:** {ia['impact_score']}\n")
+                            if ia.get('estimated_timeline'):
+                                output_parts.append(f"**Timeline:** {ia['estimated_timeline']}\n")
+                            if ia.get('confidence'):
+                                output_parts.append(f"**Confidence:** {ia['confidence']}\n")
+                            if ia.get('affected_domains'):
+                                output_parts.append(f"**Affected Domains:** {', '.join(ia['affected_domains'])}\n")
+
+                        # Shift summary
+                        if item.get('shift_summary'):
+                            output_parts.append(f"**Summary:** {item['shift_summary']}\n")
+
+                        # Narratives
+                        if item.get('old_narrative'):
+                            output_parts.append(f"**From:** {item['old_narrative']}\n")
+                        if item.get('new_narrative'):
+                            output_parts.append(f"**To:** {item['new_narrative']}\n")
+
+                        # Predicted effects (list)
+                        if item.get('predicted_effects') and isinstance(item['predicted_effects'], list):
+                            output_parts.append(f"**Predicted Effects:**\n")
+                            for effect in item['predicted_effects'][:8]:
+                                output_parts.append(f"  - {effect}\n")
+
+                        # Recommendations (list)
+                        if item.get('recommendations') and isinstance(item['recommendations'], list):
+                            output_parts.append(f"**Recommendations:**\n")
+                            for rec in item['recommendations'][:8]:
+                                output_parts.append(f"  - {rec}\n")
+
+                        # Affected domains (list of dicts or strings)
+                        if item.get('affected_domains') and isinstance(item['affected_domains'], list):
+                            output_parts.append(f"**Affected Domains:**\n")
+                            for ad in item['affected_domains'][:6]:
+                                if isinstance(ad, dict):
+                                    dom = ad.get('domain', 'Unknown')
+                                    strength = ad.get('connection_strength') or ad.get('impact_level', '')
+                                    output_parts.append(f"  - {dom}: {strength}\n")
+                                elif isinstance(ad, str):
+                                    output_parts.append(f"  - {ad}\n")
+
+                        # Historical parallels (list)
+                        if item.get('parallels') and isinstance(item['parallels'], list):
+                            output_parts.append(f"**Historical Parallels:**\n")
+                            for p in item['parallels'][:5]:
+                                if isinstance(p, dict):
+                                    p_title = p.get('title', 'Untitled')
+                                    p_domain = p.get('domain', '')
+                                    output_parts.append(f"  - {p_title} ({p_domain})\n")
+
+                        # Note/message
+                        if item.get('note'):
+                            output_parts.append(f"*Note: {item['note']}*\n")
+
                     else:
                         # Standard dict item format
                         # Session 848: Added 'text' key for podcast agents (ModeratorAgent, etc.)
                         # Session 851: Added more keys for diverse agent outputs
+                        # Session 853: Expanded fallback keys for more agent types
                         item_title = (item.get('title') or item.get('name') or item.get('source') or
-                                      item.get('segment') or item.get('topic') or item.get('role') or f'Item {i}')
+                                      item.get('segment') or item.get('topic') or item.get('role') or
+                                      item.get('domain') or item.get('shift_summary', '')[:50] or
+                                      item.get('analysis_type') or item.get('narrative') or f'Item {i}')
                         item_content = (item.get('content') or item.get('summary') or item.get('description') or
                                         item.get('text') or item.get('message') or item.get('output') or
-                                        item.get('analysis') or '')
+                                        item.get('analysis') or item.get('note') or
+                                        item.get('shift_summary') or item.get('assumption') or '')
                         item_score = item.get('overall_score') or item.get('score', '')
                         score_str = f" (score: {item_score})" if item_score else ""
                         output_parts.append(f"### {i}. {item_title}{score_str}\n{item_content[:500]}\n")
