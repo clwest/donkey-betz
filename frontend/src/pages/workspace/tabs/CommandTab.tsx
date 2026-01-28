@@ -75,6 +75,8 @@ export function CommandTab({
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
   // Session 848: Decision error feedback
   const [decisionError, setDecisionError] = useState<string | null>(null)
+  // Session 855: Toggle to show all decisions inline
+  const [showAllDecisions, setShowAllDecisions] = useState(false)
 
   // Queries
   const {
@@ -236,16 +238,35 @@ export function CommandTab({
                   Pending Decisions ({governanceData.pending_decisions_count})
                 </h3>
               </div>
-              <a
-                href="/human?tab=attention"
-                className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
-              >
-                View All
-                <ChevronRight size={12} />
-              </a>
+              <div className="flex items-center gap-3">
+                {/* Session 855: Toggle to show all inline */}
+                {governanceData.pending_decisions.length > 3 && (
+                  <button
+                    onClick={() => setShowAllDecisions(!showAllDecisions)}
+                    className="text-xs text-gray-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {showAllDecisions ? 'Show Less' : `Show All ${governanceData.pending_decisions.length}`}
+                    {showAllDecisions ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  </button>
+                )}
+                <button
+                  onClick={() => window.location.href = '/human?tab=attention'}
+                  className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1 cursor-pointer"
+                >
+                  Open in Human
+                  <ChevronRight size={12} />
+                </button>
+              </div>
             </div>
-            <div className="space-y-3">
-              {governanceData.pending_decisions.slice(0, 3).map((decision: any) => (
+            {/* Session 855: Scrollable area when showing all */}
+            <div className={cn(
+              "space-y-3",
+              showAllDecisions && governanceData.pending_decisions.length > 5 && "max-h-96 overflow-y-auto pr-2"
+            )}>
+              {(showAllDecisions
+                ? governanceData.pending_decisions
+                : governanceData.pending_decisions.slice(0, 3)
+              ).map((decision: any) => (
                 <DecisionCard
                   key={decision.id}
                   decision={decision}
