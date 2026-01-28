@@ -1006,11 +1006,69 @@ class WorkspaceManager:
         return workspace
 
     def get_active_workspace(self) -> Optional[ProjectWorkspace]:
-        """Get the user's currently active workspace."""
-        return ProjectWorkspace.objects.filter(
+        """
+        Get the user's currently active workspace.
+
+        Session 855: For system_autonomous user, creates a default workspace
+        if none exists (for autonomous agent operations).
+        """
+        workspace = ProjectWorkspace.objects.filter(
             user=self.user,
             is_active=True
         ).first()
+
+        # Session 855: Create default workspace for system user if needed
+        if not workspace and self.user.username == 'system_autonomous':
+            workspace = self._ensure_system_workspace()
+
+        return workspace
+
+    def _ensure_system_workspace(self) -> Optional[ProjectWorkspace]:
+        """
+        Session 855: Create or get default workspace for autonomous operations.
+
+        Returns:
+            ProjectWorkspace for system operations, or None if creation fails
+        """
+        try:
+            # Check if system workspace already exists
+            workspace = ProjectWorkspace.objects.filter(
+                user=self.user,
+                name='System Autonomous Workspace'
+            ).first()
+
+            if workspace:
+                workspace.is_active = True
+                workspace.save(update_fields=['is_active'])
+                return workspace
+
+            # Create system workspace pointing to the project root
+            import os
+            from pathlib import Path
+
+            # Use the Django project root as the workspace
+            project_root = Path(__file__).parent.parent.parent  # core/services -> core -> project root
+            output_dir = project_root / 'generated_content'
+
+            # Create output directory if it doesn't exist
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            workspace = ProjectWorkspace.objects.create(
+                user=self.user,
+                name='System Autonomous Workspace',
+                root_path=str(output_dir),
+                workspace_type='local',
+                is_active=True,
+                allow_file_write=True,
+                protected_paths=['.env', '.env.local', 'secrets/', 'credentials/'],
+            )
+
+            logger.info(f"🤖 Created system autonomous workspace at {output_dir}")
+            return workspace
+
+        except Exception as e:
+            logger.warning(f"Could not ensure system workspace: {e}")
+            return None
 
     def set_active_workspace(self, workspace_id: UUID) -> ProjectWorkspace:
         """Set a workspace as the active target for operations."""
