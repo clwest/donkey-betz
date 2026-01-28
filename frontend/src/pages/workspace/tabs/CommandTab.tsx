@@ -3,7 +3,7 @@
 // Session 832: Enhanced Recent Activity with system activity feed
 // Session 834: Clickable System Activity cards with expanded details
 
-import { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
@@ -32,6 +32,10 @@ import {
   FlaskConical,
   // Session 849: Help icon for "Needs Input" badge
   HelpCircle,
+  // Session 850: Inbox view icons
+  Inbox,
+  FolderOpen,
+  Link2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, humanApi } from '@/lib/api'
@@ -682,6 +686,10 @@ function ActivityFeedSection({
   onViewDecision,
 }: ActivityFeedSectionProps) {
   const [activeTab, setActiveTab] = useState<'executions' | 'system'>('executions')
+  // Session 850: Sub-view for system activity - chronological or inbox (grouped by initiative)
+  const [systemView, setSystemView] = useState<'chrono' | 'inbox'>('chrono')
+  // Session 850: Track expanded initiative groups in inbox view
+  const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(new Set())
 
   const hasExecutions = recentActivity && recentActivity.length > 0
   const hasSystemActivity = systemActivity?.activities && systemActivity.activities.length > 0
@@ -693,6 +701,42 @@ function ActivityFeedSection({
   // Count in-progress executions for badge
   // Session 839: Handle both 'running' (backend) and 'in_progress' (legacy)
   const inProgressCount = recentActivity.filter((a) => isRunningStatus(a.status)).length
+
+  // Session 850: Group activities by initiative for inbox view
+  const groupedByInitiative = useMemo(() => {
+    if (!systemActivity?.activities) return { linked: {}, unlinked: [] }
+
+    const linked: Record<string, { name: string; items: any[] }> = {}
+    const unlinked: any[] = []
+
+    for (const item of systemActivity.activities) {
+      if (item.initiative_id && item.initiative_name) {
+        if (!linked[item.initiative_id]) {
+          linked[item.initiative_id] = { name: item.initiative_name, items: [] }
+        }
+        linked[item.initiative_id].items.push(item)
+      } else {
+        unlinked.push(item)
+      }
+    }
+
+    return { linked, unlinked }
+  }, [systemActivity?.activities])
+
+  // Session 850: Count initiatives with items
+  const initiativeCount = Object.keys(groupedByInitiative.linked).length
+
+  const toggleInitiativeExpanded = (id: string) => {
+    setExpandedInitiatives((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   return (
     <div className="card">
@@ -768,34 +812,158 @@ function ActivityFeedSection({
 
       {activeTab === 'system' && (
         <div className="space-y-2">
-          {/* Activity type counts */}
-          {systemActivity?.counts && Object.keys(systemActivity.counts).length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-gray-700/50">
-              {Object.entries(systemActivity.counts).map(([type, count]) => (
-                <span
-                  key={type}
-                  className="text-xs px-2 py-1 bg-gray-800 rounded flex items-center gap-1"
-                >
-                  {getSystemActivityIcon(type)}
-                  <span className="capitalize">{type}s</span>
-                  <span className="text-gray-500">{count}</span>
-                </span>
-              ))}
+          {/* Session 850: View toggle - Chronological vs Inbox */}
+          <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-700/50">
+            {/* Activity type counts */}
+            <div className="flex flex-wrap gap-2">
+              {systemActivity?.counts && Object.keys(systemActivity.counts).length > 0 &&
+                Object.entries(systemActivity.counts).map(([type, count]) => (
+                  <span
+                    key={type}
+                    className="text-xs px-2 py-1 bg-gray-800 rounded flex items-center gap-1"
+                  >
+                    {getSystemActivityIcon(type)}
+                    <span className="capitalize">{type}s</span>
+                    <span className="text-gray-500">{count}</span>
+                  </span>
+                ))}
             </div>
+            {/* View toggle */}
+            <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-0.5">
+              <button
+                onClick={() => setSystemView('chrono')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors',
+                  systemView === 'chrono'
+                    ? 'bg-gray-700 text-white'
+                    : 'text-gray-400 hover:text-white'
+                )}
+                title="Chronological view"
+              >
+                <Clock size={12} />
+                Recent
+              </button>
+              <button
+                onClick={() => setSystemView('inbox')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors',
+                  systemView === 'inbox'
+                    ? 'bg-gray-700 text-white'
+                    : 'text-gray-400 hover:text-white'
+                )}
+                title="Inbox view - grouped by initiative"
+              >
+                <Inbox size={12} />
+                Inbox
+                {initiativeCount > 0 && (
+                  <span className="text-[10px] bg-primary-500/30 text-primary-400 px-1 rounded">
+                    {initiativeCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Chronological View */}
+          {systemView === 'chrono' && (
+            <>
+              {systemActivity?.activities?.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No recent system activity</p>
+              ) : (
+                systemActivity?.activities?.map((item: any) => (
+                  <SystemActivityCard
+                    key={item.id}
+                    item={item}
+                    onViewConversation={onViewConversation}
+                    onViewDream={onViewDream}
+                    onViewDecision={onViewDecision}
+                  />
+                ))
+              )}
+            </>
           )}
 
-          {systemActivity?.activities?.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No recent system activity</p>
-          ) : (
-            systemActivity?.activities?.map((item: any) => (
-              <SystemActivityCard
-                key={item.id}
-                item={item}
-                onViewConversation={onViewConversation}
-                onViewDream={onViewDream}
-                onViewDecision={onViewDecision}
-              />
-            ))
+          {/* Session 850: Inbox View - Grouped by Initiative */}
+          {systemView === 'inbox' && (
+            <div className="space-y-3">
+              {/* Linked to Initiatives */}
+              {Object.entries(groupedByInitiative.linked).map(([initId, group]) => (
+                <div key={initId} className="rounded-lg border border-primary-500/30 bg-primary-500/5 overflow-hidden">
+                  <button
+                    onClick={() => toggleInitiativeExpanded(initId)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-primary-500/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FolderOpen size={16} className="text-primary-400" />
+                      <span className="text-sm font-medium text-white">{group.name}</span>
+                      <span className="text-xs bg-primary-500/20 text-primary-400 px-1.5 py-0.5 rounded">
+                        {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {expandedInitiatives.has(initId) ? (
+                      <ChevronDown size={16} className="text-gray-400" />
+                    ) : (
+                      <ChevronRight size={16} className="text-gray-400" />
+                    )}
+                  </button>
+                  {expandedInitiatives.has(initId) && (
+                    <div className="border-t border-primary-500/20 p-2 space-y-2">
+                      {group.items.map((item: any) => (
+                        <SystemActivityCard
+                          key={item.id}
+                          item={item}
+                          onViewConversation={onViewConversation}
+                          onViewDream={onViewDream}
+                          onViewDecision={onViewDecision}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Unlinked Items */}
+              {groupedByInitiative.unlinked.length > 0 && (
+                <div className="rounded-lg border border-gray-700 bg-gray-800/30 overflow-hidden">
+                  <button
+                    onClick={() => toggleInitiativeExpanded('__unlinked__')}
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-800/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Link2 size={16} className="text-gray-500" />
+                      <span className="text-sm font-medium text-gray-400">Unlinked Items</span>
+                      <span className="text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">
+                        {groupedByInitiative.unlinked.length}
+                      </span>
+                    </div>
+                    {expandedInitiatives.has('__unlinked__') ? (
+                      <ChevronDown size={16} className="text-gray-500" />
+                    ) : (
+                      <ChevronRight size={16} className="text-gray-500" />
+                    )}
+                  </button>
+                  {expandedInitiatives.has('__unlinked__') && (
+                    <div className="border-t border-gray-700/50 p-2 space-y-2">
+                      {groupedByInitiative.unlinked.map((item: any) => (
+                        <SystemActivityCard
+                          key={item.id}
+                          item={item}
+                          onViewConversation={onViewConversation}
+                          onViewDream={onViewDream}
+                          onViewDecision={onViewDecision}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Empty state */}
+              {Object.keys(groupedByInitiative.linked).length === 0 &&
+                groupedByInitiative.unlinked.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-4">No system activity</p>
+                )}
+            </div>
           )}
         </div>
       )}
