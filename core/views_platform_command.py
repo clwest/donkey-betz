@@ -684,6 +684,7 @@ def decision_summary_detail_view(request, decision_id):
     GET /api/platform/decision-summary/<uuid:decision_id>/
 
     Session 845: Get detail for a single AgentDecisionSummary.
+    Session 848: Fixed field name mismatches causing 500 errors.
     Used by DecisionDetailModal for System Activity items.
     """
     from core.models_unified_system import AgentDecisionSummary
@@ -693,50 +694,64 @@ def decision_summary_detail_view(request, decision_id):
     except AgentDecisionSummary.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Decision not found'}, status=404)
 
+    # Session 848: Use correct field names from AgentDecisionSummary model
+    # - rationale (not reasoning)
+    # - recommended_stance (not final_decision)
+    # - participants (not lead_agent, contributing_agents)
+    # - key_insights (not key_factors)
+    participants = decision.participants or []
+    lead_agent = participants[0] if participants else 'Multiple Agents'
+    conversation_id = str(decision.conversation.id) if decision.conversation else None
+
     # Build rich response
-    return JsonResponse({
-        'success': True,
-        'item': {
-            'id': str(decision.id),
-            'title': decision.topic or 'Untitled Decision',
-            'summary': decision.reasoning or decision.final_decision or '',
-            'urgency': 'medium',  # Default since AgentDecisionSummary doesn't have urgency
-            'status': getattr(decision, 'status', 'pending'),
-            'item_type': 'decision_summary',
-            'source_type': 'boardroom',
-            'source_agent': decision.lead_agent or 'Multiple Agents',
-            'source_id': str(decision.conversation_id) if decision.conversation_id else None,
-            'payload': {
-                'decision_type': decision.decision_type,
-                'impact_area': decision.impact_area,
-                'confidence_level': decision.confidence_level,
-                'dissenting_views': decision.dissenting_views,
-                'key_factors': decision.key_factors,
-                'next_steps': decision.next_steps,
-                'contributing_agents': decision.contributing_agents,
-                'final_decision': decision.final_decision,
-            },
-            'priority_score': decision.confidence_level or 0.5,
-            'impact_estimate': None,
-            'ml_prediction': None,
-            'ml_confidence': decision.confidence_level,
-            'ml_recommendation': decision.final_decision,
-            'decision': getattr(decision, 'status', None),
-            'decision_feedback': None,
-            'decision_confidence': decision.confidence_level,
-            'decided_at': decision.created_at.isoformat() if decision.created_at else None,
-            'human_overrode_ml': False,
-            'override_reason': None,
-            'deferred_until': None,
-            'created_at': decision.created_at.isoformat() if decision.created_at else None,
-            'viewed_at': None,
-            'expires_at': None,
-            'verification_outcome': None,
-            'verified_at': None,
-            'verification_profit': None,
-            'verification_notes': None,
-        }
-    })
+    try:
+        return JsonResponse({
+            'success': True,
+            'item': {
+                'id': str(decision.id),
+                'title': decision.topic or 'Untitled Decision',
+                'summary': decision.rationale or decision.recommended_stance or '',
+                'urgency': 'medium',  # Default since AgentDecisionSummary doesn't have urgency
+                'status': decision.status or 'draft',
+                'item_type': 'decision_summary',
+                'source_type': 'boardroom',
+                'source_agent': lead_agent,
+                'source_id': str(conversation_id) if conversation_id else None,
+                'payload': {
+                    'decision_type': decision.decision_type,
+                    'impact_area': decision.impact_area,
+                    'key_insights': decision.key_insights or [],
+                    'recommended_stance': decision.recommended_stance,
+                    'suggested_feature': decision.suggested_feature,
+                    'rationale': decision.rationale,
+                    'participants': participants,
+                    'is_canonical': decision.is_canonical,
+                },
+                'priority_score': 0.5,  # No confidence_level field
+                'impact_estimate': None,
+                'ml_prediction': None,
+                'ml_confidence': None,
+                'ml_recommendation': decision.recommended_stance,
+                'decision': decision.status,
+                'decision_feedback': None,
+                'decision_confidence': None,
+                'decided_at': decision.created_at.isoformat() if decision.created_at else None,
+                'human_overrode_ml': False,
+                'override_reason': None,
+                'deferred_until': None,
+                'created_at': decision.created_at.isoformat() if decision.created_at else None,
+                'viewed_at': None,
+                'expires_at': None,
+                'verification_outcome': None,
+                'verified_at': None,
+                'verification_profit': None,
+                'verification_notes': None,
+            }
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error serializing decision {decision_id}: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @csrf_exempt
