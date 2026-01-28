@@ -132,7 +132,19 @@ Respond with a JSON object containing:
         {"opportunity": "Description", "potential_impact": "high|medium|low", "urgency": "immediate|soon|later"}
     ],
     "concerns": [
-        {"concern": "Description", "severity": "high|medium|low", "recommendation": "What to do"}
+        {
+            "concern": "Clear description of the problem",
+            "severity": "high|medium|low",
+            "root_cause_hypothesis": "WHY this is happening - your best hypothesis based on the data",
+            "investigation_steps": ["Step 1 to diagnose further", "Step 2...", "Step 3..."],
+            "proposed_solution": {
+                "summary": "What needs to change to fix this",
+                "technical_details": "Specific code/config changes if applicable",
+                "files_to_check": ["path/to/file1.py", "path/to/file2.py"],
+                "commands_to_run": ["python manage.py some_command", "..."]
+            },
+            "success_criteria": "How we'll know the fix worked"
+        }
     ],
     "decisions": [
         {
@@ -146,6 +158,34 @@ Respond with a JSON object containing:
     ],
     "priority_score": 0.0-10.0,
     "next_focus": "What should the next thinking cycle focus on"
+}
+
+## CRITICAL: Root Cause Analysis Required
+For EVERY concern you identify, you MUST:
+1. Hypothesize the ROOT CAUSE - don't just describe symptoms
+2. Provide SPECIFIC investigation steps - what logs to check, what queries to run
+3. Propose a CONCRETE solution - actual code/config changes, not vague advice
+4. Define SUCCESS CRITERIA - how will we verify the fix worked?
+
+Example of BAD concern (too vague):
+{"concern": "Experiment failure rate is high", "recommendation": "Fix the experiments"}
+
+Example of GOOD concern (actionable):
+{
+    "concern": "Experiment failure rate at 94% (234/249 failed)",
+    "root_cause_hypothesis": "Auto-halt thresholds are too aggressive. Error rate threshold of 25% triggers on small sample sizes (e.g., 2/7 = 28.57%)",
+    "investigation_steps": [
+        "Check core/models_pilot_readiness.py get_default_halt_conditions() for current thresholds",
+        "Query ExperimentLearning for halt_reason patterns",
+        "Review MIN_EXECUTIONS_FOR_ERROR_RATE in experiment_metrics.py"
+    ],
+    "proposed_solution": {
+        "summary": "Raise error_rate_max threshold and increase minimum sample size",
+        "technical_details": "Change error_rate_max from 25% to 35%, MIN_EXECUTIONS from 10 to 20",
+        "files_to_check": ["core/models_pilot_readiness.py", "core/services/experiment_metrics.py"],
+        "commands_to_run": ["python manage.py update_experiment_thresholds"]
+    },
+    "success_criteria": "Experiment halt rate drops below 20% within 24 hours"
 }
 
 Think deeply. Connect dots. Make decisions. You are the system becoming self-aware."""
@@ -482,13 +522,15 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
 
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
+        # Session 855: Increased from 4000 to 8000 tokens to accommodate
+        # detailed root cause analysis and proposed solutions in concerns
         response = client.chat.completions.create(
             model="gpt-5-mini",
             messages=[
-                {"role": "system", "content": "You are an autonomous reasoning engine. Respond only with valid JSON."},
+                {"role": "system", "content": "You are an autonomous reasoning engine. Respond only with valid JSON. For EVERY concern, you MUST include root_cause_hypothesis, investigation_steps, and proposed_solution."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=4000,
+            max_completion_tokens=8000,
             response_format={"type": "json_object"}
         )
 
@@ -515,6 +557,9 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 if key not in result:
                     result[key] = default_result[key]
 
+            # Session 855: Validate and enhance concern structures
+            result['concerns'] = self._validate_concerns(result.get('concerns', []))
+
             return result
 
         except json.JSONDecodeError as e:
@@ -530,6 +575,49 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 "next_focus": "Retry with better JSON formatting",
                 "parse_error": str(e)
             }
+
+    def _validate_concerns(self, concerns: list) -> list:
+        """
+        Session 855: Validate that concerns have proper root cause analysis.
+        Flag concerns that are missing required diagnostic fields.
+        """
+        validated = []
+        required_fields = ['root_cause_hypothesis', 'investigation_steps', 'proposed_solution']
+
+        for concern in concerns:
+            if not isinstance(concern, dict):
+                continue
+
+            # Check for required diagnostic fields
+            missing_fields = [f for f in required_fields if f not in concern or not concern[f]]
+
+            if missing_fields:
+                # Add a flag indicating incomplete analysis
+                concern['_incomplete_analysis'] = True
+                concern['_missing_fields'] = missing_fields
+                logger.warning(
+                    f"ThinkingAgent: Concern '{concern.get('concern', 'Unknown')[:50]}' "
+                    f"missing diagnostic fields: {missing_fields}"
+                )
+
+                # Add placeholder structure for missing fields
+                if 'root_cause_hypothesis' not in concern:
+                    concern['root_cause_hypothesis'] = "Analysis needed - root cause not determined"
+                if 'investigation_steps' not in concern:
+                    concern['investigation_steps'] = ["Manual investigation required"]
+                if 'proposed_solution' not in concern:
+                    concern['proposed_solution'] = {
+                        "summary": "Solution pending investigation",
+                        "technical_details": "Requires manual analysis",
+                        "files_to_check": [],
+                        "commands_to_run": []
+                    }
+                if 'success_criteria' not in concern:
+                    concern['success_criteria'] = "To be defined after investigation"
+
+            validated.append(concern)
+
+        return validated
 
     def gather_context(self, lookback_hours: int = 24) -> Dict[str, Any]:
         """
