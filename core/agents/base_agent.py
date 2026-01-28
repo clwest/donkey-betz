@@ -1634,7 +1634,9 @@ Consider these trends when crafting the response to maximize relevance and engag
         relevant_docs = self._get_relevant_docs_for_task(task, limit=3)
         if relevant_docs:
             prompt_parts.append(f"\n\n## Relevant Documentation (Session 786)")
-            prompt_parts.append("The following curated documentation may inform your response:")
+            # Session 850: Clarify that docs are reference material, not tasks
+            prompt_parts.append("**REFERENCE ONLY:** The following describes EXISTING code/features.")
+            prompt_parts.append("Use this to understand the codebase - do NOT treat as work to be done.")
             for idx, doc in enumerate(relevant_docs, 1):
                 title = doc.get('title', 'Documentation')
                 summary = doc.get('summary', '')[:200]
