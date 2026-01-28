@@ -1322,11 +1322,11 @@ function SystemActivityCard({ item, onViewConversation, onViewDream, onViewDecis
           )}
           {item.type === 'pilot' && (
             <a
-              href="/pilots"
+              href="/autonomous"
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
             >
-              Go to Pilots Page <ChevronRight size={12} />
+              View Autonomous Systems <ChevronRight size={12} />
             </a>
           )}
         </div>

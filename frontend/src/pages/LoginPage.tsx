@@ -21,7 +21,7 @@ export default function LoginPage() {
       const response = await authApi.login(username, password)
       const { token, user } = response.data
       login(token, user)
-      navigate('/dashboard')
+      navigate('/workspace')  // Session 857: Workspace is now the main hub
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
       setError(error.response?.data?.detail || 'Login failed. Please try again.')

@@ -72,7 +72,8 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        {/* Session 857: Workspace is now the main hub */}
+        <Route index element={<Navigate to="/workspace" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="assistant" element={<AssistantPage />} />
         <Route path="agents" element={<AgentsPage />} />

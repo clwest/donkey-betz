@@ -402,14 +402,14 @@ function IntegrationSubTab() {
           value={systemStats.spiders}
           icon={Server}
           color="text-accent-green"
-          onClick={() => window.location.href = '/spider-health'}
+          onClick={() => window.location.href = '/spiders'}
         />
         <StatCard
           label="Celery Tasks"
           value={systemStats.celeryTasks}
           icon={Clock}
           color="text-accent-amber"
-          onClick={() => window.location.href = '/celery-monitor'}
+          onClick={() => window.location.href = '/admin'}
         />
         <StatCard
           label="Services"
@@ -439,7 +439,7 @@ function IntegrationSubTab() {
             label="Celery Workers"
             status={services.celery ? 'running' : 'stopped'}
             icon={Cpu}
-            onClick={() => window.location.href = '/celery-monitor'}
+            onClick={() => window.location.href = '/admin'}
           />
           <HealthCheckRow
             label="WebSocket"
@@ -455,14 +455,14 @@ function IntegrationSubTab() {
         <h4 className="text-sm font-medium text-gray-400 mb-3">Data Pipeline</h4>
         <div className="grid grid-cols-3 gap-4">
           <button
-            onClick={() => window.location.href = '/spider-health'}
+            onClick={() => window.location.href = '/spiders'}
             className="text-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
           >
             <div className="text-2xl font-bold text-primary-400">23,847</div>
             <div className="text-xs text-gray-500">Spider Data Items</div>
           </button>
           <button
-            onClick={() => window.location.href = '/spider-health'}
+            onClick={() => window.location.href = '/spiders'}
             className="text-center p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
           >
             <div className="text-2xl font-bold text-accent-green">40,435</div>
@@ -521,8 +521,8 @@ function ServicesSubTab() {
           description="120 service classes powering the platform"
           stats={[
             { label: 'Agents', value: stats.agents || 213, link: '/agents' },
-            { label: 'Spiders', value: stats.spiders || 77, link: '/spider-health' },
-            { label: 'Celery Tasks', value: stats.scheduled_tasks || 233, link: '/celery-monitor' },
+            { label: 'Spiders', value: stats.spiders || 77, link: '/spiders' },
+            { label: 'Celery Tasks', value: stats.scheduled_tasks || 233, link: '/admin' },
           ]}
           onClick={() => window.location.href = '/integration-health'}
         />
@@ -530,11 +530,11 @@ function ServicesSubTab() {
           title="API Layer"
           description="RESTful endpoints for all functionality"
           stats={[
-            { label: 'Platform APIs', value: 16, link: '/api-docs' },
-            { label: 'Deliverables APIs', value: 9, link: '/api-docs' },
-            { label: 'Body APIs', value: 65, link: '/api-docs' },
+            { label: 'Platform APIs', value: 16, link: '/admin' },
+            { label: 'Deliverables APIs', value: 9, link: '/admin' },
+            { label: 'Body APIs', value: 65, link: '/admin' },
           ]}
-          onClick={() => window.location.href = '/api-docs'}
+          onClick={() => window.location.href = '/admin'}
         />
       </div>
 
@@ -543,9 +543,9 @@ function ServicesSubTab() {
         <h4 className="text-sm font-medium text-gray-400 mb-3">Quick Links</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <QuickLinkButton label="Django Admin" href="/admin" icon={Settings} />
-          <QuickLinkButton label="Celery Monitor" href="/celery-monitor" icon={Activity} />
-          <QuickLinkButton label="Spider Health" href="/spider-health" icon={Server} />
-          <QuickLinkButton label="API Docs" href="/api-docs" icon={Eye} />
+          <QuickLinkButton label="Celery Monitor" href="/admin" icon={Activity} />
+          <QuickLinkButton label="Spider Health" href="/spiders" icon={Server} />
+          <QuickLinkButton label="API Docs" href="/admin" icon={Eye} />
         </div>
       </div>
     </div>

@@ -424,14 +424,14 @@ function AutomationSubTab() {
           value={stats.runningPilots}
           icon={Play}
           color="text-accent-green"
-          onClick={() => window.location.href = '/celery-monitor'}
+          onClick={() => window.location.href = '/admin'}
         />
         <StatCard
           label="Scheduled Tasks"
           value={stats.celeryTasks}
           icon={Clock}
           color="text-primary-400"
-          onClick={() => window.location.href = '/celery-monitor'}
+          onClick={() => window.location.href = '/admin'}
         />
         <StatCard
           label="Remediation Tasks"
