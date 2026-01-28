@@ -47,7 +47,7 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, OutputCategory, QualityTier
 from ml.auto_selection import TaskType
 
 # Session 523: Import Intelligent Prompting System
@@ -503,6 +503,20 @@ For this {content_type}, ensure:
                     if isinstance(generated_content, dict) else len(str(generated_content).split())
                 )
 
+                # Session 857: Check for truncation and calculate quality tier
+                was_truncated = (
+                    generated_content.get('_truncated', False)
+                    if isinstance(generated_content, dict)
+                    else getattr(self, '_last_generation_truncated', False)
+                )
+
+                quality_tier, confidence = self._calculate_quality_tier(
+                    content_data=generated_content if isinstance(generated_content, dict) else {},
+                    content_type=content_type,
+                    target_word_count=word_count,
+                    was_truncated=was_truncated
+                )
+
                 # Session 856: Build descriptive message for content review UI
                 content_type_display = content_config['name']
                 message_parts = [f"{content_type_display}: \"{content_title[:80]}\""]
@@ -511,6 +525,11 @@ For this {content_type}, ensure:
                     message_parts.append(f"{tone} tone")
                 if target_audience:
                     message_parts.append(f"for {target_audience}")
+
+                # Session 857: Add quality tier and truncation warning to message
+                message_parts.append(f"[{quality_tier.upper()}]")
+                if was_truncated:
+                    message_parts.append("⚠️ TRUNCATED")
 
                 descriptive_message = " | ".join(message_parts)
 
@@ -530,11 +549,20 @@ For this {content_type}, ensure:
                             'word_count_target': word_count,
                             'actual_word_count': actual_word_count,
                             'topic': topic or self._extract_topic(research, task),
+                            # Session 857: Add quality metadata
+                            'quality_tier': quality_tier,
+                            'confidence': confidence,
+                            'truncated': was_truncated,
                         }
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time,
-                    decisions_made=self._tt_decision_count
+                    decisions_made=self._tt_decision_count,
+                    # Session 857: Set new AgentResult fields
+                    quality_tier=quality_tier,
+                    output_category=OutputCategory.CONTENT.value,
+                    truncated=was_truncated,
+                    confidence=confidence,
                 )
 
                 self.mark_decision_outcome(
@@ -830,6 +858,7 @@ Generate the {content_config['name']} now:"""
         Generate content using GPT with intelligent prompting.
 
         Session 523: Now uses _build_intelligent_system_prompt for rich context.
+        Session 857: Added truncation detection and tracking.
         """
         try:
             from openai import OpenAI
@@ -864,6 +893,16 @@ Generate the {content_config['name']} now:"""
             )
 
             content_text = response.choices[0].message.content
+            finish_reason = response.choices[0].finish_reason
+
+            # Session 857: Detect truncation
+            was_truncated = finish_reason == 'length'
+            if was_truncated:
+                logger.warning(f"⚠️ Session 857: Content truncated at {len(content_text)} chars (finish_reason=length)")
+                # Store truncation state for later use in result
+                self._last_generation_truncated = True
+            else:
+                self._last_generation_truncated = False
 
             # Try to parse as JSON
             try:
@@ -883,6 +922,9 @@ Generate the {content_config['name']} now:"""
                 if 'full_text' not in content_data:
                     content_data['full_text'] = self._extract_full_text(content_data, content_type)
 
+                # Session 857: Add truncation flag to content data
+                content_data['_truncated'] = was_truncated
+
                 return content_data
 
             except json.JSONDecodeError:
@@ -891,7 +933,8 @@ Generate the {content_config['name']} now:"""
                 return {
                     'full_text': content_text,
                     'raw_content': content_text,
-                    'parse_error': 'Content was not valid JSON'
+                    'parse_error': 'Content was not valid JSON',
+                    '_truncated': was_truncated
                 }
 
         except Exception as e:
@@ -973,6 +1016,98 @@ Generate the {content_config['name']} now:"""
         if '.' in text[:100]:
             return text[:text.find('.')].strip()[:50]
         return text[:50].strip()
+
+    def _calculate_quality_tier(
+        self,
+        content_data: Dict[str, Any],
+        content_type: str,
+        target_word_count: int,
+        was_truncated: bool
+    ) -> tuple:
+        """
+        Session 857: Calculate quality tier and confidence score for content.
+
+        Returns:
+            tuple: (quality_tier: str, confidence: float)
+
+        Quality Tiers:
+            - GOLD: 80+ points - Ready to publish as-is
+            - SILVER: 50-79 points - Publishable with minor edits
+            - BRONZE: <50 points - Needs significant review/editing
+        """
+        score = 0
+        max_score = 100
+
+        # 1. Check for required structure fields (up to 30 points)
+        content_config = CONTENT_TYPES.get(content_type, {})
+        required_fields = content_config.get('structure', [])
+        fields_present = sum(1 for f in required_fields if content_data.get(f))
+        if required_fields:
+            structure_score = (fields_present / len(required_fields)) * 30
+            score += structure_score
+            logger.debug(f"   Structure score: {structure_score:.1f}/30 ({fields_present}/{len(required_fields)} fields)")
+
+        # 2. Word count meets target (up to 20 points)
+        full_text = content_data.get('full_text', '')
+        actual_word_count = len(full_text.split()) if full_text else 0
+        if target_word_count > 0:
+            word_ratio = min(actual_word_count / target_word_count, 1.5)  # Cap at 150%
+            if word_ratio >= 0.8:  # Within 80% of target
+                score += 20
+            elif word_ratio >= 0.5:
+                score += 10
+            logger.debug(f"   Word count score: {actual_word_count}/{target_word_count} words (ratio: {word_ratio:.2f})")
+
+        # 3. Has sources/citations (15 points) - Session 523 requirement
+        sources = content_data.get('sources', [])
+        if sources and len(sources) > 0:
+            score += 15
+            logger.debug(f"   Sources score: 15/15 ({len(sources)} sources)")
+        else:
+            logger.debug(f"   Sources score: 0/15 (no sources)")
+
+        # 4. Not truncated (15 points)
+        if not was_truncated:
+            score += 15
+            logger.debug(f"   Truncation score: 15/15 (complete)")
+        else:
+            logger.debug(f"   Truncation score: 0/15 (TRUNCATED)")
+
+        # 5. Has title/headline (10 points)
+        has_title = bool(
+            content_data.get('title') or
+            content_data.get('headline') or
+            content_data.get('subject_line')
+        )
+        if has_title:
+            score += 10
+            logger.debug(f"   Title score: 10/10")
+
+        # 6. Has conclusion/CTA (10 points)
+        has_ending = bool(
+            content_data.get('conclusion') or
+            content_data.get('cta') or
+            content_data.get('outro') or
+            content_data.get('sign_off')
+        )
+        if has_ending:
+            score += 10
+            logger.debug(f"   Ending score: 10/10")
+
+        # Calculate confidence as normalized score
+        confidence = round(score / max_score, 2)
+
+        # Determine tier
+        if score >= 80:
+            tier = QualityTier.GOLD.value
+        elif score >= 50:
+            tier = QualityTier.SILVER.value
+        else:
+            tier = QualityTier.BRONZE.value
+
+        logger.info(f"📊 Session 857: Quality tier = {tier.upper()} (score: {score}/{max_score}, confidence: {confidence})")
+
+        return tier, confidence
 
     def _execute_tool_call(
         self,

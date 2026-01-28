@@ -46,7 +46,36 @@ import time
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
+from enum import Enum
 from openai import OpenAI
+
+
+class OutputCategory(Enum):
+    """
+    Session 857: Standard output categories for agent results.
+
+    Used for UI routing, filtering, and harmonization.
+    """
+    CONTENT = "content"      # Blog, article, newsletter, scripts
+    RESEARCH = "research"    # Analysis, findings, intelligence
+    CREATION = "creation"    # Image, video, audio, 3D assets
+    CODE = "code"            # Generated code, scripts, configs
+    ANALYSIS = "analysis"    # Trends, scores, reports, audits
+    DECISION = "decision"    # Recommendations, choices, strategies
+    GENERAL = "general"      # Default for unclassified outputs
+
+
+class QualityTier(Enum):
+    """
+    Session 857: Quality tiers for content readiness.
+
+    - BRONZE: Needs significant review/editing
+    - SILVER: Publishable with minor edits
+    - GOLD: Ready to publish as-is
+    """
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
 
 # Session 727: Migrated TimeTravelMixin to core/agents
 from core.agents.time_travel_mixin import TimeTravelMixin
@@ -94,6 +123,11 @@ class AgentResult:
     cost: float = 0.0
     # Session 765: Link to AgentExecution record for intelligence data
     execution_id: Optional[str] = None
+    # Session 857: Quality and truncation tracking
+    quality_tier: str = "bronze"  # bronze/silver/gold - content readiness level
+    output_category: str = "general"  # content/research/creation/code/analysis/decision
+    truncated: bool = False  # True if output was cut off due to token limits
+    confidence: float = 0.0  # Overall confidence in the output (0.0-1.0)
 
     # Session 840: Backwards compatibility alias for .content
     @property
@@ -117,6 +151,11 @@ class AgentResult:
             'cost': self.cost,
             # Session 765: Include execution ID for intelligence lookup
             'execution_id': self.execution_id,
+            # Session 857: Quality and truncation tracking
+            'quality_tier': self.quality_tier,
+            'output_category': self.output_category,
+            'truncated': self.truncated,
+            'confidence': self.confidence,
         }
         # Session 400: Include knowledge attribution if present
         if self.knowledge_attribution:
