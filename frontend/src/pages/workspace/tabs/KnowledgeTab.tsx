@@ -6,7 +6,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, FileText, ClipboardList, ExternalLink, Loader2, X, AlertCircle, Calendar, FileCode, Shield, CheckCircle, Clock, XCircle, ChevronDown } from 'lucide-react'
+import { BookOpen, FileText, ClipboardList, Loader2, X, AlertCircle, Calendar, FileCode, Shield, CheckCircle, Clock, XCircle, ChevronDown } from 'lucide-react'
 import { platformApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import ReactMarkdown from 'react-markdown'
@@ -380,20 +380,17 @@ export function KnowledgeTab() {
         )}
       </div>
 
-      {/* Full Documentation Index Link */}
+      {/* Session 857: Documentation info shown inline instead of external link */}
       <div className="card">
-        <a
-          href="/docs-index"
-          className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
-        >
+        <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
           <div>
-            <h4 className="font-medium">Full Documentation Index</h4>
+            <h4 className="font-medium">Documentation Index</h4>
             <p className="text-sm text-gray-400 mt-1">
-              Browse all 1,500+ documentation files with cross-reference graph
+              1,500+ documentation files available in canon and playbooks above
             </p>
           </div>
-          <ExternalLink size={20} className="text-primary-400" />
-        </a>
+          <BookOpen size={20} className="text-primary-400" />
+        </div>
       </div>
 
       {/* Document Preview Modal */}
