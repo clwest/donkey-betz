@@ -85,6 +85,33 @@ initiatives_list.append({
 1. `/api/platform/decision-summary/{id}/` - For `AgentDecisionSummary` (now works)
 2. `/api/human/attention/{id}/` - Fallback for `HumanAttentionItem` (404 correct since ID is a decision)
 
+### Bug 4: Pending Decisions Not Updating After Approve/Dismiss
+
+**Problem:** Users clicking Approve/Dismiss on "Pending Decisions" in Production UI saw no change - items stayed in the list.
+
+**Root Cause:** Mismatch between query and action:
+
+| Component | Behavior |
+|-----------|----------|
+| `_get_pending_decisions()` | Returns ALL users' pending items (no user filter) |
+| `record_decision()` | Only allows deciding on items owned by `request.user` |
+
+This caused silent 404 failures when trying to decide on another user's items.
+
+**Fix:**
+1. **Backend**: `_get_pending_decisions(user=None)` now accepts user parameter and filters when provided
+2. **Frontend**: Added `onError` handler to `decisionMutation` to display error feedback
+
+```python
+# Before (broken):
+pending = HumanAttentionItem.objects.filter(status='pending')
+
+# After (fixed):
+queryset = HumanAttentionItem.objects.filter(status='pending')
+if user and user.is_authenticated:
+    queryset = queryset.filter(user=user)
+```
+
 ---
 
 ## Known Limitations (Acceptable)
@@ -117,7 +144,8 @@ The Initiative detail modal is missing:
 |------|--------|
 | `core/views_research_demo.py` | Added health calculation to initiatives_api |
 | `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added document navigation link |
-| `core/views_platform_command.py` | Fixed field name mismatches in decision_summary_detail_view |
+| `core/views_platform_command.py` | Fixed field name mismatches in decision_summary_detail_view + user filter for pending decisions |
+| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | Added error feedback for failed decisions |
 
 ---
 
@@ -142,6 +170,9 @@ dfc1b7df docs: Session 848 handoff - Initiative Pipeline testing & fixes (#355)
 a461fefb fix(Session 848): Add health to Initiatives API + document navigation (#354)
 1f879be9 feat(Session 847): Initiative Pipeline - Wire ThinkingAgent to 5-stage workflow (#353)
 ```
+
+### Pending PR
+- **#358** - fix(Session 848): Filter pending decisions by user to enable approve/dismiss
 
 ### Production Deployment
 ```bash

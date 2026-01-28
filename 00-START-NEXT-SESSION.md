@@ -28,8 +28,10 @@ Executed ChatGPT's 7-point verification checklist:
 1. **Health Missing from API** - Added `get_initiative_health()` to `initiatives_api`
 2. **Document Button Non-Functional** - Added navigation link in InitiativesTab
 3. **Decision Card 500 Error** - Fixed field name mismatches in `decision_summary_detail_view`
+4. **Pending Decisions Not Updating** - Filtered by user so users only see items they can act on
 
 **PRs Merged:** #353 (Session 847), #354 (Initiative fixes), #355 (Docs), #356 (Decision Card fix)
+**PR Pending:** #358 (Pending decisions user filter)
 
 ---
 
@@ -39,7 +41,8 @@ Executed ChatGPT's 7-point verification checklist:
 |------|--------|
 | `core/views_research_demo.py` | Added health calculation to initiatives_api |
 | `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added document navigation link |
-| `core/views_platform_command.py` | Fixed field name mismatches in decision_summary_detail_view |
+| `core/views_platform_command.py` | Fixed field mismatches + user filter for pending decisions |
+| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | Added error feedback for failed decisions |
 | `docs/handoffs/SESSION_848_INITIATIVE_TESTING.md` | **NEW** - Session handoff |
 
 ---
