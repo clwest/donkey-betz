@@ -29431,3 +29431,137 @@ def run_triggered_conversation(
             'topic': topic,
             'error': str(e)
         }
+
+
+# ==================== SESSION 856: DIAGNOSTIC PIPELINE TASKS ====================
+
+
+@shared_task(bind=True)
+def run_diagnostic_pipeline_task(self, signature_id: str = None, force: bool = False):
+    """
+    Session 856: Run the diagnostic pipeline for failure analysis.
+
+    Processes signatures with undiagnosed detections:
+    1. Diagnoses root causes using multi-source evidence
+    2. Generates prioritized prescriptions (fixes)
+    3. Creates remediation Initiatives for tracking
+
+    Args:
+        signature_id: Optional specific signature to process
+        force: Bypass guardrails (cooldown, threshold)
+
+    Called by Celery Beat every 15 minutes.
+    """
+    from core.services.diagnostic_pipeline import run_diagnostic_pipeline
+
+    task_id = self.request.id if self.request else 'unknown'
+    logger.info(f"🔬 [DIAGNOSTIC] Task {task_id} STARTED")
+
+    try:
+        result = run_diagnostic_pipeline(
+            signature_id=signature_id,
+            force=force
+        )
+
+        logger.info(
+            f"🔬 [DIAGNOSTIC] Task {task_id} COMPLETED: "
+            f"processed={result['signatures_processed']}, "
+            f"diagnoses={result['diagnoses_created']}, "
+            f"prescriptions={result['prescriptions_created']}, "
+            f"initiatives={result['initiatives_created']}"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"🔬 [DIAGNOSTIC] Task {task_id} FAILED: {e}", exc_info=True)
+        raise
+
+
+@shared_task
+def cleanup_resolved_signatures(days_old: int = 30):
+    """
+    Session 856: Archive old resolved failure signatures.
+
+    Signatures that have been resolved for more than `days_old` days
+    are marked as inactive/archived to keep the active list clean.
+
+    Called by Celery Beat daily.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_diagnostic_pipeline import FailureSignature
+
+    cutoff = timezone.now() - timedelta(days=days_old)
+
+    # Find resolved signatures older than cutoff
+    old_resolved = FailureSignature.objects.filter(
+        status=FailureSignature.Status.RESOLVED,
+        last_seen_at__lt=cutoff
+    )
+
+    count = old_resolved.count()
+
+    if count > 0:
+        # Archive them by setting status to IGNORED
+        old_resolved.update(status=FailureSignature.Status.IGNORED)
+        logger.info(f"🧹 [DIAGNOSTIC] Archived {count} old resolved signatures")
+    else:
+        logger.info("🧹 [DIAGNOSTIC] No old resolved signatures to archive")
+
+    return {'archived': count}
+
+
+@shared_task
+def detect_failure_task(
+    error_message: str,
+    source_type: str,
+    error_code: str = None,
+    provider: str = None,
+    source_id: str = None,
+    source_name: str = None,
+    context: dict = None
+):
+    """
+    Session 856: Async task to detect and record a failure.
+
+    This can be called from anywhere in the codebase to record
+    a failure without blocking the main execution flow.
+
+    Example usage:
+        detect_failure_task.delay(
+            error_message="Rate limit exceeded",
+            source_type="api_call",
+            error_code="429",
+            provider="openai",
+            source_name="experiment_123"
+        )
+    """
+    from core.services.diagnostic_pipeline import detect_failure
+
+    try:
+        detection = detect_failure(
+            error_message=error_message,
+            source_type=source_type,
+            error_code=error_code,
+            provider=provider,
+            source_id=source_id,
+            source_name=source_name,
+            context=context or {}
+        )
+
+        logger.info(
+            f"🔬 [DIAGNOSTIC] Recorded failure: {detection.signature.signature} "
+            f"(count: {detection.signature.occurrence_count})"
+        )
+
+        return {
+            'success': True,
+            'detection_id': str(detection.id),
+            'signature': detection.signature.signature,
+            'occurrence_count': detection.signature.occurrence_count
+        }
+
+    except Exception as e:
+        logger.error(f"🔬 [DIAGNOSTIC] Failed to record failure: {e}")
+        return {'success': False, 'error': str(e)}
