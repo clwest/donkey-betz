@@ -318,3 +318,128 @@ class WiringDefectResolveView(APIView):
         except Exception as e:
             logger.error(f"Error resolving wiring defect: {e}")
             return Response({'error': str(e)}, status=500)
+
+
+class CitationViolationsListView(APIView):
+    """
+    Session 846: List citation violations.
+
+    GET /api/citation-violations/ - List violations
+    GET /api/citation-violations/?resolved=false - Filter by resolved status
+    GET /api/citation-violations/?agent=ResearchAgent - Filter by agent
+    GET /api/citation-violations/?blocked=true - Filter by blocked status
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """List citation violations."""
+        try:
+            from core.models_orchestration import CitationViolation
+
+            queryset = CitationViolation.objects.all()
+
+            # Filter by resolved status
+            resolved = request.query_params.get('resolved')
+            if resolved is not None:
+                is_resolved = resolved.lower() == 'true'
+                queryset = queryset.filter(is_resolved=is_resolved)
+
+            # Filter by violation type
+            violation_type = request.query_params.get('type')
+            if violation_type:
+                queryset = queryset.filter(violation_type=violation_type)
+
+            # Filter by agent
+            agent = request.query_params.get('agent')
+            if agent:
+                queryset = queryset.filter(agent_name=agent)
+
+            # Filter by blocked status
+            blocked = request.query_params.get('blocked')
+            if blocked is not None:
+                was_blocked = blocked.lower() == 'true'
+                queryset = queryset.filter(was_blocked=was_blocked)
+
+            # Limit results
+            limit = min(int(request.query_params.get('limit', 100)), 500)
+            violations = queryset.order_by('-created_at')[:limit]
+
+            # Get summary stats
+            stats = {
+                'total': queryset.count(),
+                'unresolved': queryset.filter(is_resolved=False).count(),
+                'blocked_count': queryset.filter(was_blocked=True).count(),
+                'by_type': {},
+                'by_agent': {},
+            }
+
+            # Type breakdown
+            for v in CitationViolation.VIOLATION_TYPES:
+                count = queryset.filter(violation_type=v[0]).count()
+                if count > 0:
+                    stats['by_type'][v[0]] = count
+
+            # Agent breakdown (top 10)
+            from django.db.models import Count
+            agent_counts = queryset.values('agent_name').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10]
+            for ac in agent_counts:
+                stats['by_agent'][ac['agent_name']] = ac['count']
+
+            return Response({
+                'stats': stats,
+                'violations': [{
+                    'id': str(v.id),
+                    'violation_type': v.violation_type,
+                    'agent_name': v.agent_name,
+                    'agent_category': v.agent_category,
+                    'required_sources': v.required_sources,
+                    'provided_sources': v.provided_sources,
+                    'sources_detail': v.sources_detail,
+                    'task_preview': v.task_description[:100] if v.task_description else '',
+                    'trace_id': str(v.trace_id) if v.trace_id else None,
+                    'was_blocked': v.was_blocked,
+                    'is_resolved': v.is_resolved,
+                    'resolved_at': v.resolved_at.isoformat() if v.resolved_at else None,
+                    'resolution_action': v.resolution_action,
+                    'created_at': v.created_at.isoformat() if v.created_at else None,
+                } for v in violations]
+            })
+        except Exception as e:
+            logger.error(f"Error listing citation violations: {e}")
+            return Response({'error': str(e)}, status=500)
+
+
+class CitationViolationResolveView(APIView):
+    """
+    Session 846: Mark a citation violation as resolved.
+
+    POST /api/citation-violations/<violation_id>/resolve/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, violation_id):
+        """Resolve a citation violation."""
+        try:
+            from core.models_orchestration import CitationViolation
+
+            violation_uuid = uuid.UUID(str(violation_id))
+            violation = CitationViolation.objects.get(id=violation_uuid)
+
+            action = request.data.get('action', '')
+            notes = request.data.get('notes', '')
+            violation.resolve(action=action, notes=notes)
+
+            return Response({
+                'success': True,
+                'violation_id': str(violation.id),
+                'resolved_at': violation.resolved_at.isoformat(),
+            })
+        except CitationViolation.DoesNotExist:
+            return Response({'error': 'Violation not found'}, status=404)
+        except ValueError:
+            return Response({'error': 'Invalid violation_id format'}, status=400)
+        except Exception as e:
+            logger.error(f"Error resolving citation violation: {e}")
+            return Response({'error': str(e)}, status=500)
