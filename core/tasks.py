@@ -26658,11 +26658,12 @@ def _extract_agent_output_content(result, task_description: str) -> str:
     import json
 
     # Priority order of keys to check for text content
+    # Session 848: 'text' moved higher for podcast agents (ModeratorAgent, etc.)
     CONTENT_KEYS = [
-        'content', 'output', 'analysis', 'code', 'research',
+        'content', 'output', 'text', 'analysis', 'code', 'research',
         'report', 'response', 'summary', 'recommendation',
         'strategy', 'plan', 'document', 'article', 'script',
-        'memo', 'brief', 'findings', 'insights', 'text',
+        'memo', 'brief', 'findings', 'insights',
         'thesis', 'conclusion', 'explanation', 'narrative',  # Session 839: More content keys
     ]
 
@@ -26758,8 +26759,9 @@ def _extract_agent_output_content(result, task_description: str) -> str:
 
                     else:
                         # Standard dict item format
-                        item_title = item.get('title') or item.get('name') or item.get('source') or f'Item {i}'
-                        item_content = item.get('content') or item.get('summary') or item.get('description') or ''
+                        # Session 848: Added 'text' key for podcast agents (ModeratorAgent, etc.)
+                        item_title = item.get('title') or item.get('name') or item.get('source') or item.get('segment') or f'Item {i}'
+                        item_content = item.get('content') or item.get('summary') or item.get('description') or item.get('text') or ''
                         item_score = item.get('overall_score') or item.get('score', '')
                         score_str = f" (score: {item_score})" if item_score else ""
                         output_parts.append(f"### {i}. {item_title}{score_str}\n{item_content[:500]}\n")
