@@ -1011,6 +1011,9 @@ class WorkspaceManager:
 
         Session 855: For system_autonomous user, creates a default workspace
         if none exists (for autonomous agent operations).
+
+        Session 858: For ANY user without a workspace, creates a personal workspace.
+        This ensures agents can always write files without "No active workspace" errors.
         """
         workspace = ProjectWorkspace.objects.filter(
             user=self.user,
@@ -1020,6 +1023,10 @@ class WorkspaceManager:
         # Session 855: Create default workspace for system user if needed
         if not workspace and self.user.username == 'system_autonomous':
             workspace = self._ensure_system_workspace()
+
+        # Session 858: Create personal workspace for any user without one
+        if not workspace and self.user:
+            workspace = self._ensure_personal_workspace()
 
         return workspace
 
@@ -1068,6 +1075,60 @@ class WorkspaceManager:
 
         except Exception as e:
             logger.warning(f"Could not ensure system workspace: {e}")
+            return None
+
+    def _ensure_personal_workspace(self) -> Optional[ProjectWorkspace]:
+        """
+        Session 858: Create or get default personal workspace for a user.
+
+        Every user gets a personal workspace in generated_content/users/{username}/
+        This ensures agents can always write files without "No active workspace" errors.
+
+        Returns:
+            ProjectWorkspace for user operations, or None if creation fails
+        """
+        try:
+            workspace_name = f'{self.user.username}-personal'
+
+            # Check if personal workspace already exists
+            workspace = ProjectWorkspace.objects.filter(
+                user=self.user,
+                name=workspace_name
+            ).first()
+
+            if workspace:
+                workspace.is_active = True
+                workspace.save(update_fields=['is_active'])
+                logger.debug(f"👤 Reactivated personal workspace for {self.user.username}")
+                return workspace
+
+            # Create personal workspace
+            from pathlib import Path
+
+            project_root = Path(__file__).parent.parent.parent  # core/services -> core -> project root
+            user_dir = project_root / 'generated_content' / 'users' / self.user.username
+
+            # Create user directory if it doesn't exist
+            user_dir.mkdir(parents=True, exist_ok=True)
+
+            workspace = ProjectWorkspace.objects.create(
+                user=self.user,
+                name=workspace_name,
+                root_path=str(user_dir),
+                workspace_type='local',
+                is_active=True,
+                allow_file_write=True,
+                allow_file_delete=False,  # Safe default
+                allow_git_operations=False,
+                description=f'Personal workspace for {self.user.username}',
+                protected_paths=['.env', '.env.local', 'secrets/', 'credentials/'],
+            )
+
+            logger.info(f"👤 [Session 858] Created personal workspace for {self.user.username} at {user_dir}")
+            return workspace
+
+        except Exception as e:
+            logger.warning(f"Could not create personal workspace for {self.user.username}: {e}")
             return None
 
     def set_active_workspace(self, workspace_id: UUID) -> ProjectWorkspace:

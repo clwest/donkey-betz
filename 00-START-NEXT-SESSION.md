@@ -1,46 +1,62 @@
-# Session 857 - Start Here
+# Session 859 - Start Here
 
-**Previous Session:** 856 (Diagnostic Pipeline + Agent Content Review Fixes)
+**Previous Session:** 858 (User Context Injection)
 **Date:** January 28, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Diagnostic Pipeline Active**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **User Context Active**
 
 ---
 
-## What Was Accomplished in Session 856
+## What Was Accomplished in Session 858
 
-Session 856 implemented the Diagnostic Pipeline System and fixed content review display for 12 agents.
+Session 858 implemented User Context Injection - teaching the system about the User so agents can provide personalized responses.
 
-### Diagnostic Pipeline System (PR #396)
+### User Context Injection
 
-Created complete failure detection → diagnosis → prescription system:
+**Problem Identified:** The platform had rich user profile infrastructure (6 models, 100+ fields) but agents never received this data. They operated "blind" to who the user was.
 
-| Component | Purpose |
-|-----------|---------|
-| **FailureSignature** | Groups failures by stable signature (e.g., `OPENAI_429_QUOTA`) |
-| **FailureDetection** | Records raw failure data |
-| **FailureDiagnosis** | Root cause analysis with evidence gathering |
-| **FailurePrescription** | Ranked solutions by scope (immediate/structural/observability) |
+**Solution Implemented:**
 
-**New Services:**
-- `failure_signature_generator.py` - Generates stable signatures
-- `diagnostic_pipeline.py` - Main orchestrator
-- `evidence_gatherer.py` - Collects evidence (stops at 80% confidence)
-- `solution_ranker.py` - Templates + ranking for solutions
+| Component | What It Does |
+|-----------|--------------|
+| `_get_user_context()` | Retrieves user profile + memory context from middleware |
+| `_apply_injection_policy()` | Filters context based on agent category (avoids prompt bloat) |
+| `_record_user_learning()` | Records success patterns for learning loop |
+| `_ensure_personal_workspace()` | Auto-creates workspace for any user |
 
-### Agent Content Review Fixes (PRs #397-400)
+**Agent Category Injection Policy:**
 
-Fixed 12 agents to show descriptive messages instead of raw JSON:
+| Category | Agents | Data Injected |
+|----------|--------|---------------|
+| career | OpportunityPipelineAgent | skills, job_preferences, salary_range, success_patterns |
+| content | ContentWriterAgent, SEOOptimizerAgent | communication_style, tone_preferences, goals |
+| financial | StockAnalystAgent, SportsOddsAnalyst | risk_tolerance, betting_preferences |
+| development | CodeGeneratorAgent, DevOpsAgent | skills, tech_stack, github_username |
+| research | ResearchAgent, TrendAnalysisAgent | interests, learning_goals |
+| default | All other agents | name, goals, communication_style |
 
-| Agent | Fix |
-|-------|-----|
-| ContentWriterAgent | Message: `Blog Post: "Title" \| 1,500 words \| tone` |
-| LegalDocDrafterAgent | Added actionable_config with legal review actions |
-| ResolveAgent | Descriptive messages + actionable_config |
-| VideoAgent, AudioAgent | Added actionable_config + descriptive messages |
-| VideoEditingAgent, ImageEditingAgent | Added actionable_config + descriptive messages |
-| DevOpsAgent, FullStackDeveloperAgent | Added actionable_config + descriptive messages |
-| CodeReviewAgent, PromptEngineeringAgent | Added actionable_config + descriptive messages |
-| WorkflowAgent | Added actionable_config + descriptive messages |
+**How Agents Access User Context:**
+
+```python
+def execute(self, task, context, scifi_context, spider_context):
+    user = context.get('user', {})           # Full user context dict
+    user_name = context.get('user_name', '') # Quick access
+    user_skills = context.get('user_skills', [])
+    user_goals = context.get('user_goals', [])
+```
+
+### Workspace Auto-Creation
+
+**Fixed:** "No active workspace. Register a workspace first." errors
+
+Now when ANY user calls an agent, a personal workspace is auto-created at:
+`generated_content/users/{username}/`
+
+### Learning Feedback Loop
+
+When agents succeed, a `UserMemoryContext` record is created:
+- `memory_type='success_pattern'`
+- `source='agent:{agent_name}'`
+- Contains task summary for future retrieval
 
 ---
 
@@ -50,8 +66,15 @@ Fixed 12 agents to show descriptive messages instead of raw JSON:
 # 1. Start platform
 make start && make celery
 
-# 2. Run migrations for diagnostic models
-python manage.py makemigrations && python manage.py migrate
+# 2. Test user context injection
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+from core.agent_router import get_agent_router
+user = get_user_model().objects.filter(is_staff=True).first()
+router = get_agent_router(user)
+context = router._get_user_context('ContentWriterAgent', 'test')
+print('User context:', list(context.keys()))
+"
 
 # 3. Access Workspace
 open http://localhost:8000/ai-studio/
@@ -59,51 +82,26 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 856 PRs
+## Files Modified in Session 858
 
-| PR | Feature |
-|----|---------|
-| #396 | Diagnostic Pipeline System |
-| #397 | Retry logic + Content review improvements |
-| #398 | ResolveAgent output fix |
-| #399 | Add actionable_config to 9 agents |
-| #400 | ContentWriterAgent + LegalDocDrafterAgent display fixes |
+| File | Changes |
+|------|---------|
+| `core/agent_router.py` | Added `_get_user_context()`, `_apply_injection_policy()`, `_record_user_learning()`, injection mappings |
+| `core/services/workspace_manager.py` | Added `_ensure_personal_workspace()`, updated `get_active_workspace()` |
+| `docs/handoffs/SESSION_858_USER_CONTEXT_INJECTION.md` | Full documentation |
 
 ---
 
 ## Potential Next Steps
 
-1. **Run migrations** - Diagnostic models need migration
-2. **Integrate diagnostic pipeline with ThinkingAgent** - Add diagnostic context to audits
-3. **Add Celery tasks** - Periodic diagnostic runs (every 15 min)
-4. **Test diagnostic pipeline** - Simulate failures and verify signature grouping
-5. **Check for more agents** - May be other agents needing content review fixes
+1. **Enhance Individual Agents** - Update high-value agents to use `context['user']` in prompts
+2. **Profile Onboarding Flow** - Create interview flow to populate EnhancedUserProfile fields
+3. **User Canon Doc** - Auto-generate "Operating Manual" from user profiles (RAG retrievable)
+4. **Success Pattern Retrieval** - Use recorded patterns in future agent prompts
+5. **Profile UI** - Add frontend screens to view/edit profile data
 
 ---
 
-## Previous Sessions
+## Session 858 Handoff
 
-| Session | Focus |
-|---------|-------|
-| **856** | Diagnostic Pipeline + Agent Content Review Fixes |
-| **855** | Gate Waiving + Dream Backlog Triage |
-| **854** | Flagship Content Voice System |
-| **853** | CulturalImpactAgent output fix + broken links |
-| **852** | Artifact Classification Fix - 4 PRs |
-| **851** | Multiple Integration Fixes - 5 PRs |
-| **850** | Inbox View + Smart Truncate + Docs Framing Fix |
-| **849** | Decision-Initiative Linking |
-| **848** | Initiative Pipeline Testing |
-| **847** | Initiative Pipeline - ThinkingAgent -> Initiative -> Stages |
-
----
-
-## Key Documentation
-
-- `docs/handoffs/SESSION_856_DIAGNOSTIC_PIPELINE.md` - Full session details
-- `docs/handoffs/SESSION_855_GATE_WAIVING.md` - Previous session
-- `CLAUDE.md` - System overview
-
----
-
-**Session 856 Complete - Diagnostic Pipeline + 12 Agent Display Fixes**
+See: `docs/handoffs/SESSION_858_USER_CONTEXT_INJECTION.md`
