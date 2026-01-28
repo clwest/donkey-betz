@@ -51,6 +51,7 @@ import {
   DataSourcesTab,
   AIConsciousnessTab,
   IntelligenceTab,
+  InitiativesTab,  // Session 847: Initiative Pipeline Dashboard
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -60,6 +61,7 @@ const tabs = [
   { id: 'command' as WorkspaceTab, label: 'Command', icon: Target },
   { id: 'infrastructure' as WorkspaceTab, label: 'Infrastructure', icon: Server },
   { id: 'orchestration' as WorkspaceTab, label: 'Orchestration', icon: Workflow },
+  { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: Workflow },  // Session 847
   { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
   { id: 'datasources' as WorkspaceTab, label: 'Data', icon: Database },
   { id: 'consciousness' as WorkspaceTab, label: 'AI Mind', icon: Sparkles },
@@ -856,6 +858,8 @@ export default function WorkspacePage() {
           {activeTab === 'consciousness' && <AIConsciousnessTab />}
 
           {activeTab === 'intelligence' && <IntelligenceTab />}
+
+          {activeTab === 'initiatives' && <InitiativesTab />}
 
           {activeTab === 'governance' && <GovernanceTab />}
 

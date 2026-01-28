@@ -1,0 +1,468 @@
+// Session 847: Initiative Pipeline Dashboard
+// ChatGPT feedback: "Build 'Initiative Dashboard' View - One screen showing all initiatives"
+// Shows: Initiative name, status, owner, progress bar (Stage 1-5), health indicator
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  FolderKanban,
+  RefreshCw,
+  Loader2,
+  CheckCircle2,
+  Circle,
+  Clock,
+  AlertTriangle,
+  ChevronRight,
+  FileText,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react'
+import { cn } from '@/lib/cn'
+import { platformApi } from '@/lib/api'
+
+// Stage names for display
+const STAGE_NAMES: Record<number, string> = {
+  1: 'Research Brief',
+  2: 'Prototype Plan',
+  3: 'Evaluation',
+  4: 'Tech Design',
+  5: 'Pilot Execution',
+}
+
+interface Initiative {
+  id: string
+  name: string
+  description: string
+  status: string
+  current_stage: number
+  completion_percentage: number
+  stages: Record<number, {
+    status: string
+    stage_name: string
+    document_id: string | null
+    approved_at: string | null
+  }>
+  created_at: string
+  updated_at: string
+}
+
+// Health indicator based on status and update time
+function getHealth(initiative: Initiative): 'healthy' | 'stale' | 'blocked' {
+  const daysSinceUpdate = Math.floor(
+    (Date.now() - new Date(initiative.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+  )
+
+  // Check for rejected stages
+  for (let i = 1; i <= 5; i++) {
+    if (initiative.stages[i]?.status === 'REJECTED') {
+      return 'blocked'
+    }
+  }
+
+  // Check if current stage is stuck
+  const currentStage = initiative.stages[initiative.current_stage]
+  if (currentStage && !currentStage.document_id && daysSinceUpdate > 7) {
+    return 'blocked'
+  }
+
+  // Check for staleness
+  if (daysSinceUpdate > 14) {
+    return 'stale'
+  }
+
+  return 'healthy'
+}
+
+// Stage progress indicator
+function StageProgress({ initiative }: { initiative: Initiative }) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((stageNum) => {
+        const stage = initiative.stages[stageNum]
+        const isApproved = stage?.status === 'APPROVED'
+        const hasDraft = stage?.document_id && stage?.status !== 'APPROVED'
+        const isCurrent = initiative.current_stage === stageNum
+        const isRejected = stage?.status === 'REJECTED'
+
+        return (
+          <div
+            key={stageNum}
+            className="group relative"
+          >
+            <div
+              className={cn(
+                'w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all',
+                isApproved && 'bg-green-500/20 text-green-400 ring-2 ring-green-500/30',
+                hasDraft && !isApproved && 'bg-yellow-500/20 text-yellow-400 ring-2 ring-yellow-500/30',
+                isRejected && 'bg-red-500/20 text-red-400 ring-2 ring-red-500/30',
+                !stage?.document_id && !isRejected && 'bg-dark-border text-gray-500',
+                isCurrent && !isApproved && !isRejected && 'ring-2 ring-primary-500/50'
+              )}
+            >
+              {isApproved ? (
+                <CheckCircle2 size={14} />
+              ) : isRejected ? (
+                <AlertTriangle size={12} />
+              ) : (
+                stageNum
+              )}
+            </div>
+            {/* Tooltip */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-dark-card border border-dark-border rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+              <div className="font-medium">{STAGE_NAMES[stageNum]}</div>
+              <div className="text-gray-400">
+                {isApproved ? 'Approved' : hasDraft ? 'Draft' : isRejected ? 'Rejected' : 'Pending'}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Single initiative card
+function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative; onViewDetails: () => void }) {
+  const health = getHealth(initiative)
+
+  return (
+    <div
+      className={cn(
+        'bg-dark-card border rounded-lg p-4 hover:border-primary-500/50 transition-colors cursor-pointer',
+        health === 'healthy' && 'border-dark-border',
+        health === 'stale' && 'border-yellow-500/30',
+        health === 'blocked' && 'border-red-500/30'
+      )}
+      onClick={onViewDetails}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <FolderKanban size={16} className="text-primary-400 flex-shrink-0" />
+            <h3 className="font-medium truncate">{initiative.name}</h3>
+          </div>
+          <p className="text-xs text-gray-400 truncate">{initiative.description || 'No description'}</p>
+        </div>
+        <div className="flex items-center gap-2 ml-3">
+          {/* Health indicator */}
+          <span
+            className={cn(
+              'px-2 py-0.5 rounded text-xs font-medium',
+              health === 'healthy' && 'bg-green-500/20 text-green-400',
+              health === 'stale' && 'bg-yellow-500/20 text-yellow-400',
+              health === 'blocked' && 'bg-red-500/20 text-red-400'
+            )}
+          >
+            {health === 'healthy' && 'On Track'}
+            {health === 'stale' && 'Stale'}
+            {health === 'blocked' && 'Blocked'}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress section */}
+      <div className="flex items-center justify-between">
+        <StageProgress initiative={initiative} />
+        <div className="flex items-center gap-3 text-xs text-gray-400">
+          <span>{initiative.completion_percentage}% complete</span>
+          <ChevronRight size={14} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Initiative detail modal
+function InitiativeDetailModal({
+  initiative,
+  onClose,
+}: {
+  initiative: Initiative
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div>
+            <h3 className="text-lg font-semibold">{initiative.name}</h3>
+            <p className="text-sm text-gray-400">{initiative.description || 'No description'}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
+            &times;
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4 overflow-y-auto max-h-96">
+          {/* Progress bar */}
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-gray-400">Overall Progress</span>
+              <span className="font-medium">{initiative.completion_percentage}%</span>
+            </div>
+            <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all"
+                style={{ width: `${initiative.completion_percentage}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Stage list */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-400">Pipeline Stages</h4>
+            {[1, 2, 3, 4, 5].map((stageNum) => {
+              const stage = initiative.stages[stageNum]
+              const isApproved = stage?.status === 'APPROVED'
+              const hasDraft = stage?.document_id && stage?.status !== 'APPROVED'
+              const isCurrent = initiative.current_stage === stageNum
+
+              return (
+                <div
+                  key={stageNum}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-lg border',
+                    isApproved && 'bg-green-500/10 border-green-500/30',
+                    hasDraft && !isApproved && 'bg-yellow-500/10 border-yellow-500/30',
+                    !stage?.document_id && 'bg-dark-bg border-dark-border',
+                    isCurrent && !isApproved && 'ring-1 ring-primary-500/50'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
+                      isApproved && 'bg-green-500/20 text-green-400',
+                      hasDraft && !isApproved && 'bg-yellow-500/20 text-yellow-400',
+                      !stage?.document_id && 'bg-dark-border text-gray-500'
+                    )}
+                  >
+                    {isApproved ? <CheckCircle2 size={18} /> : stageNum}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{STAGE_NAMES[stageNum]}</span>
+                      {isCurrent && !isApproved && (
+                        <span className="px-1.5 py-0.5 rounded text-xs bg-primary-500/20 text-primary-400">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {isApproved
+                        ? `Approved ${stage?.approved_at ? new Date(stage.approved_at).toLocaleDateString() : ''}`
+                        : hasDraft
+                          ? 'Document in draft'
+                          : 'No document yet'}
+                    </div>
+                  </div>
+                  {stage?.document_id && (
+                    <button className="p-2 hover:bg-dark-border rounded-lg transition-colors">
+                      <FileText size={16} className="text-gray-400" />
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Metadata */}
+          <div className="flex items-center gap-4 text-xs text-gray-400 pt-2 border-t border-dark-border">
+            <span>Created: {new Date(initiative.created_at).toLocaleDateString()}</span>
+            <span>Updated: {new Date(initiative.updated_at).toLocaleDateString()}</span>
+            <span className="capitalize">Status: {initiative.status.toLowerCase()}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Empty state
+function EmptyState({ onPopulate, isPopulating }: { onPopulate: () => void; isPopulating: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-16 h-16 rounded-full bg-primary-500/10 flex items-center justify-center mb-4">
+        <FolderKanban size={32} className="text-primary-400" />
+      </div>
+      <h3 className="text-lg font-medium mb-2">No Initiatives Yet</h3>
+      <p className="text-gray-400 max-w-md mb-6">
+        Initiatives are auto-created when ThinkingAgent triggers actions like research or content creation.
+        You can also populate from existing deliverables.
+      </p>
+      <button
+        onClick={onPopulate}
+        disabled={isPopulating}
+        className="btn btn-primary flex items-center gap-2"
+      >
+        {isPopulating ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            Populating...
+          </>
+        ) : (
+          <>
+            <Sparkles size={16} />
+            Populate from Deliverables
+          </>
+        )}
+      </button>
+    </div>
+  )
+}
+
+export function InitiativesTab() {
+  const queryClient = useQueryClient()
+  const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(null)
+  const [filter, setFilter] = useState<'all' | 'active' | 'stale' | 'blocked'>('all')
+
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['initiatives'],
+    queryFn: async () => {
+      const res = await platformApi.initiatives()
+      return res.data
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  })
+
+  const populateMutation = useMutation({
+    mutationFn: () => platformApi.populateInitiatives(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiatives'] })
+    },
+  })
+
+  // Filter initiatives by health
+  const filteredInitiatives = (data?.initiatives || []).filter((init) => {
+    if (filter === 'all') return true
+    const health = getHealth(init)
+    if (filter === 'active') return init.status === 'ACTIVE'
+    return health === filter
+  })
+
+  // Stats
+  const stats = {
+    total: data?.initiatives?.length || 0,
+    active: data?.initiatives?.filter((i) => i.status === 'ACTIVE').length || 0,
+    stale: data?.initiatives?.filter((i) => getHealth(i) === 'stale').length || 0,
+    blocked: data?.initiatives?.filter((i) => getHealth(i) === 'blocked').length || 0,
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 size={24} className="animate-spin text-primary-400" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-16">
+        <AlertTriangle size={32} className="text-red-400 mx-auto mb-2" />
+        <p className="text-gray-400">Failed to load initiatives</p>
+        <button onClick={() => refetch()} className="btn btn-ghost mt-4">
+          Try Again
+        </button>
+      </div>
+    )
+  }
+
+  if (!data?.initiatives?.length) {
+    return <EmptyState onPopulate={() => populateMutation.mutate()} isPopulating={populateMutation.isPending} />
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with stats */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">Initiative Pipeline</h2>
+          <div className="flex items-center gap-2 text-sm">
+            <button
+              onClick={() => setFilter('all')}
+              className={cn(
+                'px-3 py-1 rounded-full transition-colors',
+                filter === 'all' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
+              )}
+            >
+              All ({stats.total})
+            </button>
+            <button
+              onClick={() => setFilter('active')}
+              className={cn(
+                'px-3 py-1 rounded-full transition-colors',
+                filter === 'active' ? 'bg-green-500/20 text-green-400' : 'text-gray-400 hover:text-white'
+              )}
+            >
+              Active ({stats.active})
+            </button>
+            {stats.stale > 0 && (
+              <button
+                onClick={() => setFilter('stale')}
+                className={cn(
+                  'px-3 py-1 rounded-full transition-colors',
+                  filter === 'stale' ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                Stale ({stats.stale})
+              </button>
+            )}
+            {stats.blocked > 0 && (
+              <button
+                onClick={() => setFilter('blocked')}
+                className={cn(
+                  'px-3 py-1 rounded-full transition-colors',
+                  filter === 'blocked' ? 'bg-red-500/20 text-red-400' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                Blocked ({stats.blocked})
+              </button>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="btn btn-ghost p-2"
+          title="Refresh"
+        >
+          <RefreshCw size={16} />
+        </button>
+      </div>
+
+      {/* Initiative grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {filteredInitiatives.map((initiative) => (
+          <InitiativeCard
+            key={initiative.id}
+            initiative={initiative}
+            onViewDetails={() => setSelectedInitiative(initiative)}
+          />
+        ))}
+      </div>
+
+      {filteredInitiatives.length === 0 && (
+        <div className="text-center py-8 text-gray-400">
+          No initiatives match the selected filter
+        </div>
+      )}
+
+      {/* Detail modal */}
+      {selectedInitiative && (
+        <InitiativeDetailModal
+          initiative={selectedInitiative}
+          onClose={() => setSelectedInitiative(null)}
+        />
+      )}
+    </div>
+  )
+}

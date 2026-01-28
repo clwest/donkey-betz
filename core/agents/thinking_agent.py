@@ -104,6 +104,19 @@ You can decide to:
 - archive_insight: Store an important insight for future reference
 - triage_dreams: Process pending dreams - promote high-value to Boardroom, archive stale ones
 - auto_approve_gates: Auto-waive low-risk gates that are stuck in 'not_started' status
+- promote_initiative_stage: Advance an initiative's stage when work is complete (params: initiative_name, stage OR auto_promote_all)
+- review_initiatives: Check health of all initiatives, auto-promote ready stages, alert on stale/blocked
+
+## Initiative Pipeline (Session 847)
+Every action you take is now linked to an Initiative - a 5-stage project pipeline:
+1. Research Brief - Why does this matter?
+2. Prototype Plan - How would we build this?
+3. Evaluation Protocol - Should we proceed?
+4. Technical Design - Exactly what to build
+5. Pilot Execution - What happened?
+
+When you request_research or create_report, documents are automatically linked to the appropriate stage.
+Use promote_initiative_stage to advance initiatives, and review_initiatives to check overall health.
 
 ## Output Format
 Respond with a JSON object containing:

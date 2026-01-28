@@ -7,6 +7,11 @@ actually executes them using the appropriate agents and services.
 Session 804: Added _create_blog_attention_item() to surface auto-generated
 blogs in the Human Interface. Previously, blogs were created but not visible
 because HumanAttentionItem entries weren't being created.
+
+Session 847: Added Initiative integration - every action now links to an
+Initiative (5-stage project pipeline). This creates the "project spine"
+that organizes floating documents into coherent workflows.
+ChatGPT feedback: "You're missing the middle. ThinkingAgent -> Initiative -> Stages -> Documents"
 """
 
 import logging
@@ -38,6 +43,8 @@ class AutonomousActionExecutor:
             'schedule_followup': self._execute_schedule_followup,
             'triage_dreams': self._execute_triage_dreams,  # Session 564: Dream pipeline
             'auto_approve_gates': self._execute_auto_approve_gates,  # Session 654: Auto-approve low-risk gates
+            'promote_initiative_stage': self._execute_promote_initiative_stage,  # Session 847: Initiative pipeline
+            'review_initiatives': self._execute_review_initiatives,  # Session 847: Initiative health check
         }
 
     def _create_blog_attention_item(
@@ -88,6 +95,9 @@ class AutonomousActionExecutor:
         """
         Execute a single autonomous action.
 
+        Session 847: Now integrates with Initiative pipeline - every action
+        is linked to an Initiative for structured project tracking.
+
         Args:
             action: Dictionary containing action details from ThinkingAgent
 
@@ -97,6 +107,7 @@ class AutonomousActionExecutor:
         action_type = action.get('action_type', '')
         action_name = action.get('action_name', 'Unnamed Action')
         params = action.get('params', {})
+        reasoning = action.get('reasoning', '')
 
         logger.info(f"Executing autonomous action: {action_type} - {action_name}")
 
@@ -111,12 +122,24 @@ class AutonomousActionExecutor:
             }
 
         try:
-            result = handler(action_name, params, action.get('reasoning', ''))
+            result = handler(action_name, params, reasoning)
+
+            # Session 847: Link action to Initiative pipeline
+            initiative_id = None
+            try:
+                initiative = self._link_to_initiative(action_type, action_name, params, reasoning, result)
+                if initiative:
+                    initiative_id = str(initiative.id)
+                    logger.info(f"[Session 847] Linked action to Initiative: {initiative.name}")
+            except Exception as init_err:
+                logger.warning(f"[Session 847] Initiative linking failed (non-fatal): {init_err}")
+
             return {
                 'success': True,
                 'action_type': action_type,
                 'action_name': action_name,
                 'result': result,
+                'initiative_id': initiative_id,  # Session 847: Track linked initiative
                 'executed_at': timezone.now().isoformat()
             }
         except Exception as e:
@@ -127,6 +150,51 @@ class AutonomousActionExecutor:
                 'action_type': action_type,
                 'action_name': action_name
             }
+
+    def _link_to_initiative(
+        self,
+        action_type: str,
+        action_name: str,
+        params: Dict[str, Any],
+        reasoning: str,
+        result: Dict[str, Any]
+    ):
+        """
+        Session 847: Link an executed action to the Initiative pipeline.
+
+        This creates the "project spine" that connects:
+        ThinkingAgent -> Initiative -> Stages -> Documents -> Actions
+
+        Args:
+            action_type: The type of action executed
+            action_name: Human-readable action name
+            params: Action parameters
+            reasoning: Why this action was taken
+            result: Execution result
+
+        Returns:
+            The Initiative that was linked/created, or None
+        """
+        from core.services.initiative_integration_service import get_initiative_integration_service
+
+        # Skip actions that don't produce artifacts
+        skip_actions = ['send_alert', 'update_strategy', 'schedule_followup']
+        if action_type in skip_actions:
+            return None
+
+        service = get_initiative_integration_service()
+
+        # Merge action_name into params if no topic
+        merged_params = {**params}
+        if 'topic' not in merged_params:
+            merged_params['topic'] = action_name
+
+        return service.link_action_to_initiative(
+            action_type=action_type,
+            action_params=merged_params,
+            reasoning=reasoning,
+            result=result
+        )
 
     def execute_actions(self, actions: List[Dict[str, Any]], max_actions: int = 5) -> List[Dict[str, Any]]:
         """
@@ -1200,6 +1268,16 @@ The document should:
             try:
                 decision_topic = gate.decision.topic[:60] if gate.decision else 'Unknown'
 
+                # Session 847: Skip initiative-linked gates (require human review)
+                if gate.initiative_id:
+                    results['skipped'].append({
+                        'gate_id': str(gate.id),
+                        'topic': decision_topic,
+                        'reason': 'Linked to initiative - requires human review'
+                    })
+                    logger.info(f"[Session 847] Skipped initiative-linked gate: {decision_topic}")
+                    continue
+
                 if dry_run:
                     results['waived'].append({
                         'gate_id': str(gate.id),
@@ -1358,3 +1436,179 @@ The document should:
 
         tracker = get_concern_tracker()
         return tracker.get_concern_dashboard()
+
+    # =========================================================================
+    # Session 847: Initiative Pipeline Actions
+    # =========================================================================
+
+    def _execute_promote_initiative_stage(
+        self,
+        name: str,
+        params: Dict[str, Any],
+        reasoning: str
+    ) -> Dict[str, Any]:
+        """
+        Session 847: Promote an initiative stage to APPROVED status.
+
+        This unlocks the next stage in the 5-stage pipeline.
+
+        Args:
+            name: Action name
+            params: {
+                'initiative_name': Name of the initiative,
+                'stage': Stage number to promote (1-5),
+                'auto_promote_all': If true, auto-promote all ready stages
+            }
+            reasoning: Why this promotion was triggered
+
+        Returns:
+            Summary of promotion results
+        """
+        from core.services.initiative_integration_service import get_initiative_integration_service
+        from core.models_document_registry import Initiative
+
+        initiative_name = params.get('initiative_name', '')
+        stage = params.get('stage')
+        auto_promote_all = params.get('auto_promote_all', False)
+
+        logger.info(f"[Session 847] Promoting initiative stage: {initiative_name}, stage={stage}, auto_all={auto_promote_all}")
+
+        service = get_initiative_integration_service()
+        results = {
+            'promoted': [],
+            'skipped': [],
+            'errors': []
+        }
+
+        try:
+            # Get the initiative
+            initiative = Initiative.objects.filter(name__icontains=initiative_name).first()
+            if not initiative:
+                return {
+                    'success': False,
+                    'error': f'Initiative not found: {initiative_name}',
+                    'results': results
+                }
+
+            if auto_promote_all:
+                # Auto-promote all ready stages
+                promoted = service.auto_promote_if_ready(initiative)
+                results['promoted'] = promoted
+                message = f"Auto-promoted {len(promoted)} stages"
+            elif stage:
+                # Promote specific stage
+                success = service.promote_stage(initiative, stage, approved_by="ThinkingAgent")
+                if success:
+                    results['promoted'] = [stage]
+                    message = f"Promoted Stage {stage}"
+                else:
+                    results['skipped'] = [stage]
+                    message = f"Could not promote Stage {stage}"
+            else:
+                return {
+                    'success': False,
+                    'error': 'Must specify stage or auto_promote_all',
+                    'results': results
+                }
+
+            return {
+                'success': True,
+                'initiative_name': initiative.name,
+                'initiative_id': str(initiative.id),
+                'current_stage': initiative.current_stage,
+                'completion_percentage': initiative.completion_percentage,
+                'results': results,
+                'message': message
+            }
+
+        except Exception as e:
+            logger.error(f"[Session 847] Error promoting stage: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'results': results
+            }
+
+    def _execute_review_initiatives(
+        self,
+        name: str,
+        params: Dict[str, Any],
+        reasoning: str
+    ) -> Dict[str, Any]:
+        """
+        Session 847: Review all initiatives and report on health.
+
+        This surfaces stale, blocked, or completed initiatives.
+
+        Args:
+            name: Action name
+            params: {
+                'auto_archive_completed': Archive completed initiatives (default: False),
+                'alert_on_stale': Generate alerts for stale initiatives (default: True)
+            }
+            reasoning: Why this review was triggered
+
+        Returns:
+            Dashboard summary of all initiatives
+        """
+        from core.services.initiative_integration_service import get_initiative_integration_service
+        from core.models_document_registry import Initiative
+
+        auto_archive = params.get('auto_archive_completed', False)
+        alert_on_stale = params.get('alert_on_stale', True)
+
+        logger.info(f"[Session 847] Reviewing initiatives: auto_archive={auto_archive}, alert_on_stale={alert_on_stale}")
+
+        service = get_initiative_integration_service()
+        dashboard = service.get_all_initiatives_dashboard()
+
+        results = {
+            'archived': [],
+            'alerts_generated': [],
+            'auto_promoted': []
+        }
+
+        # Process initiatives based on health
+        for init_health in dashboard['initiatives']:
+            initiative_id = init_health['initiative_id']
+
+            try:
+                initiative = Initiative.objects.get(id=initiative_id)
+
+                # Auto-archive completed initiatives (100% completion)
+                if auto_archive and init_health['completion_percentage'] == 100:
+                    initiative.status = Initiative.Status.COMPLETED
+                    initiative.save()
+                    results['archived'].append(init_health['name'])
+                    logger.info(f"[Session 847] Archived completed initiative: {init_health['name']}")
+
+                # Generate alerts for stale/blocked initiatives
+                if alert_on_stale and init_health['health'] in ['stale', 'blocked']:
+                    alert_msg = f"Initiative '{init_health['name']}' is {init_health['health']}: {', '.join(init_health.get('health_issues', []))}"
+                    results['alerts_generated'].append(alert_msg)
+                    logger.warning(f"[Session 847] {alert_msg}")
+
+                # Try auto-promoting ready stages
+                promoted = service.auto_promote_if_ready(initiative)
+                if promoted:
+                    results['auto_promoted'].append({
+                        'initiative': init_health['name'],
+                        'stages_promoted': promoted
+                    })
+
+            except Exception as e:
+                logger.error(f"[Session 847] Error processing initiative {initiative_id}: {e}")
+
+        # Update dashboard with action results
+        dashboard['action_results'] = results
+
+        return {
+            'success': True,
+            'total_initiatives': dashboard['total'],
+            'by_health': dashboard['by_health'],
+            'archived_count': len(results['archived']),
+            'alerts_count': len(results['alerts_generated']),
+            'auto_promoted_count': len(results['auto_promoted']),
+            'dashboard': dashboard,
+            'message': f"Reviewed {dashboard['total']} initiatives: {dashboard['by_health']['healthy']} healthy, {dashboard['by_health']['stale']} stale, {dashboard['by_health']['blocked']} blocked"
+        }
