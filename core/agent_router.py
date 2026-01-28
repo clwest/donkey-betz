@@ -227,6 +227,9 @@ from core.agents.technical_document_agent import TechnicalDocumentAgent
 # Session 663: System Intelligence Agent
 from core.agents.system_intelligence_agent import SystemIntelligenceAgent
 
+# Session 857: Platform Audit Agent
+from core.agents.platform_audit_agent import PlatformAuditAgent
+
 logger = logging.getLogger(__name__)
 
 # Session 488: Semantic routing confidence threshold
@@ -270,6 +273,9 @@ class AgentRouter:
 
         # Research Agents
         "ResearchAgent": ResearchAgent,
+
+        # Audit Agents (Session 857)
+        "PlatformAuditAgent": PlatformAuditAgent,
 
         # Writing Agents (Session 496)
         "ContentWriterAgent": ContentWriterAgent,
