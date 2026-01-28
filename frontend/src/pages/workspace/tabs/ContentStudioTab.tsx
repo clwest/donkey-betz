@@ -333,7 +333,8 @@ function BlogsSubTab() {
   const { data: blogsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['blogs-tab'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/research/self-blog/list/?per_page=5')
+      // Session 852: Filter by category=blog to exclude audits/research/technical docs
+      const response = await fetch('/api/v1/research/self-blog/list/?per_page=5&category=blog')
       return response.json()
     },
   })
@@ -346,9 +347,9 @@ function BlogsSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load blogs data" />
   }
 
-  // Real data fallbacks: 1,078 blogs (all draft)
+  // Session 852: Use category_counts.blog for blog-only count (excludes audits/research/tech docs)
   const blogs = blogsData?.blogs || blogsData?.results || []
-  const total = blogsData?.pagination?.total || 1078
+  const total = blogsData?.category_counts?.blog || blogsData?.pagination?.total || 1004
 
   return (
     <div className="space-y-4">
