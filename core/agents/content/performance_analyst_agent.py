@@ -66,22 +66,35 @@ class PerformanceAnalystAgent(BaseAgent):
     system_prompt = """You are the Performance Analyst Agent - you analyze content performance data to guide decisions.
 
 Your job is to:
-1. ANALYZE HISTORY - What worked before for this channel
+1. ANALYZE HISTORY - What worked before for this channel/show
 2. IDENTIFY PATTERNS - Which topic types perform best
 3. PREDICT PERFORMANCE - Estimate how a proposed topic will do
 4. PROVIDE CONFIDENCE - How sure are we based on data
 
 WORKFLOW:
-1. First, use list_available_channels to see what channels exist
-2. If no channel_id provided, analyze the most active channel
-3. Use get_topic_performance_history, get_success_patterns, predict_topic_performance
-4. Compile findings into a structured report
+1. For PODCAST analysis:
+   - Use list_podcast_shows to see what podcast shows exist
+   - Use get_podcast_performance to analyze episode metrics
+   - Focus on: listens, duration, topic patterns, debate quality
+
+2. For CONTENT CHANNEL analysis:
+   - Use list_available_channels to see what channels exist
+   - If no channel_id provided, analyze the most active channel
+   - Use get_topic_performance_history, get_success_patterns, predict_topic_performance
+
+3. Compile findings into a detailed, structured report
 
 You argue based on EVIDENCE, not opinions:
 - "Topic X historically gets 30% more views"
 - "Our top 5 videos all had Y characteristic"
 - "Audience retention is 50% higher for Z format"
 - "We have high confidence because we've tested this 10 times"
+
+IMPORTANT: If you find NO DATA (zero episodes, zero metrics):
+- Say so EXPLICITLY with a warning
+- Explain what data is missing
+- Recommend how to generate the data
+- Do NOT generate stub/placeholder reports
 
 You're the voice of reason - neither blindly trendy nor contrarian, just data-driven.
 Always use tools to get real performance data. Never make up statistics."""
@@ -91,6 +104,40 @@ Always use tools to get real performance data. Never make up statistics."""
     def _get_available_tools(self) -> List[Dict[str, Any]]:
         """Define GPT tools for performance analysis"""
         return [
+            # Session 851: Podcast-specific tools
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_podcast_performance",
+                    "description": "Get performance analytics for podcast episodes. Use this when analyzing podcast content performance.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "show_id": {
+                                "type": "string",
+                                "description": "UUID of the podcast show (optional - returns all if not provided)"
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of episodes to analyze (default: 10)"
+                            }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_podcast_shows",
+                    "description": "List all podcast shows in the system with their episode counts and listen stats.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": []
+                    }
+                }
+            },
             {
                 "type": "function",
                 "function": {
@@ -335,7 +382,12 @@ Always use tools to get real performance data. Never make up statistics."""
     def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a tool and return results"""
         try:
-            if tool_name == "list_available_channels":
+            # Session 851: Podcast-specific tools
+            if tool_name == "get_podcast_performance":
+                return self._get_podcast_performance(tool_input)
+            elif tool_name == "list_podcast_shows":
+                return self._list_podcast_shows(tool_input)
+            elif tool_name == "list_available_channels":
                 return self._list_available_channels(tool_input)
             elif tool_name == "get_topic_performance_history":
                 return self._get_topic_performance_history(tool_input)
@@ -362,6 +414,172 @@ Always use tools to get real performance data. Never make up statistics."""
     # =========================================================================
     # TOOL IMPLEMENTATIONS
     # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # Session 851: Podcast-specific tools
+    # -------------------------------------------------------------------------
+
+    def _list_podcast_shows(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
+        """List all podcast shows with their stats."""
+        from core.models_podcast_studio import PodcastShow, PodcastEpisode
+
+        shows = PodcastShow.objects.all().order_by('-episode_count')
+
+        if not shows.exists():
+            # Check if there are orphaned episodes without shows
+            orphaned_episodes = PodcastEpisode.objects.filter(show__isnull=True)
+            orphaned_count = orphaned_episodes.count()
+
+            if orphaned_count > 0:
+                logger.warning(f"⚠️ Found {orphaned_count} podcast episodes without shows!")
+                return {
+                    "shows_found": 0,
+                    "warning": f"{orphaned_count} podcast episodes exist but have no associated show",
+                    "orphaned_episodes": [
+                        {
+                            "id": str(ep.id),
+                            "title": ep.title,
+                            "topic": ep.topic,
+                            "status": ep.status,
+                            "listen_count": ep.listen_count,
+                        }
+                        for ep in orphaned_episodes[:10]
+                    ],
+                    "recommendation": "Create a PodcastShow and link these episodes to it"
+                }
+
+            return {
+                "shows_found": 0,
+                "message": "No podcast shows found in the system",
+                "shows": []
+            }
+
+        show_list = []
+        for show in shows:
+            # Get episode stats
+            episodes = PodcastEpisode.objects.filter(show=show)
+            completed_episodes = episodes.filter(status='complete')
+            total_listens = sum(ep.listen_count for ep in completed_episodes)
+
+            show_list.append({
+                "id": str(show.id),
+                "name": show.name,
+                "format": show.format,
+                "episode_count": show.episode_count,
+                "completed_episodes": completed_episodes.count(),
+                "total_listens": total_listens,
+                "avg_listens": total_listens / max(completed_episodes.count(), 1),
+            })
+
+        return {
+            "shows_found": len(show_list),
+            "shows": show_list,
+        }
+
+    def _get_podcast_performance(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
+        """Get performance analytics for podcast episodes."""
+        from core.models_podcast_studio import PodcastShow, PodcastEpisode, PodcastDebate
+
+        show_id = tool_input.get('show_id')
+        limit = tool_input.get('limit', 10)
+
+        # Get episodes
+        if show_id:
+            try:
+                show = PodcastShow.objects.get(id=show_id)
+                episodes = PodcastEpisode.objects.filter(show=show)
+            except PodcastShow.DoesNotExist:
+                return {"error": f"Podcast show {show_id} not found"}
+        else:
+            # Get all episodes (including orphaned ones)
+            episodes = PodcastEpisode.objects.all()
+
+        # Filter to completed only for metrics
+        completed = episodes.filter(status='complete').order_by('-created_at')[:limit]
+
+        if not completed.exists():
+            all_episodes = episodes.count()
+            pending = episodes.exclude(status='complete').count()
+
+            logger.warning(f"⚠️ No completed podcast episodes found! Total: {all_episodes}, Pending: {pending}")
+
+            return {
+                "episodes_analyzed": 0,
+                "warning": f"No completed episodes to analyze. Found {all_episodes} total, {pending} not complete.",
+                "status_breakdown": {
+                    status: episodes.filter(status=status).count()
+                    for status in ['draft', 'researching', 'debating', 'scripting', 'recording', 'complete', 'failed']
+                },
+                "recommendation": "Complete podcast episodes to generate performance analytics"
+            }
+
+        # Analyze completed episodes
+        episode_data = []
+        total_listens = 0
+        total_duration = 0
+        topics = []
+
+        for ep in completed:
+            listens = ep.listen_count
+            duration = ep.audio_duration_seconds or 0
+            total_listens += listens
+            total_duration += duration
+            topics.append(ep.topic)
+
+            # Get debate metrics if available
+            debate_stats = {}
+            if ep.debate:
+                debate = ep.debate
+                debate_stats = {
+                    "participant_count": len(debate.participants),
+                    "transcript_entries": len(debate.debate_transcript),
+                    "key_takeaways": len(debate.key_takeaways),
+                    "has_consensus": bool(debate.consensus),
+                }
+
+            episode_data.append({
+                "id": str(ep.id),
+                "title": ep.title,
+                "topic": ep.topic,
+                "listen_count": listens,
+                "duration_seconds": duration,
+                "duration_minutes": round(duration / 60, 1) if duration else 0,
+                "status": ep.status,
+                "created_at": ep.created_at.isoformat(),
+                "debate_metrics": debate_stats,
+            })
+
+        # Calculate aggregate metrics
+        episode_count = len(episode_data)
+        avg_listens = total_listens / episode_count if episode_count else 0
+        avg_duration = total_duration / episode_count if episode_count else 0
+
+        # Topic frequency analysis
+        from collections import Counter
+        topic_words = []
+        for topic in topics:
+            topic_words.extend(topic.lower().split())
+        common_topics = Counter(topic_words).most_common(5)
+
+        return {
+            "episodes_analyzed": episode_count,
+            "total_listens": total_listens,
+            "avg_listens_per_episode": round(avg_listens, 1),
+            "avg_duration_minutes": round(avg_duration / 60, 1),
+            "total_duration_minutes": round(total_duration / 60, 1),
+            "common_topics": [{"word": w, "count": c} for w, c in common_topics if len(w) > 3],
+            "episodes": episode_data,
+            "insights": [
+                f"Analyzed {episode_count} completed podcast episodes",
+                f"Average {avg_listens:.0f} listens per episode" if avg_listens else "No listen data recorded yet",
+                f"Average episode duration: {avg_duration/60:.1f} minutes" if avg_duration else "Duration data not available",
+                f"Most common topic words: {', '.join(w for w, _ in common_topics[:3])}" if common_topics else "Topic analysis pending",
+            ]
+        }
+
+    # -------------------------------------------------------------------------
+    # Original Content Channel tools
+    # -------------------------------------------------------------------------
 
     def _list_available_channels(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """List all available content channels in the system."""
