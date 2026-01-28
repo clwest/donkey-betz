@@ -212,20 +212,20 @@ function InitiativeDetailModal({
       onClick={onClose}
     >
       <div
-        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden"
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+        <div className="flex items-center justify-between p-4 border-b border-dark-border shrink-0">
           <div>
             <h3 className="text-lg font-semibold">{initiative.name}</h3>
             <p className="text-sm text-gray-400">{initiative.description || 'No description'}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg transition-colors">
             &times;
           </button>
         </div>
 
-        <div className="p-4 space-y-4 overflow-y-auto max-h-96">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Progress bar - Session 857: Show both progress and approved metrics */}
           <div>
             <div className="flex justify-between text-sm mb-2">
@@ -400,12 +400,21 @@ function InitiativeDetailModal({
             </div>
           )}
 
-          {/* Metadata */}
-          <div className="flex items-center gap-4 text-xs text-gray-400 pt-2 border-t border-dark-border">
+        </div>
+
+        {/* Footer with metadata */}
+        <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-bg/50 shrink-0">
+          <div className="flex items-center gap-4 text-xs text-gray-400">
             <span>Created: {new Date(initiative.created_at).toLocaleDateString()}</span>
             <span>Updated: {new Date(initiative.updated_at).toLocaleDateString()}</span>
             <span className="capitalize">Status: {initiative.status.toLowerCase()}</span>
           </div>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
