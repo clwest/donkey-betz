@@ -27,8 +27,9 @@ Executed ChatGPT's 7-point verification checklist:
 
 1. **Health Missing from API** - Added `get_initiative_health()` to `initiatives_api`
 2. **Document Button Non-Functional** - Added navigation link in InitiativesTab
+3. **Decision Card 500 Error** - Fixed field name mismatches in `decision_summary_detail_view`
 
-**PRs Merged:** #353 (Session 847 feature), #354 (Session 848 fixes)
+**PRs Merged:** #353 (Session 847), #354 (Initiative fixes), #355 (Docs), #356 (Decision Card fix)
 
 ---
 
@@ -38,6 +39,7 @@ Executed ChatGPT's 7-point verification checklist:
 |------|--------|
 | `core/views_research_demo.py` | Added health calculation to initiatives_api |
 | `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added document navigation link |
+| `core/views_platform_command.py` | Fixed field name mismatches in decision_summary_detail_view |
 | `docs/handoffs/SESSION_848_INITIATIVE_TESTING.md` | **NEW** - Session handoff |
 
 ---
@@ -95,7 +97,7 @@ curl -X POST http://localhost:8000/api/v1/initiatives/populate/
 
 | Session | Focus |
 |---------|-------|
-| **848** | Initiative Pipeline Testing - 7-point verification, 2 bug fixes |
+| **848** | Initiative Pipeline Testing - 7-point verification, 3 bug fixes (health API, doc link, decision 500) |
 | **847** | Initiative Pipeline - ThinkingAgent → Initiative → Stages → Documents |
 | **846** | Citation Gate + Serper News API + Stuck Conversations Fix |
 | **845** | Agent-Spider Wiring (213 agents) + Memory Delete UI |
