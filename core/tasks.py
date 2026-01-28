@@ -14,6 +14,8 @@ from django.db.models import F, Count
 from django.utils import timezone
 from typing import Dict, Any
 import os
+# Session 850: Smart truncation for cleaner synthesis display
+from core.api_helpers import smart_truncate
 
 logger = logging.getLogger(__name__)
 
@@ -10484,9 +10486,10 @@ Include this DecisionSummary block NOW."""
                     break
         if not summary:
             # Take first meaningful paragraph
+            # Session 850: Use smart_truncate for cleaner sentence boundaries
             for line in summary_lines:
                 if len(line.strip()) > 50:
-                    summary = line.strip()[:500]
+                    summary = smart_truncate(line.strip(), 500)
                     break
 
         # Update session with final results
@@ -10517,9 +10520,10 @@ Include this DecisionSummary block NOW."""
                 impact = "low"
 
             # Send boardroom decision with the synthesis
+            # Session 850: Use smart_truncate for cleaner sentence boundaries
             discord_notify.send_boardroom_decision(
-                title=f"HiveMind Consensus: {session.question[:80]}{'...' if len(session.question) > 80 else ''}",
-                decision=f"**{len(participant_names)} agents reached consensus:**\n\n{synthesis[:3500]}",
+                title=f"HiveMind Consensus: {smart_truncate(session.question, 80)}",
+                decision=f"**{len(participant_names)} agents reached consensus:**\n\n{smart_truncate(synthesis, 3500)}",
                 participants=participant_names,
                 decision_type="strategy",
                 impact=impact
