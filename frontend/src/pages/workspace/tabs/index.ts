@@ -22,3 +22,6 @@ export { AIConsciousnessTab } from './AIConsciousnessTab'
 
 // Phase 6: Intelligence Tab (consolidates 3 pages)
 export { IntelligenceTab } from './IntelligenceTab'
+
+// Session 847: Initiative Pipeline Dashboard
+export { InitiativesTab } from './InitiativesTab'
