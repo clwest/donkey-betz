@@ -2,7 +2,7 @@
 
 **Date:** January 27, 2026
 **Focus:** Testing Session 847's Initiative Pipeline against ChatGPT's verification checklist
-**PRs Merged:** #353 (Session 847 feature), #354 (Session 848 fixes)
+**PRs Merged:** #353 (Session 847 feature), #354 (Initiative fixes), #355 (Docs), #356 (Decision Card 500 fix)
 
 ---
 
@@ -62,6 +62,29 @@ initiatives_list.append({
 </a>
 ```
 
+### Bug 3: Decision Card 500 Error (Production)
+
+**Problem:** `/api/platform/decision-summary/{id}/` returning 500 Internal Server Error on production.
+
+**Root Cause:** `decision_summary_detail_view` in `core/views_platform_command.py` used field names that don't exist on the `AgentDecisionSummary` model:
+
+| Incorrect Field | Correct Field |
+|-----------------|---------------|
+| `decision.reasoning` | `decision.rationale` |
+| `decision.final_decision` | `decision.recommended_stance` |
+| `decision.lead_agent` | `decision.participants[0]` |
+| `decision.confidence_level` | (doesn't exist) |
+| `decision.dissenting_views` | (doesn't exist) |
+| `decision.key_factors` | `decision.key_insights` |
+| `decision.contributing_agents` | `decision.participants` |
+| `decision.conversation_id` | `decision.conversation.id` |
+
+**Fix:** Updated `core/views_platform_command.py` to use correct field names and added error handling.
+
+**Note:** The 404 error on `/api/human/attention/{id}/` is **expected behavior** - the frontend tries two endpoints:
+1. `/api/platform/decision-summary/{id}/` - For `AgentDecisionSummary` (now works)
+2. `/api/human/attention/{id}/` - Fallback for `HumanAttentionItem` (404 correct since ID is a decision)
+
 ---
 
 ## Known Limitations (Acceptable)
@@ -94,6 +117,7 @@ The Initiative detail modal is missing:
 |------|--------|
 | `core/views_research_demo.py` | Added health calculation to initiatives_api |
 | `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added document navigation link |
+| `core/views_platform_command.py` | Fixed field name mismatches in decision_summary_detail_view |
 
 ---
 
@@ -113,6 +137,8 @@ The health calculation in `InitiativeIntegrationService.get_initiative_health()`
 
 ### Merged to Main
 ```
+4cdea0d9 fix(Session 848): Fix 500 error on decision-summary endpoint (#356)
+dfc1b7df docs: Session 848 handoff - Initiative Pipeline testing & fixes (#355)
 a461fefb fix(Session 848): Add health to Initiatives API + document navigation (#354)
 1f879be9 feat(Session 847): Initiative Pipeline - Wire ThinkingAgent to 5-stage workflow (#353)
 ```
