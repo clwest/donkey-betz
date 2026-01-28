@@ -261,9 +261,13 @@ function InitiativeDetailModal({
                     </div>
                   </div>
                   {stage?.document_id && (
-                    <button className="p-2 hover:bg-dark-border rounded-lg transition-colors">
-                      <FileText size={16} className="text-gray-400" />
-                    </button>
+                    <a
+                      href={`/ai-studio/workspace?tab=deliverables&id=${stage.document_id}`}
+                      className="p-2 hover:bg-dark-border rounded-lg transition-colors"
+                      title="Open document"
+                    >
+                      <FileText size={16} className="text-gray-400 hover:text-primary-400" />
+                    </a>
                   )}
                 </div>
               )
