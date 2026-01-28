@@ -46,6 +46,25 @@ class Command(BaseCommand):
             action='store_true',
             help='Print the context without generating the blog'
         )
+        # Session 854: Flagship template options
+        parser.add_argument(
+            '--flagship',
+            action='store_true',
+            default=True,
+            help='Use flagship template for distinctive Donkey Betz voice (default: True)'
+        )
+        parser.add_argument(
+            '--no-flagship',
+            action='store_true',
+            help='Disable flagship template (generic content)'
+        )
+        parser.add_argument(
+            '--cta-type',
+            type=str,
+            default='newsletter',
+            choices=['demo', 'early_access', 'newsletter', 'investor', 'pilot', 'github'],
+            help='Call-to-action type for the blog post'
+        )
 
     def handle(self, *args, **options):
         from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearningConnection, KnowledgeTransfer, SpiderData, SelfBlog
@@ -202,7 +221,15 @@ describing itself using its own capabilities.
         try:
             agent = ContentWriterAgent(user=None)
 
+            # Session 854: Determine flagship mode
+            use_flagship = options.get('flagship', True) and not options.get('no_flagship', False)
+            cta_type = options.get('cta_type', 'newsletter')
+
+            if use_flagship:
+                self.stdout.write(self.style.SUCCESS(f'   📝 Using FLAGSHIP template (CTA: {cta_type})'))
+
             # Session 851: Improved task prompt with editorial guidance
+            # Session 854: Now uses flagship template for distinctive voice
             result = agent.execute(
                 task="Write an engaging blog post about our AI platform based on the research provided. "
                      "This is a meta-demonstration: you are an AI agent writing about the very system you're part of. "
@@ -219,6 +246,9 @@ describing itself using its own capabilities.
                     'target_audience': 'tech enthusiasts, AI researchers, and potential investors',
                     'word_count': options['word_count'],
                     'seo_keywords': ['AI platform', 'collective intelligence', 'autonomous learning', 'multi-agent system'],
+                    # Session 854: Flagship template options
+                    'flagship': use_flagship,
+                    'cta_type': cta_type,
                 },
                 scifi_context={
                     'collective_intelligence': True,
