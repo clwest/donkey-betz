@@ -1,89 +1,78 @@
-# Session 852 - Start Here
+# Session 853 - Start Here
 
-**Previous Session:** 851 (Multiple Integration Fixes)
+**Previous Session:** 852 (Artifact Classification & Decision Card Fixes)
 **Date:** January 27, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **All Wires Verified**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Category Filtering Complete**
 
 ---
 
-## What Was Accomplished in Session 851
+## What Was Accomplished in Session 852
 
-Session 851 fixed 5 integration issues with PRs #367-371.
+Session 852 fixed artifact misclassification and UI interaction issues with PRs #374-377.
 
-### 1. Debate Agent Output Fix (PR #367)
+### 1. Backend Artifact Category Fix (PR #374)
 
-Fixed the "1. Item 1" bug in Debate agents (DebateAdvocateAgent, DebateSkepticAgent).
-
-| Problem | Solution |
-|---------|----------|
-| Debate agents showed "1. Item 1" instead of actual content | Added debate-specific format handling in `core/tasks.py` and `DebateRenderer` in frontend |
-
-### 2. React Hook Order Fix (PR #368)
-
-Fixed React Error #310 "Rendered fewer hooks than expected" in ActivityFeedSection.
+Fixed auto-generated content being misclassified as 'blog' when it should be audit/research/technical.
 
 | Problem | Solution |
 |---------|----------|
-| useMemo called after early return violated Rules of Hooks | Moved all hooks before early return |
+| `autonomous_action_executor.py` defaulted all content to `category='blog'` | Set correct categories based on content type |
 
-### 3. Input Parameters JSON Display (PR #369)
+**Category Mapping:**
+- Reports (`[Report]` titles) → `category='audit'`
+- Research (`[Research]` titles) → `category='research_brief'`
+- Deliverables (`[S1-`, `[S2-` etc.) → `category='technical_document'`
 
-Fixed raw JSON display in Activity Feed's "Input Parameters" section.
+**Data Migration:** Fixed 88 existing misclassified entries (59 reports, 29 research)
 
-| Problem | Solution |
-|---------|----------|
-| Objects displayed as ugly raw JSON | Created `InputParamRow` component with type-aware rendering |
+### 2. BlogsPage Category Filter UI (PR #375)
 
-**Rendering by type:**
-- Arrays → Pill-style tags
-- Objects → Nested key-value pairs (max 5, then truncated)
-- Booleans → Green "true" / Red "false"
-- null → Gray italic "null"
-
-### 4. Blog Editorial Improvements (PR #370)
-
-Applied ChatGPT editorial feedback to `write_self_blog` command.
-
-| Improvement | Implementation |
-|-------------|----------------|
-| "Why It Matters" section | Added audience-specific value props (founders, investors, developers) |
-| Grounded metrics | Added attribution like "tracked via internal learning network" |
-| Concrete dream example | Added specific example of headline strategy improvement |
-| Strong CTA | Added call-to-action guidance in prompts |
-
-### 5. Podcast Analytics Wiring (PR #371)
-
-Fixed PerformanceAnalystAgent showing stub reports for podcast content.
+Added category filtering to the dedicated Blogs page.
 
 | Problem | Solution |
 |---------|----------|
-| Agent queried `ContentChannel`/`ChannelEpisode` but podcasts use `PodcastShow`/`PodcastEpisode` | Added `list_podcast_shows` and `get_podcast_performance` tools |
+| BlogsPage showed ALL SelfBlog entries mixed together | Added category filter tabs with 'blog' as default |
 
-### Wire Test Results
+**New Features:**
+- Category tabs: Blog Posts | Audits | Research | Technical Docs | All
+- Dynamic header title/description based on selected category
+- Category badge on non-blog content cards
+- Default filter to `category='blog'`
 
-| System | Status |
-|--------|--------|
-| Debate Agents | ✅ Working |
-| Podcast Analytics | ✅ New tools working |
-| Self-Blog | ✅ 1,092 blogs |
-| Learning Network | ✅ 212 agents, 1,899 transfers |
-| Recent Activity | ✅ 20 activities |
-| Spider Network | ✅ 77 registered |
-| Input Parameters | ✅ Clean rendering |
+### 3. Workspace BlogsSubTab Filter (PR #376)
 
-**Data Issues Identified:**
-- 3 orphaned podcast episodes (no associated PodcastShow)
-- 190 channel episodes with 0 views (view tracking not active)
+Fixed the Workspace → Content Studio → Blogs tab showing mixed content.
 
-### Files Changed
+| Problem | Solution |
+|---------|----------|
+| BlogsSubTab fetched all categories without filtering | Added `category=blog` filter to API call |
 
-| File | Change |
-|------|--------|
-| `core/tasks.py` | Debate format handling + Blog editorial improvements |
-| `frontend/src/components/SmartOutputRenderer.tsx` | DebateRenderer component |
-| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | InputParamRow component |
-| `core/agents/content/performance_analyst_agent.py` | Podcast analytics tools |
-| `core/management/commands/write_self_blog.py` | Editorial improvements |
+### 4. GovernanceTab Decision Card onClick (PR #377)
+
+Fixed non-interactive pending decision cards in the Governance tab.
+
+| Problem | Solution |
+|---------|----------|
+| Decision cards had no click handlers | Added onClick to open DecisionDetailModal |
+
+**New Features:**
+- Click handlers open `DecisionDetailModal`
+- Hover effects (background change, cursor pointer)
+- Eye icon indicator showing clickability
+- Title highlights on hover
+
+---
+
+## Current Category Distribution
+
+```
+SelfBlog entries: 1,092 total
+  - blog: 1,004
+  - audit: 59
+  - research_brief: 29
+  - technical_document: 0
+  - prototype_plan: 0
+```
 
 ---
 
@@ -96,43 +85,43 @@ make start && make celery
 # 2. Access Workspace
 open http://localhost:8000/ai-studio/
 
-# 3. Verify integrations
-# - Command tab: Check input parameters render cleanly
-# - Podcast analytics: Test with PerformanceAnalystAgent
-# - Activity Feed: Verify debate agent output renders properly
+# 3. Verify fixes
+# - /blogs: Check category tabs filter correctly
+# - Workspace → Content Studio → Blogs: Should show only blog posts
+# - Workspace → Governance: Click pending decisions to open modal
 ```
 
 ---
 
-## Current System Stats
+## Files Changed
 
-| Component | Count |
-|-----------|-------|
-| Initiatives | 17 |
-| SelfBlogs | 1,092 |
-| Gates | 572 |
-| Agents | 74 (212 in learning network) |
-| Spiders | 77 |
-| Knowledge Transfers | 1,899 |
+| File | Change |
+|------|--------|
+| `core/services/autonomous_action_executor.py` | Set correct categories for auto-generated content |
+| `core/migrations/0196_session_852_fix_artifact_categories.py` | Data migration for existing entries |
+| `frontend/src/pages/BlogsPage.tsx` | Category filter tabs UI |
+| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Blog-only API filter |
+| `frontend/src/pages/workspace/tabs/GovernanceTab.tsx` | Decision card onClick + modal |
 
 ---
 
-## Session 851 PRs
+## Session 852 PRs
 
 | PR | Fix |
 |----|-----|
-| #367 | Debate Agent output rendering |
-| #368 | React Hook order (Error #310) |
-| #369 | Input Parameters JSON display |
-| #370 | Blog editorial improvements |
-| #371 | Podcast Analytics wiring |
+| #374 | Backend artifact category classification |
+| #375 | BlogsPage category filter tabs |
+| #376 | Workspace BlogsSubTab blog-only filter |
+| #377 | GovernanceTab decision card onClick handlers |
+
+---
 
 ## Potential Next Steps
 
-1. **Fix orphaned podcast episodes** - 3 episodes have no associated PodcastShow
+1. **Fix orphaned podcast episodes** - 3 episodes have no associated PodcastShow (from Session 851)
 2. **Enable channel view tracking** - 190 episodes have 0 views
-3. **Test full Initiative flow** - Create decision with suggested_feature
-4. **Continue to next phase** - User mentioned preparing for next phase
+3. **Add more category types** - technical_document and prototype_plan have 0 entries
+4. **Audit other UI areas** - Check for other non-clickable cards
 
 ---
 
@@ -140,6 +129,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
+| **852** | Artifact Classification Fix - 4 PRs (#374-377) |
 | **851** | Multiple Integration Fixes - 5 PRs (#367-371) |
 | **850** | Inbox View + Smart Truncate + Docs Framing Fix |
 | **849** | Decision-Initiative Linking - Auto-create Initiative from Proposed Feature |
@@ -151,11 +141,10 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
-- `docs/handoffs/SESSION_851_INPUT_DATA_RENDER_FIX.md` - Input parameters fix
-- `docs/handoffs/SESSION_850_INBOX_AND_DOCS_FRAMING.md` - Session 850 details
-- `docs/handoffs/SESSION_849_DECISION_INITIATIVE_LINKING.md` - Implementation details
+- `docs/handoffs/SESSION_852_ARTIFACT_CLASSIFICATION.md` - Full session details
+- `docs/handoffs/SESSION_851_INPUT_DATA_RENDER_FIX.md` - Previous session
 - `CLAUDE.md` - System overview
 
 ---
 
-**Session 851 Complete - All wires verified working**
+**Session 852 Complete - Artifact classification and UI interaction fixes deployed**
