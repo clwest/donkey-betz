@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     'django_celery_beat',      # Celery Beat scheduler for automated tasks
     'django_celery_results',   # Celery task result storage
     "pgvector",
+    'cloudinary_storage',      # Session 857: Cloudinary storage for production media files
     # Core app only for now
     'core.apps.CoreConfig',    # Core utilities and management (Session 623: with startup health check)
 
@@ -541,6 +542,17 @@ cloudinary.config(
     api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
     secure=True
 )
+
+# Session 857: Configure Cloudinary as default storage for production
+# This fixes "Permission denied: /app/media" errors in Railway containers
+if not DEBUG:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    # Required settings for django-cloudinary-storage
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'donkeybetz'),
+        'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
+        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+    }
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
