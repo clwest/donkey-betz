@@ -6572,6 +6572,14 @@ Next Steps:
                 except Exception as e:
                     logger.debug(f"Could not update mood after conversation: {e}")
 
+            else:
+                # Session 846: Mark conversation as abandoned if no messages were generated
+                logger.warning(f"💬 [CONVERSATIONS] No messages generated for conversation {conversation.id}, marking as abandoned")
+                conversation.status = 'abandoned'
+                conversation.conclusion = 'No messages were generated - conversation abandoned'
+                conversation.ended_at = timezone.now()
+                conversation.save()
+
         # Broadcast the update
         try:
             import redis
@@ -7257,6 +7265,14 @@ Next Steps:
                 except Exception as e:
                     logger.debug(f"Could not update mood after panel: {e}")
 
+            else:
+                # Session 846: Mark conversation as abandoned if no messages were generated
+                logger.warning(f"👥 [MULTI-AGENT] No messages generated for panel {conversation.id}, marking as abandoned")
+                conversation.status = 'abandoned'
+                conversation.conclusion = 'No messages were generated - panel abandoned'
+                conversation.ended_at = timezone.now()
+                conversation.save()
+
         # Calculate average participants
         if stats['conversations_started'] > 0:
             stats['avg_participants'] = round(total_participants / stats['conversations_started'], 1)
@@ -7505,6 +7521,12 @@ Keep your response to 2-3 sentences. Be specific about actionable insights."""
                         f"🕷️ [SPIDER-TRIGGER] Created conversation about {spider_data.spider_name} "
                         f"with {initiator.name} and {responder.name}"
                     )
+
+                else:
+                    # Session 846: Delete conversation if OpenAI returned empty content
+                    logger.warning(f"🕷️ [SPIDER-TRIGGER] Empty content from OpenAI, deleting conversation")
+                    conversation.delete()
+                    continue
 
             except Exception as e:
                 logger.warning(f"🕷️ [SPIDER-TRIGGER] Failed to generate message: {e}")
