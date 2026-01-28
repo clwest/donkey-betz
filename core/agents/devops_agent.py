@@ -12,7 +12,7 @@ This agent can:
 import logging
 from typing import Any, Dict, List
 
-from .base_agent import BaseAgent, AgentResult
+from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,12 @@ class DevOpsAgent(BaseAgent):
 
     name = "DevOpsAgent"
     requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'platform', 'environment', 'app_type', 'cloud_provider']
+    )
 
     system_prompt = """You are DevOpsAgent, an expert in DevOps practices, deployment, and infrastructure management.
 
@@ -355,13 +361,48 @@ Only use these tools when explicitly asked to generate configs. For questions or
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 856: Build descriptive message based on tool used
+                        first_result = all_results[0]
+                        tool_used = first_result['source']
+                        tool_data = first_result.get('data', {})
+                        if tool_used == 'create_ci_pipeline':
+                            platform = tool_data.get('platform', 'unknown')
+                            language = tool_data.get('language', '')
+                            descriptive_msg = f"CI/CD pipeline created for {platform}: {language} project with {len(tool_data.get('stages', []))} stages"
+                        elif tool_used == 'create_docker_config':
+                            app_type = tool_data.get('app_type', 'unknown')
+                            env = tool_data.get('environment', 'production')
+                            descriptive_msg = f"Docker configuration created for {app_type} ({env} environment)"
+                        elif tool_used == 'create_k8s_deployment':
+                            app_name = tool_data.get('app_name', 'unknown')
+                            replicas = tool_data.get('replicas', 3)
+                            descriptive_msg = f"Kubernetes deployment created for {app_name} ({replicas} replicas)"
+                        elif tool_used == 'create_terraform_config':
+                            provider = tool_data.get('cloud_provider', 'unknown')
+                            region = tool_data.get('region', '')
+                            descriptive_msg = f"Terraform configuration created for {provider} ({region})"
+                        elif tool_used == 'create_monitoring_config':
+                            stack = tool_data.get('stack', 'unknown')
+                            metrics = tool_data.get('metrics', [])
+                            descriptive_msg = f"Monitoring config created using {stack}: {len(metrics)} metrics tracked"
+                        else:
+                            descriptive_msg = f"DevOps task '{tool_used}' completed"
+
+                        # Enrich result data with tool_used for content review
+                        result_data = {
+                            'results': all_results,
+                            'query': task,
+                            'tool_used': tool_used,
+                            'platform': tool_data.get('platform'),
+                            'environment': tool_data.get('environment'),
+                            'app_type': tool_data.get('app_type'),
+                            'cloud_provider': tool_data.get('cloud_provider')
+                        }
+
                         result = AgentResult(
                             success=True,
-                            message=f"DevOps task completed using {len(all_results)} tool(s)",
-                            data={
-                                'results': all_results,
-                                'query': task
-                            },
+                            message=descriptive_msg,
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,

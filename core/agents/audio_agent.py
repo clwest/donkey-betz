@@ -28,7 +28,7 @@ import logging
 import time
 from typing import Dict, Any
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -75,6 +75,12 @@ class AudioAgent(BaseAgent):
     """
 
     name = "AudioAgent"
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'voice', 'text', 'audio_id', 'duration']
+    )
 
     system_prompt = """You are AudioAgent, a specialist in creating audio content.
 
@@ -267,10 +273,35 @@ If asked to do something outside audio generation, politely explain you can only
                     all_errors = [tc['result'].get('error', 'Unknown error') for tc in failed_calls]
 
                     if successful_calls:
+                        # Session 856: Build descriptive message based on tool used
+                        tool_used = successful_calls[0]['tool']
+                        args = successful_calls[0].get('arguments', {})
+                        tool_result = successful_calls[0]['result']
+                        if tool_used == 'generate_voice':
+                            voice = args.get('voice', 'Rachel')
+                            text_preview = args.get('text', '')[:80]
+                            descriptive_msg = f"Voice generated using {voice}: '{text_preview}...'"
+                        elif tool_used == 'generate_sfx':
+                            desc = args.get('description', '')[:80]
+                            duration = args.get('duration', 3.0)
+                            descriptive_msg = f"Sound effect generated ({duration}s): '{desc}'"
+                        elif tool_used == 'add_voiceover':
+                            voice = args.get('voice', 'Rachel')
+                            video_id = args.get('video_id', 'unknown')
+                            descriptive_msg = f"Voiceover added to video {video_id} using {voice} voice"
+                        else:
+                            descriptive_msg = f"Audio operation '{tool_used}' completed"
+
+                        # Merge tool result with additional context
+                        result_data = tool_result.copy() if isinstance(tool_result, dict) else {'result': tool_result}
+                        result_data['tool_used'] = tool_used
+                        result_data['voice'] = args.get('voice')
+                        result_data['text'] = args.get('text', '')[:200]
+
                         result = AgentResult(
                             success=True,
-                            message=f"Audio generated successfully",
-                            data=successful_calls[0]['result'],
+                            message=descriptive_msg,
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,
