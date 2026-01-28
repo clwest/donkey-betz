@@ -11,12 +11,15 @@ import {
   Loader2,
   Hash,
   User,
+  Users,
   Brain,
   MessageSquare,
   Zap,
   Eye,
   Target,
   TrendingUp,
+  Lightbulb,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { humanApi, platformApi } from '@/lib/api'
@@ -380,17 +383,106 @@ export function DecisionDetailModal({ decisionId, onClose }: DecisionDetailModal
                 </div>
               )}
 
-              {/* Payload */}
+              {/* Session 849: Structured Payload Display */}
               {decision.payload && Object.keys(decision.payload).length > 0 && (
-                <div className="bg-dark-bg rounded-lg p-4">
-                  <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-2">
-                    <TrendingUp size={12} />
-                    Additional Data
-                  </h4>
-                  <pre className="text-xs text-gray-300 bg-gray-900/50 p-3 rounded overflow-x-auto max-h-48">
-                    {JSON.stringify(decision.payload, null, 2)}
-                  </pre>
-                </div>
+                <>
+                  {/* Key Insights */}
+                  {decision.payload.key_insights && Array.isArray(decision.payload.key_insights) && decision.payload.key_insights.length > 0 && (
+                    <div className="bg-dark-bg rounded-lg p-4">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3 flex items-center gap-2">
+                        <Lightbulb size={12} />
+                        Key Insights
+                      </h4>
+                      <ul className="space-y-2">
+                        {(decision.payload.key_insights as string[]).map((insight, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-200">
+                            <span className="w-5 h-5 flex-shrink-0 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-xs font-medium mt-0.5">
+                              {idx + 1}
+                            </span>
+                            <span className="leading-relaxed">{insight}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Recommended Stance */}
+                  {decision.payload.recommended_stance && (
+                    <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-4">
+                      <h4 className="text-xs font-semibold text-primary-400 uppercase mb-2 flex items-center gap-2">
+                        <Target size={12} />
+                        Recommended Stance
+                      </h4>
+                      <p className="text-sm text-gray-200 leading-relaxed">
+                        {decision.payload.recommended_stance as string}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Suggested Feature */}
+                  {decision.payload.suggested_feature && (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <h4 className="text-xs font-semibold text-green-400 uppercase mb-2 flex items-center gap-2">
+                        <Sparkles size={12} />
+                        Suggested Feature
+                      </h4>
+                      <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
+                        {decision.payload.suggested_feature as string}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Rationale */}
+                  {decision.payload.rationale && (
+                    <div className="bg-dark-bg rounded-lg p-4">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                        <Brain size={12} />
+                        Rationale
+                      </h4>
+                      <p className="text-sm text-gray-200 leading-relaxed">
+                        {decision.payload.rationale as string}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Participants */}
+                  {decision.payload.participants && Array.isArray(decision.payload.participants) && decision.payload.participants.length > 0 && (
+                    <div className="bg-dark-bg rounded-lg p-4">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                        <Users size={12} />
+                        Participants
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(decision.payload.participants as string[]).map((participant, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-gray-700/50 rounded text-sm text-gray-300">
+                            {participant}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Decision Type & Impact Area Badges */}
+                  {(decision.payload.decision_type || decision.payload.impact_area) && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {decision.payload.decision_type && (
+                        <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">
+                          Type: {decision.payload.decision_type as string}
+                        </span>
+                      )}
+                      {decision.payload.impact_area && (
+                        <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium">
+                          Impact: {decision.payload.impact_area as string}
+                        </span>
+                      )}
+                      {decision.payload.is_canonical === true && (
+                        <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">
+                          Canonical Policy
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Metadata */}
