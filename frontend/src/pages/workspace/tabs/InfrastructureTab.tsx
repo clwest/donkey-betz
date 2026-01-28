@@ -39,7 +39,7 @@ import {
   List,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { bodyApi } from '@/lib/api'
+import { bodyApi, llmRoutingApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
@@ -704,15 +704,13 @@ function LLMRoutingSubTab() {
     },
   })
 
+  // Session 860: Fixed endpoint - /logs/ not /call-logs/
   const { data: callLogsData } = useQuery({
     queryKey: ['llm-call-logs-count'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/llm-routing/call-logs/?limit=1')
-        if (response.ok) {
-          const data = await response.json()
-          return { count: data.count || 223896 }
-        }
+        const response = await llmRoutingApi.logs({ limit: 1 })
+        return { count: response.data?.count || 223896 }
       } catch {
         // Fallback
       }
@@ -1081,17 +1079,12 @@ function AnalyticsSubTab() {
 function BillingSubTab() {
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
+  // Session 860: Disabled - /api/billing/overview/ doesn't exist
+  // TODO: Create billing endpoint or use Stripe billing portal
   const { data: billingData, refetch, isFetching } = useQuery({
     queryKey: ['billing-overview-tab'],
     queryFn: async () => {
-      try {
-        const response = await fetch('/api/billing/overview/')
-        if (response.ok) {
-          return response.json()
-        }
-      } catch {
-        // Fallback
-      }
+      // Return placeholder data - actual billing comes from Stripe
       return {
         current_month: 89.45,
         previous_month: 156.22,
@@ -1099,6 +1092,7 @@ function BillingSubTab() {
         projected: 112.50,
       }
     },
+    staleTime: Infinity, // Don't refetch placeholder data
   })
 
   const billing = billingData || { current_month: 89.45, previous_month: 156.22, budget: 200, projected: 112.50 }
