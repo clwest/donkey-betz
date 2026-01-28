@@ -74,6 +74,7 @@ export interface WorkspaceOperation {
   content_after?: string
   error_message?: string
   execution_time_ms?: number
+  agent_execution_time_ms?: number  // Session 855: Agent execution time from AgentExecution
   requires_review?: boolean
   reviewed_by_human?: boolean
   human_approved?: boolean | null
