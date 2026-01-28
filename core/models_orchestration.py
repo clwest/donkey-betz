@@ -587,3 +587,75 @@ class WiringDefect(models.Model):
         self.resolved_at = timezone.now()
         self.resolution_notes = notes
         self.save(update_fields=['is_resolved', 'resolved_at', 'resolution_notes'])
+
+
+class CitationViolation(models.Model):
+    """
+    Session 846: Tracks outputs that fail citation requirements.
+
+    Critical agents (Research, Financial, Strategy) must include proper
+    source citations. This model tracks violations for auditing and
+    quality enforcement.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    VIOLATION_TYPES = [
+        ('no_sources', 'No Sources Provided'),
+        ('insufficient_sources', 'Insufficient Sources'),
+        ('no_urls', 'Sources Missing URLs'),
+        ('synthetic_only', 'Only Synthetic/Mock Sources'),
+        ('stale_sources', 'Sources Too Old'),
+    ]
+    violation_type = models.CharField(max_length=30, choices=VIOLATION_TYPES, db_index=True)
+
+    # Agent info
+    agent_name = models.CharField(max_length=100, db_index=True)
+    agent_category = models.CharField(max_length=50, blank=True)
+
+    # What was required vs what was provided
+    required_sources = models.IntegerField(default=2)
+    provided_sources = models.IntegerField(default=0)
+    sources_detail = models.JSONField(default=list, help_text="List of sources found in output")
+
+    # The problematic output
+    task_description = models.TextField(blank=True)
+    output_preview = models.TextField(blank=True, help_text="First 500 chars of output")
+
+    # Trace linkage
+    trace_id = models.UUIDField(null=True, blank=True, db_index=True)
+    execution_id = models.UUIDField(null=True, blank=True, db_index=True)
+    deliverable_id = models.UUIDField(null=True, blank=True, db_index=True)
+
+    # Resolution
+    is_resolved = models.BooleanField(default=False, db_index=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolution_action = models.CharField(max_length=50, blank=True)
+    resolution_notes = models.TextField(blank=True)
+
+    # Was the output blocked or just flagged?
+    was_blocked = models.BooleanField(default=False, help_text="True if output was rejected")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        db_table = 'core_citation_violation'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['violation_type', 'is_resolved']),
+            models.Index(fields=['agent_name', '-created_at']),
+            models.Index(fields=['was_blocked', '-created_at']),
+        ]
+        verbose_name = 'Citation Violation'
+        verbose_name_plural = 'Citation Violations'
+
+    def __str__(self):
+        return f"[{self.violation_type}] {self.agent_name}: {self.provided_sources}/{self.required_sources} sources"
+
+    def resolve(self, action: str = '', notes: str = ''):
+        """Mark violation as resolved."""
+        self.is_resolved = True
+        self.resolved_at = timezone.now()
+        self.resolution_action = action
+        self.resolution_notes = notes
+        self.save(update_fields=['is_resolved', 'resolved_at', 'resolution_action', 'resolution_notes'])

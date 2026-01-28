@@ -32,10 +32,13 @@ from core.views_integration_health import (
 )
 
 # Session 843: Trace Viewer - Orchestration Contract
+# Session 846: Citation Gate - Citation Violations
 from core.views_trace_viewer import (
     TraceViewerView,
     WiringDefectsListView,
     WiringDefectResolveView,
+    CitationViolationsListView,
+    CitationViolationResolveView,
 )
 
 # Session 237: Redirect handler for legacy broken URLs
@@ -1469,6 +1472,10 @@ urlpatterns = [
     path('api/traces/<uuid:trace_id>/', TraceViewerView.as_view(), name='trace-viewer'),
     path('api/wiring-defects/', WiringDefectsListView.as_view(), name='wiring-defects-list'),
     path('api/wiring-defects/<uuid:defect_id>/resolve/', WiringDefectResolveView.as_view(), name='wiring-defect-resolve'),
+
+    # Session 846: Citation Gate - Citation Violations
+    path('api/citation-violations/', CitationViolationsListView.as_view(), name='citation-violations-list'),
+    path('api/citation-violations/<uuid:violation_id>/resolve/', CitationViolationResolveView.as_view(), name='citation-violation-resolve'),
 
     # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
     path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),
