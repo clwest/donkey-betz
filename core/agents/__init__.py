@@ -145,6 +145,9 @@ from core.agents.video_editing_agent import VideoEditingAgent
 # Research Agents
 from core.agents.research_agent import ResearchAgent
 
+# Platform Audit Agent (Session 857: Internal platform auditing)
+from core.agents.platform_audit_agent import PlatformAuditAgent
+
 # Orchestration Agents (Session 393: Added 3 new orchestrators)
 from core.agents.workflow_agent import WorkflowAgent
 from core.agents.workflow_orchestration_agent import (

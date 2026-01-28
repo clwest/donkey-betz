@@ -1,0 +1,463 @@
+{
+  "audit_metadata": {
+    "generated_at": "2026-01-28T13:20:00Z",
+    "generated_by": "Manual audit (Session 857)",
+    "total_integrations": 52,
+    "integrations_missing_credentials": 8,
+    "integrations_with_expiring_keys_30d": 0,
+    "integrations_with_errors": 2
+  },
+  "summary": {
+    "llm_providers": 6,
+    "media_generation": 4,
+    "spider_integrations": 77,
+    "spiders_need_api_keys": 5,
+    "payment_integrations": 1,
+    "search_apis": 2,
+    "infrastructure": 3,
+    "other_apis": 8
+  },
+  "integrations": [
+    {
+      "name": "OpenAI",
+      "service_type": "llm_provider",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:OPENAI_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Primary LLM provider for GPT-4o, GPT-4o-mini, o3-mini"
+    },
+    {
+      "name": "Anthropic",
+      "service_type": "llm_provider",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:ANTHROPIC_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Claude 3.5 Sonnet, Claude 3 Opus"
+    },
+    {
+      "name": "Together AI",
+      "service_type": "llm_provider",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:TOGETHER_AI_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Llama 3.1 70B/8B for coding tasks"
+    },
+    {
+      "name": "Google Gemini",
+      "service_type": "llm_provider",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:GEMINI_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Gemini 2.0 Flash, Pro for long context"
+    },
+    {
+      "name": "DeepSeek",
+      "service_type": "llm_provider",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:DEEPSEEK_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "needs_key",
+      "notes": "DeepSeek V3 for coding"
+    },
+    {
+      "name": "Groq",
+      "service_type": "llm_provider",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:GROQ_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "needs_key",
+      "notes": "Fast inference provider"
+    },
+    {
+      "name": "Stability AI",
+      "service_type": "image_generation",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:STABILITY_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "SDXL, SD3, Ultra for image generation"
+    },
+    {
+      "name": "Runway ML",
+      "service_type": "video_generation",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:RUNWAY_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Gen-4 Turbo/Aleph for video generation"
+    },
+    {
+      "name": "ElevenLabs",
+      "service_type": "audio_generation",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:ELEVENLABS_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "TTS for podcasts and voice content"
+    },
+    {
+      "name": "Replicate",
+      "service_type": "ml_inference",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:REPLICATE_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "needs_key",
+      "notes": "Alternative ML model hosting"
+    },
+    {
+      "name": "Stripe",
+      "service_type": "payment",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Subscription billing (Free/Pro/Premium tiers)"
+    },
+    {
+      "name": "Serper",
+      "service_type": "search_api",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:SERPER_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Web search for ResearchAgent, Citation Gate"
+    },
+    {
+      "name": "NewsAPI",
+      "service_type": "news_api",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:NEWS_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "News aggregation (80k+ sources)"
+    },
+    {
+      "name": "PostgreSQL (Railway)",
+      "service_type": "database",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "env_var:DATABASE_URL",
+      "owner": "railway",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Primary database with pgvector"
+    },
+    {
+      "name": "Redis (Railway)",
+      "service_type": "cache_broker",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "env_var:REDIS_URL",
+      "owner": "railway",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Celery broker, cache, channels"
+    },
+    {
+      "name": "GitHub",
+      "service_type": "code_repository",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:GITHUB_TOKEN",
+      "owner": "platform",
+      "expiry_policy": "PAT expiry varies",
+      "status": "active",
+      "notes": "GitHub API for trending repos spider"
+    },
+    {
+      "name": "Polygon.io",
+      "service_type": "financial_data",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:POLYGON_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Stock market data spider"
+    },
+    {
+      "name": "Etherscan",
+      "service_type": "blockchain_data",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:ETHERSCAN_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Ethereum blockchain data spider"
+    },
+    {
+      "name": "CoinGecko",
+      "service_type": "crypto_data",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "env_var:COINGECKO_API_KEY (optional)",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Crypto prices, free tier works"
+    },
+    {
+      "name": "The Odds API",
+      "service_type": "betting_data",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:THEODDS_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Sports odds from 40+ bookmakers"
+    },
+    {
+      "name": "Kalshi",
+      "service_type": "prediction_markets",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "none (public API)",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Prediction market data spider"
+    },
+    {
+      "name": "Finnhub",
+      "service_type": "financial_data",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:FINNHUB_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Stock quotes, market news"
+    },
+    {
+      "name": "Giphy",
+      "service_type": "media_api",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:GIPHY_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Trending GIFs spider"
+    },
+    {
+      "name": "Unsplash",
+      "service_type": "media_api",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:UNSPLASH_ACCESS_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Stock photos spider"
+    },
+    {
+      "name": "Discord Bot",
+      "service_type": "social_integration",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:DISCORD_BOT_TOKEN",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "needs_token",
+      "notes": "Spider needs bot token"
+    },
+    {
+      "name": "BlueSky",
+      "service_type": "social_integration",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:BLUESKY_IDENTIFIER,BLUESKY_PASSWORD",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "needs_credentials",
+      "notes": "Spider needs AT Protocol credentials"
+    },
+    {
+      "name": "Spotify",
+      "service_type": "media_api",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:SPOTIFY_CLIENT_ID,SPOTIFY_CLIENT_SECRET",
+      "owner": "platform",
+      "expiry_policy": "OAuth token refresh",
+      "status": "needs_oauth",
+      "notes": "Spider needs OAuth setup"
+    },
+    {
+      "name": "YouTube",
+      "service_type": "media_api",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:GOOGLE_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Uses Google API key"
+    },
+    {
+      "name": "SEC EDGAR",
+      "service_type": "financial_data",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:SEC_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "needs_key",
+      "notes": "Spider needs API key for SEC filings"
+    },
+    {
+      "name": "CourtListener",
+      "service_type": "legal_api",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "none (free API)",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Court opinions, case law"
+    },
+    {
+      "name": "HuggingFace",
+      "service_type": "ml_data",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "none (public API)",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "ML models and datasets spider"
+    },
+    {
+      "name": "Open-Meteo",
+      "service_type": "weather_api",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "none (free API)",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Weather data spider"
+    },
+    {
+      "name": "NOAA",
+      "service_type": "weather_api",
+      "api_key_required": false,
+      "key_configured": true,
+      "storage_location": "none (public API)",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Weather alerts spider"
+    },
+    {
+      "name": "Telegram Bot",
+      "service_type": "messaging",
+      "api_key_required": true,
+      "key_configured": false,
+      "storage_location": "env_var:TELEGRAM_BOT_TOKEN",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "needs_token",
+      "notes": "Optional notification channel"
+    },
+    {
+      "name": "Resend",
+      "service_type": "email",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:RESEND_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Transactional email"
+    },
+    {
+      "name": "Adzuna",
+      "service_type": "jobs_api",
+      "api_key_required": true,
+      "key_configured": true,
+      "storage_location": "env_var:ADZUNA_APP_ID,ADZUNA_API_KEY",
+      "owner": "platform",
+      "expiry_policy": "none",
+      "status": "active",
+      "notes": "Remote jobs spider"
+    }
+  ],
+  "spider_integrations": {
+    "total": 77,
+    "working": 72,
+    "need_api_keys": 5,
+    "spiders_needing_keys": [
+      "bluesky - needs BLUESKY_IDENTIFIER + BLUESKY_PASSWORD",
+      "discord - needs DISCORD_BOT_TOKEN",
+      "spotify - needs SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET",
+      "sec_edgar - needs SEC_API_KEY",
+      "youtube - needs GOOGLE_API_KEY (may be configured)"
+    ],
+    "categories": {
+      "news_media": 10,
+      "financial_crypto": 9,
+      "tech_development": 8,
+      "legal": 6,
+      "education": 5,
+      "community_social": 4,
+      "design_creative": 2,
+      "content_monetization": 3,
+      "jobs_freelance": 3,
+      "ai_ml": 3,
+      "startups_vc": 3,
+      "specialty_tech": 5,
+      "entertainment": 4,
+      "lifestyle": 4,
+      "weather": 2,
+      "science_health": 3,
+      "business_government": 2,
+      "visual_media": 2,
+      "real_estate": 1
+    }
+  },
+  "known_issues": [
+    {
+      "integration": "ImageAgent",
+      "error": "See user-reported failure - needs investigation",
+      "last_error_date": "2026-01-28"
+    },
+    {
+      "integration": "ResearchAgent",
+      "error": "Task routing issue - asked to do internal audit, only has external research tools",
+      "last_error_date": "2026-01-28"
+    }
+  ]
+}
