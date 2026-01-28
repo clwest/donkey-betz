@@ -2,6 +2,7 @@
  * Session 814: Dedicated Blogs Page
  * Direct access to all AI-generated blog posts from SelfBlog model
  * Session 833: Added approval workflow with status badges and filtering
+ * Session 852: Added category filtering to separate blogs from documents/research/audits
  */
 
 import { useState } from 'react'
@@ -22,6 +23,9 @@ import {
   CheckCircle,
   Eye,
   Clock,
+  ClipboardList,
+  FlaskConical,
+  FileCode,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { blogsApi, Blog } from '@/lib/api'
@@ -40,22 +44,32 @@ const statusStyles: Record<string, { bg: string; text: string; icon: typeof Cloc
   published: { bg: 'bg-green-500/20', text: 'text-green-400', icon: Eye },
 }
 
+// Session 852: Category styling
+const categoryStyles: Record<string, { bg: string; text: string; icon: typeof BookOpen; label: string }> = {
+  blog: { bg: 'bg-primary-500/20', text: 'text-primary-400', icon: BookOpen, label: 'Blog Posts' },
+  audit: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', icon: ClipboardList, label: 'Audits' },
+  research_brief: { bg: 'bg-violet-500/20', text: 'text-violet-400', icon: FlaskConical, label: 'Research' },
+  technical_document: { bg: 'bg-orange-500/20', text: 'text-orange-400', icon: FileCode, label: 'Technical Docs' },
+}
+
 export default function BlogsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('') // Session 833
+  const [categoryFilter, setCategoryFilter] = useState<string>('blog') // Session 852: Default to blog category
   const [deleteConfirm, setDeleteConfirm] = useState<Blog | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['blogs-page', page, search, statusFilter],
+    queryKey: ['blogs-page', page, search, statusFilter, categoryFilter],
     queryFn: async () => {
       const res = await blogsApi.list({
         page,
         per_page: 12,
         ...(search && { search }),
         ...(statusFilter && { status: statusFilter }),
+        ...(categoryFilter && { category: categoryFilter }), // Session 852
       })
       return res.data
     },
@@ -112,6 +126,8 @@ export default function BlogsPage() {
     total_pages: 0,
   }
   const statusCounts = data?.status_counts || { all: 0, draft: 0, approved: 0, published: 0 }
+  // Session 852: Category counts from backend
+  const categoryCounts = data?.category_counts || { all: 0, blog: 0, documents: 0 }
 
   const handleSearch = () => {
     setSearch(searchInput)
@@ -197,16 +213,32 @@ export default function BlogsPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header - Session 852: Dynamic based on category */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary-500/20 flex items-center justify-center">
-            <BookOpen className="text-primary-400" size={20} />
+          <div className={cn(
+            'h-10 w-10 rounded-lg flex items-center justify-center',
+            categoryStyles[categoryFilter]?.bg || 'bg-primary-500/20'
+          )}>
+            {(() => {
+              const Icon = categoryStyles[categoryFilter]?.icon || BookOpen
+              return <Icon className={categoryStyles[categoryFilter]?.text || 'text-primary-400'} size={20} />
+            })()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold">AI-Generated Blogs</h1>
+            <h1 className="text-2xl font-bold">
+              {categoryFilter === 'blog' ? 'AI-Generated Blogs' :
+               categoryFilter === 'audit' ? 'System Audits & Reports' :
+               categoryFilter === 'research_brief' ? 'Research Briefs' :
+               categoryFilter === 'technical_document' ? 'Technical Documents' :
+               'All Content'}
+            </h1>
             <p className="text-gray-400 text-sm">
-              Blog posts written by the system about itself and various topics
+              {categoryFilter === 'blog' ? 'Blog posts written by the system about itself and various topics' :
+               categoryFilter === 'audit' ? 'Automated system audits, reports, and findings' :
+               categoryFilter === 'research_brief' ? 'Research documents from autonomous investigations' :
+               categoryFilter === 'technical_document' ? 'Technical documents and deliverables' :
+               'All AI-generated content'}
             </p>
           </div>
         </div>
@@ -216,6 +248,70 @@ export default function BlogsPage() {
         >
           <RefreshCw size={16} />
           Refresh
+        </button>
+      </div>
+
+      {/* Session 852: Category Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        <button
+          onClick={() => { setCategoryFilter('blog'); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            categoryFilter === 'blog'
+              ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <BookOpen size={14} />
+          Blog Posts ({categoryCounts.blog})
+        </button>
+        <button
+          onClick={() => { setCategoryFilter('audit'); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            categoryFilter === 'audit'
+              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <ClipboardList size={14} />
+          Audits
+        </button>
+        <button
+          onClick={() => { setCategoryFilter('research_brief'); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            categoryFilter === 'research_brief'
+              ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <FlaskConical size={14} />
+          Research
+        </button>
+        <button
+          onClick={() => { setCategoryFilter('technical_document'); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            categoryFilter === 'technical_document'
+              ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <FileCode size={14} />
+          Technical Docs
+        </button>
+        <button
+          onClick={() => { setCategoryFilter(''); setPage(1); }}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-2',
+            !categoryFilter
+              ? 'bg-gray-600/20 text-gray-300 border border-gray-500/30'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+          )}
+        >
+          <FileText size={14} />
+          All ({categoryCounts.all})
         </button>
       </div>
 
@@ -230,7 +326,7 @@ export default function BlogsPage() {
               : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
           )}
         >
-          All ({statusCounts.all})
+          All Status ({statusCounts.all})
         </button>
         <button
           onClick={() => { setStatusFilter('draft'); setPage(1); }}
@@ -293,7 +389,7 @@ export default function BlogsPage() {
       {/* Stats */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-400">
-          {pagination.total} blog posts
+          {pagination.total} {categoryFilter ? categoryStyles[categoryFilter]?.label.toLowerCase() || 'items' : 'items'}
           {search && ` matching "${search}"`}
           {statusFilter && ` (${statusFilter})`}
         </p>
@@ -331,15 +427,25 @@ export default function BlogsPage() {
           {blogs.map((blog) => {
             const style = statusStyles[blog.status] || statusStyles.draft
             const StatusIcon = style.icon
+            // Session 852: Category styling
+            const catStyle = categoryStyles[blog.category || 'blog'] || categoryStyles.blog
+            const CategoryIcon = catStyle.icon
             return (
               <div key={blog.id} className="card hover:border-primary-500/50 transition-colors group relative">
                 <Link to={`/blog/${blog.id}`} className="block">
-                  {/* Session 833: Status Badge */}
-                  <div className="flex items-center justify-between mb-2">
+                  {/* Session 833: Status Badge + Session 852: Category Badge */}
+                  <div className="flex items-center gap-2 mb-2">
                     <span className={cn('text-xs px-2 py-0.5 rounded flex items-center gap-1', style.bg, style.text)}>
                       <StatusIcon size={12} />
                       {blog.status}
                     </span>
+                    {/* Session 852: Show category if not default blog */}
+                    {blog.category && blog.category !== 'blog' && (
+                      <span className={cn('text-xs px-2 py-0.5 rounded flex items-center gap-1', catStyle.bg, catStyle.text)}>
+                        <CategoryIcon size={12} />
+                        {catStyle.label}
+                      </span>
+                    )}
                   </div>
 
                   <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors pr-8">
