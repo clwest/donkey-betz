@@ -1,12 +1,12 @@
 # Agent Reference
 
-**Last Updated:** Session 781 (January 19, 2026) - Agent conversation voice fixes with 22 role-anchored styles
+**Last Updated:** Session 858 (January 28, 2026) - User context injection for personalized responses
 
 ---
 
 ## Overview
 
-**Total Agents: 72** | **Routable: 48** | **Non-Routable (Sub-agents): 24** | **Workspace-Aware: 22**
+**Total Agents: 74** | **Routable: 49** | **Non-Routable (Sub-agents): 25** | **Workspace-Aware: 22** | **User-Context-Enhanced: 4**
 
 The platform uses a **Clean Agent Architecture** where each agent is specialized with isolated tools. Agents cannot call each other's tools directly - they must delegate through the WorkflowAgent.
 
@@ -59,12 +59,50 @@ The platform uses a **Clean Agent Architecture** where each agent is specialized
 | Special | 2 | 1 | Thinking/reasoning + system intelligence |
 | **TOTAL** | **72** | **48** | |
 
+**Session 858 Addition:** All agents now receive personalized user context via `context['user']`. Four high-value agents actively use this for enhanced personalization:
+- **ContentWriterAgent**: Uses user's communication style as default tone, includes name/goals in prompt
+- **ResearchAgent**: Enhances task with user's research interests and memory patterns
+- **StockAnalystAgent**: Adds investor profile (risk tolerance, investment goals) to analysis
+- **SportsOddsAnalyst**: Adds bettor profile (favorite sports, bankroll, risk level)
+
 **Session 400 Addition:** All agents now automatically inject learned knowledge into their prompts via `_build_prompt()`. The knowledge pipeline is:
 ```
 Spider Data → Embeddings → Learning Bridge → AgentKnowledgeSource → Agent Prompts
 ```
 
 **Session 303 Addition:** Business research agents now have unified intelligence search with auto-refresh and prior research context.
+
+### User Context Injection (Session 858)
+
+All agents receive user context via the `context` parameter. Access it like this:
+
+```python
+def execute(self, task, context, scifi_context, spider_context):
+    # Full user context dict
+    user_context = context.get('user', {})
+
+    # Quick access fields (injected at top level)
+    user_name = context.get('user_name', '')
+    user_skills = context.get('user_skills', [])
+    user_goals = context.get('user_goals', [])
+    user_communication_style = context.get('user_communication_style', 'professional')
+
+    # Category-specific data (depends on agent type)
+    if user_context.get('has_user_context'):
+        risk_tolerance = user_context.get('risk_tolerance', 'moderate')
+        betting_prefs = user_context.get('betting_preferences', {})
+        job_prefs = user_context.get('job_preferences', {})
+```
+
+Agents receive different context based on their category:
+| Category | Data Available |
+|----------|---------------|
+| career | skills, job_preferences, salary_range, work_history, success_patterns |
+| content | communication_style, tone_preferences, goals |
+| financial | risk_tolerance, betting_preferences, investment_goals |
+| development | skills, tech_stack, github_username |
+| research | interests, learning_goals, preferred_topics |
+| default | name, goals, communication_style |
 
 ---
 

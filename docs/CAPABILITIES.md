@@ -1,19 +1,19 @@
 # Platform Capabilities
 
-**Last Updated:** Session 702 (January 6, 2026) - Added LUNGS Service for resource & capacity management
+**Last Updated:** Session 858 (January 28, 2026) - Added User Context Injection for personalized agent responses
 
 ---
 
-## System Overview (Session 702)
+## System Overview (Session 858)
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Total Agents** | **72** | 48 routable, 24 sub-agents (5 coordinator teams) - ALL have workspace integration |
+| **Total Agents** | **74** | 49 routable, 25 sub-agents (5 coordinator teams) - ALL have workspace + user context |
 | **Total Spiders** | **77** | 72 working, 5 need API keys |
-| **PA Tools** | **83** | +workspace_tool (Session 695) |
-| **Database Models** | **341+** | 37 categories (+3 LUNGS models) |
-| **Celery Tasks** | **132** | +3 LUNGS tasks (breathing, forecast, reset) |
-| **Services** | **99** | Business logic layer (+lungs.py) |
+| **PA Tools** | **86** | +workspace_tool, +body tools |
+| **Database Models** | **367+** | 37 categories (+SKIN, BRAIN, SPINE models) |
+| **Celery Tasks** | **235** | ALL body systems active |
+| **Services** | **124** | Business logic layer (+user context, diagnostic pipeline) |
 | **Discord Commands** | **112** | 29 Cog categories |
 | **Advisors** | **25** | Famous figures + domain experts |
 | **Sci-Fi Features** | **14** | All active (Session 567 cleanup) |
@@ -21,6 +21,7 @@
 | **LUNGS Service** | **3 models** | Budget, BreathCycle, RespiratoryStatus - 6 default budgets |
 | **SKIN Layer** | **3 models** | ProjectWorkspace, WorkspaceOperation, WorkspaceContext |
 | **WORKSPACE_AWARE_AGENTS** | **22** | Development, Content, Strategy, Research, Analysis, Legal |
+| **USER_CONTEXT_ENHANCED** | **4** | ContentWriter, Research, StockAnalyst, SportsOddsAnalyst (Session 858) |
 
 ---
 
@@ -78,6 +79,9 @@
 | **Event-Driven Triggers** | **29 Types, 34 Defaults, Instant Reaction** | **Production (Session 481)** |
 | **Situation Discord Commands** | **4 Commands (list/status/run/alerts)** | **Production (Session 480)** |
 | **Celery Beat Schedules** | **53 Automated Tasks** | **Production (Session 567)** |
+| **User Context Injection** | **All 74 Agents Personalized** | **Production (Session 858)** |
+| **Auto Personal Workspaces** | **On-Demand Creation** | **Production (Session 858)** |
+| **Learning Feedback Loop** | **Success Pattern Recording** | **Production (Session 858)** |
 | **Betting Dashboard** | **8 Sub-tabs + Push Notifications** | **Production (Session 562)** |
 | **Chief of Staff Layer** | **Pro/Con Review Documents** | **Production (Session 555)** |
 | **System Intelligence Agent** | **Platform Health & Attention Monitoring** | **Production (Session 663)** |
@@ -321,6 +325,64 @@ GET /api/lungs/alive/                     # Quick alive check
 | `core/services/lungs.py` | ~450 | LungsCapacityService |
 | `core/views_lungs.py` | ~350 | 9 API endpoints |
 | `core/management/commands/lungs_check.py` | ~443 | CLI command |
+
+---
+
+## User Context Injection (Session 858)
+
+All 74 agents now receive personalized user context for tailored responses. The system learns what works for each user and applies that knowledge to future interactions.
+
+### How It Works
+
+```
+User Request → AgentRouter._get_user_context()
+                      │
+                      ├─► AgentContextMiddleware (profile data)
+                      ├─► MemoryContextService (preferences, patterns)
+                      └─► Injection Policy (category filtering)
+                      │
+                      ▼
+              context['user'] = user_context
+                      │
+                      ▼
+              Agent.execute() → Personalized Response
+                      │
+                      ▼
+              _record_user_learning() → UserMemoryContext
+```
+
+### Injection Policy by Agent Category
+
+| Category | Agents | Data Injected |
+|----------|--------|---------------|
+| **career** | OpportunityPipelineAgent, CustomerResearchAgent | skills, job_preferences, salary_range, success_patterns |
+| **content** | ContentWriterAgent, SEOOptimizerAgent | communication_style, tone_preferences, goals |
+| **financial** | StockAnalystAgent, SportsOddsAnalyst | risk_tolerance, betting_preferences, investment_goals |
+| **development** | CodeGeneratorAgent, DevOpsAgent | skills, tech_stack, github_username |
+| **research** | ResearchAgent, TrendAnalysisAgent | interests, learning_goals, preferred_topics |
+| **default** | All other agents | name, goals, communication_style |
+
+### Enhanced Agents (4 Active)
+
+| Agent | Personalization |
+|-------|----------------|
+| **ContentWriterAgent** | Uses user's communication style as default tone, adds name/goals to system prompt |
+| **ResearchAgent** | Enhances task with research interests and memory patterns |
+| **StockAnalystAgent** | Adds investor profile (risk tolerance, investment goals) |
+| **SportsOddsAnalyst** | Adds bettor profile (favorite sports, bankroll, risk level) |
+
+### Auto Personal Workspaces
+
+Every user now gets a personal workspace auto-created at `generated_content/users/{username}/` when they first use an agent. This eliminates "No active workspace" errors.
+
+### Key Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/agent_router.py` | +288 | `_get_user_context()`, injection policy |
+| `core/agent_context_middleware.py` | ~500 | Profile data extraction |
+| `core/services/memory_context_service.py` | ~200 | Memory/preference building |
+| `core/services/workspace_manager.py` | +61 | `_ensure_personal_workspace()` |
 
 ---
 
