@@ -696,14 +696,64 @@ def decision_summary_detail_view(request, decision_id):
 
     Session 845: Get detail for a single AgentDecisionSummary.
     Session 848: Fixed field name mismatches causing 500 errors.
+    Session 855: Also check HumanAttentionItem to avoid 404 on pending decisions.
     Used by DecisionDetailModal for System Activity items.
     """
     from core.models_unified_system import AgentDecisionSummary
+    from core.models_human_interface import HumanAttentionItem
 
+    decision = None
+    attention_item = None
+
+    # Try AgentDecisionSummary first
     try:
         decision = AgentDecisionSummary.objects.get(id=decision_id)
     except AgentDecisionSummary.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Decision not found'}, status=404)
+        pass
+
+    # Session 855: Fall back to HumanAttentionItem if not found
+    if not decision:
+        try:
+            attention_item = HumanAttentionItem.objects.get(id=decision_id)
+        except HumanAttentionItem.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Decision not found'}, status=404)
+
+    # If we found a HumanAttentionItem, return it in the expected format
+    if attention_item:
+        return JsonResponse({
+            'success': True,
+            'item': {
+                'id': str(attention_item.id),
+                'title': attention_item.title,
+                'summary': attention_item.summary,
+                'urgency': attention_item.urgency,
+                'status': attention_item.status,
+                'item_type': attention_item.item_type,
+                'source_type': attention_item.source_type,
+                'source_agent': attention_item.source_agent,
+                'source_id': attention_item.source_id,
+                'payload': attention_item.payload or {},
+                'priority_score': attention_item.priority_score,
+                'impact_estimate': attention_item.impact_estimate,
+                'ml_prediction': attention_item.ml_prediction,
+                'ml_confidence': attention_item.ml_confidence,
+                'ml_recommendation': attention_item.ml_recommendation,
+                'decision': attention_item.decision,
+                'decision_feedback': attention_item.decision_feedback,
+                'decision_confidence': attention_item.decision_confidence,
+                'decided_at': attention_item.decided_at.isoformat() if attention_item.decided_at else None,
+                'human_overrode_ml': attention_item.human_overrode_ml,
+                'override_reason': attention_item.override_reason,
+                'deferred_until': attention_item.deferred_until.isoformat() if attention_item.deferred_until else None,
+                'created_at': attention_item.created_at.isoformat() if attention_item.created_at else None,
+                'viewed_at': attention_item.viewed_at.isoformat() if attention_item.viewed_at else None,
+                'expires_at': attention_item.expires_at.isoformat() if attention_item.expires_at else None,
+                'verification_outcome': attention_item.verification_outcome,
+                'verified_at': attention_item.verified_at.isoformat() if attention_item.verified_at else None,
+                'verification_profit': float(attention_item.verification_profit) if attention_item.verification_profit else None,
+                'verification_notes': attention_item.verification_notes,
+            }
+        })
 
     # Session 848: Use correct field names from AgentDecisionSummary model
     # - rationale (not reasoning)
