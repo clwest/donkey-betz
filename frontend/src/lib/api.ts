@@ -2948,6 +2948,20 @@ export const platformApi = {
   decisionSummaryDetail: (decisionId: string) =>
     api.get<{ success: boolean; item: Record<string, unknown> }>(`/platform/decision-summary/${decisionId}/`),
 
+  // Session 852: Create initiative from decision
+  createInitiativeFromDecision: (decisionId: string) =>
+    api.post<{
+      success: boolean
+      message?: string
+      error?: string
+      initiative?: {
+        id: string
+        name: string
+        current_stage: number
+        status: string
+      }
+    }>(`/platform/decision-summary/${decisionId}/create-initiative/`),
+
   // Session 847: Initiative Pipeline Dashboard
   initiatives: () =>
     api.get<{
