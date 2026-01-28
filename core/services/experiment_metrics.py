@@ -37,9 +37,11 @@ class ExperimentMetricsService:
     BIAS_DETECTION_WINDOW_HOURS = 2
     ANOMALY_DETECTION_WINDOW_HOURS = 6
 
-    # Session 841: Minimum thresholds to prevent premature halt decisions
-    MIN_EXECUTIONS_FOR_ERROR_RATE = 10  # Need at least 10 executions before calculating error rate
-    MIN_AGE_MINUTES = 10  # Experiment must be at least 10 minutes old
+    # Session 841/855: Minimum thresholds to prevent premature halt decisions
+    # Session 855: Increased from 10 to 20 executions - small samples cause false positives
+    # (e.g., 2/7 = 28.57% looks like high error rate but is just noise)
+    MIN_EXECUTIONS_FOR_ERROR_RATE = 20  # Need at least 20 executions before calculating error rate
+    MIN_AGE_MINUTES = 30  # Session 855: Increased from 10 to 30 minutes grace period
 
     def __init__(self, experiment):
         """
