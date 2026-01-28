@@ -10,6 +10,9 @@ The envelope wraps:
 - Execution metadata (timing, cost, tool calls)
 - Quality metrics
 - Classification (type, category, tags)
+
+Session 846: Added citation gate integration to validate Research/Financial/Strategy
+outputs have proper source citations before creating deliverables.
 """
 
 import logging
@@ -168,6 +171,20 @@ class DeliverableEnvelopeService:
                 )
                 return None
 
+            # Session 846: Citation Gate - validate Research/Financial/Strategy outputs
+            context = kwargs.get('context', {})
+            parent_execution = kwargs.get('parent_execution')
+            trace_id = context.get('trace_id')
+            execution_id = parent_execution.id if parent_execution and hasattr(parent_execution, 'id') else None
+
+            citation_valid = self._validate_citations(
+                agent_name=agent_name,
+                result=result,
+                task=task,
+                trace_id=trace_id,
+                execution_id=execution_id,
+            )
+
             # Determine deliverable type
             deliverable_type = self._determine_type(agent_name, result)
 
@@ -191,9 +208,7 @@ class DeliverableEnvelopeService:
             llm_cost = Decimal(str(result.get('cost', 0)))
             tool_calls = result.get('tool_calls', [])
 
-            # Session 843: Get trace context from kwargs or result
-            context = kwargs.get('context', {})
-            parent_execution = kwargs.get('parent_execution')
+            # Session 843: Get trace context from kwargs or result (moved earlier for citation gate)
 
             # Create the deliverable
             deliverable = Deliverable.objects.create(
@@ -498,6 +513,83 @@ class DeliverableEnvelopeService:
             score += 0.1
 
         return min(score, 1.0)
+
+    def _validate_citations(
+        self,
+        agent_name: str,
+        result: Dict[str, Any],
+        task: str,
+        trace_id=None,
+        execution_id=None,
+    ) -> bool:
+        """
+        Session 846: Validate citation requirements for critical agents.
+
+        Uses CitationGateService to check Research/Financial/Strategy outputs
+        have proper source citations. Currently runs in 'warn' mode - violations
+        are logged but outputs are not blocked.
+
+        Args:
+            agent_name: Name of the agent
+            result: The agent result dictionary
+            task: The task/prompt
+            trace_id: Optional trace ID for linking
+            execution_id: Optional execution ID
+
+        Returns:
+            True if citations are valid or not required, False if violation logged
+        """
+        try:
+            from core.services.citation_gate_service import get_citation_gate_service
+            import uuid
+
+            gate = get_citation_gate_service()
+
+            # Check if this agent requires citations
+            if not gate.requires_citations(agent_name):
+                return True
+
+            # Convert trace_id to UUID if needed
+            trace_uuid = None
+            if trace_id:
+                if isinstance(trace_id, str):
+                    try:
+                        trace_uuid = uuid.UUID(trace_id)
+                    except ValueError:
+                        pass
+                elif isinstance(trace_id, uuid.UUID):
+                    trace_uuid = trace_id
+
+            exec_uuid = None
+            if execution_id:
+                if isinstance(execution_id, str):
+                    try:
+                        exec_uuid = uuid.UUID(execution_id)
+                    except ValueError:
+                        pass
+                elif isinstance(execution_id, uuid.UUID):
+                    exec_uuid = execution_id
+
+            # Enforce in 'warn' mode (log violations but don't block)
+            is_valid = gate.enforce(
+                agent_name=agent_name,
+                result=result,
+                task=task,
+                trace_id=trace_uuid,
+                execution_id=exec_uuid,
+                mode='warn',
+            )
+
+            if not is_valid:
+                self.logger.info(
+                    f"Citation violation recorded for {agent_name} - output will proceed"
+                )
+
+            return is_valid
+
+        except Exception as e:
+            self.logger.warning(f"Citation gate check failed: {e}")
+            return True  # Don't block on gate errors
 
 
 # Singleton instance for easy access
