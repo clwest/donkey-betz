@@ -116,20 +116,32 @@ function GallerySubTab() {
     },
   })
 
+  // Session 860: Added error handling - endpoint requires authentication
   const { data: videoData } = useQuery({
     queryKey: ['gallery-video-stats-tab'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/gallery/videos/?limit=50')
-      return response.json()
+      try {
+        const response = await fetch('/api/v1/gallery/videos/?limit=50')
+        if (!response.ok) {
+          // Return empty data on 401/403 - user not authenticated
+          return { results: [], count: 0 }
+        }
+        return response.json()
+      } catch {
+        return { results: [], count: 0 }
+      }
     },
   })
 
+  // Session 860: Disabled - endpoint /api/v1/gallery/series/ doesn't exist yet
+  // TODO: Create backend endpoint or use sessions/list/ instead
   const { data: seriesData } = useQuery({
     queryKey: ['gallery-series-tab'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/gallery/series/?limit=50')
-      return response.json()
+      // Return empty placeholder until backend endpoint is created
+      return { results: [], count: 0 }
     },
+    enabled: false, // Disabled until endpoint exists
   })
 
   if (isLoading) {
