@@ -2221,6 +2221,31 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0),  # Every hour at :00
         'options': {'expires': 3600, 'queue': 'long_running'}
     },
+
+    # ==================== SESSION 856: DIAGNOSTIC PIPELINE ====================
+    # Transform audit output from "stuff failed again" to "here's the root cause and fix"
+    # Phase 1: Detect → Phase 2: Diagnose → Phase 3: Prescribe
+
+    # Run diagnostic pipeline to diagnose signatures with undiagnosed detections
+    # Requires 3+ samples per signature before diagnosis (guardrail against noise)
+    'run-diagnostic-pipeline': {
+        'task': 'core.tasks.run_diagnostic_pipeline_task',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,  # 15 minutes
+            'queue': 'long_running',
+        }
+    },
+
+    # Archive old resolved failure signatures (cleanup)
+    'cleanup-resolved-signatures': {
+        'task': 'core.tasks.cleanup_resolved_signatures',
+        'schedule': crontab(hour=4, minute=45),  # Daily at 4:45 AM
+        'args': (30,),  # Keep for 30 days before archiving
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
 }
 
 # Task routing configuration

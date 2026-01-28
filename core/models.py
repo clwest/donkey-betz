@@ -75,6 +75,14 @@ from .models_audit_tracking import (
     AuditVerificationRun,
 )
 
+# Import diagnostic pipeline models (Session 856 - Root Cause Analysis)
+from .models_diagnostic_pipeline import (
+    FailureSignature,
+    FailureDetection,
+    FailureDiagnosis,
+    FailurePrescription,
+)
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
