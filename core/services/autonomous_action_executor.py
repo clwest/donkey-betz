@@ -1293,6 +1293,7 @@ The document should:
     ) -> Dict[str, Any]:
         """
         Session 654: Auto-approve low-risk gates and optionally deploy as pilots.
+        Session 855: Enhanced with adaptive aggressive mode for gate backlogs.
 
         This action:
         1. Finds all 'not_started' gates with risk_level='low'
@@ -1300,17 +1301,23 @@ The document should:
         3. Optionally creates and starts pilot executions
         4. Records learnings for ThinkingAgent feedback loop
 
+        Session 855: When gate backlog exceeds 50 or oldest gate > 72h,
+        automatically uses aggressive mode that also waives stale medium-risk gates.
+
         Safety Rails:
-        - ONLY processes 'low' risk gates (medium/high/critical require human review)
+        - Default: ONLY processes 'low' risk gates
+        - Aggressive: Also processes stale (>72h) medium-risk gates
+        - High/critical always require human review
         - Maximum batch size to prevent runaway processing
         - All actions logged and tracked
 
         Args:
             name: Action name for logging
             params: {
-                'max_gates': Maximum gates to process (default: 20),
+                'max_gates': Maximum gates to process (default: 20, aggressive: 50),
                 'auto_deploy': Whether to auto-start pilots (default: False),
-                'dry_run': If True, just report what would happen (default: False)
+                'dry_run': If True, just report what would happen (default: False),
+                'include_stale_medium': Force include stale medium-risk (default: auto)
             }
             reasoning: Why this action was triggered
 
@@ -1318,21 +1325,61 @@ The document should:
             Summary of gates processed
         """
         from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+        from datetime import timedelta
 
-        max_gates = params.get('max_gates', 20)
+        # Session 855: Check gate backlog health to determine if aggressive mode needed
+        pending_count = PilotReadinessGate.objects.filter(status='not_started').count()
+
+        oldest_gate = PilotReadinessGate.objects.filter(
+            status='not_started'
+        ).order_by('created_at').first()
+
+        oldest_age_hours = 0
+        if oldest_gate:
+            oldest_age_hours = (timezone.now() - oldest_gate.created_at).total_seconds() / 3600
+
+        # Session 855: Determine if aggressive mode needed
+        aggressive_mode = pending_count > 50 or oldest_age_hours > 72
+        include_stale_medium = params.get('include_stale_medium', aggressive_mode)
+
+        if aggressive_mode:
+            max_gates = params.get('max_gates', 50)  # Higher default in aggressive mode
+            stale_threshold_hours = params.get('stale_hours', 72)
+            logger.info(
+                f"🚦 [Session 855] Gate approval AGGRESSIVE mode activated: "
+                f"{pending_count} pending, oldest {oldest_age_hours:.1f}h"
+            )
+        else:
+            max_gates = params.get('max_gates', 20)
+            stale_threshold_hours = params.get('stale_hours', 72)
+
         auto_deploy = params.get('auto_deploy', False)
         dry_run = params.get('dry_run', False)
 
-        logger.info(f"🚦 [Session 654] Auto-approving low-risk gates (max={max_gates}, auto_deploy={auto_deploy}, dry_run={dry_run})")
+        logger.info(f"🚦 [Session 654/855] Auto-approving gates (max={max_gates}, aggressive={aggressive_mode}, auto_deploy={auto_deploy}, dry_run={dry_run})")
 
         # Find low-risk gates that haven't been started
-        pending_gates = PilotReadinessGate.objects.filter(
+        pending_gates = list(PilotReadinessGate.objects.filter(
             status='not_started',
             risk_level='low'
-        ).order_by('created_at')[:max_gates]
+        ).select_related('decision').order_by('created_at')[:max_gates])
+
+        # Session 855: In aggressive mode, also include stale medium-risk gates
+        if include_stale_medium:
+            stale_cutoff = timezone.now() - timedelta(hours=stale_threshold_hours)
+            remaining_slots = max_gates - len(pending_gates)
+            if remaining_slots > 0:
+                stale_medium_gates = PilotReadinessGate.objects.filter(
+                    status='not_started',
+                    risk_level='medium',
+                    created_at__lt=stale_cutoff
+                ).select_related('decision').order_by('created_at')[:remaining_slots]
+                pending_gates.extend(stale_medium_gates)
+                logger.info(f"🚦 [Session 855] Added {len(stale_medium_gates)} stale medium-risk gates to processing queue")
 
         results = {
             'waived': [],
+            'waived_stale_medium': [],  # Session 855: Track stale medium separately
             'deployed': [],
             'skipped': [],
             'errors': []
@@ -1341,9 +1388,10 @@ The document should:
         for gate in pending_gates:
             try:
                 decision_topic = gate.decision.topic[:60] if gate.decision else 'Unknown'
+                is_stale_medium = gate.risk_level == 'medium'  # Session 855
 
                 # Session 847: Skip initiative-linked gates (require human review)
-                if gate.initiative_id:
+                if gate.initiative is not None:
                     results['skipped'].append({
                         'gate_id': str(gate.id),
                         'topic': decision_topic,
@@ -1367,11 +1415,17 @@ The document should:
                 )
 
                 if waived:
-                    results['waived'].append({
+                    waive_record = {
                         'gate_id': str(gate.id),
                         'topic': decision_topic,
+                        'risk_level': gate.risk_level,
                         'waived_at': timezone.now().isoformat()
-                    })
+                    }
+                    # Session 855: Track stale medium separately
+                    if is_stale_medium:
+                        results['waived_stale_medium'].append(waive_record)
+                    else:
+                        results['waived'].append(waive_record)
 
                     # Optionally auto-deploy as pilot
                     if auto_deploy:
@@ -1410,22 +1464,32 @@ The document should:
                     'error': str(e)
                 })
 
-        total_processed = len(results['waived'])
+        total_low_risk = len(results['waived'])
+        total_stale_medium = len(results['waived_stale_medium'])
+        total_processed = total_low_risk + total_stale_medium
         total_deployed = len(results['deployed'])
 
-        summary_msg = f"Auto-approved {total_processed} low-risk gates"
+        # Session 855: Enhanced summary with aggressive mode info
+        mode_label = "AGGRESSIVE" if aggressive_mode else "normal"
+        summary_parts = [f"Auto-approved {total_low_risk} low-risk gates"]
+        if total_stale_medium > 0:
+            summary_parts.append(f"{total_stale_medium} stale medium-risk gates")
         if auto_deploy:
-            summary_msg += f", deployed {total_deployed} pilots"
+            summary_parts.append(f"deployed {total_deployed} pilots")
+        summary_msg = f"({mode_label} mode) " + ", ".join(summary_parts)
         if dry_run:
             summary_msg = f"[DRY RUN] Would process {total_processed} gates"
 
-        logger.info(f"🚦 [Session 654] {summary_msg}")
+        logger.info(f"🚦 [Session 654/855] {summary_msg}")
 
         return {
             'total_processed': total_processed,
+            'total_low_risk': total_low_risk,
+            'total_stale_medium': total_stale_medium,
             'total_deployed': total_deployed,
             'total_skipped': len(results['skipped']),
             'total_errors': len(results['errors']),
+            'aggressive_mode': aggressive_mode,
             'dry_run': dry_run,
             'details': results,
             'message': summary_msg
