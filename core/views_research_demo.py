@@ -1138,6 +1138,19 @@ def initiatives_api(request):
             # Session 848: Calculate health for each initiative
             health_data = health_service.get_initiative_health(init)
 
+            # Session 849: Get source decisions for trace view
+            source_decisions = []
+            for decision in init.source_decisions.all()[:5]:  # Limit to 5 for performance
+                source_decisions.append({
+                    'id': str(decision.id),
+                    'topic': decision.topic,
+                    'artifact_type': decision.artifact_type,
+                    'suggested_feature': decision.suggested_feature[:200] if decision.suggested_feature else '',
+                    'conversation_id': str(decision.conversation_id) if decision.conversation_id else None,
+                    'hive_session_id': str(decision.hive_session_id) if decision.hive_session_id else None,
+                    'created_at': decision.created_at.isoformat(),
+                })
+
             initiatives_list.append({
                 'id': str(init.id),
                 'name': init.name,
@@ -1149,6 +1162,10 @@ def initiatives_api(request):
                 'health': health_data.get('health', 'unknown'),
                 'health_issues': health_data.get('health_issues', []),
                 'days_since_update': health_data.get('days_since_update', 0),
+                # Session 849: Trace data
+                'source_decision_id': str(init.source_decision_id) if init.source_decision_id else None,
+                'parent_topic': init.parent_topic,
+                'source_decisions': source_decisions,
                 'created_at': init.created_at.isoformat(),
                 'updated_at': init.updated_at.isoformat(),
             })
