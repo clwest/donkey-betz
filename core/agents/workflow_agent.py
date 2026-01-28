@@ -30,7 +30,7 @@ import logging
 import time
 from typing import Dict, Any
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,12 @@ class WorkflowAgent(BaseAgent):
     """
 
     name = "WorkflowAgent"
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['workflow_type', 'agents_used', 'successful_steps', 'failed_steps', 'total_steps']
+    )
 
     system_prompt = """You are WorkflowAgent, a specialist in coordinating multi-step creative workflows.
 
@@ -420,11 +426,20 @@ You orchestrate. You don't create content directly."""
                 failed_steps = [wr for wr in workflow_results if not wr['success']]
 
                 if successful_steps:
+                    # Session 856: Build descriptive message with agent details
+                    agents_used = list(set([wr['agent'] for wr in workflow_results]))
+                    if len(failed_steps) == 0:
+                        descriptive_msg = f"Workflow completed successfully: {len(successful_steps)} steps across {len(agents_used)} agents ({', '.join(agents_used[:3])}{'...' if len(agents_used) > 3 else ''})"
+                    else:
+                        descriptive_msg = f"Workflow partially completed: {len(successful_steps)} successful, {len(failed_steps)} failed using {', '.join(agents_used[:3])}"
+
                     result = AgentResult(
                         success=len(failed_steps) == 0,
-                        message=f"Workflow completed: {len(successful_steps)} successful, {len(failed_steps)} failed",
+                        message=descriptive_msg,
                         data={
                             'workflow_results': workflow_results,
+                            'workflow_type': 'multi_agent',
+                            'agents_used': agents_used,
                             'successful_steps': len(successful_steps),
                             'failed_steps': len(failed_steps),
                             'total_steps': len(workflow_results)

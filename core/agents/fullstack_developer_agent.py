@@ -19,7 +19,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
-from .base_agent import BaseAgent, AgentResult
+from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,12 @@ class FullStackDeveloperAgent(BaseAgent):
 
     name = "FullStackDeveloperAgent"
     requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'feature_name', 'backend_framework', 'frontend_framework', 'file_count']
+    )
 
     system_prompt = """You are FullStackDeveloperAgent, an expert full-stack developer capable of building complete features.
 
@@ -352,13 +358,52 @@ Provide complete, working code that can be directly used."""
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 856: Build descriptive message based on tool used
+                        first_result = all_results[0]
+                        tool_used = first_result['source']
+                        tool_data = first_result.get('data', {})
+                        if tool_used == 'build_feature':
+                            feature_name = tool_data.get('feature_name', 'unknown')
+                            backend = tool_data.get('backend_framework', '')
+                            frontend = tool_data.get('frontend_framework', '')
+                            file_count = tool_data.get('file_count', 0)
+                            descriptive_msg = f"Full-stack feature '{feature_name}' built: {backend}/{frontend} ({file_count} files)"
+                        elif tool_used == 'create_api_endpoint':
+                            endpoint = tool_data.get('endpoint_path', '/api/unknown')
+                            methods = tool_data.get('methods', [])
+                            framework = tool_data.get('framework', '')
+                            descriptive_msg = f"API endpoint created: {', '.join(methods)} {endpoint} ({framework})"
+                        elif tool_used == 'create_frontend_component':
+                            component = tool_data.get('component_name', 'unknown')
+                            comp_type = tool_data.get('component_type', 'component')
+                            framework = tool_data.get('framework', '')
+                            descriptive_msg = f"Frontend {comp_type} created: {component} ({framework})"
+                        elif tool_used == 'design_database_schema':
+                            entities = tool_data.get('entities', [])
+                            orm = tool_data.get('orm', '')
+                            descriptive_msg = f"Database schema designed: {len(entities)} entities using {orm}"
+                        elif tool_used == 'integrate_frontend_backend':
+                            framework = tool_data.get('frontend_framework', '')
+                            endpoints = tool_data.get('endpoints_count', 0)
+                            descriptive_msg = f"Integration layer created: {framework} with {endpoints} API endpoints"
+                        else:
+                            descriptive_msg = f"Full-stack development '{tool_used}' completed"
+
+                        # Enrich result data for content review
+                        result_data = {
+                            'results': all_results,
+                            'query': task,
+                            'tool_used': tool_used,
+                            'feature_name': tool_data.get('feature_name'),
+                            'backend_framework': tool_data.get('backend_framework') or tool_data.get('framework'),
+                            'frontend_framework': tool_data.get('frontend_framework'),
+                            'file_count': tool_data.get('file_count', len(tool_data.get('files', [])))
+                        }
+
                         result = AgentResult(
                             success=True,
-                            message=f"Full-stack development completed using {len(all_results)} tool(s)",
-                            data={
-                                'results': all_results,
-                                'query': task
-                            },
+                            message=descriptive_msg,
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,

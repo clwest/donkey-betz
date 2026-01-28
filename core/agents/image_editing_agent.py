@@ -26,7 +26,7 @@ import logging
 import time
 from typing import Dict, Any
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,12 @@ class ImageEditingAgent(BaseAgent):
     """
 
     name = "ImageEditingAgent"
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'image_id', 'operation', 'scale_factor', 'variations']
+    )
 
     system_prompt = """You are ImageEditingAgent, a specialist in modifying existing images.
 
@@ -284,10 +290,42 @@ If asked to create something new, explain you can only edit existing images."""
 
                     successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
                     if successful_calls:
+                        # Session 856: Build descriptive message based on tool used
+                        tool_used = successful_calls[0]['tool']
+                        args = successful_calls[0].get('arguments', {})
+                        tool_result = successful_calls[0]['result']
+                        image_id = args.get('image_id', 'unknown')
+                        if tool_used == 'upscale':
+                            scale = args.get('scale_factor', 2)
+                            creative = 'creative' if args.get('creative_upscale') else 'standard'
+                            descriptive_msg = f"Image upscaled: {image_id} at {scale}x ({creative} mode)"
+                        elif tool_used == 'remove_background':
+                            descriptive_msg = f"Background removed from image {image_id}"
+                        elif tool_used == 'create_variations':
+                            count = args.get('count', 3)
+                            strength = args.get('variation_strength', 0.5)
+                            descriptive_msg = f"Created {count} variations of image {image_id} (strength: {strength:.0%})"
+                        elif tool_used == 'recolor':
+                            target = args.get('target_color', '')
+                            new_color = args.get('new_color', '')
+                            descriptive_msg = f"Recolored {image_id}: {target} → {new_color}"
+                        elif tool_used == 'search_replace':
+                            search = args.get('search_prompt', '')[:30]
+                            replace = args.get('replace_prompt', '')[:30]
+                            descriptive_msg = f"Search/replace on {image_id}: '{search}' → '{replace}'"
+                        else:
+                            descriptive_msg = f"Image editing '{tool_used}' completed on {image_id}"
+
+                        # Merge tool result with additional context
+                        result_data = tool_result.copy() if isinstance(tool_result, dict) else {'result': tool_result}
+                        result_data['tool_used'] = tool_used
+                        result_data['image_id'] = image_id
+                        result_data['operation'] = tool_used
+
                         result = AgentResult(
                             success=True,
-                            message=f"Image edited successfully",
-                            data=successful_calls[0]['result'],
+                            message=descriptive_msg,
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,

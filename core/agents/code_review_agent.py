@@ -12,7 +12,7 @@ This agent can:
 import logging
 from typing import Any, Dict, List
 
-from .base_agent import BaseAgent, AgentResult
+from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,12 @@ class CodeReviewAgent(BaseAgent):
 
     name = "CodeReviewAgent"
     requires_system_context = True  # Session 820: Inject CLAUDE.md + critical docs
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'language', 'review_type', 'file_path', 'lines_reviewed']
+    )
 
     system_prompt = """You are CodeReviewAgent, a senior code reviewer with expertise in multiple languages and frameworks.
 
@@ -404,13 +410,62 @@ Be constructive and brief."""
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 856: Build descriptive message based on tool used
+                        # Find the review result (not the read_file result)
+                        review_result = None
+                        file_result = None
+                        for r in all_results:
+                            if r['source'] in ['comprehensive_review', 'security_audit', 'performance_review', 'style_check', 'suggest_improvements']:
+                                review_result = r
+                            elif r['source'] == 'read_file':
+                                file_result = r
+
+                        if review_result:
+                            tool_used = review_result['source']
+                            tool_data = review_result.get('data', {})
+                            language = tool_data.get('language', 'unknown')
+                            lines = tool_data.get('lines_reviewed', tool_data.get('lines_analyzed', 0))
+                            review_type = tool_data.get('review_type', tool_used.replace('_', ' '))
+
+                            if tool_used == 'comprehensive_review':
+                                descriptive_msg = f"Comprehensive code review completed: {lines} lines of {language} analyzed"
+                            elif tool_used == 'security_audit':
+                                categories = len(tool_data.get('categories_checked', []))
+                                descriptive_msg = f"Security audit completed: {lines} lines of {language} checked across {categories} categories"
+                            elif tool_used == 'performance_review':
+                                scale = tool_data.get('expected_scale', 'medium')
+                                descriptive_msg = f"Performance review completed: {language} code analyzed for {scale} scale"
+                            elif tool_used == 'style_check':
+                                guide = tool_data.get('style_guide', 'default')
+                                descriptive_msg = f"Style check completed: {language} code against {guide} guide"
+                            elif tool_used == 'suggest_improvements':
+                                goals = tool_data.get('goals', [])
+                                descriptive_msg = f"Code improvements suggested for {language}: {', '.join(goals[:3])}"
+                            else:
+                                descriptive_msg = f"Code review '{tool_used}' completed for {language}"
+                        else:
+                            tool_used = all_results[0]['source']
+                            descriptive_msg = f"Code review task completed using {len(all_results)} tool(s)"
+                            tool_data = all_results[0].get('data', {})
+                            language = tool_data.get('language', 'unknown')
+                            lines = 0
+
+                        # Enrich result data for content review
+                        file_path = file_result.get('data', {}).get('file_path', '') if file_result else ''
+                        result_data = {
+                            'results': all_results,
+                            'query': task,
+                            'tool_used': tool_used,
+                            'language': language,
+                            'review_type': tool_used.replace('_', ' '),
+                            'file_path': file_path,
+                            'lines_reviewed': lines
+                        }
+
                         result = AgentResult(
                             success=True,
-                            message=f"Code review completed using {len(all_results)} tool(s)",
-                            data={
-                                'results': all_results,
-                                'query': task
-                            },
+                            message=descriptive_msg,
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,

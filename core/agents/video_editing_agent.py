@@ -27,7 +27,7 @@ import logging
 import time
 from typing import Dict, Any
 
-from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,12 @@ class VideoEditingAgent(BaseAgent):
     """
 
     name = "VideoEditingAgent"
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'video_id', 'operation', 'effect', 'text']
+    )
 
     system_prompt = """You are VideoEditingAgent, a specialist in modifying existing videos.
 
@@ -350,10 +356,45 @@ If asked to create something new, explain you can only edit existing videos."""
 
                     successful_calls = [tc for tc in tool_calls_made if tc['result'].get('success')]
                     if successful_calls:
+                        # Session 856: Build descriptive message based on tool used
+                        tool_used = successful_calls[0]['tool']
+                        args = successful_calls[0].get('arguments', {})
+                        tool_result = successful_calls[0]['result']
+                        video_id = args.get('video_id', 'unknown')
+                        if tool_used == 'trim':
+                            start = args.get('start_time', 0)
+                            end = args.get('end_time') or args.get('duration', 'end')
+                            descriptive_msg = f"Video trimmed: {video_id} from {start}s to {end}"
+                        elif tool_used == 'add_text':
+                            text = args.get('text', '')[:50]
+                            position = args.get('position', 'bottom')
+                            descriptive_msg = f"Text overlay added to {video_id}: '{text}' at {position}"
+                        elif tool_used == 'add_effects':
+                            effect = args.get('effect', 'unknown')
+                            intensity = args.get('intensity', 0.5)
+                            descriptive_msg = f"Effect applied to {video_id}: {effect} at {intensity:.0%} intensity"
+                        elif tool_used == 'extract_frame':
+                            frame_time = args.get('time', 0)
+                            descriptive_msg = f"Frame extracted from {video_id} at {frame_time}s"
+                        elif tool_used == 'concatenate':
+                            video_ids = args.get('video_ids', [])
+                            descriptive_msg = f"Videos concatenated: {len(video_ids)} clips joined"
+                        elif tool_used == 'speed_change':
+                            factor = args.get('speed_factor', 1.0)
+                            descriptive_msg = f"Video speed changed: {video_id} at {factor}x speed"
+                        else:
+                            descriptive_msg = f"Video editing '{tool_used}' completed on {video_id}"
+
+                        # Merge tool result with additional context
+                        result_data = tool_result.copy() if isinstance(tool_result, dict) else {'result': tool_result}
+                        result_data['tool_used'] = tool_used
+                        result_data['video_id'] = video_id
+                        result_data['operation'] = tool_used
+
                         result = AgentResult(
                             success=True,
-                            message=f"Video edited successfully",
-                            data=successful_calls[0]['result'],
+                            message=descriptive_msg,
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,

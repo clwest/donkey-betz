@@ -12,7 +12,7 @@ This agent can:
 import logging
 from typing import Any, Dict, List
 
-from .base_agent import BaseAgent, AgentResult
+from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,12 @@ class PromptEngineeringAgent(BaseAgent):
     """Agent specialized in designing and optimizing prompts for LLM interactions."""
 
     name = "PromptEngineeringAgent"
+
+    # Session 856: Content review configuration
+    actionable_config = ActionableOutputConfig(
+        actions=['approve', 'revise', 'reject'],
+        payload_fields=['tool_used', 'target_model', 'task_description', 'domain', 'agent_name']
+    )
 
     system_prompt = """You are PromptEngineeringAgent, an expert in designing effective prompts for Large Language Models.
 
@@ -307,13 +313,47 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 856: Build descriptive message based on tool used
+                        first_result = all_results[0]
+                        tool_used = first_result['source']
+                        tool_data = first_result.get('data', {})
+                        if tool_used == 'design_prompt':
+                            task_desc = tool_data.get('task_description', '')[:50]
+                            target = tool_data.get('target_model', 'general')
+                            descriptive_msg = f"Prompt template designed for {target}: '{task_desc}...'"
+                        elif tool_used == 'optimize_prompt':
+                            goals = tool_data.get('optimization_goals', [])
+                            target = tool_data.get('target_model', 'general')
+                            descriptive_msg = f"Prompt optimized for {target}: {', '.join(goals[:3])}"
+                        elif tool_used == 'create_prompt_library':
+                            domain = tool_data.get('domain', 'unknown')
+                            count = tool_data.get('prompt_count', 0)
+                            descriptive_msg = f"Prompt library created for {domain}: {count} prompts"
+                        elif tool_used == 'analyze_prompt':
+                            intended = tool_data.get('intended_task', '')[:50]
+                            descriptive_msg = f"Prompt analyzed for task: '{intended}...'"
+                        elif tool_used == 'generate_system_prompt':
+                            agent_name = tool_data.get('agent_name', 'unknown')
+                            role = tool_data.get('agent_role', '')[:30]
+                            descriptive_msg = f"System prompt generated for {agent_name}: {role}"
+                        else:
+                            descriptive_msg = f"Prompt engineering '{tool_used}' completed"
+
+                        # Enrich result data for content review
+                        result_data = {
+                            'results': all_results,
+                            'query': task,
+                            'tool_used': tool_used,
+                            'target_model': tool_data.get('target_model'),
+                            'task_description': tool_data.get('task_description', '')[:100],
+                            'domain': tool_data.get('domain'),
+                            'agent_name': tool_data.get('agent_name')
+                        }
+
                         result = AgentResult(
                             success=True,
-                            message=f"Prompt engineering completed using {len(all_results)} tool(s)",
-                            data={
-                                'results': all_results,
-                                'query': task
-                            },
+                            message=descriptive_msg,
+                            data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,
