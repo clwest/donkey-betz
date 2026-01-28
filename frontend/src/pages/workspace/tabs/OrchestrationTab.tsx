@@ -607,11 +607,19 @@ function AutomationSubTab() {
     },
   })
 
+  // Session 860: Added error handling for API responses
   const { data: remediationStatus } = useQuery({
     queryKey: ['automation-remediation-status'],
     queryFn: async () => {
-      const response = await fetch('/api/platform/remediation/status/')
-      return response.json()
+      try {
+        const response = await fetch('/api/platform/remediation/status/')
+        if (!response.ok) {
+          return { tasks: { total: 0 } }
+        }
+        return response.json()
+      } catch {
+        return { tasks: { total: 0 } }
+      }
     },
   })
 
