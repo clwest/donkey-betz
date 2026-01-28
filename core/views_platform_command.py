@@ -714,6 +714,20 @@ def decision_summary_detail_view(request, decision_id):
     lead_agent = participants[0] if participants else 'Multiple Agents'
     conversation_id = str(decision.conversation.id) if decision.conversation else None
 
+    # Session 852: Include initiative data if linked
+    initiative_data = None
+    try:
+        if decision.initiative:
+            initiative = decision.initiative
+            initiative_data = {
+                'id': str(initiative.id),
+                'name': initiative.name,
+                'current_stage': initiative.current_stage,
+                'status': initiative.status,
+            }
+    except Exception:
+        pass  # Initiative may have been deleted or not exist
+
     # Build rich response
     try:
         return JsonResponse({
@@ -737,6 +751,9 @@ def decision_summary_detail_view(request, decision_id):
                     'rationale': decision.rationale,
                     'participants': participants,
                     'is_canonical': decision.is_canonical,
+                    # Session 852: Initiative linkage
+                    'initiative': initiative_data,
+                    'has_suggested_feature': bool(decision.suggested_feature and len(decision.suggested_feature.strip()) >= 10),
                 },
                 'priority_score': 0.5,  # No confidence_level field
                 'impact_estimate': None,
@@ -762,6 +779,76 @@ def decision_summary_detail_view(request, decision_id):
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Error serializing decision {decision_id}: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def create_initiative_from_decision_view(request, decision_id):
+    """
+    POST /api/platform/decision-summary/<uuid:decision_id>/create-initiative/
+
+    Session 852: Create an Initiative from a decision's suggested_feature.
+    This exposes the auto_link_initiative_for_decision functionality via API.
+    """
+    from core.models_unified_system import AgentDecisionSummary
+    from core.services.decision_extractor import auto_link_initiative_for_decision
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Verify authentication
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        decision = AgentDecisionSummary.objects.get(id=decision_id)
+    except AgentDecisionSummary.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Decision not found'}, status=404)
+
+    # Check if already linked to an initiative
+    try:
+        if decision.initiative:
+            return JsonResponse({
+                'success': False,
+                'error': 'Decision already linked to an initiative',
+                'initiative_id': str(decision.initiative.id),
+                'initiative_name': decision.initiative.name,
+            }, status=400)
+    except Exception:
+        pass
+
+    # Check if decision has a suggested feature
+    if not decision.suggested_feature or len(decision.suggested_feature.strip()) < 10:
+        return JsonResponse({
+            'success': False,
+            'error': 'Decision does not have a suggested feature to create an initiative from',
+        }, status=400)
+
+    try:
+        # Use the existing auto_link function
+        initiative = auto_link_initiative_for_decision(decision)
+
+        if initiative:
+            logger.info(f"Session 852: Created Initiative '{initiative.name}' from decision via API")
+            return JsonResponse({
+                'success': True,
+                'message': f"Initiative '{initiative.name}' created successfully",
+                'initiative': {
+                    'id': str(initiative.id),
+                    'name': initiative.name,
+                    'current_stage': initiative.current_stage,
+                    'status': initiative.status,
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to create initiative - check logs for details',
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"Session 852: Error creating initiative from decision {decision_id}: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 

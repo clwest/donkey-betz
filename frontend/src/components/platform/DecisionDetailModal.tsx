@@ -1,6 +1,8 @@
 // Session 843: Decision Detail Modal
+// Session 852: Added Initiative linkage UI
 // View full decision/attention item details without leaving Workspace
 
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   X,
@@ -20,6 +22,9 @@ import {
   TrendingUp,
   Lightbulb,
   Sparkles,
+  Rocket,
+  ExternalLink,
+  Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { humanApi, platformApi } from '@/lib/api'
@@ -63,6 +68,7 @@ interface Decision {
 
 export function DecisionDetailModal({ decisionId, onClose }: DecisionDetailModalProps) {
   const queryClient = useQueryClient()
+  const [initiativeFeedback, setInitiativeFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   // Session 845: Try decision summary (System Activity) first, fall back to attention item
   const { data, isLoading, error } = useQuery({
@@ -90,6 +96,26 @@ export function DecisionDetailModal({ decisionId, onClose }: DecisionDetailModal
       queryClient.invalidateQueries({ queryKey: ['decision-detail', decisionId] })
       queryClient.invalidateQueries({ queryKey: ['human-attention'] })
       queryClient.invalidateQueries({ queryKey: ['platform-governance'] })
+    },
+  })
+
+  // Session 852: Create initiative from decision
+  const createInitiativeMutation = useMutation({
+    mutationFn: () => platformApi.createInitiativeFromDecision(decisionId),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['decision-detail', decisionId] })
+      queryClient.invalidateQueries({ queryKey: ['platform-initiatives'] })
+      setInitiativeFeedback({
+        type: 'success',
+        message: response.data.message || 'Initiative created successfully',
+      })
+    },
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create initiative'
+      setInitiativeFeedback({
+        type: 'error',
+        message: errorMessage,
+      })
     },
   })
 
@@ -482,6 +508,66 @@ export function DecisionDetailModal({ decisionId, onClose }: DecisionDetailModal
                       )}
                     </div>
                   )}
+
+                  {/* Session 852: Initiative Linkage */}
+                  {decision.payload.initiative ? (
+                    <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
+                      <h4 className="text-xs font-semibold text-cyan-400 uppercase mb-3 flex items-center gap-2">
+                        <Rocket size={12} />
+                        Linked Initiative
+                      </h4>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-white">
+                            {(decision.payload.initiative as { name: string }).name}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Stage {(decision.payload.initiative as { current_stage: number }).current_stage}/5
+                            {' • '}
+                            {(decision.payload.initiative as { status: string }).status}
+                          </p>
+                        </div>
+                        <a
+                          href={`/ai-studio/workspace?tab=initiatives&id=${(decision.payload.initiative as { id: string }).id}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg text-xs font-medium transition-colors"
+                        >
+                          <ExternalLink size={12} />
+                          View Initiative
+                        </a>
+                      </div>
+                    </div>
+                  ) : decision.payload.has_suggested_feature ? (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                      <h4 className="text-xs font-semibold text-amber-400 uppercase mb-3 flex items-center gap-2">
+                        <Rocket size={12} />
+                        Initiative Pipeline
+                      </h4>
+                      <p className="text-sm text-gray-300 mb-3">
+                        This decision has a suggested feature that can be converted to an Initiative for tracking and execution.
+                      </p>
+                      {initiativeFeedback && (
+                        <div className={cn(
+                          'mb-3 p-2 rounded text-xs flex items-center gap-2',
+                          initiativeFeedback.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        )}>
+                          {initiativeFeedback.type === 'success' ? <CheckCircle size={12} /> : <AlertTriangle size={12} />}
+                          {initiativeFeedback.message}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => createInitiativeMutation.mutate()}
+                        disabled={createInitiativeMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                      >
+                        {createInitiativeMutation.isPending ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Plus size={14} />
+                        )}
+                        Create Initiative
+                      </button>
+                    </div>
+                  ) : null}
                 </>
               )}
 
