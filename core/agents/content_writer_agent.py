@@ -455,6 +455,23 @@ For this {content_type}, ensure:
                     keywords=keywords
                 )
 
+                # Session 854: Add Flagship template injection for distinctive content
+                use_flagship = context.get('flagship', True)  # Default to flagship
+                cta_type = context.get('cta_type', 'newsletter')
+
+                if use_flagship and content_type in ['blog_post', 'article', 'newsletter']:
+                    try:
+                        from core.services.content_voice_system import generate_flagship_injection
+                        flagship_injection = generate_flagship_injection(
+                            topic=topic or task[:50],
+                            audience=target_audience,
+                            cta_type=cta_type
+                        )
+                        prompt = prompt + "\n\n" + flagship_injection
+                        logger.info(f"📝 Session 854: Added flagship template injection ({len(flagship_injection)} chars)")
+                    except Exception as e:
+                        logger.warning(f"Could not add flagship injection: {e}")
+
                 # Session 523: Generate content via GPT with intelligent prompting
                 generated_content = self._generate_content(
                     prompt,
