@@ -42,13 +42,23 @@ class ProviderHealthTracker:
     # Error types we track
     ERROR_TYPES = ['rate_limit', 'server_error', 'connection_error', 'timeout']
 
-    def record_error(self, provider: str, error_type: str) -> None:
+    def record_error(
+        self,
+        provider: str,
+        error_type: str,
+        error_message: str = None,
+        error_code: str = None,
+        context: dict = None
+    ) -> None:
         """
         Record an error for a provider.
 
         Args:
             provider: Provider name (e.g., 'openai', 'anthropic')
             error_type: Type of error ('rate_limit', 'server_error', 'connection_error', 'timeout')
+            error_message: Optional error message for diagnostic pipeline
+            error_code: Optional HTTP status or error code
+            context: Optional context dict (model, endpoint, etc.)
         """
         if provider not in self.PROVIDERS:
             logger.debug(f"[Session 841] Unknown provider: {provider}")
@@ -81,6 +91,21 @@ class ProviderHealthTracker:
                 f"[Session 841] Provider {provider} error recorded: {error_type} "
                 f"(total errors in window: {len(errors)})"
             )
+
+            # Session 856: Feed into diagnostic pipeline (async to avoid blocking)
+            if error_message:
+                try:
+                    from core.tasks import detect_failure_task
+                    detect_failure_task.delay(
+                        error_message=error_message,
+                        source_type='provider',
+                        error_code=error_code or error_type,
+                        provider=provider,
+                        source_name=f"provider_{provider}",
+                        context=context or {}
+                    )
+                except Exception as diag_error:
+                    logger.debug(f"[Session 856] Failed to queue diagnostic: {diag_error}")
 
         except Exception as e:
             logger.error(f"[Session 841] Failed to record provider error: {e}")
@@ -201,9 +226,21 @@ def get_provider_health_tracker() -> ProviderHealthTracker:
 
 
 # Convenience functions
-def record_provider_error(provider: str, error_type: str) -> None:
+def record_provider_error(
+    provider: str,
+    error_type: str,
+    error_message: str = None,
+    error_code: str = None,
+    context: dict = None
+) -> None:
     """Record an error for a provider."""
-    get_provider_health_tracker().record_error(provider, error_type)
+    get_provider_health_tracker().record_error(
+        provider=provider,
+        error_type=error_type,
+        error_message=error_message,
+        error_code=error_code,
+        context=context
+    )
 
 
 def record_provider_success(provider: str) -> None:

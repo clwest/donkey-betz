@@ -507,6 +507,52 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             prompt_parts.append("- Execution FAILs (-0.5) are informative, not fatal\n")
             prompt_parts.append("\n")
 
+        # Session 856: Add diagnostic pipeline context
+        if 'diagnostic_pipeline' in context and context['diagnostic_pipeline']:
+            diag = context['diagnostic_pipeline']
+            prompt_parts.append("### Diagnostic Pipeline (Session 856)\n")
+            prompt_parts.append(f"- Total Signatures: {diag.get('total_signatures', 0)}\n")
+            prompt_parts.append(f"- Pending Diagnoses: {diag.get('pending_diagnosis_count', 0)}\n")
+
+            # Active failure signatures
+            if diag.get('active_signatures'):
+                prompt_parts.append("\n**Active Failure Signatures:**\n")
+                for sig in diag['active_signatures'][:5]:
+                    prompt_parts.append(
+                        f"- **{sig['signature']}** ({sig['occurrence_count']}x) "
+                        f"[{sig['category']}] - {sig['status']}\n"
+                    )
+
+            # Unresolved prescriptions (solutions awaiting implementation)
+            if diag.get('unresolved_prescriptions'):
+                prompt_parts.append("\n**Unresolved Prescriptions (Fixes Needed):**\n")
+                for rx in diag['unresolved_prescriptions'][:5]:
+                    prompt_parts.append(
+                        f"- [{rx['scope'].upper()}] {rx['title']}\n"
+                        f"  Impact: {rx['impact']}, Effort: {rx['effort']}, "
+                        f"Confidence: {rx['confidence']:.0%}\n"
+                    )
+                    if rx.get('files_to_modify'):
+                        prompt_parts.append(f"  Files: {', '.join(rx['files_to_modify'][:3])}\n")
+
+            # Recent diagnoses
+            if diag.get('recent_diagnoses'):
+                prompt_parts.append("\n**Recent Root Cause Diagnoses:**\n")
+                for dx in diag['recent_diagnoses'][:3]:
+                    prompt_parts.append(
+                        f"- **{dx['signature']}**: {dx['root_cause'][:150]}...\n"
+                        f"  Confidence: {dx['confidence']:.0%}, "
+                        f"Blast Radius: {dx['blast_radius']}\n"
+                    )
+
+            prompt_parts.append("\n**IMPORTANT - Using Diagnostic Data:**\n")
+            prompt_parts.append("The diagnostic pipeline has identified root causes and proposed fixes.\n")
+            prompt_parts.append("When you see recurring failures in experiments/agents, check if a prescription exists.\n")
+            prompt_parts.append("- NEVER re-analyze failures that already have diagnoses\n")
+            prompt_parts.append("- Focus your concerns on IMPLEMENTING the proposed fixes\n")
+            prompt_parts.append("- Prescriptions with high confidence and low effort should be prioritized\n")
+            prompt_parts.append("\n")
+
         # Add the task
         prompt_parts.append("\n## Your Task\n")
         prompt_parts.append("Analyze this context deeply. Identify patterns, generate insights, ")
@@ -900,6 +946,20 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
         except Exception as e:
             logger.warning(f"Error gathering experiment learnings: {e}")
             context['experiment_learnings'] = {}
+
+        # Session 856: Gather diagnostic pipeline context
+        try:
+            from core.services.diagnostic_pipeline import get_diagnostic_context
+            diagnostic_context = get_diagnostic_context()
+            context['diagnostic_pipeline'] = diagnostic_context
+            logger.info(
+                f"[Session 856] Added diagnostic context: "
+                f"{len(diagnostic_context.get('active_signatures', []))} active signatures, "
+                f"{len(diagnostic_context.get('unresolved_prescriptions', []))} unresolved prescriptions"
+            )
+        except Exception as e:
+            logger.warning(f"[Session 856] Error gathering diagnostic context: {e}")
+            context['diagnostic_pipeline'] = {}
 
         return context
 
