@@ -177,9 +177,10 @@ class RecentActivityService:
         try:
             from core.models_unified_system import AgentDecisionSummary
 
+            # Session 850: Select related initiative for Inbox view grouping
             decisions = AgentDecisionSummary.objects.filter(
                 created_at__gte=cutoff
-            ).order_by('-created_at')[:10]
+            ).select_related('initiative').order_by('-created_at')[:10]
 
             for dec in decisions:
                 topic = dec.topic or 'Untitled decision'
@@ -194,6 +195,13 @@ class RecentActivityService:
                     'promoted': '🚀',
                 }.get(status, '📋')
 
+                # Session 850: Include initiative info for Inbox view grouping
+                initiative_id = None
+                initiative_name = None
+                if dec.initiative:
+                    initiative_id = str(dec.initiative.id)
+                    initiative_name = dec.initiative.name
+
                 activities.append({
                     'id': str(dec.id),
                     'type': 'decision',
@@ -204,6 +212,9 @@ class RecentActivityService:
                     'timestamp_display': self._format_time_ago(dec.created_at),
                     'status': status,
                     'decision_type': dec.decision_type,
+                    # Session 850: Initiative link for Inbox view
+                    'initiative_id': initiative_id,
+                    'initiative_name': initiative_name,
                 })
 
         except Exception as e:
