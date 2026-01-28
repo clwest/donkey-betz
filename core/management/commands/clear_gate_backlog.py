@@ -238,15 +238,16 @@ class Command(BaseCommand):
         # Waive low-risk gates
         if results['waived_low']:
             # Direct bulk update for efficiency (avoids ID issues)
+            # Use correct field names: approved_by, approval_notes, gate_approved_at
             updated = PilotReadinessGate.objects.filter(
                 status='not_started',
                 risk_level='low',
                 initiative__isnull=True
             ).update(
                 status='waived',
-                waived_at=now,
-                waived_by='clear_gate_backlog_command',
-                waive_reason='Auto-waived: low-risk gate cleared by Session 855 backlog triage'
+                gate_approved_at=now,
+                approved_by='clear_gate_backlog_command',
+                approval_notes='Auto-waived: low-risk gate cleared by Session 855 backlog triage'
             )
             self.stdout.write(self.style.SUCCESS(f'Waived {updated} low-risk gates'))
 
@@ -260,9 +261,9 @@ class Command(BaseCommand):
                 initiative__isnull=True
             ).update(
                 status='waived',
-                waived_at=now,
-                waived_by='clear_gate_backlog_command',
-                waive_reason=f'Auto-waived: stale medium-risk gate (>{options["stale_hours"]}h) cleared by Session 855 backlog triage'
+                gate_approved_at=now,
+                approved_by='clear_gate_backlog_command',
+                approval_notes=f'Auto-waived: stale medium-risk gate (>{options["stale_hours"]}h) cleared by Session 855 backlog triage'
             )
             self.stdout.write(self.style.SUCCESS(
                 f'Waived {stale_medium_updated} stale medium-risk gates'
@@ -276,7 +277,7 @@ class Command(BaseCommand):
                 risk_level__in=['high', 'critical']
             ).update(
                 status='blocked',
-                blocked_reason='Flagged for human review by Session 855 backlog triage'
+                approval_notes='BLOCKED: Flagged for human review by Session 855 backlog triage'
             )
             self.stdout.write(self.style.SUCCESS(
                 f'Flagged {high_flagged} high-risk gates for review'
