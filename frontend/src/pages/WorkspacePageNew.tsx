@@ -352,10 +352,21 @@ function OperationContentModal({
                 )}
               </div>
               {operation && (
-                <p className="text-xs text-gray-400">
-                  {category && <span className="text-gray-500">{category} • </span>}
-                  {operation.operation_type} • {operation.agent_name}
-                </p>
+                <>
+                  <p className="text-xs text-gray-400">
+                    {category && <span className="text-gray-500">{category} • </span>}
+                    {operation.operation_type} • {operation.agent_name}
+                    {operation.workspace_name && (
+                      <span className="text-primary-400"> • {operation.workspace_name}</span>
+                    )}
+                  </p>
+                  {/* Session 855: Show file path prominently */}
+                  {operation.file_path && (
+                    <p className="text-xs text-gray-500 font-mono mt-0.5 truncate max-w-lg" title={operation.file_path}>
+                      📁 {operation.file_path}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

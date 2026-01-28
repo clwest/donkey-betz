@@ -72,9 +72,14 @@ export interface WorkspaceOperation {
   diff?: string
   content_before?: string
   content_after?: string
+  // Session 855: API returns these field names
+  file_content_before?: string
+  file_content_after?: string
+  workspace_name?: string
   error_message?: string
   execution_time_ms?: number
   agent_execution_time_ms?: number  // Session 855: Agent execution time from AgentExecution
+  lines_changed?: number
   requires_review?: boolean
   reviewed_by_human?: boolean
   human_approved?: boolean | null
