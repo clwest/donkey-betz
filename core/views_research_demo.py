@@ -1101,12 +1101,17 @@ def deliverables_api(request):
 def initiatives_api(request):
     """
     Session 622: Get all initiatives with their stage status.
+    Session 848: Added health calculation.
     Provides a single source of truth for document lifecycle tracking.
     """
     try:
         from core.models_document_registry import Initiative, InitiativeStage
+        from core.services.initiative_integration_service import get_initiative_integration_service
 
         initiatives = Initiative.objects.all().order_by('-updated_at')
+
+        # Session 848: Get health service for calculating initiative health
+        health_service = get_initiative_integration_service()
 
         initiatives_list = []
         for init in initiatives[:50]:
@@ -1130,6 +1135,9 @@ def initiatives_api(request):
                         'approved_at': None,
                     }
 
+            # Session 848: Calculate health for each initiative
+            health_data = health_service.get_initiative_health(init)
+
             initiatives_list.append({
                 'id': str(init.id),
                 'name': init.name,
@@ -1138,6 +1146,9 @@ def initiatives_api(request):
                 'current_stage': init.current_stage,
                 'completion_percentage': init.completion_percentage,
                 'stages': stages,
+                'health': health_data.get('health', 'unknown'),
+                'health_issues': health_data.get('health_issues', []),
+                'days_since_update': health_data.get('days_since_update', 0),
                 'created_at': init.created_at.isoformat(),
                 'updated_at': init.updated_at.isoformat(),
             })
