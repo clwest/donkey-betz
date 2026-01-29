@@ -759,9 +759,12 @@ function PodcastSubTab() {
   }
 
   const episodes = podcastData?.episodes || podcastData?.results || []
-  const stats = podcastData?.stats || { total: 3, published: 0, draft: 3 }
-  const publishedEpisodes = episodes.filter((e: PodcastEpisode) => e.status === 'published')
-  const draftEpisodes = episodes.filter((e: PodcastEpisode) => e.status === 'draft' || !e.status)
+  const stats = podcastData?.stats || podcastData?.status_counts || { total: 3, published: 0, draft: 3 }
+  // Session 862: Backend uses 'complete' not 'published', and various in-progress statuses not 'draft'
+  const publishedEpisodes = episodes.filter((e: PodcastEpisode) => e.status === 'complete' || e.status === 'published')
+  const draftEpisodes = episodes.filter((e: PodcastEpisode) =>
+    !e.status || ['pending', 'researching', 'debating', 'scripting', 'generating_audio', 'draft', 'failed'].includes(e.status)
+  )
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section)
@@ -801,8 +804,8 @@ function PodcastSubTab() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-accent-green">{stats.published || publishedEpisodes.length}</div>
-              <div className="text-xs text-gray-500">Published</div>
+              <div className="text-2xl font-bold text-accent-green">{stats.complete || stats.published || publishedEpisodes.length}</div>
+              <div className="text-xs text-gray-500">Complete</div>
             </div>
             {expandedSection === 'published' ? (
               <ChevronUp size={14} className="text-gray-400" />
