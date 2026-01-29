@@ -2246,6 +2246,20 @@ app.conf.beat_schedule = {
             'expires': 7200,  # 2 hours
         }
     },
+
+    # ==================== SESSION 865: CONTENT ENHANCEMENT ====================
+    # Auto-enhance blogs marked as 'needs_enhancement' using EditorAgent
+    # Improves structure, hooks, headers, engagement, and conclusions
+
+    'enhance-content-daily': {
+        'task': 'core.tasks.enhance_all_blogs_task',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
+        'kwargs': {'limit': 20, 'save': True},
+        'options': {
+            'expires': 7200,  # 2 hours
+            'queue': 'long_running',
+        }
+    },
 }
 
 # Task routing configuration
