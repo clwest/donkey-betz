@@ -30,6 +30,7 @@ import {
   ChevronRight,
   Zap,  // Session 861B: Triggers tab icon
   FlaskConical,  // Session 865: ConceptForge tab icon
+  Briefcase,  // Session 866: Career tab icon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -56,6 +57,7 @@ import {
   InitiativesTab,  // Session 847: Initiative Pipeline Dashboard
   TriggersTab,  // Session 861B: WorkspaceTrigger Autopilot Queue
   ConceptForgeTab,  // Session 865: ConceptForge Dossier Pipeline
+  CareerTab,  // Session 866: ATS Resume Optimizer
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -76,6 +78,7 @@ const tabs = [
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
   { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },  // Session 861B
   { id: 'conceptforge' as WorkspaceTab, label: 'Dossiers', icon: FlaskConical },  // Session 865
+  { id: 'career' as WorkspaceTab, label: 'Career', icon: Briefcase },  // Session 866
 ]
 
 // Workspace Selector Modal
@@ -908,6 +911,9 @@ export default function WorkspacePage() {
 
           {/* Session 865: ConceptForge Dossier Pipeline */}
           {activeTab === 'conceptforge' && <ConceptForgeTab />}
+
+          {/* Session 866: Career Tab - ATS Resume Optimizer */}
+          {activeTab === 'career' && <CareerTab />}
         </>
       )}
 

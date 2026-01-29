@@ -31,3 +31,6 @@ export { TriggersTab } from './TriggersTab'
 
 // Session 865: ConceptForge Dossier Pipeline
 export { ConceptForgeTab } from './ConceptForgeTab'
+
+// Session 866: Career Tab - ATS Resume Optimizer
+export { CareerTab } from './CareerTab'
