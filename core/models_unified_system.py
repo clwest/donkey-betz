@@ -8840,6 +8840,16 @@ class AgentDream(models.Model):
         help_text='Session 327: Optional project context for this dream'
     )
 
+    # Session 862: Content Flow Traceability
+    initiative = models.ForeignKey(
+        'core.Initiative',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='source_dreams',
+        help_text="Session 862: Initiative created from this dream"
+    )
+
     # Timestamps
     dreamed_at = models.DateTimeField(auto_now_add=True)
 
@@ -20043,6 +20053,33 @@ class SelfBlog(models.Model):
         related_name='self_blogs',
         help_text="Session 843: Project this blog belongs to"
     )
+
+    # Session 862: Content Flow Traceability
+    initiative = models.ForeignKey(
+        'core.Initiative',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='blogs',
+        help_text="Session 862: Initiative this blog belongs to"
+    )
+    dream = models.ForeignKey(
+        'AgentDream',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='blogs',
+        help_text="Session 862: Dream that originated this blog"
+    )
+    initiative_stage = models.ForeignKey(
+        'core.InitiativeStage',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='blogs',
+        help_text="Session 862: Initiative stage this blog fulfills"
+    )
+
     title = models.CharField(max_length=255)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='blog', db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
