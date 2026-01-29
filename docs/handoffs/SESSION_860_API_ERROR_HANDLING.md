@@ -5,10 +5,11 @@
 
 ## Summary
 
-Three major accomplishments:
+Four major accomplishments:
 1. Fixed Initiative Pipeline document linking - backfilled 25 unlinked documents
 2. Fixed multiple frontend console errors (404/401) and `v.filter is not a function` errors
 3. **Fixed all 8 AI Consciousness (AI Mind) sub-tabs** - proper data extraction, removed hardcoded values
+4. **Fixed ContentWriterAgent blog persistence** - 111 blogs were lost in production before fix (96.5% loss rate)
 
 ## Key Changes
 
@@ -122,6 +123,45 @@ Fixed all 8 sub-tabs in the AI Mind (AI Consciousness) tab:
 | #427 | fix(Session 860): Fix Relationships sub-tab data display |
 | #428 | fix(Session 860): Fix remaining AI Consciousness sub-tabs |
 | #429 | fix(Session 860): Fix Memory Palace detail modal data extraction |
+| #431 | fix(Session 860): Fix Data tab filter errors with Array.isArray() checks |
+| #432 | fix(Session 860): ContentWriterAgent persists blogs to SelfBlog |
+| #433 | fix(Session 860): Show agent name in Memory Palace instead of UUID |
+| #434 | feat(Session 860): Add lost blogs check script |
+
+### 6. Data Tab Filter Errors (PR #431)
+
+**Problem:** `v.filter is not a function` errors when API returned non-array data on failure.
+
+**Solution:** Added `Array.isArray()` checks before all `.filter()` calls in Spiders, Feed, and Learning sub-tabs.
+
+### 7. ContentWriterAgent Blog Persistence Fix (PR #432)
+
+**Problem:** ContentWriterAgent generated blog content but only stored:
+- `AgentResult` (ephemeral, lost after request)
+- `AgentMemory` (just a summary record, not full content)
+
+Blogs were never saved to `SelfBlog` table.
+
+**Production Impact:**
+| Metric | Count |
+|--------|-------|
+| Blog creation memories | 115 |
+| SelfBlogs actually saved | 202 |
+| **Lost blogs** | **111 (96.5%)** |
+
+**Solution:** Added `_save_to_selfblog()` method to persist blog content to SelfBlog table.
+
+### 8. Agent Name Display (PR #433)
+
+**Problem:** Memory Palace showed agent UUID instead of name.
+
+**Solution:** Updated frontend to use `agent_name` field (already returned by API).
+
+### 9. Lost Blogs Diagnostic Script (PR #434)
+
+Created `scripts/check_lost_blogs.py` to audit AgentMemory vs SelfBlog records.
+
+Run: `python manage.py shell < scripts/check_lost_blogs.py`
 
 ## Learnings
 
@@ -133,6 +173,8 @@ Fixed all 8 sub-tabs in the AI Mind (AI Consciousness) tab:
 6. **Array to object conversion** - APIs return arrays `[{type, count}]` but UI may expect `{type: count}` objects
 7. **Remove hardcoded fallbacks** - Don't use fake numbers like `|| 147000` - show real 0 when no data
 8. **Detail endpoint extraction** - When API returns `{success, memory: {...}}`, extract the nested `memory` field
+9. **Persist agent output to database** - `AgentResult` is ephemeral; content must be saved to appropriate model (SelfBlog, Deliverable, etc.) or it's lost after request
+10. **Check production for data loss** - When fixing persistence bugs, audit production for records lost before the fix
 
 ## Next Session
 
