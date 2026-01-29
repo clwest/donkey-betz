@@ -559,6 +559,23 @@ Create a structured podcast debate with:
         }
 
         logger.info(f"Generated podcast script: {episode_title} ({len(script_segments)} segments)")
+
+        # Session 861: Persist podcast script to Deliverable
+        self._save_to_deliverable(
+            title=f"Podcast Script: {episode_title}",
+            content=full_script,
+            deliverable_type='script',
+            category='Content',
+            tags=['podcast', 'script', 'debate'],
+            content_format='markdown',
+            metadata={
+                'episode_title': episode_title,
+                'segment_count': len(script_segments),
+                'estimated_duration_seconds': result['estimated_duration_seconds'],
+                'show_notes': show_notes,
+            },
+        )
+
         return result
 
     def _assign_voices(self, voice_assignments: Dict[str, str]) -> Dict[str, Any]:
@@ -712,6 +729,24 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
         script = self._transcript_to_script(topic, transcript, agents_loaded)
 
         logger.info(f"🎙️ [SESSION 653] Multi-agent debate complete: {len(transcript)} turns")
+
+        # Session 861: Persist debate transcript and script to Deliverable
+        self._save_to_deliverable(
+            title=f"Cross-Domain AI Debate: {topic}",
+            content=script,
+            deliverable_type='script',
+            category='Content',
+            tags=['podcast', 'debate', 'multi-agent'] + [a['name'] for a in agents_loaded],
+            content_format='markdown',
+            metadata={
+                'topic': topic,
+                'participants': [a['name'] for a in agents_loaded],
+                'participant_roles': {a['name']: a['role'] for a in agents_loaded},
+                'rounds': rounds,
+                'total_turns': len(transcript),
+                'is_cross_domain': True,
+            },
+        )
 
         return {
             "success": True,

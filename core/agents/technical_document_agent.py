@@ -583,6 +583,25 @@ Your output should be ready for executive review and formal approval processes."
 
             execution_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
 
+            # Session 861: Persist to Deliverable model
+            self._save_to_deliverable(
+                title=doc_title,
+                content=document_content,
+                deliverable_type='document',
+                category='Development',
+                tags=[doc_type, f'stage-{stage}', topic[:30] if topic else ''],
+                content_format='markdown',
+                metadata={
+                    'doc_type': doc_type,
+                    'stage': stage,
+                    'stage_name': DOCUMENT_STAGES.get(stage, {}).get('name', 'Document'),
+                    'topic': topic,
+                    'classification': classification,
+                    'workspace_saved': workspace_saved,
+                },
+                user=context.get('user'),
+            )
+
             workspace_msg = ""
             if workspace_saved:
                 workspace_msg = f" (saved to workspace: {workspace_result.get('workspace', 'default')})"
