@@ -96,13 +96,22 @@ MODIFIED:
 - core/tasks.py (added ConceptForge Celery tasks)
 - core/signals/__init__.py (added ConceptForge signal exports)
 - docs/ARCHITECTURE.md (added ConceptForge section)
+- frontend/src/pages/workspace/tabs/IntelligenceTab.tsx (fixed API URL)
+- frontend/src/pages/workspace/tabs/OperationsTab.tsx (fixed data extraction)
 ```
 
-## Deployment Fix
+## Deployment Fixes
 
+### Fix 1: Signals Package Conflict
 Initial deployment failed due to signals file conflict:
 - Created `core/signals.py` but `core/signals/` package already existed
 - Fixed by moving signals to `core/signals/conceptforge_signals.py`
+
+### Fix 2: Frontend API Errors (PR #462)
+Fixed console errors in Operations and Intelligence tabs:
+- **IntelligenceTab.tsx**: Wrong API URL `/api/v1/consciousness/thoughts/` → `/api/v1/reasoning/thoughts/`
+- **OperationsTab.tsx**: Data extraction looking for wrong key `data.results` → `data.operations`
+- Added error handling to prevent crashes when API calls fail
 
 ## Testing
 
