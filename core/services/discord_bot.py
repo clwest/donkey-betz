@@ -12820,7 +12820,8 @@ class PodcastCommands(commands.Cog):
             # Create the episode
             @sync_to_async
             def create_episode():
-                from core.models import PodcastEpisode, PodcastDebate
+                # Session 865: Fixed import - models are in models_podcast_studio
+                from core.models_podcast_studio import PodcastEpisode, PodcastDebate
 
                 # Create debate first
                 debate = PodcastDebate.objects.create(
@@ -12909,7 +12910,7 @@ class PodcastCommands(commands.Cog):
 
             @sync_to_async
             def get_episodes():
-                from core.models import PodcastEpisode
+                from core.models_podcast_studio import PodcastEpisode
                 return list(PodcastEpisode.objects.filter(user=user).order_by('-created_at')[:10])
 
             episodes = await get_episodes()
@@ -12966,7 +12967,7 @@ class PodcastCommands(commands.Cog):
         try:
             @sync_to_async
             def get_episode():
-                from core.models import PodcastEpisode
+                from core.models_podcast_studio import PodcastEpisode
                 # Search by prefix
                 return PodcastEpisode.objects.filter(
                     id__startswith=episode_id
@@ -13035,7 +13036,7 @@ class PodcastCommands(commands.Cog):
         try:
             @sync_to_async
             def get_episode():
-                from core.models import PodcastEpisode
+                from core.models_podcast_studio import PodcastEpisode
                 return PodcastEpisode.objects.filter(
                     id__startswith=episode_id
                 ).first()

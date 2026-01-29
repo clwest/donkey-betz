@@ -829,7 +829,8 @@ HOST: That was a fascinating debate! Thank you to all our participants for their
         4. Generate podcast script
         5. Optionally generate audio
         """
-        from core.models import PodcastEpisode, PodcastDebate
+        # Session 865: Fixed import - models are in models_podcast_studio, not models
+        from core.models_podcast_studio import PodcastEpisode, PodcastDebate
         from django.contrib.auth import get_user_model
 
         User = get_user_model()
