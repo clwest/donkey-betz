@@ -759,8 +759,80 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
 
             logger.info(f"📝 Session 757: Created rich memory for {content_type}: {content_title[:30]}...")
 
+            # Session 860: Also save blog_post content to SelfBlog so it's not ephemeral
+            if content_type == 'blog_post' and isinstance(generated_content, dict):
+                self._save_to_selfblog(
+                    generated_content=generated_content,
+                    content_title=content_title,
+                    topic=topic,
+                    tone=tone,
+                    target_audience=target_audience,
+                    word_count=word_count
+                )
+
         except Exception as e:
             logger.warning(f"Failed to create content memory: {e}")
+
+    def _save_to_selfblog(
+        self,
+        generated_content: Dict[str, Any],
+        content_title: str,
+        topic: str,
+        tone: str,
+        target_audience: str,
+        word_count: int
+    ) -> None:
+        """
+        Session 860: Save blog_post content to SelfBlog so it persists.
+
+        Previously, blog content was only stored in the ephemeral AgentResult
+        and a summary memory. The actual content was lost after the request.
+        This method saves it to SelfBlog for retrieval in the Content Studio.
+        """
+        try:
+            from core.models_unified_system import SelfBlog
+
+            # Extract structured content
+            intro = generated_content.get('intro', '')
+            conclusion = generated_content.get('conclusion', '')
+            sections = generated_content.get('sections', [])
+            meta_description = generated_content.get('meta_description', '')
+            keywords = generated_content.get('keywords', [])
+            full_text = generated_content.get('full_text', '')
+
+            # Create tags from keywords and topic
+            tags = []
+            if keywords:
+                tags.extend(keywords[:5])
+            if topic:
+                tags.append(topic)
+            if tone:
+                tags.append(tone)
+
+            # Create the SelfBlog record
+            blog = SelfBlog.objects.create(
+                title=content_title,
+                meta_description=meta_description or f"{content_title} - {topic}",
+                intro=intro or (full_text[:500] if full_text else ""),
+                sections=sections if sections else [{'header': 'Content', 'content': full_text}],
+                conclusion=conclusion or "",
+                word_count=word_count,
+                category='blog',  # Mark as blog (not audit/research)
+                status='draft',   # New blogs start as drafts for review
+                tags=tags,
+                stats_snapshot={
+                    'agent_name': self.name,
+                    'topic': topic,
+                    'tone': tone,
+                    'target_audience': target_audience,
+                    'generated_by': 'ContentWriterAgent',
+                }
+            )
+
+            logger.info(f"📝 Session 860: Saved blog to SelfBlog: {blog.id} - {content_title[:40]}...")
+
+        except Exception as e:
+            logger.warning(f"Failed to save blog to SelfBlog: {e}")
 
     def _build_content_prompt(
         self,
