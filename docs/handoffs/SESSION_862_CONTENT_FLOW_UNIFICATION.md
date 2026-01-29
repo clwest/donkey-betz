@@ -2,7 +2,7 @@
 
 **Date:** January 28, 2026
 **Status:** COMPLETE
-**PRs:** #450, #451, #452
+**PRs:** #450, #451, #452, #454 (publish fix)
 
 ---
 
@@ -188,6 +188,31 @@ Modified tables:
 - `core_deliverables` - added `initiative_id`, `dream_id`, `self_blog_id`, `podcast_episode_id`
 - `core_selfblog` - added `initiative_id`, `dream_id`, `initiative_stage_id`
 - `core_podcastepisode` - added `initiative_id`, `dream_id`, `initiative_stage_id`
+
+---
+
+## Bug Fix: Blog Publish 400 Error (PR #454)
+
+**Problem:** Publishing blogs from Workspace ContentStudioTab returned 400 Bad Request.
+
+**Cause:** The publish mutation was sending a POST request without a body. The backend requires `force: true` to publish blogs in 'draft' status.
+
+**Fix:** Added `body: JSON.stringify({ force: true })` to the publish request in `ContentStudioTab.tsx`.
+
+```javascript
+// Before (broken)
+const response = await fetch(`/api/v1/research/self-blog/${blog.id}/publish/`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+})
+
+// After (fixed)
+const response = await fetch(`/api/v1/research/self-blog/${blog.id}/publish/`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ force: true }),
+})
+```
 
 ---
 
