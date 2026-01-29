@@ -116,40 +116,26 @@ function GallerySubTab() {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
   const [selectedSeries, setSelectedSeries] = useState<AISeries | null>(null)
 
-  // Session 860: Added error handling - endpoint may require authentication
-  // Session 865: Added credentials to include auth cookies
+  // Session 865: Use contentApi which includes auth token in headers
   const { data: galleryData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['gallery-stats-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/gallery/all/?limit=50', {
-          credentials: 'include',
-        })
-        if (!response.ok) {
-          // Return empty data on 401/403 - user not authenticated
-          return { results: [], count: 0 }
-        }
-        return response.json()
+        const response = await contentApi.unifiedGallery()
+        return response.data || { results: [], count: 0 }
       } catch {
         return { results: [], count: 0 }
       }
     },
   })
 
-  // Session 860: Added error handling - endpoint requires authentication
-  // Session 865: Added credentials to include auth cookies
+  // Session 865: Use contentApi which includes auth token in headers
   const { data: videoData } = useQuery({
     queryKey: ['gallery-video-stats-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/gallery/videos/?limit=50', {
-          credentials: 'include',
-        })
-        if (!response.ok) {
-          // Return empty data on 401/403 - user not authenticated
-          return { results: [], count: 0 }
-        }
-        return response.json()
+        const response = await contentApi.videoGallery()
+        return response.data || { results: [], count: 0 }
       } catch {
         return { results: [], count: 0 }
       }
