@@ -1,13 +1,13 @@
 """
-Core Django Signals
-==================
+ConceptForge Signal Handlers
+============================
 
-Session 863: ConceptForge pipeline triggers
-Session 822: Revenue tracking signals
-Session 766: Dream execution signals
+Session 863: Triggers ConceptForge pipeline when high-quality content is published.
 
-This module contains all Django signal handlers for the core app.
-Signals are connected in apps.py via the _register_signals method.
+Gate Logic:
+- quality_score >= 0.80
+- Has strategic tags matching a domain lab
+- Content not already processed by ConceptForge
 """
 
 import logging
@@ -16,10 +16,6 @@ from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
 
-
-# =============================================================================
-# CONCEPTFORGE SIGNALS (Session 863)
-# =============================================================================
 
 def connect_conceptforge_signals():
     """
@@ -31,7 +27,7 @@ def connect_conceptforge_signals():
 
 
 @receiver(post_save, sender='core.SelfBlog')
-def handle_selfblog_save(sender, instance, created, **kwargs):
+def handle_selfblog_publish(sender, instance, created, **kwargs):
     """
     Handle SelfBlog save event.
 
@@ -147,56 +143,3 @@ def _calculate_blog_quality_score(blog) -> float:
         score += 0.5
 
     return min(score / max_score, 1.0)
-
-
-# =============================================================================
-# DREAM EXECUTION SIGNALS (Session 766)
-# =============================================================================
-
-def connect_dream_signals():
-    """
-    Connect dream execution signals.
-
-    Call this from apps.py ready() method.
-    """
-    logger.info("💭 Session 766: Dream execution signals connected")
-
-
-@receiver(post_save, sender='core.AgentDream')
-def handle_dream_approved(sender, instance, **kwargs):
-    """
-    Handle AgentDream approval.
-
-    When a dream is approved (decision_outcome = 'approved'),
-    trigger initiative creation and subsequent workflows.
-    """
-    if instance.decision_outcome != 'approved':
-        return
-
-    # Check if initiative already exists
-    if hasattr(instance, 'initiative') and instance.initiative:
-        return
-
-    try:
-        from core.services.initiative_integration_service import InitiativeIntegrationService
-        service = InitiativeIntegrationService()
-        service.create_initiative_from_dream(instance)
-        logger.info(f"✅ Initiative created from approved dream: {instance.idea[:50]}")
-    except Exception as e:
-        logger.error(f"Failed to create initiative from dream: {e}")
-
-
-# =============================================================================
-# REVENUE TRACKING SIGNALS (Session 822)
-# =============================================================================
-
-def connect_revenue_signals():
-    """
-    Connect revenue tracking signals.
-
-    Call this from apps.py ready() method.
-    """
-    logger.info("💰 Session 822: Revenue tracking signals connected")
-
-
-# Revenue signals will be registered via decorators when models are imported
