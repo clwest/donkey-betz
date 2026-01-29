@@ -152,8 +152,11 @@ function SpidersSubTab() {
   }
 
   // Session 860: Fixed data extraction to match actual API response structures
-  const executions = executionsData?.logs || executionsData?.executions || []
-  const spiders = spidersData?.spiders || spidersData?.results || []
+  // Session 860: Ensure arrays before filtering to prevent "v.filter is not a function" errors
+  const executions = Array.isArray(executionsData?.logs) ? executionsData.logs :
+                     Array.isArray(executionsData?.executions) ? executionsData.executions : []
+  const spiders = Array.isArray(spidersData?.spiders) ? spidersData.spiders :
+                  Array.isArray(spidersData?.results) ? spidersData.results : []
   const healthySpiders = spiders.filter((s: SpiderInfo) => s.status === 'healthy')
   const needsApiSpiders = spiders.filter((s: SpiderInfo) => s.status === 'needs_api_key')
 
@@ -436,9 +439,10 @@ function FeedSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load feed data" />
   }
 
-  const items = feedData?.items || []
-  const trending = trendingData?.items || []
-  const total = feedData?.pagination?.total || 23888
+  // Session 860: Ensure arrays before filtering
+  const items = Array.isArray(feedData?.items) ? feedData.items : []
+  const trending = Array.isArray(trendingData?.items) ? trendingData.items : []
+  const total = feedData?.pagination?.total || feedData?.pagination?.total_items || 0
   const annotatedItems = items.filter((i: FeedItem) => i.annotation_count > 0)
 
   const toggleSection = (section: string) => {
@@ -706,8 +710,11 @@ function LearningSubTab() {
     trend: 'stable',
   }
 
-  const patterns = patternsData?.results || patternsData?.patterns || []
-  const insights = insightsData?.results || insightsData?.insights || []
+  // Session 860: Ensure arrays before filtering
+  const patterns = Array.isArray(patternsData?.results) ? patternsData.results :
+                   Array.isArray(patternsData?.patterns) ? patternsData.patterns : []
+  const insights = Array.isArray(insightsData?.results) ? insightsData.results :
+                   Array.isArray(insightsData?.insights) ? insightsData.insights : []
   const pendingPatterns = patterns.filter((p: LearningPattern) => p.pattern_type === 'pending')
 
   const toggleSection = (section: string) => {
