@@ -34,3 +34,6 @@ export { ConceptForgeTab } from './ConceptForgeTab'
 
 // Session 866: Career Tab - ATS Resume Optimizer
 export { CareerTab } from './CareerTab'
+
+// Session 869: Voice Marketplace Tab
+export { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
