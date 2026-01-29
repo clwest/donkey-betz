@@ -19,6 +19,10 @@ import {
   Lightbulb,
   BarChart3,
   FlaskConical,
+  Eye,
+  Copy,
+  Download,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
@@ -110,6 +114,111 @@ interface Stats {
   success_rate: number
   avg_duration_ms: number
   by_domain: Array<{ domain: string; count: number }>
+}
+
+// Session 869: Artifact view modal
+interface ArtifactModalProps {
+  artifact: {
+    id: string
+    name: string
+    kind: string
+    version: number
+    is_primary: boolean
+    content: string
+    created_at: string
+  }
+  onClose: () => void
+}
+
+function ArtifactViewModal({ artifact, onClose }: ArtifactModalProps) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(artifact.content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleDownload = () => {
+    const blob = new Blob([artifact.content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${artifact.name.toLowerCase().replace(/\s+/g, '-')}-v${artifact.version}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div className="flex items-center gap-3">
+            <FileText size={20} className={artifact.is_primary ? 'text-yellow-400' : 'text-primary-400'} />
+            <div>
+              <h3 className="font-semibold text-lg">{artifact.name}</h3>
+              <p className="text-xs text-gray-400">
+                v{artifact.version} • {artifact.kind.toUpperCase()} • {new Date(artifact.created_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-dark-bg hover:bg-dark-hover transition-colors"
+              title="Copy to clipboard"
+            >
+              <Copy size={14} />
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors"
+              title="Download as markdown"
+            >
+              <Download size={14} />
+              Download
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-dark-hover rounded-lg transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {artifact.content ? (
+            <pre className="whitespace-pre-wrap text-sm font-mono text-gray-300 leading-relaxed">
+              {artifact.content}
+            </pre>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FileText size={32} className="mx-auto mb-2 opacity-50" />
+              <p>No content available</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer stats */}
+        <div className="flex items-center justify-between p-3 border-t border-dark-border bg-dark-bg/50 text-xs text-gray-400">
+          <span>{artifact.content?.length?.toLocaleString() || 0} characters</span>
+          <span>{artifact.content?.split(/\s+/).filter(Boolean).length?.toLocaleString() || 0} words</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // Status badge component
@@ -221,6 +330,7 @@ function RunCard({ run, onSelect, isSelected }: { run: ConceptForgeRun; onSelect
 // Run detail view with stage tabs
 function RunDetailView({ runId }: { runId: string }) {
   const [activeStage, setActiveStage] = useState<string>('research')
+  const [selectedArtifact, setSelectedArtifact] = useState<RunDetail['artifacts'][0] | null>(null)
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['conceptforge-run', runId],
@@ -356,18 +466,21 @@ function RunDetailView({ runId }: { runId: string }) {
         </div>
       </div>
 
-      {/* Artifacts */}
+      {/* Artifacts - Session 869: Added interaction buttons */}
       {detail.artifacts.length > 0 && (
         <div className="bg-dark-card border border-dark-border rounded-lg p-4">
           <h3 className="font-medium mb-3 flex items-center gap-2">
             <FileText size={16} className="text-primary-400" />
             Artifacts
+            <span className="text-xs bg-dark-bg px-2 py-0.5 rounded text-gray-400">
+              {detail.artifacts.length}
+            </span>
           </h3>
           <div className="space-y-2">
             {detail.artifacts.map((artifact) => (
               <div
                 key={artifact.id}
-                className="flex items-center justify-between p-3 bg-dark-bg rounded-lg"
+                className="flex items-center justify-between p-3 bg-dark-bg rounded-lg hover:bg-dark-hover/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <FileText size={16} className={artifact.is_primary ? 'text-yellow-400' : 'text-gray-400'} />
@@ -378,15 +491,60 @@ function RunDetailView({ runId }: { runId: string }) {
                     </p>
                   </div>
                 </div>
-                {artifact.is_primary && (
-                  <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">
-                    Primary Dossier
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {artifact.is_primary && (
+                    <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">
+                      Primary
+                    </span>
+                  )}
+                  {/* Session 869: Artifact action buttons */}
+                  <button
+                    onClick={() => setSelectedArtifact(artifact)}
+                    className="p-1.5 hover:bg-dark-border rounded transition-colors text-gray-400 hover:text-white"
+                    title="View content"
+                  >
+                    <Eye size={14} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(artifact.content || '')
+                    }}
+                    className="p-1.5 hover:bg-dark-border rounded transition-colors text-gray-400 hover:text-white"
+                    title="Copy to clipboard"
+                  >
+                    <Copy size={14} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!artifact.content) return
+                      const blob = new Blob([artifact.content], { type: 'text/markdown' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${artifact.name.toLowerCase().replace(/\s+/g, '-')}-v${artifact.version}.md`
+                      document.body.appendChild(a)
+                      a.click()
+                      document.body.removeChild(a)
+                      URL.revokeObjectURL(url)
+                    }}
+                    className="p-1.5 hover:bg-dark-border rounded transition-colors text-gray-400 hover:text-primary-400"
+                    title="Download as markdown"
+                  >
+                    <Download size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Session 869: Artifact view modal */}
+      {selectedArtifact && (
+        <ArtifactViewModal
+          artifact={selectedArtifact}
+          onClose={() => setSelectedArtifact(null)}
+        />
       )}
     </div>
   )
