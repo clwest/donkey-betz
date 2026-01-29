@@ -1,13 +1,14 @@
-# Session 860: Initiative Pipeline Investigation + API Error Handling
+# Session 860: Initiative Pipeline + AI Consciousness Tab Complete Fix
 
 **Date:** January 28, 2026
-**Focus:** Initiative document linking + comprehensive API error handling fixes
+**Focus:** Initiative document linking + comprehensive API error handling + AI Mind tab fixes
 
 ## Summary
 
-Two major accomplishments:
+Three major accomplishments:
 1. Fixed Initiative Pipeline document linking - backfilled 25 unlinked documents
 2. Fixed multiple frontend console errors (404/401) and `v.filter is not a function` errors
+3. **Fixed all 8 AI Consciousness (AI Mind) sub-tabs** - proper data extraction, removed hardcoded values
 
 ## Key Changes
 
@@ -84,6 +85,28 @@ const operations = data?.results || data?.operations || []
 - `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` - Fixed agent/advisor/remediation APIs
 - `frontend/src/components/workspace/JobsPanel.tsx` - Fixed workspace operations API
 
+### 5. AI Consciousness Tab Fixes (PRs #424-429)
+
+Fixed all 8 sub-tabs in the AI Mind (AI Consciousness) tab:
+
+| Sub-tab | Issues Fixed |
+|---------|--------------|
+| Memory Palace | Created backend list endpoint, fixed data extraction from nested response |
+| Neural Orchestra | Fixed agent/collaboration data extraction, used correct API |
+| Relationships | Fixed field names (`agent_from.name` not `agent_1`), removed hardcoded fallbacks |
+| Mood | Converted `mood_distribution` array to object format, filter client-side |
+| Evolution | Extract from nested `overview`, use `top_agents` for list |
+| Social | Added `response.ok` check, calculate channels dynamically |
+| Time Capsules | Already had proper error handling |
+| Time Travel | Use `recent_sessions` from overview, fixed URL `/session/` not `/sessions/` |
+
+**Key Pattern:** Backend returns `{success: true, overview: {...}, items: [...]}` but frontend was using `response.data` directly. Fixed to extract nested data properly.
+
+**Memory Detail Modal Bug (PR #429):**
+- Modal showed data briefly then cleared to "Untitled"
+- Root cause: Using `response.data` instead of `response.data.memory`
+- Backend returns `{success: true, memory: {...}}` - need to extract the `memory` field
+
 ## PRs Merged
 
 | PR | Title |
@@ -93,6 +116,12 @@ const operations = data?.results || data?.operations || []
 | #420 | fix(Session 860): Fix remaining hardcoded API endpoints |
 | #421 | fix(Session 860): Fix API response data extraction for learning endpoints |
 | #422 | fix(Session 860): Add error handling to remaining fetch() calls |
+| #424 | fix(Session 860): Fix AIConsciousnessTab API endpoints |
+| #425 | fix(Session 860): Fix Memory Palace sub-tab with real data |
+| #426 | fix(Session 860): Fix Neural Orchestra sub-tab |
+| #427 | fix(Session 860): Fix Relationships sub-tab data display |
+| #428 | fix(Session 860): Fix remaining AI Consciousness sub-tabs |
+| #429 | fix(Session 860): Fix Memory Palace detail modal data extraction |
 
 ## Learnings
 
@@ -100,9 +129,13 @@ const operations = data?.results || data?.operations || []
 2. **API response formats vary** - always extract with fallbacks like `res.data?.data || res.data || []`
 3. **Use TypeScript typed API clients** instead of raw `fetch()` when possible
 4. **Initiative linking requires `parent_topic`** in document `stats_snapshot` to match stages
+5. **Nested response extraction** - APIs return `{success, overview: {...}, items: [...]}` - extract from nested object
+6. **Array to object conversion** - APIs return arrays `[{type, count}]` but UI may expect `{type: count}` objects
+7. **Remove hardcoded fallbacks** - Don't use fake numbers like `|| 147000` - show real 0 when no data
+8. **Detail endpoint extraction** - When API returns `{success, memory: {...}}`, extract the nested `memory` field
 
 ## Next Session
 
 - Monitor production for any remaining console errors
+- All AI Mind sub-tabs should now display real data
 - Continue Initiative Pipeline improvements if needed
-- Review any new audit findings
