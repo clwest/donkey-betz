@@ -26113,6 +26113,148 @@ Agent: ContentWriterAgent
         return {'success': False, 'error': str(e)}
 
 
+# ============================================================================
+# Session 864: Content Enhancement Tasks (EditorAgent)
+# ============================================================================
+
+@shared_task(name='core.tasks.enhance_blog')
+def enhance_blog_task(blog_id: str, focus_areas: list = None, save: bool = False):
+    """
+    Session 864: Enhance a single blog using EditorAgent.
+
+    Takes content marked as 'needs_enhancement' and improves its structure
+    by adding hooks, better headers, engagement elements, etc.
+
+    Args:
+        blog_id: UUID of the blog to enhance
+        focus_areas: List of areas to focus on (default: all)
+        save: Whether to save changes to database
+
+    Returns:
+        Enhancement result
+    """
+    from core.agents.editor_agent import EditorAgent
+
+    logger.info(f"📝 [EDITOR] Starting enhancement for blog: {blog_id}")
+
+    try:
+        agent = EditorAgent()
+        result = agent.execute(
+            task="Enhance blog structure",
+            context={
+                'blog_id': blog_id,
+                'focus_areas': focus_areas or ['hooks', 'headers', 'engagement', 'structure', 'conclusion'],
+                'save': save,
+            },
+            scifi_context={},
+            spider_context={},
+        )
+
+        if result.success:
+            logger.info(f"📝 [EDITOR] Blog {blog_id} enhanced successfully")
+            return {
+                'success': True,
+                'blog_id': blog_id,
+                'changes_made': result.data.get('changes_made', []),
+                'saved': save,
+            }
+        else:
+            logger.warning(f"📝 [EDITOR] Blog {blog_id} enhancement failed: {result.error}")
+            return {
+                'success': False,
+                'blog_id': blog_id,
+                'error': result.error,
+            }
+
+    except Exception as e:
+        logger.error(f"📝 [EDITOR] Enhancement task failed: {e}", exc_info=True)
+        return {'success': False, 'blog_id': blog_id, 'error': str(e)}
+
+
+@shared_task(name='core.tasks.enhance_all_blogs_needing_enhancement')
+def enhance_all_blogs_task(limit: int = 10, save: bool = False):
+    """
+    Session 864: Batch enhance all blogs marked as 'needs_enhancement'.
+
+    Processes blogs that have been evaluated by PublishGate and marked
+    as needing structural improvements before publishing.
+
+    Args:
+        limit: Maximum number of blogs to enhance (default: 10)
+        save: Whether to save changes to database
+
+    Returns:
+        Summary of enhancement results
+    """
+    from core.models_unified_system import SelfBlog
+    from core.agents.editor_agent import EditorAgent
+
+    logger.info(f"📝 [EDITOR] Starting batch enhancement (limit: {limit}, save: {save})")
+
+    blogs = SelfBlog.objects.filter(status='needs_enhancement')[:limit]
+    total = blogs.count()
+
+    if total == 0:
+        logger.info("📝 [EDITOR] No blogs needing enhancement found")
+        return {'success': True, 'processed': 0, 'message': 'No blogs need enhancement'}
+
+    agent = EditorAgent()
+    results = {
+        'success': True,
+        'processed': 0,
+        'successful': 0,
+        'failed': 0,
+        'details': []
+    }
+
+    for blog in blogs:
+        try:
+            result = agent.execute(
+                task=f"Enhance blog: {blog.title[:50]}",
+                context={
+                    'blog_id': str(blog.id),
+                    'save': save,
+                },
+                scifi_context={},
+                spider_context={},
+            )
+
+            results['processed'] += 1
+
+            if result.success:
+                results['successful'] += 1
+                results['details'].append({
+                    'blog_id': str(blog.id),
+                    'title': blog.title[:60],
+                    'success': True,
+                    'changes': result.data.get('changes_made', []),
+                })
+            else:
+                results['failed'] += 1
+                results['details'].append({
+                    'blog_id': str(blog.id),
+                    'title': blog.title[:60],
+                    'success': False,
+                    'error': result.error,
+                })
+
+        except Exception as e:
+            results['failed'] += 1
+            results['details'].append({
+                'blog_id': str(blog.id),
+                'title': blog.title[:60] if blog.title else 'Unknown',
+                'success': False,
+                'error': str(e),
+            })
+
+    logger.info(
+        f"📝 [EDITOR] Batch enhancement complete: "
+        f"{results['successful']}/{results['processed']} successful"
+    )
+
+    return results
+
+
 @shared_task(name='core.tasks.agent_daily_summary')
 def agent_daily_summary():
     """
