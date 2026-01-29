@@ -1,84 +1,71 @@
-# Session 866 - Start Here
+# Session 867 - Start Here
 
-**Previous Session:** 865 (Podcast TTS + Voice Profiles + ConceptForge UI)
+**Previous Session:** 866 (Research Report Improvements + Session 865 PRs Deployed)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 241 Celery Tasks (+1) | 12 Workspace Tabs (+1) | **ConceptForge UI: COMPLETE** | **Celery Health Monitoring: ACTIVE** | **Podcast TTS: RECONNECTED** | **VoiceProfileModal: CONNECTED**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 241 Celery Tasks | 12 Workspace Tabs | **ConceptForge UI: COMPLETE** | **EditorAgent UI: COMPLETE** | **Research Reports: IMPROVED**
 
 ---
 
-## What Was Accomplished in Session 865
+## What Was Accomplished in Session 866
 
-**Handoff:** `docs/handoffs/SESSION_865_PODCAST_TTS_VOICE_PROFILES.md`
+**Handoff:** `docs/handoffs/SESSION_866_RESEARCH_REPORT_IMPROVEMENTS.md`
 
-### Part 1: Spider Network Investigation
+### ChatGPT Feedback Implementation
 
-Discovered Celery Beat had stopped 38 hours ago. Redeployed Railway to restart all periodic tasks.
+Implemented 3 fixes suggested by ChatGPT for research reports:
 
-### Part 2: Celery Health Monitoring (NEW)
+| Fix | Problem | Solution |
+|-----|---------|----------|
+| **#1: Deliverables mismatch** | "Deliverables Requested" header with "None specified" body | Only show section when deliverables exist |
+| **#2: Self-unblocking** | Pipeline stops when data insufficient | Auto-spawn spiders/search when blocked |
+| **#3: System bindings** | Generic DB refs (BigQuery, Snowflake) | Map to actual DonkeyBetz tables |
 
-Added `monitor_celery_health` task that runs every 30 minutes:
+### New Feature: Decision Gate
 
-- Checks spider data freshness (alert if no data in 6 hours)
-- Checks periodic task staleness (alert if exercise_agents hasn't run in 6 hours)
-- Checks stuck workspace operations (alert if > 10 stuck for > 2 hours)
-- Sends Discord alerts to #system-status
+Every research report now includes an actionable Decision Gate section:
 
-**Location:** `core/tasks.py`
+```markdown
+## Decision Gate
 
-### Part 3: Podcast TTS Pipeline Reconnection
+### Data Status
+✅ Data Available
 
-Fixed multiple disconnects between UI and backend:
+### Recommended Actions
+1. ✅ Synthesize 3 requested deliverable(s)
+2. 📊 Review findings and validate key insights
+3. 🎯 Route to appropriate agent for content creation
+4. 👤 Assign to ResearchAgent for follow-up
 
-| Issue | Fix |
-|-------|-----|
-| Scripts not displaying | Auth bug - changed raw `fetch()` to `podcastApi.script()` |
-| No Generate Audio button | Added button with loading/error states |
-| VoiceProfileModal was stub | Complete rewrite - now fetches real voices from API |
-| Voice selection not passed | Connected localStorage → API → backend → TTS |
-
-### End-to-End Voice Profile Flow
-
-```
-VoiceProfileModal → localStorage (podcast_voice_profile_id) →
-handleGenerateAudio → podcastApi.generateAudio(id, voiceProfileId) →
-Backend (VoiceProfile.elevenlabs_voice_id lookup) →
-podcast_audio_service (custom_voice_id) → ElevenLabs TTS
+### Ownership
+**Primary Owner:** ResearchAgent
+**Status:** Pending Review
 ```
 
-### Part 4: ConceptForge Dossier Pipeline UI (NEW)
+### New Methods Added
 
-Added complete UI for viewing ConceptForge pipeline runs in new "Dossiers" workspace tab.
+| Method | Purpose |
+|--------|---------|
+| `_extract_system_bindings()` | Map generic DB refs to DonkeyBetz tables (20+ mappings) |
+| `_build_decision_gate()` | Generate actionable Decision Gate section |
+| `_trigger_self_unblock()` | Auto-spawn data collection when blocked |
 
-**Backend API (`core/views_conceptforge.py`):**
-- `GET /api/conceptforge/runs/` - List runs with filtering
-- `GET /api/conceptforge/runs/<id>/` - Run details with stages
-- `POST /api/conceptforge/runs/<id>/retry/` - Retry failed runs
-- `GET /api/conceptforge/stats/` - Pipeline statistics
+### Session 865 PRs Deployed
 
-**Frontend (`ConceptForgeTab.tsx`):**
-- Stats panel (total runs, success rate, 7-day activity)
-- Run list with 6-stage progress indicators
-- Detail view with stage tabs (Research, Debate, Feasibility, Risk, Market, Synthesis)
-- Artifacts list
+All Session 865 work is now in production:
+- PR #483: Enhancement Celery Beat schedule
+- PR #485, #486: ConceptForge API + UI
+- PR #488: EditorAgent enhancement UI
 
 ### Files Modified
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added `monitor_celery_health` task |
-| `core/settings.py` | Added to Celery Beat schedule |
-| `core/views_podcast.py` | Added `podcast_generate_audio` endpoint |
-| `core/urls.py` | Added URL routes for podcast + ConceptForge API |
-| `core/views_conceptforge.py` | NEW - ConceptForge API endpoints |
-| `core/services/podcast_audio_service.py` | Added `custom_voice_id` parameter |
-| `frontend/src/lib/api.ts` | Updated `generateAudio` method |
-| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Fixed auth, added Generate Audio, rewrote VoiceProfileModal |
-| `frontend/src/pages/workspace/tabs/ConceptForgeTab.tsx` | NEW - Dossier pipeline UI |
-| `frontend/src/pages/WorkspacePageNew.tsx` | Added Dossiers tab to navigation |
+| `core/services/autonomous_action_executor.py` | Added 3 helper methods, updated report template |
+| `docs/handoffs/SESSION_866_RESEARCH_REPORT_IMPROVEMENTS.md` | NEW - Session handoff |
 
 ---
 
-## Priority for Session 866
+## Priority for Session 867
 
 ### Option A: Test TTS End-to-End (Recommended)
 
@@ -86,20 +73,20 @@ Verify the podcast TTS pipeline works in production:
 
 ```bash
 # Check if episodes have scripts
-railway run python -c "
+railway ssh -c "python manage.py shell -c \"
 from core.models_podcast_studio import PodcastEpisode
 episodes = PodcastEpisode.objects.filter(script__isnull=False).exclude(script='')[:5]
 for ep in episodes:
     print(f'{ep.id}: {ep.title[:50]} - script length: {len(ep.script)}')
-"
+\""
 
 # Generate audio for one episode (dry run)
-railway run python -c "
+railway ssh -c "python manage.py shell -c \"
 from core.services.podcast_audio_service import generate_podcast_audio
 # Use an episode ID from above
 result = generate_podcast_audio('episode-uuid-here')
 print(result)
-"
+\""
 ```
 
 ### Option B: Voice Recording UI
@@ -110,31 +97,25 @@ Add interface for voice cloning:
 3. Save cloned voice to VoiceProfile model
 4. Allow selection in VoiceProfileModal
 
-### Option C: Run PublishGate with New Rules
+### Option C: Test Research Report Improvements
 
-Test Session 864's content intelligence improvements:
+Run ThinkingAgent and verify improved research reports:
 
 ```bash
-# Re-evaluate with new rules (dry run first!)
-railway run python manage.py apply_publish_gate --all --dry-run
-
-# Apply changes
-railway run python manage.py apply_publish_gate --all
+# Check a recent research report
+railway ssh -c "python manage.py shell -c \"
+from core.models_unified_system import SelfBlog
+research = SelfBlog.objects.filter(category='research_brief').order_by('-created_at').first()
+print(research.full_text[:3000])
+\""
 ```
 
-### Option D: Add Enhancement Celery Beat Schedule
+Look for:
+- Decision Gate section with recommended actions
+- System bindings if topic mentions databases
+- No "Deliverables: None specified" when empty
 
-Add auto-enhancement for content marked as `needs_enhancement`:
-
-```python
-'enhance-content-daily': {
-    'task': 'core.tasks.enhance_all_blogs_task',
-    'schedule': crontab(hour=3, minute=0),  # 3 AM daily
-    'kwargs': {'limit': 20, 'save': True},
-},
-```
-
-### Option E: Audio Player Enhancement
+### Option D: Audio Player Enhancement
 
 Improve podcast playback experience:
 1. Add waveform visualization
@@ -142,31 +123,51 @@ Improve podcast playback experience:
 3. Add download button
 4. Show transcript sync with audio
 
+### Option E: ConceptForge Pipeline Testing
+
+Trigger a ConceptForge run and monitor via the new Dossiers tab:
+
+```bash
+railway ssh -c "python manage.py shell -c \"
+from core.tasks import run_conceptforge_pipeline
+task = run_conceptforge_pipeline.delay(
+    source_type='initiative',
+    source_id='<initiative-uuid>',
+    source_title='Test ConceptForge Run',
+    domain='tech',
+    quality_score=0.85,
+    triggered_by='manual_test'
+)
+print(f'Task ID: {task.id}')
+\""
+```
+
 ---
 
 ## Quick Reference
 
-### Test Celery Health Monitoring
+### Check System Bindings Map
 
-```bash
-# Force run monitoring task
-railway run python -c "
-from core.tasks import monitor_celery_health
-result = monitor_celery_health()
-print(result)
-"
+```python
+from core.services.autonomous_action_executor import AutonomousActionExecutor
+executor = AutonomousActionExecutor()
+bindings = executor._extract_system_bindings("database analytics ml", "topic")
+print(bindings)
+# {'Database': 'core.models (PostgreSQL + pgvector)',
+#  'Analytics': 'core.services.analytics_service / ContentMetrics',
+#  'Ml': 'ml/ models + AgentModelRouter'}
 ```
 
-### Check Voice Profiles
+### Test Self-Unblock
 
-```bash
-railway run python -c "
-from core.models_voice_marketplace import VoiceProfile
-profiles = VoiceProfile.objects.all()
-print(f'Total voice profiles: {profiles.count()}')
-for p in profiles[:10]:
-    print(f'  {p.name}: {p.elevenlabs_voice_id or \"No ElevenLabs ID\"}'')
-"
+```python
+from core.services.autonomous_action_executor import AutonomousActionExecutor
+executor = AutonomousActionExecutor()
+result = executor._trigger_self_unblock(
+    topic="AI market analysis",
+    missing_data_type="spider"
+)
+print(result)
 ```
 
 ### Default ElevenLabs Voices
@@ -184,10 +185,10 @@ for p in profiles[:10]:
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **865** | Podcast TTS + Voice Profile Integration + Celery Health Monitoring | COMPLETE |
-| **864** | Content Intelligence + Run Mode Tracking (warmup vs production) | COMPLETE |
+| **866** | Research Report Improvements (ChatGPT feedback) | DEPLOYED |
+| **865** | Podcast TTS + Voice Profiles + ConceptForge UI + EditorAgent UI | DEPLOYED |
+| **864** | Content Intelligence + Run Mode Tracking | COMPLETE |
 | **863** | ConceptForge - Autonomous Think Tank Pipeline | COMPLETE |
-| **862** | Content Intelligence - PublishGate + ContentClassifier | PRODUCTION DEPLOYED |
 | **862** | Content Flow Unification - Dream → Initiative → Deliverable | COMPLETE |
 | **861** | Data Persistence - 6 gap fixes + Content Tab UI | COMPLETE |
 | **860** | Initiative Pipeline + API Error Handling | COMPLETE |
