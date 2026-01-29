@@ -1361,6 +1361,13 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.exercise_all_dormant_agents',
         'schedule': crontab(day_of_week='sunday', hour=4, minute=0),  # Weekly Sunday 4 AM
     },
+    # =========================================================================
+    # Session 865: Celery Health Monitoring
+    # =========================================================================
+    'monitor-celery-health': {
+        'task': 'core.tasks.monitor_celery_health',
+        'schedule': 1800.0,  # Every 30 minutes - check spider/task health
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
