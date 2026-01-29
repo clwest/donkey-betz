@@ -20072,6 +20072,7 @@ class SelfBlog(models.Model):
     A meta-demonstration of the platform's capabilities.
     Session 814: Added category field to support technical documents/audits.
     Session 833: Added status field for approval workflow.
+    Session 862: Added content_type for routing (public vs internal) and quality scoring.
     """
     CATEGORY_CHOICES = [
         ('blog', 'Blog Post'),
@@ -20079,10 +20080,24 @@ class SelfBlog(models.Model):
         ('technical_document', 'Technical Document'),
         ('prototype_plan', 'Prototype Plan'),
         ('research_brief', 'Research Brief'),
+        # Session 862: New internal content types
+        ('build_log', 'Build Log'),
+        ('internal_note', 'Internal Note'),
+        ('playbook', 'Playbook/Doctrine'),
+        ('dossier', 'Strategic Dossier'),
+    ]
+
+    # Session 862: Content type determines routing (public vs internal)
+    CONTENT_TYPE_CHOICES = [
+        ('public', 'Public Content'),      # For external audience, SEO, marketing
+        ('internal', 'Internal Content'),  # For system learning, team reference
+        ('strategic', 'Strategic Content'), # For operators, partners, investors
     ]
 
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('pending_review', 'Pending Review'),  # Session 862: Awaiting quality gate
+        ('needs_enhancement', 'Needs Enhancement'),  # Session 862: Failed quality gate
         ('approved', 'Approved'),
         ('published', 'Published'),
     ]
@@ -20129,7 +20144,37 @@ class SelfBlog(models.Model):
 
     title = models.CharField(max_length=255)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='blog', db_index=True)
+    content_type = models.CharField(
+        max_length=20,
+        choices=CONTENT_TYPE_CHOICES,
+        default='public',
+        db_index=True,
+        help_text="Session 862: Determines routing - public (external), internal (learning), strategic (operators)"
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
+
+    # Session 862: Quality scoring for PublishGate
+    quality_score = models.FloatField(
+        null=True, blank=True,
+        help_text="Overall content quality (0-1)"
+    )
+    novelty_score = models.FloatField(
+        null=True, blank=True,
+        help_text="How unique vs existing content (0-1)"
+    )
+    structure_score = models.FloatField(
+        null=True, blank=True,
+        help_text="Section variety, hooks, formatting (0-1)"
+    )
+    publish_ready = models.BooleanField(
+        default=False,
+        help_text="True if passed PublishGate quality checks"
+    )
+    gate_notes = models.TextField(
+        blank=True,
+        help_text="Session 862: Notes from PublishGate evaluation"
+    )
+
     meta_description = models.TextField(blank=True)
     intro = models.TextField(blank=True)
     sections = models.JSONField(default=list, help_text="List of {header, content} sections")
