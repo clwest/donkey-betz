@@ -237,19 +237,56 @@ No new dependencies. Uses existing:
 - `_execute_spawn_spider()` for spider spawning
 - `core.agents.technical_document_agent.TechnicalDocumentAgent`
 
+### 8. Smart HiveMind Execution (NEW)
+**File:** `core/services/hivemind_execution_pipeline.py`
+
+**Problem:** HiveMind brainstorm sessions produced rich DecisionSummary outputs with Proposed Features and Next Steps, but the pipeline ignored this structure. 175 sessions with synthesis were pending (3.8% execution rate).
+
+**Solution:** Enhanced pipeline to parse and act on DecisionSummary:
+
+1. **Parse DecisionSummary** - Extract Insights, Proposed Feature, and Next Steps
+2. **Create Initiative** - When Proposed Feature found, create Initiative with 5-stage pipeline
+3. **Smart Workflow** - Create workflow steps from Next Steps with agent assignments
+4. **Agent Name Mapping** - Normalize display names to system names
+
+**Example Transformation:**
+```
+Input (from brainstorm):
+  Proposed Feature: Persona Synthesis Engine
+  Next Steps:
+    1. Resume Optimizer AI: Build ATS module...
+    2. Hidden Job Market Explorer: Expand dataset...
+
+Output (created automatically):
+  - Initiative: "Persona Synthesis Engine" (5 stages)
+  - Workflow Step 1 → ResumeOptimizerAgent
+  - Workflow Step 2 → HiddenJobMarketAgent
+```
+
+**New Methods:**
+| Method | Purpose |
+|--------|---------|
+| `_parse_decision_summary()` | Parse DecisionSummary from synthesis |
+| `_extract_proposed_feature()` | Extract feature name, inputs, outputs |
+| `_extract_next_steps()` | Extract agent:task pairs |
+| `_normalize_agent_name()` | Convert display names to system names |
+| `_create_initiative_from_feature()` | Create Initiative with 5 stages |
+| `_create_workflow_from_next_steps()` | Create workflow with agent tasks |
+
 ## Pull Requests
 
 | PR | Title | Status |
 |----|-------|--------|
 | #489 | Research Report Improvements | MERGED |
 | #491 | Internal Data Source Registry | MERGED |
-| #492 | Initiative Pipeline Automation | PENDING |
+| #492 | Initiative Pipeline Automation | MERGED |
+| #493 | Smart HiveMind Execution | PENDING |
 
 ## Next Steps
 
-1. Deploy PR #492 to Railway production
-2. Monitor research reports for improved actionability
-3. Track self-unblock success rate
-4. Monitor initiative pipeline advancement
-5. Add more data sources to registry as discovered
-6. Consider extending registry to other agents (not just research)
+1. Deploy PR #493 to Railway production
+2. Run `process_hivemind_sessions` task to test enhanced execution
+3. Monitor Initiatives tab for HiveMind-created initiatives
+4. Track self-unblock success rate
+5. Monitor initiative pipeline advancement
+6. Add more data sources to registry as discovered

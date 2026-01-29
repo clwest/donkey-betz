@@ -43,38 +43,63 @@ Added `advance_initiative_pipeline` Celery task to automate the 5-stage pipeline
 
 **Schedule:** Every 4 hours at :30, processing up to 5 initiatives per run.
 
+### Smart HiveMind Execution (NEW)
+
+Enhanced the HiveMind execution pipeline to parse DecisionSummary and create actionable outputs:
+- **Parses DecisionSummary** to extract Insights, Proposed Feature, and Next Steps
+- **Creates Initiatives** from Proposed Features with 5-stage pipeline
+- **Generates targeted workflows** with specific agent assignments from Next Steps
+- **Agent name mapping** (e.g., "Resume Optimizer AI" → "ResumeOptimizerAgent")
+
+**Before:** Generic 3-step workflow, 3.8% execution rate (175 sessions pending)
+**After:** Initiative + targeted agent tasks from session output
+
 ### Pull Requests
 
 | PR | Title | Status |
 |----|-------|--------|
 | #489 | Research Report Improvements | MERGED |
 | #491 | Internal Data Source Registry | MERGED |
-| #492 | Initiative Pipeline Automation | **PENDING** |
+| #492 | Initiative Pipeline Automation | MERGED |
+| #493 | Smart HiveMind Execution | **PENDING** |
 
 ---
 
 ## Priority for Session 867
 
-### Option A: Merge PR #492 + Test Initiative Pipeline (Recommended)
+### Option A: Merge PR #493 + Test Smart HiveMind Execution (Recommended)
 
-1. Merge PR #492 (Initiative Pipeline Automation)
+1. Merge PR #493 (Smart HiveMind Execution)
 2. Deploy to Railway
-3. Test the pipeline:
+3. Test the enhanced pipeline:
 
 ```bash
-# Check current initiative stages
+# Check HiveMind execution stats
 railway ssh -c "python manage.py shell -c \"
-from core.models_document_registry import Initiative, InitiativeStage
-for init in Initiative.objects.filter(status='ACTIVE')[:3]:
-    stages = InitiativeStage.objects.filter(initiative=init).order_by('stage')
-    print(f'{init.name[:40]}: {[(s.stage, s.status, bool(s.document_id)) for s in stages]}')
+from core.services.hivemind_execution_pipeline import hivemind_execution_pipeline
+stats = hivemind_execution_pipeline.get_execution_stats()
+for k, v in stats.items():
+    print(f'{k}: {v}')
 \""
 
-# Manually trigger pipeline advancement
+# Process pending HiveMind sessions
 railway ssh -c "python manage.py shell -c \"
-from core.tasks import advance_initiative_pipeline
-result = advance_initiative_pipeline(limit=3)
-print(result)
+from core.services.hivemind_execution_pipeline import hivemind_execution_pipeline
+results = hivemind_execution_pipeline.process_completed_sessions(limit=3)
+for r in results:
+    print(f'Session: {r.get(\"session_id\", \"?\")}')
+    print(f'  Initiative: {r.get(\"initiative_id\", \"None\")}')
+    print(f'  Next Steps: {r.get(\"next_steps_count\", 0)}')
+    print()
+\""
+
+# Check for HiveMind-created initiatives
+railway ssh -c "python manage.py shell -c \"
+from core.models_document_registry import Initiative
+inits = Initiative.objects.filter(created_by__startswith='HiveMind:')[:5]
+print(f'Found {inits.count()} HiveMind initiatives')
+for i in inits:
+    print(f'  {i.name}: Stage {i.current_stage}/5')
 \""
 ```
 
