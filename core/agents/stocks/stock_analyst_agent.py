@@ -389,6 +389,22 @@ Alert on:
             # Session 763: Create Mission Control attention item
             self._maybe_create_attention_item(result, task, context)
 
+            # Session 861: Persist analysis to Deliverable
+            self._save_to_deliverable(
+                title=f"Stock Analysis: {ticker}" if ticker else f"Stock Analysis: {task[:60]}",
+                content=analysis,
+                deliverable_type='analysis',
+                category='Finance',
+                tags=['stock', 'analysis', ticker] if ticker else ['stock', 'analysis'],
+                content_format='markdown',
+                metadata={
+                    'ticker': ticker,
+                    'severity': severity,
+                    'tools_used': [tc['tool'] for tc in tool_calls_made],
+                    'ml_used': ml_insights.get('ml_used', False),
+                },
+            )
+
             return result
 
         except Exception as e:

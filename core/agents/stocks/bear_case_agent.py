@@ -371,6 +371,23 @@ Always acknowledge bull arguments but emphasize potential risks."""
                 except Exception as le:
                     logger.warning(f"Failed to record learning outcome: {le}")
 
+                # Session 861: Persist bear case analysis to Deliverable
+                conviction = self._extract_conviction(analysis)
+                self._save_to_deliverable(
+                    title=f"Bear Case: {ticker}" if ticker else f"Bear Case Analysis: {task[:60]}",
+                    content=analysis,
+                    deliverable_type='analysis',
+                    category='Finance',
+                    tags=['stock', 'bear-case', 'analysis', ticker] if ticker else ['stock', 'bear-case', 'analysis'],
+                    content_format='markdown',
+                    metadata={
+                        'ticker': ticker,
+                        'conviction': conviction,
+                        'tools_used': [tc['tool'] for tc in tool_calls_made],
+                        'case_type': 'bearish',
+                    },
+                )
+
                 return result
 
             except Exception as e:

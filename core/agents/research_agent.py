@@ -619,6 +619,35 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         # Session 763: Create Mission Control attention item
                         self._maybe_create_attention_item(result, task, context)
 
+                        # Session 861: Persist research findings to Deliverable
+                        research_content = f"# Research: {task}\n\n"
+                        research_content += f"**Sources:** {len(all_results)}\n\n"
+                        if key_insights:
+                            research_content += "## Key Insights\n"
+                            for i, insight in enumerate(key_insights, 1):
+                                research_content += f"{i}. {insight}\n"
+                            research_content += "\n"
+                        if ml_analysis.get('sentiment') and ml_analysis['sentiment'] != 'unknown':
+                            research_content += f"**Sentiment:** {ml_analysis['sentiment']}\n"
+                        if ml_analysis.get('topics_detected'):
+                            research_content += f"**Topics:** {', '.join(ml_analysis['topics_detected'])}\n"
+
+                        self._save_to_deliverable(
+                            title=f"Research: {task[:100]}",
+                            content=research_content,
+                            deliverable_type='research',
+                            category='Research',
+                            tags=['research'] + ml_analysis.get('topics_detected', [])[:3],
+                            content_format='markdown',
+                            metadata={
+                                'query': task,
+                                'sources_count': len(all_results),
+                                'sources_used': sources_used,
+                                'sentiment': ml_analysis.get('sentiment', 'unknown'),
+                                'ml_used': ml_analysis.get('ml_used', False),
+                            },
+                        )
+
                         return result
                     else:
                         result = AgentResult(
