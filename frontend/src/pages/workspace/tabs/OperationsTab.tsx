@@ -1,6 +1,7 @@
 // Session 825: Operations Tab
 // Extracted from WorkspacePage.tsx for modular architecture
 // Session 834: Added grouped view to link related operations
+// Session 861B: Added dedicated Pending Reviews section with feedback UI
 
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -17,6 +18,8 @@ import {
   Clock,
   FileText,
   Bot,
+  AlertTriangle,
+  MessageSquare,
 } from 'lucide-react'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
 import { OperationCard } from '../components/OperationCard'
@@ -149,7 +152,7 @@ function OperationGroupCard({
 }: {
   group: OperationGroup
   onRollback: (id: string) => void
-  onReview: (id: string, approved: boolean) => void
+  onReview: (id: string, approved: boolean, notes?: string) => void
   onViewContent: (id: string) => void
   reviewingOperationId: string | null
 }) {
@@ -229,7 +232,7 @@ function OperationGroupCard({
               key={operation.id}
               operation={operation}
               onRollback={() => onRollback(operation.id)}
-              onReview={(approved) => onReview(operation.id, approved)}
+              onReview={(approved) => onReview(operation.id, approved, undefined)}
               onViewContent={() => onViewContent(operation.id)}
               isReviewing={reviewingOperationId === operation.id}
               compact
@@ -237,6 +240,240 @@ function OperationGroupCard({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Session 861B: Pending Reviews Section Component
+function PendingReviewsSection({
+  pendingReviews,
+  isLoading,
+  onReview,
+  onViewContent,
+  reviewingOperationId,
+}: {
+  pendingReviews: WorkspaceOperation[]
+  isLoading: boolean
+  onReview: (operationId: string, approved: boolean, feedback?: string) => void
+  onViewContent: (operationId: string) => void
+  reviewingOperationId: string | null
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [feedbackText, setFeedbackText] = useState<Record<string, string>>({})
+
+  if (isLoading) {
+    return (
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+        <div className="flex items-center gap-2 text-amber-400 mb-2">
+          <Loader2 size={16} className="animate-spin" />
+          <span className="font-medium">Loading pending reviews...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (pendingReviews.length === 0) {
+    return null // Don't show section if no pending reviews
+  }
+
+  const handleReview = (operationId: string, approved: boolean) => {
+    const feedback = feedbackText[operationId] || ''
+    onReview(operationId, approved, feedback)
+    // Clear feedback after submission
+    setFeedbackText((prev) => {
+      const next = { ...prev }
+      delete next[operationId]
+      return next
+    })
+  }
+
+  return (
+    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={18} className="text-amber-400" />
+          <h3 className="font-semibold text-amber-400">
+            Pending Reviews ({pendingReviews.length})
+          </h3>
+        </div>
+        <span className="text-xs text-amber-400/70">
+          These operations require your approval before being applied
+        </span>
+      </div>
+
+      {/* Pending Operations List */}
+      <div className="space-y-3">
+        {pendingReviews.map((operation) => {
+          const isExpanded = expandedId === operation.id
+          const isReviewing = reviewingOperationId === operation.id
+
+          return (
+            <div
+              key={operation.id}
+              className="bg-dark-card border border-amber-500/20 rounded-lg overflow-hidden"
+            >
+              {/* Operation Header */}
+              <div
+                className="p-3 cursor-pointer hover:bg-dark-border/30 transition-colors"
+                onClick={() => setExpandedId(isExpanded ? null : operation.id)}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="text-gray-400">
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </div>
+                    <FileText size={16} className="text-amber-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-white truncate">
+                        {operation.file_path || operation.operation_type}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <Bot size={12} />
+                        <span>{operation.agent_name}</span>
+                        <span>•</span>
+                        <Clock size={12} />
+                        <span>{new Date(operation.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions (visible even when collapsed) */}
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleReview(operation.id, true)}
+                      disabled={isReviewing}
+                      className={cn(
+                        'px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all',
+                        isReviewing
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30'
+                      )}
+                    >
+                      {isReviewing ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <CheckCircle size={12} />
+                      )}
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleReview(operation.id, false)}
+                      disabled={isReviewing}
+                      className={cn(
+                        'px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all',
+                        isReviewing
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
+                      )}
+                    >
+                      {isReviewing ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <XCircle size={12} />
+                      )}
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Details */}
+              {isExpanded && (
+                <div className="border-t border-amber-500/20 p-3 bg-dark-bg/50 space-y-3">
+                  {/* Agent Task */}
+                  {operation.agent_task && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Agent Task</label>
+                      <p className="text-sm text-gray-300 bg-dark-bg p-2 rounded">
+                        {operation.agent_task}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Content Preview */}
+                  {(operation.content_after || operation.file_content_after) && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Content Preview</label>
+                      <pre className="text-xs text-gray-300 bg-dark-bg p-2 rounded overflow-x-auto max-h-40 overflow-y-auto font-mono">
+                        {((operation.content_after || operation.file_content_after) || '').slice(0, 1000)}
+                        {((operation.content_after || operation.file_content_after) || '').length > 1000 && (
+                          <span className="text-gray-500">... (truncated)</span>
+                        )}
+                      </pre>
+                      <button
+                        onClick={() => onViewContent(operation.id)}
+                        className="mt-2 text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                      >
+                        <FileText size={12} />
+                        View Full Content
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Feedback Textarea */}
+                  <div>
+                    <label className="text-xs text-gray-500 flex items-center gap-1 mb-1">
+                      <MessageSquare size={12} />
+                      Review Feedback (optional)
+                    </label>
+                    <textarea
+                      value={feedbackText[operation.id] || ''}
+                      onChange={(e) =>
+                        setFeedbackText((prev) => ({
+                          ...prev,
+                          [operation.id]: e.target.value,
+                        }))
+                      }
+                      placeholder="Add notes about your decision..."
+                      className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm focus:border-primary-500 focus:outline-none resize-none"
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Action Buttons (in expanded view) */}
+                  <div className="flex items-center gap-3 pt-2 border-t border-dark-border">
+                    <button
+                      onClick={() => handleReview(operation.id, true)}
+                      disabled={isReviewing}
+                      className={cn(
+                        'flex-1 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-all',
+                        isReviewing
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30'
+                      )}
+                    >
+                      {isReviewing ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <CheckCircle size={14} />
+                      )}
+                      Approve & Apply
+                    </button>
+                    <button
+                      onClick={() => handleReview(operation.id, false)}
+                      disabled={isReviewing}
+                      className={cn(
+                        'flex-1 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-all',
+                        isReviewing
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
+                      )}
+                    >
+                      {isReviewing ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <XCircle size={14} />
+                      )}
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -259,6 +496,18 @@ export function OperationsTab({
     enabled: !!activeWorkspace?.id,
   })
 
+  // Session 861B: Pending reviews query - fetches all operations needing human approval
+  const { data: pendingReviewsData, isLoading: loadingPendingReviews } = useQuery({
+    queryKey: ['workspace-pending-reviews'],
+    queryFn: () => workspaceOperationsApi.pendingReviews(),
+    // Refetch every 30 seconds to catch new pending items
+    refetchInterval: 30000,
+  })
+
+  const pendingReviews = (pendingReviewsData?.data?.results ||
+    pendingReviewsData?.data ||
+    []) as WorkspaceOperation[]
+
   // Rollback mutation
   const rollbackMutation = useMutation({
     mutationFn: (operationId: string) => workspaceOperationsApi.rollback(operationId),
@@ -272,10 +521,17 @@ export function OperationsTab({
     },
   })
 
-  // Review mutation
+  // Review mutation - Session 861B: Added notes/feedback support
   const reviewMutation = useMutation({
-    mutationFn: ({ operationId, approved }: { operationId: string; approved: boolean }) =>
-      workspaceOperationsApi.review(operationId, { approved }),
+    mutationFn: ({
+      operationId,
+      approved,
+      notes,
+    }: {
+      operationId: string
+      approved: boolean
+      notes?: string
+    }) => workspaceOperationsApi.review(operationId, { approved, notes }),
     onSuccess: (_, { approved }) => {
       queryClient.invalidateQueries({ queryKey: ['workspace-operations'] })
       queryClient.invalidateQueries({ queryKey: ['workspace-pending-reviews'] })
@@ -310,13 +566,23 @@ export function OperationsTab({
     [filteredOperations]
   )
 
-  const handleReview = (operationId: string, approved: boolean) => {
+  // Session 861B: Updated to accept optional feedback/notes
+  const handleReview = (operationId: string, approved: boolean, notes?: string) => {
     setReviewingOperationId(operationId)
-    reviewMutation.mutate({ operationId, approved })
+    reviewMutation.mutate({ operationId, approved, notes })
   }
 
   return (
     <div className="space-y-4">
+      {/* Session 861B: Pending Reviews Section - shown at top when there are pending reviews */}
+      <PendingReviewsSection
+        pendingReviews={pendingReviews}
+        isLoading={loadingPendingReviews}
+        onReview={handleReview}
+        onViewContent={onViewFileContent}
+        reviewingOperationId={reviewingOperationId}
+      />
+
       {/* Filter & View Toggle */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
@@ -420,7 +686,7 @@ export function OperationsTab({
               key={operation.id}
               operation={operation}
               onRollback={() => rollbackMutation.mutate(operation.id)}
-              onReview={(approved) => handleReview(operation.id, approved)}
+              onReview={(approved) => handleReview(operation.id, approved, undefined)}
               onViewContent={() => onViewFileContent(operation.id)}
               isReviewing={reviewingOperationId === operation.id}
             />

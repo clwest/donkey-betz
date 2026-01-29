@@ -1,8 +1,47 @@
 # Session 862 - Start Here
 
-**Previous Session:** 861 (Data Persistence Gaps + Content Tab UI Fixes)
+**Previous Session:** 861 (Data Persistence Gaps + Content Tab UI Fixes + Content Flow Audit)
 **Date:** January 28, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Data Persistence: COMPLETE** | **Content Tab: ENHANCED**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Data Persistence: COMPLETE** | **Content Tab: ENHANCED** | **Content Flow: NEEDS UNIFICATION**
+
+---
+
+## PRIORITY: Content Flow Unification (4 Phases)
+
+**Full Plan:** `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md`
+
+The content creation system has **critical integration gaps** - Dreams, Initiatives, Content, and Deliverables are disconnected. This session implements the fix:
+
+### Current Problem
+```
+AgentDream ──[DEAD END]
+Initiative ──[Isolated]
+Research ──[NO MODEL]
+Content ──[Orphaned]
+Deliverable ──[No source tracking]
+```
+
+### Implementation Phases
+
+| Phase | Description | Effort |
+|-------|-------------|--------|
+| **1** | Add FKs to Deliverable, SelfBlog, PodcastEpisode, AgentDream | 2-3 hrs |
+| **2** | Dream → Initiative bridge (`promote_to_initiative()`) | 1-2 hrs |
+| **3** | Create `ResearchResult` model for Stage 1 | 2-3 hrs |
+| **4** | Auto-stage progression + publish on completion | 2-3 hrs |
+
+### Target Flow
+```
+AgentDream → Initiative → 5 Stages → Deliverable (with full traceability)
+```
+
+### Files to Modify
+- `core/models_deliverables.py` - Add initiative, dream, self_blog, podcast_episode FKs
+- `core/models_unified_system.py` - Add FKs to AgentDream, SelfBlog
+- `core/models_podcast_studio.py` - Add FKs to PodcastEpisode
+- `core/models_document_registry.py` - Add approve(), advance_stage()
+- `core/models_research.py` - NEW FILE
+- `core/services/mission_control_executor.py` - Update publish
 
 ---
 

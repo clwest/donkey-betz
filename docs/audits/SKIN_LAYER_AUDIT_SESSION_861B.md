@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The SKIN/Workspace layer is **79% connected** - robust backend with 21% of features not exposed in UI. The backend is production-ready but critical user-facing workflows are missing UI components.
+The SKIN/Workspace layer is **92% connected** after Session 861B fixes - up from 79%. Critical P0 gaps resolved.
 
 | Component | Backend | API | Frontend | Overall |
 |-----------|---------|-----|----------|---------|
@@ -16,8 +16,8 @@ The SKIN/Workspace layer is **79% connected** - robust backend with 21% of featu
 | File Operations | 100% | 100% | 50% | **80%** |
 | Git Operations | 100% | 100% | 30% | **75%** |
 | Operations Audit | 100% | 100% | 90% | **97%** |
-| **Human Review** | 100% | 100% | **0%** | **75%** |
-| **Workspace Triggers** | 100% | **0%** | **0%** | **25%** |
+| **Human Review** | 100% | 100% | **100%** | **100%** ✅ Session 861B |
+| **Workspace Triggers** | 100% | **100%** | **100%** | **100%** ✅ Session 861B |
 | SKIN Health | 100% | 100% | 50% | **87%** |
 
 ---
@@ -282,12 +282,35 @@ This audit focuses on **SKIN layer connectivity** - complementary work.
 
 ## Next Steps
 
-1. [ ] Implement Human Review UI (P0)
-2. [ ] Create Workspace Triggers API (P0)
-3. [ ] Create Triggers Tab UI (P0)
+1. [x] Implement Human Review UI (P0) - **DONE** Session 861B
+2. [x] Create Workspace Triggers API (P0) - **DONE** Session 861B
+3. [x] Create Triggers Tab UI (P0) - **DONE** Session 861B
 4. [ ] Add File Write Form (P1)
 5. [ ] Build Diff Viewer Component (P1)
 6. [ ] Enhance Git Operation Forms (P2)
+
+## Session 861B Implementation Summary
+
+**Completed January 28, 2026:**
+
+### 1. Human Review UI (OperationsTab.tsx)
+- Added `PendingReviewsSection` component with approve/reject buttons
+- Integrated `pendingReviews` query with 30-second auto-refresh
+- Added feedback notes support for rejections
+- Uses existing `workspaceOperationsApi.review()` endpoint
+
+### 2. Workspace Triggers API (views_workspace_triggers.py)
+- `WorkspaceTriggerViewSet` with CRUD + stats/cancel/retry/bump_priority actions
+- `WorkspaceTriggerConfigViewSet` with toggle/test actions
+- `autopilot_status` endpoint for queue health monitoring
+- URL routes added to core/urls.py
+
+### 3. Triggers Tab UI (TriggersTab.tsx)
+- `TriggerStatsDashboard` showing queue depth, success rate, pending/in-progress/completed/failed counts
+- `TriggerCard` with expand/collapse, status badges, and action buttons
+- Status filtering and search functionality
+- 15-second auto-refresh for live monitoring
+- Wired into workspace page with Zap icon
 
 ---
 
