@@ -429,6 +429,135 @@ def podcast_delete(request, episode_id):
         }, status=500)
 
 
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def podcast_generate_audio(request, episode_id):
+    """
+    Session 865: Generate TTS audio for an existing podcast episode.
+
+    POST /api/podcasts/<episode_id>/generate-audio/
+
+    Works for both PodcastEpisode and ChannelEpisode.
+    For ChannelEpisode, creates a linked PodcastEpisode with audio.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    from core.models_podcast_studio import PodcastEpisode
+    from core.models_autonomous_studio import ChannelEpisode
+    from core.services.podcast_audio_service import generate_podcast_audio
+
+    try:
+        # Try PodcastEpisode first
+        try:
+            episode = PodcastEpisode.objects.get(id=episode_id, user=request.user)
+
+            if not episode.script:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Episode has no script to convert to audio'
+                }, status=400)
+
+            if episode.audio_url or episode.audio_file:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Episode already has audio. Delete and recreate to regenerate.'
+                }, status=400)
+
+            # Generate audio - the service handles status updates
+            episode.status = 'generating_audio'
+            episode.save()
+
+            result = generate_podcast_audio(episode_id=str(episode.id))
+
+            if result['success']:
+                # Refresh episode from DB (audio service updates it)
+                episode.refresh_from_db()
+                return JsonResponse({
+                    'success': True,
+                    'audio_url': result.get('audio_url'),
+                    'duration_seconds': result.get('duration_seconds'),
+                    'segment_count': result.get('segment_count'),
+                    'total_cost': str(result.get('total_cost', 0)),
+                    'message': 'Audio generated successfully'
+                })
+            else:
+                episode.status = 'failed'
+                episode.error_message = result.get('error', 'Audio generation failed')
+                episode.save()
+                return JsonResponse({
+                    'success': False,
+                    'error': result.get('error', 'Audio generation failed')
+                }, status=500)
+
+        except PodcastEpisode.DoesNotExist:
+            pass
+
+        # Try ChannelEpisode - convert script to audio
+        try:
+            channel_ep = ChannelEpisode.objects.get(id=episode_id)
+
+            script = channel_ep.script or channel_ep.description
+            if not script:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Episode has no script/content to convert to audio'
+                }, status=400)
+
+            # Create a PodcastEpisode to store the audio
+            podcast_ep = PodcastEpisode.objects.create(
+                user=request.user,
+                topic=channel_ep.title or channel_ep.topic,
+                title=channel_ep.title or channel_ep.topic,
+                script=script,
+                status='generating_audio',
+                generation_config={
+                    'source': 'channel_episode',
+                    'channel_episode_id': str(channel_ep.id),
+                    'generate_audio': True,
+                }
+            )
+
+            result = generate_podcast_audio(episode_id=str(podcast_ep.id))
+
+            if result['success']:
+                podcast_ep.refresh_from_db()
+                return JsonResponse({
+                    'success': True,
+                    'podcast_episode_id': str(podcast_ep.id),
+                    'audio_url': result.get('audio_url'),
+                    'duration_seconds': result.get('duration_seconds'),
+                    'segment_count': result.get('segment_count'),
+                    'total_cost': str(result.get('total_cost', 0)),
+                    'message': 'Audio generated successfully. New podcast episode created.'
+                })
+            else:
+                podcast_ep.status = 'failed'
+                podcast_ep.error_message = result.get('error', 'Audio generation failed')
+                podcast_ep.save()
+                return JsonResponse({
+                    'success': False,
+                    'error': result.get('error', 'Audio generation failed')
+                }, status=500)
+
+        except ChannelEpisode.DoesNotExist:
+            pass
+
+        return JsonResponse({
+            'success': False,
+            'error': 'Episode not found'
+        }, status=404)
+
+    except Exception as e:
+        import traceback
+        logger.error(f"Audio generation error: {e}\n{traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @require_http_methods(["GET"])
 def podcast_stats(request):
     # Session 688: Removed @login_required for React frontend access
