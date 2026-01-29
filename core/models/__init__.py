@@ -118,6 +118,12 @@ from ..models_research import (
     ResearchResult,
 )
 
+# Import synthetic user models (Session 862 - Test Personas)
+from ..models_synthetic_users import (
+    SyntheticUserProfile,
+    SyntheticUserTestRun,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -271,4 +277,8 @@ __all__ = [
 
     # Research Result (Session 862)
     'ResearchResult',
+
+    # Synthetic Users - Test Personas (Session 862)
+    'SyntheticUserProfile',
+    'SyntheticUserTestRun',
 ]
