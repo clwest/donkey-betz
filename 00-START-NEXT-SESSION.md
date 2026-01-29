@@ -1,55 +1,38 @@
-# Session 870 - Start Here
+# Session 870 - In Progress
 
 **Previous Session:** 869 (Stub Replacement + Voice Marketplace UI)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | **16 Workspace Tabs** | **ALL STUBS REPLACED + VOICE MARKETPLACE UI**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | **16 Workspace Tabs** | **FRONTEND ERROR STATES IMPROVED**
 
 ---
 
-## What Was Accomplished in Session 869
+## What Was Accomplished So Far in Session 870
 
-**Handoff:** `docs/handoffs/SESSION_869_COMPLETE.md`
+### TIER 3: Frontend Error States - COMPLETE
 
-### TIER 3: Stub Endpoints Replaced
+Added proper error states to frontend tabs (PR #504):
 
-All 40+ stub endpoints replaced with real implementations:
+| Tab | Change |
+|-----|--------|
+| **IntelligenceTab** | Sub-queries show error states instead of silent fail |
+| **ConceptForgeTab** | RunDetailView & runs list show error with retry button |
+| **ConceptForgeTab** | Artifact copy buttons show visual feedback (checkmark) |
+| **DataSourcesTab** | Warning banner when secondary queries fail |
 
-| Category | Stubs | Replaced By |
-|----------|-------|-------------|
-| **Stripe Billing** | 13 | `views_stripe_billing.py` |
-| **Analytics** | 4 | `views_analytics_real.py` |
-| **Learning Journey** | 8 | `views_learning_journey_api.py` |
-| **Autonomous** | 6 | `views_autonomous_dashboard.py` |
-| **Reasoning** | 10 | `views_autonomous_reasoning.py` |
-
-### TIER 3: Voice Marketplace UI - NEW
-
-Created `VoiceMarketplaceTab.tsx` (600+ lines):
-
-| Feature | Description |
-|---------|-------------|
-| **Browse Tab** | Grid view with search, filters (gender, age, use case, sort) |
-| **Voice Cards** | Preview, rating, uses, price display |
-| **Voice Detail Modal** | Sample player, attributes, generate speech, reviews |
-| **My Voices Tab** | List of owned/purchased voices |
-| **Earnings Tab** | Revenue tracking for sellers |
-| **Audio Player** | Play/pause sample previews |
-
-**Backend already complete:** 4 models, 17+ endpoints at `/api/voice-marketplace/`
-
-### TIER 3: ConceptForge Artifacts
-
-Added View/Copy/Download buttons to artifacts in Dossiers tab.
+**Key improvements:**
+- `ExpandedListCard` component updated with `isError` prop
+- Clipboard operations wrapped in try-catch with user-friendly alerts
+- Gates, Thoughts, Actions expanded views show "Failed to load data" on error
 
 ---
 
-## Priority for Session 870
+## Priority for Remaining Session 870
 
 ### TIER 3: Remaining Medium Priority
 
-- [x] ~~Replace 40+ stub endpoints with real implementations~~ DONE
-- [x] ~~Integrate Voice Marketplace into workspace~~ DONE
-- [ ] Add proper error states to frontend fallbacks (silent failures → user messages)
+- [x] ~~Replace 40+ stub endpoints with real implementations~~ DONE (Session 869)
+- [x] ~~Integrate Voice Marketplace into workspace~~ DONE (Session 869)
+- [x] ~~Add proper error states to frontend fallbacks~~ DONE (PR #504)
 - [ ] Model deduplication audit (181 models in `models_unified_system.py`)
 - [ ] Learning Journey Dashboard UI (16+ endpoints exist, no workspace integration)
 
@@ -102,7 +85,7 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 | Triggers | Zap | Automation triggers |
 | Dossiers | FlaskConical | ConceptForge pipeline |
 | Career | Briefcase | ATS Resume Optimizer |
-| **Voices** | **Mic** | **Voice Marketplace (NEW)** |
+| **Voices** | **Mic** | **Voice Marketplace** |
 
 ---
 
@@ -110,11 +93,11 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **870** | Frontend Error States | IN PROGRESS |
 | **869** | Stub Replacement + Voice Marketplace UI + ConceptForge Artifacts | COMPLETE |
 | **868** | TIER 1 Critical Fixes - Gallery Series, Reasoning Gates, Celery Tasks | COMPLETE |
 | **867** | System-Wide Audit + Initiative Pipeline Fix | COMPLETE |
 | **866** | ATS Keyword Optimization Module + Career Tab UI | COMPLETE |
-| **865** | Podcast TTS + Voice Profiles + ConceptForge UI | DEPLOYED |
 
 ---
 
@@ -122,7 +105,7 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 
 | Doc | Purpose |
 |-----|---------|
-| `docs/handoffs/SESSION_869_COMPLETE.md` | **Full session details** |
+| `docs/handoffs/SESSION_869_COMPLETE.md` | Session 869 full details |
 | `docs/handoffs/SESSION_868_TIER1_FIXES.md` | TIER 1 critical fixes |
 | `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | System audit with gaps |
 | `docs/AGENTS.md` | Agent documentation (75 agents) |
@@ -130,4 +113,4 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 
 ---
 
-**Next priority: Frontend error states OR Learning Journey UI!**
+**Next priority: Model deduplication audit OR Learning Journey UI!**
