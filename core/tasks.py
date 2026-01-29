@@ -22252,6 +22252,172 @@ def _send_halt_discord_notification(experiment, reason):
 
 
 # =============================================================================
+# Session 865: Celery Health Monitoring Task
+# =============================================================================
+
+@shared_task(name='core.tasks.monitor_celery_health')
+def monitor_celery_health():
+    """
+    Session 865: Monitor Celery task health and alert on failures.
+
+    Checks:
+    - Spider network data freshness (alert if no new data in 2 hours)
+    - Long-running queue task completion
+    - Periodic task last_run_at staleness
+
+    Sends Discord alerts to #system-status when issues are detected.
+    Runs every 30 minutes via Celery Beat.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.services.discord_notifications import discord_notify
+
+    logger.info("🔍 [SESSION 865] Running Celery health check...")
+
+    issues = []
+    warnings = []
+    stats = {}
+
+    try:
+        # === Check 1: Spider Data Freshness ===
+        from core.models_unified_system import SpiderData, SpiderExecutionLog
+
+        two_hours_ago = timezone.now() - timedelta(hours=2)
+        one_hour_ago = timezone.now() - timedelta(hours=1)
+
+        # Check latest spider data
+        latest_spider = SpiderData.objects.order_by('-created_at').first()
+        if latest_spider:
+            stats['latest_spider_data'] = latest_spider.created_at.isoformat()
+            if latest_spider.created_at < two_hours_ago:
+                issues.append(
+                    f"🕷️ **Spider Data Stale**: No new spider data since {latest_spider.created_at.strftime('%Y-%m-%d %H:%M UTC')} "
+                    f"({(timezone.now() - latest_spider.created_at).total_seconds() / 3600:.1f} hours ago)"
+                )
+        else:
+            issues.append("🕷️ **No Spider Data**: No spider data records found in database")
+
+        # Count recent spider data
+        recent_spider_count = SpiderData.objects.filter(created_at__gte=one_hour_ago).count()
+        stats['spider_data_last_hour'] = recent_spider_count
+        if recent_spider_count == 0 and latest_spider and latest_spider.created_at >= two_hours_ago:
+            warnings.append(f"⚠️ No spider data in last hour (last was {(timezone.now() - latest_spider.created_at).total_seconds() / 60:.0f} min ago)")
+
+        # Check execution logs for errors
+        recent_errors = SpiderExecutionLog.objects.filter(
+            started_at__gte=one_hour_ago,
+            status='error'
+        ).count()
+        stats['spider_errors_last_hour'] = recent_errors
+        if recent_errors > 10:
+            warnings.append(f"⚠️ High spider error rate: {recent_errors} errors in last hour")
+
+        # === Check 2: Periodic Task Staleness ===
+        from django_celery_beat.models import PeriodicTask
+
+        critical_tasks = [
+            ('run-spider-network', timedelta(hours=2)),  # Should run every 30 min
+            ('run-agent-learning-cycle', timedelta(hours=2)),  # Should run every 10 min
+            ('agent-dream-cycle', timedelta(hours=2)),  # Should run every 15 min
+        ]
+
+        for task_name, max_age in critical_tasks:
+            try:
+                task = PeriodicTask.objects.get(name=task_name, enabled=True)
+                if task.last_run_at:
+                    age = timezone.now() - task.last_run_at
+                    stats[f'task_{task_name}_age_minutes'] = age.total_seconds() / 60
+                    if age > max_age:
+                        issues.append(
+                            f"📋 **Task Stale**: `{task_name}` hasn't run since "
+                            f"{task.last_run_at.strftime('%Y-%m-%d %H:%M UTC')} "
+                            f"({age.total_seconds() / 3600:.1f} hours ago)"
+                        )
+                else:
+                    warnings.append(f"⚠️ Task `{task_name}` has never run (last_run_at is NULL)")
+            except PeriodicTask.DoesNotExist:
+                warnings.append(f"⚠️ Critical task `{task_name}` not found or disabled")
+
+        # === Check 3: Long-Running Queue Health ===
+        # Check if any WorkspaceOperations are stuck in 'running' state
+        try:
+            from core.models_skin_layer import WorkspaceOperation
+            stuck_threshold = timezone.now() - timedelta(hours=1)
+            stuck_operations = WorkspaceOperation.objects.filter(
+                success__isnull=True,  # Still running (no success/failure yet)
+                created_at__lt=stuck_threshold
+            ).count()
+            stats['stuck_operations'] = stuck_operations
+            if stuck_operations > 0:
+                warnings.append(f"⚠️ {stuck_operations} workspace operations stuck in pending state > 1 hour")
+        except Exception as e:
+            logger.debug(f"Could not check WorkspaceOperations: {e}")
+
+        # === Send Alerts ===
+        if issues:
+            alert_message = "**🚨 CELERY HEALTH ALERT**\n\n"
+            alert_message += "**Critical Issues:**\n"
+            for issue in issues:
+                alert_message += f"• {issue}\n"
+
+            if warnings:
+                alert_message += "\n**Warnings:**\n"
+                for warning in warnings:
+                    alert_message += f"• {warning}\n"
+
+            alert_message += f"\n**Stats:** Spider data (1h): {stats.get('spider_data_last_hour', 'N/A')}, "
+            alert_message += f"Spider errors (1h): {stats.get('spider_errors_last_hour', 'N/A')}"
+            alert_message += "\n\n_Check Railway dashboard for worker status. May need worker restart._"
+
+            discord_notify.send_status(
+                "Celery Health Alert",
+                alert_message,
+                status_type="error"
+            )
+            logger.warning(f"🚨 [SESSION 865] Celery health issues detected: {len(issues)} critical, {len(warnings)} warnings")
+
+        elif warnings:
+            # Only warnings, no critical issues
+            warning_message = "**⚠️ CELERY HEALTH WARNINGS**\n\n"
+            for warning in warnings:
+                warning_message += f"• {warning}\n"
+
+            discord_notify.send_status(
+                "Celery Health Warning",
+                warning_message,
+                status_type="warning"
+            )
+            logger.info(f"⚠️ [SESSION 865] Celery health warnings: {len(warnings)}")
+
+        else:
+            logger.info(f"✅ [SESSION 865] Celery health check passed - all systems nominal")
+
+        return {
+            'success': True,
+            'issues': len(issues),
+            'warnings': len(warnings),
+            'stats': stats,
+            'issues_list': issues,
+            'warnings_list': warnings,
+        }
+
+    except Exception as e:
+        logger.error(f"🛑 [SESSION 865] Celery health check failed: {e}", exc_info=True)
+
+        # Try to send emergency alert
+        try:
+            discord_notify.send_status(
+                "Celery Health Check Failed",
+                f"**Error:** {str(e)}\n\nThe health monitoring task itself failed. Check logs.",
+                status_type="error"
+            )
+        except Exception:
+            pass
+
+        return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
 # Session 609: Auto KPI Tracking Task
 # =============================================================================
 
