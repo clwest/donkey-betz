@@ -48,8 +48,9 @@ def trigger_dream_execution_on_approval(sender, instance, created, **kwargs):
     """
     Trigger dream execution when a dream is approved.
 
-    This handler fires after the dream is saved and queues the
-    dream for execution via Celery task.
+    This handler fires after the dream is saved and:
+    1. Session 862: Creates an Initiative from the dream (content flow bridge)
+    2. Queues the dream for execution via Celery task
     """
     # Check if this save resulted in a new approval
     was_approved = getattr(instance, '_was_approved', False)
@@ -58,6 +59,19 @@ def trigger_dream_execution_on_approval(sender, instance, created, **kwargs):
         logger.info(
             f"💭 [DREAM SIGNAL] Dream approved: {instance.title[:50]} (ID: {instance.id})"
         )
+
+        # Session 862: Create Initiative from approved Dream
+        # This establishes the content flow: Dream → Initiative → Stages → Deliverable
+        try:
+            initiative = instance.promote_to_initiative(approved_by='boardroom')
+            logger.info(
+                f"💭 [DREAM SIGNAL] Created Initiative {initiative.id} from Dream {instance.id}"
+            )
+        except Exception as e:
+            logger.error(
+                f"💭 [DREAM SIGNAL] Failed to create Initiative from Dream {instance.id}: {e}"
+            )
+            # Continue with execution even if Initiative creation fails
 
         # Check if already has a project (already executed)
         if instance.project_id:

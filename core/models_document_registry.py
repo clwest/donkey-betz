@@ -141,13 +141,90 @@ class Initiative(models.Model):
             return None
 
     def advance_stage(self):
-        """Advance to the next stage if current stage is approved."""
+        """
+        Session 862: Advance to the next stage if current stage is approved.
+
+        Creates the next stage if it doesn't exist. Returns the new stage number
+        or None if cannot advance.
+        """
         current = self.get_stage_document(self.current_stage)
         if current and current.status == 'APPROVED' and self.current_stage < 5:
             self.current_stage += 1
             self.save()
-            return True
-        return False
+
+            # Create the next stage if it doesn't exist
+            InitiativeStage.objects.get_or_create(
+                initiative=self,
+                stage=self.current_stage,
+                defaults={'status': 'PENDING'}
+            )
+            return self.current_stage
+
+        return None
+
+    def is_complete(self):
+        """Check if all 5 stages are approved."""
+        approved_count = self.stages.filter(status='APPROVED').count()
+        return approved_count >= 5
+
+    def create_final_deliverable(self):
+        """
+        Session 862: Create a published Deliverable from completed initiative.
+
+        Called when all 5 stages are approved to generate the final output.
+        """
+        from core.models_deliverables import Deliverable
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        # Get all approved stage documents
+        stages = self.stages.filter(
+            status='APPROVED'
+        ).select_related('document').order_by('stage')
+
+        # Compile content from all stages
+        content_parts = []
+        for stage in stages:
+            content_parts.append(f"## Stage {stage.stage}: {stage.stage_name}\n\n")
+            if stage.document:
+                content_parts.append(stage.document.full_text or stage.document.intro or '')
+            else:
+                content_parts.append(f"*No document for {stage.stage_name}*")
+            content_parts.append("\n\n---\n\n")
+
+        full_content = ''.join(content_parts)
+
+        # Get user (default to first superuser if none specified)
+        user = User.objects.filter(is_superuser=True).first()
+
+        # Get source dream if exists
+        source_dream = self.source_dreams.first()
+
+        # Create the deliverable
+        deliverable = Deliverable.objects.create(
+            user=user,
+            title=f"Completed: {self.name}",
+            content=full_content,
+            deliverable_type='document',
+            content_format='markdown',
+            status='published',
+            initiative=self,
+            dream=source_dream,
+            category='initiative_completion',
+            agent_name='InitiativePipeline',
+            metadata={
+                'stages_completed': 5,
+                'initiative_id': str(self.id),
+                'completed_at': timezone.now().isoformat(),
+                'stage_names': [stage.stage_name for stage in stages],
+            }
+        )
+
+        # Update initiative status
+        self.status = self.Status.COMPLETED
+        self.save(update_fields=['status'])
+
+        return deliverable
 
 
 # Stage definitions (must be outside class for field definition)
@@ -240,15 +317,34 @@ class InitiativeStage(models.Model):
     def stage_purpose(self):
         return STAGE_PURPOSES.get(self.stage, '')
 
-    def approve(self, approved_by='system'):
-        """Mark this stage as approved."""
+    def approve(self, approved_by='system', notes=''):
+        """
+        Session 862: Mark this stage as approved and advance initiative.
+
+        If all 5 stages are now approved, creates final Deliverable.
+
+        Args:
+            approved_by: Who approved (user or 'system')
+            notes: Optional approval notes
+
+        Returns:
+            Deliverable or None: Final deliverable if all stages complete
+        """
         self.status = self.StageStatus.APPROVED
         self.approved_by = approved_by
         self.approved_at = timezone.now()
+        if notes:
+            self.notes = (self.notes or '') + f"\n\nApproval notes: {notes}"
         self.save()
 
         # Try to advance the initiative
         self.initiative.advance_stage()
+
+        # Check if all stages are now complete
+        if self.initiative.is_complete():
+            return self.initiative.create_final_deliverable()
+
+        return None
 
     def reject(self, reason=''):
         """Mark this stage as rejected."""
