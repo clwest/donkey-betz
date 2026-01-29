@@ -370,6 +370,47 @@ class WorkspaceOperation(models.Model):
         help_text="The operation that rolled back this one"
     )
 
+    # Session 864: Run Mode and Intent Tracking
+    # Distinguishes purposeful production runs from warmup/exercise runs
+    RUN_MODE_CHOICES = [
+        ('production', 'Production'),
+        ('warmup', 'Warmup/Exercise'),
+    ]
+    TRIGGER_SOURCE_CHOICES = [
+        ('initiative', 'Initiative Stage'),
+        ('user', 'User Request'),
+        ('dream', 'Dream Execution'),
+        ('schedule', 'Scheduled Task'),
+        ('warmup', 'Warmup/Exercise'),
+        ('self_healing', 'Self-Healing'),
+        ('conceptforge', 'ConceptForge'),
+        ('unknown', 'Unknown'),
+    ]
+
+    run_mode = models.CharField(
+        max_length=20,
+        choices=RUN_MODE_CHOICES,
+        default='production',
+        db_index=True,
+        help_text="Whether this is a production run or warmup exercise"
+    )
+    trigger_source = models.CharField(
+        max_length=30,
+        choices=TRIGGER_SOURCE_CHOICES,
+        default='unknown',
+        help_text="What triggered this agent execution"
+    )
+    initiative_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Initiative this operation is associated with"
+    )
+    is_warmup = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Quick filter for warmup operations"
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -384,6 +425,9 @@ class WorkspaceOperation(models.Model):
             models.Index(fields=['agent_name', '-created_at']),
             models.Index(fields=['workspace', 'file_path']),
             models.Index(fields=['requires_review', 'reviewed_by_human']),
+            # Session 864: Filter out warmups from dashboards
+            models.Index(fields=['is_warmup', '-created_at']),
+            models.Index(fields=['run_mode', '-created_at']),
         ]
 
     def __str__(self):
