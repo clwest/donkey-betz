@@ -19,6 +19,7 @@ from content.models import ContentGeneration, ContentStatus
 # Import content pipeline models for gallery/library
 from core.models_content_pipeline import ContentAsset, AssetType, ContentPackage
 from core.models_podcast_studio import PodcastEpisode, PodcastShow
+from core.models_ai_series import AISeries, SeriesEpisode, SeriesStatus, EpisodeStatus
 
 # Import image generation service
 try:
@@ -1336,3 +1337,121 @@ def ai_image_studio(request):
     - Video generation (Runway ML)
     """
     return render(request, 'ai_image_studio.html')
+
+
+# ========================================
+# AI SERIES GALLERY VIEW (Session 868)
+# ========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def gallery_series(request):
+    """
+    Session 868: Gallery endpoint for AI Series.
+
+    Returns paginated list of AI series created by the user.
+
+    Query parameters:
+    - limit: Max results (default: 20)
+    - offset: Pagination offset (default: 0)
+    - status: Filter by status (planning, generating, complete, failed)
+    - type: Filter by series type (educational, entertainment, marketing)
+
+    Returns:
+    {
+        "count": 10,
+        "next": null,
+        "previous": null,
+        "results": [
+            {
+                "id": "uuid",
+                "name": "Series Title",
+                "description": "...",
+                "series_type": "educational",
+                "episode_count": 3,
+                "completed_episodes": 2,
+                "status": "generating",
+                "progress": 67,
+                "thumbnail_url": "...",
+                "created_at": "...",
+                "updated_at": "..."
+            }
+        ]
+    }
+    """
+    user = request.user
+
+    # Get query parameters
+    limit = int(request.query_params.get('limit', 20))
+    offset = int(request.query_params.get('offset', 0))
+    status_filter = request.query_params.get('status', '')
+    type_filter = request.query_params.get('type', '')
+
+    # Build queryset
+    queryset = AISeries.objects.filter(created_by=user)
+
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+    if type_filter:
+        queryset = queryset.filter(series_type=type_filter)
+
+    queryset = queryset.order_by('-created_at')
+
+    # Get total count before pagination
+    total_count = queryset.count()
+
+    # Apply pagination
+    series_list = queryset[offset:offset + limit]
+
+    # Build results
+    results = []
+    for series in series_list:
+        # Count completed episodes
+        completed_episodes = series.episodes.filter(status=EpisodeStatus.COMPLETE).count()
+
+        # Get thumbnail from first complete episode's content package
+        thumbnail_url = None
+        first_episode = series.episodes.filter(
+            status=EpisodeStatus.COMPLETE,
+            content_package__isnull=False
+        ).first()
+        if first_episode and first_episode.content_package:
+            # Try to get first image asset from content package
+            first_asset = first_episode.content_package.assets.filter(
+                asset_type=AssetType.IMAGE
+            ).first()
+            if first_asset:
+                thumbnail_url = first_asset.file_url
+
+        results.append({
+            'id': str(series.id),
+            'name': series.name,
+            'description': series.description,
+            'series_type': series.series_type,
+            'series_type_display': series.get_series_type_display(),
+            'episode_count': series.episode_count,
+            'completed_episodes': completed_episodes,
+            'status': series.status,
+            'status_display': series.get_status_display(),
+            'progress': series.generation_progress,
+            'thumbnail_url': thumbnail_url,
+            'target_audience': series.target_audience,
+            'total_cost': float(series.total_cost),
+            'created_at': series.created_at.isoformat(),
+            'updated_at': series.updated_at.isoformat(),
+        })
+
+    # Build pagination URLs
+    next_url = None
+    prev_url = None
+    if offset + limit < total_count:
+        next_url = f"?limit={limit}&offset={offset + limit}"
+    if offset > 0:
+        prev_url = f"?limit={limit}&offset={max(0, offset - limit)}"
+
+    return Response({
+        'count': total_count,
+        'next': next_url,
+        'previous': prev_url,
+        'results': results
+    })

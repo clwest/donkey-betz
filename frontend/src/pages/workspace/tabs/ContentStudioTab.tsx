@@ -135,15 +135,16 @@ function GallerySubTab() {
   // The /api/v1/gallery/videos/ endpoint queries ContentAsset (empty)
   // while our real videos are in VideoHistory (included in unified gallery)
 
-  // Session 860: Disabled - endpoint /api/v1/gallery/series/ doesn't exist yet
-  // TODO: Create backend endpoint or use sessions/list/ instead
+  // Session 868: Gallery series endpoint now exists
   const { data: seriesData } = useQuery({
     queryKey: ['gallery-series-tab'],
     queryFn: async () => {
-      // Return empty placeholder until backend endpoint is created
-      return { results: [], count: 0 }
+      const res = await fetch('/api/v1/gallery/series/')
+      if (!res.ok) {
+        return { results: [], count: 0 }
+      }
+      return res.json()
     },
-    enabled: false, // Disabled until endpoint exists
   })
 
   if (isLoading) {
