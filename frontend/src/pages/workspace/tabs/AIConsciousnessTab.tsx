@@ -106,6 +106,7 @@ interface MemoryItem {
   safety_class: string
   importance_score?: number
   agent_id?: string
+  agent_name?: string  // Session 860: Add agent_name for display
   created_at?: string
 }
 
@@ -279,7 +280,8 @@ function MemorySubTab() {
                   )} />
                   <div>
                     <span className="text-sm">{memory.title || 'Untitled Memory'}</span>
-                    <p className="text-xs text-gray-500">{memory.memory_type} {memory.agent_id && `- ${memory.agent_id}`}</p>
+                    {/* Session 860: Show agent name instead of UUID */}
+                    <p className="text-xs text-gray-500">{memory.memory_type} {(memory.agent_name || memory.agent_id) && `- ${memory.agent_name || memory.agent_id}`}</p>
                   </div>
                 </div>
                 <ChevronRight size={14} className="text-gray-500" />
@@ -386,10 +388,11 @@ function MemoryDetailModal({ memory, onClose }: { memory: MemoryItem; onClose: (
               </span>
             </div>
           </div>
-          {displayMemory.agent_id && (
+          {(displayMemory.agent_name || displayMemory.agent_id) && (
             <div>
               <label className="text-xs text-gray-500">Agent</label>
-              <p className="text-sm">{displayMemory.agent_id}</p>
+              {/* Session 860: Show agent name instead of UUID */}
+              <p className="text-sm">{displayMemory.agent_name || displayMemory.agent_id}</p>
             </div>
           )}
           {displayMemory.content && (
