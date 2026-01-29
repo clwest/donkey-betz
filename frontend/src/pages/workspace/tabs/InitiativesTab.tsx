@@ -20,7 +20,7 @@ import {
   Lightbulb,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { platformApi } from '@/lib/api'
+import { platformApi, blogsApi } from '@/lib/api'
 
 // Stage names for display
 const STAGE_NAMES: Record<number, string> = {
@@ -198,6 +198,102 @@ function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative;
   )
 }
 
+// Session 866: Document viewer modal for stage documents
+function DocumentViewerModal({
+  documentId,
+  stageName,
+  onClose,
+}: {
+  documentId: string
+  stageName: string
+  onClose: () => void
+}) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['selfBlog', documentId],
+    queryFn: async () => {
+      const res = await blogsApi.get(documentId)
+      return res.data.blog
+    },
+    enabled: !!documentId,
+  })
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
+      onClick={onClose}
+    >
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-dark-border shrink-0">
+          <div className="flex items-center gap-3">
+            <FileText size={20} className="text-primary-400" />
+            <div>
+              <h3 className="text-lg font-semibold">{stageName} Document</h3>
+              {data?.title && (
+                <p className="text-sm text-gray-400">{data.title}</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto flex-1">
+          {isLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 size={24} className="animate-spin text-primary-400" />
+            </div>
+          )}
+
+          {isError && (
+            <div className="text-center py-16">
+              <AlertTriangle size={32} className="text-red-400 mx-auto mb-2" />
+              <p className="text-gray-400">Failed to load document</p>
+            </div>
+          )}
+
+          {data && !isLoading && (
+            <div className="prose prose-invert max-w-none">
+              {/* Document metadata */}
+              <div className="flex items-center gap-4 text-xs text-gray-400 mb-4 pb-4 border-b border-dark-border">
+                {data.word_count && <span>{data.word_count} words</span>}
+                {data.created_at && (
+                  <span>Created: {new Date(data.created_at).toLocaleDateString()}</span>
+                )}
+                {data.status && (
+                  <span className="px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                    {data.status}
+                  </span>
+                )}
+              </div>
+
+              {/* Document content */}
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                {data.full_text || data.content || 'No content available'}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end p-4 border-t border-dark-border bg-dark-bg/50 shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Initiative detail modal
 function InitiativeDetailModal({
   initiative,
@@ -206,6 +302,9 @@ function InitiativeDetailModal({
   initiative: Initiative
   onClose: () => void
 }) {
+  // Session 866: State for viewing stage documents
+  const [viewingDocument, setViewingDocument] = useState<{ id: string; stageName: string } | null>(null)
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -308,14 +407,18 @@ function InitiativeDetailModal({
                           : 'No document yet'}
                     </div>
                   </div>
-                  {/* Session 857: Show document indicator inline instead of external link */}
+                  {/* Session 866: Clickable document indicator to view content */}
                   {stage?.document_id && (
-                    <div
-                      className="p-2 bg-primary-500/10 rounded-lg"
-                      title="Document available"
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setViewingDocument({ id: stage.document_id!, stageName: STAGE_NAMES[stageNum] })
+                      }}
+                      className="p-2 bg-primary-500/10 hover:bg-primary-500/20 rounded-lg transition-colors"
+                      title="View document"
                     >
                       <FileText size={16} className="text-primary-400" />
-                    </div>
+                    </button>
                   )}
                 </div>
               )
@@ -416,6 +519,15 @@ function InitiativeDetailModal({
             Close
           </button>
         </div>
+
+        {/* Session 866: Document viewer modal */}
+        {viewingDocument && (
+          <DocumentViewerModal
+            documentId={viewingDocument.id}
+            stageName={viewingDocument.stageName}
+            onClose={() => setViewingDocument(null)}
+          />
+        )}
       </div>
     </div>
   )
