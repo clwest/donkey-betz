@@ -139,11 +139,34 @@ promote_to_conceptforge.delay(
 
 ---
 
+## Session 862 Content Intelligence (Latest - Not in Prod Yet)
+
+### MIGRATION REQUIRED ON PROD
+```bash
+railway run python manage.py migrate core
+```
+
+### What Was Added
+- **PublishGate**: Quality evaluation before publishing (quality, novelty, structure scores)
+- **ContentClassifier**: Routes content to public/internal/strategic
+- **SelfBlog Updates**: content_type field, new categories (build_log, internal_note, playbook, dossier)
+
+### Test the AI Development Blog
+```bash
+railway run python manage.py apply_publish_gate --blog-id fc2b9def-7f64-425b-90e8-d2b26326489d
+```
+
+### Handoff
+`docs/handoffs/SESSION_862_CONTENT_INTELLIGENCE.md`
+
+---
+
 ## Recent Session History
 
 | Session | Focus | Status |
 |---------|-------|--------|
 | **863** | ConceptForge - Autonomous Think Tank Pipeline | ✅ COMPLETE |
+| **862** | Content Intelligence - PublishGate + ContentClassifier | ✅ CODE COMPLETE |
 | **862** | Content Flow Unification - Dream → Initiative → Deliverable | ✅ COMPLETE |
 | **861** | Data Persistence - 6 gap fixes + Content Tab UI | ✅ COMPLETE |
 | **860** | Initiative Pipeline + API Error Handling | ✅ COMPLETE |
