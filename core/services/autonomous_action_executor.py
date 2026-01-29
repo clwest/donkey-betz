@@ -581,24 +581,65 @@ class AutonomousActionExecutor:
         # Session 620.1: Debug logging for research result
         logger.info(f"Research result - hasattr success: {hasattr(result, 'success')}, success value: {result.success if hasattr(result, 'success') else 'N/A'}, research_successful: {research_successful}")
 
+        # Session 866: Self-unblocking pattern - if research failed or data insufficient, try to unblock
+        unblock_result = None
+        data_insufficient = not findings or len(findings) < 50
+        if not research_successful or data_insufficient:
+            logger.warning(f"[Session 866] Research may need unblocking - success: {research_successful}, findings length: {len(findings) if findings else 0}")
+            try:
+                unblock_result = self._trigger_self_unblock(
+                    topic=topic,
+                    missing_data_type='spider' if data_insufficient else 'general'
+                )
+                logger.info(f"[Session 866] Self-unblock triggered: {unblock_result.get('unblock_type')}")
+            except Exception as unblock_error:
+                logger.warning(f"[Session 866] Self-unblock failed: {unblock_error}")
+
         # Session 620: Create a SelfBlog entry to persist research findings
+        # Session 866: ChatGPT feedback - 3 fixes:
+        #   1. Deliverables mismatch - only show section when deliverables exist
+        #   2. Decision Gate - add actionable outputs at end
+        #   3. System Bindings - map to actual DonkeyBetz tables
         research_blog_id = None
         if research_successful:
             try:
+                # Session 866: Build deliverables section only if deliverables exist
+                deliverables_section = ""
+                if deliverables:
+                    deliverables_section = f"""
+## Deliverables Requested
+{chr(10).join(f'- {d}' for d in deliverables)}
+"""
+
+                # Session 866: Extract actual system bindings from findings
+                system_bindings = self._extract_system_bindings(findings, topic)
+                bindings_section = ""
+                if system_bindings:
+                    bindings_section = f"""
+## System Bindings (DonkeyBetz Integration)
+{chr(10).join(f'- **{k}**: `{v}`' for k, v in system_bindings.items())}
+"""
+
+                # Session 866: Build decision gate with actionable outputs
+                decision_gate = self._build_decision_gate(
+                    topic=topic,
+                    findings=findings,
+                    deliverables=deliverables,
+                    owner_agent=owner_agent
+                )
+
                 research_report = f"""# Research Report: {topic}
 
 ## Request Context
 {reasoning}
-
-## Deliverables Requested
-{chr(10).join(f'- {d}' for d in deliverables) if deliverables else 'None specified'}
-
+{deliverables_section}
 ## Research Findings
 {findings if findings else 'Research completed - see data below'}
 
 ## Data Sources Consulted
 {', '.join(r.get('source', 'unknown') for r in research_data.get('results', [])) if isinstance(research_data, dict) else 'Multiple sources'}
-
+{bindings_section}
+{decision_gate}
 ---
 *Auto-generated research report from ThinkingAgent autonomous action*
 """
@@ -698,7 +739,10 @@ class AutonomousActionExecutor:
             'synthesize_deliverables': synthesize_deliverables,
             'synthesized_count': len(synthesized_deliverables),
             'synthesized_success': sum(1 for d in synthesized_deliverables if d.get('success')),
-            'synthesized_deliverables': synthesized_deliverables
+            'synthesized_deliverables': synthesized_deliverables,
+            # Session 866: Self-unblock result
+            'self_unblock_triggered': unblock_result is not None,
+            'self_unblock_result': unblock_result,
         }
 
     def _build_research_context(self, topic: str, reasoning: str, findings: str, findings_detailed: List[Dict]) -> str:
@@ -730,6 +774,185 @@ class AutonomousActionExecutor:
                     context_parts.append(f"**Reference:** {finding['link']}")
 
         return "\n".join(context_parts)
+
+    def _extract_system_bindings(self, findings: str, topic: str) -> Dict[str, str]:
+        """
+        Session 866: Extract system bindings from research findings.
+        ChatGPT Feedback Fix #3: Map generic database references to actual DonkeyBetz tables.
+
+        Instead of generic mentions like "BigQuery" or "Snowflake", map to our actual
+        database models for actionable integration.
+        """
+        # Map of generic terms to actual DonkeyBetz models/tables
+        SYSTEM_BINDING_MAP = {
+            # Data storage
+            'database': 'core.models (PostgreSQL + pgvector)',
+            'bigquery': 'SpiderData / BusinessResearchResult',
+            'snowflake': 'SpiderData / ContentMetrics',
+            'data warehouse': 'SpiderData + ResearchResult + ContentMetrics',
+            'analytics': 'core.services.analytics_service / ContentMetrics',
+
+            # Content storage
+            'content': 'SelfBlog / Deliverable / ContentMetrics',
+            'blog': 'SelfBlog (category=blog)',
+            'research': 'SelfBlog (category=research_brief) / BusinessResearchResult',
+            'document': 'Deliverable / SelfBlog',
+
+            # Spider data
+            'spider': 'SpiderData / ai_core.spiders',
+            'crawler': 'SpiderData / SpiderConfig',
+            'scraper': 'ai_core.spiders (Scrapy framework)',
+
+            # Agent system
+            'agent': 'core.agents + Agent (database registry)',
+            'workflow': 'AgentExecution + Initiative',
+            'pipeline': 'Initiative (5-stage) + ConceptForgeRun',
+
+            # Learning
+            'ml': 'ml/ models + AgentModelRouter',
+            'embedding': 'pgvector embeddings on SelfBlog/SpiderData',
+            'model': 'LLMProvider / LLMModel (6 providers, 16 models)',
+
+            # User data
+            'user': 'User + ExtendedUserProfile',
+            'customer': 'BusinessResearchResult (research_type=customer)',
+            'persona': 'CustomerResearchAgent output',
+        }
+
+        bindings = {}
+        findings_lower = (findings or '').lower()
+        topic_lower = (topic or '').lower()
+
+        # Check for matches in findings and topic
+        for generic_term, donkey_binding in SYSTEM_BINDING_MAP.items():
+            if generic_term in findings_lower or generic_term in topic_lower:
+                bindings[generic_term.title()] = donkey_binding
+
+        return bindings
+
+    def _build_decision_gate(
+        self,
+        topic: str,
+        findings: str,
+        deliverables: List[str],
+        owner_agent: str
+    ) -> str:
+        """
+        Session 866: Build Decision Gate section for research reports.
+        ChatGPT Feedback: Add actionable outputs at the end of research reports.
+
+        The Decision Gate provides:
+        1. Summary verdict on research quality
+        2. Recommended next actions
+        3. Assigned ownership
+        4. Data availability status
+        """
+        # Determine data availability
+        data_available = bool(findings and len(findings) > 50)
+        data_status = "✅ Data Available" if data_available else "⚠️ Insufficient Data - DataExportAgent may be needed"
+
+        # Build recommended actions based on deliverables
+        next_actions = []
+        if deliverables:
+            next_actions.append(f"✅ Synthesize {len(deliverables)} requested deliverable(s)")
+        else:
+            next_actions.append("📋 Define specific deliverables for this research")
+
+        if data_available:
+            next_actions.append("📊 Review findings and validate key insights")
+            next_actions.append("🎯 Route to appropriate agent for content creation")
+        else:
+            next_actions.append("🔄 Trigger additional data collection (DataExportAgent)")
+            next_actions.append("🕷️ Consider spawning focused spiders for this topic")
+
+        next_actions.append(f"👤 Assign to {owner_agent} for follow-up")
+
+        # Build the decision gate section
+        decision_gate = f"""
+## Decision Gate
+
+### Data Status
+{data_status}
+
+### Recommended Actions
+{chr(10).join(f'{i}. {action}' for i, action in enumerate(next_actions, 1))}
+
+### Ownership
+**Primary Owner:** {owner_agent}
+**Status:** Pending Review
+"""
+
+        return decision_gate
+
+    def _trigger_self_unblock(
+        self,
+        topic: str,
+        missing_data_type: str = 'general'
+    ) -> Dict[str, Any]:
+        """
+        Session 866: Self-unblocking pattern.
+        ChatGPT Feedback Fix #2: Auto-spawn DataExportAgent when data is unavailable.
+
+        When research cannot proceed due to missing data, this method
+        automatically triggers data collection to unblock the pipeline.
+        """
+        logger.info(f"[Session 866] Self-unblock triggered for topic: {topic}, missing: {missing_data_type}")
+
+        try:
+            # Determine which agent to spawn based on missing data type
+            if missing_data_type in ['spider', 'web', 'external']:
+                # Spawn spider for external data
+                spawn_result = self._execute_spawn_spider(
+                    name=f"Data collection for: {topic[:50]}",
+                    params={
+                        'topic': topic,
+                        'categories': ['tech', 'news', 'content'],
+                        'reason': 'Self-unblock: Research blocked on missing data'
+                    },
+                    reasoning=f"Auto-spawned to unblock research on: {topic}"
+                )
+                return {
+                    'unblock_type': 'spawn_spider',
+                    'result': spawn_result,
+                    'message': f"Spawned spider to collect data for: {topic}"
+                }
+
+            elif missing_data_type in ['internal', 'database', 'export']:
+                # Trigger internal data aggregation via spider refresh
+                try:
+                    from core.services.unified_intelligence_search import get_unified_intelligence_search
+                    search_service = get_unified_intelligence_search()
+                    refresh_result = search_service.refresh_spiders_for_query(
+                        query=topic,
+                        categories=['tech', 'news', 'content', 'social']
+                    )
+                    return {
+                        'unblock_type': 'data_refresh',
+                        'result': refresh_result,
+                        'message': f"Triggered data refresh for: {topic}"
+                    }
+                except Exception as refresh_error:
+                    logger.warning(f"Data refresh failed: {refresh_error}")
+                    return {
+                        'unblock_type': 'data_refresh_failed',
+                        'error': str(refresh_error),
+                        'message': f"Data refresh failed for: {topic}"
+                    }
+
+            else:
+                # Default: trigger comprehensive research request
+                return {
+                    'unblock_type': 'research_request',
+                    'message': f"Research blocked - manual intervention may be needed for: {topic}"
+                }
+
+        except Exception as e:
+            logger.error(f"[Session 866] Self-unblock failed: {e}")
+            return {
+                'unblock_type': 'failed',
+                'error': str(e),
+                'message': f"Could not auto-unblock: {topic}"
+            }
 
     def _synthesize_single_deliverable(
         self,
