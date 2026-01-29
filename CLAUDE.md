@@ -139,14 +139,14 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **867** | System-Wide Audit - 231 unscheduled tasks, 40+ stubs, Initiative Pipeline fix | `SESSION_867_SYSTEM_AUDIT.md` |
+| **866** | ATS Keyword Optimization Module + Career Tab UI + Cleanup Command | `SESSION_866_ATS_KEYWORD_MODULE.md` |
 | **865** | Podcast TTS + Voice Profile Integration + Celery Health Monitoring | `SESSION_865_PODCAST_TTS_VOICE_PROFILES.md` |
 | **864** | Content Intelligence Improvements - EditorAgent, operational titles, threshold 0.65→0.55 | `SESSION_864_RUN_MODE_TRACKING.md` |
 | **863** | ConceptForge - Autonomous Think Tank Pipeline (Content → Intelligence → Strategy → Product) | `SESSION_863_CONCEPTFORGE.md` |
 | **862** | Content Flow Unification - Dream → Initiative → Stages → Deliverable with full FK traceability | `SESSION_862_CONTENT_FLOW_UNIFICATION.md` |
 | **861** | Data Persistence Gaps - 6 fixes (ToolCall, Decision, Spider, Learning, Feedback) + Content Tab UI | `SESSION_861_DATA_PERSISTENCE.md` |
 | **860** | Initiative Pipeline + API Error Handling - 25 docs linked, console errors fixed | `SESSION_860_API_ERROR_HANDLING.md` |
-| **858** | User Context Injection - Agents receive personalized user data | `SESSION_858_USER_CONTEXT_INJECTION.md` |
-| **857** | Workspace Inline Refactor - 181 external links removed, publish fix | `SESSION_857_WORKSPACE_INLINE_REFACTOR.md` |
 | **856** | Diagnostic Pipeline + Agent Content Review Fixes (12 agents) | `SESSION_856_DIAGNOSTIC_PIPELINE.md` |
 | **847** | Initiative Pipeline - ThinkingAgent → Initiative → Stages → Documents | `SESSION_847_INITIATIVE_PIPELINE.md` |
 | **846** | Citation Gate + Serper News API + Stuck Conversations Fix + Dream Cleanup | `SESSION_846_CITATION_GATE.md` |
