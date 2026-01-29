@@ -1,144 +1,165 @@
-# Session 867 - Start Here
+# Session 868 - Start Here
 
-**Previous Session:** 866 (ATS Keyword Optimization Module)
+**Previous Session:** 867 (System-Wide Audit)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 242 Celery Tasks | 12 Workspace Tabs | **ATS Module: COMPLETE**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 291 Celery Tasks (60 scheduled) | 12 Workspace Tabs | **AUDIT COMPLETE**
 
 ---
 
-## What Was Accomplished in Session 866
+## What Was Accomplished in Session 867
 
-**Handoff:** `docs/handoffs/SESSION_866_ATS_KEYWORD_MODULE.md`
+**Handoff:** `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md`
 
-### ATS Keyword Optimization Module (COMPLETE)
+### System Audit Results
 
-Built complete resume-to-job matching system from HiveMind brainstorm request:
+Conducted comprehensive platform audit revealing critical gaps:
 
-| Component | Description |
-|-----------|-------------|
-| **ATSKeywordService** | 590+ lines - keyword extraction, scoring, optimization suggestions |
-| **4 Django Models** | PersonaResumeTemplate, ATSKeywordMapping, ResumeOptimizationLog, ResumeRewriteOrder |
-| **6 API Endpoints** | analyze, extract-keywords, optimize, templates, generate-summary, stats |
-| **Migration** | `0208_session_866_ats_optimization.py` |
+| Issue | Impact | Status |
+|-------|--------|--------|
+| **231 Celery tasks not scheduled** | HIGH | Tasks defined but not in beat_schedule |
+| **Gallery Series endpoint missing** | HIGH | Frontend disabled, users can't see AI series |
+| **Reasoning endpoints broken** | MEDIUM-HIGH | Intelligence tab features non-functional |
+| **40+ stub endpoints** | MEDIUM | Fake success responses in production |
+| **ATS UI not built** | MEDIUM | Backend complete, no frontend |
 
-### Key Features
+### Bug Fixes Deployed
 
-1. **Keyword Categories**: technical_skills, soft_skills, certifications, experience_levels, action_verbs, industry_specific
-2. **Industry Detection**: Fintech, Healthcare, E-commerce, SaaS, AI/ML
-3. **Scoring Algorithm**: Weighted category scoring (tech=40%, soft=20%, certs=15%, exp=15%, etc.)
-4. **Conversion Tracking**: Full funnel from signup → interview → offer
+1. **Initiative Pipeline Fixed** (PR #497)
+   - Removed invalid `priority` field from order_by
+   - Added document viewer modal to view stage content
 
-### API Endpoints
-
-```bash
-# Score resume against job
-POST /api/ats/analyze/
-{"resume_text": "...", "job_description": "...", "include_suggestions": true}
-
-# Extract keywords
-POST /api/ats/extract-keywords/
-{"text": "...", "use_llm": false}
-
-# Get optimization suggestions
-POST /api/ats/optimize/
-{"resume_text": "...", "job_description": "...", "user_skills": [...]}
-```
+2. **Cleanup Command Enhanced** (PR #498)
+   - Added `--delete-cleaned` option to remove old failed executions
 
 ---
 
-## Priority for Session 867
+## Priority for Session 868
 
-### Option A: Build Frontend ATS UI (Recommended)
+### TIER 1: Critical Fixes (Do First)
 
-Add ATS optimization to the Job Tracker tab:
-1. Resume upload/paste interface
-2. Job description paste field
-3. Real-time ATS score display with category breakdown
-4. Missing keywords highlighted
-5. Optimization suggestions panel
-6. "Apply Suggestions" button to auto-enhance resume
+#### 1. Schedule Missing Celery Tasks
+**Impact:** HIGH | **Effort:** MEDIUM
 
-### Option B: Hidden Job Market Spider (Task #2 from HiveMind)
-
-Deploy new spiders for hidden job sources:
-- Company career pages (direct scraping)
-- LinkedIn job alerts
-- AngelList/Wellfound
-- Remote job boards (WeWorkRemotely, RemoteOK expansion)
-- Industry-specific job boards
-
-### Option C: LLM-Enhanced Keyword Extraction
-
-Implement the `use_llm=True` path in ATSKeywordService:
-- Use Claude/GPT to extract contextual keywords
-- Identify implicit requirements
-- Suggest keyword variations
-- Industry-specific scoring adjustments
-
-### Option D: Test Smart HiveMind Execution
-
-Verify PR #493 implementation:
-```bash
-# Check HiveMind execution stats
-python manage.py shell -c "
-from core.services.hivemind_execution_pipeline import hivemind_execution_pipeline
-stats = hivemind_execution_pipeline.get_execution_stats()
-for k, v in stats.items():
-    print(f'{k}: {v}')
-"
-
-# Process pending HiveMind sessions
-python manage.py shell -c "
-from core.services.hivemind_execution_pipeline import hivemind_execution_pipeline
-results = hivemind_execution_pipeline.process_completed_sessions(limit=3)
-for r in results:
-    print(f'Session: {r.get(\"session_id\", \"?\")}')"
-```
-
----
-
-## Quick Reference
-
-### Test ATS Service
+Create management command or update `celery.py` to register critical autonomous tasks:
 
 ```python
-from core.services.ats_keyword_service import ats_keyword_service
-
-# Extract keywords
-result = ats_keyword_service.extract_keywords("Python Django AWS developer")
-print(result['categories']['technical_skills'])
-
-# Score resume
-result = ats_keyword_service.score_resume_match(resume_text, job_description)
-print(f"Score: {result['overall_score']}%, Level: {result['match_level']}")
-
-# Get suggestions
-suggestions = ats_keyword_service.get_optimization_suggestions(
-    resume_text, job_description, user_skills=['python', 'aws']
-)
-print(suggestions['priority_keywords_to_add'])
+# Tasks that MUST be scheduled:
+'advance_initiative_pipeline'      # Initiative Pipeline
+'run_conceptforge_pipeline'        # ConceptForge
+'compute_spider_aggregations'      # Spider data
+'run_agent_health_rotation'        # Agent health
+'discover_and_import_audits'       # Diagnostic pipeline
+'poll_processing_videos'           # Video processing
 ```
 
-### ATS Score Levels
+**Files:** `core/celery.py`, `core/tasks.py`
 
-| Score | Level |
-|-------|-------|
-| 85%+ | Excellent |
-| 70-84% | Good |
-| 50-69% | Moderate |
-| 30-49% | Low |
-| <30% | Poor |
+#### 2. Create Gallery Series Endpoint
+**Impact:** HIGH | **Effort:** LOW (1-2 hours)
 
-### Category Weights
+Frontend disabled at `ContentStudioTab.tsx:138-147`:
+```typescript
+// Session 860: Disabled - endpoint /api/v1/gallery/series/ doesn't exist yet
+enabled: false,
+```
 
-| Category | Weight |
-|----------|--------|
-| Technical Skills | 40% |
-| Soft Skills | 20% |
-| Certifications | 15% |
-| Experience Level | 15% |
-| Action Verbs | 5% |
-| Industry Specific | 5% |
+Create `/api/v1/gallery/series/` endpoint returning AI series data.
+
+**Files:** `core/views_gallery.py` (or new file), `core/urls.py`
+
+#### 3. Fix Intelligence Tab Reasoning Endpoints
+**Impact:** MEDIUM-HIGH | **Effort:** LOW
+
+Frontend calls these endpoints that may not exist:
+```
+/api/v1/reasoning/thoughts/
+/api/v1/reasoning/actions/
+/api/v1/reasoning/gates/
+```
+
+Verify existence or create them.
+
+**Files:** `frontend/src/pages/workspace/tabs/IntelligenceTab.tsx:100-145`
+
+---
+
+### TIER 2: High Priority (Do If Time Permits)
+
+#### 4. Build ATS UI in Career Tab
+**Impact:** MEDIUM | **Effort:** MEDIUM (2-3 hours)
+
+Backend complete from Session 866 with 6 API endpoints:
+```
+POST /api/ats/analyze/
+POST /api/ats/extract-keywords/
+POST /api/ats/optimize/
+GET  /api/ats/templates/
+POST /api/ats/generate-summary/
+GET  /api/ats/stats/
+```
+
+Build UI showing:
+- Resume paste/upload
+- Job description input
+- ATS score with category breakdown
+- Missing keywords highlighted
+- Optimization suggestions
+
+**Files:** `frontend/src/pages/workspace/tabs/CareerTab.tsx`
+
+#### 5. Complete Podcast TTS Frontend
+**Impact:** MEDIUM | **Effort:** LOW-MEDIUM
+
+Session 865 added backend - verify frontend properly consumes:
+- `podcast_generate_audio_view` endpoint
+- Audio playback in Content Studio
+
+**Files:** `core/views_podcast.py`, `ContentStudioTab.tsx`
+
+---
+
+### TIER 3: Medium Priority (Track for Future)
+
+- [ ] Replace 40+ stub endpoints with real implementations
+- [ ] Integrate Voice Marketplace into workspace
+- [ ] Add ConceptForge artifact interaction buttons
+- [ ] Add proper error states to frontend fallbacks
+- [ ] Model deduplication audit
+
+---
+
+## Quick Commands
+
+### Check Celery Beat Schedule
+```bash
+python manage.py shell -c "
+from core.celery import app
+for name, task in sorted(app.conf.beat_schedule.items()):
+    print(f'{name}: {task.get(\"schedule\", \"?\")}')
+" | head -30
+```
+
+### Test ATS Service
+```python
+from core.services.ats_keyword_service import ats_keyword_service
+result = ats_keyword_service.score_resume_match(resume_text, job_description)
+print(f"Score: {result['overall_score']}%")
+```
+
+### Verify Initiative Pipeline Task
+```bash
+python manage.py shell -c "
+from django_celery_beat.models import PeriodicTask
+tasks = PeriodicTask.objects.filter(name__icontains='initiative')
+for t in tasks:
+    print(f'{t.name}: enabled={t.enabled}')
+"
+```
+
+### Delete Cleaned Executions (Production)
+```bash
+python manage.py cleanup_stuck_executions --delete-cleaned --apply
+```
 
 ---
 
@@ -146,14 +167,27 @@ print(suggestions['priority_keywords_to_add'])
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **866** | ATS Keyword Optimization Module | COMPLETE |
-| **865** | Podcast TTS + Voice Profiles + ConceptForge UI + EditorAgent UI | DEPLOYED |
+| **867** | System-Wide Audit + Initiative Pipeline Fix | COMPLETE |
+| **866** | ATS Keyword Optimization Module + Career Tab UI | COMPLETE |
+| **865** | Podcast TTS + Voice Profiles + ConceptForge UI | DEPLOYED |
 | **864** | Content Intelligence + Run Mode Tracking | COMPLETE |
 | **863** | ConceptForge - Autonomous Think Tank Pipeline | COMPLETE |
-| **862** | Content Flow Unification - Dream → Initiative → Deliverable | COMPLETE |
-| **861** | Data Persistence - 6 gap fixes + Content Tab UI | COMPLETE |
+| **862** | Content Flow Unification | COMPLETE |
+| **861** | Data Persistence - 6 gap fixes | COMPLETE |
 | **860** | Initiative Pipeline + API Error Handling | COMPLETE |
 
 ---
 
-**Always read this file first - it has the current priorities!**
+## Key Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | **Full audit with all gaps identified** |
+| `docs/handoffs/SESSION_866_ATS_KEYWORD_MODULE.md` | ATS backend implementation |
+| `docs/AGENTS.md` | Agent documentation (75 agents) |
+| `docs/SPIDERS.md` | Spider network (77 spiders) |
+| `docs/DATABASE_MODEL_REFERENCE.md` | Which DB table for what |
+
+---
+
+**Read `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` for the complete gap analysis!**
