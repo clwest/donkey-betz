@@ -636,6 +636,11 @@ def auto_link_initiative_for_decision(decision) -> Optional['Initiative']:
         if not feature_name or len(feature_name) < 3:
             feature_name = decision.topic
 
+        # Session 865: Truncate feature name to fit Initiative.name max_length (200)
+        # Leave room for normalization in the service
+        if len(feature_name) > 150:
+            feature_name = feature_name[:147] + '...'
+
         # Create/get the initiative
         initiative, created = service.get_or_create_initiative(
             topic=feature_name,
