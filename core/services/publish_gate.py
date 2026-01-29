@@ -1,4 +1,5 @@
 # Session 862: PublishGate - Quality evaluation before publishing
+# Session 864: Added operational title auto-classification, lowered structure threshold
 # Implements content scoring and routing logic
 
 import logging
@@ -41,7 +42,23 @@ class PublishGate:
     # Thresholds for publishing
     QUALITY_THRESHOLD = 0.75
     NOVELTY_THRESHOLD = 0.6
-    STRUCTURE_THRESHOLD = 0.65
+    STRUCTURE_THRESHOLD = 0.55  # Session 864: Lowered from 0.65 to catch more legitimate content
+
+    # Session 864: Operational title prefixes that bypass quality checks -> internal_only
+    # These are clearly internal documents and shouldn't be evaluated as public content
+    OPERATIONAL_TITLE_PATTERNS = [
+        r'^\[research\]',           # [Research] ...
+        r'^\[stage \d+',            # [Stage 1 - Research Brief] ...
+        r'^\[report\]',             # [Report] ...
+        r'^\[audit\]',              # [Audit] ...
+        r'^\[internal\]',           # [Internal] ...
+        r'^\[debug\]',              # [Debug] ...
+        r'^\[fix\]',                # [Fix] ...
+        r'^\[todo\]',               # [TODO] ...
+        r'^researchagent:',         # ResearchAgent: ...
+        r'^systeminsights:',        # SystemInsights: ...
+        r'^root.?cause',            # Root-cause analysis...
+    ]
 
     # Signals indicating internal content
     INTERNAL_SIGNALS = [
@@ -77,6 +94,20 @@ class PublishGate:
         Returns:
             GateResult with scores and decision
         """
+        # Session 864: Check for operational title patterns first
+        # These bypass quality checks and go straight to internal_only
+        if self._is_operational_title(blog.title):
+            logger.info(f"PublishGate: {blog.title[:50]}... -> internal_only (operational title pattern)")
+            return GateResult(
+                decision='internal_only',
+                quality_score=0.0,  # Not scored
+                novelty_score=0.0,
+                structure_score=0.0,
+                content_type='internal',
+                notes='Operational content detected from title pattern; auto-classified as internal',
+                suggested_category='internal_note',
+            )
+
         # Get full text for analysis
         full_text = self._get_full_text(blog)
 
@@ -110,6 +141,24 @@ class PublishGate:
         logger.info(f"PublishGate: {blog.title[:50]}... -> {decision} (Q:{quality_score:.2f}, N:{novelty_score:.2f}, S:{structure_score:.2f})")
 
         return result
+
+    def _is_operational_title(self, title: str) -> bool:
+        """
+        Session 864: Check if title indicates operational/internal content.
+
+        These patterns indicate documents that are clearly internal and
+        shouldn't be evaluated for public publishing quality.
+        """
+        if not title:
+            return False
+
+        title_lower = title.lower().strip()
+
+        for pattern in self.OPERATIONAL_TITLE_PATTERNS:
+            if re.match(pattern, title_lower):
+                return True
+
+        return False
 
     def _get_full_text(self, blog) -> str:
         """Extract full text from blog for analysis."""

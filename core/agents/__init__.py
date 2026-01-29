@@ -95,6 +95,9 @@ Available Agents (41 total):
     CONTENT WRITING AGENTS (1) - Session 496:
         ContentWriterAgent          - Transform research into blog posts, podcasts, articles
 
+    CONTENT EDITING AGENTS (1) - Session 864:
+        EditorAgent                 - Enhance content structure for publishing readiness
+
     ENTRY POINT (1):
         PersonalAssistantAgent  - Main user interaction and routing
 
@@ -237,6 +240,9 @@ from core.agents.resolve_agent import ResolveAgent, get_resolve_agent
 
 # Content Writer Agent (Session 496: Written content from research)
 from core.agents.content_writer_agent import ContentWriterAgent, get_content_writer_agent
+
+# Editor Agent (Session 864: Content structure enhancement)
+from core.agents.editor_agent import EditorAgent, enhance_blog, enhance_all_needing_enhancement
 
 # Technical Document Agent (Session 622: Formal technical documents with governance)
 from core.agents.technical_document_agent import (
@@ -405,6 +411,11 @@ __all__ = [
     # Content Writer Agent (1) - Session 496
     'ContentWriterAgent',
     'get_content_writer_agent',
+
+    # Editor Agent (1) - Session 864
+    'EditorAgent',
+    'enhance_blog',
+    'enhance_all_needing_enhancement',
 
     # Technical Document Agent (1) - Session 622
     'TechnicalDocumentAgent',

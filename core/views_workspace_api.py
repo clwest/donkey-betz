@@ -908,6 +908,16 @@ class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
         # Filtering
         queryset = workspace.operations.all()
 
+        # Session 864: Exclude warmups by default
+        include_warmups = request.query_params.get('include_warmups', 'false')
+        if include_warmups.lower() != 'true':
+            queryset = queryset.filter(is_warmup=False)
+
+        # Filter by run_mode if specified
+        run_mode = request.query_params.get('run_mode')
+        if run_mode:
+            queryset = queryset.filter(run_mode=run_mode)
+
         operation_type = request.query_params.get('type')
         if operation_type:
             queryset = queryset.filter(operation_type=operation_type)
@@ -1022,6 +1032,17 @@ class WorkspaceOperationViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = WorkspaceOperation.objects.filter(
             user=self.request.user
         ).select_related('workspace').order_by('-created_at')
+
+        # Session 864: Exclude warmups by default (unless explicitly requested)
+        # This keeps the Operations tab meaningful by hiding exercise/warmup runs
+        include_warmups = self.request.query_params.get('include_warmups', 'false')
+        if include_warmups.lower() != 'true':
+            queryset = queryset.filter(is_warmup=False)
+
+        # Filter by run_mode if specified
+        run_mode = self.request.query_params.get('run_mode')
+        if run_mode:
+            queryset = queryset.filter(run_mode=run_mode)
 
         # Filtering
         workspace_id = self.request.query_params.get('workspace')
