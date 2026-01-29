@@ -124,6 +124,13 @@ from ..models_synthetic_users import (
     SyntheticUserTestRun,
 )
 
+# Import ConceptForge models (Session 863 - Autonomous Think Tank Pipeline)
+from ..models_conceptforge import (
+    ConceptForgeRun,
+    ConceptForgeStageRun,
+    ConceptForgeArtifact,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -281,4 +288,9 @@ __all__ = [
     # Synthetic Users - Test Personas (Session 862)
     'SyntheticUserProfile',
     'SyntheticUserTestRun',
+
+    # ConceptForge - Autonomous Think Tank Pipeline (Session 863)
+    'ConceptForgeRun',
+    'ConceptForgeStageRun',
+    'ConceptForgeArtifact',
 ]

@@ -23,6 +23,11 @@ from .revenue_signals import (
     connect_revenue_signals,
 )
 
+from .conceptforge_signals import (
+    handle_selfblog_publish,
+    connect_conceptforge_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -37,4 +42,7 @@ __all__ = [
     'opportunity_pre_save',
     'opportunity_post_save_create_revenue',
     'connect_revenue_signals',
+    # ConceptForge signals (Session 863)
+    'handle_selfblog_publish',
+    'connect_conceptforge_signals',
 ]
