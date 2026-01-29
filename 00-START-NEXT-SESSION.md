@@ -86,4 +86,9 @@ open http://localhost:8000/ai-studio/
 
 See: `docs/handoffs/SESSION_860_API_ERROR_HANDLING.md`
 
-**Total PRs Merged:** 11 (#418-422, #424-429)
+**Total PRs Merged:** 15 (#418-422, #424-429, #431-434)
+
+### Production Lost Blogs Audit
+- 111 blogs lost (96.5%) before ContentWriterAgent persistence fix
+- Fix deployed in PR #432 - future blogs will persist correctly
+- Diagnostic script: `python manage.py shell < scripts/check_lost_blogs.py`
