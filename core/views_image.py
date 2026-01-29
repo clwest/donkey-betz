@@ -4306,7 +4306,10 @@ def unified_gallery(request):
         if media_type in ['all', 'images']:
           try:
             # Session 94: Exclude data URI images (too large for JSON response)
-            image_queryset = ImageHistory.objects.filter(user=user).exclude(
+            # Session 865: Include user's own images AND system-generated images
+            image_queryset = ImageHistory.objects.filter(
+                Q(user=user) | Q(user__username__in=['system_autonomous', 'system', 'admin'])
+            ).exclude(
                 file_path__startswith='data:'
             )
 
@@ -4405,7 +4408,11 @@ def unified_gallery(request):
         if media_type in ['all', 'videos']:
           try:
             # Session 96: Exclude videos with expired external CDN URLs
-            video_queryset = VideoHistory.objects.filter(user=user, status='completed').exclude(
+            # Session 865: Include user's own videos AND system-generated videos
+            video_queryset = VideoHistory.objects.filter(
+                Q(user=user) | Q(user__username__in=['system_autonomous', 'system', 'admin']),
+                status='completed'
+            ).exclude(
                 Q(video_url__icontains='cloudfront.net') |
                 Q(video_url__icontains='storage.googleapis.com') |
                 Q(video_url__icontains='_jwt=')
