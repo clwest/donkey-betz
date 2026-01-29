@@ -30674,7 +30674,7 @@ def advance_initiative_pipeline(limit: int = 5):
 
     # Find initiatives with pending stages that need documents
     initiatives_to_advance = []
-    for init in Initiative.objects.filter(status='ACTIVE').order_by('-priority', '-updated_at')[:limit * 2]:
+    for init in Initiative.objects.filter(status='ACTIVE').order_by('-updated_at')[:limit * 2]:
         # Find the current stage (or first pending stage)
         for stage_num in range(1, 6):
             stage = InitiativeStage.objects.filter(
