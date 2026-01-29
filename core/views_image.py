@@ -4358,6 +4358,49 @@ def unified_gallery(request):
             logger.warning(f"Error fetching images: {e}")
             media_errors.append(f"images: {str(e)}")
 
+          # Session 865: Also fetch images from WorkspaceOperation (ImageAgent outputs)
+          try:
+            from core.models_skin_layer import WorkspaceOperation
+            import re
+
+            # Get ImageAgent operations with Cloudinary URLs
+            image_ops = WorkspaceOperation.objects.filter(
+                agent_name='ImageAgent',
+                success=True
+            ).order_by('-created_at')[:50]  # Limit to recent 50
+
+            for op in image_ops:
+                content = op.file_content_after or ''
+                # Extract Cloudinary URLs
+                urls = re.findall(r'https://res\.cloudinary\.com/[^\s\"\'\)]+', content)
+                for url in urls:
+                    # Clean up URL (remove trailing punctuation)
+                    url = url.rstrip('.,;:')
+                    all_items.append({
+                        'id': str(op.id),
+                        'type': 'image',
+                        'url': url,
+                        'thumbnail_url': url,  # Use same URL for thumbnail
+                        'prompt': op.agent_task[:200] if op.agent_task else 'AI Generated Image',
+                        'created_at': op.created_at,
+                        'is_favorite': False,
+                        'view_count': 0,
+                        'download_count': 0,
+                        'model_used': 'ImageAgent',
+                        'parameters': {},
+                        'image_type': 'agent_generated',
+                        'style': 'AI Generated',
+                        'width': None,
+                        'height': None,
+                        'filename': url.split('/')[-1] if url else None,
+                        'user_notes': '',
+                        'tags': [],
+                        'source': 'workspace_operation',
+                    })
+          except Exception as e:
+            logger.warning(f"Error fetching WorkspaceOperation images: {e}")
+            media_errors.append(f"workspace_images: {str(e)}")
+
         # Fetch videos if requested
         if media_type in ['all', 'videos']:
           try:
