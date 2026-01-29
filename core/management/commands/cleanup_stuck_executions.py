@@ -31,9 +31,33 @@ class Command(BaseCommand):
             default=1.0,
             help='Hours threshold - executions older than this are considered stuck (default: 1)',
         )
+        parser.add_argument(
+            '--delete-cleaned',
+            action='store_true',
+            help='Delete executions that were previously marked failed by this cleanup script',
+        )
 
     def handle(self, *args, **options):
         from core.models_unified_system import AgentExecution
+
+        # Handle --delete-cleaned option first
+        if options.get('delete_cleaned'):
+            cleaned = AgentExecution.objects.filter(
+                status='failed',
+                error_message__icontains='cleanup_stuck_executions'
+            )
+            count = cleaned.count()
+            if count == 0:
+                self.stdout.write(self.style.SUCCESS('No previously cleaned executions found'))
+                return
+
+            if options['apply']:
+                cleaned.delete()
+                self.stdout.write(self.style.SUCCESS(f'Deleted {count} previously cleaned executions'))
+            else:
+                self.stdout.write(self.style.WARNING(f'DRY RUN: Would delete {count} previously cleaned executions'))
+                self.stdout.write('Run with --apply to actually delete')
+            return
 
         apply = options['apply']
         hours = options['hours']
