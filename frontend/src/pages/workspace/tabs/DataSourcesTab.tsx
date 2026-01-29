@@ -25,6 +25,7 @@ import {
   BookOpen,
   FileText,
   List,
+  AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { spiderIntegrationApi, spiderFeedApi, learningApi } from '@/lib/api'
@@ -118,7 +119,8 @@ function SpidersSubTab() {
   })
 
   // Session 860: Fixed incorrect API endpoints - use spiderIntegrationApi
-  const { data: executionsData } = useQuery({
+  // Session 870: Added error tracking for user feedback
+  const { data: executionsData, isError: executionsError } = useQuery({
     queryKey: ['spider-executions-recent'],
     queryFn: async () => {
       const res = await spiderIntegrationApi.executionLogs({ limit: 50 })
@@ -126,13 +128,16 @@ function SpidersSubTab() {
     },
   })
 
-  const { data: spidersData } = useQuery({
+  const { data: spidersData, isError: spidersError } = useQuery({
     queryKey: ['spider-list-tab'],
     queryFn: async () => {
       const res = await spiderIntegrationApi.registry()
       return res.data
     },
   })
+
+  // Session 870: Track if any secondary queries have errors
+  const hasSecondaryError = executionsError || spidersError
 
   if (isLoading) {
     return <LoadingState />
@@ -172,6 +177,14 @@ function SpidersSubTab() {
         onRefresh={refetch}
         isFetching={isFetching}
       />
+
+      {/* Session 870: Warning when secondary queries fail */}
+      {hasSecondaryError && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-sm">
+          <AlertTriangle size={14} />
+          <span>Some data failed to load. Showing partial results.</span>
+        </div>
+      )}
 
       {/* Health Stats - Expandable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

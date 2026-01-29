@@ -107,38 +107,40 @@ function ReasoningSubTab() {
   })
 
   // Fetch thoughts for expanded view
-  const { data: thoughtsData, isLoading: thoughtsLoading } = useQuery({
+  const { data: thoughtsData, isLoading: thoughtsLoading, isError: thoughtsError } = useQuery({
     queryKey: ['reasoning-thoughts-list', visibleCount],
     queryFn: async () => {
-      try {
-        const res = await fetch(`/api/v1/reasoning/thoughts/?limit=${visibleCount}`)
-        if (!res.ok) {
-          return { results: [], count: 0 }
-        }
-        return res.json()
-      } catch {
-        return { results: [], count: 0 }
+      const res = await fetch(`/api/v1/reasoning/thoughts/?limit=${visibleCount}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch thoughts')
       }
+      return res.json()
     },
   })
 
   // Fetch gates for expanded view
-  const { data: gatesData, isLoading: gatesLoading } = useQuery({
+  const { data: gatesData, isLoading: gatesLoading, isError: gatesError } = useQuery({
     queryKey: ['reasoning-gates-list', expandedSection, visibleCount],
     queryFn: async () => {
       let url = `/api/v1/reasoning/gates/?limit=${visibleCount}`
       if (expandedSection === 'approved') url += '&status=approved'
       const res = await fetch(url)
+      if (!res.ok) {
+        throw new Error('Failed to fetch gates')
+      }
       return res.json()
     },
     enabled: expandedSection === 'gates' || expandedSection === 'approved',
   })
 
   // Fetch actions for expanded view
-  const { data: actionsData, isLoading: actionsLoading } = useQuery({
+  const { data: actionsData, isLoading: actionsLoading, isError: actionsError } = useQuery({
     queryKey: ['reasoning-actions-list', visibleCount],
     queryFn: async () => {
       const res = await fetch(`/api/v1/reasoning/actions/?limit=${visibleCount}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch actions')
+      }
       return res.json()
     },
     enabled: expandedSection === 'actions',
@@ -225,6 +227,7 @@ function ReasoningSubTab() {
         <ExpandedListCard
           title={expandedSection === 'gates' ? 'All Gates' : 'Approved Gates'}
           isLoading={gatesLoading}
+          isError={gatesError}
           onClose={() => setExpandedSection(null)}
           count={expandedSection === 'gates' ? dashboard.total_gates : dashboard.approved_gates}
         >
@@ -251,7 +254,7 @@ function ReasoningSubTab() {
                 </span>
               </div>
             ))}
-            {gates.length === 0 && !gatesLoading && (
+            {gates.length === 0 && !gatesLoading && !gatesError && (
               <p className="text-sm text-gray-500 text-center py-4">No gates found</p>
             )}
           </div>
@@ -263,6 +266,7 @@ function ReasoningSubTab() {
         <ExpandedListCard
           title="All Thoughts"
           isLoading={thoughtsLoading}
+          isError={thoughtsError}
           onClose={() => setExpandedSection(null)}
           count={dashboard.total_thoughts}
         >
@@ -274,11 +278,11 @@ function ReasoningSubTab() {
                 onClick={() => setSelectedThought(thought)}
               />
             ))}
-            {thoughts.length === 0 && !thoughtsLoading && (
+            {thoughts.length === 0 && !thoughtsLoading && !thoughtsError && (
               <p className="text-sm text-gray-500 text-center py-4">No thoughts found</p>
             )}
           </div>
-          {thoughts.length < (dashboard.total_thoughts || 81) && (
+          {thoughts.length < (dashboard.total_thoughts || 81) && !thoughtsError && (
             <button
               onClick={() => setVisibleCount(prev => prev + 10)}
               className="w-full mt-2 py-2 text-sm text-primary-400 hover:text-primary-300"
@@ -294,6 +298,7 @@ function ReasoningSubTab() {
         <ExpandedListCard
           title="Autonomous Actions"
           isLoading={actionsLoading}
+          isError={actionsError}
           onClose={() => setExpandedSection(null)}
           count={dashboard.autonomous_actions}
         >
@@ -323,11 +328,11 @@ function ReasoningSubTab() {
                 </span>
               </div>
             ))}
-            {actions.length === 0 && !actionsLoading && (
+            {actions.length === 0 && !actionsLoading && !actionsError && (
               <p className="text-sm text-gray-500 text-center py-4">No actions found</p>
             )}
           </div>
-          {actions.length < (dashboard.autonomous_actions || 293) && (
+          {actions.length < (dashboard.autonomous_actions || 293) && !actionsError && (
             <button
               onClick={() => setVisibleCount(prev => prev + 10)}
               className="w-full mt-2 py-2 text-sm text-primary-400 hover:text-primary-300"
@@ -1076,26 +1081,29 @@ function InlineHeaderRow({
 }
 
 // Session 857: Expandable list card
+// Session 870: Added error state support
 function ExpandedListCard({
   title,
   isLoading,
+  isError,
   onClose,
   count,
   children,
 }: {
   title: string
   isLoading: boolean
+  isError?: boolean
   onClose: () => void
   count?: number
   children: React.ReactNode
 }) {
   return (
-    <div className="card border-primary-500/30">
+    <div className={cn("card", isError ? "border-red-500/30" : "border-primary-500/30")}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <List size={14} className="text-primary-400" />
+          <List size={14} className={isError ? "text-red-400" : "text-primary-400"} />
           <h4 className="text-sm font-medium">{title}</h4>
-          {count !== undefined && (
+          {count !== undefined && !isError && (
             <span className="text-xs text-gray-500">({count})</span>
           )}
         </div>
@@ -1110,6 +1118,12 @@ function ExpandedListCard({
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="animate-spin text-primary-400" size={20} />
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <AlertTriangle size={24} className="text-red-400 mb-2" />
+          <p className="text-sm text-gray-400">Failed to load data</p>
+          <p className="text-xs text-gray-500 mt-1">Please try again later</p>
         </div>
       ) : (
         children
