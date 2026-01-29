@@ -18567,7 +18567,8 @@ def generate_podcast_episode(self, episode_id: str, topic: str, format_type: str
     logger.info(f"🎙️ [PODCAST] Starting generation for episode {episode_id}: {topic}")
 
     try:
-        from core.models import PodcastEpisode
+        # Session 865: Fixed import - models are in models_podcast_studio
+        from core.models_podcast_studio import PodcastEpisode
         from core.agents.podcast import PodcastCoordinatorAgent
 
         # Get the episode
@@ -18752,7 +18753,7 @@ Use the generate_podcast_script tool to create the full script with speaker labe
 
         # Try to update the episode status
         try:
-            from core.models import PodcastEpisode
+            from core.models_podcast_studio import PodcastEpisode
             episode = PodcastEpisode.objects.get(id=episode_id)
             episode.status = 'failed'
             episode.error_message = str(e)[:500]
