@@ -25,3 +25,6 @@ export { IntelligenceTab } from './IntelligenceTab'
 
 // Session 847: Initiative Pipeline Dashboard
 export { InitiativesTab } from './InitiativesTab'
+
+// Session 861B: WorkspaceTrigger Autopilot Queue
+export { TriggersTab } from './TriggersTab'

@@ -14,6 +14,7 @@ export type WorkspaceTab =
   | 'knowledge'
   | 'files'
   | 'operations'
+  | 'triggers'  // Session 861B: WorkspaceTrigger autopilot queue
 
 // Sub-tab types for each main tab
 export type InfrastructureSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'

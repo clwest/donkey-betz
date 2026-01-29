@@ -1180,6 +1180,69 @@ export const workspaceOperationsApi = {
   pendingReviews: () => api.get('/workspace-operations/pending-reviews/'),
 }
 
+// Session 861B: Workspace Triggers API (Autonomous Work Queue)
+export const workspaceTriggersApi = {
+  // Triggers CRUD
+  list: (params?: {
+    status?: string
+    trigger_type?: string
+    min_priority?: number
+    category?: string
+    workspace?: string
+    show_expired?: boolean
+  }) => api.get('/workspace-triggers/', { params }),
+  detail: (id: string) => api.get(`/workspace-triggers/${id}/`),
+  create: (data: {
+    trigger_type: string
+    title: string
+    description?: string
+    workspace?: string
+    target_agent?: string
+    target_category?: string
+    context_data?: Record<string, unknown>
+    priority?: number
+    ttl_hours?: number
+  }) => api.post('/workspace-triggers/', data),
+
+  // Trigger Actions
+  cancel: (id: string) => api.post(`/workspace-triggers/${id}/cancel/`),
+  retry: (id: string) => api.post(`/workspace-triggers/${id}/retry/`),
+  bumpPriority: (id: string) => api.post(`/workspace-triggers/${id}/bump_priority/`),
+
+  // Stats & Meta
+  stats: () => api.get('/workspace-triggers/stats/'),
+  triggerTypes: () => api.get('/workspace-triggers/trigger_types/'),
+  autopilotStatus: () => api.get('/workspace-triggers/autopilot-status/'),
+}
+
+// Session 861B: Workspace Trigger Configs API
+export const workspaceTriggerConfigsApi = {
+  list: (params?: { is_active?: boolean; trigger_type?: string }) =>
+    api.get('/workspace-trigger-configs/', { params }),
+  detail: (id: string) => api.get(`/workspace-trigger-configs/${id}/`),
+  create: (data: {
+    name: string
+    description?: string
+    target_spiders?: string[]
+    match_field: string
+    match_operator: string
+    match_value: string
+    trigger_type: string
+    trigger_title_template?: string
+    priority?: number
+    ttl_hours?: number
+    target_agent?: string
+    target_category?: string
+    cooldown_minutes?: number
+  }) => api.post('/workspace-trigger-configs/', data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/workspace-trigger-configs/${id}/`, data),
+  delete: (id: string) => api.delete(`/workspace-trigger-configs/${id}/`),
+  toggle: (id: string) => api.post(`/workspace-trigger-configs/${id}/toggle/`),
+  test: (id: string, sampleData: Record<string, unknown>) =>
+    api.post(`/workspace-trigger-configs/${id}/test/`, { sample_data: sampleData }),
+}
+
 // Session 697: Multi-LLM Provider API
 export const llmApi = {
   // Provider Management

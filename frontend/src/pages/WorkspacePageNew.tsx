@@ -28,6 +28,7 @@ import {
   Code,
   Terminal,
   ChevronRight,
+  Zap,  // Session 861B: Triggers tab icon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -52,6 +53,7 @@ import {
   AIConsciousnessTab,
   IntelligenceTab,
   InitiativesTab,  // Session 847: Initiative Pipeline Dashboard
+  TriggersTab,  // Session 861B: WorkspaceTrigger Autopilot Queue
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -70,6 +72,7 @@ const tabs = [
   { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
   { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
+  { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },  // Session 861B
 ]
 
 // Workspace Selector Modal
@@ -893,6 +896,11 @@ export default function WorkspacePage() {
               showSuccess={showSuccess}
               showError={showError}
             />
+          )}
+
+          {/* Session 861B: WorkspaceTrigger Autopilot Queue */}
+          {activeTab === 'triggers' && (
+            <TriggersTab showSuccess={showSuccess} showError={showError} />
           )}
         </>
       )}

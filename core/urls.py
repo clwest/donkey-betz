@@ -3716,6 +3716,28 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 861B: WorkspaceTrigger API - Autonomous Work Queue
+# =========================================================================
+from core.views_workspace_triggers import (
+    WorkspaceTriggerViewSet,
+    WorkspaceTriggerConfigViewSet,
+    autopilot_status,
+)
+
+# Create dedicated router for workspace triggers
+trigger_router = WorkspaceRouter()
+trigger_router.register(r'workspace-triggers', WorkspaceTriggerViewSet, basename='workspace-trigger')
+trigger_router.register(r'workspace-trigger-configs', WorkspaceTriggerConfigViewSet, basename='workspace-trigger-config')
+
+urlpatterns += [
+    # Autopilot status endpoint
+    path('api/workspace-triggers/autopilot-status/', autopilot_status, name='workspace-autopilot-status'),
+
+    # Trigger Router URLs
+    path('api/', include(trigger_router.urls)),
+]
+
+# =========================================================================
 # Session 686: Human Interface Layer API
 # =========================================================================
 from core.views_human_interface import get_human_interface_urls
