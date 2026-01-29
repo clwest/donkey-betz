@@ -473,35 +473,46 @@ function OrchestraSubTab() {
     },
   })
 
-  // Fetch agents for expanded list
+  // Session 860: Use agentsApi.list() and proper data extraction
   const { data: agentsData, isLoading: agentsLoading } = useQuery({
     queryKey: ['orchestra-agents-list', expandedSection, visibleCount],
     queryFn: async () => {
       try {
-        let url = `/api/agents/?limit=${visibleCount}`
-        if (expandedSection === 'active') url += '&status=active'
-        const response = await fetch(url)
+        // /api/agents/ returns { agents: [...], totalCount: N }
+        const response = await fetch(`/api/agents/`)
         if (response.ok) {
-          return response.json()
+          const data = await response.json()
+          // Filter to active if needed and limit
+          let agents = data.agents || []
+          if (expandedSection === 'active') {
+            agents = agents.filter((a: AgentSummary) => a.status === 'active' || !a.status)
+          }
+          return {
+            agents: agents.slice(0, visibleCount),
+            count: data.totalCount || agents.length
+          }
         }
-        return { results: [], count: 0 }
+        return { agents: [], count: 0 }
       } catch {
-        return { results: [], count: 0 }
+        return { agents: [], count: 0 }
       }
     },
     enabled: expandedSection === 'agents' || expandedSection === 'active',
   })
 
-  // Fetch collaborations for expanded list
-  // Session 860: Use relationshipsApi.overview() instead of non-existent /api/relationships/
+  // Session 860: Use relationshipsApi.overview() - returns { relationships: [...], total_relationships: N }
   const { data: collabsData, isLoading: collabsLoading } = useQuery({
     queryKey: ['orchestra-collabs-list', visibleCount],
     queryFn: async () => {
       try {
         const response = await relationshipsApi.overview()
-        return response.data || { results: [], count: 0 }
+        const data = response.data || {}
+        return {
+          relationships: (data.relationships || []).slice(0, visibleCount),
+          count: data.total_relationships || 0
+        }
       } catch {
-        return { results: [], count: 0 }
+        return { relationships: [], count: 0 }
       }
     },
     enabled: expandedSection === 'collaborations',
@@ -515,11 +526,12 @@ function OrchestraSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load neural orchestra data" />
   }
 
-  const stats = statsData || { total: 213, active: 212, collaborations: 462 }
-  const learning = learningData || { models_active: 15, feedback_processed: 617 }
-  const agents = agentsData?.results || []
+  const stats = statsData || { total: 0, active: 0, collaborations: 0 }
+  const learning = learningData || { models_active: 0, feedback_processed: 0 }
+  // Session 860: Fixed data extraction
+  const agents = agentsData?.agents || []
   const agentsCount = agentsData?.count || 0
-  const collabs = collabsData?.results || []
+  const collabs = collabsData?.relationships || []
   const collabsCount = collabsData?.count || 0
 
   const toggleSection = (section: 'agents' | 'active' | 'collaborations') => {
@@ -543,7 +555,7 @@ function OrchestraSubTab() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Total Agents"
-          value={stats.total || 213}
+          value={stats.total}
           color="text-primary-400"
           onClick={() => toggleSection('agents')}
           icon={Users}
@@ -551,7 +563,7 @@ function OrchestraSubTab() {
         />
         <StatCard
           label="Active Now"
-          value={stats.active || 212}
+          value={stats.active}
           color="text-accent-green"
           onClick={() => toggleSection('active')}
           icon={Activity}
@@ -559,7 +571,7 @@ function OrchestraSubTab() {
         />
         <StatCard
           label="Collaborations"
-          value={stats.collaborations || 462}
+          value={stats.collaborations}
           color="text-accent-purple"
           onClick={() => toggleSection('collaborations')}
           icon={Users}
@@ -567,7 +579,7 @@ function OrchestraSubTab() {
         />
         <StatCard
           label="ML Models"
-          value={learning.models_active || 15}
+          value={learning.models_active}
           color="text-accent-amber"
           icon={Brain}
         />
@@ -633,9 +645,12 @@ function OrchestraSubTab() {
                 className="flex items-center justify-between p-2 bg-gray-800/50 rounded"
               >
                 <div className="flex items-center gap-3">
-                  <Users size={14} className="text-primary-400" />
+                  <span className="text-lg">{collab.emoji || '🤝'}</span>
                   <div>
-                    <span className="text-sm">{collab.agent_1} ↔ {collab.agent_2}</span>
+                    {/* Session 860: Fixed field names - API returns agent_from/agent_to objects */}
+                    <span className="text-sm">
+                      {collab.agent_from?.name || collab.agent_1} ↔ {collab.agent_to?.name || collab.agent_2}
+                    </span>
                     <p className="text-xs text-gray-500 capitalize">{collab.relationship_type || 'neutral'}</p>
                   </div>
                 </div>
@@ -645,7 +660,7 @@ function OrchestraSubTab() {
                   collab.relationship_type === 'rivalry' ? 'bg-red-500/20 text-red-400' :
                   'bg-gray-700 text-gray-400'
                 )}>
-                  {collab.strength || 0} strength
+                  {Math.round((collab.strength || 0) * 100)}%
                 </span>
               </div>
             ))}
