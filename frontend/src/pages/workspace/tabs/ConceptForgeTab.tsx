@@ -133,10 +133,16 @@ interface ArtifactModalProps {
 function ArtifactViewModal({ artifact, onClose }: ArtifactModalProps) {
   const [copied, setCopied] = useState(false)
 
+  // Session 870: Added error handling for clipboard
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(artifact.content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(artifact.content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err)
+      alert('Failed to copy to clipboard. Please try selecting and copying manually.')
+    }
   }
 
   const handleDownload = () => {
@@ -328,11 +334,13 @@ function RunCard({ run, onSelect, isSelected }: { run: ConceptForgeRun; onSelect
 }
 
 // Run detail view with stage tabs
+// Session 870: Added error state handling
 function RunDetailView({ runId }: { runId: string }) {
   const [activeStage, setActiveStage] = useState<string>('research')
   const [selectedArtifact, setSelectedArtifact] = useState<RunDetail['artifacts'][0] | null>(null)
+  const [copiedArtifactId, setCopiedArtifactId] = useState<string | null>(null)
 
-  const { data: detail, isLoading } = useQuery({
+  const { data: detail, isLoading, isError, refetch } = useQuery({
     queryKey: ['conceptforge-run', runId],
     queryFn: async () => {
       const response = await platformApi.get(`/api/conceptforge/runs/${runId}/`)
@@ -341,10 +349,38 @@ function RunDetailView({ runId }: { runId: string }) {
     enabled: !!runId,
   })
 
+  // Session 870: Handler for inline artifact copy with feedback
+  const handleArtifactCopy = async (artifact: RunDetail['artifacts'][0]) => {
+    try {
+      await navigator.clipboard.writeText(artifact.content || '')
+      setCopiedArtifactId(artifact.id)
+      setTimeout(() => setCopiedArtifactId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err)
+      alert('Failed to copy to clipboard')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="animate-spin text-primary-500" size={32} />
+      </div>
+    )
+  }
+
+  // Session 870: Show error state instead of null
+  if (isError) {
+    return (
+      <div className="bg-dark-card border border-red-500/30 rounded-lg p-8 text-center">
+        <AlertTriangle size={32} className="mx-auto mb-3 text-red-400" />
+        <p className="text-gray-400">Failed to load dossier details</p>
+        <button
+          onClick={() => refetch()}
+          className="mt-3 px-4 py-2 bg-primary-500/20 text-primary-400 rounded-lg text-sm hover:bg-primary-500/30 transition-colors"
+        >
+          Try Again
+        </button>
       </div>
     )
   }
@@ -505,14 +541,22 @@ function RunDetailView({ runId }: { runId: string }) {
                   >
                     <Eye size={14} />
                   </button>
+                  {/* Session 870: Added copy feedback */}
                   <button
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(artifact.content || '')
-                    }}
-                    className="p-1.5 hover:bg-dark-border rounded transition-colors text-gray-400 hover:text-white"
-                    title="Copy to clipboard"
+                    onClick={() => handleArtifactCopy(artifact)}
+                    className={cn(
+                      "p-1.5 hover:bg-dark-border rounded transition-colors",
+                      copiedArtifactId === artifact.id
+                        ? "text-green-400"
+                        : "text-gray-400 hover:text-white"
+                    )}
+                    title={copiedArtifactId === artifact.id ? "Copied!" : "Copy to clipboard"}
                   >
-                    <Copy size={14} />
+                    {copiedArtifactId === artifact.id ? (
+                      <CheckCircle2 size={14} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
                   </button>
                   <button
                     onClick={() => {
@@ -582,7 +626,8 @@ export function ConceptForgeTab() {
   const [statusFilter, setStatusFilter] = useState<string>('')
 
   // Fetch runs
-  const { data: runsData, isLoading: runsLoading, refetch } = useQuery({
+  // Session 870: Added error state handling
+  const { data: runsData, isLoading: runsLoading, isError: runsError, refetch } = useQuery({
     queryKey: ['conceptforge-runs', statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams()
@@ -652,10 +697,22 @@ export function ConceptForgeTab() {
       {/* Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Runs list */}
+        {/* Session 870: Added error state */}
         <div className="space-y-3">
           {runsLoading ? (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="animate-spin text-primary-500" size={24} />
+            </div>
+          ) : runsError ? (
+            <div className="bg-dark-card border border-red-500/30 rounded-lg p-8 text-center">
+              <AlertTriangle size={32} className="mx-auto mb-3 text-red-400" />
+              <p className="text-gray-400">Failed to load dossiers</p>
+              <button
+                onClick={() => refetch()}
+                className="mt-3 px-4 py-2 bg-primary-500/20 text-primary-400 rounded-lg text-sm hover:bg-primary-500/30 transition-colors"
+              >
+                Try Again
+              </button>
             </div>
           ) : runs.length === 0 ? (
             <div className="bg-dark-card border border-dark-border rounded-lg p-8 text-center">
