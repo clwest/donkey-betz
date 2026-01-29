@@ -102,6 +102,12 @@ from ..models_decision_records import (
     DecisionAggregate,
 )
 
+# Import spider aggregation models (Session 861 - Spider Aggregation Caching)
+from ..models_spider_aggregation import (
+    SpiderAggregation,
+    TrendDataPoint,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -245,4 +251,8 @@ __all__ = [
     # Decision Recording (Session 861)
     'DecisionRecord',
     'DecisionAggregate',
+
+    # Spider Aggregation Caching (Session 861)
+    'SpiderAggregation',
+    'TrendDataPoint',
 ]
