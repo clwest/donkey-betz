@@ -55,13 +55,14 @@ def legacy_portfolio_image_redirect(request, path):
 # Import advisor API views (Session 25)
 from core.views_advisor_api import advisor_consult, advisor_list, advisor_detail
 
-# Import podcast API views (Session 502)
+# Import podcast API views (Session 502, 865)
 from core.views_podcast import (
     podcast_list as podcast_list_view,
     podcast_create as podcast_create_view,
     podcast_status as podcast_status_view,
     podcast_script as podcast_script_view,
     podcast_delete as podcast_delete_view,
+    podcast_generate_audio as podcast_generate_audio_view,
     podcast_stats as podcast_stats_view,
 )
 
@@ -2629,6 +2630,7 @@ urlpatterns = [
     path('api/podcasts/stats/', podcast_stats_view, name='podcast-stats'),
     path('api/podcasts/<uuid:episode_id>/status/', podcast_status_view, name='podcast-status'),
     path('api/podcasts/<uuid:episode_id>/script/', podcast_script_view, name='podcast-script'),
+    path('api/podcasts/<uuid:episode_id>/generate-audio/', podcast_generate_audio_view, name='podcast-generate-audio'),
     path('api/podcasts/<uuid:episode_id>/', podcast_delete_view, name='podcast-delete'),
 
     # Session 513: Campaign Orchestrator APIs

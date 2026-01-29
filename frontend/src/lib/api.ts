@@ -995,12 +995,16 @@ export const legalApi = {
 export const podcastApi = {
   // Episodes list
   list: () => api.get('/podcasts/list/'),
-  create: (data: { topic: string; style?: string }) => api.post('/podcasts/create/', data),
+  create: (data: { topic: string; style?: string; generate_audio?: boolean }) =>
+    api.post('/podcasts/create/', data),
 
   // Episode details
   status: (episodeId: string) => api.get(`/podcasts/${episodeId}/status/`),
   script: (episodeId: string) => api.get(`/podcasts/${episodeId}/script/`),
   delete: (episodeId: string) => api.delete(`/podcasts/${episodeId}/`),
+
+  // Session 865: Generate TTS audio for an existing episode
+  generateAudio: (episodeId: string) => api.post(`/podcasts/${episodeId}/generate-audio/`),
 
   // Generation
   generateScript: (topic: string, style?: string) =>
