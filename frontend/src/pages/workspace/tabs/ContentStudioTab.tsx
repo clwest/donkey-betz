@@ -2232,8 +2232,13 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
 
 // Session 861: Enhanced Episode Detail Modal with script viewing and audio playback
 // Session 865: Fixed authentication - use podcastApi instead of raw fetch
+// Session 865: Added Generate Audio button for TTS
 function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onClose: () => void }) {
   const [showScript, setShowScript] = useState(false)
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false)
+  const [audioError, setAudioError] = useState<string | null>(null)
+  const [audioSuccess, setAudioSuccess] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   // Fetch full script when expanded - Session 865: Use podcastApi for proper auth
   const { data: scriptData, isLoading: scriptLoading } = useQuery({
@@ -2244,6 +2249,29 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
     },
     enabled: showScript,
   })
+
+  // Session 865: Generate Audio handler
+  const handleGenerateAudio = async () => {
+    setIsGeneratingAudio(true)
+    setAudioError(null)
+    setAudioSuccess(null)
+
+    try {
+      const response = await podcastApi.generateAudio(episode.id)
+      if (response.data?.success) {
+        setAudioSuccess(`Audio generated! Duration: ${Math.round(response.data.duration_seconds / 60)} min`)
+        queryClient.invalidateQueries({ queryKey: ['podcast-tab'] })
+        queryClient.invalidateQueries({ queryKey: ['podcast-list'] })
+      } else {
+        setAudioError(response.data?.error || 'Failed to generate audio')
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string }
+      setAudioError(error.response?.data?.error || error.message || 'Failed to generate audio')
+    } finally {
+      setIsGeneratingAudio(false)
+    }
+  }
 
   const statusColors: Record<string, { color: string; bg: string; icon: typeof Clock }> = {
     complete: { color: 'text-green-400', bg: 'bg-green-500/20', icon: CheckCircle },
@@ -2323,6 +2351,50 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
               >
                 Your browser does not support the audio element.
               </audio>
+            </div>
+          )}
+
+          {/* Session 865: Generate Audio Section - show when no audio exists */}
+          {!hasAudio && (
+            <div className="p-4 bg-gray-800/50 rounded-lg border border-dashed border-gray-600">
+              <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                <Music size={14} /> Generate Audio (TTS)
+              </h4>
+              <p className="text-xs text-gray-500 mb-3">
+                Convert this script to audio using ElevenLabs text-to-speech. This uses premium voices and will incur API costs.
+              </p>
+              {audioError && (
+                <div className="mb-3 p-2 bg-red-500/20 border border-red-500/30 rounded text-red-400 text-sm">
+                  {audioError}
+                </div>
+              )}
+              {audioSuccess && (
+                <div className="mb-3 p-2 bg-green-500/20 border border-green-500/30 rounded text-green-400 text-sm">
+                  {audioSuccess}
+                </div>
+              )}
+              <button
+                onClick={handleGenerateAudio}
+                disabled={isGeneratingAudio}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                  isGeneratingAudio
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-accent-purple hover:bg-accent-purple/80 text-white'
+                )}
+              >
+                {isGeneratingAudio ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Generating Audio...
+                  </>
+                ) : (
+                  <>
+                    <Mic size={16} />
+                    Generate Audio
+                  </>
+                )}
+              </button>
             </div>
           )}
 
