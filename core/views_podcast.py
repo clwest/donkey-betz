@@ -86,7 +86,7 @@ def podcast_list(request):
     if not request.user.is_authenticated:
         return JsonResponse({'success': True, 'episodes': [], 'total': 0, 'limit': 20, 'offset': 0})
 
-    from core.models import PodcastEpisode
+    from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
     try:
@@ -179,7 +179,7 @@ def podcast_create(request):
         - participant_count: Number of AI participants 2-5 (default: 3)
         - generate_audio: Whether to generate TTS audio (default: false)
     """
-    from core.models import PodcastEpisode
+    from core.models_podcast_studio import PodcastEpisode
     from core.tasks import generate_podcast_episode
 
     try:
@@ -249,7 +249,7 @@ def podcast_status(request, episode_id):
 
     GET /api/podcasts/<episode_id>/status/
     """
-    from core.models import PodcastEpisode
+    from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
     try:
@@ -293,7 +293,7 @@ def podcast_script(request, episode_id):
 
     GET /api/podcasts/<episode_id>/script/
     """
-    from core.models import PodcastEpisode
+    from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
     try:
@@ -389,7 +389,7 @@ def podcast_delete(request, episode_id):
 
     DELETE /api/podcasts/<episode_id>/
     """
-    from core.models import PodcastEpisode
+    from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
     try:
@@ -451,7 +451,7 @@ def podcast_stats(request):
             'processing': 0,
         })
 
-    from core.models import PodcastEpisode
+    from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
     from django.db.models import Sum
 
