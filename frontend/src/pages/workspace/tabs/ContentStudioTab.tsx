@@ -727,8 +727,9 @@ function DocumentsSubTab() {
     queryFn: async () => {
       try {
         // Fetch documents (non-blog categories)
+        // Session 865: Increased per_page to 500 to show all documents
         const categoryParam = categoryFilter === 'all' ? 'documents' : categoryFilter
-        const response = await fetch(`/api/v1/research/self-blog/list/?per_page=100&category=${categoryParam}`)
+        const response = await fetch(`/api/v1/research/self-blog/list/?per_page=500&category=${categoryParam}`)
         if (!response.ok) {
           return { blogs: [], pagination: { total: 0 }, category_counts: {} }
         }
