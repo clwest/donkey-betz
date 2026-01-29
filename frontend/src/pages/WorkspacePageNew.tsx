@@ -29,6 +29,7 @@ import {
   Terminal,
   ChevronRight,
   Zap,  // Session 861B: Triggers tab icon
+  FlaskConical,  // Session 865: ConceptForge tab icon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -54,6 +55,7 @@ import {
   IntelligenceTab,
   InitiativesTab,  // Session 847: Initiative Pipeline Dashboard
   TriggersTab,  // Session 861B: WorkspaceTrigger Autopilot Queue
+  ConceptForgeTab,  // Session 865: ConceptForge Dossier Pipeline
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -73,6 +75,7 @@ const tabs = [
   { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
   { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
   { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },  // Session 861B
+  { id: 'conceptforge' as WorkspaceTab, label: 'Dossiers', icon: FlaskConical },  // Session 865
 ]
 
 // Workspace Selector Modal
@@ -902,6 +905,9 @@ export default function WorkspacePage() {
           {activeTab === 'triggers' && (
             <TriggersTab showSuccess={showSuccess} showError={showError} />
           )}
+
+          {/* Session 865: ConceptForge Dossier Pipeline */}
+          {activeTab === 'conceptforge' && <ConceptForgeTab />}
         </>
       )}
 
