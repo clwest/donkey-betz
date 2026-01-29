@@ -139,11 +139,41 @@ promote_to_conceptforge.delay(
 
 ---
 
+## Session 862 Content Intelligence (PRODUCTION DEPLOYED)
+
+### What Was Added
+- **PublishGate**: Quality evaluation before publishing (quality, novelty, structure scores)
+- **ContentClassifier**: Routes content to public/internal/strategic
+- **SelfBlog Updates**: content_type field, new categories (build_log, internal_note, playbook, dossier)
+
+### Production Status
+- Migrations 0204, 0205, 0206 applied to production
+- PublishGate tested on "AI Development Best Practices" blog (Q:0.95, N:0.70, S:0.80)
+- Content type correctly identified as `internal`
+
+### Test the Content Intelligence
+```bash
+# Evaluate a specific blog
+railway run python manage.py apply_publish_gate --blog-id <uuid>
+
+# Evaluate all blogs
+railway run python manage.py apply_publish_gate --all --dry-run
+
+# Show summary
+railway run python manage.py apply_publish_gate --summary
+```
+
+### Handoff
+`docs/handoffs/SESSION_862_CONTENT_INTELLIGENCE.md`
+
+---
+
 ## Recent Session History
 
 | Session | Focus | Status |
 |---------|-------|--------|
 | **863** | ConceptForge - Autonomous Think Tank Pipeline | ✅ COMPLETE |
+| **862** | Content Intelligence - PublishGate + ContentClassifier | ✅ PRODUCTION DEPLOYED |
 | **862** | Content Flow Unification - Dream → Initiative → Deliverable | ✅ COMPLETE |
 | **861** | Data Persistence - 6 gap fixes + Content Tab UI | ✅ COMPLETE |
 | **860** | Initiative Pipeline + API Error Handling | ✅ COMPLETE |
