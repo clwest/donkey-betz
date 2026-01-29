@@ -131,6 +131,14 @@ from ..models_conceptforge import (
     ConceptForgeArtifact,
 )
 
+# Import ATS optimization models (Session 866 - Resume ATS Keyword Optimization)
+from ..models_ats_optimization import (
+    PersonaResumeTemplate,
+    ATSKeywordMapping,
+    ResumeOptimizationLog,
+    ResumeRewriteOrder,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -293,4 +301,10 @@ __all__ = [
     'ConceptForgeRun',
     'ConceptForgeStageRun',
     'ConceptForgeArtifact',
+
+    # ATS Optimization - Resume Keyword Optimization (Session 866)
+    'PersonaResumeTemplate',
+    'ATSKeywordMapping',
+    'ResumeOptimizationLog',
+    'ResumeRewriteOrder',
 ]

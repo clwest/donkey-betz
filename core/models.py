@@ -100,6 +100,14 @@ from .models_learning_backup import (
     backup_agent_improvement,
 )
 
+# Import ATS optimization models (Session 866 - Resume ATS Keyword Optimization)
+from .models_ats_optimization import (
+    PersonaResumeTemplate,
+    ATSKeywordMapping,
+    ResumeOptimizationLog,
+    ResumeRewriteOrder,
+)
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
