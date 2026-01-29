@@ -341,6 +341,22 @@ Always provide:
                 execution_time_ms=execution_time_ms
             )
 
+            # Session 861: Persist analysis to Deliverable
+            analysis_content = gpt_result.get('analysis', '')
+            if analysis_content:
+                self._save_to_deliverable(
+                    title=f"Signal Scan: {task[:50]}",
+                    content=analysis_content,
+                    deliverable_type='analysis',
+                    category='Finance',
+                    tags=['signals', 'technical', 'stocks', 'analysis'],
+                    content_format='markdown',
+                    metadata={
+                        'task': task,
+                        'signals_found': signals_found,
+                    },
+                )
+
             # Record learning outcome for collective intelligence
             try:
                 self._record_learning_outcome(

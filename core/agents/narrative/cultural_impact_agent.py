@@ -833,6 +833,18 @@ Provide clear, actionable analysis with specific recommendations."""
                 data={'tool_results': tool_results, 'analysis': content},
                 agent_name=self.name
             )
+
+            # Session 861: Persist analysis to Deliverable
+            if content:
+                self._save_to_deliverable(
+                    title=f"Cultural Impact Analysis: {task[:50]}",
+                    content=content,
+                    deliverable_type='analysis',
+                    category='Analysis',
+                    tags=['cultural', 'impact', 'analysis', 'narrative'],
+                    content_format='markdown',
+                    metadata={'task': task},
+                )
         except Exception as e:
             logger.error(f"CulturalImpactAgent error: {e}")
             result = AgentResult(

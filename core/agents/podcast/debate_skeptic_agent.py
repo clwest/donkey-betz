@@ -229,24 +229,49 @@ Be critical but fair - acknowledge valid points from the other side."""
                         tool_results.append(result)
 
                     execution_time_ms = int((time.time() - start_time) * 1000)
+                    content = response.get('content') or "Skeptic argument prepared"
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or "Skeptic argument prepared",
+                        message=content,
                         data={"tool_results": tool_results, "role": "SKEPTIC", "voice_id": "Clyde"},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms,
                         tool_calls=tool_calls_made
                     )
+
+                    # Session 861: Persist script to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Debate Skepticism: {task[:50]}",
+                        content=content,
+                        deliverable_type='script',
+                        category='Content',
+                        tags=['debate', 'skeptic', 'podcast', 'script'],
+                        content_format='markdown',
+                        metadata={'task': task, 'role': 'SKEPTIC'},
+                    )
                 else:
                     # No tools called, return content directly
                     execution_time_ms = int((time.time() - start_time) * 1000)
+                    content = response.get('content') or 'No response'
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or 'No response',
+                        message=content,
                         data={"role": "SKEPTIC", "voice_id": "Clyde"},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms
                     )
+
+                    # Session 861: Persist script to Deliverable
+                    if content and content != 'No response':
+                        self._save_to_deliverable(
+                            title=f"Debate Skepticism: {task[:50]}",
+                            content=content,
+                            deliverable_type='script',
+                            category='Content',
+                            tags=['debate', 'skeptic', 'podcast', 'script'],
+                            content_format='markdown',
+                            metadata={'task': task, 'role': 'SKEPTIC'},
+                        )
 
                 # Record learning outcome for collective intelligence
                 try:

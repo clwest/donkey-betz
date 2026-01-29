@@ -320,6 +320,25 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                             knowledge_attribution=knowledge_attribution
                         )
 
+                        # Session 861: Persist analysis to Deliverable
+                        analysis_content = f"# Whale Monitoring Report\n\n**Task:** {task}\n\n"
+                        for res in all_results:
+                            source = res.get('source', 'Analysis')
+                            data = res.get('data', {})
+                            analysis_content += f"## {source}\n{data}\n\n"
+                        self._save_to_deliverable(
+                            title=f"Whale Watch: {task[:50]}",
+                            content=analysis_content,
+                            deliverable_type='analysis',
+                            category='Blockchain',
+                            tags=['whale', 'monitoring', 'blockchain', 'analysis'],
+                            content_format='markdown',
+                            metadata={
+                                'task': task,
+                                'analyses': len(all_results),
+                            },
+                        )
+
                         # Record learning outcome for collective intelligence
                         try:
                             self._record_learning_outcome(
