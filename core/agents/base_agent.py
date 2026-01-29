@@ -3198,6 +3198,156 @@ Consider this current data when formulating your response."""
 
         return title, content, list(set(tags))  # Dedupe tags
 
+    def _save_to_deliverable(
+        self,
+        title: str,
+        content: str,
+        deliverable_type: str = 'document',
+        category: str = '',
+        tags: List[str] = None,
+        content_format: str = 'markdown',
+        metadata: Dict[str, Any] = None,
+        user=None,
+        trace_id: str = None,
+        quality_score: float = 0.7,
+        confidence_score: float = 0.7,
+    ) -> Optional[Any]:
+        """
+        Session 861: Save agent output to Deliverable model for persistence.
+
+        All content-creating agents should call this to ensure their output
+        is not lost after the request completes. AgentResult is ephemeral
+        and AgentMemory only stores summaries - this method persists the
+        full content.
+
+        Args:
+            title: Human-readable title for the deliverable
+            content: The full content to persist
+            deliverable_type: One of: document, image, video, audio, code,
+                             analysis, report, template, research, strategy,
+                             plan, script
+            category: Business category (Content, Finance, Legal, etc.)
+            tags: List of tags for filtering
+            content_format: text, markdown, html, json, python, etc.
+            metadata: Additional metadata dict
+            user: User who owns this (optional)
+            trace_id: UUID for cross-artifact linking (optional)
+            quality_score: AI-assessed quality (0.0-1.0)
+            confidence_score: Agent confidence (0.0-1.0)
+
+        Returns:
+            Created Deliverable instance or None if creation failed
+
+        Example:
+            self._save_to_deliverable(
+                title="Market Analysis: AAPL Q4 2026",
+                content=analysis_text,
+                deliverable_type='analysis',
+                category='Finance',
+                tags=['stocks', 'AAPL', 'quarterly'],
+                metadata={'symbol': 'AAPL', 'period': 'Q4 2026'}
+            )
+        """
+        try:
+            from core.models_deliverables import Deliverable
+            from django.utils.text import slugify
+            import uuid
+
+            # Generate unique slug
+            base_slug = slugify(title[:100]) if title else 'untitled'
+            unique_slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
+
+            # Determine category if not provided
+            if not category:
+                category = self._get_deliverable_category()
+
+            # Build preview content
+            preview = content[:500] if content else ''
+            if len(content or '') > 500:
+                preview += '...'
+
+            deliverable = Deliverable.objects.create(
+                title=title or f"{self.name} Output",
+                slug=unique_slug,
+                deliverable_type=deliverable_type,
+                category=category,
+                tags=tags or [],
+                agent_name=self.name,
+                agent_task=getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else '',
+                content=content or '',
+                content_format=content_format,
+                preview_content=preview,
+                metadata=metadata or {},
+                user=user,
+                trace_id=uuid.UUID(trace_id) if trace_id else None,
+                quality_score=quality_score,
+                confidence_score=confidence_score,
+                status='ready',
+            )
+
+            logger.info(f"📦 Session 861: Saved Deliverable {deliverable.id} - {title[:50] if title else 'Untitled'}")
+            return deliverable
+
+        except Exception as e:
+            logger.warning(f"Failed to save Deliverable for {self.name}: {e}")
+            return None
+
+    def _get_deliverable_category(self) -> str:
+        """
+        Session 861: Map agent name to a Deliverable category.
+
+        Returns a category string based on agent name patterns.
+        """
+        category_map = {
+            'ContentWriter': 'Content',
+            'Technical': 'Development',
+            'Stock': 'Finance',
+            'Bull': 'Finance',
+            'Bear': 'Finance',
+            'Market': 'Finance',
+            'Opportunity': 'Finance',
+            'Signal': 'Finance',
+            'Institutional': 'Finance',
+            'Legal': 'Legal',
+            'Code': 'Development',
+            'FullStack': 'Development',
+            'DevOps': 'Development',
+            'Research': 'Research',
+            'Customer': 'Research',
+            'Trend': 'Analysis',
+            'Competitor': 'Business',
+            'Brand': 'Marketing',
+            'SEO': 'Marketing',
+            'Social': 'Marketing',
+            'Content Strategy': 'Marketing',
+            'Marketing': 'Marketing',
+            'Podcast': 'Content',
+            'Debate': 'Content',
+            'Moderator': 'Content',
+            'Smart': 'Blockchain',
+            'Whale': 'Blockchain',
+            'Exploit': 'Blockchain',
+            'Transaction': 'Blockchain',
+            'Blockchain': 'Blockchain',
+            'Narrative': 'Analysis',
+            'Cultural': 'Analysis',
+            'Bookmaker': 'Betting',
+            'Sports': 'Betting',
+            'Prediction': 'Betting',
+            'Arbitrage': 'Betting',
+            'CTO': 'Executive',
+            'COO': 'Executive',
+            'Creative': 'Executive',
+            'Meeting': 'Executive',
+            'Platform': 'Operations',
+            'System': 'Operations',
+            'Thinking': 'Analysis',
+        }
+        for prefix, category in category_map.items():
+            if prefix in self.name:
+                return category
+        return 'General'
+
     def _track_contribution(
         self,
         content_type: str,

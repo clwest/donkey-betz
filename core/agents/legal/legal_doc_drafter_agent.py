@@ -1301,6 +1301,27 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                     if generated_documents:
                         self._share_legal_knowledge(task, generated_documents, context)
 
+                    # Session 861: Also persist to Deliverable for universal access
+                    for doc in generated_documents:
+                        doc_type = doc.get('document_type', 'other')
+                        doc_content = doc.get('document', '')
+                        if doc_content:
+                            self._save_to_deliverable(
+                                title=f"Legal {doc_type.title()}: {task[:80]}",
+                                content=doc_content,
+                                deliverable_type='document',
+                                category='Legal',
+                                tags=['legal', doc_type, 'colorado', 'family-law'],
+                                content_format='markdown',
+                                metadata={
+                                    'document_type': doc_type,
+                                    'motion_type': doc.get('motion_type', ''),
+                                    'jurisdiction': 'Colorado',
+                                    'case_id': str(self.case_id) if self.case_id else None,
+                                },
+                                user=self.user,
+                            )
+
                 # Session 409: Validate output through Mythology Enforcer to prevent hallucinations
                 # This is CRITICAL for legal documents - must not contain unrealistic claims
                 result = self._validate_output(result)

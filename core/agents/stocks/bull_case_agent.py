@@ -373,6 +373,23 @@ Always acknowledge risks but emphasize potential rewards."""
                 except Exception as le:
                     logger.warning(f"Failed to record learning outcome: {le}")
 
+                # Session 861: Persist bull case analysis to Deliverable
+                conviction = self._extract_conviction(analysis)
+                self._save_to_deliverable(
+                    title=f"Bull Case: {ticker}" if ticker else f"Bull Case Analysis: {task[:60]}",
+                    content=analysis,
+                    deliverable_type='analysis',
+                    category='Finance',
+                    tags=['stock', 'bull-case', 'analysis', ticker] if ticker else ['stock', 'bull-case', 'analysis'],
+                    content_format='markdown',
+                    metadata={
+                        'ticker': ticker,
+                        'conviction': conviction,
+                        'tools_used': [tc['tool'] for tc in tool_calls_made],
+                        'case_type': 'bullish',
+                    },
+                )
+
                 return result
 
             except Exception as e:
