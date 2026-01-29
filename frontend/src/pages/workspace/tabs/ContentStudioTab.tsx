@@ -161,17 +161,19 @@ function GallerySubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load gallery data" />
   }
 
-  const totalImages = galleryData?.count || 0
-  const totalVideos = videoData?.count || 0
-  const images = galleryData?.results || []
+  // Session 865: Extract items by type from unified gallery
+  const allItems = galleryData?.results || []
+  const images = allItems.filter((item: GalleryItem) => item.type === 'image')
   const videos = videoData?.results || []
+  const audioItems = allItems.filter((item: GalleryItem) => item.type === 'audio')
+  const models3d = allItems.filter((item: GalleryItem) => item.type === '3d')
   const series = seriesData?.results || []
 
   const stats = {
-    images: totalImages,
-    videos: totalVideos,
-    audio: 45,
-    models3d: 8,
+    images: images.length,
+    videos: videos.length,
+    audio: audioItems.length,
+    models3d: models3d.length,
   }
 
   const toggleSection = (section: string) => {
@@ -263,11 +265,17 @@ function GallerySubTab() {
         <ExpandedListCard
           title="Audio Files"
           icon={Music}
-          items={[]}
+          items={audioItems}
           visibleCount={visibleCount.audio}
           onLoadMore={() => loadMore('audio')}
-          emptyMessage="Audio content is managed separately"
-          renderItem={() => null}
+          emptyMessage="No audio files found"
+          renderItem={(item: GalleryItem) => (
+            <GalleryCard
+              key={item.id}
+              item={{ ...item, type: 'audio' }}
+              onClick={() => setSelectedItem({ ...item, type: 'audio' })}
+            />
+          )}
         />
       )}
 
@@ -276,11 +284,17 @@ function GallerySubTab() {
         <ExpandedListCard
           title="3D Models"
           icon={Box}
-          items={[]}
+          items={models3d}
           visibleCount={visibleCount.models3d}
           onLoadMore={() => loadMore('models3d')}
-          emptyMessage="3D models are managed separately"
-          renderItem={() => null}
+          emptyMessage="No 3D models found"
+          renderItem={(item: GalleryItem) => (
+            <GalleryCard
+              key={item.id}
+              item={{ ...item, type: '3d' }}
+              onClick={() => setSelectedItem({ ...item, type: '3d' })}
+            />
+          )}
         />
       )}
 

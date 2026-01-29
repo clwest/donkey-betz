@@ -4273,7 +4273,7 @@ def unified_gallery(request):
     }
     """
     try:
-        from content.models import ImageHistory, VideoHistory
+        from content.models import ImageHistory, VideoHistory, AudioHistory
         from django.db.models import Q
 
         user = request.user
@@ -4573,11 +4573,120 @@ def unified_gallery(request):
             logger.warning(f"Error fetching Resolve renders: {e}")
             media_errors.append(f"resolve: {str(e)}")
 
-        # NOTE: Audio support will be added when AudioHistory model is created.
-        # See content/models.py for current model inventory.
-        # if media_type in ['all', 'audio']:
-        #     audio_queryset = AudioHistory.objects.filter(user=user)
-        #     ...
+        # Session 865: Add audio support
+        if media_type in ['all', 'audio']:
+          try:
+            # Include user's audio AND system-generated audio
+            audio_queryset = AudioHistory.objects.filter(
+                Q(user=user) | Q(user__username__in=['system_autonomous', 'system', 'admin'])
+            ).order_by('-created_at')
+
+            # Apply filters
+            if is_favorite is not None:
+                audio_queryset = audio_queryset.filter(is_favorite=is_favorite.lower() == 'true')
+
+            if search_term:
+                audio_queryset = audio_queryset.filter(
+                    Q(prompt__icontains=search_term) |
+                    Q(user_notes__icontains=search_term) |
+                    Q(voice_name__icontains=search_term)
+                )
+
+            for aud in audio_queryset:
+                # Build audio URL
+                audio_url = None
+                if aud.file_path:
+                    if aud.file_path.startswith(('http://', 'https://')):
+                        audio_url = aud.file_path
+                    else:
+                        audio_url = request.build_absolute_uri(f'/media/{aud.file_path}')
+
+                all_items.append({
+                    'id': str(aud.id),
+                    'type': 'audio',
+                    'url': audio_url,
+                    'thumbnail_url': None,  # Audio has no thumbnail
+                    'prompt': aud.prompt or 'Audio',
+                    'created_at': aud.created_at,
+                    'is_favorite': aud.is_favorite,
+                    'view_count': aud.play_count,
+                    'download_count': aud.download_count,
+                    'model_used': aud.model_used,
+                    'parameters': aud.parameters or {},
+                    # Audio-specific fields
+                    'audio_type': aud.audio_type,
+                    'voice_name': aud.voice_name,
+                    'duration_seconds': aud.duration_seconds,
+                    'filename': aud.filename,
+                    'user_notes': aud.user_notes,
+                    'tags': aud.tags or [],
+                    'source': 'audio_history',
+                })
+          except Exception as e:
+            logger.warning(f"Error fetching audio: {e}")
+            media_errors.append(f"audio: {str(e)}")
+
+        # Session 865: Add 3D model support from WorkspaceOperation
+        if media_type in ['all', '3d', 'models']:
+          try:
+            from core.models_skin_layer import WorkspaceOperation
+            import re
+
+            # Get ThreeDAgent operations
+            threed_ops = WorkspaceOperation.objects.filter(
+                agent_name='ThreeDAgent',
+                success=True
+            ).order_by('-created_at')[:50]
+
+            for op in threed_ops:
+                content = op.file_content_after or ''
+                # Extract 3D model URLs (.glb, .gltf, .obj)
+                urls = re.findall(r'https://[^\s\"\'\)]+\.(?:glb|gltf|obj)', content, re.IGNORECASE)
+
+                if urls:
+                    for url in urls:
+                        url = url.rstrip('.,;:')
+                        all_items.append({
+                            'id': str(op.id),
+                            'type': '3d',
+                            'url': url,
+                            'thumbnail_url': None,  # 3D models need viewer
+                            'prompt': op.agent_task[:200] if op.agent_task else '3D Model',
+                            'created_at': op.created_at,
+                            'is_favorite': False,
+                            'view_count': 0,
+                            'download_count': 0,
+                            'model_used': 'ThreeDAgent',
+                            'parameters': {},
+                            'model_type': '3d',
+                            'filename': url.split('/')[-1] if url else None,
+                            'user_notes': '',
+                            'tags': [],
+                            'source': 'workspace_operation',
+                        })
+                else:
+                    # No URL but has 3D agent output - include as brief/spec
+                    all_items.append({
+                        'id': str(op.id),
+                        'type': '3d',
+                        'url': None,
+                        'thumbnail_url': None,
+                        'prompt': op.agent_task[:200] if op.agent_task else '3D Model Brief',
+                        'created_at': op.created_at,
+                        'is_favorite': False,
+                        'view_count': 0,
+                        'download_count': 0,
+                        'model_used': 'ThreeDAgent',
+                        'parameters': {},
+                        'model_type': '3d_brief',
+                        'filename': None,
+                        'user_notes': content[:500] if content else '',
+                        'tags': [],
+                        'source': 'workspace_operation',
+                    })
+          except Exception as e:
+            logger.warning(f"Error fetching 3D models: {e}")
+            media_errors.append(f"3d_models: {str(e)}")
 
         # Sort all items
         reverse = sort_by.startswith('-')
