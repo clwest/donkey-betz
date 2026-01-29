@@ -25107,61 +25107,54 @@ def run_business_strategy_agents():
 def exercise_all_dormant_agents():
     """
     Session 737: Exercise ALL dormant agents to ensure they work.
+    Session 864: REFACTORED - Now uses infra warmup instead of content generation.
 
-    This is a comprehensive test that runs all 50 dormant agents.
+    This task verifies agents work without generating noise content:
+    - Checks agent class can be loaded
+    - Checks agent can be instantiated
+    - Checks agent has required methods
+    - NO file creation, NO default_topic content, NO LLM calls
+
     Should be run weekly or on-demand to verify agent health.
     """
     from core.agent_router import AgentRouter
-    from core.models_unified_system import Agent, AgentExecution
+    from core.models_unified_system import Agent
     from django.db.models import Count
 
-    logger.info("🔄 [AGENT EXERCISE] Starting comprehensive agent exercise...")
+    logger.info("🔄 [AGENT WARMUP] Starting infrastructure health check...")
 
     router = AgentRouter()
 
-    # Find all dormant agents
+    # Find all dormant agents (0 executions)
     routable = set(router.AGENT_MAP.keys())
     agents_with_counts = Agent.objects.annotate(exec_count=Count('executions'))
     dormant = [a.name for a in agents_with_counts if a.exec_count == 0 and a.name in routable]
 
-    logger.info(f"🔄 [AGENT EXERCISE] Found {len(dormant)} dormant agents to exercise")
+    logger.info(f"🔄 [AGENT WARMUP] Found {len(dormant)} dormant agents to check")
 
     results = []
     for agent_name in dormant:
-        try:
-            # Generate a simple task for each agent
-            task = f"Perform a brief self-diagnostic and report your capabilities"
+        # Session 864: Use infra warmup instead of content generation
+        result = _run_agent_warmup(agent_name)
+        results.append(result)
 
-            result = router.route(
-                agent_name=agent_name,
-                task=task,
-                context={'exercise_mode': True, 'session': 737}
-            )
-
-            success = result.success if result else False
-            results.append({
-                'agent': agent_name,
-                'success': success,
-            })
-
-            if success:
-                logger.info(f"🔄 [AGENT EXERCISE] ✅ {agent_name}")
-            else:
-                logger.warning(f"🔄 [AGENT EXERCISE] ❌ {agent_name}")
-
-        except Exception as e:
-            logger.error(f"🔄 [AGENT EXERCISE] ❌ {agent_name}: {e}")
-            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
+        status = '✅' if result.get('success') else '❌'
+        logger.info(f"🔄 [AGENT WARMUP] {status} {agent_name}")
 
     succeeded = len([r for r in results if r.get('success')])
-    logger.info(f"🔄 [AGENT EXERCISE] Complete: {succeeded} / {len(results)} agents exercised successfully")
+    logger.info(
+        f"🔄 [AGENT WARMUP] Complete: {succeeded}/{len(results)} agents healthy "
+        f"(no content generated, infra check only)"
+    )
 
     return {
         'total_dormant': len(dormant),
-        'exercised': len(results),
-        'succeeded': succeeded,
-        'failed': len(results) - succeeded,
-        'results': results
+        'checked': len(results),
+        'healthy': succeeded,
+        'unhealthy': len(results) - succeeded,
+        'results': results,
+        'files_created': 0,  # Key: no files created
+        'mode': 'infra_warmup',
     }
 
 
@@ -27280,26 +27273,74 @@ def _extract_agent_output_content(result, task_description: str) -> str:
 
 
 @shared_task(name='core.tasks.universal_agent_workspace_output')
-def universal_agent_workspace_output(agent_name: str, topic: str = None):
+def universal_agent_workspace_output(
+    agent_name: str,
+    topic: str = None,
+    initiative_id: str = None,
+    trigger_source: str = None,
+    force_production: bool = False
+):
     """
     Session 777: Universal task to execute any agent and write output to workspace.
+    Session 864: Added run_mode detection and intent-based quality gates.
 
     This task can run any registered agent and write its output to the SKIN Layer.
+    Now distinguishes between PRODUCTION (purposeful) and WARMUP (exercise) runs.
 
     Args:
         agent_name: Name of the agent to execute
-        topic: Optional topic override
+        topic: Optional topic override (if None, may trigger warmup mode)
+        initiative_id: Optional initiative this is associated with
+        trigger_source: What triggered this run (initiative, user, schedule, warmup)
+        force_production: Force production mode even without topic
 
     Returns:
-        Operation result
+        Operation result with run_mode metadata
     """
     from django.contrib.auth import get_user_model
-    from core.models_skin_layer import ProjectWorkspace
+    from core.models_skin_layer import ProjectWorkspace, WorkspaceOperation
     from core.services.workspace_manager import WorkspaceManager
     from datetime import datetime
     import importlib
 
-    logger.info(f"🤖 [SKIN LAYER] Universal agent execution: {agent_name}")
+    # ==========================================================================
+    # SESSION 864 PHASE 0: DETERMINE RUN MODE
+    # ==========================================================================
+    # If no topic provided and not forced, this is a warmup run
+    is_warmup = (topic is None) and (not force_production) and (not initiative_id)
+
+    if is_warmup:
+        run_mode = 'warmup'
+        trigger = trigger_source or 'warmup'
+    else:
+        run_mode = 'production'
+        trigger = trigger_source or ('initiative' if initiative_id else 'schedule')
+
+    logger.info(
+        f"🤖 [SKIN LAYER] Agent execution: {agent_name} "
+        f"(run_mode={run_mode}, trigger={trigger})"
+    )
+
+    # ==========================================================================
+    # SESSION 864 PHASE 2: CHECK FOR REAL TASK (Initiative Queue)
+    # If this is a scheduled run without topic, try to get a real task first
+    # ==========================================================================
+    real_task = None
+    if topic is None and not is_warmup:
+        real_task = _get_next_task_for_agent(agent_name)
+        if real_task:
+            topic = real_task.get('topic')
+            initiative_id = real_task.get('initiative_id')
+            trigger = 'initiative'
+            run_mode = 'production'
+            logger.info(f"🤖 [SKIN LAYER] Found real task for {agent_name}: {topic[:50]}...")
+
+    # ==========================================================================
+    # SESSION 864 PHASE 1: WARMUP MODE - Just verify agent works, no content
+    # ==========================================================================
+    if is_warmup and not real_task:
+        logger.info(f"🔄 [WARMUP] {agent_name} - Infra check only, no content generation")
+        return _run_agent_warmup(agent_name)
 
     # Get agent config
     config = AGENT_WORKSPACE_REGISTRY.get(agent_name)
@@ -27318,79 +27359,65 @@ def universal_agent_workspace_output(agent_name: str, topic: str = None):
     try:
         user = User.objects.filter(is_superuser=True).first()
         if not user:
-            return {'success': False, 'error': 'No admin user found'}
+            return {'success': False, 'error': 'No admin user found', 'run_mode': run_mode}
 
         workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
         if not workspace:
-            return {'success': False, 'error': 'No active workspace found'}
+            return {'success': False, 'error': 'No active workspace found', 'run_mode': run_mode}
 
-        # Determine topic
+        # Determine topic - use provided or fall back to default
         actual_topic = topic or config['default_topic']
         task_description = config['task_template'].format(topic=actual_topic)
 
         # Dynamically import and instantiate agent
-        agent_class = None
-
-        # Try common module patterns
-        module_patterns = [
-            f"core.agents.{agent_name.lower().replace('agent', '_agent')}",
-            f"core.agents.{agent_name.lower()}",
-            f"core.agents.{agent_name[0].lower() + agent_name[1:]}",
-        ]
-
-        # Convert CamelCase to snake_case for module name
-        import re
-        snake_name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', agent_name)
-        snake_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', snake_name).lower()
-        module_patterns.insert(0, f"core.agents.{snake_name}")
-
-        for module_path in module_patterns:
-            try:
-                module = importlib.import_module(module_path)
-                if hasattr(module, agent_name):
-                    agent_class = getattr(module, agent_name)
-                    break
-            except (ImportError, ModuleNotFoundError):
-                continue
-
-        if not agent_class:
-            # Try to get from agent registry
-            try:
-                from core.agent_router import AgentRouter
-                router = AgentRouter()
-                agent_class = router.get_agent_class(agent_name)
-            except Exception:
-                pass
+        agent_class = _get_agent_class(agent_name)
 
         if not agent_class:
             return {
                 'success': False,
                 'error': f'Could not find agent class: {agent_name}',
-                'tried_modules': module_patterns
+                'run_mode': run_mode
             }
 
         # Execute agent
         agent = agent_class()
         result = agent.execute(
             task=task_description,
-            context={'topic': actual_topic, 'output_format': 'markdown'},
+            context={
+                'topic': actual_topic,
+                'output_format': 'markdown',
+                'initiative_id': initiative_id,
+                'run_mode': run_mode,
+                'trigger_source': trigger,
+            },
             scifi_context={},
             spider_context={}
         )
 
         # Session 813: Improved output extraction from AgentResult
-        # Agents return structured data with various keys - we need to capture all of it
         output_content = _extract_agent_output_content(result, task_description)
 
-        # Format output file
+        # ==========================================================================
+        # SESSION 864 PHASE 3: QUALITY GATE - Only write meaningful content
+        # ==========================================================================
+        # For production runs, always write
+        # For warmup runs that slipped through, quarantine to .warmups/
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
         safe_topic = actual_topic[:30].replace(' ', '_').replace('/', '-').replace(':', '')
-        filename = f"{config['output_dir']}/{config['output_type']}_{safe_topic}_{timestamp}.md"
+
+        if run_mode == 'production':
+            filename = f"{config['output_dir']}/{config['output_type']}_{safe_topic}_{timestamp}.md"
+        else:
+            # Quarantine warmup output to .warmups/ directory
+            filename = f".warmups/{agent_name}/{config['output_type']}_{safe_topic}_{timestamp}.md"
 
         content = f"""# {agent_name}: {actual_topic}
 Type: {config['output_type'].replace('_', ' ').title()}
 Category: {config['category'].title()}
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Run Mode: {run_mode.upper()}
+Trigger: {trigger}
+{f'Initiative: {initiative_id}' if initiative_id else ''}
 
 ---
 
@@ -27400,7 +27427,7 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 *Generated via SKIN Layer - Universal Agent Workspace Integration*
 """
 
-        # Write to workspace
+        # Write to workspace with run_mode metadata
         manager = WorkspaceManager(user)
         operation = manager.write_file(
             workspace=workspace,
@@ -27410,9 +27437,18 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
             agent_task=task_description
         )
 
+        # Session 864: Update operation with run_mode metadata
+        if operation and operation.id:
+            WorkspaceOperation.objects.filter(pk=operation.id).update(
+                run_mode=run_mode,
+                trigger_source=trigger,
+                initiative_id=initiative_id,
+                is_warmup=(run_mode == 'warmup')
+            )
+
         logger.info(
             f"🤖 [SKIN LAYER] {agent_name} output written: {filename} "
-            f"(success: {operation.success})"
+            f"(success: {operation.success}, run_mode: {run_mode})"
         )
 
         return {
@@ -27421,12 +27457,167 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
             'category': config['category'],
             'file': filename,
             'topic': actual_topic,
-            'operation_id': str(operation.id)
+            'operation_id': str(operation.id),
+            'run_mode': run_mode,
+            'trigger_source': trigger,
+            'initiative_id': initiative_id,
         }
 
     except Exception as e:
         logger.error(f"🤖 [SKIN LAYER] {agent_name} execution failed: {e}", exc_info=True)
-        return {'success': False, 'agent': agent_name, 'error': str(e)}
+        return {'success': False, 'agent': agent_name, 'error': str(e), 'run_mode': run_mode}
+
+
+def _get_agent_class(agent_name: str):
+    """Get agent class by name, trying multiple module patterns."""
+    import importlib
+    import re
+
+    # Try common module patterns
+    module_patterns = [
+        f"core.agents.{agent_name.lower().replace('agent', '_agent')}",
+        f"core.agents.{agent_name.lower()}",
+        f"core.agents.{agent_name[0].lower() + agent_name[1:]}",
+    ]
+
+    # Convert CamelCase to snake_case for module name
+    snake_name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', agent_name)
+    snake_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', snake_name).lower()
+    module_patterns.insert(0, f"core.agents.{snake_name}")
+
+    for module_path in module_patterns:
+        try:
+            module = importlib.import_module(module_path)
+            if hasattr(module, agent_name):
+                return getattr(module, agent_name)
+        except (ImportError, ModuleNotFoundError):
+            continue
+
+    # Try agent router as fallback
+    try:
+        from core.agent_router import AgentRouter
+        router = AgentRouter()
+        return router.get_agent_class(agent_name)
+    except Exception:
+        return None
+
+
+def _run_agent_warmup(agent_name: str) -> dict:
+    """
+    Session 864: Infra warmup for an agent - verify it works without content generation.
+
+    This replaces content-generating warmups with lightweight health checks:
+    - Verify agent class can be loaded
+    - Verify agent can be instantiated
+    - Optionally do a minimal LLM ping (5-20 tokens)
+    - NO file creation, NO default_topic content
+
+    Returns:
+        Health check result dict
+    """
+    import time
+    start_time = time.time()
+
+    try:
+        # 1. Verify agent class exists
+        agent_class = _get_agent_class(agent_name)
+        if not agent_class:
+            return {
+                'success': False,
+                'agent': agent_name,
+                'run_mode': 'warmup',
+                'check': 'class_load',
+                'error': 'Agent class not found'
+            }
+
+        # 2. Verify agent can be instantiated
+        try:
+            agent = agent_class()
+        except Exception as e:
+            return {
+                'success': False,
+                'agent': agent_name,
+                'run_mode': 'warmup',
+                'check': 'instantiation',
+                'error': str(e)
+            }
+
+        # 3. Check if agent has required methods
+        has_execute = hasattr(agent, 'execute')
+        has_tools = hasattr(agent, 'tools')
+
+        execution_time_ms = int((time.time() - start_time) * 1000)
+
+        logger.info(
+            f"✅ [WARMUP] {agent_name} healthy: "
+            f"class=✓, instance=✓, execute={has_execute}, tools={has_tools} "
+            f"({execution_time_ms}ms)"
+        )
+
+        return {
+            'success': True,
+            'agent': agent_name,
+            'run_mode': 'warmup',
+            'checks': {
+                'class_load': True,
+                'instantiation': True,
+                'has_execute': has_execute,
+                'has_tools': has_tools,
+            },
+            'execution_time_ms': execution_time_ms,
+            'file_created': False,  # Key: no file output
+        }
+
+    except Exception as e:
+        logger.warning(f"❌ [WARMUP] {agent_name} failed: {e}")
+        return {
+            'success': False,
+            'agent': agent_name,
+            'run_mode': 'warmup',
+            'error': str(e)
+        }
+
+
+def _get_next_task_for_agent(agent_name: str) -> dict | None:
+    """
+    Session 864: Get next real task from the initiative queue for an agent.
+
+    Checks for:
+    1. Initiative stages that need this agent
+    2. PublishGate backlog (needs enhancement)
+    3. Failed jobs in retry queue
+    4. Approved dreams with execution pending
+
+    Returns:
+        Task dict with topic, initiative_id, etc. or None if no real work.
+    """
+    try:
+        from core.models import Initiative, InitiativeStage
+
+        # Check for initiative stages needing this agent
+        # Stages have assigned_agent or agent_type that matches
+        pending_stage = InitiativeStage.objects.filter(
+            status='pending',
+            assigned_agent=agent_name
+        ).select_related('initiative').first()
+
+        if pending_stage:
+            return {
+                'topic': pending_stage.description or pending_stage.initiative.title,
+                'initiative_id': str(pending_stage.initiative.id),
+                'stage_id': str(pending_stage.id),
+                'source': 'initiative_stage',
+            }
+
+        # TODO: Check PublishGate backlog
+        # TODO: Check retry queue
+        # TODO: Check approved dreams
+
+        return None
+
+    except Exception as e:
+        logger.debug(f"Error getting next task for {agent_name}: {e}")
+        return None
 
 
 @shared_task(name='core.tasks.agent_category_rotation')
