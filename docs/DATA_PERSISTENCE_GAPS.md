@@ -13,7 +13,7 @@ During Session 861, we discovered that **96% of blog posts were being lost** in 
 | Risk Level | Category | Data Loss Rate | Status |
 |------------|----------|----------------|--------|
 | **CRITICAL** | Agent Content | ~96% (111/115 blogs) | ✅ Fixed (Session 860-861) |
-| **HIGH** | Tool Call Results | 100% | ⚠️ Needs Fix |
+| **HIGH** | Tool Call Results | 100% | ✅ Fixed (Session 861) |
 | **MEDIUM** | Learning Data | Potential total loss | ⚠️ Needs Fix |
 | **MEDIUM** | Decision Traces | ~90% not recorded | ⚠️ Needs Fix |
 | **MEDIUM** | Spider Aggregations | No caching | ⚠️ Needs Fix |
@@ -46,47 +46,65 @@ See `docs/plans/AGENT_PERSISTENCE_FIX_PLAN.md` for complete list.
 
 ---
 
-## 2. Tool Call Results (HIGH RISK)
+## 2. Tool Call Results (FIXED - Session 861)
 
-### Problem
-When agents call tools (web search, API calls, file reads), the results are:
+### Problem (Solved)
+When agents call tools (web search, API calls, file reads), the results were:
 - Processed inline during execution
 - Never persisted to any database
 - Lost completely after the request completes
 
-### Impact
-- **No audit trail** of what data agents actually used
-- Cannot replay or debug agent decisions
-- Cannot verify if agent made correct tool calls
-- Cannot detect if tool results were manipulated
-
-### Current Architecture
-```python
-# In BaseAgent.execute()
-tool_result = self._call_tool(tool_name, params)  # Result used inline
-# tool_result is never stored anywhere!
-```
-
-### Recommended Fix
-Create `ToolCallRecord` model:
+### Solution Implemented
+**PR #439** - Added `ToolCallRecord` model and recording infrastructure:
 
 ```python
+# New models in core/models_tool_calls.py
 class ToolCallRecord(models.Model):
     trace_id = models.UUIDField()
     agent_name = models.CharField(max_length=255)
     tool_name = models.CharField(max_length=100)
     parameters = models.JSONField()
-    result_summary = models.TextField()  # First 2KB
-    result_hash = models.CharField(max_length=64)  # SHA256 of full result
-    full_result = models.TextField(null=True)  # Optional, for debugging
+    result_summary = models.TextField()  # First 4KB
+    result_hash = models.CharField(max_length=72)  # sha256:...
+    full_result = models.TextField()  # If under 64KB
     latency_ms = models.IntegerField()
     success = models.BooleanField()
-    error_message = models.TextField(null=True)
+    error_message = models.TextField()
+    error_type = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class ToolCallAggregate(models.Model):
+    # Daily statistics per agent/tool for dashboards
+    agent_name = models.CharField(max_length=255)
+    tool_name = models.CharField(max_length=100)
+    date = models.DateField()
+    total_calls = models.IntegerField()
+    success_calls = models.IntegerField()
+    avg_latency_ms = models.IntegerField()
+    # ...
 ```
 
-### Priority
-**HIGH** - This is the most significant remaining data gap.
+### New BaseAgent Methods
+```python
+# Automatic recording wrapper
+result = agent._execute_and_record_tool_call(
+    tool_name='analyze_filing',
+    arguments={'ticker': 'AAPL'},
+    trace_id=trace_id
+)
+
+# Manual recording
+agent._record_tool_call(
+    tool_name='web_search',
+    arguments={'query': 'AI trends'},
+    result=search_results,
+    latency_ms=350,
+    success=True
+)
+```
+
+### Status
+✅ **FIXED** - PR #439 merged Session 861
 
 ---
 
@@ -276,15 +294,17 @@ def process_agent_feedback(sender, instance, created, **kwargs):
 - [x] Agent Content persistence via Deliverable model
 - [x] 22 agents fixed (8 in Phase 1, 14 in Phase 2)
 
-### Phase 2: High Priority (Recommended Next)
-- [ ] Tool Call Results - `ToolCallRecord` model
-- [ ] Learning Data - Database backup layer
+### Phase 2: Complete (Session 861)
+- [x] Tool Call Results - `ToolCallRecord` model (PR #439)
 
-### Phase 3: Medium Priority
+### Phase 3: High Priority (Recommended Next)
+- [ ] Learning Data - Database backup layer for Redis
+
+### Phase 4: Medium Priority
 - [ ] Decision Traces - Default-on recording
 - [ ] Spider Aggregations - Caching layer
 
-### Phase 4: Low Priority
+### Phase 5: Low Priority
 - [ ] User Feedback Loop - Processing pipeline
 
 ---
