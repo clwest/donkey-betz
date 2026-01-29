@@ -32,6 +32,7 @@ import {
   FlaskConical,  // Session 865: ConceptForge tab icon
   Briefcase,  // Session 866: Career tab icon
   Mic,  // Session 869: Voice Marketplace tab icon
+  GraduationCap,  // Session 870: Learning Journey tab icon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -60,6 +61,7 @@ import {
   ConceptForgeTab,  // Session 865: ConceptForge Dossier Pipeline
   CareerTab,  // Session 866: ATS Resume Optimizer
   VoiceMarketplaceTab,  // Session 869: Voice Marketplace
+  LearningJourneyTab,  // Session 870: Learning Journey Dashboard
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -82,6 +84,7 @@ const tabs = [
   { id: 'conceptforge' as WorkspaceTab, label: 'Dossiers', icon: FlaskConical },  // Session 865
   { id: 'career' as WorkspaceTab, label: 'Career', icon: Briefcase },  // Session 866
   { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },  // Session 869
+  { id: 'learning' as WorkspaceTab, label: 'Learn', icon: GraduationCap },  // Session 870
 ]
 
 // Workspace Selector Modal
@@ -920,6 +923,9 @@ export default function WorkspacePage() {
 
           {/* Session 869: Voice Marketplace */}
           {activeTab === 'voices' && <VoiceMarketplaceTab />}
+
+          {/* Session 870: Learning Journey Dashboard */}
+          {activeTab === 'learning' && <LearningJourneyTab />}
         </>
       )}
 
