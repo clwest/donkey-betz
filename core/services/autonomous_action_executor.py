@@ -499,6 +499,20 @@ class AutonomousActionExecutor:
         owner_agent = params.get('owner_agent', 'ResearchAgent')
         deadline_hours = params.get('deadline_hours', 72)
 
+        # Session 866: Inject internal data source context
+        # This teaches the agent about available DonkeyBetz data sources
+        from core.services.internal_data_registry import (
+            build_agent_data_context,
+            get_data_source_for_topic
+        )
+
+        # Check if this topic has internal data sources
+        internal_sources = get_data_source_for_topic(topic)
+        internal_data_context = ""
+        if internal_sources:
+            internal_data_context = build_agent_data_context(topic, max_sources=3)
+            logger.info(f"[Session 866] Found {len(internal_sources)} internal data sources for topic: {topic}")
+
         # Build comprehensive research task including deliverables
         task_parts = [f"Research topic: {topic}"]
         task_parts.append(f"Depth: {depth}")
@@ -510,6 +524,12 @@ class AutonomousActionExecutor:
 
         if reasoning:
             task_parts.append(f"\nContext: {reasoning}")
+
+        # Session 866: Add internal data context to task
+        if internal_data_context:
+            task_parts.append("\n" + internal_data_context)
+            task_parts.append("\n**IMPORTANT:** Query the internal DonkeyBetz data sources above.")
+            task_parts.append("Do NOT request BigQuery, Snowflake, or external database access.")
 
         full_task = "\n".join(task_parts)
 
@@ -782,51 +802,76 @@ class AutonomousActionExecutor:
 
         Instead of generic mentions like "BigQuery" or "Snowflake", map to our actual
         database models for actionable integration.
-        """
-        # Map of generic terms to actual DonkeyBetz models/tables
-        SYSTEM_BINDING_MAP = {
-            # Data storage
-            'database': 'core.models (PostgreSQL + pgvector)',
-            'bigquery': 'SpiderData / BusinessResearchResult',
-            'snowflake': 'SpiderData / ContentMetrics',
-            'data warehouse': 'SpiderData + ResearchResult + ContentMetrics',
-            'analytics': 'core.services.analytics_service / ContentMetrics',
 
-            # Content storage
-            'content': 'SelfBlog / Deliverable / ContentMetrics',
-            'blog': 'SelfBlog (category=blog)',
-            'research': 'SelfBlog (category=research_brief) / BusinessResearchResult',
-            'document': 'Deliverable / SelfBlog',
+        Enhanced: Now uses internal_data_registry for more specific mappings.
+        """
+        # Map of generic external terms to actual DonkeyBetz models/tables
+        EXTERNAL_TO_INTERNAL_MAP = {
+            # External DB references -> Internal
+            'bigquery': 'Use: SpiderData, BusinessResearchResult (direct Django ORM)',
+            'snowflake': 'Use: SpiderData, ContentMetrics (direct Django ORM)',
+            'redshift': 'Use: SpiderData, AgentExecution (direct Django ORM)',
+            'data warehouse': 'Use: SpiderData + ResearchResult + ContentMetrics',
+            'csv export': 'Use: Django ORM queryset, export via management command',
+            'parquet': 'Use: Django ORM queryset with pandas DataFrame export',
+
+            # Generic terms -> Specific internal models
+            'database': 'PostgreSQL + pgvector via Django ORM',
+            'analytics': 'core.services.analytics_service + ContentMetrics model',
+            'experiment data': 'ExperimentExecution model (status, halt_reason, metrics)',
+            'experiment': 'ExperimentExecution model',
+            'halt': 'ExperimentExecution.objects.filter(status="auto_halted")',
+            'failed': 'Filter by status="failed" or success=False',
+
+            # Content
+            'content': 'SelfBlog / Deliverable models',
+            'blog': 'SelfBlog.objects.filter(category="blog")',
+            'research report': 'SelfBlog.objects.filter(category="research_brief")',
+            'document': 'Deliverable model',
 
             # Spider data
-            'spider': 'SpiderData / ai_core.spiders',
-            'crawler': 'SpiderData / SpiderConfig',
-            'scraper': 'ai_core.spiders (Scrapy framework)',
+            'spider': 'SpiderData model (77 spiders available)',
+            'crawl': 'SpiderData model',
+            'scrape': 'ai_core.spiders (Scrapy framework)',
+            'external data': 'SpiderData model',
 
             # Agent system
-            'agent': 'core.agents + Agent (database registry)',
-            'workflow': 'AgentExecution + Initiative',
-            'pipeline': 'Initiative (5-stage) + ConceptForgeRun',
+            'agent': 'AgentExecution model + core.agents/',
+            'execution': 'AgentExecution model',
+            'workflow': 'Initiative model (5-stage pipeline)',
+            'pipeline': 'Initiative + ConceptForgeRun models',
 
             # Learning
             'ml': 'ml/ models + AgentModelRouter',
-            'embedding': 'pgvector embeddings on SelfBlog/SpiderData',
-            'model': 'LLMProvider / LLMModel (6 providers, 16 models)',
+            'learning': 'AgentLearning model',
+            'feedback': 'DecisionRecord, ToolCallRecord models',
 
             # User data
-            'user': 'User + ExtendedUserProfile',
-            'customer': 'BusinessResearchResult (research_type=customer)',
-            'persona': 'CustomerResearchAgent output',
+            'user': 'User + ExtendedUserProfile models',
+            'customer': 'BusinessResearchResult (research_type="customer")',
         }
 
         bindings = {}
         findings_lower = (findings or '').lower()
         topic_lower = (topic or '').lower()
+        combined_text = f"{findings_lower} {topic_lower}"
 
         # Check for matches in findings and topic
-        for generic_term, donkey_binding in SYSTEM_BINDING_MAP.items():
-            if generic_term in findings_lower or generic_term in topic_lower:
+        for generic_term, donkey_binding in EXTERNAL_TO_INTERNAL_MAP.items():
+            if generic_term in combined_text:
                 bindings[generic_term.title()] = donkey_binding
+
+        # Also check internal_data_registry for more specific matches
+        try:
+            from core.services.internal_data_registry import get_data_source_for_topic
+            internal_sources = get_data_source_for_topic(topic)
+            for source in internal_sources[:3]:  # Top 3 matches
+                source_name = source.get('name', '')
+                source_model = source.get('model', '')
+                if source_name and source_model:
+                    bindings[f"[Internal] {source_name}"] = source_model
+        except Exception as e:
+            logger.warning(f"Could not load internal data registry: {e}")
 
         return bindings
 
