@@ -1,4 +1,4 @@
-# Session 864: Content Intelligence Layer Improvements
+# Session 864: Content Intelligence + Run Mode Tracking
 
 **Date:** January 28, 2026
 **Status:** COMPLETE
@@ -8,7 +8,16 @@
 
 ## Overview
 
-This session improved the Content Intelligence Layer (from Session 862) based on production data analysis. After running `apply_publish_gate --all --dry-run` on production, we identified three key issues:
+This session had two major parts:
+
+1. **Content Intelligence Improvements** - Refined PublishGate thresholds and added EditorAgent
+2. **Run Mode Tracking** - Implemented 3-phase system to separate warmup exercises from production work
+
+---
+
+## Part 1: Content Intelligence Improvements
+
+After running `apply_publish_gate --all --dry-run` on production, we identified three key issues:
 
 | Metric | Before | After |
 |--------|--------|-------|
@@ -211,9 +220,156 @@ Add enhancement task to periodic schedule:
 
 ---
 
+---
+
+## Part 2: Run Mode Tracking (Warmup vs Production)
+
+### Problem
+The Operations Tab was showing generic agent-generated content like "Python utility functions" because `exercise_all_dormant_agents` was generating real content using default topics.
+
+### Root Cause
+`universal_agent_workspace_output()` was called for both:
+1. Real production work (user requests, initiatives, dreams)
+2. Exercise/warmup runs (health checks for dormant agents)
+
+Both paths created real files and database records, polluting the workspace.
+
+### Solution: 3-Phase Implementation
+
+#### Phase 0: Signal Classification
+Added run mode tracking to `WorkspaceOperation` model:
+
+```python
+# core/models_skin_layer.py
+RUN_MODE_CHOICES = [
+    ('production', 'Production'),
+    ('warmup', 'Warmup/Exercise'),
+]
+
+TRIGGER_SOURCE_CHOICES = [
+    ('initiative', 'Initiative Stage'),
+    ('user', 'User Request'),
+    ('dream', 'Dream Execution'),
+    ('schedule', 'Scheduled Task'),
+    ('warmup', 'Warmup/Exercise'),
+    ('self_healing', 'Self-Healing'),
+    ('conceptforge', 'ConceptForge'),
+    ('unknown', 'Unknown'),
+]
+
+run_mode = models.CharField(...)       # production or warmup
+trigger_source = models.CharField(...) # what triggered execution
+initiative_id = models.UUIDField(...)  # FK to initiative
+is_warmup = models.BooleanField(...)   # quick filter flag
+```
+
+**Migration:** `0207_session_864_run_mode_tracking.py`
+
+#### Phase 1: Infra-Only Warmup
+Rewrote `exercise_all_dormant_agents()` to use `_run_agent_warmup()`:
+
+```python
+def _run_agent_warmup(agent_name: str) -> dict:
+    """Verify agent works WITHOUT content generation."""
+    # 1. Verify agent class exists
+    # 2. Verify agent can be instantiated
+    # 3. Check required methods (execute, tools)
+    # NO file creation, NO LLM calls
+    return {
+        'success': True,
+        'agent': agent_name,
+        'run_mode': 'warmup',
+        'file_created': False,  # Key difference
+    }
+```
+
+#### Phase 2: Initiative Queue
+Added `_get_next_task_for_agent()` to pull real work:
+
+```python
+def _get_next_task_for_agent(agent_name: str) -> Optional[dict]:
+    """Check for pending initiative work for this agent."""
+    pending = InitiativeStage.objects.filter(
+        assigned_agent=agent_name,
+        status='pending',
+    ).order_by('created_at').first()
+
+    if pending:
+        return {
+            'initiative_id': str(pending.initiative_id),
+            'stage_number': pending.stage_number,
+            'topic': pending.description,
+            'trigger_source': 'initiative',
+        }
+    return None
+```
+
+#### Phase 3: Quality Gate
+Updated `universal_agent_workspace_output()` with intent-based routing:
+
+```python
+# PRODUCTION: Full execution with file output
+if run_mode == 'production':
+    result = agent.execute(task=topic, ...)
+    _save_to_workspace(result)
+    _create_operation_record(run_mode='production', ...)
+
+# WARMUP: Telemetry only, quarantine to .warmups/
+if run_mode == 'warmup':
+    result = _run_agent_warmup(agent_name)
+    _save_warmup_telemetry(result)
+    # NO workspace files created
+```
+
+### API Changes
+
+Operations endpoint now filters out warmups by default:
+
+```python
+# core/views_workspace_api.py
+def get_queryset(self):
+    queryset = WorkspaceOperation.objects.all()
+
+    # Session 864: Exclude warmups by default
+    include_warmups = self.request.query_params.get('include_warmups', 'false')
+    if include_warmups.lower() != 'true':
+        queryset = queryset.filter(is_warmup=False)
+
+    # Filter by run_mode if specified
+    run_mode = self.request.query_params.get('run_mode')
+    if run_mode:
+        queryset = queryset.filter(run_mode=run_mode)
+```
+
+**Usage:**
+- `GET /api/workspace/operations/` - Production operations only (default)
+- `GET /api/workspace/operations/?include_warmups=true` - All operations
+- `GET /api/workspace/operations/?run_mode=warmup` - Warmup only
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/models_skin_layer.py` | Added run_mode, trigger_source, initiative_id, is_warmup fields + indexes |
+| `core/tasks.py` | Rewrote universal_agent_workspace_output, added _run_agent_warmup, _get_next_task_for_agent |
+| `core/views_workspace_api.py` | Added warmup filtering to Operations endpoint |
+| `.gitignore` | Added `.warmups/` quarantine directory |
+
+### Result
+
+| Behavior | Before | After |
+|----------|--------|-------|
+| Exercise runs | Generated real content with default topics | Infra check only, no files |
+| Operations Tab | Mixed production + warmup noise | Clean production-only view |
+| Initiative queue | Unused | Agents pull real tasks first |
+| Warmup tracking | No distinction | Full metadata + filtering |
+
+---
+
 ## Agent Count Update
 
 | Type | Count |
 |------|-------|
 | **Agents** | 75 (+1 EditorAgent) |
 | **Celery Tasks** | 240 (+2) |
+| **Database Models** | 378+ (WorkspaceOperation updated) |
