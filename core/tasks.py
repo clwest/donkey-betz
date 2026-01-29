@@ -29830,3 +29830,228 @@ def invalidate_spider_aggregations(category: str = None, spider_name: str = None
 
     SpiderAggregation.invalidate(category=category, spider_name=spider_name)
     logger.debug(f"📊 Session 861: Invalidated aggregations for {category or spider_name or 'all'}")
+
+
+# ============================================================
+# Session 863: ConceptForge Pipeline Tasks
+# ============================================================
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120)
+def run_conceptforge_pipeline(
+    self,
+    source_type: str,
+    source_id: str,
+    source_title: str,
+    domain: str,
+    quality_score: float = 0.0,
+    triggered_by: str = 'celery',
+    user_id: int = None
+):
+    """
+    Session 863: Execute a ConceptForge pipeline run.
+
+    This is the main entry point for async ConceptForge execution.
+    Creates a run, executes all stages, and produces a dossier.
+
+    Args:
+        source_type: Type of source content (blog, decision_summary, etc.)
+        source_id: UUID of source content
+        source_title: Title for display
+        domain: Domain lab to use (legal, market, tech, etc.)
+        quality_score: Quality score of source content
+        triggered_by: What triggered this run (signal, manual, celery_beat)
+        user_id: Optional user ID for permission context
+    """
+    from core.conceptforge import ConceptForgeOrchestrator
+
+    logger.info(f"🔮 [CONCEPTFORGE] Starting pipeline for '{source_title}' in {domain}Lab")
+
+    try:
+        # Get user if specified
+        user = None
+        if user_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                pass
+
+        # Create orchestrator
+        orchestrator = ConceptForgeOrchestrator(user=user)
+
+        # Start the pipeline
+        run = orchestrator.start_pipeline(
+            source_type=source_type,
+            source_id=source_id,
+            source_title=source_title,
+            domain=domain,
+            quality_score=quality_score,
+            triggered_by=triggered_by,
+            celery_task_id=self.request.id,
+        )
+
+        # Execute the pipeline
+        success = orchestrator.execute_run(run)
+
+        if success:
+            logger.info(
+                f"🔮 [CONCEPTFORGE] Pipeline completed for '{source_title}' "
+                f"(run_id={run.id}, duration={run.duration_ms}ms)"
+            )
+            return {
+                'status': 'completed',
+                'run_id': str(run.id),
+                'domain': domain,
+                'duration_ms': run.duration_ms,
+                'stage_count': run.stages.count(),
+            }
+        else:
+            logger.error(
+                f"🔮 [CONCEPTFORGE] Pipeline failed for '{source_title}': {run.error}"
+            )
+            return {
+                'status': 'failed',
+                'run_id': str(run.id),
+                'error': run.error,
+            }
+
+    except Exception as e:
+        logger.exception(f"🔮 [CONCEPTFORGE] Pipeline error for '{source_title}': {e}")
+
+        # Retry on transient errors
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e, countdown=120)
+
+        return {
+            'status': 'failed',
+            'error': str(e),
+        }
+
+
+@shared_task
+def promote_to_conceptforge(
+    source_type: str,
+    source_id: str,
+    domain: str = None,
+    user_id: int = None
+):
+    """
+    Session 863: Manually promote content to ConceptForge.
+
+    Use this to trigger ConceptForge on content that didn't meet
+    the automatic gate criteria, or to run with a specific domain.
+
+    Args:
+        source_type: Type of source content
+        source_id: UUID of source content
+        domain: Optional domain override (auto-detects if not specified)
+        user_id: User triggering the promotion
+    """
+    logger.info(f"🔮 [CONCEPTFORGE] Manual promotion: {source_type} {source_id}")
+
+    try:
+        # Get source content
+        if source_type == 'blog':
+            from core.models_unified_system import SelfBlog
+            source = SelfBlog.objects.get(id=source_id)
+            source_title = source.title
+            tags = source.tags if isinstance(source.tags, list) else []
+            quality_score = 0.90  # Manual promotion assumes quality
+        else:
+            source_title = f"{source_type}:{source_id}"
+            tags = []
+            quality_score = 0.85
+
+        # Determine domain if not specified
+        if not domain:
+            from core.conceptforge import ConceptForgeOrchestrator
+            orchestrator = ConceptForgeOrchestrator()
+            _, _, domain = orchestrator.should_trigger(
+                quality_score=quality_score,
+                tags=tags,
+                force=True,
+            )
+            domain = domain or 'tech'
+
+        # Trigger the pipeline
+        run_conceptforge_pipeline.delay(
+            source_type=source_type,
+            source_id=str(source_id),
+            source_title=source_title,
+            domain=domain,
+            quality_score=quality_score,
+            triggered_by='manual_promotion',
+            user_id=user_id,
+        )
+
+        return {
+            'status': 'queued',
+            'domain': domain,
+            'source_title': source_title,
+        }
+
+    except Exception as e:
+        logger.exception(f"🔮 [CONCEPTFORGE] Promotion failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e),
+        }
+
+
+@shared_task
+def run_conceptforge_stage(
+    run_id: str,
+    stage_name: str
+):
+    """
+    Session 863: Execute a single ConceptForge stage.
+
+    Used for individual stage retries or parallel stage execution.
+
+    Args:
+        run_id: UUID of the ConceptForge run
+        stage_name: Name of stage to execute
+    """
+    from core.models_conceptforge import ConceptForgeRun, ConceptForgeStageRun
+    from core.conceptforge import ConceptForgeOrchestrator, get_lab_config
+
+    logger.info(f"🔮 [CONCEPTFORGE] Running stage '{stage_name}' for run {run_id}")
+
+    try:
+        run = ConceptForgeRun.objects.get(id=run_id)
+        stage = run.stages.get(stage_name=stage_name)
+        lab_config = get_lab_config(run.domain)
+
+        if not lab_config:
+            stage.fail(f"No lab config for domain: {run.domain}")
+            return {'status': 'failed', 'error': 'no lab config'}
+
+        # Get previous outputs
+        previous_outputs = {}
+        for prev_stage in run.stages.filter(status='completed').order_by('stage_order'):
+            if prev_stage.stage_order < stage.stage_order:
+                previous_outputs[prev_stage.stage_name] = prev_stage.output_text
+
+        # Execute stage
+        orchestrator = ConceptForgeOrchestrator(user=run.user)
+        success = orchestrator._execute_stage(
+            run=run,
+            stage=stage,
+            lab_config=lab_config,
+            previous_outputs=previous_outputs,
+        )
+
+        return {
+            'status': 'completed' if success else 'failed',
+            'stage': stage_name,
+            'output_length': len(stage.output_text) if stage.output_text else 0,
+        }
+
+    except Exception as e:
+        logger.exception(f"🔮 [CONCEPTFORGE] Stage {stage_name} failed: {e}")
+        return {
+            'status': 'failed',
+            'stage': stage_name,
+            'error': str(e),
+        }

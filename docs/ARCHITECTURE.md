@@ -1,7 +1,7 @@
 # System Architecture
 
 **Platform:** Unified Donkey Betz - AI Content Creation Empire
-**Last Updated:** January 28, 2026 (Session 858)
+**Last Updated:** January 28, 2026 (Session 863)
 **Total Lines of Code:** 200,000+
 
 ---
@@ -713,10 +713,47 @@ CELERY_BEAT_SCHEDULE = {
 
 ---
 
+## ConceptForge: Autonomous Think Tank Pipeline (Session 863)
+
+Transforms published content into comprehensive dossiers through 6-stage analysis.
+
+```
+SelfBlog (published, quality >= 0.80)
+    ↓ [Django signal]
+ConceptForgeRun
+    ↓ [domain router]
+DomainLab (Legal | Market | Tech | Content | Startup | Career)
+    ↓
+┌──────────────────────────────────────────────────────────────┐
+│ Stage 1: Research   → ResearchAgent + Persona Advisors      │
+│ Stage 2: Debate     → Legendary Advisors (pro/con)          │
+│ Stage 3: Feasibility→ SystemsArchitectAgent                 │
+│ Stage 4: Risk       → RiskAnalysisAgent + Legal Personas    │
+│ Stage 5: Market     → MarketIntelligenceAgent               │
+│ Stage 6: Synthesis  → ThinkingAgent → Dossier               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Key Design:**
+- Config-first labs (no migrations needed for new domains)
+- Advisor panel snapshotted per run (reproducibility)
+- Legendary advisors as constraints, core agents as writers
+- Gate logic: quality_score >= 0.80 + strategic_tag
+
+**Files:**
+- `core/conceptforge/` - Package with labs, panels, orchestrator
+- `core/models_conceptforge.py` - Run tracking models
+- `core/signals.py` - SelfBlog publish trigger
+
+See [CONCEPTFORGE.md](CONCEPTFORGE.md) for full documentation.
+
+---
+
 ## Related Documentation
 
 - [AGENTS.md](AGENTS.md) - Detailed agent documentation
 - [SPIDERS.md](SPIDERS.md) - Spider network details
+- [CONCEPTFORGE.md](CONCEPTFORGE.md) - Autonomous think tank pipeline
 - [EXTERNAL_APIS.md](EXTERNAL_APIS.md) - API integration details
 - [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) - Learning flow
 - [DAVINCI_RESOLVE.md](DAVINCI_RESOLVE.md) - Unused $300 render node
