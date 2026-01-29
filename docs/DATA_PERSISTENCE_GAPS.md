@@ -16,7 +16,7 @@ During Session 861, we discovered that **96% of blog posts were being lost** in 
 | **HIGH** | Tool Call Results | 100% | ✅ Fixed (Session 861) |
 | **MEDIUM** | Learning Data | Potential total loss | ✅ Fixed (Session 861) |
 | **MEDIUM** | Decision Traces | ~90% not recorded | ✅ Fixed (Session 861) |
-| **MEDIUM** | Spider Aggregations | No caching | ⚠️ Needs Fix |
+| **MEDIUM** | Spider Aggregations | No caching | ✅ Fixed (Session 861) |
 | **LOW-MEDIUM** | User Feedback Loop | Incomplete | ⚠️ Needs Fix |
 | **LOW** | Conversations | Well-handled | ✅ OK |
 | **LOW** | File Operations | Audited | ✅ OK |
@@ -231,47 +231,70 @@ agent._record_decision(
 
 ---
 
-## 5. Spider Aggregations (MEDIUM RISK)
+## 5. Spider Aggregations (FIXED - Session 861)
 
-### Problem
-Spider results are:
+### Problem (Solved)
+Spider results were:
 - Stored individually in `SpiderResult` model ✅
-- But aggregations/analyses are computed on-the-fly
+- But aggregations/analyses were computed on-the-fly
 - No caching of expensive computations
 
-### Impact
-- Same expensive aggregations re-computed repeatedly
-- Slow response times for dashboards
-- Wasted compute resources
-- Cannot compare historical aggregations
-
-### Recommended Fix
-Add `SpiderAggregation` model:
+### Solution Implemented
+**PR #443** - Added spider aggregation caching system:
 
 ```python
+# New models in core/models_spider_aggregation.py
+
 class SpiderAggregation(models.Model):
-    aggregation_type = models.CharField(max_length=100)  # daily_summary, trend, etc.
-    spider_category = models.CharField(max_length=100)
-    date_range_start = models.DateTimeField()
-    date_range_end = models.DateTimeField()
+    """Cached aggregation results for spider data."""
+    aggregation_type = models.CharField(max_length=50, db_index=True)  # daily_summary, category_summary, etc.
+    category = models.CharField(max_length=100, blank=True, db_index=True)
+    spider_name = models.CharField(max_length=100, blank=True, db_index=True)
+    date_range_start = models.DateTimeField(db_index=True)
+    date_range_end = models.DateTimeField(db_index=True)
     aggregation_data = models.JSONField()
+    computation_time_ms = models.IntegerField(default=0)
+    expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
     computed_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ['aggregation_type', 'spider_category', 'date_range_start']
+class TrendDataPoint(models.Model):
+    """Time-series data points for spider trends."""
+    trend_type = models.CharField(max_length=50, db_index=True)
+    category = models.CharField(max_length=100, blank=True, db_index=True)
+    granularity = models.CharField(max_length=20, db_index=True)  # hourly, daily, weekly
+    timestamp = models.DateTimeField(db_index=True)
+    value = models.FloatField()
+    metadata = models.JSONField(default=dict)
 ```
 
-Add Celery task for pre-computation:
+### Celery Task for Pre-computation
 ```python
+# Added to core/tasks.py
 @shared_task
 def compute_spider_aggregations():
-    """Run hourly via Celery Beat"""
-    for category in SpiderCategory.objects.all():
-        compute_aggregation(category, 'hourly')
+    """
+    Session 861: Pre-compute spider aggregations for caching.
+    Runs hourly via Celery Beat.
+    """
+    # Computes daily_summary, category_summaries, trend_data_points
 ```
 
-### Priority
-**MEDIUM** - Performance and historical analysis impact.
+### Helper Methods
+```python
+# Get cached or compute on-demand
+data, from_cache = SpiderAggregation.get_cached_or_compute(
+    aggregation_type='category_summary',
+    category='financial',
+    compute_fn=lambda: compute_category_summary('financial'),
+    ttl_hours=1,
+)
+
+# Invalidate cache when new data arrives
+SpiderAggregation.invalidate(category='financial')
+```
+
+### Status
+✅ **FIXED** - PR #443 merged Session 861
 
 ---
 
@@ -324,8 +347,8 @@ def process_agent_feedback(sender, instance, created, **kwargs):
 - [x] Learning Data - Database backup models (PR #441)
 - [x] Decision Traces - `DecisionRecord` model (PR #442)
 
-### Phase 3: Medium Priority (Recommended Next)
-- [ ] Spider Aggregations - Caching layer
+### Phase 3: Complete (Session 861)
+- [x] Spider Aggregations - Caching layer (PR #443)
 
 ### Phase 5: Low Priority
 - [ ] User Feedback Loop - Processing pipeline
