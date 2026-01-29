@@ -662,6 +662,14 @@ class Collaboration(models.Model):
 
 class Revenue(models.Model):
     """
+    DEPRECATED: Use core.models.Revenue instead.
+
+    The version in models.py inherits UnifiedBaseModel and has more comprehensive
+    source_type choices (quick_apply, freelance, consulting, trading, sports_betting, affiliate).
+    See docs/audits/MODEL_DEDUPLICATION_AUDIT.md.
+
+    ---
+
     Tracks all revenue generated through the platform
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

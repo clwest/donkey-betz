@@ -2650,6 +2650,14 @@ class Revenue(UnifiedBaseModel):
 
 class UserAgentLearning(UnifiedBaseModel):
     """
+    DEPRECATED: Use core.models_unified_system.UserAgentLearning instead.
+
+    This version has fewer learning_domain choices (10 vs 20+).
+    The canonical version in models_unified_system.py includes sports betting
+    and partnership domains. See docs/audits/MODEL_DEDUPLICATION_AUDIT.md.
+
+    ---
+
     Connects user profiles to agent learning - making agents learn FOR specific users
 
     This model enables personalized agent learning where agents track what works
