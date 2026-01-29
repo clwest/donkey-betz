@@ -19,7 +19,7 @@
 | **Frontend Bundle** | 1,948 KB | 11 workspace tabs, collapsible sidebar |
 
 ## Key Capabilities
-- **Initiative Pipeline Fix (860):** Documents now properly link to initiatives - added parent_topic to Reports/Research, backfilled 25 unlinked docs
+- **Initiative Pipeline + API Error Handling (860):** Documents now link to initiatives (25 backfilled) + fixed all console 404/401 errors and v.filter crashes
 - **Workspace Inline Refactor (857):** 181 external links removed - all content displays inline, publish action creates Deliverables
 - **User Context Injection (858):** All agents receive personalized user data (skills, goals, preferences) via context dict with category-based injection policy
 - **Diagnostic Pipeline (856):** Detection → Diagnosis → Prescription system for failure analysis with evidence gathering
@@ -134,7 +134,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **860** | Initiative Pipeline Fix - Documents now link properly, backfilled 25 docs | `SESSION_860_INITIATIVE_PIPELINE_FIXES.md` |
+| **860** | Initiative Pipeline + API Error Handling - 25 docs linked, console errors fixed | `SESSION_860_API_ERROR_HANDLING.md` |
 | **858** | User Context Injection - Agents receive personalized user data | `SESSION_858_USER_CONTEXT_INJECTION.md` |
 | **857** | Workspace Inline Refactor - 181 external links removed, publish fix | `SESSION_857_WORKSPACE_INLINE_REFACTOR.md` |
 | **856** | Diagnostic Pipeline + Agent Content Review Fixes (12 agents) | `SESSION_856_DIAGNOSTIC_PIPELINE.md` |
