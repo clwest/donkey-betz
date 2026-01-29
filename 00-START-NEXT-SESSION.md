@@ -1,8 +1,8 @@
 # Session 867 - Start Here
 
-**Previous Session:** 866 (Research Report Improvements + Session 865 PRs Deployed)
+**Previous Session:** 866 (Research Report Improvements + Initiative Pipeline Automation)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 241 Celery Tasks | 12 Workspace Tabs | **ConceptForge UI: COMPLETE** | **EditorAgent UI: COMPLETE** | **Research Reports: IMPROVED**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 242 Celery Tasks | 12 Workspace Tabs | **ConceptForge UI: COMPLETE** | **EditorAgent UI: COMPLETE** | **Research Reports: IMPROVED** | **Initiative Pipeline: AUTOMATED**
 
 ---
 
@@ -22,52 +22,63 @@ Implemented 3 fixes suggested by ChatGPT for research reports:
 
 ### New Feature: Decision Gate
 
-Every research report now includes an actionable Decision Gate section:
+Every research report now includes an actionable Decision Gate section with data status, recommended actions, and ownership assignment.
 
-```markdown
-## Decision Gate
+### Internal Data Source Registry
 
-### Data Status
-✅ Data Available
+Created comprehensive registry of 18 internal data sources so agents stop asking for BigQuery/Snowflake access:
+- `experiments`, `agent_executions`, `research_briefs`, `spider_data`, `initiatives`, etc.
 
-### Recommended Actions
-1. ✅ Synthesize 3 requested deliverable(s)
-2. 📊 Review findings and validate key insights
-3. 🎯 Route to appropriate agent for content creation
-4. 👤 Assign to ResearchAgent for follow-up
+### Initiative Pipeline Automation (NEW)
 
-### Ownership
-**Primary Owner:** ResearchAgent
-**Status:** Pending Review
-```
+Added `advance_initiative_pipeline` Celery task to automate the 5-stage pipeline:
 
-### New Methods Added
+| Stage | Name | Document Type |
+|-------|------|---------------|
+| 1 | Research Brief | Market analysis, feasibility study |
+| 2 | Prototype Plan | Architecture, technical design |
+| 3 | Evaluation | Testing criteria, acceptance tests |
+| 4 | Tech Design | Implementation details, code structure |
+| 5 | Pilot Execution | Deployment plan, monitoring |
 
-| Method | Purpose |
-|--------|---------|
-| `_extract_system_bindings()` | Map generic DB refs to DonkeyBetz tables (20+ mappings) |
-| `_build_decision_gate()` | Generate actionable Decision Gate section |
-| `_trigger_self_unblock()` | Auto-spawn data collection when blocked |
+**Schedule:** Every 4 hours at :30, processing up to 5 initiatives per run.
 
-### Session 865 PRs Deployed
+### Pull Requests
 
-All Session 865 work is now in production:
-- PR #483: Enhancement Celery Beat schedule
-- PR #485, #486: ConceptForge API + UI
-- PR #488: EditorAgent enhancement UI
-
-### Files Modified
-
-| File | Changes |
-|------|---------|
-| `core/services/autonomous_action_executor.py` | Added 3 helper methods, updated report template |
-| `docs/handoffs/SESSION_866_RESEARCH_REPORT_IMPROVEMENTS.md` | NEW - Session handoff |
+| PR | Title | Status |
+|----|-------|--------|
+| #489 | Research Report Improvements | MERGED |
+| #491 | Internal Data Source Registry | MERGED |
+| #492 | Initiative Pipeline Automation | **PENDING** |
 
 ---
 
 ## Priority for Session 867
 
-### Option A: Test TTS End-to-End (Recommended)
+### Option A: Merge PR #492 + Test Initiative Pipeline (Recommended)
+
+1. Merge PR #492 (Initiative Pipeline Automation)
+2. Deploy to Railway
+3. Test the pipeline:
+
+```bash
+# Check current initiative stages
+railway ssh -c "python manage.py shell -c \"
+from core.models_document_registry import Initiative, InitiativeStage
+for init in Initiative.objects.filter(status='ACTIVE')[:3]:
+    stages = InitiativeStage.objects.filter(initiative=init).order_by('stage')
+    print(f'{init.name[:40]}: {[(s.stage, s.status, bool(s.document_id)) for s in stages]}')
+\""
+
+# Manually trigger pipeline advancement
+railway ssh -c "python manage.py shell -c \"
+from core.tasks import advance_initiative_pipeline
+result = advance_initiative_pipeline(limit=3)
+print(result)
+\""
+```
+
+### Option B: Test TTS End-to-End
 
 Verify the podcast TTS pipeline works in production:
 
@@ -80,26 +91,15 @@ for ep in episodes:
     print(f'{ep.id}: {ep.title[:50]} - script length: {len(ep.script)}')
 \""
 
-# Generate audio for one episode (dry run)
+# Generate audio for one episode
 railway ssh -c "python manage.py shell -c \"
 from core.services.podcast_audio_service import generate_podcast_audio
-# Use an episode ID from above
 result = generate_podcast_audio('episode-uuid-here')
 print(result)
 \""
 ```
 
-### Option B: Voice Recording UI
-
-Add interface for voice cloning:
-1. Record audio samples (minimum 30 seconds)
-2. Upload to ElevenLabs voice cloning API
-3. Save cloned voice to VoiceProfile model
-4. Allow selection in VoiceProfileModal
-
 ### Option C: Test Research Report Improvements
-
-Run ThinkingAgent and verify improved research reports:
 
 ```bash
 # Check a recent research report
@@ -115,7 +115,14 @@ Look for:
 - System bindings if topic mentions databases
 - No "Deliverables: None specified" when empty
 
-### Option D: Audio Player Enhancement
+### Option D: Voice Recording UI
+
+Add interface for voice cloning:
+1. Record audio samples (minimum 30 seconds)
+2. Upload to ElevenLabs voice cloning API
+3. Save cloned voice to VoiceProfile model
+
+### Option E: Audio Player Enhancement
 
 Improve podcast playback experience:
 1. Add waveform visualization
@@ -123,28 +130,18 @@ Improve podcast playback experience:
 3. Add download button
 4. Show transcript sync with audio
 
-### Option E: ConceptForge Pipeline Testing
-
-Trigger a ConceptForge run and monitor via the new Dossiers tab:
-
-```bash
-railway ssh -c "python manage.py shell -c \"
-from core.tasks import run_conceptforge_pipeline
-task = run_conceptforge_pipeline.delay(
-    source_type='initiative',
-    source_id='<initiative-uuid>',
-    source_title='Test ConceptForge Run',
-    domain='tech',
-    quality_score=0.85,
-    triggered_by='manual_test'
-)
-print(f'Task ID: {task.id}')
-\""
-```
-
 ---
 
 ## Quick Reference
+
+### Test Initiative Pipeline Advancement
+
+```python
+from core.tasks import advance_initiative_pipeline
+result = advance_initiative_pipeline(limit=3)
+print(result)
+# Returns: {'processed': N, 'documents_created': N, 'stages_updated': [...], 'errors': [...]}
+```
 
 ### Check System Bindings Map
 
@@ -153,21 +150,17 @@ from core.services.autonomous_action_executor import AutonomousActionExecutor
 executor = AutonomousActionExecutor()
 bindings = executor._extract_system_bindings("database analytics ml", "topic")
 print(bindings)
-# {'Database': 'core.models (PostgreSQL + pgvector)',
-#  'Analytics': 'core.services.analytics_service / ContentMetrics',
-#  'Ml': 'ml/ models + AgentModelRouter'}
 ```
 
-### Test Self-Unblock
+### Test Internal Data Registry
 
 ```python
-from core.services.autonomous_action_executor import AutonomousActionExecutor
-executor = AutonomousActionExecutor()
-result = executor._trigger_self_unblock(
-    topic="AI market analysis",
-    missing_data_type="spider"
-)
-print(result)
+from core.services.internal_data_registry import get_data_source_for_topic, build_agent_data_context
+sources = get_data_source_for_topic("failed experiments")
+print([s['name'] for s in sources])
+
+context = build_agent_data_context("analyze failed experiments")
+print(context[:500])
 ```
 
 ### Default ElevenLabs Voices
@@ -185,7 +178,7 @@ print(result)
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **866** | Research Report Improvements (ChatGPT feedback) | DEPLOYED |
+| **866** | Research Report Improvements + Initiative Pipeline Automation | PR #492 PENDING |
 | **865** | Podcast TTS + Voice Profiles + ConceptForge UI + EditorAgent UI | DEPLOYED |
 | **864** | Content Intelligence + Run Mode Tracking | COMPLETE |
 | **863** | ConceptForge - Autonomous Think Tank Pipeline | COMPLETE |

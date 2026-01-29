@@ -30632,3 +30632,234 @@ def poll_processing_videos():
         'still_processing': still_processing,
         'errors': errors
     }
+
+
+# =============================================================================
+# Session 866: Initiative Pipeline Advancement Task
+# =============================================================================
+
+@shared_task
+def advance_initiative_pipeline(limit: int = 5):
+    """
+    Session 866: Advance initiatives through their 5-stage pipeline.
+
+    Problem: Initiatives are created with empty PENDING stages, but no mechanism
+    generates the actual stage documents to make the pipeline flow.
+
+    This task:
+    1. Finds initiatives with PENDING stages (no documents)
+    2. For the current stage, generates appropriate content using TechnicalDocumentAgent
+    3. Links the document to the stage
+    4. Marks the stage as DRAFT for review
+
+    Stage document types:
+    - Stage 1: Research Brief (market analysis, feasibility)
+    - Stage 2: Prototype Plan (architecture, technical design)
+    - Stage 3: Evaluation (testing criteria, acceptance tests)
+    - Stage 4: Tech Design (implementation details, code structure)
+    - Stage 5: Pilot Execution (deployment plan, monitoring)
+
+    Args:
+        limit: Maximum initiatives to process per run (default 5)
+
+    Returns:
+        Summary of advancement results
+    """
+    from core.models_document_registry import Initiative, InitiativeStage, STAGE_NAMES
+    from core.models_unified_system import SelfBlog
+    from core.agents.technical_document_agent import TechnicalDocumentAgent
+    import uuid
+
+    logger.info(f"📋 [INITIATIVE PIPELINE] Starting advancement for up to {limit} initiatives...")
+
+    # Find initiatives with pending stages that need documents
+    initiatives_to_advance = []
+    for init in Initiative.objects.filter(status='ACTIVE').order_by('-priority', '-updated_at')[:limit * 2]:
+        # Find the current stage (or first pending stage)
+        for stage_num in range(1, 6):
+            stage = InitiativeStage.objects.filter(
+                initiative=init,
+                stage=stage_num
+            ).first()
+
+            # If stage doesn't exist or has no document and is pending, this initiative needs work
+            if not stage or (stage.status == 'PENDING' and not stage.document_id):
+                initiatives_to_advance.append({
+                    'initiative': init,
+                    'stage_num': stage_num,
+                    'stage': stage
+                })
+                break
+
+    if not initiatives_to_advance:
+        logger.info("📋 [INITIATIVE PIPELINE] No initiatives need advancement")
+        return {'processed': 0, 'documents_created': 0, 'errors': []}
+
+    logger.info(f"📋 [INITIATIVE PIPELINE] Found {len(initiatives_to_advance)} initiatives to advance")
+
+    results = {
+        'processed': 0,
+        'documents_created': 0,
+        'stages_updated': [],
+        'errors': []
+    }
+
+    # Process each initiative
+    for item in initiatives_to_advance[:limit]:
+        init = item['initiative']
+        stage_num = item['stage_num']
+        stage = item['stage']
+
+        logger.info(f"📋 [INITIATIVE PIPELINE] Processing: {init.name[:50]}... Stage {stage_num}")
+
+        try:
+            # Build the document generation task
+            stage_name = STAGE_NAMES.get(stage_num, f'Stage {stage_num}')
+            doc_type = _get_stage_document_type(stage_num)
+
+            task_prompt = f"""Create a formal {stage_name} document for the initiative: {init.name}
+
+Initiative Description: {init.description or 'No description provided'}
+
+Parent Topic: {init.parent_topic or init.name}
+
+This is Stage {stage_num} of 5 in the initiative pipeline.
+
+Document type: {doc_type}
+
+Requirements:
+1. Use formal, professional language
+2. Include specific, measurable criteria where applicable
+3. Be structured for executive review and decision-making
+4. Build upon any previous stage work (context will be provided)
+
+Previous stage context:
+{_get_previous_stage_context(init, stage_num)}
+"""
+
+            # Generate the document using TechnicalDocumentAgent
+            agent = TechnicalDocumentAgent()
+            result = agent.execute(
+                task=task_prompt,
+                context={
+                    'initiative_id': str(init.id),
+                    'initiative_name': init.name,
+                    'stage': stage_num,
+                    'doc_type': doc_type,
+                    'autonomous': True,
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            # Extract content from result
+            content = ""
+            if hasattr(result, 'data') and result.data:
+                if isinstance(result.data, dict):
+                    content_data = result.data.get('content', {})
+                    if isinstance(content_data, dict):
+                        content = content_data.get('full_text', '')
+                    elif content_data:
+                        content = str(content_data)
+                else:
+                    content = str(result.data)
+            elif hasattr(result, 'message') and result.message:
+                content = result.message
+
+            if not content or len(content) < 100:
+                results['errors'].append(f"{init.name}: Stage {stage_num} - Generated content too short")
+                continue
+
+            # Create the SelfBlog document
+            doc_title = f"[Stage {stage_num} - {stage_name}] {init.name[:80]}"
+            blog = SelfBlog.objects.create(
+                id=uuid.uuid4(),
+                title=doc_title,
+                category='internal',  # Stage documents are internal
+                intro=f"Stage {stage_num} ({stage_name}) document for initiative: {init.name}",
+                full_text=content,
+                tone='formal',
+                stats_snapshot={
+                    'auto_generated': True,
+                    'parent_topic': init.parent_topic or init.name,
+                    'stage': stage_num,
+                    'stage_name': stage_name,
+                    'initiative_id': str(init.id),
+                    'doc_type': doc_type,
+                }
+            )
+
+            logger.info(f"📋 [INITIATIVE PIPELINE] Created document: {blog.id}")
+
+            # Create or update the stage record
+            if not stage:
+                stage = InitiativeStage.objects.create(
+                    initiative=init,
+                    stage=stage_num,
+                    status='DRAFT',
+                    document_id=blog.id,
+                )
+            else:
+                stage.document_id = blog.id
+                stage.status = 'DRAFT'
+                stage.save()
+
+            # Update initiative current_stage if needed
+            if init.current_stage < stage_num:
+                init.current_stage = stage_num
+                init.save()
+
+            results['documents_created'] += 1
+            results['stages_updated'].append(f"{init.name[:30]}... Stage {stage_num}")
+            results['processed'] += 1
+
+            logger.info(f"✅ [INITIATIVE PIPELINE] Advanced: {init.name[:30]}... to Stage {stage_num}")
+
+        except Exception as e:
+            error_msg = f"{init.name[:30]}...: Stage {stage_num} - {str(e)}"
+            results['errors'].append(error_msg)
+            logger.error(f"❌ [INITIATIVE PIPELINE] Error: {error_msg}")
+
+    logger.info(f"📋 [INITIATIVE PIPELINE] Complete: {results['processed']} processed, {results['documents_created']} documents created")
+
+    return results
+
+
+def _get_stage_document_type(stage_num: int) -> str:
+    """Get the document type for a given stage number."""
+    doc_types = {
+        1: 'Research Brief - Market analysis, feasibility study, opportunity assessment',
+        2: 'Prototype Plan - Architecture overview, technical approach, MVP scope',
+        3: 'Evaluation Criteria - Testing requirements, acceptance criteria, success metrics',
+        4: 'Technical Design - Implementation details, code structure, integration points',
+        5: 'Pilot Execution Plan - Deployment strategy, monitoring, rollback procedures',
+    }
+    return doc_types.get(stage_num, f'Stage {stage_num} Document')
+
+
+def _get_previous_stage_context(initiative, current_stage: int) -> str:
+    """Get context from previous completed stages."""
+    from core.models_document_registry import InitiativeStage
+    from core.models_unified_system import SelfBlog
+
+    context_parts = []
+
+    for stage_num in range(1, current_stage):
+        stage = InitiativeStage.objects.filter(
+            initiative=initiative,
+            stage=stage_num
+        ).first()
+
+        if stage and stage.document_id:
+            try:
+                doc = SelfBlog.objects.get(id=stage.document_id)
+                # Include a summary of the previous stage document
+                summary = doc.intro or doc.full_text[:500] if doc.full_text else ''
+                context_parts.append(f"**Stage {stage_num} Summary:** {summary}")
+            except SelfBlog.DoesNotExist:
+                pass
+
+    if not context_parts:
+        return "No previous stage documents available - this is a new initiative."
+
+    return "\n\n".join(context_parts)
