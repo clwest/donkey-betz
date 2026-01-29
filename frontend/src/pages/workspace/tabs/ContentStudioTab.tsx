@@ -2,9 +2,11 @@
 // Consolidates: Gallery, Channels, Blogs, Podcast, Distribution
 // Session 840: Enhanced with onClick handlers, detail modals, refresh buttons, and real data fallbacks
 // Session 857: Refactored for inline content viewing - removed external navigation
+// Session 861: Enhanced BlogDetailModal with full content viewing, approve/publish actions
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import ReactMarkdown from 'react-markdown'
 import {
   Image,
   MessageSquare,
@@ -28,9 +30,13 @@ import {
   Music,
   Box,
   List,
+  FileText,
+  ThumbsUp,
+  Send,
+  AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { contentApi, podcastApi, distributionApi } from '@/lib/api'
+import { contentApi, podcastApi, distributionApi, blogsApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
@@ -500,6 +506,7 @@ function ChannelsSubTab() {
 
 // ============ Blogs Sub-Tab ============
 
+// Session 861: Enhanced BlogPost interface with full content fields
 interface BlogPost {
   id: string
   title: string
@@ -508,6 +515,14 @@ interface BlogPost {
   word_count: number
   tags: string[]
   created_at: string
+  category?: string
+  meta_description?: string
+  tone?: string
+  // Full content fields (fetched on demand)
+  full_text?: string
+  sections?: Array<{ header: string; content: string }>
+  conclusion?: string
+  stats_snapshot?: Record<string, unknown>
 }
 
 function BlogsSubTab() {
@@ -705,6 +720,20 @@ interface PodcastEpisode {
   status: string
   duration: number
   created_at: string
+  // Additional fields for enhanced modal
+  audio_url?: string
+  has_audio?: boolean
+  word_count?: number
+  duration_seconds?: number
+  format_type?: string
+  description?: string
+  error_message?: string
+  script?: string
+  script_segments?: Array<{
+    speaker: string
+    text: string
+    duration_seconds?: number
+  }>
 }
 
 function PodcastSubTab() {
@@ -1565,15 +1594,75 @@ function ChannelDetailModal({ channel, onClose }: { channel: ContentChannel; onC
   )
 }
 
-// Session 857: Blog Detail Modal (updated - removed external link)
+// Session 861: Enhanced Blog Detail Modal with full content viewing and actions
 function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => void }) {
-  const statusStyles: Record<string, { bg: string; text: string }> = {
-    draft: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
-    approved: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-    published: { bg: 'bg-green-500/20', text: 'text-green-400' },
+  const [showFullContent, setShowFullContent] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  // Fetch full blog content when showing full content
+  const { data: fullBlog, isLoading: contentLoading } = useQuery({
+    queryKey: ['blog-full', blog.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/v1/research/self-blog/${blog.id}/`)
+      if (!response.ok) throw new Error('Failed to fetch blog content')
+      const data = await response.json()
+      return data.blog as BlogPost
+    },
+    enabled: showFullContent,
+  })
+
+  // Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/v1/research/self-blog/${blog.id}/approve/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!response.ok) throw new Error('Failed to approve blog')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogs-tab'] })
+      setActionError(null)
+    },
+    onError: (error: Error) => {
+      setActionError(error.message)
+    },
+  })
+
+  // Publish mutation
+  const publishMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/v1/research/self-blog/${blog.id}/publish/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!response.ok) throw new Error('Failed to publish blog')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blogs-tab'] })
+      setActionError(null)
+    },
+    onError: (error: Error) => {
+      setActionError(error.message)
+    },
+  })
+
+  const statusStyles: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
+    draft: { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: FileText },
+    approved: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: ThumbsUp },
+    published: { bg: 'bg-green-500/20', text: 'text-green-400', icon: CheckCircle },
   }
-  const status = blog.status || 'draft'
-  const style = statusStyles[status] || statusStyles.draft
+  const currentStatus = blog.status || 'draft'
+  const style = statusStyles[currentStatus] || statusStyles.draft
+  const StatusIcon = style.icon
+
+  const displayContent = fullBlog || blog
+  const canApprove = currentStatus === 'draft'
+  const canPublish = currentStatus === 'approved' || currentStatus === 'draft'
 
   return (
     <div
@@ -1581,17 +1670,29 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
       onClick={onClose}
     >
       <div
-        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <div className="flex items-center gap-3">
             <BookOpen size={20} className="text-accent-green" />
             <div>
-              <h3 className="font-semibold">{blog.title}</h3>
-              <span className={cn('text-xs px-2 py-0.5 rounded capitalize', style.bg, style.text)}>
-                {status}
-              </span>
+              <h3 className="font-semibold text-lg">{blog.title}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={cn('text-xs px-2 py-0.5 rounded capitalize flex items-center gap-1', style.bg, style.text)}>
+                  <StatusIcon size={12} />
+                  {currentStatus}
+                </span>
+                {blog.category && blog.category !== 'blog' && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                    {blog.category}
+                  </span>
+                )}
+                {blog.tone && (
+                  <span className="text-xs text-gray-500">Tone: {blog.tone}</span>
+                )}
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
@@ -1599,23 +1700,39 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
           </button>
         </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Action Error */}
+          {actionError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400">
+              <AlertCircle size={16} />
+              <span className="text-sm">{actionError}</span>
+            </div>
+          )}
+
+          {/* Intro */}
           <div>
-            <h4 className="text-sm font-medium text-gray-400 mb-2">Intro</h4>
-            <p className="text-sm">{blog.intro}</p>
+            <h4 className="text-sm font-medium text-gray-400 mb-2">Introduction</h4>
+            <p className="text-sm leading-relaxed">{blog.intro}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Word Count</p>
-              <p className="text-xl font-bold">{blog.word_count}</p>
+              <p className="text-xl font-bold">{blog.word_count?.toLocaleString() || 0}</p>
             </div>
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Created</p>
               <p className="text-sm">{new Date(blog.created_at).toLocaleDateString()}</p>
             </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Reading Time</p>
+              <p className="text-sm">{Math.ceil((blog.word_count || 0) / 200)} min</p>
+            </div>
           </div>
 
+          {/* Tags */}
           {blog.tags?.length > 0 && (
             <div>
               <h4 className="text-sm font-medium text-gray-400 mb-2">Tags</h4>
@@ -1628,26 +1745,153 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
               </div>
             </div>
           )}
+
+          {/* Full Content Toggle */}
+          <div className="border-t border-dark-border pt-4">
+            <button
+              onClick={() => setShowFullContent(!showFullContent)}
+              className="flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors"
+            >
+              <Eye size={16} />
+              <span className="text-sm font-medium">
+                {showFullContent ? 'Hide Full Content' : 'Read Full Content'}
+              </span>
+              {showFullContent ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
+
+          {/* Full Content Section */}
+          {showFullContent && (
+            <div className="border border-dark-border rounded-lg p-4 bg-gray-900/50">
+              {contentLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="animate-spin text-gray-400" size={24} />
+                  <span className="ml-2 text-gray-400">Loading content...</span>
+                </div>
+              ) : displayContent.full_text ? (
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-lg font-semibold text-white mt-5 mb-2">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-base font-medium text-white mt-4 mb-2">{children}</h3>,
+                      p: ({ children }) => <p className="text-gray-300 mb-3 leading-relaxed">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc list-inside mb-3 text-gray-300">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-inside mb-3 text-gray-300">{children}</ol>,
+                      li: ({ children }) => <li className="mb-1">{children}</li>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-primary-500 pl-4 italic text-gray-400 my-4">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children }) => (
+                        <code className="bg-gray-800 px-1.5 py-0.5 rounded text-sm text-primary-300">{children}</code>
+                      ),
+                      pre: ({ children }) => (
+                        <pre className="bg-gray-800 p-4 rounded-lg overflow-x-auto my-4">{children}</pre>
+                      ),
+                    }}
+                  >
+                    {displayContent.full_text}
+                  </ReactMarkdown>
+                </div>
+              ) : displayContent.sections?.length ? (
+                <div className="space-y-4">
+                  {displayContent.sections.map((section, idx) => (
+                    <div key={idx}>
+                      <h3 className="text-base font-semibold text-white mb-2">{section.header}</h3>
+                      <p className="text-sm text-gray-300 leading-relaxed">{section.content}</p>
+                    </div>
+                  ))}
+                  {displayContent.conclusion && (
+                    <div className="mt-4 pt-4 border-t border-dark-border">
+                      <h3 className="text-base font-semibold text-white mb-2">Conclusion</h3>
+                      <p className="text-sm text-gray-300 leading-relaxed">{displayContent.conclusion}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No content available</p>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end">
-          <button onClick={onClose} className="btn btn-primary text-sm">
-            Close
-          </button>
+        {/* Footer with Actions */}
+        <div className="p-4 border-t border-dark-border flex items-center justify-between">
+          <div className="text-xs text-gray-500">
+            ID: {blog.id.slice(0, 8)}...
+          </div>
+          <div className="flex items-center gap-2">
+            {canApprove && (
+              <button
+                onClick={() => approveMutation.mutate()}
+                disabled={approveMutation.isPending}
+                className="btn btn-secondary text-sm flex items-center gap-2"
+              >
+                {approveMutation.isPending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <ThumbsUp size={14} />
+                )}
+                Approve
+              </button>
+            )}
+            {canPublish && (
+              <button
+                onClick={() => publishMutation.mutate()}
+                disabled={publishMutation.isPending}
+                className="btn btn-primary text-sm flex items-center gap-2"
+              >
+                {publishMutation.isPending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
+                )}
+                Publish
+              </button>
+            )}
+            <button onClick={onClose} className="btn btn-ghost text-sm">
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-// Session 857: Episode Detail Modal (updated - removed external link)
+// Session 861: Enhanced Episode Detail Modal with script viewing and audio playback
 function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onClose: () => void }) {
-  const statusColors: Record<string, { color: string; bg: string }> = {
-    published: { color: 'text-green-400', bg: 'bg-green-500/20' },
-    draft: { color: 'text-amber-400', bg: 'bg-amber-500/20' },
-    generating: { color: 'text-blue-400', bg: 'bg-blue-500/20' },
+  const [showScript, setShowScript] = useState(false)
+
+  // Fetch full script when expanded
+  const { data: scriptData, isLoading: scriptLoading } = useQuery({
+    queryKey: ['podcast-script', episode.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/podcasts/${episode.id}/script/`)
+      if (!response.ok) throw new Error('Failed to fetch script')
+      return response.json()
+    },
+    enabled: showScript,
+  })
+
+  const statusColors: Record<string, { color: string; bg: string; icon: typeof Clock }> = {
+    complete: { color: 'text-green-400', bg: 'bg-green-500/20', icon: CheckCircle },
+    published: { color: 'text-green-400', bg: 'bg-green-500/20', icon: CheckCircle },
+    draft: { color: 'text-amber-400', bg: 'bg-amber-500/20', icon: Clock },
+    pending: { color: 'text-amber-400', bg: 'bg-amber-500/20', icon: Clock },
+    researching: { color: 'text-blue-400', bg: 'bg-blue-500/20', icon: Loader2 },
+    debating: { color: 'text-blue-400', bg: 'bg-blue-500/20', icon: Loader2 },
+    scripting: { color: 'text-blue-400', bg: 'bg-blue-500/20', icon: Loader2 },
+    recording: { color: 'text-purple-400', bg: 'bg-purple-500/20', icon: Mic },
+    generating: { color: 'text-blue-400', bg: 'bg-blue-500/20', icon: Loader2 },
+    failed: { color: 'text-red-400', bg: 'bg-red-500/20', icon: AlertCircle },
   }
   const status = statusColors[episode.status] || statusColors.draft
+  const StatusIcon = status.icon
+
+  const hasAudio = episode.audio_url || episode.has_audio
 
   return (
     <div
@@ -1655,17 +1899,31 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
       onClick={onClose}
     >
       <div
-        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <div className="flex items-center gap-3">
             <Mic size={20} className="text-accent-purple" />
             <div>
-              <h3 className="font-semibold">{episode.title || episode.topic}</h3>
-              <span className={cn('text-xs px-2 py-0.5 rounded capitalize', status.bg, status.color)}>
-                {episode.status}
-              </span>
+              <h3 className="font-semibold text-lg">{episode.title || episode.topic}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={cn('text-xs px-2 py-0.5 rounded capitalize flex items-center gap-1', status.bg, status.color)}>
+                  <StatusIcon size={12} className={episode.status?.includes('ing') ? 'animate-spin' : ''} />
+                  {episode.status}
+                </span>
+                {episode.format_type && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                    {episode.format_type}
+                  </span>
+                )}
+                {hasAudio && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400 flex items-center gap-1">
+                    <Music size={10} /> Audio
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors">
@@ -1673,29 +1931,134 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
           </button>
         </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {episode.topic && (
+          {/* Topic/Description */}
+          {(episode.topic || episode.description) && (
             <div>
               <h4 className="text-sm font-medium text-gray-400 mb-2">Topic</h4>
-              <p className="text-sm">{episode.topic}</p>
+              <p className="text-sm leading-relaxed">{episode.description || episode.topic}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Audio Player */}
+          {hasAudio && episode.audio_url && (
+            <div className="p-4 bg-gray-800/50 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                <Play size={14} /> Listen to Episode
+              </h4>
+              <audio
+                controls
+                className="w-full"
+                src={episode.audio_url}
+              >
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Duration</p>
               <p className="text-xl font-bold">
-                {episode.duration ? `${Math.round(episode.duration / 60)} min` : 'Processing'}
+                {episode.duration_seconds
+                  ? `${Math.round(episode.duration_seconds / 60)} min`
+                  : episode.duration
+                  ? `${Math.round(episode.duration / 60)} min`
+                  : 'N/A'}
               </p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Word Count</p>
+              <p className="text-xl font-bold">{episode.word_count?.toLocaleString() || 0}</p>
             </div>
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Created</p>
               <p className="text-sm">{new Date(episode.created_at).toLocaleDateString()}</p>
             </div>
           </div>
+
+          {/* Script Toggle */}
+          <div className="border-t border-dark-border pt-4">
+            <button
+              onClick={() => setShowScript(!showScript)}
+              className="flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors"
+            >
+              <FileText size={16} />
+              <span className="text-sm font-medium">
+                {showScript ? 'Hide Script' : 'Read Full Script'}
+              </span>
+              {showScript ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
+
+          {/* Full Script Section */}
+          {showScript && (
+            <div className="border border-dark-border rounded-lg p-4 bg-gray-900/50">
+              {scriptLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="animate-spin text-gray-400" size={24} />
+                  <span className="ml-2 text-gray-400">Loading script...</span>
+                </div>
+              ) : scriptData?.script ? (
+                <div className="space-y-4">
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-lg font-semibold text-white mt-5 mb-2">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-base font-medium text-white mt-4 mb-2">{children}</h3>,
+                        p: ({ children }) => <p className="text-gray-300 mb-3 leading-relaxed">{children}</p>,
+                        strong: ({ children }) => <strong className="text-primary-300 font-semibold">{children}</strong>,
+                        em: ({ children }) => <em className="text-gray-400 italic">{children}</em>,
+                      }}
+                    >
+                      {scriptData.script}
+                    </ReactMarkdown>
+                  </div>
+                  {scriptData.debate && (
+                    <div className="mt-4 pt-4 border-t border-dark-border space-y-3">
+                      <h4 className="text-sm font-medium text-gray-400">Debate Insights</h4>
+                      {scriptData.debate.consensus && (
+                        <div className="p-3 bg-gray-800/50 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Consensus</p>
+                          <p className="text-sm text-gray-300">{scriptData.debate.consensus}</p>
+                        </div>
+                      )}
+                      {scriptData.debate.key_insights?.length > 0 && (
+                        <div className="p-3 bg-gray-800/50 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-2">Key Takeaways</p>
+                          <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
+                            {scriptData.debate.key_insights.map((insight: string, idx: number) => (
+                              <li key={idx}>{insight}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No script available</p>
+              )}
+            </div>
+          )}
+
+          {/* Error Message */}
+          {episode.error_message && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400">
+              <AlertCircle size={16} />
+              <span className="text-sm">{episode.error_message}</span>
+            </div>
+          )}
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end">
+        {/* Footer */}
+        <div className="p-4 border-t border-dark-border flex items-center justify-between">
+          <div className="text-xs text-gray-500">
+            ID: {episode.id.slice(0, 8)}...
+          </div>
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
