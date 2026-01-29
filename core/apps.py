@@ -58,6 +58,13 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Feedback processing not available
 
+        # Session 863: Connect ConceptForge signals
+        try:
+            from core.signals import connect_conceptforge_signals
+            connect_conceptforge_signals()
+        except ImportError:
+            pass  # ConceptForge signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled

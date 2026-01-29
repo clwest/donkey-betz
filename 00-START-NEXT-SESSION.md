@@ -1,164 +1,154 @@
-# Session 863 - Start Here
+# Session 864 - Start Here
 
-**Previous Session:** 862 (Content Flow Unification)
+**Previous Session:** 863 (ConceptForge - Autonomous Think Tank Pipeline)
 **Date:** January 28, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Content Flow: COMPLETE** | **Data Persistence: COMPLETE** | **SKIN Layer: 92%**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 139 Personas | 238 Celery Tasks | **ConceptForge: COMPLETE** | **Content Flow: COMPLETE** | **Data Persistence: COMPLETE**
 
 ---
 
-## What Was Accomplished in Session 862
+## What Was Accomplished in Session 863
 
-### Content Flow Unification - ALL 4 PHASES COMPLETE
+### ConceptForge - Autonomous Think Tank Pipeline
 
-Implemented complete traceability from Dream → Initiative → Stages → Deliverable.
+Implemented a complete "Content → Intelligence → Strategy → Product" pipeline that transforms published content into comprehensive dossiers.
 
-**Full Plan:** `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md` (marked COMPLETE)
-**Handoff:** `docs/handoffs/SESSION_862_CONTENT_FLOW_UNIFICATION.md`
+**Documentation:** `docs/CONCEPTFORGE.md`
+**Handoff:** `docs/handoffs/SESSION_863_CONCEPTFORGE.md`
 
-| Phase | Description | Status | PR |
-|-------|-------------|--------|-----|
-| **1** | FK relationships (Deliverable, SelfBlog, PodcastEpisode, AgentDream) | ✅ DONE | #450-#451 |
-| **2** | Dream → Initiative bridge (`promote_to_initiative()`) | ✅ DONE | #452 |
-| **3** | `ResearchResult` model for Stage 1 tracking | ✅ DONE | #452 |
-| **4** | Auto-stage progression + final Deliverable on completion | ✅ DONE | #452 |
-| **Fix** | Blog publish 400 error (missing force=true) | ✅ DONE | #454 |
-
-### Content Flow Now Working
+### Architecture
 
 ```
-AgentDream (approved)
-    ↓ promote_to_initiative() [auto via signal]
-Initiative + Stage 1 (DRAFT)
-    ↓ ResearchResult.create_for_initiative()
-Research → Stage 1 Document (SelfBlog)
-    ↓ InitiativeStage.approve()
-Stage 2-5 → All approved
-    ↓ create_final_deliverable()
-Deliverable (published with full traceability)
+SelfBlog (published, quality >= 0.80)
+    ↓ [Django signal]
+ConceptForgeRun
+    ↓ [domain router]
+DomainLab (Legal | Market | Tech | Content | Startup | Career)
+    ↓
+Stage 1: Research   → ResearchAgent + Persona Advisors
+Stage 2: Debate     → Legendary Advisors (pro/con)
+Stage 3: Feasibility→ SystemsArchitectAgent
+Stage 4: Risk       → RiskAnalysisAgent + Legal Personas
+Stage 5: Market     → MarketIntelligenceAgent
+Stage 6: Synthesis  → ThinkingAgent → Dossier
 ```
 
-### New Model: ResearchResult
+### Key Design Decisions
 
-```python
-from core.models import ResearchResult
+1. **Config-first** - Labs/panels in Python, not database (no migrations for new domains)
+2. **Advisor panel snapshots** - Frozen per run for reproducibility
+3. **Legendary advisors as constraints** - They provide frameworks, agents do writing
+4. **Gate triggers** - quality_score >= 0.80 + strategic_tag
+5. **Rule-based routing** - Domain tags → panel pools
 
-# Create research for an initiative
-research = ResearchResult.create_for_initiative(
-    initiative,
-    topic="Market analysis...",
-    research_type='market_analysis'
-)
+### 6 Domain Labs Configured
 
-# Complete and create document
-research.mark_complete(findings={...}, summary="...", confidence=0.85)
-blog = research.create_research_brief()
+| Lab | Advisors | Debate Pair |
+|-----|----------|-------------|
+| LegalLab ⚖️ | Warren Buffett, Peter Thiel | Buffett vs Soros |
+| MarketLab 📈 | Warren Buffett, Ray Dalio | Cathie Wood vs Buffett |
+| TechLab 🔧 | Elon Musk, Peter Thiel | Musk vs Harari |
+| ContentLab 📝 | Gary Vaynerchuk, Seth Godin | GaryVee vs Godin |
+| StartupLab 🚀 | Mark Cuban, Reid Hoffman | Branson vs Thiel |
+| CareerLab 💼 | Tim Ferriss, Simon Sinek | Ferriss vs GaryVee |
+
+### Files Created
+
 ```
+core/conceptforge/__init__.py
+core/conceptforge/labs.py
+core/conceptforge/panels.py
+core/conceptforge/orchestrator.py
+core/models_conceptforge.py
+core/signals/conceptforge_signals.py
+docs/CONCEPTFORGE.md
+```
+
+### New Celery Tasks
+
+- `run_conceptforge_pipeline` - Main pipeline execution
+- `promote_to_conceptforge` - Manual promotion
+- `run_conceptforge_stage` - Single stage retry
 
 ---
 
-## Priority for Session 863
+## Priority for Session 864
 
-### Option A: Wire Up ResearchAgent (Recommended)
-Connect ResearchAgent to use the new `ResearchResult` model:
+### Option A: ConceptForge UI Integration (Recommended)
+
+Add ConceptForge dossier view to Workspace:
+
+1. Create "Dossiers" tab matching initiative phase cards
+2. Show stage tabs: Research | Debate | Feasibility | Risk | Market | Synthesis
+3. Add "Promote to ConceptForge" button on blog cards
+4. Display run progress and advisor panel
+
+### Option B: Test ConceptForge End-to-End
+
+1. Publish a high-quality blog with strategic tags
+2. Verify signal triggers pipeline
+3. Watch stages execute via Celery
+4. Verify dossier artifact created
+5. Debug any issues
+
+### Option C: ConceptForge API Endpoints
+
+Create REST endpoints for run management:
+
+```
+GET  /api/v1/conceptforge/runs/
+GET  /api/v1/conceptforge/runs/<id>/
+POST /api/v1/conceptforge/promote/
+GET  /api/v1/conceptforge/runs/<id>/stages/
+GET  /api/v1/conceptforge/runs/<id>/dossier/
+```
+
+### Option D: Wire ResearchAgent to ResearchResult
+
+Connect ResearchAgent to use the new `ResearchResult` model from Session 862:
+
 1. Update ResearchAgent to create `ResearchResult` when researching for Initiative
 2. Auto-link spider data sources used
 3. Generate research brief document
-
-### Option B: Content Flow UI
-Add UI to show content traceability:
-1. Add "Content Flow" visualization to Workspace
-2. Show Dream → Initiative → Stages → Deliverable chain
-3. Allow clicking through the flow
-
-### Option C: SKIN Layer Remaining Gaps
-Continue with P1 items from Session 861B:
-- File Write Form (3-4 hrs)
-- Diff Viewer Component (4-5 hrs)
-- Git Operation Forms (2-3 hrs)
-
-### Option D: Test Content Flow End-to-End
-1. Create a dream and approve it
-2. Verify Initiative + Stage 1 created automatically
-3. Create research and approve stages
-4. Verify final Deliverable created
-
----
-
-## Session 862 - Content Tab Fixes (Latest)
-
-### Gallery API Fix - PR #457
-- Added per-media-type error handling to `/api/v1/gallery/all/`
-- Now if images fail, videos/3D/Resolve still return
-- `_media_errors` field in response shows any partial failures
-- Prevents single model issue from breaking entire gallery
-
-### Podcast Status Fix - PR #458
-- Frontend was filtering for `status='published'` but backend uses `status='complete'`
-- Updated `publishedEpisodes` filter to include 'complete' status
-- Updated `draftEpisodes` filter to include all in-progress statuses
-- 192 podcast episodes now display correctly
-
-### Synthetic Users System (Session 862)
-- Created `SyntheticUserProfile` model for testing agent recommendations
-- 15 persona archetypes (new_grad, career_pivoter, freelancer_starter, etc.)
-- Management command: `python manage.py generate_synthetic_users --all`
-- 15 synthetic users generated in database
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Start platform
-make start && make celery
-
-# 2. Test Content Flow
+# Test ConceptForge
 python manage.py shell
->>> from core.models import AgentDream, Agent
->>> agent = Agent.objects.first()
->>> dream = AgentDream.objects.create(
-...     agent=agent,
-...     title="Test Content Flow",
-...     content="Testing the new content flow...",
-...     dream_type='creative_idea'
-... )
->>> dream.decision_outcome = 'approved'
->>> dream.save()
->>> print(f"Initiative created: {dream.initiative}")
 
-# 3. Access AI Studio
-open http://localhost:8000/ai-studio/
+from core.conceptforge import ConceptForgeOrchestrator
+orchestrator = ConceptForgeOrchestrator()
+
+# Check if content qualifies
+should_trigger, reason, domain = orchestrator.should_trigger(
+    quality_score=0.85,
+    tags=['legal', 'automation'],
+)
+print(f"Should trigger: {should_trigger}, Reason: {reason}, Domain: {domain}")
+
+# Manual trigger
+from core.tasks import promote_to_conceptforge
+promote_to_conceptforge.delay(
+    source_type='blog',
+    source_id='<blog-uuid>',
+    domain='legal',
+)
 ```
 
 ---
 
-## Session 862 Files Created
+## Recent Session History
 
-| File | Purpose |
-|------|---------|
-| `core/models_research.py` | ResearchResult model |
-| `core/migrations/0202_session_862_content_flow_fks.py` | FK migration |
-| `core/migrations/0203_session_862_research_result.py` | ResearchResult migration |
-| `docs/handoffs/SESSION_862_CONTENT_FLOW_UNIFICATION.md` | Session handoff |
-
-## Session 862 Files Modified
-
-| File | Changes |
-|------|---------|
-| `core/models_unified_system.py` | Added `promote_to_initiative()` to AgentDream |
-| `core/models_document_registry.py` | Enhanced Initiative with `advance_stage()`, `is_complete()`, `create_final_deliverable()` |
-| `core/models/__init__.py` | Added ResearchResult import |
-| `core/signals/dream_signals.py` | Auto-create Initiative on dream approval |
-| `core/models_deliverables.py` | Added FK fields |
-| `core/models_podcast_studio.py` | Added FK fields |
-| `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md` | Marked COMPLETE |
-| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Fixed publish 400 error (added force=true) |
+| Session | Focus | Status |
+|---------|-------|--------|
+| **863** | ConceptForge - Autonomous Think Tank Pipeline | ✅ COMPLETE |
+| **862** | Content Flow Unification - Dream → Initiative → Deliverable | ✅ COMPLETE |
+| **861** | Data Persistence - 6 gap fixes + Content Tab UI | ✅ COMPLETE |
+| **860** | Initiative Pipeline + API Error Handling | ✅ COMPLETE |
+| **858** | User Context Injection - All 74 agents personalized | ✅ COMPLETE |
 
 ---
 
-## Handoff Documents
-
-- `docs/handoffs/SESSION_862_CONTENT_FLOW_UNIFICATION.md` - Content flow implementation
-- `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md` - Full plan (marked COMPLETE)
-- `docs/handoffs/SESSION_861B_SKIN_LAYER_FIXES.md` - SKIN gap fixes
-- `docs/handoffs/SESSION_861_DATA_PERSISTENCE.md` - Data persistence fixes
+**Always read this file first - it has the current priorities!**
