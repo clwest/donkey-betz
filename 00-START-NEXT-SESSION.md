@@ -21,6 +21,7 @@ Implemented complete traceability from Dream → Initiative → Stages → Deliv
 | **2** | Dream → Initiative bridge (`promote_to_initiative()`) | ✅ DONE | #452 |
 | **3** | `ResearchResult` model for Stage 1 tracking | ✅ DONE | #452 |
 | **4** | Auto-stage progression + final Deliverable on completion | ✅ DONE | #452 |
+| **Fix** | Blog publish 400 error (missing force=true) | ✅ DONE | #454 |
 
 ### Content Flow Now Working
 
@@ -129,6 +130,7 @@ open http://localhost:8000/ai-studio/
 | `core/models_deliverables.py` | Added FK fields |
 | `core/models_podcast_studio.py` | Added FK fields |
 | `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md` | Marked COMPLETE |
+| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Fixed publish 400 error (added force=true) |
 
 ---
 
