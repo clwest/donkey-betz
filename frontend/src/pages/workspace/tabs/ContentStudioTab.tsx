@@ -90,7 +90,8 @@ export function ContentStudioTab() {
 
 interface GalleryItem {
   id: string
-  title: string
+  title?: string
+  prompt?: string  // Session 865: Backend sends prompt, not title
   type: 'image' | 'video' | 'audio' | '3d'
   created_at: string
   url?: string
@@ -1559,7 +1560,7 @@ function GalleryItemRow({ item, onClick }: { item: GalleryItem; onClick: () => v
           <TypeIcon size={14} className="text-primary-400" />
         </div>
         <div>
-          <p className="text-sm font-medium">{item.title || `${item.type} ${item.id}`}</p>
+          <p className="text-sm font-medium truncate max-w-[300px]">{item.title || item.prompt || `${item.type} ${item.id}`}</p>
           <p className="text-xs text-gray-500">
             {new Date(item.created_at).toLocaleDateString()}
           </p>
