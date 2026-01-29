@@ -51,6 +51,13 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Revenue signals not available
 
+        # Session 861: Connect feedback processing signals
+        try:
+            from core.models_feedback_processing import connect_feedback_signals
+            connect_feedback_signals()
+        except ImportError:
+            pass  # Feedback processing not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
