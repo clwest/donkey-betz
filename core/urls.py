@@ -443,6 +443,7 @@ from core.views_memory_palace import (
     get_memory_connections,
     get_memory_palace_overview,
     delete_memory,
+    list_all_memories,  # Session 860
 )
 
 # Session 252: Agent Mood System
@@ -3099,6 +3100,7 @@ urlpatterns = [
 
     # Session 251: Memory Palace API
     path('api/memory-palace/', get_memory_palace_overview, name='memory-palace-overview'),
+    path('api/memory-palace/memories/', list_all_memories, name='memory-palace-list'),  # Session 860
     path('api/memory-palace/agent/<uuid:agent_id>/memories/', get_agent_memories, name='memory-palace-agent-memories'),
     path('api/memory-palace/agent/<uuid:agent_id>/rooms/', get_memory_palace_rooms, name='memory-palace-rooms'),
     path('api/memory-palace/agent/<uuid:agent_id>/summary/', get_memory_summary, name='memory-palace-summary'),
