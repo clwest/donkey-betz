@@ -1004,7 +1004,9 @@ export const podcastApi = {
   delete: (episodeId: string) => api.delete(`/podcasts/${episodeId}/`),
 
   // Session 865: Generate TTS audio for an existing episode
-  generateAudio: (episodeId: string) => api.post(`/podcasts/${episodeId}/generate-audio/`),
+  // Accepts optional voiceProfileId to use a custom voice
+  generateAudio: (episodeId: string, voiceProfileId?: string) =>
+    api.post(`/podcasts/${episodeId}/generate-audio/`, voiceProfileId ? { voice_profile_id: voiceProfileId } : {}),
 
   // Generation
   generateScript: (topic: string, style?: string) =>

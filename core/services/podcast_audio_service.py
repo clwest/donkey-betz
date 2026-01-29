@@ -218,7 +218,8 @@ def concatenate_audio_segments(
 
 def generate_podcast_audio(
     episode_id: str,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
+    custom_voice_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Main entry point for podcast audio generation.
@@ -232,6 +233,7 @@ def generate_podcast_audio(
     Args:
         episode_id: UUID of the PodcastEpisode
         progress_callback: Optional callback(percent, message) for progress updates
+        custom_voice_id: Optional ElevenLabs voice ID to use for ALL speakers (Session 865)
 
     Returns:
         Dict with success, audio_url, duration_seconds, segment_count, error
@@ -278,12 +280,16 @@ def generate_podcast_audio(
                 f"Recording {segment['voice_name']} ({i+1}/{len(segments)})..."
             )
 
-        logger.info(f"🎤 Recording segment {i+1}/{len(segments)}: {segment['speaker']} ({segment['voice_name']})")
+        # Session 865: Use custom voice if provided, otherwise use segment's assigned voice
+        voice_id_to_use = custom_voice_id if custom_voice_id else segment['voice_id']
+        voice_name = "Custom Voice" if custom_voice_id else segment['voice_name']
+
+        logger.info(f"🎤 Recording segment {i+1}/{len(segments)}: {segment['speaker']} ({voice_name})")
 
         # Generate audio
         result = generate_segment_audio(
             text=segment['text'],
-            voice_id=segment['voice_id']
+            voice_id=voice_id_to_use
         )
 
         if not result['success']:

@@ -36,7 +36,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { contentApi, podcastApi, distributionApi, blogsApi } from '@/lib/api'
+import { contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
@@ -2251,13 +2251,17 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
   })
 
   // Session 865: Generate Audio handler
+  // Reads selected voice from localStorage (set by VoiceProfileModal)
   const handleGenerateAudio = async () => {
     setIsGeneratingAudio(true)
     setAudioError(null)
     setAudioSuccess(null)
 
     try {
-      const response = await podcastApi.generateAudio(episode.id)
+      // Get selected voice profile from localStorage
+      const voiceProfileId = localStorage.getItem('podcast_voice_profile_id')
+      // Pass voice profile to API (null/undefined uses default voices)
+      const response = await podcastApi.generateAudio(episode.id, voiceProfileId || undefined)
       if (response.data?.success) {
         setAudioSuccess(`Audio generated! Duration: ${Math.round(response.data.duration_seconds / 60)} min`)
         queryClient.invalidateQueries({ queryKey: ['podcast-tab'] })
@@ -2510,7 +2514,69 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
 }
 
 // Session 857: Voice Profile Modal
+// Session 865: Connected to real voice marketplace API
+interface VoiceProfile {
+  id: string
+  name: string
+  elevenlabs_voice_id: string
+  gender: string
+  primary_use_case: string
+  is_public: boolean
+  creation_method?: string
+  created_at: string
+}
+
+// Default ElevenLabs voices for podcast generation
+const DEFAULT_VOICES = [
+  { id: 'default-host', name: 'Antoni (Host)', role: 'HOST', elevenlabs_id: 'ErXwobaYiN019PkySvjV', gender: 'male' },
+  { id: 'default-advocate', name: 'Rachel (Advocate)', role: 'ADVOCATE', elevenlabs_id: '21m00Tcm4TlvDq8ikWAM', gender: 'female' },
+  { id: 'default-skeptic', name: 'Clyde (Skeptic)', role: 'SKEPTIC', elevenlabs_id: '2EiwWnXFnvU5JabPnv8n', gender: 'male' },
+  { id: 'default-analyst', name: 'Paul (Analyst)', role: 'ANALYST', elevenlabs_id: '5Q0t7uMcjvnagumLfvZi', gender: 'male' },
+]
+
 function VoiceProfileModal({ onClose }: { onClose: () => void }) {
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(() => {
+    // Load from localStorage
+    return localStorage.getItem('podcast_voice_profile_id')
+  })
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null)
+
+  // Fetch user's custom voice profiles
+  const { data: voicesData, isLoading, isError, refetch } = useQuery({
+    queryKey: ['my-voices'],
+    queryFn: async () => {
+      const response = await voiceMarketplaceApi.myVoices()
+      return response.data
+    },
+  })
+
+  const myVoices: VoiceProfile[] = voicesData?.voices || []
+
+  const handleSelectVoice = (voiceId: string | null) => {
+    setSelectedVoiceId(voiceId)
+    if (voiceId) {
+      localStorage.setItem('podcast_voice_profile_id', voiceId)
+    } else {
+      localStorage.removeItem('podcast_voice_profile_id')
+    }
+  }
+
+  const handlePreview = async (voiceId: string) => {
+    setPreviewingVoice(voiceId)
+    try {
+      const response = await voiceMarketplaceApi.preview(voiceId)
+      if (response.data?.audio_url) {
+        const audio = new Audio(response.data.audio_url)
+        audio.play()
+        audio.onended = () => setPreviewingVoice(null)
+      }
+    } catch {
+      // Preview failed silently
+    } finally {
+      setTimeout(() => setPreviewingVoice(null), 3000)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -2531,38 +2597,158 @@ function VoiceProfileModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="p-4 bg-gray-800/50 rounded-lg">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-12 w-12 rounded-full bg-accent-purple/20 flex items-center justify-center">
-                <Mic size={24} className="text-accent-purple" />
+          {/* Default System Voices */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+              <Radio size={14} /> Default Podcast Voices
+            </h4>
+            <div className="space-y-2">
+              {/* Use Default Option */}
+              <div
+                className={cn(
+                  'p-3 rounded-lg cursor-pointer transition-colors border',
+                  !selectedVoiceId
+                    ? 'bg-accent-purple/20 border-accent-purple'
+                    : 'bg-gray-800/50 border-transparent hover:border-gray-600'
+                )}
+                onClick={() => handleSelectVoice(null)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-accent-purple/20 flex items-center justify-center">
+                      <Radio size={18} className="text-accent-purple" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Use Default Voices</p>
+                      <p className="text-xs text-gray-500">Multi-voice debate format (4 speakers)</p>
+                    </div>
+                  </div>
+                  {!selectedVoiceId && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green">
+                      Active
+                    </span>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="font-medium">Default Voice</p>
-                <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green">
-                  Active
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-gray-500">Type</p>
-                <p>AI Generated</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Language</p>
-                <p>English</p>
-              </div>
+
+              {/* Show default voice details */}
+              {!selectedVoiceId && (
+                <div className="ml-4 pl-4 border-l border-gray-700 space-y-1">
+                  {DEFAULT_VOICES.map(voice => (
+                    <div key={voice.id} className="flex items-center gap-2 text-xs text-gray-400">
+                      <span className="w-20 text-gray-500">{voice.role}:</span>
+                      <span>{voice.name}</span>
+                      <span className="text-gray-600">({voice.gender})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="text-center text-sm text-gray-500">
-            <p>Voice profiles are used for podcast episode generation</p>
+          {/* Custom Voice Profiles */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+              <Mic size={14} /> Your Custom Voices
+              <button
+                onClick={() => refetch()}
+                className="ml-auto text-xs text-primary-400 hover:text-primary-300"
+              >
+                Refresh
+              </button>
+            </h4>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin text-gray-400" size={24} />
+              </div>
+            ) : isError ? (
+              <div className="text-center py-4 text-red-400 text-sm">
+                Failed to load voice profiles
+              </div>
+            ) : myVoices.length === 0 ? (
+              <div className="text-center py-6 text-gray-500">
+                <Mic size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No custom voices yet</p>
+                <p className="text-xs mt-1">Clone your voice or create a custom voice in the Voice Marketplace</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {myVoices.map(voice => (
+                  <div
+                    key={voice.id}
+                    className={cn(
+                      'p-3 rounded-lg cursor-pointer transition-colors border',
+                      selectedVoiceId === voice.id
+                        ? 'bg-accent-purple/20 border-accent-purple'
+                        : 'bg-gray-800/50 border-transparent hover:border-gray-600'
+                    )}
+                    onClick={() => handleSelectVoice(voice.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-gray-700 flex items-center justify-center">
+                          <Mic size={18} className="text-gray-300" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{voice.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span className="capitalize">{voice.gender}</span>
+                            <span>•</span>
+                            <span className="capitalize">{voice.primary_use_case?.replace('_', ' ')}</span>
+                            {voice.creation_method === 'cloned' && (
+                              <>
+                                <span>•</span>
+                                <span className="text-accent-purple">Cloned</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handlePreview(voice.id)
+                          }}
+                          disabled={previewingVoice === voice.id}
+                          className="p-1.5 hover:bg-gray-600 rounded transition-colors"
+                          title="Preview voice"
+                        >
+                          {previewingVoice === voice.id ? (
+                            <Loader2 size={14} className="animate-spin text-gray-400" />
+                          ) : (
+                            <Play size={14} className="text-gray-400" />
+                          )}
+                        </button>
+                        {selectedVoiceId === voice.id && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-accent-green/20 text-accent-green">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <p className="text-xs text-blue-300">
+              <strong>Tip:</strong> The selected voice will be used for all speakers when generating audio.
+              For multi-voice debates, use the default voices which assign different speakers to different roles.
+            </p>
           </div>
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end">
+        <div className="p-4 border-t border-dark-border flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            {selectedVoiceId ? 'Custom voice selected' : 'Using default multi-voice'}
+          </p>
           <button onClick={onClose} className="btn btn-primary text-sm">
-            Close
+            Done
           </button>
         </div>
       </div>
