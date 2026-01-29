@@ -504,8 +504,8 @@ export function OperationsTab({
     refetchInterval: 30000,
   })
 
-  const pendingReviews = (pendingReviewsData?.data?.results ||
-    pendingReviewsData?.data ||
+  const pendingReviews = (pendingReviewsData?.data?.operations ||
+    pendingReviewsData?.data?.results ||
     []) as WorkspaceOperation[]
 
   // Rollback mutation
