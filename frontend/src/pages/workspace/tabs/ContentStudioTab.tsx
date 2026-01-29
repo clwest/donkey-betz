@@ -129,18 +129,9 @@ function GallerySubTab() {
     },
   })
 
-  // Session 865: Use contentApi which includes auth token in headers
-  const { data: videoData } = useQuery({
-    queryKey: ['gallery-video-stats-tab'],
-    queryFn: async () => {
-      try {
-        const response = await contentApi.videoGallery()
-        return response.data || { results: [], count: 0 }
-      } catch {
-        return { results: [], count: 0 }
-      }
-    },
-  })
+  // Session 865: Videos are included in unified gallery, no separate fetch needed
+  // The /api/v1/gallery/videos/ endpoint queries ContentAsset (empty)
+  // while our real videos are in VideoHistory (included in unified gallery)
 
   // Session 860: Disabled - endpoint /api/v1/gallery/series/ doesn't exist yet
   // TODO: Create backend endpoint or use sessions/list/ instead
@@ -164,7 +155,7 @@ function GallerySubTab() {
   // Session 865: Extract items by type from unified gallery
   const allItems = galleryData?.results || []
   const images = allItems.filter((item: GalleryItem) => item.type === 'image')
-  const videos = videoData?.results || []
+  const videos = allItems.filter((item: GalleryItem) => item.type === 'video')
   const audioItems = allItems.filter((item: GalleryItem) => item.type === 'audio')
   const models3d = allItems.filter((item: GalleryItem) => item.type === '3d')
   const series = seriesData?.results || []
@@ -270,7 +261,7 @@ function GallerySubTab() {
           onLoadMore={() => loadMore('audio')}
           emptyMessage="No audio files found"
           renderItem={(item: GalleryItem) => (
-            <GalleryCard
+            <GalleryItemRow
               key={item.id}
               item={{ ...item, type: 'audio' }}
               onClick={() => setSelectedItem({ ...item, type: 'audio' })}
@@ -289,7 +280,7 @@ function GallerySubTab() {
           onLoadMore={() => loadMore('models3d')}
           emptyMessage="No 3D models found"
           renderItem={(item: GalleryItem) => (
-            <GalleryCard
+            <GalleryItemRow
               key={item.id}
               item={{ ...item, type: '3d' }}
               onClick={() => setSelectedItem({ ...item, type: '3d' })}
