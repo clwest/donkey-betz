@@ -117,11 +117,14 @@ function GallerySubTab() {
   const [selectedSeries, setSelectedSeries] = useState<AISeries | null>(null)
 
   // Session 860: Added error handling - endpoint may require authentication
+  // Session 865: Added credentials to include auth cookies
   const { data: galleryData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['gallery-stats-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/gallery/all/?limit=50')
+        const response = await fetch('/api/v1/gallery/all/?limit=50', {
+          credentials: 'include',
+        })
         if (!response.ok) {
           // Return empty data on 401/403 - user not authenticated
           return { results: [], count: 0 }
@@ -134,11 +137,14 @@ function GallerySubTab() {
   })
 
   // Session 860: Added error handling - endpoint requires authentication
+  // Session 865: Added credentials to include auth cookies
   const { data: videoData } = useQuery({
     queryKey: ['gallery-video-stats-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/gallery/videos/?limit=50')
+        const response = await fetch('/api/v1/gallery/videos/?limit=50', {
+          credentials: 'include',
+        })
         if (!response.ok) {
           // Return empty data on 401/403 - user not authenticated
           return { results: [], count: 0 }
