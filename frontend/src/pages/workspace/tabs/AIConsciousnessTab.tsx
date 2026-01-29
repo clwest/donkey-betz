@@ -115,48 +115,56 @@ function MemorySubTab() {
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
 
+  // Session 860: Fixed data extraction - overview endpoint returns { success, overview: {...}, agents: [...] }
   const { data: overviewData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['memory-palace-overview-tab'],
     queryFn: async () => {
       try {
         const res = await memoryPalaceApi.overview()
-        return res.data
-      } catch (e) {
-        // Fallback: fetch from agent stats
-        try {
-          const statsRes = await adminApi.agentStats()
-          const stats = statsRes.data as any
-          return {
-            total_memories: stats.memory_count || 889,
-            total_rooms: 12,
-            agents_with_memories: stats.agents_with_memories || 74,
-            memory_types: { success: 863, failure: 13, insight: 3, conceptual: 4, interaction: 3, technique: 3 },
-            approved_count: 420,
-            candidate_count: 469,
-          }
-        } catch {
-          return {
-            total_memories: 889,
-            total_rooms: 12,
-            agents_with_memories: 74,
-            memory_types: { success: 863, failure: 13, insight: 3, conceptual: 4, interaction: 3, technique: 3 },
-            approved_count: 420,
-            candidate_count: 469,
-          }
+        // Backend returns { success, overview: {...}, agents: [...] }
+        const data = res.data
+        // Convert memory_types array to object { type: count }
+        const memoryTypesArray = data?.overview?.memory_types || []
+        const memoryTypesObj: Record<string, number> = {}
+        memoryTypesArray.forEach((item: { memory_type: string; count: number }) => {
+          memoryTypesObj[item.memory_type] = item.count
+        })
+        return {
+          total_memories: data?.overview?.total_memories || 0,
+          agents_with_memories: data?.overview?.agents_with_memories || 0,
+          memory_types: memoryTypesObj,
+          approved_count: data?.overview?.approved_count || 0,
+          candidate_count: data?.overview?.candidate_count || 0,
+          agents: data?.agents || [],
+        }
+      } catch {
+        return {
+          total_memories: 0,
+          agents_with_memories: 0,
+          memory_types: {},
+          approved_count: 0,
+          candidate_count: 0,
+          agents: [],
         }
       }
     },
   })
 
-  // Session 860: Use memoryPalaceApi.overview() - /api/memory-palace/memories/ endpoint doesn't exist
-  // The overview endpoint returns agents with their memory counts, not individual memories
-  // For now, disable expanded memory list until a proper list endpoint is created
+  // Session 860: Use memoryPalaceApi.listMemories() for expanded memory list
   const { data: memoriesData, isLoading: memoriesLoading } = useQuery({
     queryKey: ['memory-palace-list', expandedSection, selectedType, visibleCount],
     queryFn: async () => {
-      // Return empty - no list endpoint exists yet
-      // TODO: Create /api/memory-palace/memories/ endpoint to list all memories with filters
-      return { memories: [], count: 0 }
+      try {
+        const params: { safety_class?: string; memory_type?: string; limit: number } = { limit: visibleCount }
+        if (expandedSection === 'approved') params.safety_class = 'approved'
+        else if (expandedSection === 'candidate') params.safety_class = 'candidate'
+        else if (expandedSection === 'type' && selectedType) params.memory_type = selectedType
+
+        const response = await memoryPalaceApi.listMemories(params)
+        return response.data || { memories: [], count: 0 }
+      } catch {
+        return { memories: [], count: 0 }
+      }
     },
     enabled: expandedSection !== null,
   })
@@ -170,12 +178,12 @@ function MemorySubTab() {
   }
 
   const stats = overviewData || {
-    total_memories: 889,
-    total_rooms: 12,
-    agents_with_memories: 74,
+    total_memories: 0,
+    agents_with_memories: 0,
     memory_types: {},
-    approved_count: 420,
-    candidate_count: 469,
+    approved_count: 0,
+    candidate_count: 0,
+    agents: [],
   }
 
   const memories = memoriesData?.memories || memoriesData?.results || []
@@ -206,7 +214,7 @@ function MemorySubTab() {
     <div className="space-y-4">
       <InlineHeaderRow
         title="Memory Palace"
-        subtitle={`${stats.total_memories || 889} memories across ${stats.agents_with_memories || 74} agents`}
+        subtitle={`${stats.total_memories} memories across ${stats.agents_with_memories} agents`}
         onRefresh={refetch}
         isFetching={isFetching}
       />
@@ -214,7 +222,7 @@ function MemorySubTab() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Total Memories"
-          value={stats.total_memories || 889}
+          value={stats.total_memories}
           color="text-primary-400"
           onClick={() => toggleSection('all')}
           icon={Brain}
@@ -222,7 +230,7 @@ function MemorySubTab() {
         />
         <StatCard
           label="Approved"
-          value={stats.approved_count || 420}
+          value={stats.approved_count}
           color="text-accent-green"
           onClick={() => toggleSection('approved')}
           icon={CheckCircle}
@@ -230,7 +238,7 @@ function MemorySubTab() {
         />
         <StatCard
           label="Candidate"
-          value={stats.candidate_count || 469}
+          value={stats.candidate_count}
           color="text-accent-amber"
           onClick={() => toggleSection('candidate')}
           icon={Target}
@@ -238,7 +246,7 @@ function MemorySubTab() {
         />
         <StatCard
           label="Memory Types"
-          value={Object.keys(stats.memory_types || {}).length || 6}
+          value={Object.keys(stats.memory_types).length}
           color="text-accent-cyan"
           icon={Lightbulb}
         />

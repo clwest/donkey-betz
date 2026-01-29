@@ -547,7 +547,10 @@ def get_memory_connections(request, memory_id):
 @csrf_exempt
 @require_http_methods(["GET"])
 def get_memory_palace_overview(request):
-    """Get overview of all agents' memory palaces"""
+    """
+    Get overview of all agents' memory palaces.
+    Session 860: Added safety_class stats for frontend Memory Palace tab.
+    """
     try:
         from core.models_unified_system import AgentMemory, Agent
         from django.db.models import Count, Avg
@@ -564,12 +567,23 @@ def get_memory_palace_overview(request):
             count=Count('id')
         ).order_by('-count')
 
+        # Session 860: Add safety class stats
+        safety_by_class = AgentMemory.objects.values('safety_class').annotate(
+            count=Count('id')
+        )
+        safety_counts = {item['safety_class']: item['count'] for item in safety_by_class}
+
         return JsonResponse({
             'success': True,
             'overview': {
                 'total_memories': total_memories,
                 'agents_with_memories': agents_with_memories.count(),
-                'memory_types': list(memory_by_type)
+                'memory_types': list(memory_by_type),
+                # Session 860: Safety class breakdown
+                'approved_count': safety_counts.get('approved', 0),
+                'candidate_count': safety_counts.get('candidate', 0),
+                'exploratory_count': safety_counts.get('exploratory', 0),
+                'test_only_count': safety_counts.get('test_only', 0),
             },
             'agents': [
                 {
@@ -608,4 +622,66 @@ def delete_memory(request, memory_id):
         })
     except Exception as e:
         logger.exception(f"Error deleting memory: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_all_memories(request):
+    """
+    Session 860: List all memories across all agents with filtering.
+    Supports: safety_class, memory_type, valence, limit, offset
+    """
+    try:
+        from core.models_unified_system import AgentMemory
+        from django.db.models import F
+
+        # Parse query params
+        safety_class = request.GET.get('safety_class')
+        memory_type = request.GET.get('memory_type')
+        valence = request.GET.get('valence')
+        limit = min(int(request.GET.get('limit', 20)), 100)
+        offset = int(request.GET.get('offset', 0))
+
+        # Build query - defer embedding fields to reduce egress
+        queryset = AgentMemory.objects.defer('embedding').select_related('agent')
+
+        # Apply filters
+        if safety_class:
+            queryset = queryset.filter(safety_class=safety_class)
+        if memory_type:
+            queryset = queryset.filter(memory_type=memory_type)
+        if valence:
+            queryset = queryset.filter(valence=valence)
+
+        # Get total count before pagination
+        total_count = queryset.count()
+
+        # Order by importance and recency, then paginate
+        memories = queryset.order_by('-importance_score', '-created_at')[offset:offset + limit]
+
+        return JsonResponse({
+            'success': True,
+            'count': total_count,
+            'limit': limit,
+            'offset': offset,
+            'memories': [
+                {
+                    'id': str(m.id),
+                    'title': m.title,
+                    'content': m.content[:300] + '...' if len(m.content) > 300 else m.content,
+                    'memory_type': m.memory_type,
+                    'safety_class': m.safety_class,
+                    'valence': m.valence,
+                    'importance_score': m.importance_score,
+                    'agent_id': str(m.agent_id),
+                    'agent_name': m.agent.name if m.agent else 'Unknown',
+                    'created_at': m.created_at.isoformat() if m.created_at else None,
+                    'memory_outcome': getattr(m, 'memory_outcome', None),
+                }
+                for m in memories
+            ]
+        })
+    except Exception as e:
+        logger.exception(f"Error listing memories: {e}")
         return JsonResponse({'error': str(e)}, status=500)
