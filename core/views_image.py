@@ -4407,15 +4407,14 @@ def unified_gallery(request):
         # Fetch videos if requested
         if media_type in ['all', 'videos']:
           try:
-            # Session 96: Exclude videos with expired external CDN URLs
             # Session 865: Include user's own videos AND system-generated videos
+            # Note: Removed cloudfront exclusion (Session 96) because Runway videos use cloudfront
             video_queryset = VideoHistory.objects.filter(
                 Q(user=user) | Q(user__username__in=['system_autonomous', 'system', 'admin']),
                 status='completed'
             ).exclude(
-                Q(video_url__icontains='cloudfront.net') |
-                Q(video_url__icontains='storage.googleapis.com') |
-                Q(video_url__icontains='_jwt=')
+                # Only exclude Google Storage URLs (truly expired)
+                Q(video_url__icontains='storage.googleapis.com')
             )
 
             # Apply filters
