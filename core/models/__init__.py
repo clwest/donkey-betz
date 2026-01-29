@@ -82,6 +82,12 @@ from ..models_audit_tracking import (
     AuditVerificationRun,
 )
 
+# Import tool call recording models (Session 861 - Tool Call Audit Trail)
+from ..models_tool_calls import (
+    ToolCallRecord,
+    ToolCallAggregate,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -211,4 +217,8 @@ __all__ = [
     'Deliverable',
     'DeliverableExport',
     'DeliverableCollection',
+
+    # Tool Call Recording (Session 861)
+    'ToolCallRecord',
+    'ToolCallAggregate',
 ]
