@@ -298,3 +298,7 @@ income_builder_outputs/
 /system/thinking/
 /workflows/definitions/
 /workflows/orchestration/
+
+# Session 864: Warmup Output Quarantine
+# Warmup runs save telemetry here instead of main workspace
+.warmups/
