@@ -84,6 +84,28 @@ Continue with P1 items from Session 861B:
 
 ---
 
+## Session 862 - Content Tab Fixes (Latest)
+
+### Gallery API Fix - PR #457
+- Added per-media-type error handling to `/api/v1/gallery/all/`
+- Now if images fail, videos/3D/Resolve still return
+- `_media_errors` field in response shows any partial failures
+- Prevents single model issue from breaking entire gallery
+
+### Podcast Status Fix - PR #458
+- Frontend was filtering for `status='published'` but backend uses `status='complete'`
+- Updated `publishedEpisodes` filter to include 'complete' status
+- Updated `draftEpisodes` filter to include all in-progress statuses
+- 192 podcast episodes now display correctly
+
+### Synthetic Users System (Session 862)
+- Created `SyntheticUserProfile` model for testing agent recommendations
+- 15 persona archetypes (new_grad, career_pivoter, freelancer_starter, etc.)
+- Management command: `python manage.py generate_synthetic_users --all`
+- 15 synthetic users generated in database
+
+---
+
 ## Quick Start
 
 ```bash
