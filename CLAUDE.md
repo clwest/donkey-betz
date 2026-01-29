@@ -16,10 +16,10 @@
 | **Services** | 124 | Including diagnostic pipeline, context optimization, self-healing orchestrator |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
-| **Frontend Bundle** | 1,948 KB | 11 workspace tabs, collapsible sidebar |
+| **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
-- **Podcast TTS + Voice Profiles (865):** Reconnected ElevenLabs TTS pipeline, VoiceProfileModal fetches real voices, custom voice selection via localStorage. Celery health monitoring sends Discord alerts every 30 min.
+- **Podcast TTS + Voice Profiles + ConceptForge UI (865):** Reconnected ElevenLabs TTS pipeline, VoiceProfileModal fetches real voices, custom voice selection. Added Dossiers tab with full 6-stage pipeline visualization. Celery health monitoring sends Discord alerts every 30 min.
 - **Content Intelligence Improvements (864):** EditorAgent for auto-enhancement, operational title detection (auto-internal), lowered structure threshold 0.65→0.55. Expected: 2%→15%+ publish ready.
 - **ConceptForge Pipeline (863):** Content → Intelligence → Strategy → Product. 6-stage autonomous think tank with 139 persona agents and 25 legendary advisors. Gate: quality >= 0.80 + strategic_tag.
 - **Content Flow Unification (862):** Dream → Initiative → 5 Stages → Deliverable with full FK traceability. New ResearchResult model for Stage 1 tracking.

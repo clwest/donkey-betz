@@ -1,8 +1,8 @@
 # Session 866 - Start Here
 
-**Previous Session:** 865 (Podcast TTS + Voice Profile Integration)
+**Previous Session:** 865 (Podcast TTS + Voice Profiles + ConceptForge UI)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 241 Celery Tasks (+1) | **Celery Health Monitoring: ACTIVE** | **Podcast TTS: RECONNECTED** | **VoiceProfileModal: CONNECTED** | **Run Mode Tracking: COMPLETE** | **Content Intelligence: IMPROVED**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 241 Celery Tasks (+1) | 12 Workspace Tabs (+1) | **ConceptForge UI: COMPLETE** | **Celery Health Monitoring: ACTIVE** | **Podcast TTS: RECONNECTED** | **VoiceProfileModal: CONNECTED**
 
 ---
 
@@ -45,6 +45,22 @@ Backend (VoiceProfile.elevenlabs_voice_id lookup) →
 podcast_audio_service (custom_voice_id) → ElevenLabs TTS
 ```
 
+### Part 4: ConceptForge Dossier Pipeline UI (NEW)
+
+Added complete UI for viewing ConceptForge pipeline runs in new "Dossiers" workspace tab.
+
+**Backend API (`core/views_conceptforge.py`):**
+- `GET /api/conceptforge/runs/` - List runs with filtering
+- `GET /api/conceptforge/runs/<id>/` - Run details with stages
+- `POST /api/conceptforge/runs/<id>/retry/` - Retry failed runs
+- `GET /api/conceptforge/stats/` - Pipeline statistics
+
+**Frontend (`ConceptForgeTab.tsx`):**
+- Stats panel (total runs, success rate, 7-day activity)
+- Run list with 6-stage progress indicators
+- Detail view with stage tabs (Research, Debate, Feasibility, Risk, Market, Synthesis)
+- Artifacts list
+
 ### Files Modified
 
 | File | Changes |
@@ -52,10 +68,13 @@ podcast_audio_service (custom_voice_id) → ElevenLabs TTS
 | `core/tasks.py` | Added `monitor_celery_health` task |
 | `core/settings.py` | Added to Celery Beat schedule |
 | `core/views_podcast.py` | Added `podcast_generate_audio` endpoint |
-| `core/urls.py` | Added URL route |
+| `core/urls.py` | Added URL routes for podcast + ConceptForge API |
+| `core/views_conceptforge.py` | NEW - ConceptForge API endpoints |
 | `core/services/podcast_audio_service.py` | Added `custom_voice_id` parameter |
 | `frontend/src/lib/api.ts` | Updated `generateAudio` method |
 | `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Fixed auth, added Generate Audio, rewrote VoiceProfileModal |
+| `frontend/src/pages/workspace/tabs/ConceptForgeTab.tsx` | NEW - Dossier pipeline UI |
+| `frontend/src/pages/WorkspacePageNew.tsx` | Added Dossiers tab to navigation |
 
 ---
 
