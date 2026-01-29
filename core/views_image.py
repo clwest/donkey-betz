@@ -4299,8 +4299,12 @@ def unified_gallery(request):
                 'items': []  # For compatibility with React frontend
             })
 
+        # Session 862: Track errors per media type for debugging
+        media_errors = []
+
         # Fetch images if requested
         if media_type in ['all', 'images']:
+          try:
             # Session 94: Exclude data URI images (too large for JSON response)
             image_queryset = ImageHistory.objects.filter(user=user).exclude(
                 file_path__startswith='data:'
@@ -4350,9 +4354,13 @@ def unified_gallery(request):
                     'user_notes': img.user_notes,
                     'tags': img.tags,
                 })
+          except Exception as e:
+            logger.warning(f"Error fetching images: {e}")
+            media_errors.append(f"images: {str(e)}")
 
         # Fetch videos if requested
         if media_type in ['all', 'videos']:
+          try:
             # Session 96: Exclude videos with expired external CDN URLs
             video_queryset = VideoHistory.objects.filter(user=user, status='completed').exclude(
                 Q(video_url__icontains='cloudfront.net') |
@@ -4402,9 +4410,13 @@ def unified_gallery(request):
                     'user_notes': video.user_notes,
                     'tags': video.tags,
                 })
+          except Exception as e:
+            logger.warning(f"Error fetching videos: {e}")
+            media_errors.append(f"videos: {str(e)}")
 
         # Fetch 3D models if requested (Session 137)
         if media_type in ['all', '3d_models', 'models']:
+          try:
             from content.models import MiniFigAsset
 
             # Only show completed 3D models
@@ -4455,9 +4467,13 @@ def unified_gallery(request):
                     'style': model.metadata.get('style', 'toy'),
                     'scale': model.metadata.get('scale', 'medium'),
                 })
+          except Exception as e:
+            logger.warning(f"Error fetching 3D models: {e}")
+            media_errors.append(f"3d_models: {str(e)}")
 
         # Fetch DaVinci Resolve renders if requested (Session 479)
         if media_type in ['all', 'videos', 'resolve']:
+          try:
             from core.models_unified_system import ResolveRenderJob
 
             # Only show completed resolve renders
@@ -4503,6 +4519,9 @@ def unified_gallery(request):
                     'was_used': render.was_used,
                     'revenue_generated': float(render.revenue_generated) if render.revenue_generated else 0,
                 })
+          except Exception as e:
+            logger.warning(f"Error fetching Resolve renders: {e}")
+            media_errors.append(f"resolve: {str(e)}")
 
         # NOTE: Audio support will be added when AudioHistory model is created.
         # See content/models.py for current model inventory.
@@ -4551,12 +4570,18 @@ def unified_gallery(request):
             if search_term:
                 previous_url += f"&search={search_term}"
 
-        return Response({
+        # Session 862: Include errors for debugging (only in non-prod or if requested)
+        response_data = {
             'count': total_count,
             'next': next_url,
             'previous': previous_url,
             'results': paginated_items
-        })
+        }
+        if media_errors:
+            response_data['_media_errors'] = media_errors
+            logger.warning(f"Gallery partial errors: {media_errors}")
+
+        return Response(response_data)
 
     except Exception as e:
         logger.error(f"❌ Unified gallery error: {str(e)}")
