@@ -438,6 +438,9 @@ def podcast_generate_audio(request, episode_id):
 
     POST /api/podcasts/<episode_id>/generate-audio/
 
+    Body (optional):
+        - voice_profile_id: UUID of a VoiceProfile to use for all speakers
+
     Works for both PodcastEpisode and ChannelEpisode.
     For ChannelEpisode, creates a linked PodcastEpisode with audio.
     """
@@ -447,8 +450,26 @@ def podcast_generate_audio(request, episode_id):
     from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
     from core.services.podcast_audio_service import generate_podcast_audio
+    from core.models_voice_marketplace import VoiceProfile
 
     try:
+        # Parse request body for voice_profile_id
+        data = json.loads(request.body) if request.body else {}
+        voice_profile_id = data.get('voice_profile_id')
+
+        # Get custom ElevenLabs voice ID if a profile is specified
+        custom_voice_id = None
+        if voice_profile_id:
+            try:
+                voice_profile = VoiceProfile.objects.get(id=voice_profile_id)
+                custom_voice_id = voice_profile.elevenlabs_voice_id
+                logger.info(f"🎤 Using custom voice: {voice_profile.name} ({custom_voice_id})")
+            except VoiceProfile.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Voice profile not found'
+                }, status=404)
+
         # Try PodcastEpisode first
         try:
             episode = PodcastEpisode.objects.get(id=episode_id, user=request.user)
@@ -469,7 +490,10 @@ def podcast_generate_audio(request, episode_id):
             episode.status = 'generating_audio'
             episode.save()
 
-            result = generate_podcast_audio(episode_id=str(episode.id))
+            result = generate_podcast_audio(
+                episode_id=str(episode.id),
+                custom_voice_id=custom_voice_id,
+            )
 
             if result['success']:
                 # Refresh episode from DB (audio service updates it)
@@ -519,7 +543,10 @@ def podcast_generate_audio(request, episode_id):
                 }
             )
 
-            result = generate_podcast_audio(episode_id=str(podcast_ep.id))
+            result = generate_podcast_audio(
+                episode_id=str(podcast_ep.id),
+                custom_voice_id=custom_voice_id,
+            )
 
             if result['success']:
                 podcast_ep.refresh_from_db()
