@@ -34,6 +34,7 @@ import {
   ThumbsUp,
   Send,
   AlertCircle,
+  Sparkles,  // Session 865: For Enhance button
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi } from '@/lib/api'
@@ -507,6 +508,7 @@ function ChannelsSubTab() {
 // ============ Blogs Sub-Tab ============
 
 // Session 861: Enhanced BlogPost interface with full content fields
+// Session 865: Added PublishGate quality scores for enhancement UI
 interface BlogPost {
   id: string
   title: string
@@ -523,12 +525,20 @@ interface BlogPost {
   sections?: Array<{ header: string; content: string }>
   conclusion?: string
   stats_snapshot?: Record<string, unknown>
+  // Session 865: PublishGate quality scores
+  quality_score?: number | null
+  novelty_score?: number | null
+  structure_score?: number | null
+  publish_ready?: boolean
+  gate_notes?: string | null
 }
 
 function BlogsSubTab() {
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
+  const [enhancingBlogId, setEnhancingBlogId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   // Session 860: Added error handling for API responses
   const { data: blogsData, isLoading, isError, error, refetch, isFetching } = useQuery({
@@ -547,6 +557,34 @@ function BlogsSubTab() {
     },
   })
 
+  // Session 865: Enhance blog mutation
+  const enhanceMutation = useMutation({
+    mutationFn: async (blogId: string) => {
+      const response = await fetch(`/api/v1/research/self-blog/${blogId}/enhance/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ save: true }),
+      })
+      if (!response.ok) throw new Error('Enhancement failed')
+      return response.json()
+    },
+    onMutate: (blogId) => {
+      setEnhancingBlogId(blogId)
+    },
+    onSuccess: () => {
+      // Refresh the blogs list after enhancement starts
+      queryClient.invalidateQueries({ queryKey: ['blogs-tab'] })
+    },
+    onSettled: () => {
+      setEnhancingBlogId(null)
+    },
+  })
+
+  const handleEnhance = (blogId: string, e: React.MouseEvent) => {
+    e.stopPropagation()  // Prevent opening the blog detail modal
+    enhanceMutation.mutate(blogId)
+  }
+
   if (isLoading) {
     return <LoadingState />
   }
@@ -559,6 +597,14 @@ function BlogsSubTab() {
   const total = blogsData?.category_counts?.blog || blogsData?.pagination?.total || 1004
   const publishedCount = blogs.filter((b: BlogPost) => b.status === 'published').length
   const draftCount = blogs.filter((b: BlogPost) => b.status === 'draft' || !b.status).length
+  // Session 865: Count blogs that could be enhanced (has scores but not publish-ready)
+  const needsEnhancementCount = blogsData?.needs_enhancement_count ||
+    blogs.filter((b: BlogPost) =>
+      b.quality_score !== null &&
+      b.quality_score !== undefined &&
+      !b.publish_ready &&
+      !b.title.startsWith('[')  // Exclude operational titles
+    ).length
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section)
@@ -574,7 +620,7 @@ function BlogsSubTab() {
       />
 
       {/* Blog Stats - Expandable */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div
           className={cn(
             'card cursor-pointer hover:border-primary-500/50 transition-colors',
@@ -632,6 +678,26 @@ function BlogsSubTab() {
             )}
           </div>
         </div>
+        {/* Session 865: Needs Enhancement card */}
+        <div
+          className={cn(
+            'card cursor-pointer hover:border-primary-500/50 transition-colors',
+            expandedSection === 'enhance' && 'border-accent-purple/50'
+          )}
+          onClick={() => toggleSection('enhance')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-accent-purple">{needsEnhancementCount}</div>
+              <div className="text-xs text-gray-500">Needs Polish</div>
+            </div>
+            {expandedSection === 'enhance' ? (
+              <ChevronUp size={14} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={14} className="text-gray-400" />
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Expanded Blog Lists */}
@@ -643,7 +709,13 @@ function BlogsSubTab() {
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
           renderItem={(blog: BlogPost) => (
-            <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
+            <BlogRow
+              key={blog.id}
+              blog={blog}
+              onClick={() => setSelectedBlog(blog)}
+              onEnhance={handleEnhance}
+              isEnhancing={enhancingBlogId === blog.id}
+            />
           )}
         />
       )}
@@ -670,7 +742,40 @@ function BlogsSubTab() {
           visibleCount={visibleCount}
           onLoadMore={() => setVisibleCount((v) => v + 10)}
           renderItem={(blog: BlogPost) => (
-            <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
+            <BlogRow
+              key={blog.id}
+              blog={blog}
+              onClick={() => setSelectedBlog(blog)}
+              onEnhance={handleEnhance}
+              isEnhancing={enhancingBlogId === blog.id}
+            />
+          )}
+        />
+      )}
+
+      {/* Session 865: Needs Enhancement expanded list */}
+      {expandedSection === 'enhance' && (
+        <ExpandedListCard
+          title="Needs Enhancement"
+          icon={Sparkles}
+          items={blogs.filter((b: BlogPost) =>
+            b.quality_score !== null &&
+            b.quality_score !== undefined &&
+            !b.publish_ready &&
+            !b.title.startsWith('[')
+          )}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No blogs need enhancement"
+          renderItem={(blog: BlogPost) => (
+            <BlogRow
+              key={blog.id}
+              blog={blog}
+              onClick={() => setSelectedBlog(blog)}
+              onEnhance={handleEnhance}
+              isEnhancing={enhancingBlogId === blog.id}
+              showEnhanceButton
+            />
           )}
         />
       )}
@@ -696,7 +801,13 @@ function BlogsSubTab() {
           ) : (
             <div className="space-y-3">
               {blogs.slice(0, 4).map((blog: BlogPost) => (
-                <BlogRow key={blog.id} blog={blog} onClick={() => setSelectedBlog(blog)} />
+                <BlogRow
+                  key={blog.id}
+                  blog={blog}
+                  onClick={() => setSelectedBlog(blog)}
+                  onEnhance={handleEnhance}
+                  isEnhancing={enhancingBlogId === blog.id}
+                />
               ))}
             </div>
           )}
@@ -1598,7 +1709,16 @@ function ChannelRow({ channel, onClick }: { channel: ContentChannel; onClick: ()
 }
 
 // Session 840: Blog row with click handler
-function BlogRow({ blog, onClick }: { blog: BlogPost; onClick: () => void }) {
+// Session 865: Added enhance button support
+interface BlogRowProps {
+  blog: BlogPost
+  onClick: () => void
+  onEnhance?: (blogId: string, e: React.MouseEvent) => void
+  isEnhancing?: boolean
+  showEnhanceButton?: boolean
+}
+
+function BlogRow({ blog, onClick, onEnhance, isEnhancing, showEnhanceButton }: BlogRowProps) {
   // Status styling
   const statusStyles: Record<string, { bg: string; text: string; icon: typeof Clock }> = {
     draft: { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: Clock },
@@ -1608,6 +1728,14 @@ function BlogRow({ blog, onClick }: { blog: BlogPost; onClick: () => void }) {
   const status = blog.status || 'draft'
   const style = statusStyles[status] || statusStyles.draft
   const StatusIcon = style.icon
+
+  // Session 865: Determine if blog can be enhanced
+  const canEnhance = showEnhanceButton ||
+    (blog.quality_score !== null &&
+     blog.quality_score !== undefined &&
+     !blog.publish_ready &&
+     !blog.title.startsWith('[') &&
+     blog.status !== 'published')
 
   return (
     <div
@@ -1623,11 +1751,45 @@ function BlogRow({ blog, onClick }: { blog: BlogPost; onClick: () => void }) {
               <StatusIcon size={10} />
               {status}
             </span>
+            {/* Session 865: Quality score indicator */}
+            {blog.quality_score !== null && blog.quality_score !== undefined && (
+              <span className={cn(
+                'px-1.5 py-0.5 rounded text-xs',
+                blog.publish_ready
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'bg-purple-500/20 text-purple-400'
+              )}>
+                {blog.publish_ready ? 'Ready' : `${Math.round(blog.quality_score * 100)}%`}
+              </span>
+            )}
           </div>
           <div className="text-xs text-gray-500 line-clamp-1">{blog.intro}</div>
         </div>
-        <div className="text-xs text-gray-500 ml-2 whitespace-nowrap">
-          {blog.word_count} words
+        <div className="flex items-center gap-2 ml-2">
+          {/* Session 865: Enhance button */}
+          {canEnhance && onEnhance && (
+            <button
+              onClick={(e) => onEnhance(blog.id, e)}
+              disabled={isEnhancing}
+              className={cn(
+                'px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors',
+                isEnhancing
+                  ? 'bg-purple-500/20 text-purple-300 cursor-wait'
+                  : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+              )}
+              title="Enhance with EditorAgent"
+            >
+              {isEnhancing ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Sparkles size={12} />
+              )}
+              {isEnhancing ? 'Enhancing...' : 'Enhance'}
+            </button>
+          )}
+          <div className="text-xs text-gray-500 whitespace-nowrap">
+            {blog.word_count} words
+          </div>
         </div>
       </div>
       {blog.tags?.length > 0 && (

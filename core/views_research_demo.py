@@ -655,6 +655,19 @@ def self_blog_list_api(request):
         end = start + per_page
         blogs = queryset[start:end]
 
+        # Session 865: Get needs_enhancement count for UI
+        needs_enhancement_count = SelfBlog.objects.filter(
+            publish_ready=False,
+            quality_score__isnull=False,
+            quality_score__gte=0.5  # Has been evaluated, decent quality
+        ).exclude(
+            title__istartswith='[Research]'
+        ).exclude(
+            title__istartswith='[Stage'
+        ).exclude(
+            title__istartswith='[Report]'
+        ).count()
+
         return JsonResponse({
             'success': True,
             'blogs': [
@@ -669,6 +682,12 @@ def self_blog_list_api(request):
                     'tone': b.tone,
                     'word_count': b.word_count,
                     'created_at': b.created_at.isoformat(),
+                    # Session 865: PublishGate scores for enhancement UI
+                    'quality_score': b.quality_score,
+                    'novelty_score': b.novelty_score,
+                    'structure_score': b.structure_score,
+                    'publish_ready': b.publish_ready,
+                    'gate_notes': b.gate_notes[:100] if b.gate_notes else None,
                 }
                 for b in blogs
             ],
@@ -682,6 +701,7 @@ def self_blog_list_api(request):
             },
             'category_counts': category_counts,  # Session 814
             'status_counts': status_counts,  # Session 833
+            'needs_enhancement_count': needs_enhancement_count,  # Session 865
         })
 
     except Exception as e:
@@ -853,6 +873,53 @@ def publish_self_blog_api(request, blog_id):
 
     except Exception as e:
         logger.error(f"Error in publish_self_blog_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def enhance_self_blog_api(request, blog_id):
+    """
+    Session 865: Trigger EditorAgent enhancement for a blog.
+    Uses the enhance_blog_task Celery task to improve structure,
+    hooks, headers, and conclusion.
+    """
+    try:
+        import json
+        from core.models_unified_system import SelfBlog
+        from core.tasks import enhance_blog_task
+
+        body = json.loads(request.body) if request.body else {}
+        focus_areas = body.get('focus_areas', None)  # Optional: ['structure', 'hooks', 'conclusion']
+        save = body.get('save', True)  # Default to saving the changes
+
+        blog = SelfBlog.objects.filter(id=blog_id).first()
+
+        if not blog:
+            return JsonResponse({
+                'success': False,
+                'error': 'Blog not found'
+            }, status=404)
+
+        # Trigger the enhancement task asynchronously
+        task = enhance_blog_task.delay(
+            blog_id=str(blog_id),
+            focus_areas=focus_areas,
+            save=save
+        )
+
+        logger.info(f"Triggered enhancement for blog: {blog.title} (ID: {blog_id}), task_id: {task.id}")
+        return JsonResponse({
+            'success': True,
+            'message': f'Enhancement started for "{blog.title}"',
+            'task_id': task.id,
+            'blog': {
+                'id': str(blog.id),
+                'title': blog.title,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in enhance_self_blog_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
