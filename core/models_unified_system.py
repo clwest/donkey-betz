@@ -9029,6 +9029,53 @@ class AgentDream(models.Model):
             qs = qs.filter(directed_topic__icontains=topic)
         return qs.select_related('agent').order_by('-dreamed_at')[:limit]
 
+    # Session 862: Content Flow Unification - Dream → Initiative Bridge
+    def promote_to_initiative(self, approved_by='system'):
+        """
+        Session 862: Create an Initiative from this Dream.
+
+        Called when dream is approved in boardroom. Creates a full Initiative
+        with Stage 1 (Research Brief) ready for research agents to work on.
+
+        Args:
+            approved_by: Who approved this dream (user or 'system')
+
+        Returns:
+            Initiative: The created initiative, or existing one if already promoted
+        """
+        from core.models_document_registry import Initiative, InitiativeStage
+
+        # Already promoted - return existing Initiative
+        if self.initiative:
+            return self.initiative
+
+        # Create the Initiative from Dream
+        initiative = Initiative.objects.create(
+            name=self.title,
+            description=self.content,
+            status='active',
+            current_stage=1,
+            created_by=self.agent.name if self.agent else 'system',
+            parent_topic=self.title,
+        )
+
+        # Create Stage 1 (Research Brief) as DRAFT
+        InitiativeStage.objects.create(
+            initiative=initiative,
+            stage=1,  # RESEARCH_BRIEF
+            status='DRAFT',
+            notes=f"Created from Dream: {self.title}\n\nDream Content:\n{self.content}\n\nDream Type: {self.dream_type}\nApproved By: {approved_by}",
+        )
+
+        # Link dream to initiative and mark as promoted
+        self.initiative = initiative
+        self.promoted_to_decision = True
+        self.promoted_at = timezone.now()
+        self.decision_outcome = 'approved'
+        self.save(update_fields=['initiative', 'promoted_to_decision', 'promoted_at', 'decision_outcome'])
+
+        return initiative
+
 
 class ContentQualityBlacklist(models.Model):
     """
