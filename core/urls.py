@@ -1098,21 +1098,20 @@ from core.views_ecosystem_activation import (
 )
 
 # Import migrated API views
-# Session 745: Frontend stub endpoints
-from core.views_frontend_stubs import (
-    # Billing/Stripe stubs
+# Session 869: Stripe billing - real implementations replacing stubs
+from core.views_stripe_billing import (
     stripe_plans, stripe_payment_methods, stripe_add_payment_method,
     stripe_remove_payment_method, stripe_set_default_payment_method,
     stripe_invoices, stripe_invoice_detail, stripe_upcoming_invoice,
     stripe_usage, stripe_subscribe, stripe_cancel_subscription,
     stripe_resume_subscription, stripe_billing_portal,
-    # Learning journey stubs (now replaced by real views in views_learning_journey_api.py)
-    # Session 782: Autonomous stubs removed - using real views from views_autonomous_dashboard.py
-    # Session 782: Reasoning stubs removed - using real views from views_reasoning_engine.py
-    # Analytics stubs (legacy - keeping for reference, now using real views)
-    # analytics_overview, analytics_summary, analytics_reports_list,
-    # analytics_reports_generate,
 )
+# NOTE: All stubs from views_frontend_stubs.py have been replaced:
+# - Stripe billing: Now using views_stripe_billing.py (Session 869)
+# - Learning journey: Now using views_learning_journey_api.py (Session 782)
+# - Autonomous: Now using views_autonomous_dashboard.py (Session 782)
+# - Reasoning: Now using views_autonomous_reasoning.py (Session 782)
+# - Analytics: Now using views_analytics_real.py (Session 780)
 
 # Session 780: Real analytics implementation replacing stubs
 from core.views_analytics_real import (
