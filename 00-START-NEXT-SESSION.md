@@ -59,7 +59,7 @@ core/conceptforge/labs.py
 core/conceptforge/panels.py
 core/conceptforge/orchestrator.py
 core/models_conceptforge.py
-core/signals.py
+core/signals/conceptforge_signals.py
 docs/CONCEPTFORGE.md
 ```
 

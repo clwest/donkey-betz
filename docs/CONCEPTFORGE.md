@@ -287,7 +287,7 @@ After dossier completion:
 | `core/conceptforge/panels.py` | Advisor panel configurations |
 | `core/conceptforge/orchestrator.py` | Pipeline orchestration |
 | `core/models_conceptforge.py` | Database models |
-| `core/signals.py` | Django signals (SelfBlog trigger) |
+| `core/signals/conceptforge_signals.py` | Django signals (SelfBlog trigger) |
 | `core/tasks.py` | Celery tasks (last section) |
 
 ## Adding a New Domain Lab

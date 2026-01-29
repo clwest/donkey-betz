@@ -85,7 +85,7 @@ NEW:
 - core/conceptforge/panels.py
 - core/conceptforge/orchestrator.py
 - core/models_conceptforge.py
-- core/signals.py
+- core/signals/conceptforge_signals.py (in existing signals package)
 - docs/CONCEPTFORGE.md
 - docs/handoffs/SESSION_863_CONCEPTFORGE.md
 - core/migrations/0205_conceptforge_pipeline.py
@@ -94,8 +94,15 @@ MODIFIED:
 - core/apps.py (added signal registration)
 - core/models/__init__.py (added ConceptForge model imports)
 - core/tasks.py (added ConceptForge Celery tasks)
+- core/signals/__init__.py (added ConceptForge signal exports)
 - docs/ARCHITECTURE.md (added ConceptForge section)
 ```
+
+## Deployment Fix
+
+Initial deployment failed due to signals file conflict:
+- Created `core/signals.py` but `core/signals/` package already existed
+- Fixed by moving signals to `core/signals/conceptforge_signals.py`
 
 ## Testing
 
