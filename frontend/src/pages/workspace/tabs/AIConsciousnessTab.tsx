@@ -1114,33 +1114,49 @@ function RelationshipsSubTab() {
   const [selectedType, setSelectedType] = useState<'all' | 'neutral' | 'alliance' | 'rivalry' | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
 
+  // Session 860: Fixed data extraction - overview returns { relationships: [...], relationship_distribution: {...}, ... }
   const { data: overviewData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['relationships-overview-tab'],
     queryFn: async () => {
       try {
         const res = await relationshipsApi.overview()
-        return res.data
-      } catch (e) {
-        // Fallback with real data
+        const data = res.data || {}
         return {
-          total_relationships: 462,
-          relationship_types: { neutral: 448, alliance: 13, rivalry: 1 }
+          total_relationships: data.total_relationships || 0,
+          // relationship_distribution is the object format { neutral: N, alliance: N, ... }
+          relationship_types: data.relationship_distribution || {},
+          // relationships is the array of actual relationship objects
+          relationships: data.relationships || [],
+          alliances_data: data.alliances_data || [],
+          rivalries_data: data.rivalries_data || [],
+        }
+      } catch {
+        return {
+          total_relationships: 0,
+          relationship_types: {},
+          relationships: [],
+          alliances_data: [],
+          rivalries_data: [],
         }
       }
     },
   })
 
-  // Session 860: Use relationshipsApi.overview() - /api/relationships/ endpoint doesn't exist
-  // The overview endpoint returns relationship types and counts, not individual relationships
-  // For now, disable expanded relationship list until a proper list endpoint is created
+  // Session 860: Filter relationships from overview data based on selected type
   const { data: relationshipsData, isLoading: relationshipsLoading } = useQuery({
-    queryKey: ['relationships-list', selectedType, visibleCount],
+    queryKey: ['relationships-list', selectedType, visibleCount, overviewData?.relationships],
     queryFn: async () => {
-      // Return empty - no list endpoint exists yet
-      // TODO: Create /api/agent-relationships/list/ endpoint to list all relationships with filters
-      return { results: [], count: 0 }
+      const allRelationships = overviewData?.relationships || []
+      let filtered = allRelationships
+      if (selectedType && selectedType !== 'all') {
+        filtered = allRelationships.filter((r: any) => r.relationship_type === selectedType)
+      }
+      return {
+        relationships: filtered.slice(0, visibleCount),
+        count: filtered.length
+      }
     },
-    enabled: selectedType !== null,
+    enabled: selectedType !== null && !!overviewData,
   })
 
   if (isLoading) {
@@ -1151,9 +1167,10 @@ function RelationshipsSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load relationships data" />
   }
 
-  const overview = overviewData || { total_relationships: 462, relationship_types: {} }
+  const overview = overviewData || { total_relationships: 0, relationship_types: {}, relationships: [] }
   const relTypes = overview.relationship_types || {}
-  const relationships = relationshipsData?.results || []
+  // Session 860: Fixed data extraction
+  const relationships = relationshipsData?.relationships || []
   const relationshipsCount = relationshipsData?.count ||
     (selectedType === 'all' ? overview.total_relationships :
     selectedType ? relTypes[selectedType] : 0) || 0
@@ -1203,7 +1220,7 @@ function RelationshipsSubTab() {
         />
         <StatCard
           label="Neutral"
-          value={relTypes.neutral || 448}
+          value={relTypes.neutral || 0}
           color="text-gray-400"
           onClick={() => toggleType('neutral')}
           icon={Users}
@@ -1211,7 +1228,7 @@ function RelationshipsSubTab() {
         />
         <StatCard
           label="Alliances"
-          value={relTypes.alliance || 13}
+          value={relTypes.alliance || 0}
           color="text-accent-green"
           onClick={() => toggleType('alliance')}
           icon={Shield}
@@ -1219,7 +1236,7 @@ function RelationshipsSubTab() {
         />
         <StatCard
           label="Rivalries"
-          value={relTypes.rivalry || 1}
+          value={relTypes.rivalry || 0}
           color="text-red-400"
           onClick={() => toggleType('rivalry')}
           icon={AlertTriangle}
@@ -1244,7 +1261,8 @@ function RelationshipsSubTab() {
                 <div className="flex items-center gap-3">
                   <Users size={14} className={getRelTypeColor(rel.relationship_type)} />
                   <div>
-                    <span className="text-sm">{rel.agent_1} ↔ {rel.agent_2}</span>
+                    {/* Session 860: Fixed field names - API returns agent_from/agent_to objects */}
+                    <span className="text-sm">{rel.agent_from?.name || rel.agent_1} ↔ {rel.agent_to?.name || rel.agent_2}</span>
                     {rel.strength !== undefined && (
                       <p className="text-xs text-gray-500">Strength: {rel.strength}</p>
                     )}
