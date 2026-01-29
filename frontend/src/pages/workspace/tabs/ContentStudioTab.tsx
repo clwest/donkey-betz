@@ -1632,12 +1632,13 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
     },
   })
 
-  // Publish mutation
+  // Publish mutation - Session 862: Add force=true to allow publishing draft blogs
   const publishMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/v1/research/self-blog/${blog.id}/publish/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
       })
       if (!response.ok) throw new Error('Failed to publish blog')
       return response.json()
