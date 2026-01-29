@@ -1,134 +1,99 @@
-# Session 865 - Start Here
+# Session 866 - Start Here
 
-**Previous Session:** 864 (Content Intelligence + Run Mode Tracking)
-**Date:** January 28, 2026
-**Status:** 75 Agents (+1 EditorAgent) | 77 Spiders | 25 Advisors | 139 Personas | 240 Celery Tasks (+2) | **Run Mode Tracking: COMPLETE** | **Content Intelligence: IMPROVED** | **ConceptForge: COMPLETE** | **Data Persistence: COMPLETE**
+**Previous Session:** 865 (Podcast TTS + Voice Profile Integration)
+**Date:** January 29, 2026
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 241 Celery Tasks (+1) | **Celery Health Monitoring: ACTIVE** | **Podcast TTS: RECONNECTED** | **VoiceProfileModal: CONNECTED** | **Run Mode Tracking: COMPLETE** | **Content Intelligence: IMPROVED**
 
 ---
 
-## What Was Accomplished in Session 864
+## What Was Accomplished in Session 865
 
-**Handoff:** `docs/handoffs/SESSION_864_RUN_MODE_TRACKING.md`
+**Handoff:** `docs/handoffs/SESSION_865_PODCAST_TTS_VOICE_PROFILES.md`
 
-### Part 1: Content Intelligence Layer Improvements
+### Part 1: Spider Network Investigation
 
-After analyzing production data from `apply_publish_gate --all --dry-run`, we identified and fixed three issues affecting content classification accuracy.
+Discovered Celery Beat had stopped 38 hours ago. Redeployed Railway to restart all periodic tasks.
 
-### Production Data Before
+### Part 2: Celery Health Monitoring (NEW)
 
-| Metric | Count | Percentage |
-|--------|-------|------------|
-| Publish Ready | 7 | 2% |
-| Needs Enhancement | 264 | 73% |
-| Internal Only | 92 | 25% |
+Added `monitor_celery_health` task that runs every 30 minutes:
 
-### Three Improvements Implemented
+- Checks spider data freshness (alert if no data in 6 hours)
+- Checks periodic task staleness (alert if exercise_agents hasn't run in 6 hours)
+- Checks stuck workspace operations (alert if > 10 stuck for > 2 hours)
+- Sends Discord alerts to #system-status
 
-#### 1. Auto-Classify Operational Titles
+**Location:** `core/tasks.py`
 
-Content with operational title patterns now bypasses quality checks and goes directly to `internal_only`.
+### Part 3: Podcast TTS Pipeline Reconnection
 
-```python
-OPERATIONAL_TITLE_PATTERNS = [
-    r'^\[research\]',           # [Research] ...
-    r'^\[stage \d+',            # [Stage 1 - Research Brief] ...
-    r'^\[report\]',             # [Report] ...
-    r'^\[audit\]',              # [Audit] ...
-    r'^\[internal\]',           # [Internal] ...
-    r'^\[debug\]',              # [Debug] ...
-    r'^\[fix\]',                # [Fix] ...
-    r'^\[todo\]',               # [TODO] ...
-    r'^researchagent:',         # ResearchAgent: ...
-    r'^systeminsights:',        # SystemInsights: ...
-    r'^root.?cause',            # Root-cause analysis...
-]
+Fixed multiple disconnects between UI and backend:
+
+| Issue | Fix |
+|-------|-----|
+| Scripts not displaying | Auth bug - changed raw `fetch()` to `podcastApi.script()` |
+| No Generate Audio button | Added button with loading/error states |
+| VoiceProfileModal was stub | Complete rewrite - now fetches real voices from API |
+| Voice selection not passed | Connected localStorage → API → backend → TTS |
+
+### End-to-End Voice Profile Flow
+
+```
+VoiceProfileModal → localStorage (podcast_voice_profile_id) →
+handleGenerateAudio → podcastApi.generateAudio(id, voiceProfileId) →
+Backend (VoiceProfile.elevenlabs_voice_id lookup) →
+podcast_audio_service (custom_voice_id) → ElevenLabs TTS
 ```
 
-**Location:** `core/services/publish_gate.py:55-67`
-
-#### 2. Lower Structure Threshold
-
-Reduced `STRUCTURE_THRESHOLD` from 0.65 to 0.55. Most content was failing on structure (0.40-0.50) while passing quality (0.80+) and novelty (0.60+).
-
-**Location:** `core/services/publish_gate.py:44`
-
-#### 3. EditorAgent for Auto-Enhancement
-
-New agent that automatically improves content structure for content marked as `needs_enhancement`.
-
-**Enhancement Strategies:**
-| Strategy | Description |
-|----------|-------------|
-| `hooks` | Add compelling opening questions, statistics, bold statements |
-| `headers` | Make section headers action-oriented and varied |
-| `engagement` | Add questions, stats, quotes, callouts |
-| `structure` | Balance section lengths, improve transitions |
-| `conclusion` | Create memorable, actionable endings |
-
-**Location:** `core/agents/editor_agent.py`
-
-### Files Created/Modified
+### Files Modified
 
 | File | Changes |
 |------|---------|
-| `core/services/publish_gate.py` | Operational title patterns, lowered threshold |
-| `core/agents/editor_agent.py` | NEW - Content structure enhancement agent |
-| `core/agents/__init__.py` | Added EditorAgent export |
-| `core/tasks.py` | Added enhance_blog_task, enhance_all_blogs_task |
-
-### New Celery Tasks
-
-- `enhance_blog_task` - Enhance single blog by ID
-- `enhance_all_blogs_task` - Batch enhance blogs marked as 'needs_enhancement'
+| `core/tasks.py` | Added `monitor_celery_health` task |
+| `core/settings.py` | Added to Celery Beat schedule |
+| `core/views_podcast.py` | Added `podcast_generate_audio` endpoint |
+| `core/urls.py` | Added URL route |
+| `core/services/podcast_audio_service.py` | Added `custom_voice_id` parameter |
+| `frontend/src/lib/api.ts` | Updated `generateAudio` method |
+| `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Fixed auth, added Generate Audio, rewrote VoiceProfileModal |
 
 ---
 
-### Part 2: Run Mode Tracking (Warmup vs Production)
+## Priority for Session 866
 
-Fixed the Operations Tab showing generic content like "Python utility functions" by implementing a 3-phase system to separate warmup exercises from production work.
+### Option A: Test TTS End-to-End (Recommended)
 
-**Problem:** `exercise_all_dormant_agents` was generating real content with default topics, polluting the workspace.
+Verify the podcast TTS pipeline works in production:
 
-#### Phase 0: Signal Classification
-Added fields to `WorkspaceOperation`:
-- `run_mode` - 'production' or 'warmup'
-- `trigger_source` - initiative, user, dream, schedule, warmup, self_healing, conceptforge
-- `initiative_id` - FK to initiative
-- `is_warmup` - Quick filter boolean
+```bash
+# Check if episodes have scripts
+railway run python -c "
+from core.models_podcast_studio import PodcastEpisode
+episodes = PodcastEpisode.objects.filter(script__isnull=False).exclude(script='')[:5]
+for ep in episodes:
+    print(f'{ep.id}: {ep.title[:50]} - script length: {len(ep.script)}')
+"
 
-**Migration:** `0207_session_864_run_mode_tracking.py`
+# Generate audio for one episode (dry run)
+railway run python -c "
+from core.services.podcast_audio_service import generate_podcast_audio
+# Use an episode ID from above
+result = generate_podcast_audio('episode-uuid-here')
+print(result)
+"
+```
 
-#### Phase 1: Infra-Only Warmup
-`_run_agent_warmup()` verifies agent works WITHOUT content generation:
-- Checks agent class exists and can be instantiated
-- Verifies required methods (execute, tools)
-- NO file creation, NO LLM calls
+### Option B: Voice Recording UI
 
-#### Phase 2: Initiative Queue
-`_get_next_task_for_agent()` pulls real work from `InitiativeStage` before using default topics.
+Add interface for voice cloning:
+1. Record audio samples (minimum 30 seconds)
+2. Upload to ElevenLabs voice cloning API
+3. Save cloned voice to VoiceProfile model
+4. Allow selection in VoiceProfileModal
 
-#### Phase 3: Quality Gate
-Operations API filters out warmups by default:
-- `GET /api/workspace/operations/` - Production only (default)
-- `GET /api/workspace/operations/?include_warmups=true` - All operations
-- `GET /api/workspace/operations/?run_mode=warmup` - Warmup only
+### Option C: Run PublishGate with New Rules
 
-### Files Modified (Run Mode)
-
-| File | Changes |
-|------|---------|
-| `core/models_skin_layer.py` | Added run_mode, trigger_source, initiative_id, is_warmup fields |
-| `core/tasks.py` | Rewrote universal_agent_workspace_output, added warmup helpers |
-| `core/views_workspace_api.py` | Added warmup filtering to Operations endpoint |
-| `.gitignore` | Added `.warmups/` quarantine directory |
-
----
-
-## Priority for Session 865
-
-### Option A: Run PublishGate with New Rules (Recommended)
-
-Test the Session 864 improvements on production:
+Test Session 864's content intelligence improvements:
 
 ```bash
 # Re-evaluate with new rules (dry run first!)
@@ -136,17 +101,11 @@ railway run python manage.py apply_publish_gate --all --dry-run
 
 # Apply changes
 railway run python manage.py apply_publish_gate --all
-
-# Test enhancement on a few blogs
-railway run python -c "
-from core.tasks import enhance_all_blogs_task
-enhance_all_blogs_task.delay(limit=5, save=False)
-"
 ```
 
-### Option B: Add Enhancement Celery Beat Schedule
+### Option D: Add Enhancement Celery Beat Schedule
 
-Add enhancement task to periodic schedule:
+Add auto-enhancement for content marked as `needs_enhancement`:
 
 ```python
 'enhance-content-daily': {
@@ -156,95 +115,49 @@ Add enhancement task to periodic schedule:
 },
 ```
 
-### Option C: ConceptForge UI Integration
+### Option E: Audio Player Enhancement
 
-Add ConceptForge dossier view to Workspace:
+Improve podcast playback experience:
+1. Add waveform visualization
+2. Add playback controls (speed, skip 15s)
+3. Add download button
+4. Show transcript sync with audio
 
-1. Create "Dossiers" tab matching initiative phase cards
-2. Show stage tabs: Research | Debate | Feasibility | Risk | Market | Synthesis
-3. Add "Promote to ConceptForge" button on blog cards
+---
 
-### Option D: UI for Enhancement
+## Quick Reference
 
-Add UI elements for EditorAgent:
-
-1. "Enhance" button on blog cards with status='needs_enhancement'
-2. Show enhancement progress/results
-3. Allow manual focus area selection
-
-### Option E: Apply Run Mode Migration (Required for Production)
-
-Apply the Session 864 migration to production:
+### Test Celery Health Monitoring
 
 ```bash
-# Apply migration
-railway run python manage.py migrate core 0207_session_864_run_mode_tracking
-
-# Verify warmup filtering works
+# Force run monitoring task
 railway run python -c "
-from core.models_skin_layer import WorkspaceOperation
-print(f'Total operations: {WorkspaceOperation.objects.count()}')
-print(f'Production: {WorkspaceOperation.objects.filter(run_mode=\"production\").count()}')
-print(f'Warmup: {WorkspaceOperation.objects.filter(is_warmup=True).count()}')
+from core.tasks import monitor_celery_health
+result = monitor_celery_health()
+print(result)
 "
 ```
 
----
-
-## Quick Start
+### Check Voice Profiles
 
 ```bash
-# Test ConceptForge
-python manage.py shell
-
-from core.conceptforge import ConceptForgeOrchestrator
-orchestrator = ConceptForgeOrchestrator()
-
-# Check if content qualifies
-should_trigger, reason, domain = orchestrator.should_trigger(
-    quality_score=0.85,
-    tags=['legal', 'automation'],
-)
-print(f"Should trigger: {should_trigger}, Reason: {reason}, Domain: {domain}")
-
-# Manual trigger
-from core.tasks import promote_to_conceptforge
-promote_to_conceptforge.delay(
-    source_type='blog',
-    source_id='<blog-uuid>',
-    domain='legal',
-)
+railway run python -c "
+from core.models_voice_marketplace import VoiceProfile
+profiles = VoiceProfile.objects.all()
+print(f'Total voice profiles: {profiles.count()}')
+for p in profiles[:10]:
+    print(f'  {p.name}: {p.elevenlabs_voice_id or \"No ElevenLabs ID\"}'')
+"
 ```
 
----
+### Default ElevenLabs Voices
 
-## Session 862/864 Content Intelligence (PRODUCTION DEPLOYED)
-
-### What Was Added (Session 862)
-- **PublishGate**: Quality evaluation before publishing (quality, novelty, structure scores)
-- **ContentClassifier**: Routes content to public/internal/strategic
-- **SelfBlog Updates**: content_type field, new categories (build_log, internal_note, playbook, dossier)
-
-### Improvements (Session 864)
-- **Operational Title Detection**: Auto-classifies `[Research]`, `[Stage X -`, etc. as internal
-- **Lowered Structure Threshold**: 0.65 → 0.55 (catches more legitimate content)
-- **EditorAgent**: Automatically enhances content structure
-
-### Test the Content Intelligence
-```bash
-# Evaluate a specific blog
-railway run python manage.py apply_publish_gate --blog-id <uuid>
-
-# Evaluate all blogs with new rules
-railway run python manage.py apply_publish_gate --all --dry-run
-
-# Enhance a blog
-railway run python -c "from core.agents.editor_agent import enhance_blog; print(enhance_blog('<blog-id>', save=False))"
-```
-
-### Handoffs
-- `docs/handoffs/SESSION_862_CONTENT_INTELLIGENCE.md`
-- `docs/handoffs/SESSION_864_RUN_MODE_TRACKING.md`
+| Role | Voice | ID |
+|------|-------|-----|
+| HOST | Antoni | ErXwobaYiN019PkySvjV |
+| ADVOCATE | Rachel | 21m00Tcm4TlvDq8ikWAM |
+| SKEPTIC | Clyde | 2EiwWnXFnvU5JabPnv8n |
+| ANALYST | Paul | 5Q0t7uMcjvnagumLfvZi |
 
 ---
 
@@ -252,12 +165,13 @@ railway run python -c "from core.agents.editor_agent import enhance_blog; print(
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **864** | Content Intelligence + Run Mode Tracking (warmup vs production) | ✅ COMPLETE |
-| **863** | ConceptForge - Autonomous Think Tank Pipeline | ✅ COMPLETE |
-| **862** | Content Intelligence - PublishGate + ContentClassifier | ✅ PRODUCTION DEPLOYED |
-| **862** | Content Flow Unification - Dream → Initiative → Deliverable | ✅ COMPLETE |
-| **861** | Data Persistence - 6 gap fixes + Content Tab UI | ✅ COMPLETE |
-| **860** | Initiative Pipeline + API Error Handling | ✅ COMPLETE |
+| **865** | Podcast TTS + Voice Profile Integration + Celery Health Monitoring | COMPLETE |
+| **864** | Content Intelligence + Run Mode Tracking (warmup vs production) | COMPLETE |
+| **863** | ConceptForge - Autonomous Think Tank Pipeline | COMPLETE |
+| **862** | Content Intelligence - PublishGate + ContentClassifier | PRODUCTION DEPLOYED |
+| **862** | Content Flow Unification - Dream → Initiative → Deliverable | COMPLETE |
+| **861** | Data Persistence - 6 gap fixes + Content Tab UI | COMPLETE |
+| **860** | Initiative Pipeline + API Error Handling | COMPLETE |
 
 ---
 
