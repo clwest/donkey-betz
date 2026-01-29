@@ -110,8 +110,15 @@ function ReasoningSubTab() {
   const { data: thoughtsData, isLoading: thoughtsLoading } = useQuery({
     queryKey: ['reasoning-thoughts-list', visibleCount],
     queryFn: async () => {
-      const res = await fetch(`/api/v1/consciousness/thoughts/?limit=${visibleCount}`)
-      return res.json()
+      try {
+        const res = await fetch(`/api/v1/reasoning/thoughts/?limit=${visibleCount}`)
+        if (!res.ok) {
+          return { results: [], count: 0 }
+        }
+        return res.json()
+      } catch {
+        return { results: [], count: 0 }
+      }
     },
   })
 
