@@ -40,12 +40,13 @@ import { contentApi, podcastApi, distributionApi, blogsApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
-type ContentSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' | 'distribution'
+type ContentSubTab = 'gallery' | 'channels' | 'blogs' | 'documents' | 'podcast' | 'distribution'
 
 const subTabs: Array<{ id: ContentSubTab; label: string; icon: typeof Image; description: string }> = [
   { id: 'gallery', label: 'Gallery', icon: Image, description: 'AI-generated visuals' },
   { id: 'channels', label: 'Channels', icon: MessageSquare, description: 'Content channels' },
   { id: 'blogs', label: 'Blogs', icon: BookOpen, description: 'AI-written articles' },
+  { id: 'documents', label: 'Documents', icon: FileText, description: 'Research & technical docs' },
   { id: 'podcast', label: 'Podcast', icon: Mic, description: 'Generated episodes' },
   { id: 'distribution', label: 'Distribution', icon: Share2, description: 'Platform publishing' },
 ]
@@ -78,6 +79,7 @@ export function ContentStudioTab() {
       {activeSubTab === 'gallery' && <GallerySubTab />}
       {activeSubTab === 'channels' && <ChannelsSubTab />}
       {activeSubTab === 'blogs' && <BlogsSubTab />}
+      {activeSubTab === 'documents' && <DocumentsSubTab />}
       {activeSubTab === 'podcast' && <PodcastSubTab />}
       {activeSubTab === 'distribution' && <DistributionSubTab />}
     </div>
@@ -707,6 +709,279 @@ function BlogsSubTab() {
       {selectedBlog && (
         <BlogDetailModal blog={selectedBlog} onClose={() => setSelectedBlog(null)} />
       )}
+    </div>
+  )
+}
+
+// ============ Documents Sub-Tab ============
+// Session 865: Added to display research briefs, audits, and technical documents
+
+function DocumentsSubTab() {
+  const [selectedDoc, setSelectedDoc] = useState<BlogPost | null>(null)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [visibleCount, setVisibleCount] = useState(10)
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+
+  const { data: docsData, isLoading, isError, error, refetch, isFetching } = useQuery({
+    queryKey: ['documents-tab', categoryFilter],
+    queryFn: async () => {
+      try {
+        // Fetch documents (non-blog categories)
+        const categoryParam = categoryFilter === 'all' ? 'documents' : categoryFilter
+        const response = await fetch(`/api/v1/research/self-blog/list/?per_page=100&category=${categoryParam}`)
+        if (!response.ok) {
+          return { blogs: [], pagination: { total: 0 }, category_counts: {} }
+        }
+        return response.json()
+      } catch {
+        return { blogs: [], pagination: { total: 0 }, category_counts: {} }
+      }
+    },
+  })
+
+  if (isLoading) {
+    return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load documents" />
+  }
+
+  const docs = docsData?.blogs || docsData?.results || []
+  const categoryCounts = docsData?.category_counts || {}
+  const totalDocs = (categoryCounts.all || 0) - (categoryCounts.blog || 0)
+
+  // Count by category from the docs we have
+  const researchCount = docs.filter((d: BlogPost) => d.category === 'research_brief').length
+  const auditCount = docs.filter((d: BlogPost) => d.category === 'audit').length
+  const technicalCount = docs.filter((d: BlogPost) => d.category === 'technical_document').length
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'research_brief':
+        return <TrendingUp size={12} className="text-blue-400" />
+      case 'audit':
+        return <CheckCircle size={12} className="text-green-400" />
+      case 'technical_document':
+        return <FileText size={12} className="text-purple-400" />
+      default:
+        return <FileText size={12} className="text-gray-400" />
+    }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'research_brief':
+        return 'Research'
+      case 'audit':
+        return 'Audit'
+      case 'technical_document':
+        return 'Technical'
+      default:
+        return category
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <InlineHeaderRow
+        title="Documents"
+        subtitle={`${totalDocs.toLocaleString()} documents`}
+        onRefresh={refetch}
+        isFetching={isFetching}
+      />
+
+      {/* Category Filter Tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { id: 'all', label: 'All', count: totalDocs },
+          { id: 'research_brief', label: 'Research', count: researchCount },
+          { id: 'audit', label: 'Audits', count: auditCount },
+          { id: 'technical_document', label: 'Technical', count: technicalCount },
+        ].map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setCategoryFilter(cat.id)}
+            className={cn(
+              'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+              categoryFilter === cat.id
+                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+            )}
+          >
+            {cat.label} ({cat.count})
+          </button>
+        ))}
+      </div>
+
+      {/* Document Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div
+          className={cn(
+            'card cursor-pointer hover:border-blue-500/50 transition-colors',
+            expandedSection === 'research' && 'border-blue-500/50'
+          )}
+          onClick={() => toggleSection('research')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-blue-400">{researchCount}</div>
+              <div className="text-xs text-gray-500">Research Briefs</div>
+            </div>
+            <TrendingUp size={18} className="text-blue-400/50" />
+          </div>
+        </div>
+        <div
+          className={cn(
+            'card cursor-pointer hover:border-green-500/50 transition-colors',
+            expandedSection === 'audit' && 'border-green-500/50'
+          )}
+          onClick={() => toggleSection('audit')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-green-400">{auditCount}</div>
+              <div className="text-xs text-gray-500">Audits</div>
+            </div>
+            <CheckCircle size={18} className="text-green-400/50" />
+          </div>
+        </div>
+        <div
+          className={cn(
+            'card cursor-pointer hover:border-purple-500/50 transition-colors',
+            expandedSection === 'technical' && 'border-purple-500/50'
+          )}
+          onClick={() => toggleSection('technical')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-purple-400">{technicalCount}</div>
+              <div className="text-xs text-gray-500">Technical Docs</div>
+            </div>
+            <FileText size={18} className="text-purple-400/50" />
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded Lists */}
+      {expandedSection === 'research' && (
+        <ExpandedListCard
+          title="Research Briefs"
+          icon={TrendingUp}
+          items={docs.filter((d: BlogPost) => d.category === 'research_brief')}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No research briefs yet"
+          renderItem={(doc: BlogPost) => (
+            <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'audit' && (
+        <ExpandedListCard
+          title="Audit Reports"
+          icon={CheckCircle}
+          items={docs.filter((d: BlogPost) => d.category === 'audit')}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No audit reports yet"
+          renderItem={(doc: BlogPost) => (
+            <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
+          )}
+        />
+      )}
+
+      {expandedSection === 'technical' && (
+        <ExpandedListCard
+          title="Technical Documents"
+          icon={FileText}
+          items={docs.filter((d: BlogPost) => d.category === 'technical_document')}
+          visibleCount={visibleCount}
+          onLoadMore={() => setVisibleCount((v) => v + 10)}
+          emptyMessage="No technical documents yet"
+          renderItem={(doc: BlogPost) => (
+            <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
+          )}
+        />
+      )}
+
+      {/* Recent Documents - Always Visible */}
+      {!expandedSection && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Recent Documents</h4>
+            <button
+              onClick={() => toggleSection('research')}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <List size={12} />
+              View All
+            </button>
+          </div>
+          {docs.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <FileText className="mx-auto mb-2" size={24} />
+              <p className="text-sm">No documents generated yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {docs.slice(0, 6).map((doc: BlogPost) => (
+                <DocumentRow key={doc.id} doc={doc} onClick={() => setSelectedDoc(doc)} getCategoryIcon={getCategoryIcon} getCategoryLabel={getCategoryLabel} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Document Detail Modal - reuse BlogDetailModal */}
+      {selectedDoc && (
+        <BlogDetailModal blog={selectedDoc} onClose={() => setSelectedDoc(null)} />
+      )}
+    </div>
+  )
+}
+
+// Document Row Component
+function DocumentRow({
+  doc,
+  onClick,
+  getCategoryIcon,
+  getCategoryLabel,
+}: {
+  doc: BlogPost
+  onClick: () => void
+  getCategoryIcon: (category: string) => React.ReactNode
+  getCategoryLabel: (category: string) => string
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className="flex items-center justify-between py-2 px-2 -mx-2 hover:bg-gray-800/50 rounded cursor-pointer transition-colors group"
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="h-8 w-8 rounded-lg bg-gray-800 flex items-center justify-center shrink-0">
+          {getCategoryIcon(doc.category || 'technical_document')}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium truncate group-hover:text-primary-400 transition-colors">
+            {doc.title}
+          </p>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">
+              {getCategoryLabel(doc.category || 'technical_document')}
+            </span>
+            <span>{doc.word_count?.toLocaleString() || 0} words</span>
+            <span>•</span>
+            <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+          </div>
+        </div>
+      </div>
+      <ChevronRight size={14} className="text-gray-500 group-hover:text-primary-400 shrink-0" />
     </div>
   )
 }
