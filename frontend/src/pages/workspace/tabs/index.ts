@@ -37,3 +37,6 @@ export { CareerTab } from './CareerTab'
 
 // Session 869: Voice Marketplace Tab
 export { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
+
+// Session 870: Learning Journey Dashboard Tab
+export { LearningJourneyTab } from './LearningJourneyTab'
