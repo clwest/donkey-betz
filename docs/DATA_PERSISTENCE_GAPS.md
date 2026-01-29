@@ -14,7 +14,7 @@ During Session 861, we discovered that **96% of blog posts were being lost** in 
 |------------|----------|----------------|--------|
 | **CRITICAL** | Agent Content | ~96% (111/115 blogs) | ✅ Fixed (Session 860-861) |
 | **HIGH** | Tool Call Results | 100% | ✅ Fixed (Session 861) |
-| **MEDIUM** | Learning Data | Potential total loss | ⚠️ Needs Fix |
+| **MEDIUM** | Learning Data | Potential total loss | ✅ Fixed (Session 861) |
 | **MEDIUM** | Decision Traces | ~90% not recorded | ⚠️ Needs Fix |
 | **MEDIUM** | Spider Aggregations | No caching | ⚠️ Needs Fix |
 | **LOW-MEDIUM** | User Feedback Loop | Incomplete | ⚠️ Needs Fix |
@@ -108,56 +108,71 @@ agent._record_tool_call(
 
 ---
 
-## 3. Learning Data (MEDIUM RISK)
+## 3. Learning Data (FIXED - Session 861)
 
-### Problem
-The Learning System stores critical data in **Redis only**:
-- Experiment learnings (251 learnings)
-- Decision patterns (29 patterns)
-- Success metrics
+### Problem (Solved)
+The Learning System stored critical data in **Redis only**:
+- Agent interactions and preferences
+- Learning progress metrics
+- Agent improvement scores
 
-### Impact
-- Redis restart = **total data loss**
-- No backup mechanism
-- Cannot recover historical learnings
-- Single point of failure for institutional knowledge
-
-### Current Architecture
-```python
-# In LearningSystem
-self.redis_client.set(f"learning:{learning_id}", json.dumps(learning))
-# No database backup!
-```
-
-### Recommended Fix
-Add database persistence layer:
+### Solution Implemented
+**PR #441** - Added database backup models and helper functions:
 
 ```python
-class LearningRecord(models.Model):
-    learning_id = models.UUIDField(primary_key=True)
-    learning_type = models.CharField(max_length=50)  # experiment, pattern, etc.
-    content = models.JSONField()
-    source_experiment = models.ForeignKey('Experiment', null=True)
-    success_rate = models.FloatField(null=True)
-    application_count = models.IntegerField(default=0)
+# New models in core/models_learning_backup.py
+
+class AgentInteractionRecord(models.Model):
+    """Backs up agent interactions from Redis"""
+    user = models.ForeignKey(User, ...)
+    agent_name = models.CharField(max_length=100)
+    interaction_type = models.CharField(choices=INTERACTION_TYPES)
+    input_data = models.JSONField()
+    output_data = models.JSONField()
+    rating = models.IntegerField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
+class LearnedPreferenceRecord(models.Model):
+    """Backs up learned preferences from Redis"""
+    user = models.ForeignKey(User, ...)
+    agent_name = models.CharField(max_length=100)
+    category = models.CharField(choices=PREFERENCE_CATEGORIES)
+    value = models.CharField(max_length=255)
+    confidence = models.FloatField()
+    occurrences = models.IntegerField()
+
+class LearningProgressSnapshot(models.Model):
+    """Periodic snapshots of learning:progress:latest"""
+    total_quality = models.FloatField()
+    total_complexity = models.FloatField()
+    total_improvements = models.IntegerField()
+    agent_scores = models.JSONField()
+    snapshot_at = models.DateTimeField(auto_now_add=True)
+
+class AgentImprovementRecord(models.Model):
+    """Backs up agent improvement data"""
+    agent_name = models.CharField(max_length=100)
+    iteration = models.IntegerField()
+    quality_score = models.FloatField()
+    complexity_score = models.FloatField()
 ```
 
-Add dual-write pattern:
+### Helper Functions for Dual-Write
 ```python
-def save_learning(self, learning):
-    # Write to Redis for fast access
-    self.redis_client.set(f"learning:{learning.id}", json.dumps(learning))
-    # Also persist to database
-    LearningRecord.objects.update_or_create(
-        learning_id=learning.id,
-        defaults={'content': learning, ...}
-    )
+from core.models_learning_backup import (
+    backup_interaction,
+    backup_learning_progress,
+    backup_agent_improvement,
+)
+
+# Call alongside Redis writes
+backup_interaction(user_id=1, agent_name='Agent', ...)
+backup_learning_progress(total_quality=0.85, ...)
+backup_agent_improvement(agent_name='Agent', iteration=10, ...)
 ```
 
-### Priority
-**MEDIUM** - Risk is real but Redis restarts are infrequent.
+### Status
+✅ **FIXED** - PR #441 merged Session 861
 
 ---
 
@@ -296,11 +311,9 @@ def process_agent_feedback(sender, instance, created, **kwargs):
 
 ### Phase 2: Complete (Session 861)
 - [x] Tool Call Results - `ToolCallRecord` model (PR #439)
+- [x] Learning Data - Database backup models (PR #441)
 
-### Phase 3: High Priority (Recommended Next)
-- [ ] Learning Data - Database backup layer for Redis
-
-### Phase 4: Medium Priority
+### Phase 3: Medium Priority (Recommended Next)
 - [ ] Decision Traces - Default-on recording
 - [ ] Spider Aggregations - Caching layer
 
