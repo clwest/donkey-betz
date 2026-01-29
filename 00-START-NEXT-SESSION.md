@@ -1,40 +1,49 @@
-# Session 870 - In Progress
+# Session 871 - Start Here
 
-**Previous Session:** 869 (Stub Replacement + Voice Marketplace UI)
+**Previous Session:** 870 (Frontend Error States + Learning Journey UI)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | **16 Workspace Tabs** | **FRONTEND ERROR STATES IMPROVED**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | **17 Workspace Tabs** | **LEARNING JOURNEY UI COMPLETE**
 
 ---
 
-## What Was Accomplished So Far in Session 870
+## What Was Accomplished in Session 870
 
-### TIER 3: Frontend Error States - COMPLETE
+**Handoff:** `docs/handoffs/SESSION_870_COMPLETE.md`
 
-Added proper error states to frontend tabs (PR #504):
+### TIER 3: Frontend Error States (PR #504)
 
-| Tab | Change |
-|-----|--------|
+Added proper error handling across workspace tabs:
+
+| Tab | Fix |
+|-----|-----|
 | **IntelligenceTab** | Sub-queries show error states instead of silent fail |
 | **ConceptForgeTab** | RunDetailView & runs list show error with retry button |
 | **ConceptForgeTab** | Artifact copy buttons show visual feedback (checkmark) |
 | **DataSourcesTab** | Warning banner when secondary queries fail |
 
-**Key improvements:**
-- `ExpandedListCard` component updated with `isError` prop
-- Clipboard operations wrapped in try-catch with user-friendly alerts
-- Gates, Thoughts, Actions expanded views show "Failed to load data" on error
+### TIER 3: Learning Journey Dashboard UI (PR #506) - NEW
+
+Created `LearningJourneyTab.tsx` (1,086 lines):
+
+| Sub-Tab | Features |
+|---------|----------|
+| **Dashboard** | Streak banner, points, stats grid, active journeys, achievements |
+| **My Journeys** | Journey list with status filter, pause/resume, step management |
+| **Templates** | Template grid with category/difficulty filters, start journey |
+
+**Backend already complete:** 6 models, 16 endpoints at `/api/learning/`
 
 ---
 
-## Priority for Remaining Session 870
+## Priority for Session 871
 
 ### TIER 3: Remaining Medium Priority
 
 - [x] ~~Replace 40+ stub endpoints with real implementations~~ DONE (Session 869)
 - [x] ~~Integrate Voice Marketplace into workspace~~ DONE (Session 869)
 - [x] ~~Add proper error states to frontend fallbacks~~ DONE (PR #504)
+- [x] ~~Learning Journey Dashboard UI~~ DONE (PR #506)
 - [ ] Model deduplication audit (181 models in `models_unified_system.py`)
-- [ ] Learning Journey Dashboard UI (16+ endpoints exist, no workspace integration)
 
 ### TIER 4: Lower Priority (Technical Debt)
 
@@ -46,27 +55,27 @@ Added proper error states to frontend tabs (PR #504):
 
 ## Quick Commands
 
-### Verify Voice Marketplace Tab
+### Verify Learning Journey Tab
 ```bash
-# Open workspace and navigate to Voices tab
+# Open workspace and navigate to Learn tab
 open http://localhost:8000/ai-studio/
-# Tab should show Browse, My Voices, Earnings sub-tabs
+# Tab should show Dashboard, My Journeys, Templates sub-tabs
 ```
 
-### Test Voice Marketplace API
+### Test Learning Journey API
 ```bash
-curl http://localhost:8000/api/voice-marketplace/
-curl http://localhost:8000/api/voice-marketplace/stats/
+curl http://localhost:8000/api/learning/templates/
+curl http://localhost:8000/api/learning/journeys/analytics/
 ```
 
-### Verify Tab Count (now 16)
+### Verify Tab Count (now 17)
 ```bash
 grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 ```
 
 ---
 
-## Workspace Tabs (16 total)
+## Workspace Tabs (17 total)
 
 | Tab | Icon | Description |
 |-----|------|-------------|
@@ -85,7 +94,8 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 | Triggers | Zap | Automation triggers |
 | Dossiers | FlaskConical | ConceptForge pipeline |
 | Career | Briefcase | ATS Resume Optimizer |
-| **Voices** | **Mic** | **Voice Marketplace** |
+| Voices | Mic | Voice Marketplace |
+| **Learn** | **GraduationCap** | **Learning Journey Dashboard (NEW)** |
 
 ---
 
@@ -93,7 +103,7 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **870** | Frontend Error States | IN PROGRESS |
+| **870** | Frontend Error States + Learning Journey UI | COMPLETE |
 | **869** | Stub Replacement + Voice Marketplace UI + ConceptForge Artifacts | COMPLETE |
 | **868** | TIER 1 Critical Fixes - Gallery Series, Reasoning Gates, Celery Tasks | COMPLETE |
 | **867** | System-Wide Audit + Initiative Pipeline Fix | COMPLETE |
@@ -105,6 +115,7 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 
 | Doc | Purpose |
 |-----|---------|
+| `docs/handoffs/SESSION_870_COMPLETE.md` | **Full session details** |
 | `docs/handoffs/SESSION_869_COMPLETE.md` | Session 869 full details |
 | `docs/handoffs/SESSION_868_TIER1_FIXES.md` | TIER 1 critical fixes |
 | `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | System audit with gaps |
@@ -113,4 +124,4 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 
 ---
 
-**Next priority: Model deduplication audit OR Learning Journey UI!**
+**Next priority: Model deduplication audit (181 models)!**
