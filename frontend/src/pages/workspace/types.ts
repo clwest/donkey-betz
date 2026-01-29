@@ -15,6 +15,7 @@ export type WorkspaceTab =
   | 'files'
   | 'operations'
   | 'triggers'  // Session 861B: WorkspaceTrigger autopilot queue
+  | 'conceptforge'  // Session 865: ConceptForge Dossier Pipeline
 
 // Sub-tab types for each main tab
 export type InfrastructureSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'
