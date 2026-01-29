@@ -74,6 +74,27 @@ Build a dashboard to trace agent work through the system:
 - Decisions recorded with reasoning
 - Time from creation to publish
 
+### Option D: SKIN Layer Gap Fixes (Session 861B Audit)
+
+**See:** `docs/audits/SKIN_LAYER_AUDIT_SESSION_861B.md`
+
+The SKIN/Workspace layer is **79% connected** - 21% of features built but not in UI:
+
+| Gap | Priority | Backend | API | Frontend | Effort |
+|-----|----------|---------|-----|----------|--------|
+| **Human Review UI** | P0 | 100% | 100% | **0%** | 4-6 hrs |
+| **WorkspaceTrigger System** | P0 | 100% | **0%** | **0%** | 8-10 hrs |
+| File Write Form | P1 | 100% | 100% | 0% | 3-4 hrs |
+| Diff Viewer Component | P1 | 100% | 100% | 0% | 4-5 hrs |
+
+**Critical Issues:**
+1. **Human Review Workflow:** API exists but no UI - users can't approve pending operations
+2. **WorkspaceTrigger (Session 785):** Entire autopilot system invisible - no API endpoints, no UI
+
+**Quick Wins:**
+- Add approve/reject buttons to OperationsPanel (calls existing API)
+- Create TriggersTab to expose WorkspaceTrigger queue
+
 ---
 
 ## Quick Start
@@ -113,6 +134,7 @@ python manage.py shell
 
 ---
 
-## Handoff Document
+## Handoff Documents
 
-See: `docs/handoffs/SESSION_861_DATA_PERSISTENCE.md` (to be created)
+- `docs/handoffs/SESSION_861_DATA_PERSISTENCE.md` - Data persistence fixes
+- `docs/audits/SKIN_LAYER_AUDIT_SESSION_861B.md` - SKIN layer connectivity audit

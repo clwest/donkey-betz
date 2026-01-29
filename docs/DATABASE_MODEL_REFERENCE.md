@@ -1,7 +1,8 @@
 # Database Model Reference
 
 **Created:** Session 737 (January 9, 2026)
-**Purpose:** Complete reference for all 291 database models
+**Purpose:** Complete reference for all database models
+**Last Updated:** Session 861 (January 28, 2026)
 
 ---
 
@@ -9,10 +10,10 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total Models** | 291 |
-| **Active Models** (have data) | 164 |
+| **Total Models** | 301+ |
+| **Active Models** (have data) | 174+ |
 | **Empty Models** (0 records) | 127 |
-| **Total Records** | 264,048 |
+| **Session 861 Models** | 10 (data persistence) |
 
 ---
 
@@ -415,6 +416,59 @@ print(f"Learning outcomes: {CoordinatorOutcome.objects.filter(created_at__gte=cu
 print(f"Spider data: {SpiderData.objects.filter(discovered_at__gte=cutoff).count()}")
 print(f"Spider intelligence: {AgentLearning.objects.filter(created_at__gte=cutoff).count()}")
 print(f"PA conversations: {ConversationMemory.objects.filter(created_at__gte=cutoff).count()}")
+```
+
+---
+
+## Session 861 Models - Data Persistence
+
+These models were added in Session 861 to fix critical data persistence gaps:
+
+### Tool Call Tracking
+
+| Purpose | Model | Import | Description |
+|---------|-------|--------|-------------|
+| Individual tool calls | `ToolCallRecord` | `core.models_tool_calls` | Records every tool call with latency, success, result |
+| Daily aggregates | `ToolCallAggregate` | `core.models_tool_calls` | Daily statistics per agent/tool |
+
+### Decision Recording
+
+| Purpose | Model | Import | Description |
+|---------|-------|--------|-------------|
+| Agent decisions | `DecisionRecord` | `core.models_decision_records` | Always-on decision tracking with reasoning |
+| Daily aggregates | `DecisionAggregate` | `core.models_decision_records` | Daily statistics per agent/decision_type |
+
+### Learning Data Backup
+
+| Purpose | Model | Import | Description |
+|---------|-------|--------|-------------|
+| Interaction backup | `AgentInteractionRecord` | `core.models_learning_backup` | Backs up Redis interactions to DB |
+| Preferences backup | `LearnedPreferenceRecord` | `core.models_learning_backup` | Backs up learned preferences |
+| Progress snapshots | `LearningProgressSnapshot` | `core.models_learning_backup` | Periodic learning progress snapshots |
+| Improvement backup | `AgentImprovementRecord` | `core.models_learning_backup` | Backs up agent improvement data |
+
+### Spider Aggregation Caching
+
+| Purpose | Model | Import | Description |
+|---------|-------|--------|-------------|
+| Cached aggregations | `SpiderAggregation` | `core.models_spider_aggregation` | Cached spider data aggregations |
+| Time-series data | `TrendDataPoint` | `core.models_spider_aggregation` | Time-series trend data points |
+
+### Usage Example
+
+```python
+from core.models_tool_calls import ToolCallRecord
+from core.models_decision_records import DecisionRecord
+from core.models_spider_aggregation import SpiderAggregation
+
+# Check tool call recording
+ToolCallRecord.objects.filter(agent_name='ContentWriterAgent').count()
+
+# Check decision traces
+DecisionRecord.objects.filter(decision_type='tool_call').count()
+
+# Check spider aggregation cache
+SpiderAggregation.objects.filter(aggregation_type='daily_summary').first()
 ```
 
 ---
