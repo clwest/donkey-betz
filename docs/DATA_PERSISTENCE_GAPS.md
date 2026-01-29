@@ -15,7 +15,7 @@ During Session 861, we discovered that **96% of blog posts were being lost** in 
 | **CRITICAL** | Agent Content | ~96% (111/115 blogs) | ✅ Fixed (Session 860-861) |
 | **HIGH** | Tool Call Results | 100% | ✅ Fixed (Session 861) |
 | **MEDIUM** | Learning Data | Potential total loss | ✅ Fixed (Session 861) |
-| **MEDIUM** | Decision Traces | ~90% not recorded | ⚠️ Needs Fix |
+| **MEDIUM** | Decision Traces | ~90% not recorded | ✅ Fixed (Session 861) |
 | **MEDIUM** | Spider Aggregations | No caching | ⚠️ Needs Fix |
 | **LOW-MEDIUM** | User Feedback Loop | Incomplete | ⚠️ Needs Fix |
 | **LOW** | Conversations | Well-handled | ✅ OK |
@@ -176,48 +176,58 @@ backup_agent_improvement(agent_name='Agent', iteration=10, ...)
 
 ---
 
-## 4. Decision Traces (MEDIUM RISK)
+## 4. Decision Traces (FIXED - Session 861)
 
-### Problem
-Agent decision-making is only recorded when `time_travel_session` is explicitly passed:
+### Problem (Solved)
+Agent decision-making was only recorded when `time_travel_session` was explicitly passed:
 
 ```python
-# Only recorded if explicitly enabled
+# Only recorded if explicitly enabled - OLD BEHAVIOR
 if trace_id := kwargs.get('time_travel_session'):
     self._record_decision(trace_id, decision_data)
 ```
 
-### Impact
-- ~90% of agent decisions have no trace
-- Cannot debug why agent made a choice
-- Cannot audit agent behavior
-- Cannot detect agent errors post-facto
-
-### Current State
-- `DecisionTrace` model exists
-- Recording logic exists
-- But opt-in means most traces are not created
-
-### Recommended Fix
-Make decision recording **opt-out** instead of opt-in:
+### Solution Implemented
+**PR #442** - Added `DecisionRecord` model and always-on recording:
 
 ```python
-# Default to recording (can disable with trace_enabled=False)
-trace_id = kwargs.get('time_travel_session') or str(uuid.uuid4())
-if kwargs.get('trace_enabled', True):  # Default ON
-    self._record_decision(trace_id, decision_data)
+# New models in core/models_decision_records.py
+class DecisionRecord(models.Model):
+    """Always-on decision recording - no opt-in required."""
+    trace_id = models.UUIDField(null=True, blank=True, db_index=True)
+    agent_name = models.CharField(max_length=255, db_index=True)
+    decision_type = models.CharField(max_length=50, db_index=True)
+    action = models.TextField()
+    reasoning = models.TextField(blank=True)
+    alternatives = models.JSONField(default=list)
+    context = models.JSONField(default=dict)
+    confidence = models.FloatField(default=0.8)
+    was_successful = models.BooleanField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class DecisionAggregate(models.Model):
+    """Daily statistics per agent/decision_type for dashboards."""
+    agent_name = models.CharField(max_length=255)
+    decision_type = models.CharField(max_length=50)
+    date = models.DateField()
+    total_decisions = models.IntegerField(default=0)
+    successful_decisions = models.IntegerField(default=0)
+    avg_confidence = models.FloatField(default=0.0)
 ```
 
-Consider adding sampling for high-volume scenarios:
+### New BaseAgent Method
 ```python
-# Record 10% of decisions by default, 100% when explicitly requested
-sample_rate = 1.0 if kwargs.get('time_travel_session') else 0.1
-if random.random() < sample_rate:
-    self._record_decision(...)
+# Always-on recording (added to BaseAgent)
+agent._record_decision(
+    decision_type='tool_call',
+    action='Calling analyze_filing for AAPL',
+    reasoning='LLM requested SEC filing analysis',
+    confidence=0.9
+)
 ```
 
-### Priority
-**MEDIUM** - Important for debugging but not data loss per se.
+### Status
+✅ **FIXED** - PR #442 merged Session 861
 
 ---
 
@@ -312,9 +322,9 @@ def process_agent_feedback(sender, instance, created, **kwargs):
 ### Phase 2: Complete (Session 861)
 - [x] Tool Call Results - `ToolCallRecord` model (PR #439)
 - [x] Learning Data - Database backup models (PR #441)
+- [x] Decision Traces - `DecisionRecord` model (PR #442)
 
 ### Phase 3: Medium Priority (Recommended Next)
-- [ ] Decision Traces - Default-on recording
 - [ ] Spider Aggregations - Caching layer
 
 ### Phase 5: Low Priority
