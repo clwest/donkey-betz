@@ -52,6 +52,16 @@ from core.views_conceptforge import (
     get_domain_labs as conceptforge_domain_labs,
 )
 
+# Session 866: ATS Optimization API
+from core.views_ats_optimization import (
+    ATSAnalyzeView,
+    ATSExtractKeywordsView,
+    ATSOptimizeSuggestionsView,
+    ATSTemplatesView,
+    ATSGenerateSummaryView,
+    ATSConversionStatsView,
+)
+
 # Session 237: Redirect handler for legacy broken URLs
 def legacy_portfolio_image_redirect(request, path):
     """
@@ -1498,6 +1508,14 @@ urlpatterns = [
     path('api/conceptforge/artifacts/<uuid:artifact_id>/', conceptforge_artifact_content, name='conceptforge-artifact-content'),
     path('api/conceptforge/stats/', conceptforge_stats, name='conceptforge-stats'),
     path('api/conceptforge/labs/', conceptforge_domain_labs, name='conceptforge-domain-labs'),
+
+    # Session 866: ATS Optimization API
+    path('api/ats/analyze/', ATSAnalyzeView.as_view(), name='ats-analyze'),
+    path('api/ats/extract-keywords/', ATSExtractKeywordsView.as_view(), name='ats-extract-keywords'),
+    path('api/ats/optimize/', ATSOptimizeSuggestionsView.as_view(), name='ats-optimize'),
+    path('api/ats/templates/', ATSTemplatesView.as_view(), name='ats-templates'),
+    path('api/ats/generate-summary/', ATSGenerateSummaryView.as_view(), name='ats-generate-summary'),
+    path('api/ats/stats/', ATSConversionStatsView.as_view(), name='ats-stats'),
 
     # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
     path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),
