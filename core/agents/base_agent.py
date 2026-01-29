@@ -2392,6 +2392,115 @@ Consider these trends when crafting the response to maximize relevance and engag
             f"Tool execution for '{tool_name}' not implemented in {self.name}"
         )
 
+    def _execute_and_record_tool_call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        trace_id: str = None,
+        conversation_id: str = None,
+        task_summary: str = '',
+    ) -> Dict[str, Any]:
+        """
+        Session 861: Execute a tool call and record it for audit trail.
+
+        This wrapper around _execute_tool_call adds persistence to the
+        ToolCallRecord model, providing a complete audit trail of tool usage.
+
+        Args:
+            tool_name: Name of the tool to execute
+            arguments: Tool arguments
+            trace_id: Optional trace ID for linking
+            conversation_id: Optional conversation ID
+            task_summary: Optional summary of the task
+
+        Returns:
+            Tool execution result
+        """
+        import time
+        start_time = time.time()
+        result = None
+        success = True
+        error_message = ''
+        error_type = ''
+
+        try:
+            result = self._execute_tool_call(tool_name, arguments)
+            return result
+        except Exception as e:
+            success = False
+            error_message = str(e)
+            error_type = type(e).__name__
+            result = {'error': error_message, 'error_type': error_type}
+            raise
+        finally:
+            # Record the tool call regardless of success/failure
+            latency_ms = int((time.time() - start_time) * 1000)
+            self._record_tool_call(
+                tool_name=tool_name,
+                arguments=arguments,
+                result=result,
+                latency_ms=latency_ms,
+                success=success,
+                error_message=error_message,
+                error_type=error_type,
+                trace_id=trace_id,
+                conversation_id=conversation_id,
+                task_summary=task_summary,
+            )
+
+    def _record_tool_call(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        result: Any,
+        latency_ms: int,
+        success: bool = True,
+        error_message: str = '',
+        error_type: str = '',
+        trace_id: str = None,
+        conversation_id: str = None,
+        task_summary: str = '',
+    ) -> None:
+        """
+        Session 861: Record a tool call to the ToolCallRecord model.
+
+        This method persists tool call data for audit trail and debugging.
+        Called automatically by _execute_and_record_tool_call, but can also
+        be called manually for tools executed outside the standard flow.
+
+        Args:
+            tool_name: Name of the tool called
+            arguments: Dict of parameters passed to tool
+            result: The tool's result
+            latency_ms: Execution time in milliseconds
+            success: Whether the call succeeded
+            error_message: Error message if failed
+            error_type: Exception class name if failed
+            trace_id: Optional trace ID for linking
+            conversation_id: Optional conversation ID
+            task_summary: Optional summary of the task
+        """
+        try:
+            from core.models_tool_calls import ToolCallRecord
+
+            ToolCallRecord.record(
+                agent_name=self.name,
+                tool_name=tool_name,
+                parameters=arguments,
+                result=result,
+                latency_ms=latency_ms,
+                success=success,
+                error_message=error_message,
+                error_type=error_type,
+                trace_id=trace_id,
+                conversation_id=conversation_id,
+                task_summary=task_summary,
+            )
+            logger.debug(f"📝 Session 861: Recorded tool call {self.name}.{tool_name}")
+        except Exception as e:
+            # Don't let recording failures break the agent
+            logger.warning(f"Failed to record tool call for {self.name}.{tool_name}: {e}")
+
     def _validate_task(self, task: str) -> bool:
         """
         Validate the task is appropriate for this agent.

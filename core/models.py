@@ -83,6 +83,12 @@ from .models_diagnostic_pipeline import (
     FailurePrescription,
 )
 
+# Import tool call recording models (Session 861 - Tool Call Audit Trail)
+from .models_tool_calls import (
+    ToolCallRecord,
+    ToolCallAggregate,
+)
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
