@@ -119,6 +119,40 @@ class Deliverable(models.Model):
         help_text="Session 843: ID of parent object"
     )
 
+    # Session 862: Content Flow Traceability - Real FKs for proper relationships
+    initiative = models.ForeignKey(
+        'core.Initiative',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deliverables',
+        help_text="Session 862: Initiative that produced this deliverable"
+    )
+    dream = models.ForeignKey(
+        'core.AgentDream',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deliverables',
+        help_text="Session 862: Dream that originated this deliverable"
+    )
+    self_blog = models.ForeignKey(
+        'core.SelfBlog',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deliverables',
+        help_text="Session 862: SelfBlog content for this deliverable"
+    )
+    podcast_episode = models.ForeignKey(
+        'core.PodcastEpisode',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deliverables',
+        help_text="Session 862: Podcast episode for this deliverable"
+    )
+
     # Source
     source_operation = models.ForeignKey(
         'WorkspaceOperation',
@@ -260,6 +294,9 @@ class Deliverable(models.Model):
             models.Index(fields=['is_saved', '-created_at']),
             models.Index(fields=['is_template', '-created_at']),
             models.Index(fields=['category', '-created_at']),
+            # Session 862: Content Flow indexes
+            models.Index(fields=['initiative', '-created_at']),
+            models.Index(fields=['dream', '-created_at']),
         ]
 
     def __str__(self):
