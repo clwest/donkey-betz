@@ -725,44 +725,35 @@ function MoodSubTab() {
   const { data: overviewData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['mood-overview-tab'],
     queryFn: async () => {
-      try {
-        const res = await moodApi.overview()
-        return res.data
-      } catch (e) {
-        // Fallback with real data distribution
-        return {
-          mood_distribution: {
-            calm: 24,
-            confident: 11,
-            contemplative: 8,
-            focused: 8,
-            playful: 7,
-            energetic: 6,
-            curious: 5,
-            inspired: 5,
-          },
-          agents_with_mood: 74
-        }
+      const res = await moodApi.overview()
+      // Session 860: Extract from nested response and convert mood_distribution array to object
+      const data = res.data
+      const overview = data?.overview || {}
+      const agents = data?.agents || []
+
+      // Convert array format [{mood, count}] to object format {mood: count}
+      const moodDistArray = overview?.mood_distribution || []
+      const moodDistObj: Record<string, number> = {}
+      moodDistArray.forEach((item: { mood: string; count: number }) => {
+        moodDistObj[item.mood] = item.count
+      })
+
+      return {
+        mood_distribution: moodDistObj,
+        agents_with_mood: overview?.total_agents || agents.length || 0,
+        agents: agents,
       }
     },
   })
 
-  // Fetch agents by mood for expanded list
-  const { data: moodAgentsData, isLoading: moodAgentsLoading } = useQuery({
-    queryKey: ['mood-agents-list', selectedMood, visibleCount],
-    queryFn: async () => {
-      try {
-        const response = await fetch(`/api/agent-mood/?mood=${selectedMood}&limit=${visibleCount}`)
-        if (response.ok) {
-          return response.json()
-        }
-        return { results: [], count: 0 }
-      } catch {
-        return { results: [], count: 0 }
-      }
-    },
-    enabled: selectedMood !== null,
-  })
+  // Session 860: Filter agents by mood client-side from overview data
+  const moodAgents = overviewData?.agents?.filter(
+    (a: { current_mood: string }) => !selectedMood || a.current_mood === selectedMood
+  )?.slice(0, visibleCount) || []
+  const moodAgentsCount = overviewData?.agents?.filter(
+    (a: { current_mood: string }) => !selectedMood || a.current_mood === selectedMood
+  )?.length || 0
+  const moodAgentsLoading = isLoading
 
   if (isLoading) {
     return <LoadingState />
@@ -772,10 +763,9 @@ function MoodSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load mood data" />
   }
 
-  const overview = overviewData || { mood_distribution: {}, agents_with_mood: 74 }
+  // Session 860: Remove hardcoded fallback - show 0 when no data
+  const overview = overviewData || { mood_distribution: {}, agents_with_mood: 0 }
   const moodDist = overview.mood_distribution || {}
-  const moodAgents = moodAgentsData?.results || []
-  const moodAgentsCount = moodAgentsData?.count || moodDist[selectedMood || ''] || 0
 
   // Mood icons and colors
   const moodConfig: Record<string, { icon: typeof Heart; color: string }> = {
@@ -929,37 +919,25 @@ function EvolutionSubTab() {
   const { data: overviewData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['evolution-overview-tab'],
     queryFn: async () => {
-      try {
-        const res = await evolutionApi.overview()
-        return res.data
-      } catch (e) {
-        // Fallback data
-        return {
-          level_distribution: { 1: 45, 2: 30, 3: 20, 4: 15, 5: 10 },
-          total_xp: 147000,
-          total_evolutions: 147,
-          total_prestiges: 0,
-          max_level: 10,
-        }
-      }
-    },
-  })
+      const res = await evolutionApi.overview()
+      // Session 860: Extract from nested response
+      const data = res.data
+      const overview = data?.overview || {}
+      const topAgents = data?.top_agents || []
 
-  // Fetch agents by level for expanded list
-  const { data: levelAgentsData, isLoading: levelAgentsLoading } = useQuery({
-    queryKey: ['evolution-level-agents', selectedLevel, visibleCount],
-    queryFn: async () => {
-      try {
-        const response = await fetch(`/api/evolution/?level=${selectedLevel}&limit=${visibleCount}`)
-        if (response.ok) {
-          return response.json()
-        }
-        return { results: [], count: 0 }
-      } catch {
-        return { results: [], count: 0 }
+      // Convert level_distribution keys from strings to numbers for display
+      const levelDist = overview?.level_distribution || {}
+      const maxLevelFound = Math.max(...Object.keys(levelDist).map(Number).filter(n => !isNaN(n)), 1)
+
+      return {
+        level_distribution: levelDist,
+        total_xp: overview?.total_xp || 0,
+        total_evolutions: overview?.evolved_agents || 0,
+        total_prestiges: overview?.total_prestiges || 0,
+        max_level: maxLevelFound,
+        top_agents: topAgents,
       }
     },
-    enabled: selectedLevel !== null,
   })
 
   if (isLoading) {
@@ -970,16 +948,21 @@ function EvolutionSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load evolution data" />
   }
 
+  // Session 860: Remove hardcoded fallback - show 0 when no data
   const overview = overviewData || {
     level_distribution: {},
-    total_xp: 147000,
-    total_evolutions: 147,
+    total_xp: 0,
+    total_evolutions: 0,
     total_prestiges: 0,
-    max_level: 10,
+    max_level: 0,
   }
 
-  const levelAgents = levelAgentsData?.results || []
-  const levelAgentsCount = levelAgentsData?.count || overview.level_distribution?.[selectedLevel || 0] || 0
+  // Session 860: Filter top_agents by level client-side
+  const levelAgents = overview.top_agents?.filter(
+    (a: { level: number }) => !selectedLevel || a.level === selectedLevel
+  )?.slice(0, visibleCount) || []
+  const levelAgentsCount = overview.level_distribution?.[selectedLevel || 0] || 0
+  const levelAgentsLoading = isLoading
 
   const toggleLevelExpand = (level: number) => {
     if (selectedLevel === level) {
@@ -994,7 +977,7 @@ function EvolutionSubTab() {
     <div className="space-y-4">
       <InlineHeaderRow
         title="Agent Evolution"
-        subtitle={`${(overview.total_xp || 147000).toLocaleString()} total XP earned`}
+        subtitle={`${(overview.total_xp || 0).toLocaleString()} total XP earned`}
         onRefresh={refetch}
         isFetching={isFetching}
       />
@@ -1002,19 +985,19 @@ function EvolutionSubTab() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Total XP"
-          value={(overview.total_xp || 147000).toLocaleString()}
+          value={(overview.total_xp || 0).toLocaleString()}
           color="text-accent-amber"
           icon={Star}
         />
         <StatCard
           label="Evolutions"
-          value={overview.total_evolutions || 147}
+          value={overview.total_evolutions || 0}
           color="text-accent-green"
           icon={TrendingUp}
         />
         <StatCard
           label="Max Level"
-          value={overview.max_level || 10}
+          value={overview.max_level || 0}
           color="text-primary-400"
           icon={Award}
         />
@@ -1325,17 +1308,12 @@ function SocialSubTab() {
   const { data: conversationsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['social-conversations-tab', visibleCount],
     queryFn: async () => {
-      try {
-        const response = await fetch(`/api/agent-conversations/?limit=${showConversations ? visibleCount : 100}&time_range=30d`)
-        return response.json()
-      } catch {
-        // Fallback data based on database counts
-        return {
-          count: 9248,
-          message_count: 39908,
-          results: [],
-        }
+      // Session 860: Add response.ok check to prevent error JSON parsing
+      const response = await fetch(`/api/agent-conversations/?limit=${showConversations ? visibleCount : 100}&time_range=30d`)
+      if (!response.ok) {
+        return { count: 0, message_count: 0, results: [] }
       }
+      return response.json()
     },
   })
 
@@ -1364,16 +1342,17 @@ function SocialSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load social data" />
   }
 
+  // Session 860: Remove hardcoded fallback values - show real 0 when no data
   const conversations = conversationsData?.results || conversationsData?.conversations || []
-  const totalConversations = conversationsData?.count || 9248
-  const totalMessages = conversationsData?.message_count || 39908
+  const totalConversations = conversationsData?.count || 0
+  const totalMessages = conversationsData?.message_count || 0
   const uniqueTopics = new Set(conversations.map((c: Conversation) => c.topic?.split(' ')[0] || 'general')).size
 
   const stats = {
     conversations: totalConversations,
     messages: totalMessages,
-    activeChannels: 15,
-    topicsTrending: uniqueTopics || 8,
+    activeChannels: conversations.length > 0 ? new Set(conversations.flatMap((c: Conversation) => c.participants || [])).size : 0,
+    topicsTrending: uniqueTopics || 0,
   }
 
   return (
@@ -1887,45 +1866,33 @@ function TimeTravelSubTab() {
   const { data: overviewData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['time-travel-overview-tab'],
     queryFn: async () => {
-      try {
-        const res = await timeTravelApi.overview()
-        return res.data
-      } catch {
-        return { total_sessions: 0, total_decisions: 0, active_sessions: 0 }
+      const res = await timeTravelApi.overview()
+      // Session 860: Extract from nested response - overview includes recent_sessions
+      const data = res.data
+      const overview = data?.overview || {}
+      const recentSessions = data?.recent_sessions || []
+
+      return {
+        total_sessions: overview?.total_sessions || 0,
+        total_decisions: overview?.total_decisions || 0,
+        completed_sessions: overview?.completed_sessions || 0,
+        bookmarked_sessions: overview?.bookmarked_sessions || 0,
+        flagged_decisions: overview?.flagged_decisions || 0,
+        recent_sessions: recentSessions,
       }
     },
   })
 
-  // Fetch sessions for expanded list
-  const { data: sessionsData, isLoading: sessionsLoading } = useQuery({
-    queryKey: ['time-travel-sessions', visibleCount],
-    queryFn: async () => {
-      try {
-        const response = await fetch(`/api/time-travel/sessions/?limit=${visibleCount}`)
-        if (response.ok) {
-          return response.json()
-        }
-        return { results: [], count: 0 }
-      } catch {
-        return { results: [], count: 0 }
-      }
-    },
-    enabled: showSessions,
-  })
-
-  // Fetch session details when selected
+  // Session 860: Fetch session details - fix endpoint URL
   const { data: sessionDetail } = useQuery({
     queryKey: ['time-travel-session-detail', selectedSession?.id],
     queryFn: async () => {
-      try {
-        const response = await fetch(`/api/time-travel/sessions/${selectedSession?.id}/`)
-        if (response.ok) {
-          return response.json()
-        }
-        return null
-      } catch {
-        return null
+      // Session 860: Fix endpoint - /api/time-travel/session/{id}/ not /sessions/
+      const response = await fetch(`/api/time-travel/session/${selectedSession?.id}/`)
+      if (response.ok) {
+        return response.json()
       }
+      return null
     },
     enabled: selectedSession !== null,
   })
@@ -1938,9 +1905,11 @@ function TimeTravelSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load time travel data" />
   }
 
-  const overview = overviewData || { total_sessions: 0, total_decisions: 0, active_sessions: 0 }
-  const sessions = sessionsData?.results || []
-  const sessionsCount = sessionsData?.count || overview.total_sessions || 0
+  // Session 860: Use recent_sessions from overview, remove hardcoded fallbacks
+  const overview = overviewData || { total_sessions: 0, total_decisions: 0, recent_sessions: [] }
+  const sessions = overview.recent_sessions?.slice(0, visibleCount) || []
+  const sessionsCount = overview.total_sessions || 0
+  const sessionsLoading = isLoading
 
   const getStatusColor = (status: string) => {
     switch (status) {
