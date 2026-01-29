@@ -1,98 +1,85 @@
-# Session 862 - Start Here
+# Session 863 - Start Here
 
-**Previous Session:** 861B (SKIN Layer Gap Fixes) + 861 (Data Persistence Gaps)
+**Previous Session:** 862 (Content Flow Unification)
 **Date:** January 28, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **SKIN Layer: 92%** | **Data Persistence: COMPLETE** | **Triggers Tab: LIVE**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Content Flow: COMPLETE** | **Data Persistence: COMPLETE** | **SKIN Layer: 92%**
 
 ---
 
-## What Was Accomplished in Session 861B
+## What Was Accomplished in Session 862
 
-### SKIN Layer Gap Fixes - ALL P0 COMPLETE
+### Content Flow Unification - ALL 4 PHASES COMPLETE
 
-The SKIN/Workspace layer improved from **79% → 92% connected**. See `docs/audits/SKIN_LAYER_AUDIT_SESSION_861B.md`.
+Implemented complete traceability from Dream → Initiative → Stages → Deliverable.
 
-| Task | Status | Files |
-|------|--------|-------|
-| **Human Review UI** | ✅ DONE | `OperationsTab.tsx` |
-| **Workspace Triggers API** | ✅ DONE | `views_workspace_triggers.py`, `urls.py` |
-| **Triggers Tab UI** | ✅ DONE | `TriggersTab.tsx`, `api.ts`, `types.ts`, `WorkspacePageNew.tsx` |
+**Full Plan:** `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md` (marked COMPLETE)
+**Handoff:** `docs/handoffs/SESSION_862_CONTENT_FLOW_UNIFICATION.md`
 
-**New Features:**
-1. **Pending Reviews Section** - Users can now see and approve/reject operations requiring human review
-2. **Triggers API** - Full ViewSet with CRUD + stats/cancel/retry/bump_priority actions
-3. **Triggers Tab** - New "Triggers" tab in Workspace with queue dashboard, trigger cards, filtering
+| Phase | Description | Status | PR |
+|-------|-------------|--------|-----|
+| **1** | FK relationships (Deliverable, SelfBlog, PodcastEpisode, AgentDream) | ✅ DONE | #450-#451 |
+| **2** | Dream → Initiative bridge (`promote_to_initiative()`) | ✅ DONE | #452 |
+| **3** | `ResearchResult` model for Stage 1 tracking | ✅ DONE | #452 |
+| **4** | Auto-stage progression + final Deliverable on completion | ✅ DONE | #452 |
+
+### Content Flow Now Working
+
+```
+AgentDream (approved)
+    ↓ promote_to_initiative() [auto via signal]
+Initiative + Stage 1 (DRAFT)
+    ↓ ResearchResult.create_for_initiative()
+Research → Stage 1 Document (SelfBlog)
+    ↓ InitiativeStage.approve()
+Stage 2-5 → All approved
+    ↓ create_final_deliverable()
+Deliverable (published with full traceability)
+```
+
+### New Model: ResearchResult
+
+```python
+from core.models import ResearchResult
+
+# Create research for an initiative
+research = ResearchResult.create_for_initiative(
+    initiative,
+    topic="Market analysis...",
+    research_type='market_analysis'
+)
+
+# Complete and create document
+research.mark_complete(findings={...}, summary="...", confidence=0.85)
+blog = research.create_research_brief()
+```
 
 ---
 
-## PRIORITY: Content Flow Unification (4 Phases)
+## Priority for Session 863
 
-**Full Plan:** `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md`
+### Option A: Wire Up ResearchAgent (Recommended)
+Connect ResearchAgent to use the new `ResearchResult` model:
+1. Update ResearchAgent to create `ResearchResult` when researching for Initiative
+2. Auto-link spider data sources used
+3. Generate research brief document
 
-The content creation system has **critical integration gaps** - Dreams, Initiatives, Content, and Deliverables are disconnected. This session implements the fix:
+### Option B: Content Flow UI
+Add UI to show content traceability:
+1. Add "Content Flow" visualization to Workspace
+2. Show Dream → Initiative → Stages → Deliverable chain
+3. Allow clicking through the flow
 
-### Current Problem
-```
-AgentDream ──[DEAD END]
-Initiative ──[Isolated]
-Research ──[NO MODEL]
-Content ──[Orphaned]
-Deliverable ──[No source tracking]
-```
-
-### Implementation Phases
-
-| Phase | Description | Effort |
-|-------|-------------|--------|
-| **1** | Add FKs to Deliverable, SelfBlog, PodcastEpisode, AgentDream | 2-3 hrs |
-| **2** | Dream → Initiative bridge (`promote_to_initiative()`) | 1-2 hrs |
-| **3** | Create `ResearchResult` model for Stage 1 | 2-3 hrs |
-| **4** | Auto-stage progression + publish on completion | 2-3 hrs |
-
-### Target Flow
-```
-AgentDream → Initiative → 5 Stages → Deliverable (with full traceability)
-```
-
----
-
-## What Was Accomplished in Session 861
-
-### 1. Data Persistence Gaps - ALL FIXED
-
-Comprehensive audit and fix of data persistence vulnerabilities. See `docs/DATA_PERSISTENCE_GAPS.md`.
-
-| Risk Level | Category | Fix | PR |
-|------------|----------|-----|-----|
-| **CRITICAL** | Agent Content | Deliverable model persistence | Session 860 |
-| **HIGH** | Tool Call Results | `ToolCallRecord` model | #439 |
-| **MEDIUM** | Learning Data | Database backup layer | #441 |
-| **MEDIUM** | Decision Traces | `DecisionRecord` model (always-on) | #442 |
-| **MEDIUM** | Spider Aggregations | Caching layer + Celery tasks | #443 |
-| **LOW-MEDIUM** | User Feedback Loop | Signal-based processing | #444 |
-
-### 2. Content Tab UI Enhancements (PR #445)
-
-- BlogDetailModal with full content fetch and Approve/Publish buttons
-- EpisodeDetailModal with script display and audio player
-
----
-
-## Priority for Session 862
-
-### Option A: Content Flow Unification (Recommended)
-Implement the 4-phase plan to connect Dreams → Initiatives → Deliverables.
-
-### Option B: SKIN Layer Remaining Gaps
-Continue with P1 items:
+### Option C: SKIN Layer Remaining Gaps
+Continue with P1 items from Session 861B:
 - File Write Form (3-4 hrs)
 - Diff Viewer Component (4-5 hrs)
 - Git Operation Forms (2-3 hrs)
 
-### Option C: Test New Triggers Tab
-- Verify Triggers API endpoints work in production
-- Test cancel/retry/bump_priority actions
-- Validate stats endpoint returns correct counts
+### Option D: Test Content Flow End-to-End
+1. Create a dream and approve it
+2. Verify Initiative + Stage 1 created automatically
+3. Create research and approve stages
+4. Verify final Deliverable created
 
 ---
 
@@ -102,44 +89,52 @@ Continue with P1 items:
 # 1. Start platform
 make start && make celery
 
-# 2. Test NEW Triggers Tab
-open http://localhost:8000/ai-studio/
-# Navigate to Workspace -> Triggers (new tab with ⚡ icon)
-# View trigger queue statistics
-# Test cancel/retry/bump priority actions
-
-# 3. Test Human Review UI
-# Navigate to Workspace -> Operations
-# Scroll to "Pending Reviews" section
-# Test approve/reject with feedback
-
-# 4. Verify data persistence
+# 2. Test Content Flow
 python manage.py shell
->>> from core.models import WorkspaceTrigger
->>> WorkspaceTrigger.objects.filter(status='pending').count()
+>>> from core.models import AgentDream, Agent
+>>> agent = Agent.objects.first()
+>>> dream = AgentDream.objects.create(
+...     agent=agent,
+...     title="Test Content Flow",
+...     content="Testing the new content flow...",
+...     dream_type='creative_idea'
+... )
+>>> dream.decision_outcome = 'approved'
+>>> dream.save()
+>>> print(f"Initiative created: {dream.initiative}")
+
+# 3. Access AI Studio
+open http://localhost:8000/ai-studio/
 ```
 
 ---
 
-## Session 861B Files Created/Modified
+## Session 862 Files Created
 
-### Created:
-- `core/views_workspace_triggers.py` - WorkspaceTrigger + Config ViewSets
-- `frontend/src/pages/workspace/tabs/TriggersTab.tsx` - Full triggers tab component
+| File | Purpose |
+|------|---------|
+| `core/models_research.py` | ResearchResult model |
+| `core/migrations/0202_session_862_content_flow_fks.py` | FK migration |
+| `core/migrations/0203_session_862_research_result.py` | ResearchResult migration |
+| `docs/handoffs/SESSION_862_CONTENT_FLOW_UNIFICATION.md` | Session handoff |
 
-### Modified:
-- `frontend/src/pages/workspace/tabs/OperationsTab.tsx` - Added PendingReviewsSection
-- `frontend/src/lib/api.ts` - Added workspaceTriggersApi, workspaceTriggerConfigsApi
-- `frontend/src/pages/workspace/types.ts` - Added 'triggers' to WorkspaceTab
-- `frontend/src/pages/workspace/tabs/index.ts` - Exported TriggersTab
-- `frontend/src/pages/WorkspacePageNew.tsx` - Wired Triggers tab
-- `core/urls.py` - Added trigger routes
-- `docs/audits/SKIN_LAYER_AUDIT_SESSION_861B.md` - Updated with completion
+## Session 862 Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/models_unified_system.py` | Added `promote_to_initiative()` to AgentDream |
+| `core/models_document_registry.py` | Enhanced Initiative with `advance_stage()`, `is_complete()`, `create_final_deliverable()` |
+| `core/models/__init__.py` | Added ResearchResult import |
+| `core/signals/dream_signals.py` | Auto-create Initiative on dream approval |
+| `core/models_deliverables.py` | Added FK fields |
+| `core/models_podcast_studio.py` | Added FK fields |
+| `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md` | Marked COMPLETE |
 
 ---
 
 ## Handoff Documents
 
-- `docs/handoffs/SESSION_861B_SKIN_LAYER_FIXES.md` - SKIN gap fixes (Human Review + Triggers)
+- `docs/handoffs/SESSION_862_CONTENT_FLOW_UNIFICATION.md` - Content flow implementation
+- `docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md` - Full plan (marked COMPLETE)
+- `docs/handoffs/SESSION_861B_SKIN_LAYER_FIXES.md` - SKIN gap fixes
 - `docs/handoffs/SESSION_861_DATA_PERSISTENCE.md` - Data persistence fixes
-- `docs/audits/SKIN_LAYER_AUDIT_SESSION_861B.md` - SKIN layer connectivity audit
