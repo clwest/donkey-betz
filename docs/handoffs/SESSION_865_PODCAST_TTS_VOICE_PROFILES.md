@@ -1,4 +1,4 @@
-# Session 865: Podcast TTS + Voice Profile Integration
+# Session 865: Podcast TTS + Voice Profile Integration + ConceptForge UI
 
 **Date:** January 29, 2026
 **Status:** COMPLETE
@@ -8,11 +8,12 @@
 
 ## Overview
 
-This session focused on three major areas:
+This session focused on four major areas:
 
 1. **Spider Network Investigation** - Discovered Celery Beat had stopped 38 hours ago
 2. **Celery Health Monitoring** - Added alerting when tasks stop running
 3. **Podcast TTS Pipeline Reconnection** - Fixed auth bugs, connected VoiceProfileModal to real data
+4. **ConceptForge UI** - Added Dossiers tab with full pipeline visualization
 
 ---
 
@@ -240,12 +241,57 @@ When a custom voice is selected, ALL speakers use that single voice (useful for 
 
 ---
 
+## Part 4: ConceptForge Dossier Pipeline UI
+
+Added a complete UI for viewing and managing ConceptForge pipeline runs.
+
+### Backend API (`core/views_conceptforge.py`)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/conceptforge/runs/` | GET | List runs with filtering (status, domain, pagination) |
+| `/api/conceptforge/runs/<id>/` | GET | Get run details with all stages and artifacts |
+| `/api/conceptforge/runs/<id>/stages/<name>/` | GET | Get full content for a specific stage |
+| `/api/conceptforge/runs/<id>/retry/` | POST | Retry a failed run |
+| `/api/conceptforge/stats/` | GET | Pipeline statistics (total, success rate, by domain) |
+| `/api/conceptforge/labs/` | GET | Available domain labs configuration |
+
+### Frontend (`ConceptForgeTab.tsx`)
+
+**Features:**
+- Stats panel showing total runs, success rate, 7-day activity, in-progress count
+- Run list with status badges and 6-stage progress indicators
+- Filtering by status (completed, running, pending, failed)
+- Detail view with stage tabs (Research, Debate, Feasibility, Risk, Market, Synthesis)
+- Stage output viewer showing agent/advisor metadata
+- Artifacts list with primary dossier indicator
+
+**Stage Configuration:**
+| Stage | Icon | Color |
+|-------|------|-------|
+| Research | FlaskConical | blue |
+| Debate | Users | purple |
+| Feasibility | Brain | cyan |
+| Risk | Scale | orange |
+| Market | TrendingUp | green |
+| Synthesis | Lightbulb | yellow |
+
+### Workspace Integration
+
+- Added `conceptforge` to WorkspaceTab type
+- Added "Dossiers" tab to workspace navigation with FlaskConical icon
+- Renders ConceptForgeTab when tab is active
+
+---
+
 ## Files Created/Modified
 
 ### Created
 | File | Purpose |
 |------|---------|
 | `docs/handoffs/SESSION_865_PODCAST_TTS_VOICE_PROFILES.md` | This handoff document |
+| `core/views_conceptforge.py` | ConceptForge API endpoints |
+| `frontend/src/pages/workspace/tabs/ConceptForgeTab.tsx` | Dossier pipeline UI |
 
 ### Modified
 | File | Changes |
@@ -253,10 +299,13 @@ When a custom voice is selected, ALL speakers use that single voice (useful for 
 | `core/tasks.py` | Added `monitor_celery_health` task |
 | `core/settings.py` | Added monitoring task to Celery Beat schedule |
 | `core/views_podcast.py` | Added `podcast_generate_audio` endpoint with voice profile lookup |
-| `core/urls.py` | Added URL route for generate-audio endpoint |
+| `core/urls.py` | Added URL routes for generate-audio and ConceptForge API |
 | `core/services/podcast_audio_service.py` | Added `custom_voice_id` parameter |
 | `frontend/src/lib/api.ts` | Updated `generateAudio` to accept voiceProfileId |
 | `frontend/src/pages/workspace/tabs/ContentStudioTab.tsx` | Fixed script auth, added Generate Audio button, rewrote VoiceProfileModal |
+| `frontend/src/pages/workspace/tabs/index.ts` | Export ConceptForgeTab |
+| `frontend/src/pages/WorkspacePageNew.tsx` | Added Dossiers tab to navigation |
+| `frontend/src/pages/workspace/types.ts` | Added conceptforge to WorkspaceTab type |
 
 ---
 
@@ -299,7 +348,8 @@ print(result)
 |-----------|-------|--------|
 | **Agents** | 75 | No change |
 | **Celery Tasks** | 241 | +1 (monitor_celery_health) |
-| **API Endpoints** | +1 | podcast_generate_audio |
+| **API Endpoints** | +8 | podcast_generate_audio + 7 ConceptForge endpoints |
+| **Workspace Tabs** | 12 | +1 (Dossiers) |
 
 ---
 
@@ -311,12 +361,18 @@ print(result)
 - Generate audio
 - Verify voice is correct
 
-### P2: Voice Recording UI
+### P2: Test ConceptForge UI
+- Navigate to Dossiers tab
+- Verify stats load correctly
+- Click on a run to see stage details
+- Test filtering by status
+
+### P3: Voice Recording UI
 - Add recording interface for voice cloning
 - Connect to ElevenLabs voice cloning API
 - Save cloned voice to VoiceProfile model
 
-### P3: Audio Player Enhancement
+### P4: Audio Player Enhancement
 - Add waveform visualization
 - Add playback controls (speed, skip)
 - Add download button
@@ -328,3 +384,5 @@ print(result)
 - `core/services/podcast_audio_service.py` - Full audio generation pipeline
 - `core/models_voice_marketplace.py` - VoiceProfile model
 - `core/views_voice_marketplace.py` - Voice marketplace API
+- `core/views_conceptforge.py` - ConceptForge API endpoints
+- `core/models_conceptforge.py` - ConceptForge data models
