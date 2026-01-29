@@ -1,68 +1,78 @@
-# Session 861 - Start Here
+# Session 862 - Start Here
 
-**Previous Session:** 860 (Initiative Pipeline + AI Consciousness Tab Complete Fix)
+**Previous Session:** 861 (Data Persistence Gaps + Content Tab UI Fixes)
 **Date:** January 28, 2026
-**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **AI Mind Tab: FIXED** | **Console Errors: FIXED**
+**Status:** 74 Agents | 77 Spiders | 25 Advisors | 235 Celery Tasks | **Data Persistence: COMPLETE** | **Content Tab: ENHANCED**
 
 ---
 
-## What Was Accomplished in Session 860
+## What Was Accomplished in Session 861
 
-### 1. Initiative Pipeline Fixes (PR #418)
+### 1. Data Persistence Gaps - ALL FIXED
 
-Documents weren't linking to initiatives. Root cause: missing `parent_topic` in `stats_snapshot`.
+Comprehensive audit and fix of data persistence vulnerabilities. See `docs/DATA_PERSISTENCE_GAPS.md`.
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Stages with documents | 15 | 31 |
-| Documents backfilled | 0 | 25 |
+| Risk Level | Category | Fix | PR |
+|------------|----------|-----|-----|
+| **CRITICAL** | Agent Content | Deliverable model persistence | Session 860 |
+| **HIGH** | Tool Call Results | `ToolCallRecord` model | #439 |
+| **MEDIUM** | Learning Data | Database backup layer | #441 |
+| **MEDIUM** | Decision Traces | `DecisionRecord` model (always-on) | #442 |
+| **MEDIUM** | Spider Aggregations | Caching layer + Celery tasks | #443 |
+| **LOW-MEDIUM** | User Feedback Loop | Signal-based processing | #444 |
 
-### 2. API Error Handling Fixes (PRs #419-422)
+**New Models Added:**
+- `ToolCallRecord` + `ToolCallAggregate` - Track all tool calls with latency/success metrics
+- `AgentInteractionRecord`, `LearnedPreferenceRecord`, `LearningProgressSnapshot` - Redis backup
+- `DecisionRecord` + `DecisionAggregate` - Always-on decision tracking
+- `SpiderAggregation` + `TrendDataPoint` - Cached aggregations + time-series data
 
-Fixed multiple frontend console errors (404/401) and `v.filter is not a function` errors across multiple tabs.
+**New BaseAgent Methods:**
+- `_execute_and_record_tool_call()` - Automatic tool call recording
+- `_record_tool_call()` - Manual tool call recording
+- `_record_decision()` - Always-on decision recording
 
-### 3. AI Consciousness (AI Mind) Tab - Complete Fix (PRs #424-429)
+### 2. Content Tab UI Enhancements (PR #445)
 
-**All 8 sub-tabs now working with real data:**
+**BlogDetailModal:**
+- Added "Read Full Content" toggle that fetches via `/api/v1/research/self-blog/{id}/`
+- ReactMarkdown rendering of full blog content
+- Approve and Publish action buttons with mutations
+- Status badges with icons (draft/approved/published)
+- Error handling for failed actions
 
-| Sub-tab | Status | Key Fix |
-|---------|--------|---------|
-| Memory Palace | Fixed | Created list endpoint, nested data extraction |
-| Neural Orchestra | Fixed | Use agents API, proper collaboration data |
-| Relationships | Fixed | `agent_from.name` not `agent_1` |
-| Mood | Fixed | Array to object conversion for mood_distribution |
-| Evolution | Fixed | Extract from nested overview, use top_agents |
-| Social | Fixed | response.ok check, dynamic channel count |
-| Time Capsules | OK | Already had proper handling |
-| Time Travel | Fixed | Use recent_sessions from overview |
-
-**Memory Detail Modal Bug (PR #429):**
-- Modal showed "Untitled" after briefly displaying data
-- Fixed: Extract `response.data.memory` not `response.data`
+**EpisodeDetailModal:**
+- Added "Read Full Script" toggle that fetches via `/api/podcasts/{id}/script/`
+- Audio player for episodes with audio_url
+- Full script display with ReactMarkdown
+- Debate insights (consensus, key takeaways)
+- Error message display for failed episodes
 
 ---
 
-## Priority for Session 861
+## Priority for Session 862
 
-### Option A: Monitor Production
+### Option A: Content Pipeline Verification
 
-After all the API fixes, verify in production:
-- AI Mind tab sub-tabs display real data
-- No remaining console errors
-- Memory Palace modal shows full details
+Now that Content Tab shows full content, verify the full pipeline:
+1. Agents create content → stored as AgentResult
+2. Content saved to Deliverable model (check persistence)
+3. Content appears in Content Tab with correct data
+4. Approve/Publish workflow works end-to-end
 
-### Option B: Initiative UI Improvements
+### Option B: Gallery/Distribution Tab Enhancements
 
-Enhance the Initiatives tab in the Workspace:
-- Show document links in stage cards
-- Add "Link existing document" button
-- Show stage completion progress inline
+Apply the same enhancements to other Content Tab sections:
+- Gallery: Add image preview modal with full details
+- Distribution: Show actual distribution status/history
 
-### Option C: Auto Stage Promotion
+### Option C: Agent Tracing Dashboard
 
-Implement automatic stage promotion when documents are approved:
-- When a document status changes to 'approved', promote the initiative stage
-- Add approval workflow to Workspace inline view
+Build a dashboard to trace agent work through the system:
+- Which agent created what content
+- Tool calls made during execution
+- Decisions recorded with reasoning
+- Time from creation to publish
 
 ---
 
@@ -72,23 +82,37 @@ Implement automatic stage promotion when documents are approved:
 # 1. Start platform
 make start && make celery
 
-# 2. Check AI Mind tab
+# 2. Test Content Tab enhancements
 open http://localhost:8000/ai-studio/
-# Navigate to Workspace -> AI Mind -> Memory Palace
+# Navigate to Workspace -> Content -> Blogs
+# Click a blog post -> Click "Read Full Content"
+# Test Approve/Publish buttons
 
-# 3. Verify memory detail modal
-# Click on a memory - should show title, type, content, etc.
+# 3. Verify data persistence
+python manage.py shell
+>>> from core.models import DecisionRecord, ToolCallRecord
+>>> DecisionRecord.objects.count()  # Should show recorded decisions
+>>> ToolCallRecord.objects.count()  # Should show recorded tool calls
 ```
 
 ---
 
-## Session 860 Handoff
+## Session 861 PRs
 
-See: `docs/handoffs/SESSION_860_API_ERROR_HANDLING.md`
+| PR | Description |
+|----|-------------|
+| #439 | Tool Call Results - ToolCallRecord model |
+| #440 | Documentation - Data persistence gaps update |
+| #441 | Learning Data - Database backup layer |
+| #442 | Decision Traces - DecisionRecord model |
+| #443 | Spider Aggregations - Caching system |
+| #444 | User Feedback - Processing pipeline |
+| #445 | Content Tab - Enhanced modals |
 
-**Total PRs Merged:** 15 (#418-422, #424-429, #431-434)
+**Total PRs Merged:** 7 (#439-445)
 
-### Production Lost Blogs Audit
-- 111 blogs lost (96.5%) before ContentWriterAgent persistence fix
-- Fix deployed in PR #432 - future blogs will persist correctly
-- Diagnostic script: `python manage.py shell < scripts/check_lost_blogs.py`
+---
+
+## Handoff Document
+
+See: `docs/handoffs/SESSION_861_DATA_PERSISTENCE.md` (to be created)
