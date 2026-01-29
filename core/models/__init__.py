@@ -113,6 +113,11 @@ from ..models_pipeline_feedback import (
     PipelineStageFeedback,
 )
 
+# Import research result model (Session 862 - Content Flow Unification)
+from ..models_research import (
+    ResearchResult,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -263,4 +268,7 @@ __all__ = [
 
     # Pipeline Feedback (Session 861)
     'PipelineStageFeedback',
+
+    # Research Result (Session 862)
+    'ResearchResult',
 ]
