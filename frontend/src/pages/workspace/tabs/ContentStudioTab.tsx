@@ -2231,16 +2231,16 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
 }
 
 // Session 861: Enhanced Episode Detail Modal with script viewing and audio playback
+// Session 865: Fixed authentication - use podcastApi instead of raw fetch
 function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onClose: () => void }) {
   const [showScript, setShowScript] = useState(false)
 
-  // Fetch full script when expanded
+  // Fetch full script when expanded - Session 865: Use podcastApi for proper auth
   const { data: scriptData, isLoading: scriptLoading } = useQuery({
     queryKey: ['podcast-script', episode.id],
     queryFn: async () => {
-      const response = await fetch(`/api/podcasts/${episode.id}/script/`)
-      if (!response.ok) throw new Error('Failed to fetch script')
-      return response.json()
+      const response = await podcastApi.script(episode.id)
+      return response.data
     },
     enabled: showScript,
   })
