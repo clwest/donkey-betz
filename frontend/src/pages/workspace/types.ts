@@ -18,6 +18,7 @@ export type WorkspaceTab =
   | 'conceptforge'  // Session 865: ConceptForge Dossier Pipeline
   | 'career'  // Session 866: ATS Resume Optimizer
   | 'voices'  // Session 869: Voice Marketplace
+  | 'learning'  // Session 870: Learning Journey Dashboard
 
 // Sub-tab types for each main tab
 export type InfrastructureSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'
