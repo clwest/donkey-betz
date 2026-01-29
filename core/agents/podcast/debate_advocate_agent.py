@@ -227,24 +227,49 @@ CRITICAL: Use research tools to find real evidence. Never fabricate statistics o
                         tool_results.append(result)
 
                     execution_time_ms = int((time.time() - start_time) * 1000)
+                    content = response.get('content') or "Advocacy argument prepared"
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or "Advocacy argument prepared",
+                        message=content,
                         data={"tool_results": tool_results, "role": "ADVOCATE", "voice_id": "Rachel"},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms,
                         tool_calls=tool_calls_made
                     )
+
+                    # Session 861: Persist script to Deliverable
+                    self._save_to_deliverable(
+                        title=f"Debate Advocacy: {task[:50]}",
+                        content=content,
+                        deliverable_type='script',
+                        category='Content',
+                        tags=['debate', 'advocacy', 'podcast', 'script'],
+                        content_format='markdown',
+                        metadata={'task': task, 'role': 'ADVOCATE'},
+                    )
                 else:
                     # No tools called, return content directly
                     execution_time_ms = int((time.time() - start_time) * 1000)
+                    content = response.get('content') or 'No response'
                     result = AgentResult(
                         success=True,
-                        message=response.get('content') or 'No response',
+                        message=content,
                         data={"role": "ADVOCATE", "voice_id": "Rachel"},
                         agent_name=self.name,
                         execution_time_ms=execution_time_ms
                     )
+
+                    # Session 861: Persist script to Deliverable
+                    if content and content != 'No response':
+                        self._save_to_deliverable(
+                            title=f"Debate Advocacy: {task[:50]}",
+                            content=content,
+                            deliverable_type='script',
+                            category='Content',
+                            tags=['debate', 'advocacy', 'podcast', 'script'],
+                            content_format='markdown',
+                            metadata={'task': task, 'role': 'ADVOCATE'},
+                        )
 
                 # Record learning outcome for collective intelligence
                 try:

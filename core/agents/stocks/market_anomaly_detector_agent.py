@@ -349,6 +349,22 @@ Focus on patterns that suggest informed trading or manipulation."""
                     tool_calls=tool_calls_made
                 )
 
+                # Session 861: Persist analysis to Deliverable
+                if analysis:
+                    self._save_to_deliverable(
+                        title=f"Market Anomaly: {ticker or task[:50]}",
+                        content=analysis,
+                        deliverable_type='analysis',
+                        category='Finance',
+                        tags=['anomaly', 'market', 'stocks', 'detection'],
+                        content_format='markdown',
+                        metadata={
+                            'task': task,
+                            'ticker': ticker,
+                            'tools_used': [tc['tool'] for tc in tool_calls_made],
+                        },
+                    )
+
                 # Record learning outcome
                 try:
                     self._record_learning_outcome(

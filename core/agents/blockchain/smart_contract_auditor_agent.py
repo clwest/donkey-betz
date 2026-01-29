@@ -412,6 +412,30 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                             knowledge_attribution=knowledge_attribution
                         )
 
+                        # Session 861: Persist audit report to Deliverable
+                        audit_content = f"# Smart Contract Security Audit\n\n**Task:** {task}\n\n"
+                        for res in all_results:
+                            source = res.get('source', 'Audit')
+                            data = res.get('data', {})
+                            audit_content += f"## {source}\n"
+                            if 'audit_report' in data:
+                                audit_content += f"{data['audit_report']}\n\n"
+                            elif 'analysis' in data:
+                                audit_content += f"{data['analysis']}\n\n"
+                        self._save_to_deliverable(
+                            title=f"Smart Contract Audit: {task[:50]}",
+                            content=audit_content,
+                            deliverable_type='report',
+                            category='Blockchain',
+                            tags=['smart-contract', 'audit', 'security', 'blockchain'],
+                            content_format='markdown',
+                            metadata={
+                                'task': task,
+                                'tools_used': [tc.get('tool') for tc in tool_calls_made],
+                                'execution_time_ms': execution_time,
+                            },
+                        )
+
                         # Share findings as knowledge for other agents
                         self._share_audit_findings(all_results)
 

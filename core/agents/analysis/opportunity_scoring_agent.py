@@ -361,6 +361,24 @@ You score and analyze - you do NOT create content or execute workflows."""
                         tool_calls=tool_calls_made
                     )
 
+                    # Session 861: Persist analysis to Deliverable
+                    analysis_content = f"# Opportunity Scoring Analysis\n\n**Task:** {task}\n\n"
+                    for tc in tool_calls_made:
+                        analysis_content += f"## {tc.get('tool', 'Tool')}\n{tc.get('result', {})}\n\n"
+                    self._save_to_deliverable(
+                        title=f"Opportunity Analysis: {task[:50]}",
+                        content=analysis_content,
+                        deliverable_type='analysis',
+                        category='Business',
+                        tags=['opportunity', 'scoring', 'analysis'],
+                        content_format='markdown',
+                        metadata={
+                            'task': task,
+                            'execution_time_ms': execution_time,
+                            'tools_used': [tc.get('tool') for tc in tool_calls_made],
+                        },
+                    )
+
                     # Session 380: Learning hooks for collective intelligence
                     self._record_learning_outcome(
                         result=result,
