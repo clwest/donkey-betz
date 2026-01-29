@@ -291,6 +291,10 @@ export const memoryPalaceApi = {
   // Overview of all agents' memory palaces
   overview: () => api.get('/memory-palace/'),
 
+  // Session 860: List all memories with filters
+  listMemories: (params?: { safety_class?: string; memory_type?: string; valence?: string; limit?: number; offset?: number }) =>
+    api.get('/memory-palace/memories/', { params }),
+
   // Agent-specific endpoints
   // Session 753: Added outcome and sort_by parameters
   // Session 754: Added tag filter parameter
