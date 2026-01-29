@@ -41,6 +41,17 @@ from core.views_trace_viewer import (
     CitationViolationResolveView,
 )
 
+# Session 865: ConceptForge Dossier Pipeline API
+from core.views_conceptforge import (
+    list_runs as conceptforge_list_runs,
+    get_run_detail as conceptforge_run_detail,
+    get_stage_content as conceptforge_stage_content,
+    get_artifact_content as conceptforge_artifact_content,
+    retry_run as conceptforge_retry_run,
+    get_stats as conceptforge_stats,
+    get_domain_labs as conceptforge_domain_labs,
+)
+
 # Session 237: Redirect handler for legacy broken URLs
 def legacy_portfolio_image_redirect(request, path):
     """
@@ -1478,6 +1489,15 @@ urlpatterns = [
     # Session 846: Citation Gate - Citation Violations
     path('api/citation-violations/', CitationViolationsListView.as_view(), name='citation-violations-list'),
     path('api/citation-violations/<uuid:violation_id>/resolve/', CitationViolationResolveView.as_view(), name='citation-violation-resolve'),
+
+    # Session 865: ConceptForge Dossier Pipeline API
+    path('api/conceptforge/runs/', conceptforge_list_runs, name='conceptforge-list-runs'),
+    path('api/conceptforge/runs/<uuid:run_id>/', conceptforge_run_detail, name='conceptforge-run-detail'),
+    path('api/conceptforge/runs/<uuid:run_id>/stages/<str:stage_name>/', conceptforge_stage_content, name='conceptforge-stage-content'),
+    path('api/conceptforge/runs/<uuid:run_id>/retry/', conceptforge_retry_run, name='conceptforge-retry-run'),
+    path('api/conceptforge/artifacts/<uuid:artifact_id>/', conceptforge_artifact_content, name='conceptforge-artifact-content'),
+    path('api/conceptforge/stats/', conceptforge_stats, name='conceptforge-stats'),
+    path('api/conceptforge/labs/', conceptforge_domain_labs, name='conceptforge-domain-labs'),
 
     # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
     path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),

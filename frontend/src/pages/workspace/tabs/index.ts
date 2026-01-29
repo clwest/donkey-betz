@@ -28,3 +28,6 @@ export { InitiativesTab } from './InitiativesTab'
 
 // Session 861B: WorkspaceTrigger Autopilot Queue
 export { TriggersTab } from './TriggersTab'
+
+// Session 865: ConceptForge Dossier Pipeline
+export { ConceptForgeTab } from './ConceptForgeTab'
