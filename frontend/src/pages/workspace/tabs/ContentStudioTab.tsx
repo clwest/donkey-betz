@@ -1706,6 +1706,7 @@ function PlatformRow({ name, status, onClick }: { name: string; status: string; 
 // ============ Detail Modals ============
 
 // Session 857: Gallery Item Detail Modal
+// Session 865: Enhanced with video/audio playback support
 function GalleryItemDetailModal({ item, onClose }: { item: GalleryItem; onClose: () => void }) {
   const typeIcons = {
     image: Image,
@@ -1715,20 +1716,95 @@ function GalleryItemDetailModal({ item, onClose }: { item: GalleryItem; onClose:
   }
   const TypeIcon = typeIcons[item.type] || Image
 
+  // Session 865: Render appropriate media player based on type
+  const renderMediaContent = () => {
+    const mediaUrl = item.url || item.thumbnail_url
+
+    if (item.type === 'video' && mediaUrl) {
+      return (
+        <div className="rounded-lg overflow-hidden bg-black">
+          <video
+            src={mediaUrl}
+            controls
+            autoPlay
+            className="w-full h-auto max-h-[60vh]"
+            poster={item.thumbnail_url}
+          >
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      )
+    }
+
+    if (item.type === 'audio' && mediaUrl) {
+      return (
+        <div className="p-6 bg-gray-800/50 rounded-lg">
+          <div className="flex items-center justify-center mb-4">
+            <div className="h-24 w-24 rounded-full bg-primary-500/20 flex items-center justify-center">
+              <Music size={48} className="text-primary-400" />
+            </div>
+          </div>
+          <audio src={mediaUrl} controls autoPlay className="w-full">
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+      )
+    }
+
+    if (item.type === '3d') {
+      return (
+        <div className="p-6 bg-gray-800/50 rounded-lg text-center">
+          <div className="flex items-center justify-center mb-4">
+            <div className="h-24 w-24 rounded-full bg-accent-green/20 flex items-center justify-center">
+              <Box size={48} className="text-accent-green" />
+            </div>
+          </div>
+          <p className="text-gray-400 mb-4">3D Model Viewer</p>
+          {mediaUrl && (
+            <a
+              href={mediaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary text-sm inline-flex items-center gap-2"
+            >
+              <Box size={14} />
+              Open Model File
+            </a>
+          )}
+        </div>
+      )
+    }
+
+    // Default: Image
+    if (mediaUrl) {
+      return (
+        <div className="rounded-lg overflow-hidden bg-gray-800">
+          <img src={mediaUrl} alt={item.title || item.prompt} className="w-full h-auto" />
+        </div>
+      )
+    }
+
+    return (
+      <div className="p-6 bg-gray-800/50 rounded-lg text-center text-gray-400">
+        No preview available
+      </div>
+    )
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div
-        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <div className="flex items-center gap-3">
             <TypeIcon size={20} className="text-primary-400" />
             <div>
-              <h3 className="font-semibold">{item.title || `${item.type} ${item.id}`}</h3>
+              <h3 className="font-semibold">{item.title || item.prompt || `${item.type} ${item.id.slice(0, 8)}`}</h3>
               <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400 capitalize">
                 {item.type}
               </span>
@@ -1740,9 +1816,13 @@ function GalleryItemDetailModal({ item, onClose }: { item: GalleryItem; onClose:
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {item.thumbnail_url && (
-            <div className="rounded-lg overflow-hidden bg-gray-800">
-              <img src={item.thumbnail_url} alt={item.title} className="w-full h-auto" />
+          {renderMediaContent()}
+
+          {/* Prompt/Description */}
+          {item.prompt && (
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">Prompt</p>
+              <p className="text-sm text-gray-300">{item.prompt}</p>
             </div>
           )}
 
@@ -1758,7 +1838,18 @@ function GalleryItemDetailModal({ item, onClose }: { item: GalleryItem; onClose:
           </div>
         </div>
 
-        <div className="p-4 border-t border-dark-border flex justify-end">
+        <div className="p-4 border-t border-dark-border flex justify-end gap-2">
+          {item.url && (
+            <a
+              href={item.url}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary text-sm"
+            >
+              Download
+            </a>
+          )}
           <button onClick={onClose} className="btn btn-primary text-sm">
             Close
           </button>
