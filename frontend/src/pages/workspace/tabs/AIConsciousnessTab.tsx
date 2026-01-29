@@ -345,7 +345,8 @@ function MemoryDetailModal({ memory, onClose }: { memory: MemoryItem; onClose: (
     queryFn: async () => {
       try {
         const response = await memoryPalaceApi.memoryDetail(memory.id)
-        return response.data || null
+        // Session 860: Extract memory from nested response {success, memory: {...}}
+        return response.data?.memory || null
       } catch {
         return null
       }
