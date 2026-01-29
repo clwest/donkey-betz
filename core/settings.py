@@ -1075,6 +1075,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.propagate_new_policies',
         'schedule': 600.0,  # Every 10 minutes - propagate new policies to agents
     },
+    # Session 865: Poll processing videos and update their status
+    'poll-processing-videos': {
+        'task': 'core.tasks.poll_processing_videos',
+        'schedule': 120.0,  # Every 2 minutes - check and update video statuses
+    },
     # Session 464: Learning Loop - Market Intelligence Desk learns from outcomes
     'track-prediction-outcomes': {
         'task': 'learning_loop.track_prediction_outcomes',
