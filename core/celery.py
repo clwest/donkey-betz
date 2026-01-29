@@ -2260,6 +2260,21 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
+
+    # ==================== SESSION 866: INITIATIVE PIPELINE AUTOMATION ====================
+    # Advance initiatives through their 5-stage pipeline automatically
+    # Stages: Research Brief → Prototype Plan → Evaluation → Tech Design → Pilot Execution
+    # Generates stage documents using TechnicalDocumentAgent
+
+    'advance-initiative-pipeline': {
+        'task': 'core.tasks.advance_initiative_pipeline',
+        'schedule': crontab(hour='*/4', minute=30),  # Every 4 hours at :30
+        'kwargs': {'limit': 5},
+        'options': {
+            'expires': 7200,  # 2 hours
+            'queue': 'long_running',
+        }
+    },
 }
 
 # Task routing configuration
