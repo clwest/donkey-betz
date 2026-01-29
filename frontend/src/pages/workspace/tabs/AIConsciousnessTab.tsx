@@ -148,24 +148,15 @@ function MemorySubTab() {
     },
   })
 
-  // Fetch memories for expanded list view
+  // Session 860: Use memoryPalaceApi.overview() - /api/memory-palace/memories/ endpoint doesn't exist
+  // The overview endpoint returns agents with their memory counts, not individual memories
+  // For now, disable expanded memory list until a proper list endpoint is created
   const { data: memoriesData, isLoading: memoriesLoading } = useQuery({
     queryKey: ['memory-palace-list', expandedSection, selectedType, visibleCount],
     queryFn: async () => {
-      try {
-        let url = `/api/memory-palace/memories/?limit=${visibleCount}`
-        if (expandedSection === 'approved') url += '&safety_class=approved'
-        else if (expandedSection === 'candidate') url += '&safety_class=candidate'
-        else if (expandedSection === 'type' && selectedType) url += `&memory_type=${selectedType}`
-
-        const response = await fetch(url)
-        if (response.ok) {
-          return response.json()
-        }
-        return { memories: [], count: 0 }
-      } catch {
-        return { memories: [], count: 0 }
-      }
+      // Return empty - no list endpoint exists yet
+      // TODO: Create /api/memory-palace/memories/ endpoint to list all memories with filters
+      return { memories: [], count: 0 }
     },
     enabled: expandedSection !== null,
   })
@@ -339,16 +330,14 @@ function MemorySubTab() {
 }
 
 function MemoryDetailModal({ memory, onClose }: { memory: MemoryItem; onClose: () => void }) {
-  // Fetch full memory details if available
+  // Session 860: Use memoryPalaceApi.memoryDetail() instead of non-existent endpoint
+  // Endpoint is /api/memory-palace/memory/{id}/ (singular) not /api/memory-palace/memories/{id}/
   const { data: fullMemory } = useQuery({
     queryKey: ['memory-detail', memory.id],
     queryFn: async () => {
       try {
-        const response = await fetch(`/api/memory-palace/memories/${memory.id}/`)
-        if (response.ok) {
-          return response.json()
-        }
-        return null
+        const response = await memoryPalaceApi.memoryDetail(memory.id)
+        return response.data || null
       } catch {
         return null
       }
@@ -496,15 +485,13 @@ function OrchestraSubTab() {
   })
 
   // Fetch collaborations for expanded list
+  // Session 860: Use relationshipsApi.overview() instead of non-existent /api/relationships/
   const { data: collabsData, isLoading: collabsLoading } = useQuery({
     queryKey: ['orchestra-collabs-list', visibleCount],
     queryFn: async () => {
       try {
-        const response = await fetch(`/api/relationships/?limit=${visibleCount}`)
-        if (response.ok) {
-          return response.json()
-        }
-        return { results: [], count: 0 }
+        const response = await relationshipsApi.overview()
+        return response.data || { results: [], count: 0 }
       } catch {
         return { results: [], count: 0 }
       }
@@ -1120,21 +1107,15 @@ function RelationshipsSubTab() {
     },
   })
 
-  // Fetch relationships for expanded list
+  // Session 860: Use relationshipsApi.overview() - /api/relationships/ endpoint doesn't exist
+  // The overview endpoint returns relationship types and counts, not individual relationships
+  // For now, disable expanded relationship list until a proper list endpoint is created
   const { data: relationshipsData, isLoading: relationshipsLoading } = useQuery({
     queryKey: ['relationships-list', selectedType, visibleCount],
     queryFn: async () => {
-      try {
-        let url = `/api/relationships/?limit=${visibleCount}`
-        if (selectedType && selectedType !== 'all') url += `&type=${selectedType}`
-        const response = await fetch(url)
-        if (response.ok) {
-          return response.json()
-        }
-        return { results: [], count: 0 }
-      } catch {
-        return { results: [], count: 0 }
-      }
+      // Return empty - no list endpoint exists yet
+      // TODO: Create /api/agent-relationships/list/ endpoint to list all relationships with filters
+      return { results: [], count: 0 }
     },
     enabled: selectedType !== null,
   })
