@@ -108,6 +108,11 @@ from ..models_spider_aggregation import (
     TrendDataPoint,
 )
 
+# Import pipeline feedback model (Session 861 - Feedback Processing)
+from ..models_pipeline_feedback import (
+    PipelineStageFeedback,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -255,4 +260,7 @@ __all__ = [
     # Spider Aggregation Caching (Session 861)
     'SpiderAggregation',
     'TrendDataPoint',
+
+    # Pipeline Feedback (Session 861)
+    'PipelineStageFeedback',
 ]

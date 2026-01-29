@@ -160,6 +160,32 @@ class PodcastEpisode(models.Model):
     show = models.ForeignKey(PodcastShow, on_delete=models.CASCADE, related_name='episodes', null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='podcast_episodes')
 
+    # Session 862: Content Flow Traceability
+    initiative = models.ForeignKey(
+        'core.Initiative',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='podcast_episodes',
+        help_text="Session 862: Initiative this podcast belongs to"
+    )
+    dream = models.ForeignKey(
+        'core.AgentDream',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='podcast_episodes',
+        help_text="Session 862: Dream that originated this podcast"
+    )
+    initiative_stage = models.ForeignKey(
+        'core.InitiativeStage',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='podcast_episodes',
+        help_text="Session 862: Initiative stage this podcast fulfills"
+    )
+
     # Episode Info
     title = models.CharField(max_length=200)
     topic = models.CharField(max_length=200)
