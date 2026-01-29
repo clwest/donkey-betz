@@ -600,6 +600,18 @@ Provide clear, analytical responses about narrative history and patterns."""
                 data={'tool_results': tool_results, 'analysis': content},
                 agent_name=self.name
             )
+
+            # Session 861: Persist analysis to Deliverable
+            if content:
+                self._save_to_deliverable(
+                    title=f"Narrative History: {task[:50]}",
+                    content=content,
+                    deliverable_type='analysis',
+                    category='Analysis',
+                    tags=['narrative', 'history', 'analysis', 'patterns'],
+                    content_format='markdown',
+                    metadata={'task': task},
+                )
         except Exception as e:
             logger.error(f"NarrativeHistorianAgent error: {e}")
             result = AgentResult(

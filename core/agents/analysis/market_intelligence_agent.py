@@ -393,6 +393,22 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                     tool_calls=tool_calls_made
                 )
 
+                # Session 861: Persist analysis to Deliverable
+                if analysis:
+                    self._save_to_deliverable(
+                        title=f"Market Intelligence: {task[:50]}",
+                        content=analysis,
+                        deliverable_type='analysis',
+                        category='Finance',
+                        tags=['market', 'intelligence', 'finance', 'sec'],
+                        content_format='markdown',
+                        metadata={
+                            'task': task,
+                            'tools_used': [tc.get('tool') for tc in tool_calls_made],
+                            'execution_time_ms': execution_time,
+                        },
+                    )
+
                 # Record learning outcome with proper AgentResult
                 try:
                     self._record_learning_outcome(result, task, context)

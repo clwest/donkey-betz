@@ -1030,6 +1030,23 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                         tool_calls=tool_calls_made
                     )
 
+                    # Session 861: Persist analysis to Deliverable
+                    analysis_content = synthesis.get('analysis', '')
+                    if analysis_content:
+                        self._save_to_deliverable(
+                            title=f"Competitor Analysis: {task[:50]}",
+                            content=analysis_content,
+                            deliverable_type='analysis',
+                            category='Business',
+                            tags=['competitor', 'analysis', 'market', 'research'],
+                            content_format='markdown',
+                            metadata={
+                                'task': task,
+                                'data_points': synthesis.get('data_points_analyzed', 0),
+                                'sources_used': synthesis.get('sources_used', 0),
+                            },
+                        )
+
                     # Session 354: Validate output for mythology (unrealistic claims)
                     result = self._validate_output(result)
 

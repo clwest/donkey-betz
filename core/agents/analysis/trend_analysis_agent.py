@@ -455,6 +455,24 @@ You analyze and report - you do NOT create content or execute workflows."""
                         tool_calls=tool_calls_made
                     )
 
+                    # Session 861: Persist analysis to Deliverable
+                    analysis_content = f"# Trend Analysis\n\n**Task:** {task}\n\n**Results:**\n"
+                    for tc in tool_calls_made:
+                        analysis_content += f"\n## {tc.get('tool', 'Tool')}\n{tc.get('result', {})}\n"
+                    self._save_to_deliverable(
+                        title=f"Trend Analysis: {task[:50]}",
+                        content=analysis_content,
+                        deliverable_type='analysis',
+                        category='Analysis',
+                        tags=['trends', 'analysis', 'intelligence'],
+                        content_format='markdown',
+                        metadata={
+                            'task': task,
+                            'tool_count': len(tool_calls_made),
+                            'execution_time_ms': execution_time,
+                        },
+                    )
+
                     # Session 380: Learning hooks for collective intelligence
                     self._record_learning_outcome(
                         result=result,
@@ -473,13 +491,26 @@ You analyze and report - you do NOT create content or execute workflows."""
                     return result
 
                 else:
+                    content = gpt_response.get('content', '')
                     result = AgentResult(
                         success=True,
-                        message=gpt_response.get('content', ''),
+                        message=content,
                         data={'type': 'conversation'},
                         agent_name=self.name,
                         execution_time_ms=int((time.time() - start_time) * 1000)
                     )
+
+                    # Session 861: Persist conversational analysis to Deliverable
+                    if content:
+                        self._save_to_deliverable(
+                            title=f"Trend Analysis: {task[:50]}",
+                            content=content,
+                            deliverable_type='analysis',
+                            category='Analysis',
+                            tags=['trends', 'analysis'],
+                            content_format='markdown',
+                            metadata={'task': task},
+                        )
 
                     # Session 380: Learning hooks for collective intelligence
                     self._record_learning_outcome(
