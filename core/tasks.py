@@ -30388,3 +30388,80 @@ def run_conceptforge_stage(
             'stage': stage_name,
             'error': str(e),
         }
+
+
+# =============================================================================
+# Session 865: Video Status Polling Task
+# =============================================================================
+
+@shared_task
+def poll_processing_videos():
+    """
+    Session 865: Poll processing videos and update their status.
+
+    Videos are created with status='processing' when generation is submitted,
+    but for autonomous/system-generated videos, no one polls to update them.
+    This task runs periodically to check and update video statuses.
+    """
+    from content.models import VideoHistory
+    from content.video_provider import runway_provider
+    from django.utils import timezone
+
+    logger.info("🎬 [VIDEO POLL] Checking processing videos...")
+
+    # Get videos stuck in processing (older than 1 minute to avoid race conditions)
+    cutoff_time = timezone.now() - timezone.timedelta(minutes=1)
+    stuck_videos = VideoHistory.objects.filter(
+        status='processing',
+        created_at__lt=cutoff_time
+    )
+
+    total = stuck_videos.count()
+    if total == 0:
+        logger.info("🎬 [VIDEO POLL] No processing videos to check")
+        return {'checked': 0, 'updated': 0, 'failed': 0}
+
+    logger.info(f"🎬 [VIDEO POLL] Found {total} processing videos")
+
+    completed = 0
+    failed = 0
+    still_processing = 0
+    errors = 0
+
+    for vid in stuck_videos[:50]:  # Limit to 50 per run to avoid timeout
+        task_id = str(vid.video_id) if vid.video_id else None
+        if not task_id:
+            continue
+
+        try:
+            result = runway_provider.check_status(task_id)
+
+            if result.status == 'completed' and result.video_url:
+                vid.video_url = result.video_url
+                vid.thumbnail_url = getattr(result, 'thumbnail_url', '') or ''
+                vid.status = 'completed'
+                vid.generation_completed = timezone.now()
+                vid.save()
+                completed += 1
+                logger.info(f"✅ [VIDEO POLL] Updated: {vid.id}")
+            elif result.status == 'failed':
+                vid.status = 'failed'
+                vid.error_message = result.error_message or 'Unknown error'
+                vid.save()
+                failed += 1
+                logger.warning(f"❌ [VIDEO POLL] Failed: {vid.id} - {result.error_message}")
+            else:
+                still_processing += 1
+        except Exception as e:
+            errors += 1
+            logger.warning(f"⚠️ [VIDEO POLL] Error checking {vid.id}: {e}")
+
+    logger.info(f"🎬 [VIDEO POLL] Complete: {completed} updated, {failed} failed, {still_processing} still processing, {errors} errors")
+
+    return {
+        'checked': total,
+        'updated': completed,
+        'failed': failed,
+        'still_processing': still_processing,
+        'errors': errors
+    }
