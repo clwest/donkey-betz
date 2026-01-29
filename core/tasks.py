@@ -29702,3 +29702,131 @@ def detect_failure_task(
     except Exception as e:
         logger.error(f"🔬 [DIAGNOSTIC] Failed to record failure: {e}")
         return {'success': False, 'error': str(e)}
+
+
+# ==================== Session 861: Spider Aggregation Tasks ====================
+
+@shared_task
+def compute_spider_aggregations():
+    """
+    Session 861: Pre-compute spider aggregations for caching.
+
+    Runs hourly via Celery Beat to pre-populate aggregation cache.
+    This addresses the MEDIUM RISK gap where expensive aggregations
+    were computed on-the-fly, causing slow dashboard response times.
+
+    Computes:
+    - Daily summary (all spiders)
+    - Category summaries (financial, tech, news, etc.)
+    - Trend data points (hourly counts and relevance)
+    """
+    from core.models_spider_aggregation import (
+        SpiderAggregation,
+        compute_category_summary,
+        compute_daily_summary,
+        record_trend_data_point,
+    )
+    from core.models_unified_system import SpiderCategory, SpiderData
+    from django.db.models import Avg, Count
+    from django.utils import timezone
+    from datetime import timedelta
+    import time
+
+    results = {'computed': [], 'errors': []}
+    now = timezone.now()
+
+    try:
+        # 1. Compute daily summary
+        start_time = time.time()
+        daily_data = compute_daily_summary()
+        computation_time_ms = int((time.time() - start_time) * 1000)
+
+        SpiderAggregation.objects.update_or_create(
+            aggregation_type='daily_summary',
+            category='',
+            spider_name='',
+            date_range_start=now.replace(hour=0, minute=0, second=0, microsecond=0),
+            date_range_end=now,
+            defaults={
+                'aggregation_data': daily_data,
+                'computation_time_ms': computation_time_ms,
+                'items_analyzed': daily_data.get('total_items', 0),
+                'expires_at': now + timedelta(hours=1),
+            }
+        )
+        results['computed'].append('daily_summary')
+        logger.info(f"📊 Session 861: Computed daily summary in {computation_time_ms}ms")
+
+    except Exception as e:
+        logger.error(f"📊 Session 861: Failed to compute daily summary: {e}")
+        results['errors'].append(f"daily_summary: {e}")
+
+    # 2. Compute category summaries
+    for category in SpiderCategory.objects.all():
+        try:
+            start_time = time.time()
+            cat_data = compute_category_summary(category.name)
+            computation_time_ms = int((time.time() - start_time) * 1000)
+
+            SpiderAggregation.objects.update_or_create(
+                aggregation_type='category_summary',
+                category=category.name,
+                spider_name='',
+                date_range_start=now - timedelta(hours=24),
+                date_range_end=now,
+                defaults={
+                    'aggregation_data': cat_data,
+                    'computation_time_ms': computation_time_ms,
+                    'items_analyzed': cat_data.get('total_items', 0),
+                    'expires_at': now + timedelta(hours=1),
+                }
+            )
+            results['computed'].append(f"category:{category.name}")
+            logger.debug(f"📊 Session 861: Computed {category.name} summary in {computation_time_ms}ms")
+
+        except Exception as e:
+            logger.error(f"📊 Session 861: Failed to compute {category.name} summary: {e}")
+            results['errors'].append(f"category:{category.name}: {e}")
+
+    # 3. Record trend data points
+    try:
+        hour_start = now - timedelta(hours=1)
+        hourly_count = SpiderData.objects.filter(created_at__gte=hour_start).count()
+        hourly_avg_relevance = SpiderData.objects.filter(
+            created_at__gte=hour_start
+        ).aggregate(avg=Avg('relevance_score'))['avg'] or 0
+
+        record_trend_data_point(
+            trend_type='item_count',
+            value=float(hourly_count),
+            granularity='hourly',
+        )
+        record_trend_data_point(
+            trend_type='relevance_avg',
+            value=round(hourly_avg_relevance, 2),
+            granularity='hourly',
+        )
+        results['computed'].append('trend_data_points')
+
+    except Exception as e:
+        logger.error(f"📊 Session 861: Failed to record trend data: {e}")
+        results['errors'].append(f"trend_data: {e}")
+
+    logger.info(
+        f"📊 Session 861: Spider aggregations complete - "
+        f"computed: {len(results['computed'])}, errors: {len(results['errors'])}"
+    )
+    return results
+
+
+@shared_task
+def invalidate_spider_aggregations(category: str = None, spider_name: str = None):
+    """
+    Session 861: Invalidate spider aggregations when new data arrives.
+
+    Call this after spider executions to trigger cache invalidation.
+    """
+    from core.models_spider_aggregation import SpiderAggregation
+
+    SpiderAggregation.invalidate(category=category, spider_name=spider_name)
+    logger.debug(f"📊 Session 861: Invalidated aggregations for {category or spider_name or 'all'}")
