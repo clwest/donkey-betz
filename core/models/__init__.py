@@ -88,6 +88,14 @@ from ..models_tool_calls import (
     ToolCallAggregate,
 )
 
+# Import learning data backup models (Session 861 - Learning Data Persistence)
+from ..models_learning_backup import (
+    AgentInteractionRecord,
+    LearnedPreferenceRecord,
+    LearningProgressSnapshot,
+    AgentImprovementRecord,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -221,4 +229,10 @@ __all__ = [
     # Tool Call Recording (Session 861)
     'ToolCallRecord',
     'ToolCallAggregate',
+
+    # Learning Data Backup (Session 861)
+    'AgentInteractionRecord',
+    'LearnedPreferenceRecord',
+    'LearningProgressSnapshot',
+    'AgentImprovementRecord',
 ]

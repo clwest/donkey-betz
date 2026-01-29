@@ -89,6 +89,17 @@ from .models_tool_calls import (
     ToolCallAggregate,
 )
 
+# Import learning data backup models (Session 861 - Learning Data Persistence)
+from .models_learning_backup import (
+    AgentInteractionRecord,
+    LearnedPreferenceRecord,
+    LearningProgressSnapshot,
+    AgentImprovementRecord,
+    backup_interaction,
+    backup_learning_progress,
+    backup_agent_improvement,
+)
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
