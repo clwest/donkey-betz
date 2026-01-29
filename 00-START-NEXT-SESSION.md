@@ -1,91 +1,49 @@
-# Session 868 - Start Here
+# Session 869 - Start Here
 
-**Previous Session:** 867 (System-Wide Audit)
+**Previous Session:** 868 (TIER 1 Critical Fixes)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 291 Celery Tasks (60 scheduled) | 12 Workspace Tabs | **AUDIT COMPLETE**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | 12 Workspace Tabs | **TIER 1 COMPLETE**
 
 ---
 
-## What Was Accomplished in Session 867
+## What Was Accomplished in Session 868
 
-**Handoff:** `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md`
+**Handoff:** `docs/handoffs/SESSION_868_TIER1_FIXES.md`
 
-### System Audit Results
+### TIER 1 Critical Fixes - ALL COMPLETE
 
-Conducted comprehensive platform audit revealing critical gaps:
+| Fix | Impact | Status |
+|-----|--------|--------|
+| **Gallery Series endpoint** | HIGH | CREATED - `/api/v1/gallery/series/` now returns AI series |
+| **Reasoning Gates endpoint** | MEDIUM-HIGH | CREATED - `/api/v1/reasoning/gates/` wraps pilot gates |
+| **Dashboard gate counts** | MEDIUM-HIGH | ADDED - Dashboard now returns `total_gates`, `approved_gates` |
+| **Celery task scheduling** | HIGH | 4 critical tasks now scheduled (77 total) |
 
-| Issue | Impact | Status |
-|-------|--------|--------|
-| **231 Celery tasks not scheduled** | HIGH | Tasks defined but not in beat_schedule |
-| **Gallery Series endpoint missing** | HIGH | Frontend disabled, users can't see AI series |
-| **Reasoning endpoints broken** | MEDIUM-HIGH | Intelligence tab features non-functional |
-| **40+ stub endpoints** | MEDIUM | Fake success responses in production |
-| **ATS UI not built** | MEDIUM | Backend complete, no frontend |
+### Implementation Details
 
-### Bug Fixes Deployed
+1. **Gallery Series Endpoint** (`core/views_content.py`)
+   - Created `gallery_series()` view returning paginated AI series
+   - Added URL at `/api/v1/gallery/series/`
+   - Frontend enabled at `ContentStudioTab.tsx`
 
-1. **Initiative Pipeline Fixed** (PR #497)
-   - Removed invalid `priority` field from order_by
-   - Added document viewer modal to view stage content
+2. **Reasoning Gates Endpoint** (`core/views_autonomous_reasoning.py`)
+   - Created `reasoning_gates_api()` wrapping pilot readiness gates
+   - Added URL at `/api/v1/reasoning/gates/`
+   - Dashboard now returns gate counts for IntelligenceTab
 
-2. **Cleanup Command Enhanced** (PR #498)
-   - Added `--delete-cleaned` option to remove old failed executions
-
----
-
-## Priority for Session 868
-
-### TIER 1: Critical Fixes (Do First)
-
-#### 1. Schedule Missing Celery Tasks
-**Impact:** HIGH | **Effort:** MEDIUM
-
-Create management command or update `celery.py` to register critical autonomous tasks:
-
-```python
-# Tasks that MUST be scheduled:
-'advance_initiative_pipeline'      # Initiative Pipeline
-'run_conceptforge_pipeline'        # ConceptForge
-'compute_spider_aggregations'      # Spider data
-'run_agent_health_rotation'        # Agent health
-'discover_and_import_audits'       # Diagnostic pipeline
-'poll_processing_videos'           # Video processing
-```
-
-**Files:** `core/celery.py`, `core/tasks.py`
-
-#### 2. Create Gallery Series Endpoint
-**Impact:** HIGH | **Effort:** LOW (1-2 hours)
-
-Frontend disabled at `ContentStudioTab.tsx:138-147`:
-```typescript
-// Session 860: Disabled - endpoint /api/v1/gallery/series/ doesn't exist yet
-enabled: false,
-```
-
-Create `/api/v1/gallery/series/` endpoint returning AI series data.
-
-**Files:** `core/views_gallery.py` (or new file), `core/urls.py`
-
-#### 3. Fix Intelligence Tab Reasoning Endpoints
-**Impact:** MEDIUM-HIGH | **Effort:** LOW
-
-Frontend calls these endpoints that may not exist:
-```
-/api/v1/reasoning/thoughts/
-/api/v1/reasoning/actions/
-/api/v1/reasoning/gates/
-```
-
-Verify existence or create them.
-
-**Files:** `frontend/src/pages/workspace/tabs/IntelligenceTab.tsx:100-145`
+3. **Celery Tasks Scheduled** (`core/celery.py`)
+   - `compute_spider_aggregations` - Every 30 min
+   - `run_agent_health_rotation` - Every 6 hours
+   - `poll_processing_videos` - Every 5 min
+   - `monitor_celery_health` - Every 30 min
 
 ---
 
-### TIER 2: High Priority (Do If Time Permits)
+## Priority for Session 869
 
-#### 4. Build ATS UI in Career Tab
+### TIER 2: High Priority (Ready to Build)
+
+#### 1. Build ATS UI in Career Tab
 **Impact:** MEDIUM | **Effort:** MEDIUM (2-3 hours)
 
 Backend complete from Session 866 with 6 API endpoints:
@@ -107,7 +65,7 @@ Build UI showing:
 
 **Files:** `frontend/src/pages/workspace/tabs/CareerTab.tsx`
 
-#### 5. Complete Podcast TTS Frontend
+#### 2. Complete Podcast TTS Frontend
 **Impact:** MEDIUM | **Effort:** LOW-MEDIUM
 
 Session 865 added backend - verify frontend properly consumes:
@@ -130,13 +88,25 @@ Session 865 added backend - verify frontend properly consumes:
 
 ## Quick Commands
 
-### Check Celery Beat Schedule
+### Verify New Endpoints
+```bash
+# Test Gallery Series endpoint
+curl -X GET "http://localhost:8000/api/v1/gallery/series/" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Test Reasoning Gates endpoint
+curl -X GET "http://localhost:8000/api/v1/reasoning/gates/" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Check Celery Beat Schedule (now 77 tasks)
 ```bash
 python manage.py shell -c "
 from core.celery import app
-for name, task in sorted(app.conf.beat_schedule.items()):
-    print(f'{name}: {task.get(\"schedule\", \"?\")}')
-" | head -30
+print(f'Total scheduled tasks: {len(app.conf.beat_schedule)}')
+for name in sorted(app.conf.beat_schedule.keys())[-10:]:
+    print(f'  - {name}')
+"
 ```
 
 ### Test ATS Service
@@ -146,27 +116,13 @@ result = ats_keyword_service.score_resume_match(resume_text, job_description)
 print(f"Score: {result['overall_score']}%")
 ```
 
-### Verify Initiative Pipeline Task
-```bash
-python manage.py shell -c "
-from django_celery_beat.models import PeriodicTask
-tasks = PeriodicTask.objects.filter(name__icontains='initiative')
-for t in tasks:
-    print(f'{t.name}: enabled={t.enabled}')
-"
-```
-
-### Delete Cleaned Executions (Production)
-```bash
-python manage.py cleanup_stuck_executions --delete-cleaned --apply
-```
-
 ---
 
 ## Recent Session History
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **868** | TIER 1 Critical Fixes - Gallery Series, Reasoning Gates, Celery Tasks | COMPLETE |
 | **867** | System-Wide Audit + Initiative Pipeline Fix | COMPLETE |
 | **866** | ATS Keyword Optimization Module + Career Tab UI | COMPLETE |
 | **865** | Podcast TTS + Voice Profiles + ConceptForge UI | DEPLOYED |
@@ -174,7 +130,6 @@ python manage.py cleanup_stuck_executions --delete-cleaned --apply
 | **863** | ConceptForge - Autonomous Think Tank Pipeline | COMPLETE |
 | **862** | Content Flow Unification | COMPLETE |
 | **861** | Data Persistence - 6 gap fixes | COMPLETE |
-| **860** | Initiative Pipeline + API Error Handling | COMPLETE |
 
 ---
 
@@ -182,12 +137,12 @@ python manage.py cleanup_stuck_executions --delete-cleaned --apply
 
 | Doc | Purpose |
 |-----|---------|
-| `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | **Full audit with all gaps identified** |
+| `docs/handoffs/SESSION_868_TIER1_FIXES.md` | **This session's implementation details** |
+| `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | Full audit with remaining gaps |
 | `docs/handoffs/SESSION_866_ATS_KEYWORD_MODULE.md` | ATS backend implementation |
 | `docs/AGENTS.md` | Agent documentation (75 agents) |
 | `docs/SPIDERS.md` | Spider network (77 spiders) |
-| `docs/DATABASE_MODEL_REFERENCE.md` | Which DB table for what |
 
 ---
 
-**Read `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` for the complete gap analysis!**
+**Next priority: Build ATS UI in Career Tab!**

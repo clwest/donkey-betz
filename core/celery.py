@@ -2275,6 +2275,48 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
+
+    # ==================== SESSION 868: MISSING CRITICAL TASKS ====================
+    # Tasks that were defined but not scheduled - identified in Session 867 audit
+
+    # Spider Aggregation - Pre-compute spider aggregations for caching
+    'compute-spider-aggregations': {
+        'task': 'core.tasks.compute_spider_aggregations',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+            'queue': 'long_running',
+        }
+    },
+
+    # Agent Health Rotation - Run health check across all agent categories
+    'run-agent-health-rotation': {
+        'task': 'core.tasks.run_agent_health_rotation',
+        'schedule': crontab(minute=15, hour='*/6'),  # Every 6 hours at :15
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'agents',
+        }
+    },
+
+    # Video Processing - Poll for processing videos and update status
+    'poll-processing-videos': {
+        'task': 'core.tasks.poll_processing_videos',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {
+            'expires': 300,  # 5 minutes
+            'queue': 'content',
+        }
+    },
+
+    # Celery Health Monitoring - Monitor task health and alert on failures (Session 865)
+    'monitor-celery-health': {
+        'task': 'core.tasks.monitor_celery_health',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
 }
 
 # Task routing configuration

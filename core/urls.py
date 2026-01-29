@@ -1181,7 +1181,8 @@ from core.views_content import (
     gallery_videos, gallery_list, content_library, podcasts_list,
     # Phase 4: Frontend Reality Fix
     generate_email, generate_podcast_script,
-    ai_image_studio  # Session 32: New AI Image Studio interface
+    ai_image_studio,  # Session 32: New AI Image Studio interface
+    gallery_series,  # Session 868: AI Series gallery endpoint
 )
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
@@ -2647,6 +2648,7 @@ urlpatterns = [
     path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),
     path('api/v1/gallery/list/', gallery_list, name='gallery-list'),
     path('api/v1/gallery/videos/', gallery_videos, name='gallery-videos'),
+    path('api/v1/gallery/series/', gallery_series, name='gallery-series'),  # Session 868: AI Series gallery
 
     # Unified Gallery API (Session 53: Phase 2 & 3)
     path('api/v1/gallery/all/', unified_gallery, name='unified-gallery'),
@@ -2840,6 +2842,7 @@ urlpatterns = [
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
     path('api/v1/reasoning/thoughts/<uuid:thought_id>/', views_autonomous_reasoning.thought_detail_api, name='reasoning-thought-detail'),
     path('api/v1/reasoning/actions/', views_autonomous_reasoning.actions_api, name='reasoning-actions'),
+    path('api/v1/reasoning/gates/', views_autonomous_reasoning.reasoning_gates_api, name='reasoning-gates'),  # Session 868
     path('api/v1/reasoning/trigger/', views_autonomous_reasoning.trigger_thinking_api, name='reasoning-trigger'),
     path('api/v1/reasoning/task/<str:task_id>/', views_autonomous_reasoning.thinking_task_status_api, name='reasoning-task-status'),
     path('api/v1/reasoning/config/', views_autonomous_reasoning.reasoning_config_api, name='reasoning-config'),

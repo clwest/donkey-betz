@@ -476,6 +476,17 @@ def reasoning_dashboard_api(request):
             count=Count('id')
         ).order_by('-count'))
 
+        # Session 868: Get pilot gate counts for IntelligenceTab
+        try:
+            from core.models_pilot_readiness import PilotReadinessGate
+            total_gates = PilotReadinessGate.objects.count()
+            approved_gates = PilotReadinessGate.objects.filter(status='approved').count()
+            pending_gates = PilotReadinessGate.objects.filter(status__in=['not_started', 'in_progress', 'ready']).count()
+        except Exception:
+            total_gates = 0
+            approved_gates = 0
+            pending_gates = 0
+
         return JsonResponse({
             'success': True,
             'engine_status': {
@@ -495,6 +506,16 @@ def reasoning_dashboard_api(request):
                 'failed': actions_failed,
                 'success_rate': round(actions_completed / total_actions * 100, 1) if total_actions > 0 else 0,
             },
+            # Session 868: Gate stats for IntelligenceTab
+            'total_gates': total_gates,
+            'approved_gates': approved_gates,
+            'pending_gates': pending_gates,
+            # Also include under gate_stats for API consistency
+            'gate_stats': {
+                'total': total_gates,
+                'approved': approved_gates,
+                'pending': pending_gates,
+            },
             'recent_thoughts': [
                 {
                     'id': str(t['id']),
@@ -509,6 +530,9 @@ def reasoning_dashboard_api(request):
             ],
             'top_insights': all_insights[:10],
             'action_breakdown': action_types[:10],
+            # Convenience fields expected by IntelligenceTab
+            'total_thoughts': total_thoughts,
+            'autonomous_actions': total_actions,
         })
 
     except Exception as e:
@@ -771,3 +795,79 @@ def handle_human_action_api(request, notification_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============= Reasoning Gates API (Session 868) =============
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def reasoning_gates_api(request):
+    """
+    Session 868: Get pilot readiness gates for IntelligenceTab.
+
+    Wraps the pilot-gates endpoint to provide a consistent /api/v1/reasoning/gates/ path.
+
+    GET /api/v1/reasoning/gates/
+
+    Query params:
+    - status: Filter by gate status (not_started, in_progress, ready, approved, blocked, waived)
+    - limit: Max gates to return (default 20)
+    """
+    try:
+        from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+        from core.utils.title_cleaner import clean_title
+
+        limit = int(request.GET.get('limit', 20))
+        status = request.GET.get('status')
+
+        queryset = PilotReadinessGate.objects.select_related('decision').order_by('-created_at')
+
+        # Apply status filter
+        if status:
+            queryset = queryset.filter(status=status)
+        else:
+            # By default, exclude declined/waived gates
+            queryset = queryset.exclude(status__in=['declined', 'waived'])
+
+        gates = queryset[:limit]
+
+        results = []
+        for gate in gates:
+            progress = gate.checklist_progress if hasattr(gate, 'checklist_progress') else {'percentage': 0}
+
+            results.append({
+                'id': str(gate.id),
+                'title': clean_title(gate.decision.title) if gate.decision else 'Untitled Gate',
+                'status': gate.status,
+                'status_display': gate.get_status_display() if hasattr(gate, 'get_status_display') else gate.status,
+                'risk_level': gate.risk_level,
+                'progress': progress.get('percentage', 0) if isinstance(progress, dict) else 0,
+                'created_at': gate.created_at.isoformat(),
+                'updated_at': gate.updated_at.isoformat() if hasattr(gate, 'updated_at') else gate.created_at.isoformat(),
+                'decision_id': str(gate.decision.id) if gate.decision else None,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'results': results,
+            'gates': results,  # Alias for compatibility
+            'count': queryset.count(),
+        })
+
+    except ImportError:
+        # PilotReadinessGate not available
+        return JsonResponse({
+            'success': True,
+            'results': [],
+            'gates': [],
+            'count': 0,
+        })
+    except Exception as e:
+        logger.error(f"Error fetching reasoning gates: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'results': [],
+            'gates': [],
+            'count': 0,
+        })
