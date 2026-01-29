@@ -2501,6 +2501,67 @@ Consider these trends when crafting the response to maximize relevance and engag
             # Don't let recording failures break the agent
             logger.warning(f"Failed to record tool call for {self.name}.{tool_name}: {e}")
 
+    def _record_decision(
+        self,
+        decision_type: str,
+        action: str,
+        reasoning: str = '',
+        alternatives: List[str] = None,
+        context: Dict[str, Any] = None,
+        confidence: float = 0.8,
+        trace_id: str = None,
+        conversation_id: str = None,
+        task_summary: str = '',
+    ) -> None:
+        """
+        Session 861: Always-on decision recording.
+
+        Unlike TimeTravelMixin.record_decision which only works when a
+        time_travel_session is active, this method ALWAYS records decisions
+        to the DecisionRecord model for audit trail and debugging.
+
+        This addresses the MEDIUM RISK data persistence gap where ~90% of
+        agent decisions were not recorded because trace_id was opt-in.
+
+        Args:
+            decision_type: Type of decision (analysis, selection, action, tool_call, etc.)
+            action: The action taken
+            reasoning: Why this decision was made
+            alternatives: Other options that were considered
+            context: Additional context data
+            confidence: Confidence score (0-1)
+            trace_id: Optional trace ID for linking related decisions
+            conversation_id: Optional conversation ID
+            task_summary: Optional summary of the task
+
+        Example:
+            self._record_decision(
+                decision_type='tool_call',
+                action='Calling analyze_filing for AAPL',
+                reasoning='LLM requested SEC filing analysis',
+                confidence=0.9
+            )
+        """
+        try:
+            from core.models_decision_records import DecisionRecord
+
+            DecisionRecord.record(
+                agent_name=self.name,
+                decision_type=decision_type,
+                action=action,
+                reasoning=reasoning,
+                alternatives=alternatives or [],
+                context=context or {},
+                confidence=confidence,
+                trace_id=trace_id,
+                conversation_id=conversation_id,
+                task_summary=task_summary,
+            )
+            logger.debug(f"📝 Session 861: Recorded decision {self.name}.{decision_type}: {action[:50]}")
+        except Exception as e:
+            # Don't let recording failures break the agent
+            logger.warning(f"Failed to record decision for {self.name}: {e}")
+
     def _validate_task(self, task: str) -> bool:
         """
         Validate the task is appropriate for this agent.

@@ -96,6 +96,12 @@ from ..models_learning_backup import (
     AgentImprovementRecord,
 )
 
+# Import decision recording models (Session 861 - Decision Trace Persistence)
+from ..models_decision_records import (
+    DecisionRecord,
+    DecisionAggregate,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -235,4 +241,8 @@ __all__ = [
     'LearnedPreferenceRecord',
     'LearningProgressSnapshot',
     'AgentImprovementRecord',
+
+    # Decision Recording (Session 861)
+    'DecisionRecord',
+    'DecisionAggregate',
 ]
