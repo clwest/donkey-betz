@@ -1,18 +1,18 @@
 # Session 865 - Start Here
 
-**Previous Session:** 864 (Content Intelligence Layer Improvements)
+**Previous Session:** 864 (Content Intelligence + Run Mode Tracking)
 **Date:** January 28, 2026
-**Status:** 75 Agents (+1 EditorAgent) | 77 Spiders | 25 Advisors | 139 Personas | 240 Celery Tasks (+2) | **Content Intelligence: IMPROVED** | **ConceptForge: COMPLETE** | **Data Persistence: COMPLETE**
+**Status:** 75 Agents (+1 EditorAgent) | 77 Spiders | 25 Advisors | 139 Personas | 240 Celery Tasks (+2) | **Run Mode Tracking: COMPLETE** | **Content Intelligence: IMPROVED** | **ConceptForge: COMPLETE** | **Data Persistence: COMPLETE**
 
 ---
 
 ## What Was Accomplished in Session 864
 
-### Content Intelligence Layer Improvements
+**Handoff:** `docs/handoffs/SESSION_864_RUN_MODE_TRACKING.md`
+
+### Part 1: Content Intelligence Layer Improvements
 
 After analyzing production data from `apply_publish_gate --all --dry-run`, we identified and fixed three issues affecting content classification accuracy.
-
-**Handoff:** `docs/handoffs/SESSION_864_CONTENT_INTELLIGENCE_IMPROVEMENTS.md`
 
 ### Production Data Before
 
@@ -83,6 +83,47 @@ New agent that automatically improves content structure for content marked as `n
 
 ---
 
+### Part 2: Run Mode Tracking (Warmup vs Production)
+
+Fixed the Operations Tab showing generic content like "Python utility functions" by implementing a 3-phase system to separate warmup exercises from production work.
+
+**Problem:** `exercise_all_dormant_agents` was generating real content with default topics, polluting the workspace.
+
+#### Phase 0: Signal Classification
+Added fields to `WorkspaceOperation`:
+- `run_mode` - 'production' or 'warmup'
+- `trigger_source` - initiative, user, dream, schedule, warmup, self_healing, conceptforge
+- `initiative_id` - FK to initiative
+- `is_warmup` - Quick filter boolean
+
+**Migration:** `0207_session_864_run_mode_tracking.py`
+
+#### Phase 1: Infra-Only Warmup
+`_run_agent_warmup()` verifies agent works WITHOUT content generation:
+- Checks agent class exists and can be instantiated
+- Verifies required methods (execute, tools)
+- NO file creation, NO LLM calls
+
+#### Phase 2: Initiative Queue
+`_get_next_task_for_agent()` pulls real work from `InitiativeStage` before using default topics.
+
+#### Phase 3: Quality Gate
+Operations API filters out warmups by default:
+- `GET /api/workspace/operations/` - Production only (default)
+- `GET /api/workspace/operations/?include_warmups=true` - All operations
+- `GET /api/workspace/operations/?run_mode=warmup` - Warmup only
+
+### Files Modified (Run Mode)
+
+| File | Changes |
+|------|---------|
+| `core/models_skin_layer.py` | Added run_mode, trigger_source, initiative_id, is_warmup fields |
+| `core/tasks.py` | Rewrote universal_agent_workspace_output, added warmup helpers |
+| `core/views_workspace_api.py` | Added warmup filtering to Operations endpoint |
+| `.gitignore` | Added `.warmups/` quarantine directory |
+
+---
+
 ## Priority for Session 865
 
 ### Option A: Run PublishGate with New Rules (Recommended)
@@ -130,6 +171,23 @@ Add UI elements for EditorAgent:
 1. "Enhance" button on blog cards with status='needs_enhancement'
 2. Show enhancement progress/results
 3. Allow manual focus area selection
+
+### Option E: Apply Run Mode Migration (Required for Production)
+
+Apply the Session 864 migration to production:
+
+```bash
+# Apply migration
+railway run python manage.py migrate core 0207_session_864_run_mode_tracking
+
+# Verify warmup filtering works
+railway run python -c "
+from core.models_skin_layer import WorkspaceOperation
+print(f'Total operations: {WorkspaceOperation.objects.count()}')
+print(f'Production: {WorkspaceOperation.objects.filter(run_mode=\"production\").count()}')
+print(f'Warmup: {WorkspaceOperation.objects.filter(is_warmup=True).count()}')
+"
+```
 
 ---
 
@@ -186,7 +244,7 @@ railway run python -c "from core.agents.editor_agent import enhance_blog; print(
 
 ### Handoffs
 - `docs/handoffs/SESSION_862_CONTENT_INTELLIGENCE.md`
-- `docs/handoffs/SESSION_864_CONTENT_INTELLIGENCE_IMPROVEMENTS.md`
+- `docs/handoffs/SESSION_864_RUN_MODE_TRACKING.md`
 
 ---
 
@@ -194,7 +252,7 @@ railway run python -c "from core.agents.editor_agent import enhance_blog; print(
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **864** | Content Intelligence Improvements - EditorAgent + Thresholds | ✅ COMPLETE |
+| **864** | Content Intelligence + Run Mode Tracking (warmup vs production) | ✅ COMPLETE |
 | **863** | ConceptForge - Autonomous Think Tank Pipeline | ✅ COMPLETE |
 | **862** | Content Intelligence - PublishGate + ContentClassifier | ✅ PRODUCTION DEPLOYED |
 | **862** | Content Flow Unification - Dream → Initiative → Deliverable | ✅ COMPLETE |
