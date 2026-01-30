@@ -1,8 +1,8 @@
 # Session 873 - Start Here
 
-**Previous Session:** 872 (API Path Migration Phase 3 + Frontend 404 Fixes)
+**Previous Session:** 872 (API Path Migration + 404 Fixes + Celery Beat Sync)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | **17 Workspace Tabs** | **ALL AUDIT TASKS COMPLETE**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | **256 Celery Tasks Synced** | **17 Workspace Tabs** | **PLATFORM NOW ALIVE**
 
 ---
 
@@ -10,26 +10,38 @@
 
 **Handoff:** `docs/handoffs/SESSION_872_COMPLETE.md`
 
-### API Path Migration Phase 3 (PR #520)
+### Critical Fix: Celery Beat Sync (PR #525)
 
-Analyzed "conflicts" between `/api/` and `/api/v1/` paths - found they are **NOT true conflicts** but different endpoint sets:
+**Root Cause Found:** Platform felt "dead" because `DatabaseScheduler` ignores Python configs. ~179 tasks in `celery.py` were **never synced** to the database.
 
-| Module | `/api/` (core) | `/api/v1/` (module) | Action |
-|--------|----------------|---------------------|--------|
-| workflows | 26 endpoints | 6 endpoints | Keep both (different purposes) |
-| agents | 35+ endpoints | 8 ViewSets | Keep both (47 frontend refs) |
-| dashboard | 11 endpoints | 3 endpoints | **Module REMOVED** (unused) |
+**Solution:** Added release command to Procfile:
+```
+release: python manage.py migrate --noinput && python manage.py sync_celery_beat --apply
+```
 
-### Frontend 404 Fixes (PR #521)
+Now on every deploy, all 256 tasks sync to the database and execute.
 
-Fixed 19 broken API paths in production:
+### Other Fixes
 
-| Category | Paths Fixed | Example |
-|----------|-------------|---------|
-| Mythology | 17 endpoints | `/v1/mythology/stats/` → `/mythology/stats/` |
-| Initiatives | 2 endpoints | `/v1/initiatives/` → `/initiatives/` |
+| PR | Fix |
+|----|-----|
+| #520 | API path migration Phase 3 - Removed unused dashboard module |
+| #521 | Fixed 19 mythology/initiatives 404 errors |
+| #522 | Documentation updates |
+| #523 | Removed duplicate Voices from sidebar |
+| #524 | Added missing `/api/v1/reasoning/gates/` endpoint |
+| #525 | **Celery Beat sync + health monitoring** |
 
-**Root cause:** Backend migrated in Session 871 but frontend paths weren't updated.
+---
+
+## Expected After Deploy
+
+Once deployed, the platform will:
+1. **Sync 256 Celery tasks** to database on startup
+2. **Run spiders** every 15 minutes (fresh data)
+3. **Create memories** every 30 minutes
+4. **Execute intelligence loops** every 15 minutes
+5. **Monitor health** every 30 minutes with Discord alerts
 
 ---
 
@@ -43,6 +55,7 @@ The system-wide audit from Session 867 is fully resolved:
 - [x] TIER 2: High priority (Sessions 868-869)
 - [x] TIER 3: Medium priority (Sessions 869-870)
 - [x] TIER 4: Technical debt (Sessions 871-872)
+- [x] Platform data freshness (Session 872 - Celery sync)
 
 ### Optional Improvements
 
@@ -64,9 +77,12 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Verify 404 fixes deployed
+# Verify Celery tasks synced (after deploy)
+python manage.py sync_celery_beat  # Should show ~256 in sync
+
+# Verify endpoints work
 curl https://donkey-betz-platform-production.up.railway.app/api/mythology/stats/
-curl https://donkey-betz-platform-production.up.railway.app/api/initiatives/
+curl https://donkey-betz-platform-production.up.railway.app/api/v1/reasoning/gates/
 ```
 
 ---
@@ -99,7 +115,7 @@ curl https://donkey-betz-platform-production.up.railway.app/api/initiatives/
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **872** | API Path Migration Phase 3 + Frontend 404 Fixes | COMPLETE |
+| **872** | API Migration + 404 Fixes + **Celery Beat Sync** | COMPLETE |
 | **871** | TIER 4: API Standardization + Dead Code + Documentation | COMPLETE |
 | **870** | TIER 3: Frontend Error States + Learning Journey UI | COMPLETE |
 | **869** | TIER 2-3: Stub Replacement + Voice Marketplace UI | COMPLETE |
@@ -111,7 +127,7 @@ curl https://donkey-betz-platform-production.up.railway.app/api/initiatives/
 
 | Doc | Purpose |
 |-----|---------|
-| `docs/handoffs/SESSION_872_COMPLETE.md` | **Full session details** |
+| `docs/handoffs/SESSION_872_COMPLETE.md` | **Full session details (6 PRs)** |
 | `docs/handoffs/SESSION_871_COMPLETE.md` | Session 871 full details |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | **Dream → Initiative pipeline** |
 | `docs/API_PATH_POLICY.md` | **API path conventions** |
@@ -127,7 +143,11 @@ curl https://donkey-betz-platform-production.up.railway.app/api/initiatives/
 |----|-------|
 | #520 | feat(Session 872): API path migration Phase 3 - Analysis and cleanup |
 | #521 | fix(Session 872): Fix 404 errors for mythology and initiatives APIs |
+| #522 | docs(Session 872): Add session handoff and update for Session 873 |
+| #523 | fix(Session 872): Remove duplicate Voices from sidebar |
+| #524 | fix(Session 872): Add missing /api/v1/reasoning/gates/ endpoint |
+| #525 | fix(Session 872): Add release command to sync Celery tasks + add health monitor |
 
 ---
 
-**System audit complete! Platform stable and production-ready.**
+**Platform now configured to stay alive! Deploy to activate all 256 scheduled tasks.**
