@@ -1000,13 +1000,50 @@ class ConversationOrchestrator:
             except Exception as e:
                 logger.warning(f"Failed to create conversation memories: {e}")
 
+        # Session 884: Extract deliverables from conversation output
+        # This creates Deliverable records from valuable content (personas, plans, analyses)
+        deliverable_extraction = {'deliverables_created': 0}
+        if decision_summary and messages:
+            try:
+                from core.services.conversation_deliverable_extractor import extract_conversation_deliverables
+                deliverable_extraction = extract_conversation_deliverables(
+                    conversation_id=conversation_id,
+                    messages=messages,
+                    decision_summary=decision_summary,
+                    participants=[agent1['name'], agent2['name']],
+                    topic=topic
+                )
+                ai_world_metadata['deliverables_created'] = deliverable_extraction.get('deliverables_created', 0)
+                ai_world_metadata['deliverable_ids'] = deliverable_extraction.get('deliverable_ids', [])
+
+                # Use concrete next steps from extraction if available
+                concrete_steps = deliverable_extraction.get('concrete_next_steps', [])
+                if concrete_steps:
+                    logger.info(f"📦 Session 884: Created {len(concrete_steps)} concrete next steps from deliverable")
+            except Exception as e:
+                logger.warning(f"Failed to extract conversation deliverables: {e}")
+
         # Dispatch next_steps as actual agent tasks
         if ENABLE_ACTION_DISPATCH and decision_summary and decision_summary.get('next_steps'):
             try:
                 from core.services.conversation_action_dispatcher import dispatch_conversation_actions
+
+                # Session 884: If we have concrete steps from deliverable extraction, use those
+                # instead of vague "document insights" type steps
+                concrete_steps = deliverable_extraction.get('concrete_next_steps', [])
+                if concrete_steps:
+                    # Convert concrete steps to dispatch format
+                    enhanced_summary = {
+                        **decision_summary,
+                        'next_steps': [f"{s['agent']}: {s['task']}" for s in concrete_steps]
+                    }
+                    dispatch_summary = enhanced_summary
+                else:
+                    dispatch_summary = decision_summary
+
                 dispatch_result = dispatch_conversation_actions(
                     conversation_id=conversation_id,
-                    decision_summary=decision_summary,
+                    decision_summary=dispatch_summary,
                     participants=[agent1['name'], agent2['name']],
                     context={'topic': topic, 'conversation_type': conversation_type}
                 )
