@@ -2180,6 +2180,61 @@ def action_agent_health_check_view(request):
 
 @csrf_exempt
 @require_POST
+def action_agent_category_rotation_view(request):
+    """
+    POST /api/platform/actions/agent-category-rotation/
+
+    Session 884: Trigger agent category rotation to generate Operations content.
+
+    Body params:
+        category: str - The category to rotate (content, research, system, financial, etc.)
+                       Defaults to 'content' if not specified.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        import json
+        from core.tasks import agent_category_rotation
+
+        # Parse category from request body
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            data = {}
+
+        category = data.get('category', 'content')
+
+        # Valid categories
+        valid_categories = ['content', 'research', 'system', 'financial', 'development', 'creative', 'analysis']
+
+        if category not in valid_categories:
+            return JsonResponse({
+                'success': False,
+                'error': f"Invalid category: {category}. Valid options: {valid_categories}",
+            }, status=400)
+
+        result = agent_category_rotation.delay(category)
+
+        message = f"Agent category rotation triggered for '{category}'"
+        logger.info(f"{message} by {request.user.username} - task_id: {result.id}")
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'task_id': result.id,
+            'category': category,
+        })
+    except Exception as e:
+        logger.error(f"Failed to trigger agent category rotation: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@csrf_exempt
+@require_POST
 def action_run_self_audit_view(request):
     """
     POST /api/platform/actions/run-self-audit/

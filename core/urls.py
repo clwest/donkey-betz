@@ -4109,6 +4109,7 @@ from core.views_platform_command import (
     action_run_spiders_view,
     action_run_remediation_view,
     action_agent_health_check_view,
+    action_agent_category_rotation_view,  # Session 884
     action_run_self_audit_view,
     remediation_status_view,
     self_healing_progress_view,  # Session 830
@@ -4140,6 +4141,7 @@ urlpatterns += [
     path('api/platform/actions/run-spiders/', action_run_spiders_view, name='platform-action-run-spiders'),
     path('api/platform/actions/run-remediation/', action_run_remediation_view, name='platform-action-run-remediation'),
     path('api/platform/actions/agent-health-check/', action_agent_health_check_view, name='platform-action-agent-health'),
+    path('api/platform/actions/agent-category-rotation/', action_agent_category_rotation_view, name='platform-action-category-rotation'),  # Session 884
     path('api/platform/actions/run-self-audit/', action_run_self_audit_view, name='platform-action-run-self-audit'),
     path('api/platform/remediation/status/', remediation_status_view, name='platform-remediation-status'),
     # Session 830: Live self-healing progress for UI polling
