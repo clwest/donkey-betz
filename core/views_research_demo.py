@@ -1329,3 +1329,48 @@ def populate_initiatives_api(request):
     except Exception as e:
         logger.error(f"Error in populate_initiatives_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def trigger_initiative_pipeline_api(request):
+    """
+    Session 880: Manually trigger the initiative pipeline advancement task.
+
+    This endpoint allows immediate execution of the initiative pipeline
+    instead of waiting for the scheduled hourly task.
+
+    Query params:
+        limit: Max initiatives to process (default 10)
+        auto_approve: Auto-approve generated documents (default true)
+    """
+    try:
+        import json
+        from core.tasks import advance_initiative_pipeline
+
+        # Parse request body if present
+        body = {}
+        if request.body:
+            try:
+                body = json.loads(request.body)
+            except json.JSONDecodeError:
+                pass
+
+        # Get parameters
+        limit = int(body.get('limit', request.GET.get('limit', 10)))
+        auto_approve = body.get('auto_approve', request.GET.get('auto_approve', 'true'))
+        if isinstance(auto_approve, str):
+            auto_approve = auto_approve.lower() in ('true', '1', 'yes')
+
+        # Queue the task for immediate execution
+        task = advance_initiative_pipeline.delay(limit=limit, auto_approve=auto_approve)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Initiative pipeline triggered (limit={limit}, auto_approve={auto_approve})',
+            'task_id': task.id,
+            'status': 'queued',
+        })
+
+    except Exception as e:
+        logger.error(f"Error triggering initiative pipeline: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
