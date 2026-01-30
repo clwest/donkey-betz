@@ -65,6 +65,13 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # ConceptForge signals not available
 
+        # Session 873: Connect experiment linker signals for halt system instrumentation
+        try:
+            from core.services.experiment_linker import connect_experiment_linker_signals
+            connect_experiment_linker_signals()
+        except ImportError:
+            pass  # Experiment linker not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
