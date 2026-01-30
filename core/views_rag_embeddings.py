@@ -277,13 +277,14 @@ Retrieved Context:
 Please provide a comprehensive response based on the query and the retrieved context.
 If the context is relevant, reference it in your answer. If not relevant, provide your best response."""
 
+        # Session 876: Increased max_completion_tokens for GPT-5-mini reasoning headroom
         response = client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_completion_tokens=1000
+            max_completion_tokens=4000
         )
 
         generated_response = response.choices[0].message.content

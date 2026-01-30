@@ -6298,20 +6298,28 @@ Guidelines:
 
                     for retry_attempt in range(3):
                         try:
-                            # Use chat.completions for gpt-5-mini with high max_completion_tokens
-                            # GPT-5 reasoning models use tokens for internal reasoning first,
-                            # so we need ~500+ tokens to ensure room for reasoning + actual output
-                            # Session 413: Added timeout=120 for reasoning model thinking time
+                            # Session 875: CRITICAL FIX for empty content issue
+                            # GPT-5 reasoning models use tokens for internal reasoning BEFORE output
+                            # With only 1000 tokens, reasoning consumes everything → empty output
+                            # Increased to 4000 to give 2000+ for reasoning AND 2000+ for output
                             response = client.chat.completions.create(
                                 model="gpt-5-mini",
                                 messages=[
                                     {"role": "system", "content": system_prompt},
                                     {"role": "user", "content": user_content}
                                 ],
-                                max_completion_tokens=1000,  # Session 413: Increased for reasoning models
+                                max_completion_tokens=4000,  # Session 875: 4x increase for reasoning headroom
                                 timeout=120,  # Session 413: 2 min timeout for reasoning model
                             )
                             content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+
+                            # Session 875: Log token usage for empty content debugging
+                            if hasattr(response, 'usage') and response.usage:
+                                total_tokens = response.usage.completion_tokens
+                                logger.info(f"💬 [CONVERSATIONS] {current_speaker.name} used {total_tokens} completion tokens")
+                                if not content:
+                                    logger.warning(f"💬 [CONVERSATIONS] EMPTY CONTENT despite {total_tokens} tokens - check reasoning consumption")
+
                             break  # Success, exit retry loop
 
                         except Exception as api_error:
@@ -8725,23 +8733,27 @@ Guidelines:
                 )
 
                 try:
-                    # Session 317: GPT-5 reasoning models split tokens between reasoning + output
-                    # Session 413: Added timeout for reasoning model thinking time
+                    # Session 875: CRITICAL FIX - Increase tokens for reasoning models
+                    # GPT-5-mini was returning empty content because reasoning consumed all 1000 tokens
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
-                        max_completion_tokens=1000,  # Higher for GPT-5 reasoning (Session 317)
+                        max_completion_tokens=4000,  # Session 875: 4x increase for reasoning headroom
                         timeout=120,  # Session 413: 2 min timeout for reasoning model
                     )
 
                     dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
+                    # Session 875: Log for monitoring
+                    if hasattr(response, 'usage') and response.usage:
+                        logger.debug(f"💭 [DREAMS] {agent.name} used {response.usage.completion_tokens} tokens")
+
                     # Session 842: Skip creating dreams with empty content
                     if not dream_content:
-                        logger.debug(f"💭 [DREAMS] Skipping empty dream for {agent.name}")
+                        logger.warning(f"💭 [DREAMS] Empty dream from {agent.name} despite 4000 token limit")
                         continue
 
                     # Session 356 NOTE: Dreams are intentionally NOT mythology-validated

@@ -781,14 +781,14 @@ You MUST respond with ONLY valid JSON in this exact format (no markdown, no expl
 }}
 """
 
-            # Call GPT directly
+            # Session 876: Increased tokens for GPT-5-mini reasoning headroom
             response = self.openai_client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": "You are a business analyst scoring opportunities. Always respond with valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=1000
+                max_completion_tokens=4000
                 # Note: gpt-5-mini reasoning models don't support temperature
             )
 

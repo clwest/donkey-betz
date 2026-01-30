@@ -325,10 +325,11 @@ class IncomeBuilderExecutor(BaseAgentExecutor):
         """
 
         try:
+            # Session 876: Increased tokens for GPT-5-mini reasoning headroom
             ai_response = await self.call_openai_api(
                 prompt=prompt,
                 model="gpt-5-mini",  # Income opportunity analysis
-                max_completion_tokens=1000,
+                max_completion_tokens=4000,
                 temperature=0.7
             )
 

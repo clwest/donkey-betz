@@ -1476,10 +1476,11 @@ Script:"""
 
         for attempt in range(max_retries):
             try:
+                # Session 876: Increased tokens for GPT-5-mini reasoning headroom
                 response = self.client.chat.completions.create(
                     model="gpt-5-mini",
                     messages=[{"role": "user", "content": script_prompt}],
-                    max_completion_tokens=1000
+                    max_completion_tokens=4000
                 )
 
                 content = response.choices[0].message.content or ""
