@@ -14901,52 +14901,30 @@ def _execute_generate_voice(user, parameters, session=None):
 
         logger.info(f"🎙️ Agent generating voice: '{text[:50]}...' with voice {voice}")
 
-        # Get ElevenLabs API key
-        elevenlabs_key = os.getenv('ELEVENLABS_API_KEY') or settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY')
-        if not elevenlabs_key:
-            return {'success': False, 'error': 'ElevenLabs API key not configured'}
+        # Session 872: Use centralized ElevenLabs service with retry logic
+        from core.services.elevenlabs_tts_service import (
+            generate_speech_with_retry, get_voice_id
+        )
 
-        # Voice ID mapping
-        voice_ids = {
-            'Rachel': '21m00Tcm4TlvDq8ikWAM',
-            'Antoni': 'ErXwobaYiN019PkySvjV',
-            'Bella': 'EXAVITQu4vr4xnSDxMaL',
-            'Callum': 'N2lVS1w4EtoT3dr4eOWO',
-            'Charlotte': 'XB0fDUnXU5powFXDhCwa',
-            'Daniel': 'onwK4e9ZLuTAKqWW03F9',
-            'Domi': 'AZnzlk1XvdvUeBnXmlld',
-            'Elli': 'MF3mGyEYCl7XYWbV9V6O',
-            'Emily': 'LcfcDJNUP1GQjkzn1xUU',
-            'George': 'JBFqnCBsd6RMkjVDRZzb',
-            'Matilda': 'XrExE9yKIg1WjnnlVkGX',
-            'Sam': 'yoZ06aMxZJJ28mfd3POQ'
-        }
+        voice_id = get_voice_id(voice)
 
-        voice_id = voice_ids.get(voice, voice_ids['Rachel'])
+        # Generate speech with adaptive timeout and retry logic
+        tts_result = generate_speech_with_retry(
+            text=text,
+            voice_id=voice_id,
+            stability=stability,
+            similarity_boost=similarity_boost,
+            max_retries=3,
+            base_timeout=60
+        )
 
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json",
-            "xi-api-key": elevenlabs_key
-        }
-        data = {
-            "text": text,
-            "model_id": "eleven_monolingual_v1",
-            "voice_settings": {
-                "stability": stability,
-                "similarity_boost": similarity_boost
-            }
-        }
+        if not tts_result['success']:
+            logger.error(f"❌ ElevenLabs TTS failed: {tts_result.get('error')}")
+            return {'success': False, 'error': tts_result.get('error')}
 
-        response = requests.post(url, json=data, headers=headers, timeout=60)
-
-        if response.status_code != 200:
-            logger.error(f"❌ ElevenLabs TTS failed: {response.text}")
-            return {'success': False, 'error': f'TTS failed: {response.text}'}
+        audio_data = tts_result['audio_data']
 
         # Save audio file
-        audio_data = response.content
         filename = f'voice_{uuid.uuid4().hex[:8]}.mp3'
         # Handle case where user is None (agent testing or system calls)
         username = user.username if user else 'system'

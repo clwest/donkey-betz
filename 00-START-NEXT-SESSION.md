@@ -31,6 +31,7 @@ Now on every deploy, all 256 tasks sync to the database and execute.
 | #523 | Removed duplicate Voices from sidebar |
 | #524 | Added missing `/api/v1/reasoning/gates/` endpoint |
 | #525 | **Celery Beat sync + health monitoring** |
+| #526 | **AudioAgent TTS fix** - Adaptive timeout + retry logic |
 
 ---
 
@@ -147,6 +148,7 @@ curl https://donkey-betz-platform-production.up.railway.app/api/v1/reasoning/gat
 | #523 | fix(Session 872): Remove duplicate Voices from sidebar |
 | #524 | fix(Session 872): Add missing /api/v1/reasoning/gates/ endpoint |
 | #525 | fix(Session 872): Add release command to sync Celery tasks + add health monitor |
+| #526 | fix(Session 872): Add ElevenLabs TTS service with adaptive timeout + retry |
 
 ---
 

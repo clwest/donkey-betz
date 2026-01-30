@@ -120,6 +120,7 @@ def generate_segment_audio(
     Generate audio for a single segment using ElevenLabs TTS.
 
     Session 769: Now includes cost tracking.
+    Session 872: Uses centralized service with adaptive timeout and retry logic.
 
     Args:
         text: Text to convert to speech
@@ -131,50 +132,39 @@ def generate_segment_audio(
     Returns:
         Dict with success, audio_data (bytes), cost_info, error (if failed)
     """
-    # Get ElevenLabs API key
-    elevenlabs_key = os.getenv('ELEVENLABS_API_KEY') or settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY')
-
-    if not elevenlabs_key:
-        return {'success': False, 'error': 'ElevenLabs API key not configured'}
-
     # Session 769: Calculate cost before making the API call
     cost_info = calculate_elevenlabs_cost(text, model=model_id)
 
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": elevenlabs_key
-    }
-    data = {
-        "text": text,
-        "model_id": model_id,
-        "voice_settings": {
-            "stability": stability,
-            "similarity_boost": similarity_boost
-        }
-    }
+    # Session 872: Use centralized service with retry logic and adaptive timeout
+    from core.services.elevenlabs_tts_service import generate_speech_with_retry
 
-    try:
-        response = requests.post(url, json=data, headers=headers, timeout=120)
+    result = generate_speech_with_retry(
+        text=text,
+        voice_id=voice_id,
+        stability=stability,
+        similarity_boost=similarity_boost,
+        model_id=model_id,
+        max_retries=3,
+        base_timeout=90  # Higher base for podcast segments
+    )
 
-        if response.status_code != 200:
-            logger.error(f"❌ ElevenLabs TTS failed: {response.text}")
-            return {'success': False, 'error': f'TTS failed: {response.text}', 'cost_info': None}
-
-        logger.info(f"💰 ElevenLabs TTS cost: ${cost_info['cost']:.4f} ({cost_info['character_count']} chars)")
-
+    if not result['success']:
+        logger.error(f"❌ ElevenLabs TTS failed: {result.get('error')}")
         return {
-            'success': True,
-            'audio_data': response.content,
-            'cost_info': cost_info,
+            'success': False,
+            'error': result.get('error'),
+            'cost_info': None,
+            'retries_used': result.get('retries_used', 0)
         }
 
-    except requests.exceptions.Timeout:
-        return {'success': False, 'error': 'ElevenLabs API timeout', 'cost_info': None}
-    except Exception as e:
-        logger.error(f"❌ ElevenLabs TTS error: {e}")
-        return {'success': False, 'error': str(e)}
+    logger.info(f"💰 ElevenLabs TTS cost: ${cost_info['cost']:.4f} ({cost_info['character_count']} chars)")
+
+    return {
+        'success': True,
+        'audio_data': result['audio_data'],
+        'cost_info': cost_info,
+        'retries_used': result.get('retries_used', 0)
+    }
 
 
 def concatenate_audio_segments(
