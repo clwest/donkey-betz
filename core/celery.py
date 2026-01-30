@@ -2273,13 +2273,14 @@ app.conf.beat_schedule = {
     # Advance initiatives through their 5-stage pipeline automatically
     # Stages: Research Brief → Prototype Plan → Evaluation → Tech Design → Pilot Execution
     # Generates stage documents using TechnicalDocumentAgent
+    # Session 880: Increased frequency (hourly) and limit (10) + auto-approval
 
     'advance-initiative-pipeline': {
         'task': 'core.tasks.advance_initiative_pipeline',
-        'schedule': crontab(hour='*/4', minute=30),  # Every 4 hours at :30
-        'kwargs': {'limit': 5},
+        'schedule': crontab(minute=15),  # Session 880: Every hour at :15 (was every 4 hours)
+        'kwargs': {'limit': 10, 'auto_approve': True},  # Session 880: Increased limit, added auto-approve
         'options': {
-            'expires': 7200,  # 2 hours
+            'expires': 3500,  # Just under 1 hour
             'queue': 'long_running',
         }
     },

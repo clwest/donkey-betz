@@ -30671,9 +30671,10 @@ def poll_processing_videos():
 # =============================================================================
 
 @shared_task
-def advance_initiative_pipeline(limit: int = 5):
+def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
     """
     Session 866: Advance initiatives through their 5-stage pipeline.
+    Session 880: Increased frequency (hourly), limit (10), and added auto-approval.
 
     Problem: Initiatives are created with empty PENDING stages, but no mechanism
     generates the actual stage documents to make the pipeline flow.
@@ -30682,7 +30683,7 @@ def advance_initiative_pipeline(limit: int = 5):
     1. Finds initiatives with PENDING stages (no documents)
     2. For the current stage, generates appropriate content using TechnicalDocumentAgent
     3. Links the document to the stage
-    4. Marks the stage as DRAFT for review
+    4. Session 880: Auto-approves the stage and advances to next stage
 
     Stage document types:
     - Stage 1: Research Brief (market analysis, feasibility)
@@ -30692,7 +30693,8 @@ def advance_initiative_pipeline(limit: int = 5):
     - Stage 5: Pilot Execution (deployment plan, monitoring)
 
     Args:
-        limit: Maximum initiatives to process per run (default 5)
+        limit: Maximum initiatives to process per run (default 10, was 5)
+        auto_approve: Auto-approve generated documents and advance stages (default True)
 
     Returns:
         Summary of advancement results
@@ -30732,6 +30734,7 @@ def advance_initiative_pipeline(limit: int = 5):
     results = {
         'processed': 0,
         'documents_created': 0,
+        'stages_approved': 0,
         'stages_updated': [],
         'errors': []
     }
@@ -30845,14 +30848,54 @@ Previous stage context:
             results['stages_updated'].append(f"{init.name[:30]}... Stage {stage_num}")
             results['processed'] += 1
 
-            logger.info(f"✅ [INITIATIVE PIPELINE] Advanced: {init.name[:30]}... to Stage {stage_num}")
+            logger.info(f"✅ [INITIATIVE PIPELINE] Created document for: {init.name[:30]}... Stage {stage_num}")
+
+            # Session 880: Auto-approve the stage and advance to next
+            if auto_approve:
+                try:
+                    from django.utils import timezone
+                    stage.status = 'APPROVED'
+                    stage.approved_by = 'auto_pipeline'
+                    stage.approved_at = timezone.now()
+                    stage.save()
+
+                    results['stages_approved'] += 1
+                    logger.info(f"✅ [INITIATIVE PIPELINE] Auto-approved: {init.name[:30]}... Stage {stage_num}")
+
+                    # Advance to next stage if not at stage 5
+                    if stage_num < 5:
+                        next_stage, created = InitiativeStage.objects.get_or_create(
+                            initiative=init,
+                            stage=stage_num + 1,
+                            defaults={'status': 'PENDING'}
+                        )
+                        init.current_stage = stage_num + 1
+                        init.save()
+                        logger.info(f"📋 [INITIATIVE PIPELINE] Advanced to Stage {stage_num + 1}")
+                    elif stage_num == 5:
+                        # All stages complete - mark initiative as completed
+                        init.status = 'COMPLETED'
+                        init.save()
+                        logger.info(f"🎉 [INITIATIVE PIPELINE] Initiative COMPLETED: {init.name[:30]}...")
+
+                        # Create final deliverable if method exists
+                        if hasattr(init, 'create_final_deliverable'):
+                            try:
+                                deliverable = init.create_final_deliverable()
+                                if deliverable:
+                                    logger.info(f"📦 [INITIATIVE PIPELINE] Created deliverable: {deliverable.id}")
+                            except Exception as del_err:
+                                logger.warning(f"Could not create deliverable: {del_err}")
+
+                except Exception as approve_err:
+                    logger.warning(f"Auto-approve failed for Stage {stage_num}: {approve_err}")
 
         except Exception as e:
             error_msg = f"{init.name[:30]}...: Stage {stage_num} - {str(e)}"
             results['errors'].append(error_msg)
             logger.error(f"❌ [INITIATIVE PIPELINE] Error: {error_msg}")
 
-    logger.info(f"📋 [INITIATIVE PIPELINE] Complete: {results['processed']} processed, {results['documents_created']} documents created")
+    logger.info(f"📋 [INITIATIVE PIPELINE] Complete: {results['processed']} processed, {results['documents_created']} docs, {results['stages_approved']} approved")
 
     return results
 
