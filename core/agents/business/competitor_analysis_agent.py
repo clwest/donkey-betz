@@ -1536,6 +1536,7 @@ NOTE: Limited domain-specific data was found. This analysis is based on general 
 and trends. For more accurate insights, consider conducting targeted primary research in this niche.
 """
 
+        # Session 879: Structured output template with Quality Header + Decision block
         analysis_prompt = f"""You are a competitive intelligence analyst. Analyze the following market research data and provide actionable insights.
 
 RESEARCH QUERY: {task}
@@ -1543,21 +1544,88 @@ RESEARCH QUERY: {task}
 DATA COLLECTED ({len(all_items)} articles/mentions):
 {items_text}
 {data_quality_note}
-Based on this data, provide a comprehensive competitive analysis with:
 
-1. **MARKET OVERVIEW** (2-3 sentences about this market)
+Provide a structured competitive analysis following this EXACT format:
 
-2. **KEY COMPETITORS IDENTIFIED** (list 3-5 main competitors with brief description)
+---
 
-3. **MARKET TRENDS** (3-4 current trends you see in the data)
+## QUALITY HEADER
 
-4. **OPPORTUNITIES** (3-4 gaps or opportunities for a new entrant)
+| Field | Value |
+|-------|-------|
+| **Purpose** | [What decision this analysis enables - be specific] |
+| **Inputs** | {len(all_items)} data points from [list sources], collected [current date] |
+| **Confidence** | [High/Medium/Low] overall - [brief reason based on sample size and data quality] |
+| **Constraints** | [What's missing: e.g., pricing data, direct user feedback, regional coverage] |
 
-5. **THREATS & CHALLENGES** (2-3 things to watch out for)
+---
 
-6. **STRATEGIC RECOMMENDATIONS** (3-4 actionable recommendations for someone entering this market)
+## MARKET OVERVIEW
+[2-3 sentences about this market, size estimate if available, growth trajectory]
 
-Be specific and reference actual data points where possible. This analysis will be used for business planning."""
+---
+
+## COMPETITIVE LANDSCAPE
+
+### Direct Competitors ({'{N}'} found)
+*Same buyer, same job-to-be-done as user's offering*
+
+| Competitor | Positioning | Key Differentiator | Est. Market Share |
+|------------|-------------|-------------------|-------------------|
+| [Name] | [Brief positioning] | [What makes them unique] | [High/Med/Low or %] |
+
+### Analogs ({'{N}'} found)
+*Different market but similar playbook we can learn from*
+
+| Analog | What We Can Borrow | Risk of Direct Copy |
+|--------|-------------------|---------------------|
+| [Name] | [Specific tactic/strategy] | [Why it might not transfer] |
+
+---
+
+## MARKET TRENDS
+1. **[Trend Name]**: [Description with specific evidence from data]
+2. **[Trend Name]**: [Description with specific evidence from data]
+3. **[Trend Name]**: [Description with specific evidence from data]
+
+---
+
+## DECISION BLOCK
+
+### Recommended Move
+[ONE sentence: what should the user do based on this analysis]
+
+### Top 3 Bets (ranked by evidence strength)
+1. **[Bet]**: [Evidence supporting this] - Confidence: [High/Med/Low]
+2. **[Bet]**: [Evidence supporting this] - Confidence: [High/Med/Low]
+3. **[Bet]**: [Evidence supporting this] - Confidence: [High/Med/Low]
+
+### Risks + Mitigations
+- **[Risk]**: [Specific mitigation action]
+- **[Risk]**: [Specific mitigation action]
+- **[Risk]**: [Specific mitigation action]
+
+### Next 7 Days
+| Action | Owner | Est. Effort |
+|--------|-------|-------------|
+| [Specific action] | [Role: Founder/Marketing/Product] | [Hours] |
+| [Specific action] | [Role] | [Hours] |
+| [Specific action] | [Role] | [Hours] |
+
+---
+
+## DATA DISCLAIMER
+> This analysis is based on {len(all_items)} data points. Treat findings as directional hypotheses until validated with primary research (customer interviews, competitor demos, pricing calls). Sample size affects confidence in [specific areas].
+
+---
+
+IMPORTANT INSTRUCTIONS:
+- Use ACTUAL data from the collected articles - cite specific sources where possible
+- For confidence levels: High = 20+ relevant data points, Medium = 10-20, Low = <10
+- "Direct Competitors" must serve the SAME customer need - don't include tangential players
+- "Analogs" are explicitly NOT competitors but offer strategic lessons
+- Be honest about data gaps in the Constraints field
+- Next 7 Days actions must be specific enough to calendar (not "do more research")"""
 
         try:
             # Session 857: Use retry-enabled completion call
