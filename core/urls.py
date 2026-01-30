@@ -2837,6 +2837,8 @@ urlpatterns = [
     path('api/v1/reasoning/config/', views_autonomous_reasoning.reasoning_config_api, name='reasoning-config'),
     path('api/v1/reasoning/config/update/', views_autonomous_reasoning.update_reasoning_config_api, name='reasoning-config-update'),
     path('api/v1/reasoning/dashboard/', views_autonomous_reasoning.reasoning_dashboard_api, name='reasoning-dashboard'),
+    # Session 872: Pilot Readiness Gates API
+    path('api/v1/reasoning/gates/', views_autonomous_reasoning.gates_api, name='reasoning-gates'),
 
     # Session 546: Concern Tracking APIs
     path('api/v1/reasoning/concerns/', views_autonomous_reasoning.concerns_dashboard_api, name='concerns-dashboard'),

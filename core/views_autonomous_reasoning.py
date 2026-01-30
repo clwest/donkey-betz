@@ -428,10 +428,12 @@ def reasoning_dashboard_api(request):
     """
     Get comprehensive dashboard data for the Autonomous Reasoning Engine.
 
-    Returns stats, recent thoughts, insights summary, and action history.
+    Returns stats, recent thoughts, insights summary, action history, and gate stats.
+    Session 872: Added gate stats for Intelligence Tab.
     """
     try:
         from core.models_unified_system import ThoughtRecord, AutonomousAction, ReasoningConfiguration
+        from core.models_pilot_readiness import PilotReadinessGate
         from datetime import timedelta
 
         now = timezone.now()
@@ -476,6 +478,11 @@ def reasoning_dashboard_api(request):
             count=Count('id')
         ).order_by('-count'))
 
+        # Session 872: Get gate stats for Intelligence Tab
+        total_gates = PilotReadinessGate.objects.count()
+        approved_gates = PilotReadinessGate.objects.filter(status='approved').count()
+        pending_gates = PilotReadinessGate.objects.filter(status__in=['not_started', 'in_progress', 'ready']).count()
+
         return JsonResponse({
             'success': True,
             'engine_status': {
@@ -495,6 +502,12 @@ def reasoning_dashboard_api(request):
                 'failed': actions_failed,
                 'success_rate': round(actions_completed / total_actions * 100, 1) if total_actions > 0 else 0,
             },
+            # Session 872: Gate stats for Intelligence Tab
+            'total_gates': total_gates,
+            'approved_gates': approved_gates,
+            'pending_gates': pending_gates,
+            'total_thoughts': total_thoughts,
+            'autonomous_actions': total_actions,
             'recent_thoughts': [
                 {
                     'id': str(t['id']),
@@ -516,6 +529,74 @@ def reasoning_dashboard_api(request):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+
+
+# ============= Pilot Readiness Gates API (Session 872) =============
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def gates_api(request):
+    """
+    Session 872: Get pilot readiness gates for the Intelligence Tab.
+
+    Returns list of gates with their status, risk level, and decision info.
+    """
+    try:
+        from core.models_pilot_readiness import PilotReadinessGate
+
+        limit = int(request.GET.get('limit', 20))
+        status_filter = request.GET.get('status')
+
+        gates = PilotReadinessGate.objects.select_related('decision').order_by('-created_at')
+
+        if status_filter:
+            gates = gates.filter(status=status_filter)
+
+        gates = gates[:limit]
+
+        gates_list = []
+        for gate in gates:
+            decision_title = 'Unknown Decision'
+            if gate.decision:
+                decision_title = gate.decision.title or f"Decision {str(gate.decision.id)[:8]}"
+
+            gates_list.append({
+                'id': str(gate.id),
+                'status': gate.status,
+                'risk_level': gate.risk_level,
+                'decision_title': decision_title,
+                'initiative_id': str(gate.initiative.id) if gate.initiative else None,
+                'created_at': gate.created_at.isoformat(),
+                'updated_at': gate.updated_at.isoformat() if hasattr(gate, 'updated_at') and gate.updated_at else None,
+            })
+
+        # Get summary stats
+        total = PilotReadinessGate.objects.count()
+        approved = PilotReadinessGate.objects.filter(status='approved').count()
+        pending = PilotReadinessGate.objects.filter(status__in=['not_started', 'in_progress', 'ready']).count()
+        blocked = PilotReadinessGate.objects.filter(status='blocked').count()
+        waived = PilotReadinessGate.objects.filter(status='waived').count()
+
+        return JsonResponse({
+            'success': True,
+            'gates': gates_list,
+            'stats': {
+                'total': total,
+                'approved': approved,
+                'pending': pending,
+                'blocked': blocked,
+                'waived': waived,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching gates: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'gates': [],
+            'stats': {'total': 0, 'approved': 0, 'pending': 0, 'blocked': 0, 'waived': 0}
         }, status=500)
 
 
