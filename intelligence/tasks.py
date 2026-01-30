@@ -21,12 +21,9 @@ def start_intelligence_engine(self):
     try:
         logger.info("🚀 Starting Limitless Intelligence Engine...")
 
-        # Create new event loop for async code
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        # Start the intelligence engine
-        loop.run_until_complete(intelligence_engine.start_intelligence_stream())
+        # Session 881: Use asyncio.run() to properly create Task context
+        # (fixes "Timeout context manager should be used inside a task" error)
+        asyncio.run(intelligence_engine.start_intelligence_stream())
 
     except Exception as e:
         logger.error(f"Intelligence engine error: {e}")
