@@ -19,7 +19,7 @@ from core.views_redirect import (
     ai_studio_redirect, ai_nexus_redirect, content_studio_redirect,
     ai_production_hub_redirect, command_redirect, diagnostics_redirect,
     income_builder_redirect, neural_orchestra_redirect, login_redirect,
-    visualization_redirect, assistant_redirect,
+    # Session 871: Removed unused imports: visualization_redirect, assistant_redirect
 )
 from core.views_react import react_app
 
@@ -999,9 +999,9 @@ from core.views_user_profile import (
 from core.views_real_income_builder import (
     real_income_opportunities, analyze_real_opportunities
 )
-from core.views_income_builder import income_builder_view
+# Session 871: Removed unused import: income_builder_view
 from core.views_neural_orchestra import (
-    neural_orchestra_view,
+    # Session 871: Removed unused import: neural_orchestra_view
     ecosystem_live_feed as neural_ecosystem_feed,
     agents_stats as neural_agents_stats,
     learning_status as neural_learning_status,
@@ -1125,8 +1125,7 @@ from core.views_analytics_real import (
 from core.views_analytics import (
     analytics_dashboard, track_usage, track_feature_usage, cost_breakdown,
     update_budget, model_performance_analytics,
-    # Session 36: Analytics Dashboard
-    AnalyticsDashboardView, analytics_api_data,
+    # Session 36: Analytics Dashboard - Session 871: Removed unused: AnalyticsDashboardView, analytics_api_data
     # Phase 1: Learning Loop Integration
     learning_stats, learning_insights,
     # Session 217: Chart.js Analytics
@@ -1180,7 +1179,7 @@ from core.views_content import (
     gallery_videos, gallery_list, content_library, podcasts_list,
     # Phase 4: Frontend Reality Fix
     generate_email, generate_podcast_script,
-    ai_image_studio  # Session 32: New AI Image Studio interface
+    # Session 871: Removed unused import: ai_image_studio
 )
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
@@ -1391,7 +1390,7 @@ from core.views_diagnostics import (
     test_spider_network,
     test_income_builder,
     websocket_test_page,
-    diagnostic_dashboard
+    # Session 871: Removed unused import: diagnostic_dashboard
 )
 
 # Session 240: New Workflow Engine (user-vision-first philosophy)
