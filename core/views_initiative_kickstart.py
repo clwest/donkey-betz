@@ -356,3 +356,159 @@ def fix_initiative_stages(request):
     )
 
     return Response(result)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def retry_stuck_initiatives(request):
+    """
+    Session 884: Retry stuck initiatives where Stage 1 was started but never completed.
+
+    These are initiatives with:
+    - current_stage = 1
+    - stages_with_work >= 1 (Stage 1 is DRAFT)
+    - But completion is still at 12% (Stage 1 never finished)
+
+    The timeout/event loop bug (PR #591) caused tasks to fail silently.
+    This endpoint re-dispatches Stage 1 tasks to retry them.
+
+    POST/GET params:
+        dry_run: bool - Preview without dispatching (default: False)
+        limit: int - Max initiatives to process (default: 50)
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.services.conversation_initiative_pipeline import CONTENT_TYPE_STAGES
+    from core.tasks import execute_initiative_stage_task
+
+    # Parse params
+    if request.method == 'POST':
+        data = request.data
+    else:
+        data = request.query_params
+
+    dry_run = data.get('dry_run', False)
+    if isinstance(dry_run, str):
+        dry_run = dry_run.lower() in ('true', '1', 'yes')
+
+    limit = int(data.get('limit', 50))
+
+    result = {
+        'dry_run': dry_run,
+        'limit': limit,
+        'initiatives_found': 0,
+        'initiatives_retried': 0,
+        'tasks_dispatched': 0,
+        'initiatives': [],
+        'errors': [],
+    }
+
+    # Find stuck initiatives: Stage 1 started (DRAFT) but not progressing
+    stuck_initiatives = []
+    for initiative in Initiative.objects.filter(status='ACTIVE', current_stage=1):
+        # Check if Stage 1 exists and is in DRAFT or IN_REVIEW (started but not approved)
+        stage_1 = InitiativeStage.objects.filter(initiative=initiative, stage=1).first()
+        if stage_1 and stage_1.status in ['DRAFT', 'IN_REVIEW']:
+            stuck_initiatives.append(initiative)
+
+    stuck_initiatives = stuck_initiatives[:limit]
+    result['initiatives_found'] = len(stuck_initiatives)
+
+    if not stuck_initiatives:
+        result['message'] = 'No stuck initiatives found (Stage 1 started but not completing)'
+        return Response(result)
+
+    for initiative in stuck_initiatives:
+        topic = initiative.parent_topic or initiative.name
+        content_type = _detect_content_type(topic)
+
+        initiative_info = {
+            'id': str(initiative.id),
+            'name': initiative.name[:100],
+            'content_type': content_type,
+            'tasks': [],
+            'status': 'pending',
+        }
+
+        # Get stage 1 tasks
+        stage_config = CONTENT_TYPE_STAGES.get(content_type, CONTENT_TYPE_STAGES['document'])
+        stage_1_info = stage_config.get(1, {'tasks': []})
+        tasks = stage_1_info.get('tasks', []) if isinstance(stage_1_info, dict) else []
+
+        if dry_run:
+            for task_config in tasks:
+                task_desc = task_config['task_template'].format(topic=topic[:50])
+                initiative_info['tasks'].append({
+                    'agent': task_config['agent'],
+                    'task': task_desc[:100],
+                    'status': 'would_retry',
+                })
+            initiative_info['status'] = 'dry_run'
+            result['initiatives'].append(initiative_info)
+            continue
+
+        # Re-dispatch Stage 1 tasks
+        try:
+            # Reset Stage 1 to DRAFT (allow re-processing)
+            stage_1 = InitiativeStage.objects.get(initiative=initiative, stage=1)
+            stage_1.status = 'DRAFT'
+            stage_1.notes = f"{stage_1.notes}\n\n[Retried via API at {timezone.now().isoformat()}]"
+            stage_1.save()
+
+            for task_config in tasks:
+                agent_name = task_config['agent']
+                task_template = task_config['task_template']
+                task_description = task_template.format(topic=topic)
+
+                try:
+                    async_result = execute_initiative_stage_task.delay(
+                        initiative_id=str(initiative.id),
+                        stage_num=1,
+                        agent_name=agent_name,
+                        task=task_description,
+                        context={
+                            'source': 'retry_stuck_api',
+                            'topic': topic,
+                            'user_id': request.user.id,
+                            'retry': True,
+                        }
+                    )
+
+                    initiative_info['tasks'].append({
+                        'agent': agent_name,
+                        'task': task_description[:100],
+                        'status': 'retried',
+                        'task_id': async_result.id,
+                    })
+                    result['tasks_dispatched'] += 1
+
+                except Exception as e:
+                    initiative_info['tasks'].append({
+                        'agent': agent_name,
+                        'task': task_description[:100],
+                        'status': 'failed',
+                        'error': str(e),
+                    })
+                    result['errors'].append(f"{initiative.name[:30]}: {agent_name} - {e}")
+
+            initiative_info['status'] = 'retried'
+            result['initiatives_retried'] += 1
+
+        except Exception as e:
+            initiative_info['status'] = 'error'
+            initiative_info['error'] = str(e)
+            result['errors'].append(f"{initiative.name[:30]}: {e}")
+
+        result['initiatives'].append(initiative_info)
+
+    result['message'] = (
+        f"{'[DRY RUN] Would retry' if dry_run else 'Retried'} "
+        f"{result['initiatives_retried'] if not dry_run else result['initiatives_found']} stuck initiatives "
+        f"with {result['tasks_dispatched']} tasks dispatched"
+    )
+
+    logger.info(
+        f"[retry_stuck_api] {result['message']} - "
+        f"found={result['initiatives_found']}, errors={len(result['errors'])}"
+    )
+
+    return Response(result)
