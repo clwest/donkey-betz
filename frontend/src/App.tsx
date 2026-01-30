@@ -48,6 +48,7 @@ import OrchestrationPage from '@/pages/OrchestrationPage'  // Session 768: Orche
 import SpiderFeedPage from '@/pages/SpiderFeedPage'  // Session 783: Spider News Feed
 import DocsIndexPage from '@/pages/DocsIndexPage'  // Session 784: Documentation Index Browser
 import AgentMonitorPage from '@/pages/AgentMonitorPage'  // Session 794: Live Agent Monitor
+import HomePage from '@/pages/HomePage'  // Session 884: AI OS Boot Experience
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -72,8 +73,8 @@ function App() {
           </ProtectedRoute>
         }
       >
-        {/* Session 857: Workspace is now the main hub */}
-        <Route index element={<Navigate to="/workspace" replace />} />
+        {/* Session 884: Home page is the AI OS boot experience */}
+        <Route index element={<HomePage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="assistant" element={<AssistantPage />} />
         <Route path="agents" element={<AgentsPage />} />

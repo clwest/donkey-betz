@@ -20,6 +20,7 @@ import {
   Book,
   PanelLeftClose,
   PanelLeft,
+  Home,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -38,8 +39,12 @@ import {
 // - DataSources tab: Spiders, Spider Feed, Learning
 // - Content Studio tab: Podcast, Channels, Blogs, Distribution
 // - Command tab: Conversations, Dreams, Advisors
-// Session 857: Workspace is now the primary hub - moved to top
+// Session 884: Home is the AI OS boot experience
+// Session 857: Workspace is the command center
 const navItems = [
+  // Session 884: Home - AI OS Boot Experience
+  { path: '/', label: 'Home', icon: Home },
+
   // Main Hub - Primary entry point
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
 
