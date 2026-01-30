@@ -1,14 +1,14 @@
 # Session 884 - Start Here
 
-**Previous Session:** 883 (Internal Data Registry Fix - Prevented AI Hallucinations)
+**Previous Session:** 883 (Internal Data Registry Fix + Production Cleanup)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **INTERVIEW SYSTEM WIRED** | **SCHEMA HALLUCINATION FIX**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **INTERVIEW SYSTEM WIRED** | **SCHEMA HALLUCINATION FIX MERGED**
 
 ---
 
 ## What Was Accomplished in Session 883
 
-### Critical Fix: Internal Data Registry Schema Corrections
+### 1. Critical Fix: Internal Data Registry Schema Corrections (PR #574 - MERGED)
 
 **Problem:** AI agents were generating completely fabricated research reports with made-up statistics (92.57% failure rate, 233 auto-halts). Investigation revealed the root cause:
 
@@ -21,27 +21,20 @@
 | File | Fix |
 |------|-----|
 | `core/services/internal_data_registry.py` | Corrected `experiments` and `agent_executions` entries with real models and fields |
-| `core/agents/research_agent.py` | Fixed `ExperimentExecution` references (lines 1109, 1150) |
+| `core/agents/research_agent.py` | Fixed `ExperimentExecution` references |
 | `core/contracts/research_contract.py` | Fixed example text referencing non-existent model |
 | `core/services/autonomous_action_executor.py` | Fixed keyword mappings to use correct Experiment model |
 
-**Before (Incorrect):**
-```python
-'experiments': {
-    'model': 'core.models_experiment.ExperimentExecution',  # DOESN'T EXIST!
-    'key_fields': [('status', 'str', 'auto_halted/completed/failed')],  # WRONG!
-}
-```
+### 2. Production Cleanup: Stuck Executions
 
-**After (Correct):**
-```python
-'experiments': {
-    'model': 'core.models.Experiment',
-    'key_fields': [('status', 'str', 'running/success/failure/partial/inconclusive')],
-}
-```
+Cleaned up 2 agent executions that were stuck "in_progress" for 2.5+ hours:
+- `WorkflowAgent` (b60dc2c7) - marked as failed
+- `CodeGeneratorAgent` (99a0f935) - marked as failed
 
-**PR:** #574
+**Production Stats (after cleanup):**
+- Last 24h completed: 85
+- Last 24h failed: 4
+- Currently in progress: 0
 
 ---
 
@@ -51,31 +44,32 @@
 - `status`: running | success | failure | partial | inconclusive
 - `is_halted`: boolean
 - `halted_by`: string (who/what halted: auto/manual/system)
-- `hypothesis`, `learning_metrics`, `created_at`, etc.
 
 ### AgentExecution Model
 - `status`: completed | failed | in_progress
 - `agent`: ForeignKey to Agent (not `agent_name`)
-- `execution_time_ms`, `result`, `error`, etc.
+- `execution_time_ms`, `output_data`, `error_message`, etc.
 
 ---
 
 ## TOP PRIORITY for Session 884
 
-### 1. Merge PR #574
-After review, merge the schema fix PR to prevent further hallucinations.
-
-### 2. Verify Interview Flow End-to-End (carried from 883)
+### 1. Verify Interview Flow End-to-End
 Test the complete flow:
 1. Chat with PA as a user with low profile completeness
 2. Verify interview prompt appears
 3. Complete the interview
 4. Verify data is saved to EnhancedUserProfile
 
-### 3. Frontend Interview UI (carried from 883)
+### 2. Frontend Interview UI
 The interview endpoints exist but there may not be a dedicated UI page:
 - Check if `/ai-studio/interview/` or similar route exists
 - If not, create a simple React component that uses the interview API
+
+### 3. Proactive Learning (Optional)
+Now that we have user profiles, PA can:
+- Ask follow-up questions based on profile gaps
+- Learn from user interactions and update profile automatically
 
 ---
 
@@ -88,11 +82,16 @@ make start && make celery
 # Check profile completeness
 python manage.py ensure_enhanced_profiles --dry-run
 
-# Verify experiment schema (production)
+# Check for stuck executions (production)
 railway run python manage.py shell -c "
-from core.models import Experiment
-print('Experiment status choices:', [f[0] for f in Experiment._meta.get_field('status').choices])
-"
+from core.models import AgentExecution
+from django.utils import timezone
+from datetime import timedelta
+stuck = AgentExecution.objects.filter(
+    status='in_progress',
+    created_at__lt=timezone.now() - timedelta(hours=1)
+).count()
+print(f'Stuck executions (>1hr): {stuck}')"
 ```
 
 ---
@@ -101,7 +100,7 @@ print('Experiment status choices:', [f[0] for f in Experiment._meta.get_field('s
 
 | Session | Focus | Status |
 |---------|-------|--------|
-| **883** | Internal Data Registry Fix - Prevented AI Hallucinations | COMPLETE |
+| **883** | Internal Data Registry Fix + Production Cleanup | COMPLETE |
 | **882** | Interview System Wired + EnhancedUserProfile Command | COMPLETE |
 | **881** | CodeGeneratorAgent Fix + Async Bug + Defensive Checks | COMPLETE |
 | **880** | Async Bug + Initiative Pipeline + Agent Workspace Writes | COMPLETE |
@@ -109,19 +108,13 @@ print('Experiment status choices:', [f[0] for f in Experiment._meta.get_field('s
 
 ---
 
-## Session 883 File Changes
+## Session 883 Commits
 
-| File | Change |
-|------|--------|
-| `core/services/internal_data_registry.py` | Fixed experiments and agent_executions schema definitions |
-| `core/agents/research_agent.py` | Removed ExperimentExecution references |
-| `core/contracts/research_contract.py` | Fixed example documentation |
-| `core/services/autonomous_action_executor.py` | Corrected keyword mappings |
-| `00-START-NEXT-SESSION.md` | Updated for Session 884 |
+- PR #574: `fix(Session 883): Correct internal data registry schema to prevent AI hallucinations` - **MERGED**
 
 ---
 
-## Why This Matters
+## Why the Schema Fix Matters
 
 The internal data registry is a **source of truth** that AI agents consult when:
 1. Generating research reports
