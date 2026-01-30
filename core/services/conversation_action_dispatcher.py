@@ -213,6 +213,18 @@ class ConversationActionDispatcher:
             result.errors.append("No next_steps in decision summary")
             return result
 
+        # Session 875: Trace and validate next_steps schema at parser stage
+        from core.services.context_tracing import ContextTracer
+        tracer = ContextTracer(source=f"dispatch_actions:{conversation_id}")
+
+        # Validate next_steps schema (should be List[str])
+        validation_errors = tracer.validate_next_steps(next_steps)
+        if validation_errors:
+            logger.warning(
+                f"[dispatch_actions] next_steps schema issues: {validation_errors}"
+            )
+            # Still proceed but log the issue
+
         result.total_actions = len(next_steps)
 
         # Parse and dispatch each action
@@ -279,6 +291,7 @@ class ConversationActionDispatcher:
         """
         try:
             from core.tasks import execute_agent_task
+            from core.services.context_tracing import ContextTracer
 
             task_context = {
                 'source': 'conversation_action_dispatch',
@@ -286,6 +299,15 @@ class ConversationActionDispatcher:
                 'participants': participants,
                 **(context or {})
             }
+
+            # Session 875: Log context at pre-enqueue stage (before Celery serializes it)
+            tracer = ContextTracer(source=f"conversation_action_dispatch:{conversation_id}")
+            tracer.log_pre_enqueue(
+                context=task_context,
+                agent_name=agent_name,
+                action_name=task[:100] if task else "",
+                task_name="execute_agent_task"
+            )
 
             # Queue the Celery task
             async_result = execute_agent_task.delay(

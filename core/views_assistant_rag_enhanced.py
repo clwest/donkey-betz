@@ -345,11 +345,11 @@ Provide helpful answers with specific recommendations when relevant."""
             # Very brief context format to avoid token bloat
             enhanced_message = f"Context: {context}\n\nQuestion: {message}"
         
-        # Generate AI response with reasonable token limits (increased from 150 to 1000 for better quality)
+        # Session 876: Increased tokens for GPT-5-mini reasoning headroom
         if 'gpt-5' in model.lower():
-            config = {'max_completion_tokens': 1000}
+            config = {'max_completion_tokens': 4000}
         else:
-            config = {'max_tokens': 1000, 'temperature': 0.7}
+            config = {'max_tokens': 2000, 'temperature': 0.7}
         
         result = ai_manager.generate_content(
             provider=provider,

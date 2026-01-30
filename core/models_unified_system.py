@@ -20321,3 +20321,138 @@ class ReasoningConfiguration(models.Model):
             )
         return config
 
+
+# =============================================================================
+# Session 875: Context Tracing - Bad Context Event Model
+# =============================================================================
+
+class BadContextEvent(models.Model):
+    """
+    Records context type violations for forensic analysis.
+
+    When agent execution context is unexpectedly a list instead of dict,
+    this model captures the trace ID, stage, and diagnostic data to help
+    identify where context type mutations occur in the pipeline.
+
+    Stages in the execution pipeline:
+    - llm_raw: Raw output from LLM before parsing
+    - parser: After parsing LLM output into structured data
+    - pre_enqueue: Before enqueuing to Celery task queue
+    - post_deserialize: After Celery deserializes the task
+    - router: In the agent router before dispatching
+    - agent: At the agent's execute() method entry point
+    """
+
+    STAGE_CHOICES = [
+        ('llm_raw', 'LLM Raw Output'),
+        ('parser', 'Parser Output'),
+        ('pre_enqueue', 'Pre-Enqueue'),
+        ('post_deserialize', 'Post-Deserialize'),
+        ('router', 'Router'),
+        ('agent', 'Agent Entry'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Correlation tracking
+    trace_id = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="Unique trace ID for correlating events across the pipeline"
+    )
+
+    # Pipeline location
+    stage = models.CharField(
+        max_length=32,
+        choices=STAGE_CHOICES,
+        db_index=True,
+        help_text="Stage in the execution pipeline where the bad context was detected"
+    )
+
+    # Context identification
+    agent_name = models.CharField(
+        max_length=128,
+        blank=True,
+        db_index=True,
+        help_text="Name of the agent being executed (if known at this stage)"
+    )
+    action_name = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Name of the action/next_step being executed"
+    )
+    task_name = models.CharField(
+        max_length=256,
+        blank=True,
+        help_text="Celery task name if applicable"
+    )
+
+    # Context diagnostics
+    context_type = models.CharField(
+        max_length=64,
+        help_text="The actual type received (e.g., 'list', 'str', 'NoneType')"
+    )
+    context_preview = models.TextField(
+        blank=True,
+        help_text="Truncated string representation of the bad context (max 1000 chars)"
+    )
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message or diagnostic information"
+    )
+
+    # Additional context
+    extra_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional diagnostic data (e.g., raw LLM preview, parent trace)"
+    )
+    source = models.CharField(
+        max_length=256,
+        blank=True,
+        help_text="Source of the trace (e.g., conversation_id, task_id)"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Bad Context Event"
+        verbose_name_plural = "Bad Context Events"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['trace_id', 'stage']),
+            models.Index(fields=['agent_name', 'created_at']),
+            models.Index(fields=['context_type', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"BadContext[{self.trace_id[:8]}] {self.stage}: {self.context_type}"
+
+    @classmethod
+    def get_recent_by_agent(cls, agent_name: str, limit: int = 10):
+        """Get recent bad context events for a specific agent."""
+        return cls.objects.filter(
+            agent_name=agent_name
+        ).order_by('-created_at')[:limit]
+
+    @classmethod
+    def get_recent_by_trace(cls, trace_id: str):
+        """Get all events for a specific trace ID."""
+        return cls.objects.filter(trace_id=trace_id).order_by('created_at')
+
+    @classmethod
+    def get_stage_summary(cls, hours: int = 24):
+        """Get summary of bad context events by stage for the past N hours."""
+        from datetime import timedelta
+        from django.db.models import Count
+        from django.utils import timezone
+
+        cutoff = timezone.now() - timedelta(hours=hours)
+        return cls.objects.filter(
+            created_at__gte=cutoff
+        ).values('stage', 'context_type').annotate(
+            count=Count('id')
+        ).order_by('-count')
+

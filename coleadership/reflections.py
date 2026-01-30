@@ -71,7 +71,7 @@ Keep it concise (2-3 paragraphs) and actionable."""
                 }
             ],
             reasoning_effort="medium",
-            max_completion_tokens=1000
+            max_completion_tokens=4000  # Session 876: Increased for GPT-5-mini reasoning headroom
         )
 
         reflection_text = response.choices[0].message.content

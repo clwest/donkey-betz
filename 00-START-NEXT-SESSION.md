@@ -1,88 +1,66 @@
-# Session 875 - Start Here
+# Session 876 - Start Here
 
-**Previous Session:** 874 (Executive Function Integration + Dream Backlog Cleared)
+**Previous Session:** 875 (Context Tracing System)
 **Date:** January 29, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **EXECUTIVE FUNCTION INTEGRATED** | **DREAM BACKLOG CLEARED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **CONTEXT TRACING ACTIVE**
 
 ---
 
-## What Was Accomplished in Session 874
+## What Was Accomplished in Session 875
 
-**Handoff:** `docs/handoffs/SESSION_874_COMPLETE.md`
+**Handoff:** `docs/handoffs/SESSION_875_CONTEXT_TRACING_SYSTEM.md`
 
-### Executive Function Integration (PRs #541-544)
+### Context Tracing System (PRs #552-554)
 
-All 4 components from Session 872 now wired into production:
+Implemented comprehensive tracing to diagnose `'list' object has no attribute 'get'` errors:
 
-| PR | Component | Integration Point |
-|----|-----------|-------------------|
-| #541 | **DecisionEnforcerAgent** | `conversation_orchestrator.py` - forces decisive outcomes |
-| #542 | **SynthesisContract** | Debate flows - binary categorization (validated/rejected) |
-| #543 | **AutoSpawnerService** | `ResearchAgent` - data insufficiency reflexes |
-| #544 | **Prompt Sharpening** | `BaseAgent` - ALL agents now use decisive language |
+| Component | Purpose |
+|-----------|---------|
+| **ContextTracer** | Service for tracking context mutations across pipeline |
+| **BadContextEvent** | Database model for persisting forensic data |
+| **Pipeline Integration** | Tracing at 4 key stages: post_deserialize, pre_enqueue, router, agent |
 
-### Dream Backlog Cleared (PR #545)
+### Key Files Added/Modified
 
-| Metric | Before | After |
-|--------|--------|-------|
-| **Pending Dreams** | 2,130+ | **13** |
-| **Oldest Pending** | 62 days | **2 days** |
-| **Reduction** | - | **99.4%** |
-
-**Root Cause:** 1,292 dreams stuck in "limbo" (scores 0.45-0.60) - too low for promotion, too high for archiving.
-
-**Fix:** Adjusted thresholds:
-- `promote_threshold`: 0.75 → 0.55
-- `archive_score_threshold`: 0.40 → 0.55
-
-### Gate Waiver Investigation
-
-**Finding:** 79.4% waiver rate is **working as designed**:
-- 83.9% of decisions are low-risk types (experiment/product/pipeline/research)
-- Auto-waive correctly fast-tracks low-risk items
-- Pilot success rate from waived gates: 204 completed, 0 failures
+| File | Changes |
+|------|---------|
+| `core/services/context_tracing.py` | **NEW** - ContextTracer service with trace IDs |
+| `core/models_unified_system.py` | Added BadContextEvent model |
+| `core/migrations/0209_add_bad_context_event.py` | Migration for new model |
+| `core/tasks.py` | Added tracing at Celery entry point |
+| `intelligence/tasks.py` | Added tracing at Celery entry point |
+| `core/services/conversation_action_dispatcher.py` | Added pre_enqueue tracing + schema validation |
+| `core/agent_router.py` | Added router stage tracing |
 
 ---
 
-## Components Now Active
+## Priority for Session 876
 
-### Executive Function (Session 872-874)
+### Monitor Context Tracing
 
-```python
-# DecisionEnforcerAgent - forces decisions after debate
-from core.agents import DecisionEnforcerAgent
-
-# SynthesisContract - structured debate output
-from core.contracts import SynthesisContract
-
-# AutoSpawnerService - data insufficiency reflexes
-from core.services.auto_spawner_service import auto_spawn_if_needed
-
-# Prompt Sharpening - decisive language for ALL agents
-from core.prompts.sharpening import sharpen_prompt, SHARP_DEBATE_RULES
+```bash
+# Check for bad context events (should be 0 initially)
+python manage.py shell -c "
+from core.models_unified_system import BadContextEvent
+print(f'Bad context events: {BadContextEvent.objects.count()}')
+if BadContextEvent.objects.exists():
+    for e in BadContextEvent.objects.order_by('-created_at')[:5]:
+        print(f'  {e.stage}: {e.context_type} - {e.agent_name}')
+"
 ```
 
-### Feature Flags (conversation_orchestrator.py)
+### Extend Tracing (if bad contexts appear)
 
-```python
-ENABLE_DECISION_ENFORCEMENT = True  # Force decisions via DecisionEnforcerAgent
-ENABLE_SYNTHESIS_CONTRACT = True    # Convert DecisionSummary → SynthesisContract
-```
-
----
-
-## Priority for Session 875
-
-### Monitoring (Optional)
-
-- [ ] Observe DecisionEnforcerAgent in production debates
-- [ ] Verify prompt sharpening transforms hedging language in agent outputs
+If BadContextEvent records accumulate:
+1. Add `log_llm_output()` to ConversationOrchestrator where DecisionSummary is generated
+2. Add `log_parser_output()` after next_steps parsing
+3. Add `log_agent()` in BaseAgent.execute()
 
 ### Potential Work
 
-- [ ] Review agents for sharpening_type customization (some may need 'analysis' vs 'debate')
-- [ ] Add content-based risk keywords for gate classification (production, user data, API)
-- [ ] Clean up 169 orphaned waived gates (old "Discussion:" decisions without pilots)
+- [ ] Review Session 867 audit findings (231 unscheduled tasks, 40+ stubs)
+- [ ] Finish remaining tracing integration points
+- [ ] Add Celery-specific deserialization checks if Redis serialization is suspect
 
 ---
 
@@ -95,27 +73,28 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Check dream backlog (should be ~13)
-python -c "
-import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
-import django; django.setup()
-from core.models_unified_system import AgentDream
-pending = AgentDream.objects.filter(promoted_to_decision=False, shown_to_user=False).count()
-print(f'Pending dreams: {pending}')
+# Check bad context events
+python manage.py shell -c "
+from core.models_unified_system import BadContextEvent
+print(f'Events: {BadContextEvent.objects.count()}')
+for e in BadContextEvent.get_stage_summary(hours=24):
+    print(f'  {e[\"stage\"]}: {e[\"count\"]} events')
 "
 
-# Test prompt sharpening
-python -c "
-from core.prompts.sharpening import sharpen_prompt
-print(sharpen_prompt('We should validate this before proceeding'))
+# Test ContextTracer
+python manage.py shell -c "
+from core.services.context_tracing import ContextTracer
+tracer = ContextTracer(source='test')
+print(f'Trace ID: {tracer.trace_id}')
+
+# Test auto-repair
+bad_context = ['item1', 'item2']  # list instead of dict
+repaired = ContextTracer.auto_repair_context(bad_context)
+print(f'Repaired: {repaired}')  # Should be {}
 "
-# Output: THIS REQUIRES validation before proceeding
 
 # Verify Celery tasks
 python manage.py sync_celery_beat
-
-# Run threshold calibration
-python manage.py calibrate_halt_thresholds --days 90
 ```
 
 ---
@@ -148,12 +127,12 @@ python manage.py calibrate_halt_thresholds --days 90
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **875** | Context Tracing System for diagnosing list-as-dict errors | COMPLETE |
 | **874** | Executive Function Integration + Dream Backlog Cleared | COMPLETE |
 | **873** | Dream Triage + Experiment Halt Instrumentation Fixes | COMPLETE |
-| **872** | API Migration + 404 Fixes + **Executive Function** (4 new components) | COMPLETE |
+| **872** | API Migration + 404 Fixes + Executive Function (4 new components) | COMPLETE |
 | **871** | TIER 4: API Standardization + Dead Code + Documentation | COMPLETE |
 | **870** | TIER 3: Frontend Error States + Learning Journey UI | COMPLETE |
-| **869** | TIER 2-3: Stub Replacement + Voice Marketplace UI | COMPLETE |
 
 ---
 
@@ -161,26 +140,23 @@ python manage.py calibrate_halt_thresholds --days 90
 
 | Doc | Purpose |
 |-----|---------|
+| `docs/handoffs/SESSION_875_CONTEXT_TRACING_SYSTEM.md` | Session 875 details |
 | `docs/handoffs/SESSION_874_COMPLETE.md` | Session 874 details |
-| `docs/handoffs/SESSION_873_DREAM_TRIAGE_FIX.md` | Session 873 details |
-| `docs/handoffs/SESSION_872_COMPLETE.md` | Executive Function components |
+| `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | System-wide audit findings |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Dream → Initiative pipeline |
 | `docs/AGENTS.md` | Agent documentation (76 agents) |
 | `docs/SPIDERS.md` | Spider network (77 spiders) |
 
 ---
 
-## Session 874 PRs
+## Session 875 PRs
 
 | PR | Title |
 |----|-------|
-| #541 | feat(Session 874): Integrate DecisionEnforcerAgent into conversation_orchestrator |
-| #542 | feat(Session 874): Add SynthesisContract to debate flows |
-| #543 | feat(Session 874): Hook AutoSpawnerService into ResearchAgent |
-| #544 | feat(Session 874): Apply prompt sharpening to all agents via BaseAgent |
-| #545 | fix(Session 874): Adjust dream triage thresholds to clear limbo backlog |
-| #547 | feat(Session 874): Add threshold sandbox for experiment halt calibration |
+| #552 | fix(Session 875): Add defensive context type checks to prevent list-as-dict errors |
+| #553 | fix(Session 875): Add defensive context checks to Celery agent tasks |
+| #554 | feat(Session 875): Add comprehensive context tracing system |
 
 ---
 
-**All Session 874 work complete. Executive Function now active in production.**
+**Context tracing is now active. BadContextEvent table will capture any context type violations for forensic analysis.**
