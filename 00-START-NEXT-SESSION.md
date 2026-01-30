@@ -48,7 +48,8 @@ Created `LearningJourneyTab.tsx` (1,086 lines):
 ### TIER 4: Lower Priority (Technical Debt)
 
 - [x] ~~API path standardization~~ DONE (PR #510) - 8 module includes migrated to `/api/`
-- [ ] Dead code cleanup
+- [x] ~~Dead code cleanup Phase 1~~ DONE (PR #512) - 2,767 lines removed
+- [ ] Dead code cleanup Phase 2 - Deprecated models (optional)
 - [ ] Document Dream → Initiative workflow
 
 ---
