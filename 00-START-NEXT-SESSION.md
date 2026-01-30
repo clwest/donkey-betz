@@ -1,14 +1,14 @@
 # Session 885 - Start Here
 
-**Previous Session:** 884 (AI OS Boot Experience - Home Page)
+**Previous Session:** 884 (AI OS Boot Experience + Codebase Workspace)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **HOME PAGE LIVE** | **AI OS Boot Experience**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **HOME PAGE LIVE** | **AI OS Boot Experience** | **Codebase Workspace**
 
 ---
 
 ## What Was Accomplished in Session 884
 
-### AI OS Boot Experience - Home Page
+### 1. AI OS Boot Experience - Home Page
 
 Created the "boot experience" that makes users feel like they're starting up their AI operating system.
 
@@ -39,11 +39,46 @@ Created the "boot experience" that makes users feel like they're starting up the
 - `frontend/src/App.tsx` - Changed index route to HomePage
 - `frontend/src/components/layout/Sidebar.tsx` - Added Home nav link
 
+### 2. Celery Async Timeout Fix
+
+Fixed "Timeout context manager should be used inside a task" error in Celery workers.
+
+**Root Cause:** aiohttp session created in one event loop but used in another when `asyncio.run()` creates new loops in Celery tasks.
+
+**Solution:** Track `_session_loop` and recreate session when event loop changes.
+
+**File Modified:**
+- `ai_core/spiders/web_request_layer.py` - Added event loop tracking
+
+### 3. Codebase Workspace for CodeGeneratorAgent
+
+Enabled CodeGeneratorAgent to read/write actual codebase files (not just sandbox).
+
+**New Command:** `python manage.py setup_codebase_workspace`
+- Auto-detects path (Railway `/app/` vs local project root)
+- Protects sensitive files (.env, .git/, secrets/, etc.)
+- Allows file writes but disables deletes
+- Verified working: can read `intelligence/tasks.py` (81KB)
+
+**Files Created:**
+- `core/management/commands/setup_codebase_workspace.py`
+
+**Files Modified:**
+- `core/services/workspace_manager.py` - Added `get_codebase_workspace()`
+- `core/agents/code_generator_agent.py` - Prefers codebase workspace for file ops
+
 ---
 
 ## TOP PRIORITY for Session 885
 
-### 1. Verify Home Page in Production
+### 1. Setup Codebase Workspace on Railway
+Run after production deployment:
+```bash
+railway run python manage.py setup_codebase_workspace
+```
+This enables CodeGeneratorAgent to access actual source files in production.
+
+### 2. Verify Home Page in Production
 After deployment, test:
 - Login redirects to `/` (Home page)
 - Greeting shows correct user name and time of day
@@ -52,13 +87,13 @@ After deployment, test:
 - Natural language input routes to `/assistant?message=...`
 - Quick actions work correctly
 
-### 2. Optional Enhancements
+### 3. Optional Enhancements
 If home page works well, consider:
 - Boot animation (typewriter effect on greeting)
 - Handle `/assistant?message=...` query param to prefill input
 - Add WebSocket for real-time "while away" updates
 
-### 3. Interview System Verification (Carried from 883)
+### 4. Interview System Verification (Carried from 883)
 The interview system was wired in Session 882 but needs end-to-end testing:
 1. Chat with PA as user with low profile completeness
 2. Verify interview prompt appears
@@ -74,6 +109,12 @@ make start && make celery
 
 # Test home boot API
 curl -H "Authorization: Token YOUR_TOKEN" http://localhost:8000/api/home/boot/
+
+# Setup codebase workspace (local)
+python manage.py setup_codebase_workspace
+
+# Setup codebase workspace (Railway production)
+railway run python manage.py setup_codebase_workspace
 
 # Check profile completeness
 python manage.py ensure_enhanced_profiles --dry-run
