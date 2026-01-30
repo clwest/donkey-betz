@@ -17,7 +17,6 @@ import {
   FolderCog,
   FileText,
   Beaker,
-  Mic,
   Book,
   PanelLeftClose,
   PanelLeft,
@@ -57,7 +56,7 @@ const navItems = [
   // Reference & Tools
   { path: '/docs-index', label: 'Docs Index', icon: Book },
   { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
-  { path: '/voice-marketplace', label: 'Voices', icon: Mic },
+  // Session 872: Removed Voices - available in Workspace tab
 
   // Admin & Settings
   { path: '/admin', label: 'Admin', icon: Shield },
