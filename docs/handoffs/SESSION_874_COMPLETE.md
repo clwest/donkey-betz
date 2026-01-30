@@ -200,16 +200,49 @@ python manage.py calibrate_halt_thresholds --apply --profile=conservative
 
 ### Calibration Analysis Results
 
-Initial analysis of 352 experiments revealed:
-- All 77 halted experiments had **100% error rate** (genuine failures)
-- FPR = 0% across all threshold values
-- FNR = 10.5% across all threshold values
-- Current threshold (35%) is adequate - threshold value is irrelevant when all halts are at 100%
+Analysis of 352 experiments in 90-day window:
 
-The system provides three profile recommendations:
-- **Conservative**: Lower threshold, catches more failures
-- **Balanced**: Cost-weighted optimization (10:1 FN:FP ratio)
-- **Permissive**: Higher threshold, fewer unnecessary halts
+| Metric | Value |
+|--------|-------|
+| Total experiments | 352 |
+| Halted | 77 (21.9%) |
+| Success rate | 67% (237 successes) |
+| Running | 0 (no stuck experiments) |
+
+### Deep Investigation Findings
+
+**Why all 77 halts show 100% error rate:**
+
+All halts occurred **before Session 841** (Jan 27, 2026 20:53 UTC), when the error rate calculation was **global** instead of experiment-scoped. The old code counted all system failures, not just failures for the specific experiment.
+
+| Timeframe | Halts | Cause |
+|-----------|-------|-------|
+| Before Session 841 | 77 | Bug - global error rate calculation |
+| After Session 841 | 0 | Fixed - scoped to experiment FK |
+
+**Why FNR shows 10.5% (9 "false negatives"):**
+
+The 9 failures that weren't halted are **not actually false negatives** - they're a different failure mode:
+- All 9 have 0 linked executions
+- All failed during **pilot evaluation** ("Pilot did not meet success criteria")
+- The halt system catches **execution errors**, not pilot evaluation failures
+
+**Execution Linkage Status:**
+
+| Metric | Value |
+|--------|-------|
+| AgentExecutions (90 days) | 2,363 |
+| With experiment FK | 0 (0%) |
+| Reason | Linker added after last execution (Jan 27) |
+
+The Session 873 linker is configured but hasn't been tested with new executions yet.
+
+### Threshold Recommendations
+
+Since all historical halts were at 100% error rate, threshold value doesn't differentiate:
+- **Conservative**: 15% (catches any error spike)
+- **Balanced**: 15% (same metrics as conservative)
+- **Permissive**: 15% (same metrics)
 
 ---
 
