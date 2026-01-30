@@ -1,114 +1,88 @@
-# Session 874 - Start Here
+# Session 875 - Start Here
 
-**Previous Session:** 873 (Dream Triage + Experiment Halt Fixes)
+**Previous Session:** 874 (Executive Function Integration + Dream Backlog Cleared)
 **Date:** January 29, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **256 Celery Tasks Synced** | **EXECUTIVE FUNCTION ADDED** | **EXPERIMENT HALT INSTRUMENTATION FIXED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **EXECUTIVE FUNCTION INTEGRATED** | **DREAM BACKLOG CLEARED**
 
 ---
 
-## What Was Accomplished in Session 873
+## What Was Accomplished in Session 874
 
-**Handoff:** `docs/handoffs/SESSION_873_DREAM_TRIAGE_FIX.md`
+**Handoff:** `docs/handoffs/SESSION_874_COMPLETE.md`
 
-### Fix 1: Dream Backlog (PR #536)
+### Executive Function Integration (PRs #541-544)
 
-ThinkingAgent system insights revealed actual backlog far worse than reported:
+All 4 components from Session 872 now wired into production:
 
-| Metric | Reported | Actual |
-|--------|----------|--------|
-| **Pending Dreams** | 538 | **2,130** |
-| **Oldest Pending** | 72.3 hours | **62 days** |
+| PR | Component | Integration Point |
+|----|-----------|-------------------|
+| #541 | **DecisionEnforcerAgent** | `conversation_orchestrator.py` - forces decisive outcomes |
+| #542 | **SynthesisContract** | Debate flows - binary categorization (validated/rejected) |
+| #543 | **AutoSpawnerService** | `ResearchAgent` - data insufficiency reflexes |
+| #544 | **Prompt Sharpening** | `BaseAgent` - ALL agents now use decisive language |
 
-**Solution:** Increased `dream-auto-triage` capacity 10x:
-- Schedule: every 4 hours → **every hour**
-- max_promote: 20 → **200**
-- max_archive: 50 → **500**
-- archive_age_days: 7 → **3**
+### Dream Backlog Cleared (PR #545)
 
-**Expected:** Clear 2,130 dream backlog in ~12 hours.
+| Metric | Before | After |
+|--------|--------|-------|
+| **Pending Dreams** | 2,130+ | **13** |
+| **Oldest Pending** | 62 days | **2 days** |
+| **Reduction** | - | **99.4%** |
 
-### Fix 2: Experiment Halt Instrumentation (PRs #538, #539)
+**Root Cause:** 1,292 dreams stuck in "limbo" (scores 0.45-0.60) - too low for promotion, too high for archiving.
 
-Audit revealed critical issues with experiment halt system:
+**Fix:** Adjusted thresholds:
+- `promote_threshold`: 0.75 → 0.55
+- `archive_score_threshold`: 0.40 → 0.55
 
-| Issue | Impact | Fix |
-|-------|--------|-----|
-| `decision.title` → `decision.topic` | All experiments named "Unknown Decision" | Fixed in gate_progression_pipeline.py + views_autonomous_reasoning.py |
-| 0% AgentExecution.experiment FK set | Halt calculations couldn't scope to experiments | Added ExperimentLinkerService with auto-link signal |
-| 4 stale experiments (54-57h old) | Wasted resources | Cleaned up, marked inconclusive |
+### Gate Waiver Investigation
 
-**New Service:** `core/services/experiment_linker.py`
-- `find_experiment_for_execution()` - Looks up running experiment
-- `link_execution_to_experiment()` - Links execution to experiment
-- Post-save signal for automatic FK population
-
----
-
-## Session 872 Recap (Executive Function)
-
-| PR | Component | Purpose |
-|----|-----------|---------|
-| #531 | **DecisionEnforcerAgent** | "Prefrontal Cortex" - forces decisions after debate |
-| #532 | **SynthesisContract** | Binary categorization (validated/rejected) |
-| #533 | **AutoSpawnerService** | Data insufficiency reflexes |
-| #534 | **Prompt Sharpening** | Transform hedging → decisive language |
+**Finding:** 79.4% waiver rate is **working as designed**:
+- 83.9% of decisions are low-risk types (experiment/product/pipeline/research)
+- Auto-waive correctly fast-tracks low-risk items
+- Pilot success rate from waived gates: 204 completed, 0 failures
 
 ---
 
-## New Components Available
+## Components Now Active
 
-### Contracts (`core/contracts/`)
-
-```python
-from core.contracts import (
-    ResearchContract,      # Structured research outputs
-    ExecutionMandate,      # Forced decision closure
-    SynthesisContract,     # Debate synthesis
-)
-```
-
-### Agents (`core/agents/`)
+### Executive Function (Session 872-874)
 
 ```python
-from core.agents import DecisionEnforcerAgent  # Forces decisions
-```
+# DecisionEnforcerAgent - forces decisions after debate
+from core.agents import DecisionEnforcerAgent
 
-### Services (`core/services/`)
+# SynthesisContract - structured debate output
+from core.contracts import SynthesisContract
 
-```python
+# AutoSpawnerService - data insufficiency reflexes
 from core.services.auto_spawner_service import auto_spawn_if_needed
-# Auto-spawns agents when data is insufficient
 
-from core.services.experiment_linker import find_experiment_for_execution
-# Auto-links AgentExecution to experiments for halt system
+# Prompt Sharpening - decisive language for ALL agents
+from core.prompts.sharpening import sharpen_prompt, SHARP_DEBATE_RULES
 ```
 
-### Prompts (`core/prompts/`)
+### Feature Flags (conversation_orchestrator.py)
 
 ```python
-from core.prompts.sharpening import sharpen_prompt, SHARP_DEBATE_RULES
-# Transforms hedging language to decisive language
+ENABLE_DECISION_ENFORCEMENT = True  # Force decisions via DecisionEnforcerAgent
+ENABLE_SYNTHESIS_CONTRACT = True    # Convert DecisionSummary → SynthesisContract
 ```
 
 ---
 
-## Priority for Session 874
+## Priority for Session 875
 
-### Monitoring
+### Monitoring (Optional)
 
-- [ ] Verify dream backlog is clearing (~700/hour expected)
-- [ ] Verify experiment linker is auto-linking new executions
+- [ ] Observe DecisionEnforcerAgent in production debates
+- [ ] Verify prompt sharpening transforms hedging language in agent outputs
 
-### Integration Work
+### Potential Work
 
-- [ ] Integrate DecisionEnforcerAgent into conversation_orchestrator
-- [ ] Add SynthesisContract to debate flows
-- [ ] Hook AutoSpawnerService into ResearchAgent
-- [ ] Apply prompt sharpening to agent system prompts
-
-### Investigation
-
-- [ ] Address 79.4% gate waiver rate (why so many waivers?)
+- [ ] Review agents for sharpening_type customization (some may need 'analysis' vs 'debate')
+- [ ] Add content-based risk keywords for gate classification (production, user data, API)
+- [ ] Clean up 169 orphaned waived gates (old "Discussion:" decisions without pilots)
 
 ---
 
@@ -121,11 +95,21 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Check dream backlog
-curl https://donkey-betz-platform-production.up.railway.app/api/mythology/dreams/stats/
+# Check dream backlog (should be ~13)
+python -c "
+import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+import django; django.setup()
+from core.models_unified_system import AgentDream
+pending = AgentDream.objects.filter(promoted_to_decision=False, shown_to_user=False).count()
+print(f'Pending dreams: {pending}')
+"
 
-# Backfill experiment FKs on historical AgentExecution records
-python -c "from core.services.experiment_linker import backfill_experiment_fks; print(backfill_experiment_fks(dry_run=False))"
+# Test prompt sharpening
+python -c "
+from core.prompts.sharpening import sharpen_prompt
+print(sharpen_prompt('We should validate this before proceeding'))
+"
+# Output: THIS REQUIRES validation before proceeding
 
 # Verify Celery tasks
 python manage.py sync_celery_beat
@@ -161,12 +145,12 @@ python manage.py sync_celery_beat
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **874** | Executive Function Integration + Dream Backlog Cleared | COMPLETE |
 | **873** | Dream Triage + Experiment Halt Instrumentation Fixes | COMPLETE |
 | **872** | API Migration + 404 Fixes + **Executive Function** (4 new components) | COMPLETE |
 | **871** | TIER 4: API Standardization + Dead Code + Documentation | COMPLETE |
 | **870** | TIER 3: Frontend Error States + Learning Journey UI | COMPLETE |
 | **869** | TIER 2-3: Stub Replacement + Voice Marketplace UI | COMPLETE |
-| **868** | TIER 1: Critical Fixes - Gallery Series, Reasoning Gates | COMPLETE |
 
 ---
 
@@ -174,24 +158,25 @@ python manage.py sync_celery_beat
 
 | Doc | Purpose |
 |-----|---------|
+| `docs/handoffs/SESSION_874_COMPLETE.md` | Session 874 details |
 | `docs/handoffs/SESSION_873_DREAM_TRIAGE_FIX.md` | Session 873 details |
-| `docs/audits/EXPERIMENT_HALT_RULES_AUDIT.md` | Experiment halt audit |
-| `docs/handoffs/SESSION_872_COMPLETE.md` | Session 872 full details |
+| `docs/handoffs/SESSION_872_COMPLETE.md` | Executive Function components |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Dream → Initiative pipeline |
 | `docs/AGENTS.md` | Agent documentation (76 agents) |
 | `docs/SPIDERS.md` | Spider network (77 spiders) |
 
 ---
 
-## Session 873 PRs
+## Session 874 PRs
 
 | PR | Title |
 |----|-------|
-| #536 | fix(Session 873): Increase dream triage frequency and capacity |
-| #537 | docs(Session 873): Add session handoff and update for Session 874 |
-| #538 | docs(Session 873): Add experiment halt rules audit |
-| #539 | fix(Session 873): Fix experiment halt system instrumentation |
+| #541 | feat(Session 874): Integrate DecisionEnforcerAgent into conversation_orchestrator |
+| #542 | feat(Session 874): Add SynthesisContract to debate flows |
+| #543 | feat(Session 874): Hook AutoSpawnerService into ResearchAgent |
+| #544 | feat(Session 874): Apply prompt sharpening to all agents via BaseAgent |
+| #545 | fix(Session 874): Adjust dream triage thresholds to clear limbo backlog |
 
 ---
 
-**All fixes deployed. Experiment halt system now properly instrumented.**
+**All Session 874 work complete. Executive Function now active in production.**
