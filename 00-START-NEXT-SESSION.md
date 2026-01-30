@@ -1,45 +1,64 @@
-# Session 876 - Start Here
+# Session 877 - Start Here
 
-**Previous Session:** 875 (Context Tracing System)
+**Previous Session:** 876 (GPT-5-mini Token Limits Fix)
 **Date:** January 29, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **CONTEXT TRACING ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **CONTEXT TRACING ACTIVE** | **TOKEN LIMITS FIXED**
 
 ---
 
-## What Was Accomplished in Session 875
+## What Was Accomplished in Session 876
 
-**Handoff:** `docs/handoffs/SESSION_875_CONTEXT_TRACING_SYSTEM.md`
+**Handoff:** `docs/handoffs/SESSION_876_TOKEN_LIMITS_FIX.md`
 
-### Context Tracing System (PRs #552-554)
+### Critical Production Fix: GPT-5-mini Empty Content (PR #554 updated)
 
-Implemented comprehensive tracing to diagnose `'list' object has no attribute 'get'` errors:
+**Problem:** Agents returning empty content in production despite HTTP 200 responses.
 
-| Component | Purpose |
-|-----------|---------|
-| **ContextTracer** | Service for tracking context mutations across pipeline |
-| **BadContextEvent** | Database model for persisting forensic data |
-| **Pipeline Integration** | Tracing at 4 key stages: post_deserialize, pre_enqueue, router, agent |
+**Root Cause:** GPT-5-mini reasoning models consume tokens internally for reasoning BEFORE generating visible output. With `max_completion_tokens=1000`, all tokens were consumed by reasoning, leaving nothing for actual content.
 
-### Key Files Added/Modified
+**Solution:** Increased `max_completion_tokens` from 1000 → 4000 across 12 production files:
 
-| File | Changes |
-|------|---------|
-| `core/services/context_tracing.py` | **NEW** - ContextTracer service with trace IDs |
-| `core/models_unified_system.py` | Added BadContextEvent model |
-| `core/migrations/0209_add_bad_context_event.py` | Migration for new model |
-| `core/tasks.py` | Added tracing at Celery entry point |
-| `intelligence/tasks.py` | Added tracing at Celery entry point |
-| `core/services/conversation_action_dispatcher.py` | Added pre_enqueue tracing + schema validation |
-| `core/agent_router.py` | Added router stage tracing |
+| File | Change |
+|------|--------|
+| `core/tasks.py` | 2 occurrences (conversation + dream generation) |
+| `core/views_rag_embeddings.py` | RAG query response |
+| `core/views_advisor_api.py` | Advisor consultations |
+| `core/views_assistant_rag_enhanced.py` | Enhanced assistant |
+| `core/views_assistant_intelligent.py` | Intelligent assistant |
+| `core/services/weekly_synthesis.py` | Weekly reports |
+| `core/services/research_orchestrator.py` | Opportunity scoring |
+| `core/agents/ai_series_workflow_agent.py` | Script generation |
+| `core/agents/business/customer_research_agent.py` | Persona generation (1000→2000) |
+| `pipelines/services.py` | Image prompt generation |
+| `agents/executors/income_builder_executor.py` | Income analysis |
+| `agents/executors/ai_project_executor.py` | Content generation |
+| `coleadership/reflections.py` | Decision reflections |
+
+### Context Tracing System (from Session 875)
+
+Still active - monitoring for `'list' object has no attribute 'get'` errors:
+- `BadContextEvent` model captures context type violations
+- Tracing at 4 pipeline stages: post_deserialize, pre_enqueue, router, agent
 
 ---
 
-## Priority for Session 876
+## Priority for Session 877
+
+### Verify Production Fix
+
+After Railway deploys, check that agents are now generating content:
+
+```bash
+# Check Operations Tab for recent content
+# Should see actual content instead of "No content generated"
+
+# Check Memory Palace for new entries
+# Should see activity after the fix is deployed
+```
 
 ### Monitor Context Tracing
 
 ```bash
-# Check for bad context events (should be 0 initially)
 python manage.py shell -c "
 from core.models_unified_system import BadContextEvent
 print(f'Bad context events: {BadContextEvent.objects.count()}')
@@ -49,18 +68,11 @@ if BadContextEvent.objects.exists():
 "
 ```
 
-### Extend Tracing (if bad contexts appear)
-
-If BadContextEvent records accumulate:
-1. Add `log_llm_output()` to ConversationOrchestrator where DecisionSummary is generated
-2. Add `log_parser_output()` after next_steps parsing
-3. Add `log_agent()` in BaseAgent.execute()
-
 ### Potential Work
 
 - [ ] Review Session 867 audit findings (231 unscheduled tasks, 40+ stubs)
-- [ ] Finish remaining tracing integration points
-- [ ] Add Celery-specific deserialization checks if Redis serialization is suspect
+- [ ] Complete remaining tracing integration points (log_llm_output, log_parser_output, log_agent)
+- [ ] Add token usage logging/monitoring to track reasoning overhead
 
 ---
 
@@ -79,18 +91,6 @@ from core.models_unified_system import BadContextEvent
 print(f'Events: {BadContextEvent.objects.count()}')
 for e in BadContextEvent.get_stage_summary(hours=24):
     print(f'  {e[\"stage\"]}: {e[\"count\"]} events')
-"
-
-# Test ContextTracer
-python manage.py shell -c "
-from core.services.context_tracing import ContextTracer
-tracer = ContextTracer(source='test')
-print(f'Trace ID: {tracer.trace_id}')
-
-# Test auto-repair
-bad_context = ['item1', 'item2']  # list instead of dict
-repaired = ContextTracer.auto_repair_context(bad_context)
-print(f'Repaired: {repaired}')  # Should be {}
 "
 
 # Verify Celery tasks
@@ -127,12 +127,12 @@ python manage.py sync_celery_beat
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **876** | GPT-5-mini Token Limits Fix (1000 → 4000) for empty content | COMPLETE |
 | **875** | Context Tracing System for diagnosing list-as-dict errors | COMPLETE |
 | **874** | Executive Function Integration + Dream Backlog Cleared | COMPLETE |
 | **873** | Dream Triage + Experiment Halt Instrumentation Fixes | COMPLETE |
 | **872** | API Migration + 404 Fixes + Executive Function (4 new components) | COMPLETE |
 | **871** | TIER 4: API Standardization + Dead Code + Documentation | COMPLETE |
-| **870** | TIER 3: Frontend Error States + Learning Journey UI | COMPLETE |
 
 ---
 
@@ -140,8 +140,8 @@ python manage.py sync_celery_beat
 
 | Doc | Purpose |
 |-----|---------|
+| `docs/handoffs/SESSION_876_TOKEN_LIMITS_FIX.md` | Session 876 details |
 | `docs/handoffs/SESSION_875_CONTEXT_TRACING_SYSTEM.md` | Session 875 details |
-| `docs/handoffs/SESSION_874_COMPLETE.md` | Session 874 details |
 | `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | System-wide audit findings |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Dream → Initiative pipeline |
 | `docs/AGENTS.md` | Agent documentation (76 agents) |
@@ -149,14 +149,12 @@ python manage.py sync_celery_beat
 
 ---
 
-## Session 875 PRs
+## Session 876 PRs
 
 | PR | Title |
 |----|-------|
-| #552 | fix(Session 875): Add defensive context type checks to prevent list-as-dict errors |
-| #553 | fix(Session 875): Add defensive context checks to Celery agent tasks |
-| #554 | feat(Session 875): Add comprehensive context tracing system |
+| #554 | feat(Session 875): Add comprehensive context tracing system + GPT-5-mini token fix |
 
 ---
 
-**Context tracing is now active. BadContextEvent table will capture any context type violations for forensic analysis.**
+**GPT-5-mini token limits fixed. Agents should now generate actual content instead of empty responses.**
