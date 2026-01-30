@@ -2827,6 +2827,7 @@ urlpatterns = [
     # Session 622: Document Registry / Initiatives API
     path('api/initiatives/', views_research_demo.initiatives_api, name='initiatives-list'),  # Session 871: migrated to /api/
     path('api/initiatives/populate/', views_research_demo.populate_initiatives_api, name='initiatives-populate'),
+    path('api/initiatives/trigger/', views_research_demo.trigger_initiative_pipeline_api, name='initiatives-trigger'),  # Session 880: Manual trigger
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
