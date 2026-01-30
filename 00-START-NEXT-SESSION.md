@@ -41,6 +41,14 @@ Removed 2,767 lines of unused code:
 | `views_master_demo.py` | 77 | Backend |
 | `DiagnosticPanel.tsx` | 376 | Frontend |
 
+### TIER 4: Dead Code Cleanup Phase 2 (PR #516)
+
+Removed 8 unused imports from `core/urls.py`:
+- `visualization_redirect`, `assistant_redirect`
+- `income_builder_view`, `neural_orchestra_view`
+- `AnalyticsDashboardView`, `analytics_api_data`
+- `ai_image_studio`, `diagnostic_dashboard`
+
 ### TIER 4: Dream → Initiative Documentation (PR #514)
 
 **Created:** `docs/DREAM_INITIATIVE_WORKFLOW.md` (398 lines)
@@ -68,7 +76,8 @@ The system-wide audit from Session 867 identified gaps that have now been addres
 
 ### Optional Remaining Tasks
 
-- [ ] Dead code cleanup Phase 2 - Deprecated models with 0 records
+- [x] Dead code cleanup Phase 2 - Unused imports (PR #516)
+- [ ] Dead code cleanup Phase 3 - Deprecated models with 0 records
 - [ ] API path migration Phase 3 - Resolve conflicting endpoints
 - [ ] Performance optimization - Identify slow queries
 - [ ] Test coverage improvements
@@ -159,6 +168,8 @@ ls core/views_command_center.py 2>/dev/null || echo "Removed"
 | #512 | chore(Session 871): Remove dead code - Phase 1 |
 | #513 | docs(Session 871): Mark dead code cleanup Phase 1 complete |
 | #514 | docs(Session 871): Document Dream → Initiative workflow |
+| #515 | docs(Session 871): Add session handoff document |
+| #516 | chore(Session 871): Remove unused imports from urls.py - Phase 2 |
 
 ---
 
