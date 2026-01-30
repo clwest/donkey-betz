@@ -1000,57 +1000,53 @@ class ConversationOrchestrator:
             except Exception as e:
                 logger.warning(f"Failed to create conversation memories: {e}")
 
-        # Session 884: Extract deliverables from conversation output
-        # This creates Deliverable records from valuable content (personas, plans, analyses)
-        deliverable_extraction = {'deliverables_created': 0}
+        # Session 884: Process conversation through Initiative Pipeline
+        # This creates an Initiative with linked Deliverable and dispatches stage-linked tasks
+        # Flow: Conversation → Initiative → Deliverable → Stage Tasks → Stage Advancement
+        initiative_pipeline_result = {'initiative_id': None}
         if decision_summary and messages:
             try:
-                from core.services.conversation_deliverable_extractor import extract_conversation_deliverables
-                deliverable_extraction = extract_conversation_deliverables(
+                from core.services.conversation_initiative_pipeline import process_conversation_to_initiative
+                initiative_pipeline_result = process_conversation_to_initiative(
                     conversation_id=conversation_id,
                     messages=messages,
                     decision_summary=decision_summary,
                     participants=[agent1['name'], agent2['name']],
                     topic=topic
                 )
-                ai_world_metadata['deliverables_created'] = deliverable_extraction.get('deliverables_created', 0)
-                ai_world_metadata['deliverable_ids'] = deliverable_extraction.get('deliverable_ids', [])
 
-                # Use concrete next steps from extraction if available
-                concrete_steps = deliverable_extraction.get('concrete_next_steps', [])
-                if concrete_steps:
-                    logger.info(f"📦 Session 884: Created {len(concrete_steps)} concrete next steps from deliverable")
+                # Update ai_world metadata with pipeline results
+                ai_world_metadata['initiative_id'] = initiative_pipeline_result.get('initiative_id')
+                ai_world_metadata['initiative_name'] = initiative_pipeline_result.get('initiative_name')
+                ai_world_metadata['deliverables_created'] = 1 if initiative_pipeline_result.get('deliverable_id') else 0
+                ai_world_metadata['deliverable_ids'] = [initiative_pipeline_result.get('deliverable_id')] if initiative_pipeline_result.get('deliverable_id') else []
+                ai_world_metadata['stages_created'] = initiative_pipeline_result.get('stages_created', 0)
+                ai_world_metadata['actions_dispatched'] = initiative_pipeline_result.get('tasks_dispatched', 0)
+
+                if initiative_pipeline_result.get('initiative_id'):
+                    logger.info(
+                        f"🚀 Session 884: Created Initiative pipeline: "
+                        f"Initiative={initiative_pipeline_result.get('initiative_name')}, "
+                        f"Deliverable={initiative_pipeline_result.get('deliverable_id')}, "
+                        f"Stages={initiative_pipeline_result.get('stages_created')}, "
+                        f"Tasks={initiative_pipeline_result.get('tasks_dispatched')}"
+                    )
             except Exception as e:
-                logger.warning(f"Failed to extract conversation deliverables: {e}")
+                logger.warning(f"Failed to process conversation through Initiative pipeline: {e}")
 
-        # Dispatch next_steps as actual agent tasks
-        if ENABLE_ACTION_DISPATCH and decision_summary and decision_summary.get('next_steps'):
-            try:
-                from core.services.conversation_action_dispatcher import dispatch_conversation_actions
-
-                # Session 884: If we have concrete steps from deliverable extraction, use those
-                # instead of vague "document insights" type steps
-                concrete_steps = deliverable_extraction.get('concrete_next_steps', [])
-                if concrete_steps:
-                    # Convert concrete steps to dispatch format
-                    enhanced_summary = {
-                        **decision_summary,
-                        'next_steps': [f"{s['agent']}: {s['task']}" for s in concrete_steps]
-                    }
-                    dispatch_summary = enhanced_summary
-                else:
-                    dispatch_summary = decision_summary
-
-                dispatch_result = dispatch_conversation_actions(
-                    conversation_id=conversation_id,
-                    decision_summary=dispatch_summary,
-                    participants=[agent1['name'], agent2['name']],
-                    context={'topic': topic, 'conversation_type': conversation_type}
-                )
-                ai_world_metadata['actions_dispatched'] = dispatch_result.get('dispatched_count', 0)
-                ai_world_metadata['actions_failed'] = dispatch_result.get('failed_count', 0)
-            except Exception as e:
-                logger.warning(f"Failed to dispatch conversation actions: {e}")
+                # Fallback to old dispatcher if pipeline fails
+                try:
+                    from core.services.conversation_action_dispatcher import dispatch_conversation_actions
+                    dispatch_result = dispatch_conversation_actions(
+                        conversation_id=conversation_id,
+                        decision_summary=decision_summary,
+                        participants=[agent1['name'], agent2['name']],
+                        context={'topic': topic, 'conversation_type': conversation_type}
+                    )
+                    ai_world_metadata['actions_dispatched'] = dispatch_result.get('dispatched_count', 0)
+                    ai_world_metadata['actions_failed'] = dispatch_result.get('failed_count', 0)
+                except Exception as e2:
+                    logger.warning(f"Fallback action dispatch also failed: {e2}")
 
         return {
             'messages': messages,
@@ -1085,6 +1081,8 @@ class ConversationOrchestrator:
             'execution_mandate': execution_mandate.to_dict() if execution_mandate else None,
             # Session 874: SynthesisContract for structured debate output
             'synthesis_contract': synthesis_contract_dict,
+            # Session 884: Initiative Pipeline - connects conversation to trackable work
+            'initiative_pipeline': initiative_pipeline_result,
         }
 
     def _enforce_decision(
