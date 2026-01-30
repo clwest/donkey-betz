@@ -432,6 +432,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 875: Ensure context is a dict (defensive fix for list being passed)
+        if not isinstance(context, dict):
+            logger.warning(f"ResearchAgent received non-dict context (type={type(context).__name__}), using empty dict")
+            context = {}
+
         # Session 858: Extract user context for personalized research
         user_context = context.get('user', {})
         self._user_context = user_context
