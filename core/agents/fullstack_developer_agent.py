@@ -358,6 +358,24 @@ Provide complete, working code that can be directly used."""
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 880: Write generated files to workspace
+                        workspace_write_result = None
+                        all_files = []
+                        for res in all_results:
+                            tool_data = res.get('data', {})
+                            if tool_data.get('files'):
+                                all_files.extend(tool_data['files'])
+
+                        if all_files:
+                            workspace_write_result = self._write_files_to_workspace(
+                                files=all_files,
+                                user=self.user
+                            )
+                            if workspace_write_result.get('written'):
+                                logger.info(f"✅ [FullStackDeveloperAgent] Wrote {workspace_write_result.get('total_written', 0)} files to workspace")
+                            else:
+                                logger.warning(f"⚠️ [FullStackDeveloperAgent] Workspace write skipped: {workspace_write_result.get('reason', 'unknown')}")
+
                         # Session 856: Build descriptive message based on tool used
                         first_result = all_results[0]
                         tool_used = first_result['source']
@@ -389,6 +407,10 @@ Provide complete, working code that can be directly used."""
                         else:
                             descriptive_msg = f"Full-stack development '{tool_used}' completed"
 
+                        # Session 880: Append workspace write info to message
+                        if workspace_write_result and workspace_write_result.get('written'):
+                            descriptive_msg += f" | 📁 {workspace_write_result.get('total_written', 0)} files written to workspace"
+
                         # Enrich result data for content review
                         result_data = {
                             'results': all_results,
@@ -397,7 +419,8 @@ Provide complete, working code that can be directly used."""
                             'feature_name': tool_data.get('feature_name'),
                             'backend_framework': tool_data.get('backend_framework') or tool_data.get('framework'),
                             'frontend_framework': tool_data.get('frontend_framework'),
-                            'file_count': tool_data.get('file_count', len(tool_data.get('files', [])))
+                            'file_count': tool_data.get('file_count', len(tool_data.get('files', []))),
+                            'workspace_write': workspace_write_result  # Session 880: Include workspace write info
                         }
 
                         result = AgentResult(
