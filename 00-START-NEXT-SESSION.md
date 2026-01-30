@@ -1,8 +1,8 @@
 # Session 873 - Start Here
 
-**Previous Session:** 872 (API Path Migration + 404 Fixes + Celery Beat Sync)
+**Previous Session:** 872 (API Fixes + Celery Sync + ChatGPT Feedback Implementation)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | **256 Celery Tasks Synced** | **17 Workspace Tabs** | **PLATFORM NOW ALIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **256 Celery Tasks Synced** | **3 New Contracts** | **EXECUTIVE FUNCTION ADDED**
 
 ---
 
@@ -10,40 +10,78 @@
 
 **Handoff:** `docs/handoffs/SESSION_872_COMPLETE.md`
 
-### Critical Fix: Celery Beat Sync (PR #525)
-
-**Root Cause Found:** Platform felt "dead" because `DatabaseScheduler` ignores Python configs. ~179 tasks in `celery.py` were **never synced** to the database.
-
-**Solution:** Added release command to Procfile:
-```
-release: python manage.py migrate --noinput && python manage.py sync_celery_beat --apply
-```
-
-Now on every deploy, all 256 tasks sync to the database and execute.
-
-### Other Fixes
+### Phase 1: Critical Fixes (PRs #520-528)
 
 | PR | Fix |
 |----|-----|
 | #520 | API path migration Phase 3 - Removed unused dashboard module |
 | #521 | Fixed 19 mythology/initiatives 404 errors |
-| #522 | Documentation updates |
-| #523 | Removed duplicate Voices from sidebar |
+| #522-523 | Documentation + UI cleanup |
 | #524 | Added missing `/api/v1/reasoning/gates/` endpoint |
 | #525 | **Celery Beat sync + health monitoring** |
-| #527 | **AudioAgent TTS fix** - Adaptive timeout + retry logic |
-| #528 | **ImageAgent fix** - Adaptive timeout + retry logic for Stability AI |
+| #527 | **AudioAgent TTS fix** - Adaptive timeout + retry |
+| #528 | **ImageAgent fix** - Stability AI timeout + retry |
+
+### Phase 2: ChatGPT Feedback Implementation (PRs #529-534)
+
+Based on external review, implemented "Executive Function" for the platform:
+
+| PR | Component | Purpose |
+|----|-----------|---------|
+| #529 | **ResearchContract** | Structured research outputs with validation |
+| #531 | **DecisionEnforcerAgent** | "Prefrontal Cortex" - forces decisions after debate |
+| #532 | **SynthesisContract** | Binary categorization (validated/rejected) |
+| #533 | **AutoSpawnerService** | Data insufficiency reflexes |
+| #534 | **Prompt Sharpening** | Transform hedging → decisive language |
+
+### New Architecture
+
+```
+Debate → SynthesisContract → DecisionEnforcerAgent → ExecutionMandate → Tasks
+         (structured)        (forces decision)       (owner/deadline)   (Celery)
+```
+
+### Blocked Phrases (System-Wide)
+
+These are now rejected:
+- "Further analysis recommended"
+- "Productive discussion"
+- "We should explore"
+- "Consider validating"
 
 ---
 
-## Expected After Deploy
+## New Components Available
 
-Once deployed, the platform will:
-1. **Sync 256 Celery tasks** to database on startup
-2. **Run spiders** every 15 minutes (fresh data)
-3. **Create memories** every 30 minutes
-4. **Execute intelligence loops** every 15 minutes
-5. **Monitor health** every 30 minutes with Discord alerts
+### Contracts (`core/contracts/`)
+
+```python
+from core.contracts import (
+    ResearchContract,      # Structured research outputs
+    ExecutionMandate,      # Forced decision closure
+    SynthesisContract,     # Debate synthesis
+)
+```
+
+### Agents (`core/agents/`)
+
+```python
+from core.agents import DecisionEnforcerAgent  # New: Forces decisions
+```
+
+### Services (`core/services/`)
+
+```python
+from core.services.auto_spawner_service import auto_spawn_if_needed
+# Auto-spawns agents when data is insufficient
+```
+
+### Prompts (`core/prompts/`)
+
+```python
+from core.prompts.sharpening import sharpen_prompt, SHARP_DEBATE_RULES
+# Transforms hedging language to decisive language
+```
 
 ---
 
@@ -51,22 +89,18 @@ Once deployed, the platform will:
 
 ### All Audit Tasks Complete!
 
-The system-wide audit from Session 867 is fully resolved:
-
-- [x] TIER 1: Critical fixes (Session 868)
-- [x] TIER 2: High priority (Sessions 868-869)
-- [x] TIER 3: Medium priority (Sessions 869-870)
-- [x] TIER 4: Technical debt (Sessions 871-872)
-- [x] Platform data freshness (Session 872 - Celery sync)
+- [x] TIER 1-4: All fixes complete
+- [x] Platform data freshness (Celery sync)
+- [x] ChatGPT feedback implementation
 
 ### Optional Improvements
 
-- [ ] Performance optimization - Identify slow queries
+- [ ] Integrate DecisionEnforcerAgent into conversation_orchestrator
+- [ ] Add SynthesisContract to debate flows
+- [ ] Hook AutoSpawnerService into ResearchAgent
+- [ ] Apply prompt sharpening to all agent system prompts
+- [ ] Performance optimization
 - [ ] Test coverage improvements
-- [ ] Add more workspace tabs for specific agent categories
-- [ ] Enhance Dream → Initiative UI with better visualization
-- [ ] Add bulk operations to Learning Journey
-- [ ] Improve Voice Marketplace with voice preview
 
 ---
 
