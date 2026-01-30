@@ -470,12 +470,67 @@ result = enforce_decision_after_synthesis(
 
 ---
 
+## 10. Synthesis Contract (PR #532)
+
+### Problem
+
+ChatGPT feedback: "The Synthesis Is Weak - It threw away 80% of the intelligence. It collapsed everything into mush."
+
+Current `DecisionSummary` format:
+- Generic prose ("Productive discussion...")
+- No binary categorization (what was validated vs rejected)
+- No risk acknowledgment
+- Vague next steps
+
+### Solution
+
+Created **SynthesisContract** for structured debate output.
+
+```python
+@dataclass
+class SynthesisContract:
+    topic: str                           # What was debated
+    validated: List[str]                 # What was PROVEN
+    rejected: List[str]                  # What was REJECTED (with reasons)
+    open_risks: List[str]                # Unresolved risks
+    experiments: List[str]               # How to test conclusions
+    owner_assignments: Dict[str, str]    # Agent → task
+    consensus_level: ConsensusLevel      # UNANIMOUS | MAJORITY | SPLIT
+```
+
+**Key Features:**
+
+| Feature | Description |
+|---------|-------------|
+| Binary categorization | Validated vs Rejected - no ambiguity |
+| Weasel detection | Rejects "productive discussion", "further analysis" |
+| Measurable experiments | Must include metrics/timeframes |
+| Owner assignments | Specific tasks with accountability |
+| Quality scoring | 0-100 based on completeness |
+
+**Vague Phrases Blocked:**
+- "productive discussion"
+- "good conversation"
+- "further analysis"
+- "should explore"
+- "needs investigation"
+
+### Integration with Decision Enforcer
+
+```
+Debate → SynthesisContract → DecisionEnforcerAgent → ExecutionMandate → Tasks
+         (structured)         (forces decision)       (actionable)      (executed)
+```
+
+---
+
 ## Session 872 Summary
 
 | PR | Description | Status |
 |----|-------------|--------|
 | #520-530 | API fixes, Celery sync, TTS/Image fixes, Research Contract | Merged |
-| #531 | Decision Enforcer Agent - Prefrontal Cortex | Pending |
+| #531 | Decision Enforcer Agent - Prefrontal Cortex | Merged |
+| #532 | Synthesis Contract - Structured debate output | Pending |
 
 **New Agents**: 1 (DecisionEnforcerAgent)
 **New Contracts**: 2 (ResearchContract, ExecutionMandate)
