@@ -57,17 +57,17 @@ path('api/v1/research/', ...)
 
 ---
 
-## Path Conflicts (Do Not Consolidate)
+## Path Namespacing (Not True Conflicts)
 
-The following paths have duplicate functionality at different prefixes:
+The following paths have **different functionality** at different prefixes - this is by design:
 
-| Core Path (`/api/`) | Module Path (`/api/v1/`) | Status |
-|---------------------|--------------------------|--------|
-| `/api/workflows/history/` | `/api/v1/workflows/history/` | Different views |
-| `/api/agents/execute/` | `/api/v1/agents/execute/` | Different views |
-| `/api/dashboard/stats/` | `/api/v1/dashboard/stats/` | Different views |
+| Core Path (`/api/`) | Module Path (`/api/v1/`) | Difference |
+|---------------------|--------------------------|------------|
+| `/api/workflows/*` (26 endpoints) | `/api/v1/workflows/*` (6 endpoints) | Core: management; Module: orchestration execution |
+| `/api/agents/*` (35+ endpoints) | `/api/v1/agents/*` (8 ViewSets) | Core: one-off; Module: full CRUD |
+| `/api/dashboard/*` (11 endpoints) | ~~`/api/v1/dashboard/*`~~ | Module removed in Session 872 (unused) |
 
-**These require consolidation before migration** - see Phase 3 below.
+**Session 872 Analysis:** These are complementary endpoint sets, not duplicates. Both are required.
 
 ---
 
@@ -136,15 +136,24 @@ The following endpoints were migrated from `/api/v1/` to `/api/`:
 
 **Note:** Research and Reasoning APIs remain at `/api/v1/` due to heavy frontend usage - will require dedicated migration session.
 
-### Phase 3: Conflict Resolution (Future)
+### Phase 3: Conflict Resolution (COMPLETE - Session 872)
 
-Before migrating these, consolidate duplicate views:
+Analysis revealed these are **not true conflicts** but **different endpoint sets** serving different purposes:
 
-| Module | Conflict Points | Action Required |
-|--------|-----------------|-----------------|
-| `workflows` | `history/`, `execute/` | Merge views, deprecate one |
-| `agents` | `execute/`, router paths | Consolidate to single view |
-| `dashboard` | `stats/`, `activity/` | Merge functionality |
+| Module | `/api/` (core) | `/api/v1/` (module) | Status |
+|--------|----------------|---------------------|--------|
+| `workflows` | 26 endpoints for workflow management | 6 endpoints for agent orchestration execution | Keep both (different purposes) |
+| `agents` | 35+ one-off endpoints | 8 DRF ViewSets for CRUD | Keep both (frontend uses v1 heavily - 47 refs) |
+| `dashboard` | 11 endpoints (revenue, learning, health) | 3 endpoints (embeddings stats) | **Module REMOVED** - unused |
+
+**Actions Taken:**
+- Removed `dashboard.urls` include - endpoints unused by frontend or backend
+- Documented that workflows/agents modules are NOT duplicates but complementary
+
+**Remaining at `/api/v1/` (Required):**
+- `workflows.urls` - Used by `personal_assistant_agent.py`
+- `agents.urls` - 47 frontend references in `api.ts`
+- `sports.urls`, `content.urls`, `self_awareness.urls` - Active modules
 
 ---
 
