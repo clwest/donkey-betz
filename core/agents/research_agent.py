@@ -1106,7 +1106,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 for r in all_results
             )
             if not has_execution_data:
-                gaps.append("ExperimentExecution logs (core.models_experiment.ExperimentExecution)")
+                gaps.append("Experiment data (core.models.Experiment, AgentExecution)")
 
         if not all_results:
             gaps.append("Primary data sources returned no results")
@@ -1147,7 +1147,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
         # Prioritize specific data gaps
         for gap in data_gaps:
-            if 'ExperimentExecution' in gap or 'log' in gap.lower():
+            if 'Experiment' in gap or 'log' in gap.lower():
                 return f"Missing: {gap}"
             if 'time-series' in gap.lower() or 'temporal' in gap.lower():
                 return f"Missing: {gap}"

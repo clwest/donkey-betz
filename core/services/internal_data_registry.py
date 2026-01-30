@@ -38,32 +38,39 @@ logger = logging.getLogger(__name__)
 INTERNAL_DATA_REGISTRY: Dict[str, Dict[str, Any]] = {
     # =========================================================================
     # EXPERIMENT & EXECUTION DATA
+    # Session 882: Fixed to match actual schema (was using non-existent ExperimentExecution model)
     # =========================================================================
     'experiments': {
-        'name': 'Experiment Executions',
-        'model': 'core.models_experiment.ExperimentExecution',
-        'description': 'All experiment runs including A/B tests, feature flags, and agent experiments',
-        'keywords': ['experiment', 'a/b test', 'feature flag', 'variant', 'control', 'treatment', 'halt', 'failed'],
+        'name': 'Experiments',
+        'model': 'core.models.Experiment',
+        'description': 'All experiment runs including A/B tests and agent experiments',
+        'keywords': ['experiment', 'a/b test', 'variant', 'control', 'treatment', 'halt', 'failed'],
         'query_examples': [
-            "ExperimentExecution.objects.filter(status='failed').order_by('-created_at')[:20]",
-            "ExperimentExecution.objects.filter(status='auto_halted', halt_reason__icontains='power')",
-            "ExperimentExecution.objects.filter(created_at__gte=timezone.now()-timedelta(days=7))",
+            "Experiment.objects.filter(status='failure').order_by('-created_at')[:20]",
+            "Experiment.objects.filter(is_halted=True).order_by('-halted_at')[:20]",
+            "Experiment.objects.filter(created_at__gte=timezone.now()-timedelta(days=7))",
+            "Experiment.objects.values('status').annotate(cnt=Count('id'))",
         ],
         'key_fields': [
             ('id', 'UUID', 'Unique experiment identifier'),
             ('name', 'str', 'Experiment name'),
-            ('status', 'str', 'pending/running/completed/failed/auto_halted'),
-            ('halt_reason', 'str', 'Why experiment was halted'),
-            ('halt_rule_triggered', 'bool', 'Whether auto-halt rule fired'),
-            ('metrics', 'JSON', 'Experiment metrics and results'),
-            ('config', 'JSON', 'Experiment configuration'),
-            ('sample_size', 'int', 'Number of samples'),
-            ('p_value', 'float', 'Statistical p-value'),
-            ('created_at', 'datetime', 'When experiment started'),
-            ('completed_at', 'datetime', 'When experiment ended'),
+            ('hypothesis', 'text', 'Experiment hypothesis'),
+            ('status', 'str', 'running/success/failure/partial/inconclusive'),
+            ('is_halted', 'bool', 'Whether experiment was halted'),
+            ('halted_by', 'str', 'Who/what halted: auto/manual/system'),
+            ('halt_reason', 'text', 'Why experiment was halted'),
+            ('result_summary', 'text', 'Summary of results'),
+            ('learnings', 'text', 'Key learnings extracted'),
+            ('extracted_metrics', 'JSON', 'Experiment metrics and results'),
+            ('halt_conditions', 'JSON', 'Conditions that trigger halt'),
+            ('primary_kpi', 'str', 'Primary KPI being measured'),
+            ('created_at', 'datetime', 'When experiment was created'),
+            ('started_at', 'datetime', 'When experiment started running'),
+            ('ended_at', 'datetime', 'When experiment ended'),
         ],
-        'related_models': ['ExperimentVariant', 'ExperimentMetric'],
+        'related_models': ['ExperimentLearning', 'ABExperiment'],
         'access_pattern': 'direct_query',
+        'status_values': ['running', 'success', 'failure', 'partial', 'inconclusive'],
     },
 
     'agent_executions': {
@@ -71,24 +78,32 @@ INTERNAL_DATA_REGISTRY: Dict[str, Dict[str, Any]] = {
         'model': 'core.models.AgentExecution',
         'description': 'Every agent task execution with timing, success/failure, and output',
         'keywords': ['agent', 'execution', 'task', 'failed', 'error', 'performance', 'timing'],
+        # Session 882: Fixed to match actual schema
         'query_examples': [
-            "AgentExecution.objects.filter(success=False).order_by('-created_at')[:50]",
-            "AgentExecution.objects.filter(agent_name='ResearchAgent', created_at__gte=last_week)",
-            "AgentExecution.objects.values('agent_name').annotate(avg_time=Avg('execution_time_ms'))",
+            "AgentExecution.objects.filter(status='failed').order_by('-created_at')[:50]",
+            "AgentExecution.objects.filter(agent__name='ResearchAgent', created_at__gte=last_week)",
+            "AgentExecution.objects.values('agent__name').annotate(avg_time=Avg('execution_time_ms'))",
+            "AgentExecution.objects.values('status').annotate(cnt=Count('id'))",
         ],
         'key_fields': [
             ('id', 'UUID', 'Execution ID'),
-            ('agent_name', 'str', 'Which agent ran'),
-            ('task', 'str', 'Task description'),
-            ('success', 'bool', 'Whether execution succeeded'),
-            ('error_message', 'str', 'Error details if failed'),
-            ('execution_time_ms', 'int', 'How long it took'),
-            ('input_context', 'JSON', 'Input provided to agent'),
+            ('agent', 'FK', 'Foreign key to Agent model'),
+            ('user', 'FK', 'Foreign key to User who triggered'),
+            ('experiment', 'FK', 'Foreign key to Experiment if part of one'),
+            ('task', 'text', 'Task description'),
+            ('status', 'str', 'completed/failed/in_progress'),
+            ('error_message', 'text', 'Error details if failed'),
+            ('execution_time_ms', 'int', 'How long it took in milliseconds'),
+            ('tokens_used', 'int', 'LLM tokens consumed'),
+            ('cost', 'decimal', 'Cost of execution'),
+            ('input_data', 'JSON', 'Input provided to agent'),
             ('output_data', 'JSON', 'Agent output'),
-            ('created_at', 'datetime', 'When executed'),
+            ('created_at', 'datetime', 'When execution started'),
+            ('completed_at', 'datetime', 'When execution finished'),
         ],
-        'related_models': ['Agent', 'AgentLearning'],
+        'related_models': ['Agent', 'User', 'Experiment'],
         'access_pattern': 'direct_query',
+        'status_values': ['completed', 'failed', 'in_progress'],
     },
 
     # =========================================================================
@@ -505,18 +520,19 @@ def get_query_for_request(request_type: str, **kwargs) -> Optional[str]:
     Returns:
         Query string or None if not recognized
     """
+    # Session 882: Fixed to use correct model and field names
     query_templates = {
         'failed_experiments': (
-            "ExperimentExecution.objects.filter(status__in=['failed', 'auto_halted'])"
+            "Experiment.objects.filter(status='failure')"
             ".order_by('-created_at')[:{limit}]"
         ),
         'recent_agent_errors': (
-            "AgentExecution.objects.filter(success=False, created_at__gte=timezone.now()-timedelta(days={days}))"
+            "AgentExecution.objects.filter(status='failed', created_at__gte=timezone.now()-timedelta(days={days}))"
             ".order_by('-created_at')"
         ),
         'halted_experiments': (
-            "ExperimentExecution.objects.filter(status='auto_halted', halt_rule_triggered=True)"
-            ".order_by('-created_at')[:{limit}]"
+            "Experiment.objects.filter(is_halted=True)"
+            ".order_by('-halted_at')[:{limit}]"
         ),
         'low_quality_content': (
             "SelfBlog.objects.filter(quality_score__lt={threshold}, category='blog')"
@@ -590,68 +606,93 @@ def get_experiment_diagnostic_sources() -> Dict[str, str]:
     Get the specific data sources and queries for experiment diagnostics.
 
     This is tailored for the "analyze failed experiments" use case.
+
+    Session 882: Fixed to use correct model (Experiment, not ExperimentExecution)
+    and correct field names and status values.
     """
     return {
         'failed_experiments': """
-from core.models_experiment import ExperimentExecution
+from core.models import Experiment
 from django.db.models import Avg, Count
 from django.utils import timezone
 from datetime import timedelta
 
-# Get last 20 failed/halted experiments
-failed_experiments = ExperimentExecution.objects.filter(
-    status__in=['failed', 'auto_halted']
+# Get last 20 failed experiments
+# Status values: running, success, failure, partial, inconclusive
+failed_experiments = Experiment.objects.filter(
+    status='failure'
 ).order_by('-created_at')[:20]
 
 for exp in failed_experiments:
     print(f"ID: {exp.id}")
     print(f"Name: {exp.name}")
     print(f"Status: {exp.status}")
+    print(f"Hypothesis: {exp.hypothesis}")
+    print(f"Is Halted: {exp.is_halted}")
     print(f"Halt Reason: {exp.halt_reason}")
-    print(f"Halt Rule Triggered: {exp.halt_rule_triggered}")
-    print(f"Config: {exp.config}")
-    print(f"Metrics: {exp.metrics}")
+    print(f"Result Summary: {exp.result_summary}")
+    print(f"Learnings: {exp.learnings}")
     print("---")
 """,
-        'halt_rule_analysis': """
-# Analyze halt rule patterns
+        'halt_analysis': """
+# Analyze halted experiments
+from core.models import Experiment
 from django.db.models import Count
 
-halt_reasons = ExperimentExecution.objects.filter(
-    status='auto_halted'
-).values('halt_reason').annotate(
+# Get experiments that were halted
+halted = Experiment.objects.filter(is_halted=True)
+print(f"Total halted experiments: {halted.count()}")
+
+# Breakdown by halted_by (auto/manual/system)
+by_halted_by = halted.values('halted_by').annotate(
     count=Count('id')
 ).order_by('-count')
 
-print("Halt Reason Distribution:")
-for reason in halt_reasons:
-    print(f"  {reason['halt_reason']}: {reason['count']}")
+print("\\nHalted By Distribution:")
+for item in by_halted_by:
+    print(f"  {item['halted_by']}: {item['count']}")
+
+# Recent halt reasons
+print("\\nRecent Halt Reasons:")
+for exp in halted.order_by('-halted_at')[:10]:
+    print(f"  {exp.name}: {exp.halt_reason[:100] if exp.halt_reason else 'No reason'}")
 """,
-        'instrumentation_check': """
-# Check for instrumentation issues
-experiments_with_issues = ExperimentExecution.objects.filter(
-    status__in=['failed', 'auto_halted'],
-    metrics__has_key='exposure_rate'
-).exclude(
-    metrics__exposure_rate__gte=0.95  # Expected exposure rate
-)
+        'status_distribution': """
+# Get experiment status distribution
+from core.models import Experiment
+from django.db.models import Count
 
-print("Experiments with potential instrumentation issues:")
-for exp in experiments_with_issues:
-    exposure = exp.metrics.get('exposure_rate', 'N/A')
-    print(f"  {exp.name}: exposure_rate={exposure}")
+status_counts = Experiment.objects.values('status').annotate(
+    count=Count('id')
+).order_by('-count')
+
+total = Experiment.objects.count()
+print(f"Total Experiments: {total}")
+print("\\nStatus Distribution:")
+for item in status_counts:
+    pct = item['count'] / total * 100 if total > 0 else 0
+    print(f"  {item['status']}: {item['count']} ({pct:.1f}%)")
 """,
-        'sample_size_check': """
-# Check for sample size issues
-from django.db.models import F
+        'agent_execution_failures': """
+# Check agent execution failures
+from core.models import AgentExecution
+from django.db.models import Count
 
-underpowered = ExperimentExecution.objects.filter(
-    status='auto_halted',
-    sample_size__lt=F('config__min_sample_size')
-)
+# Status values: completed, failed, in_progress
+status_counts = AgentExecution.objects.values('status').annotate(
+    count=Count('id')
+).order_by('-count')
 
-print("Experiments halted before reaching min sample:")
-for exp in underpowered:
-    print(f"  {exp.name}: {exp.sample_size} < {exp.config.get('min_sample_size', 'N/A')}")
+total = AgentExecution.objects.count()
+print(f"Total Agent Executions: {total}")
+print("\\nStatus Distribution:")
+for item in status_counts:
+    pct = item['count'] / total * 100 if total > 0 else 0
+    print(f"  {item['status']}: {item['count']} ({pct:.1f}%)")
+
+# Recent failures with error messages
+print("\\nRecent Failed Executions:")
+for exec in AgentExecution.objects.filter(status='failed').order_by('-created_at')[:10]:
+    print(f"  {exec.agent}: {exec.error_message[:80] if exec.error_message else 'No error message'}...")
 """,
     }
