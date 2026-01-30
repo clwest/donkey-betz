@@ -47,7 +47,7 @@ Created `LearningJourneyTab.tsx` (1,086 lines):
 
 ### TIER 4: Lower Priority (Technical Debt)
 
-- [ ] API path standardization (`/api/v1/` vs `/api/` vs `/v1/`)
+- [x] ~~API path standardization~~ DONE (PR #510) - 8 module includes migrated to `/api/`
 - [ ] Dead code cleanup
 - [ ] Document Dream → Initiative workflow
 
@@ -120,9 +120,10 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 | `docs/handoffs/SESSION_868_TIER1_FIXES.md` | TIER 1 critical fixes |
 | `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | System audit with gaps |
 | `docs/audits/MODEL_DEDUPLICATION_AUDIT.md` | **Model deduplication audit (281 models)** |
+| `docs/API_PATH_POLICY.md` | **API path conventions (`/api/` vs `/api/v1/`)** |
 | `docs/AGENTS.md` | Agent documentation (75 agents) |
 | `docs/SPIDERS.md` | Spider network (77 spiders) |
 
 ---
 
-**TIER 3 Complete! Next priority: TIER 4 technical debt (API standardization, dead code cleanup)**
+**TIER 4 in progress: Dead code cleanup, Document Dream → Initiative workflow**
