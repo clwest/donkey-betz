@@ -15,6 +15,7 @@ Contracts ensure:
 Available contracts:
 - ResearchContract: For all research operations
 - ExecutionMandate: For decision enforcement after debate/synthesis
+- SynthesisContract: For structured debate synthesis output
 """
 
 from .research_contract import (
@@ -33,6 +34,14 @@ from .execution_mandate import (
     extract_kill_criteria_from_debate,
 )
 
+from .synthesis_contract import (
+    SynthesisContract,
+    SynthesisQuality,
+    ConsensusLevel,
+    OwnerAssignment,
+    extract_synthesis_from_decision_summary,
+)
+
 __all__ = [
     # Research Contract
     'ResearchContract',
@@ -46,4 +55,10 @@ __all__ = [
     'SpawnedTask',
     'extract_experiments_from_debate',
     'extract_kill_criteria_from_debate',
+    # Synthesis Contract
+    'SynthesisContract',
+    'SynthesisQuality',
+    'ConsensusLevel',
+    'OwnerAssignment',
+    'extract_synthesis_from_decision_summary',
 ]
