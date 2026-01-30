@@ -1,43 +1,48 @@
-# Session 879 - Start Here
+# Session 880 - Start Here
 
-**Previous Session:** 878 (Goal Collection Implementation)
+**Previous Session:** 879 (Prompt Leakage Fixes + Structured Output Templates)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **TOKEN LIMITS FIXED** | **WORKSPACE FIX APPLIED** | **PA USER CONTEXT FIXED** | **GOAL COLLECTION ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **TOKEN LIMITS FIXED** | **WORKSPACE FIX APPLIED** | **PA USER CONTEXT FIXED** | **GOAL COLLECTION ACTIVE** | **STRUCTURED OUTPUT TEMPLATES**
 
 ---
 
-## What Was Accomplished in Session 878
+## What Was Accomplished in Session 879
 
-**Handoff:** `docs/handoffs/SESSION_878_GOAL_COLLECTION.md`
+### 1. Prompt Leakage Fixes - COMPLETE
 
-### Goal Collection Implementation - COMPLETE
+**Problem:** System Insights showed "92% experiment failure rate" when actual DB showed ~24.7%
 
-**Problem:** All users had empty `goals: []` - PA couldn't personalize advice
+**Root Cause:** LLM was copying hardcoded example numbers from prompts instead of using actual context data
 
-**Solution:** Added automatic goal collection to Personal Assistant
+**Fixes Applied:**
+- `core/agents/thinking_agent.py` - Replaced hardcoded example `"94% (234/249 failed)"` with placeholder + explicit instruction
+- `core/agents/decision_enforcer_agent.py` - Replaced specific example numbers with `[X]%`, `[N/M]` placeholders
+
+**PRs Merged:**
+- #558 - Fix System Insights showing stale example numbers
+- #559 - Prevent prompt leakage in DecisionEnforcerAgent
+
+### 2. Structured Output Templates - COMPLETE
+
+**Problem:** Research agent outputs lacked structure for decision-making, confidence tracking, and semantic clarity
+
+**Solution:** Added Quality Header + Decision Block format to research agents
 
 **Files Changed:**
-- `core/personal_ai_assistant_enhanced.py` - Added `_handle_goal_collection()` and `_extract_goals_from_response()` methods
-- `core/agent_context_middleware.py` - Added EnhancedUserProfile loading and goals to personalization dict
+- `core/agents/business/competitor_analysis_agent.py` - Updated `_synthesize_analysis()` method
+- `core/agents/business/customer_research_agent.py` - Updated `_synthesize_research()` method
 
-**How It Works:**
-1. First interaction → PA prompts user for goals
-2. User provides goals → Extracted and saved to `EnhancedUserProfile.long_term_goals`
-3. User can skip → Won't be asked again (respects user preference)
-4. Goals now flow through AgentRouter to PA context
+**New Output Format:**
+- **Quality Header**: Purpose, Inputs, Confidence level, Constraints
+- **Semantic Drift Prevention**: "Direct Competitors" vs "Analogs" split
+- **Decision Block**: Recommended Move, Top 3 Bets, Risks + Mitigations, Next 7 Days
+- **Data Disclaimer**: Sample size caveats
 
-**Verification:**
-```
-# Before Session 878:
-PA context goals: []
-
-# After Session 878:
-PA context goals: ['Build passive income...', 'Learn ML...', 'Launch SaaS...']
-```
+**PR Merged:** #560 - Add structured output templates to research agents
 
 ---
 
-## User Connection Gap Status (Updated)
+## User Connection Gap Status
 
 | Gap | Status | Session |
 |-----|--------|---------|
@@ -49,7 +54,7 @@ PA context goals: ['Build passive income...', 'Learn ML...', 'Launch SaaS...']
 
 ---
 
-## TOP PRIORITY for Session 879
+## TOP PRIORITY for Session 880
 
 ### 1. Test Goal Collection in Browser
 
@@ -116,15 +121,13 @@ with_goals = EnhancedUserProfile.objects.exclude(long_term_goals=[]).count()
 total = EnhancedUserProfile.objects.count()
 print(f'Users with goals: {with_goals}/{total}')"
 
-# Verify PA context includes goals
+# Verify experiment stats (should show real numbers now)
 python manage.py shell -c "
-from django.contrib.auth import get_user_model
-from core.agent_router import AgentRouter
-User = get_user_model()
-user = User.objects.get(username='admin')
-router = AgentRouter(user=user)
-ctx = router._get_user_context('PersonalAssistantAgent', 'test')
-print(f'Goals: {ctx.get(\"goals\")}')"
+from core.models import ExperimentLearning
+total = ExperimentLearning.objects.count()
+failed = ExperimentLearning.objects.filter(outcome='failure').count()
+rate = (failed/total)*100 if total > 0 else 0
+print(f'Actual failure rate: {rate:.1f}% ({failed}/{total})')"
 ```
 
 ---
@@ -153,6 +156,7 @@ print(f'Goals: {ctx.get(\"goals\")}')"
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **879** | Prompt Leakage Fixes + Structured Output Templates | COMPLETE |
 | **878** | Goal Collection Implementation | COMPLETE |
 | **877** | Workspace Fix + User Connection Gaps | COMPLETE |
 | **876** | GPT-5-mini Token Limits Fix | COMPLETE |
@@ -160,17 +164,18 @@ print(f'Goals: {ctx.get(\"goals\")}')"
 
 ---
 
-## Session 878 Changes
+## Session 879 Changes
 
 | File | Change |
 |------|--------|
-| `core/personal_ai_assistant_enhanced.py` | Added `_handle_goal_collection()`, `_extract_goals_from_response()` |
-| `core/agent_context_middleware.py` | Added EnhancedUserProfile loading, goals to personalization |
-| `docs/handoffs/SESSION_878_GOAL_COLLECTION.md` | Implementation documentation |
+| `core/agents/thinking_agent.py` | Fixed prompt leakage - replaced hardcoded example numbers |
+| `core/agents/decision_enforcer_agent.py` | Preventive fix - replaced specific examples with placeholders |
+| `core/agents/business/competitor_analysis_agent.py` | Added Quality Header + Decision Block output format |
+| `core/agents/business/customer_research_agent.py` | Added Quality Header + Decision Block output format |
 
 ---
 
-## User Connection Priority Order (Updated)
+## User Connection Priority Order
 
 1. ~~Goal Collection~~ **DONE** (Session 878)
 2. **Interview Flow** - Wire up existing infrastructure (NEXT)
