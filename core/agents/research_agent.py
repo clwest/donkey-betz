@@ -63,6 +63,18 @@ You have these tools:
 - spider_query: Query cached spider data (70 spiders, but only 15 Reddit subreddits)
 - reddit_search: Search ANY Reddit subreddit in real-time (use for specific communities!)
 - analyze_trends: Analyze trending topics from spider data
+- query_internal_data: Query DonkeyBetz internal database (experiments, executions, initiatives, learnings)
+
+INTERNAL DATA (Session 884):
+For tasks about system internals (experiments, failures, executions, initiatives), use query_internal_data:
+- data_type='experiments' + filter='failed' → Get failed experiments
+- data_type='experiments' + filter='halted' → Get halted experiments
+- data_type='agent_executions' + filter='failed' → Get failed agent executions
+- data_type='agent_learnings' → Get learning patterns
+- data_type='initiatives' + filter='blocked' → Get blocked initiatives
+- data_type='decision_records' → Get system decisions
+
+DO NOT ask for CSV exports, BigQuery, or external data dumps. You have DIRECT database access.
 
 Spider network categories:
 - Tech: HackerNews, DevTo, TechCrunch, Wired, MIT Tech Review
@@ -78,11 +90,11 @@ Use reddit_search for specific communities not in spider cache:
 - Technical subs: r/reactjs, r/golang, r/rust
 
 When given a research task:
-1. Decide whether to use web search, spider query, reddit_search, or combination
+1. For INTERNAL system analysis (experiments, failures, executions), use query_internal_data FIRST
 2. For current events/news, prefer web_search
 3. For trends/opportunities, prefer spider_query
 4. For specific Reddit communities, use reddit_search
-5. Synthesize findings into a clear summary
+5. Synthesize findings into a clear summary with ACTUAL DATA
 
 You CANNOT create images, videos, audio, or edit anything directly. Only research.
 
@@ -230,6 +242,57 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         }
                     },
                     "required": ["query"]
+                }
+            }
+        },
+        # Session 884: Internal data query tool - query DonkeyBetz database directly
+        {
+            "type": "function",
+            "function": {
+                "name": "query_internal_data",
+                "description": "Query internal DonkeyBetz database for experiments, agent executions, initiatives, and other system data. Use this for internal analytics instead of asking for data exports.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "data_type": {
+                            "type": "string",
+                            "description": "Type of internal data to query",
+                            "enum": [
+                                "experiments",
+                                "agent_executions",
+                                "initiatives",
+                                "agent_learnings",
+                                "deliverables",
+                                "conversations",
+                                "spider_data_stats",
+                                "conceptforge_runs",
+                                "decision_records"
+                            ]
+                        },
+                        "filter": {
+                            "type": "string",
+                            "description": "Filter condition: 'failed', 'halted', 'recent', 'all', 'blocked', 'active'",
+                            "default": "recent"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max records to return",
+                            "default": 20,
+                            "minimum": 1,
+                            "maximum": 100
+                        },
+                        "days_back": {
+                            "type": "integer",
+                            "description": "For 'recent' filter, how many days back to look",
+                            "default": 7
+                        },
+                        "include_details": {
+                            "type": "boolean",
+                            "description": "Include full details vs summary only",
+                            "default": True
+                        }
+                    },
+                    "required": ["data_type"]
                 }
             }
         }
@@ -1365,6 +1428,16 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 delegation_context=getattr(self, '_current_delegation_context', {})
             )
 
+        elif tool_name == "query_internal_data":
+            # Session 884: Query internal DonkeyBetz database
+            return self._query_internal_data(
+                data_type=arguments.get('data_type', ''),
+                filter_type=arguments.get('filter', 'recent'),
+                limit=arguments.get('limit', 20),
+                days_back=arguments.get('days_back', 7),
+                include_details=arguments.get('include_details', True)
+            )
+
         else:
             return {
                 'success': False,
@@ -1499,4 +1572,341 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             return {
                 'success': False,
                 'error': f"Reddit search failed: {str(e)}"
+            }
+
+    # =========================================================================
+    # Session 884: Internal Data Query Tool
+    # =========================================================================
+
+    def _query_internal_data(
+        self,
+        data_type: str,
+        filter_type: str = 'recent',
+        limit: int = 20,
+        days_back: int = 7,
+        include_details: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Session 884: Query internal DonkeyBetz database.
+
+        This enables ResearchAgent to analyze internal system data like
+        experiments, agent executions, initiatives, etc. without asking
+        for external data exports.
+
+        Args:
+            data_type: Type of data to query (experiments, agent_executions, etc.)
+            filter_type: Filter to apply (failed, halted, recent, all, blocked, active)
+            limit: Max records to return
+            days_back: For 'recent' filter, how many days to look back
+            include_details: Include full details vs summary
+
+        Returns:
+            Dict with success status and queried data
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.db.models import Count, Avg, Q
+
+        try:
+            now = timezone.now()
+            recent_cutoff = now - timedelta(days=days_back)
+            results = []
+            summary = {}
+
+            if data_type == 'experiments':
+                from core.models import Experiment
+
+                # Build query based on filter
+                queryset = Experiment.objects.all()
+
+                if filter_type == 'failed':
+                    queryset = queryset.filter(status='failure')
+                elif filter_type == 'halted':
+                    queryset = queryset.filter(is_halted=True)
+                elif filter_type == 'recent':
+                    queryset = queryset.filter(created_at__gte=recent_cutoff)
+                elif filter_type == 'active':
+                    queryset = queryset.filter(status='running')
+
+                queryset = queryset.order_by('-created_at')[:limit]
+
+                # Get summary stats
+                all_experiments = Experiment.objects.all()
+                status_counts = dict(all_experiments.values('status').annotate(
+                    count=Count('id')
+                ).values_list('status', 'count'))
+
+                summary = {
+                    'total_experiments': all_experiments.count(),
+                    'status_distribution': status_counts,
+                    'halted_count': all_experiments.filter(is_halted=True).count(),
+                    'failure_rate': f"{(status_counts.get('failure', 0) / max(all_experiments.count(), 1)) * 100:.1f}%",
+                }
+
+                for exp in queryset:
+                    record = {
+                        'id': str(exp.id),
+                        'name': exp.name,
+                        'status': exp.status,
+                        'is_halted': exp.is_halted,
+                        'created_at': exp.created_at.isoformat() if exp.created_at else None,
+                    }
+                    if include_details:
+                        record.update({
+                            'hypothesis': exp.hypothesis[:500] if exp.hypothesis else None,
+                            'halt_reason': exp.halt_reason[:300] if exp.halt_reason else None,
+                            'halted_by': exp.halted_by,
+                            'result_summary': exp.result_summary[:500] if exp.result_summary else None,
+                            'learnings': exp.learnings[:500] if exp.learnings else None,
+                            'primary_kpi': exp.primary_kpi,
+                        })
+                    results.append(record)
+
+            elif data_type == 'agent_executions':
+                from core.models import AgentExecution
+
+                queryset = AgentExecution.objects.select_related('agent')
+
+                if filter_type == 'failed':
+                    queryset = queryset.filter(status='failed')
+                elif filter_type == 'recent':
+                    queryset = queryset.filter(created_at__gte=recent_cutoff)
+
+                queryset = queryset.order_by('-created_at')[:limit]
+
+                # Summary stats
+                all_executions = AgentExecution.objects.all()
+                status_counts = dict(all_executions.values('status').annotate(
+                    count=Count('id')
+                ).values_list('status', 'count'))
+
+                summary = {
+                    'total_executions': all_executions.count(),
+                    'status_distribution': status_counts,
+                    'failure_rate': f"{(status_counts.get('failed', 0) / max(all_executions.count(), 1)) * 100:.1f}%",
+                    'avg_execution_time_ms': all_executions.aggregate(
+                        avg=Avg('execution_time_ms')
+                    )['avg'] or 0,
+                }
+
+                for exec_record in queryset:
+                    record = {
+                        'id': str(exec_record.id),
+                        'agent_name': exec_record.agent.name if exec_record.agent else 'Unknown',
+                        'status': exec_record.status,
+                        'execution_time_ms': exec_record.execution_time_ms,
+                        'created_at': exec_record.created_at.isoformat() if exec_record.created_at else None,
+                    }
+                    if include_details:
+                        record.update({
+                            'task': exec_record.task[:300] if exec_record.task else None,
+                            'error_message': exec_record.error_message[:500] if exec_record.error_message else None,
+                            'tokens_used': exec_record.tokens_used,
+                        })
+                    results.append(record)
+
+            elif data_type == 'initiatives':
+                from core.models_document_registry import Initiative
+
+                queryset = Initiative.objects.all()
+
+                if filter_type == 'blocked':
+                    queryset = queryset.filter(Q(blocked=True) | Q(status='BLOCKED'))
+                elif filter_type == 'active':
+                    queryset = queryset.filter(status='ACTIVE')
+                elif filter_type == 'recent':
+                    queryset = queryset.filter(created_at__gte=recent_cutoff)
+
+                queryset = queryset.order_by('-updated_at')[:limit]
+
+                all_initiatives = Initiative.objects.all()
+                summary = {
+                    'total_initiatives': all_initiatives.count(),
+                    'active_count': all_initiatives.filter(status='ACTIVE').count(),
+                    'blocked_count': all_initiatives.filter(Q(blocked=True) | Q(status='BLOCKED')).count(),
+                    'completed_count': all_initiatives.filter(status='COMPLETED').count(),
+                }
+
+                for init in queryset:
+                    record = {
+                        'id': str(init.id),
+                        'name': init.name[:200],
+                        'status': init.status,
+                        'current_stage': init.current_stage,
+                        'completion_percentage': init.completion_percentage,
+                        'updated_at': init.updated_at.isoformat() if init.updated_at else None,
+                    }
+                    if include_details:
+                        record.update({
+                            'parent_topic': init.parent_topic[:200] if init.parent_topic else None,
+                            'blocked': getattr(init, 'blocked', False),
+                            'block_reason': getattr(init, 'block_reason', None),
+                        })
+                    results.append(record)
+
+            elif data_type == 'agent_learnings':
+                from core.models_unified_system import AgentLearning
+
+                queryset = AgentLearning.objects.all()
+
+                if filter_type == 'failed':
+                    queryset = queryset.filter(learning_type='failure_pattern')
+                elif filter_type == 'recent':
+                    queryset = queryset.filter(created_at__gte=recent_cutoff)
+
+                queryset = queryset.order_by('-created_at')[:limit]
+
+                all_learnings = AgentLearning.objects.all()
+                type_counts = dict(all_learnings.values('learning_type').annotate(
+                    count=Count('id')
+                ).values_list('learning_type', 'count'))
+
+                summary = {
+                    'total_learnings': all_learnings.count(),
+                    'type_distribution': type_counts,
+                    'applied_count': all_learnings.filter(applied=True).count(),
+                }
+
+                for learning in queryset:
+                    record = {
+                        'id': str(learning.id),
+                        'agent_name': learning.agent_name,
+                        'learning_type': learning.learning_type,
+                        'confidence': learning.confidence,
+                        'applied': learning.applied,
+                        'created_at': learning.created_at.isoformat() if learning.created_at else None,
+                    }
+                    if include_details:
+                        record['description'] = learning.description[:500] if learning.description else None
+                    results.append(record)
+
+            elif data_type == 'deliverables':
+                from core.models_deliverables import Deliverable
+
+                queryset = Deliverable.objects.all()
+
+                if filter_type == 'recent':
+                    queryset = queryset.filter(created_at__gte=recent_cutoff)
+
+                queryset = queryset.order_by('-created_at')[:limit]
+
+                all_deliverables = Deliverable.objects.all()
+                summary = {
+                    'total_deliverables': all_deliverables.count(),
+                    'with_initiative': all_deliverables.filter(initiative__isnull=False).count(),
+                }
+
+                for deliv in queryset:
+                    record = {
+                        'id': str(deliv.id),
+                        'title': deliv.title[:200] if deliv.title else None,
+                        'deliverable_type': deliv.deliverable_type,
+                        'status': deliv.status,
+                        'created_at': deliv.created_at.isoformat() if deliv.created_at else None,
+                    }
+                    if include_details and deliv.initiative:
+                        record['initiative_name'] = deliv.initiative.name[:100]
+                    results.append(record)
+
+            elif data_type == 'spider_data_stats':
+                from core.models import SpiderData
+
+                # Get aggregated stats rather than individual records
+                recent_data = SpiderData.objects.filter(created_at__gte=recent_cutoff)
+
+                spider_counts = dict(recent_data.values('spider_name').annotate(
+                    count=Count('id')
+                ).order_by('-count')[:20].values_list('spider_name', 'count'))
+
+                summary = {
+                    'total_records': SpiderData.objects.count(),
+                    'records_last_n_days': recent_data.count(),
+                    'days_queried': days_back,
+                    'spider_activity': spider_counts,
+                    'active_spiders': len(spider_counts),
+                }
+
+                # Return top spiders as results
+                for spider_name, count in spider_counts.items():
+                    results.append({
+                        'spider_name': spider_name,
+                        'record_count': count,
+                        'period': f'last {days_back} days',
+                    })
+
+            elif data_type == 'decision_records':
+                from core.models_decision_records import DecisionRecord
+
+                queryset = DecisionRecord.objects.all()
+
+                if filter_type == 'recent':
+                    queryset = queryset.filter(created_at__gte=recent_cutoff)
+                elif filter_type == 'failed':
+                    queryset = queryset.filter(was_successful=False)
+
+                queryset = queryset.order_by('-created_at')[:limit]
+
+                all_decisions = DecisionRecord.objects.all()
+                success_counts = {
+                    'successful': all_decisions.filter(was_successful=True).count(),
+                    'failed': all_decisions.filter(was_successful=False).count(),
+                    'unknown': all_decisions.filter(was_successful__isnull=True).count(),
+                }
+                type_counts = dict(all_decisions.values('decision_type').annotate(
+                    count=Count('id')
+                ).values_list('decision_type', 'count'))
+
+                summary = {
+                    'total_decisions': all_decisions.count(),
+                    'success_distribution': success_counts,
+                    'type_distribution': type_counts,
+                }
+
+                for decision in queryset:
+                    record = {
+                        'id': str(decision.id),
+                        'agent_name': decision.agent_name,
+                        'decision_type': decision.decision_type,
+                        'action': decision.action[:200] if decision.action else None,
+                        'was_successful': decision.was_successful,
+                        'created_at': decision.created_at.isoformat() if decision.created_at else None,
+                    }
+                    if include_details:
+                        record['reasoning'] = decision.reasoning[:500] if decision.reasoning else None
+                        record['outcome_notes'] = decision.outcome_notes[:300] if decision.outcome_notes else None
+                    results.append(record)
+
+            else:
+                return {
+                    'success': False,
+                    'error': f"Unknown data_type: {data_type}. Supported: experiments, agent_executions, initiatives, agent_learnings, deliverables, spider_data_stats, decision_records"
+                }
+
+            logger.info(f"[Session 884] Internal data query: {data_type} filter={filter_type} returned {len(results)} records")
+
+            return {
+                'success': True,
+                'data': {
+                    'data_type': data_type,
+                    'filter': filter_type,
+                    'limit': limit,
+                    'days_back': days_back,
+                    'record_count': len(results),
+                    'summary': summary,
+                    'records': results,
+                    'queried_at': now.isoformat(),
+                }
+            }
+
+        except ImportError as e:
+            logger.error(f"Import error querying internal data: {e}")
+            return {
+                'success': False,
+                'error': f"Model not available: {str(e)}"
+            }
+        except Exception as e:
+            logger.error(f"Error querying internal data: {e}")
+            return {
+                'success': False,
+                'error': f"Internal data query failed: {str(e)}"
             }
