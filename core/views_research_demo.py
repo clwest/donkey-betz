@@ -1175,13 +1175,19 @@ def initiatives_api(request):
         from core.models_document_registry import Initiative, InitiativeStage
         from core.services.initiative_integration_service import get_initiative_integration_service
 
+        # Session 884: Support limit and status filter query params
+        limit = int(request.GET.get('limit', 200))  # Default 200, was hardcoded 50
+        status_filter = request.GET.get('status')  # Optional: ACTIVE, COMPLETED, etc.
+
         initiatives = Initiative.objects.all().order_by('-updated_at')
+        if status_filter:
+            initiatives = initiatives.filter(status=status_filter)
 
         # Session 848: Get health service for calculating initiative health
         health_service = get_initiative_integration_service()
 
         initiatives_list = []
-        for init in initiatives[:50]:
+        for init in initiatives[:limit]:
             # Build stage status
             stages = {}
             for i in range(1, 6):
@@ -1243,6 +1249,8 @@ def initiatives_api(request):
         return JsonResponse({
             'success': True,
             'count': len(initiatives_list),
+            'total_count': initiatives.count(),  # Session 884: Total before limit
+            'limit': limit,
             'initiatives': initiatives_list,
         })
 
