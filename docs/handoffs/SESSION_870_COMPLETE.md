@@ -169,9 +169,24 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Remaining TIER 3 Tasks
+## 3. Model Deduplication Audit (PR #508)
 
-- [ ] Model deduplication audit (181 models in `models_unified_system.py`)
+Created comprehensive audit analyzing 281 models across `models.py` and `models_unified_system.py`:
+
+| Finding | Count | Impact |
+|---------|-------|--------|
+| Exact Duplicates | 2 | HIGH - UserAgentLearning, Revenue |
+| Overlapping Models | 15+ | MEDIUM - Can consolidate |
+| Profile Fragmentation | 5 classes | HIGH - Should consolidate |
+| Estimated Savings | ~40 models | 14% fewer database tables |
+
+**Deliverable:** `docs/audits/MODEL_DEDUPLICATION_AUDIT.md` with 6-phase migration roadmap
+
+---
+
+## TIER 3 Status
+
+All TIER 3 tasks complete!
 
 ---
 
@@ -182,6 +197,7 @@ open http://localhost:8000/ai-studio/
 | #504 | feat(Session 870): Add proper error states to frontend tabs | Merged |
 | #505 | docs(Session 870): Update session progress | Merged |
 | #506 | feat(Session 870): Add Learning Journey Dashboard tab (#17 workspace) | Merged |
+| #508 | docs(Session 870): Add model deduplication audit | Merged |
 
 ---
 
