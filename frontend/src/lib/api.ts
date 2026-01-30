@@ -1756,44 +1756,45 @@ export const neuralOrchestraApi = {
 }
 
 // Session 733: Mythology Lab API - Hallucination detection and review
+// Session 872: Fixed paths from /v1/mythology/ to /mythology/ (backend migrated in Session 871)
 export const mythologyApi = {
   // Dashboard statistics
-  stats: () => api.get('/v1/mythology/stats/'),
+  stats: () => api.get('/mythology/stats/'),
 
   // Flagged content management
   flaggedContent: (params?: { limit?: number; status?: string }) =>
-    api.get('/v1/mythology/flagged-content/', { params }),
+    api.get('/mythology/flagged-content/', { params }),
   flaggedContentDetail: (contentId: string) =>
-    api.get(`/v1/mythology/flagged-content/${contentId}/`),
+    api.get(`/mythology/flagged-content/${contentId}/`),
   submitReview: (data: { content_id: string; decision: string; notes?: string }) =>
-    api.post('/v1/mythology/review/', data),
+    api.post('/mythology/review/', data),
 
   // Recent events for Neural Scan section
   recentEvents: (params?: { limit?: number; severity?: string }) =>
-    api.get('/v1/mythology/recent-events/', { params }),
+    api.get('/mythology/recent-events/', { params }),
 
   // User reporting
   reportContent: (data: { content_id: string; reason: string; details?: string }) =>
-    api.post('/v1/mythology/report/', data),
+    api.post('/mythology/report/', data),
 
   // Notifications
   notifications: (params?: { limit?: number; unread_only?: boolean }) =>
-    api.get('/v1/mythology/notifications/', { params }),
+    api.get('/mythology/notifications/', { params }),
   markNotificationRead: (notificationId: string) =>
-    api.post(`/v1/mythology/notifications/${notificationId}/read/`),
+    api.post(`/mythology/notifications/${notificationId}/read/`),
   markAllNotificationsRead: () =>
-    api.post('/v1/mythology/notifications/mark-all-read/'),
+    api.post('/mythology/notifications/mark-all-read/'),
 
   // Quarantine management (Session 541)
   quarantine: (params?: { limit?: number; status?: string }) =>
-    api.get('/v1/mythology/quarantine/', { params }),
-  quarantineStats: () => api.get('/v1/mythology/quarantine/stats/'),
+    api.get('/mythology/quarantine/', { params }),
+  quarantineStats: () => api.get('/mythology/quarantine/stats/'),
   quarantineDetail: (quarantineId: string) =>
-    api.get(`/v1/mythology/quarantine/${quarantineId}/`),
+    api.get(`/mythology/quarantine/${quarantineId}/`),
   quarantineApprove: (quarantineId: string, data?: { notes?: string }) =>
-    api.post(`/v1/mythology/quarantine/${quarantineId}/approve/`, data || {}),
+    api.post(`/mythology/quarantine/${quarantineId}/approve/`, data || {}),
   quarantineReject: (quarantineId: string, data?: { reason?: string }) =>
-    api.post(`/v1/mythology/quarantine/${quarantineId}/reject/`, data || {}),
+    api.post(`/mythology/quarantine/${quarantineId}/reject/`, data || {}),
 }
 
 // Session 745: Collective Intelligence API
@@ -3030,6 +3031,7 @@ export const platformApi = {
     }>(`/platform/decision-summary/${decisionId}/create-initiative/`),
 
   // Session 847: Initiative Pipeline Dashboard
+  // Session 872: Fixed paths from /v1/initiatives/ to /initiatives/ (backend migrated in Session 871)
   initiatives: () =>
     api.get<{
       success: boolean
@@ -3050,7 +3052,7 @@ export const platformApi = {
         created_at: string
         updated_at: string
       }>
-    }>('/v1/initiatives/'),
+    }>('/initiatives/'),
 
   // Session 847: Auto-populate initiatives from existing deliverables
   populateInitiatives: () =>
@@ -3059,7 +3061,7 @@ export const platformApi = {
       created_count: number
       created_initiatives: Array<{ name: string; stages_linked: number }>
       message: string
-    }>('/v1/initiatives/populate/'),
+    }>('/initiatives/populate/'),
 }
 
 // Session 833: Blogs API for approval workflow
