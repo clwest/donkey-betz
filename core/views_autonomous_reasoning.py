@@ -557,9 +557,10 @@ def gates_api(request):
 
         gates_list = []
         for gate in gates:
+            # Session 873: Fix - Decision model has 'topic' not 'title'
             decision_title = 'Unknown Decision'
             if gate.decision:
-                decision_title = gate.decision.title or f"Decision {str(gate.decision.id)[:8]}"
+                decision_title = gate.decision.topic or f"Decision {str(gate.decision.id)[:8]}"
 
             gates_list.append({
                 'id': str(gate.id),
