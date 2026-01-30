@@ -528,6 +528,12 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         ml_analysis = {}
                         all_result_data = []
                         for r in all_results:
+                            # Session 881: Defensive check - r might be a list in edge cases
+                            if isinstance(r, list):
+                                all_result_data.extend(r)
+                                continue
+                            if not isinstance(r, dict):
+                                continue
                             data = r.get('data', r)
                             if isinstance(data, list):
                                 all_result_data.extend(data)
@@ -573,6 +579,16 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         # Build a list of key findings from the results
                         key_insights = []
                         for r in all_results[:5]:  # Top 5 results
+                            # Session 881: Defensive check - r might be a list
+                            if isinstance(r, list):
+                                for item in r[:2]:  # Take first 2 items from list
+                                    if isinstance(item, dict):
+                                        title = item.get('title') or item.get('headline') or ''
+                                        if title:
+                                            key_insights.append(str(title)[:200])
+                                continue
+                            if not isinstance(r, dict):
+                                continue
                             data = r.get('data', r)
                             if isinstance(data, dict):
                                 # Try to get title or summary from the result
@@ -783,7 +799,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 deliverables_complete.append(deliverables[0])  # Summary
             if len(all_results) >= 3:
                 deliverables_complete.append(deliverables[1])  # Key findings
-            if any(r.get('data', {}).get('url') or r.get('source') for r in all_results):
+            # Session 881: Defensive check - r might be a list in edge cases
+            if any(
+                (isinstance(r, dict) and (r.get('data', {}).get('url') if isinstance(r.get('data'), dict) else False or r.get('source')))
+                for r in all_results
+            ):
                 deliverables_complete.append(deliverables[2])  # Sources
 
         # Identify data gaps
@@ -886,6 +906,12 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         # Count total data points
         total_items = 0
         for result in all_results:
+            # Session 881: Defensive check - result might be a list in edge cases
+            if isinstance(result, list):
+                total_items += len(result)
+                continue
+            if not isinstance(result, dict):
+                continue
             data = result.get('data', result)
             if isinstance(data, list):
                 total_items += len(data)
