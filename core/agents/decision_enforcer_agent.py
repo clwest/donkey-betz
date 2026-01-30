@@ -112,69 +112,62 @@ After agents have debated, you MUST:
 ## Output Format
 You MUST respond with valid JSON matching this structure:
 {
-    "chosen_path": "Specific, actionable decision (e.g., 'Build salary negotiation MVP targeting remote job seekers')",
-    "reason": "Why this path, with evidence from debate (e.g., '3/4 agents agreed, market data shows 40% demand, lowest risk')",
-    "decision_owner": "AgentName or role responsible (e.g., 'SalaryNegotiationExpert')",
+    "chosen_path": "Specific, actionable decision",
+    "reason": "Why this path, with ACTUAL evidence from the debate (use real numbers from context)",
+    "decision_owner": "AgentName or role responsible",
     "confidence": 0.0-1.0,
     "confidence_reason": "Why this confidence level",
     "experiments": [
-        "Specific experiment 1 (e.g., 'A/B test with 50 users over 7 days')",
-        "Specific experiment 2"
+        "Specific experiment with measurable criteria"
     ],
     "kill_criteria": [
-        "Measurable failure condition (e.g., '<10% engagement after 7 days')",
-        "Another failure condition (e.g., 'No signups within 48 hours')"
+        "Measurable failure condition with specific threshold"
     ],
-    "deadline": "ISO date or relative (e.g., '2026-02-05' or '7d')",
+    "deadline": "ISO date or relative timeframe",
     "rejected_paths": {
-        "Alternative 1": "Why rejected",
-        "Alternative 2": "Why rejected"
+        "Alternative": "Why rejected based on debate"
     },
     "acknowledged_risks": [
-        "Risk 1 we're accepting",
-        "Risk 2 we're accepting"
+        "Risk we're accepting"
     ],
     "spawned_tasks": [
         {
             "agent": "AgentName",
             "action": "Specific action to take",
-            "deadline": "When (optional, defaults to mandate deadline)",
+            "deadline": "When",
             "priority": 1
         }
     ]
 }
 
-## Example Good Decision:
+## Example Structure (use YOUR data, not these placeholder values):
 {
-    "chosen_path": "Build salary negotiation MVP for remote job seekers with 'Get My Market Rate' feature",
-    "reason": "Strongest market signal (40% of users ask about salary), lowest technical risk (reuses existing job data), 3/4 agents supported this path",
-    "decision_owner": "SalaryNegotiationExpert",
-    "confidence": 0.75,
-    "confidence_reason": "Strong signal but sample size is 77, not 500",
+    "chosen_path": "Build [feature] MVP for [target users] with [key capability]",
+    "reason": "[X]% market signal from debate, [N/M] agents supported, [specific evidence from context]",
+    "decision_owner": "[Agent from debate]",
+    "confidence": 0.XX,
+    "confidence_reason": "[Based on actual sample size and data quality from debate]",
     "experiments": [
-        "Launch to 50 beta users, measure feature adoption rate",
-        "A/B test: with vs without market rate comparison"
+        "Launch to [N] beta users, measure [specific metric]",
+        "A/B test: [variant A] vs [variant B]"
     ],
     "kill_criteria": [
-        "<10% feature engagement after 7 days",
-        "No organic shares after 14 days",
-        "<3.5 NPS score from beta users"
+        "<[X]% [metric] after [N] days",
+        "No [outcome] within [timeframe]"
     ],
-    "deadline": "2026-02-15",
+    "deadline": "[realistic date based on scope]",
     "rejected_paths": {
-        "Full salary database product": "Too complex for MVP, 6+ month timeline",
-        "Interview coaching feature": "Lower market signal, requires video infrastructure"
+        "[Alternative from debate]": "[Why rejected based on debate evidence]"
     },
     "acknowledged_risks": [
-        "Sample size of 77 may not be representative",
-        "Salary data accuracy depends on user-reported values"
+        "[Actual risks identified in debate]"
     ],
     "spawned_tasks": [
-        {"agent": "FullStackDeveloperAgent", "action": "Create salary comparison API endpoint", "priority": 1},
-        {"agent": "ContentWriterAgent", "action": "Write beta launch email copy", "priority": 2},
-        {"agent": "ResearchAgent", "action": "Gather 50 beta user emails from waitlist", "priority": 1}
+        {"agent": "[Appropriate agent]", "action": "[Specific action]", "priority": 1}
     ]
 }
+
+IMPORTANT: Use ACTUAL numbers and evidence from the debate context. Do NOT copy the placeholder values above.
 
 Remember: Your job is to DECIDE, not to defer. Break the loop."""
 
