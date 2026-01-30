@@ -26044,8 +26044,8 @@ def agent_workspace_status_report():
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
         filename = f"reports/system_status_{timestamp}.md"
 
-        # AgentResult has .data dict and .message for output
-        output_content = report_content.data.get('output', '') or report_content.message or 'No output generated'
+        # Session 875: Use unified extraction function
+        output_content = _extract_agent_output_content(report_content, 'system status report')
 
         content = f"""# System Status Report
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
@@ -26136,8 +26136,8 @@ def agent_research_to_workspace(topic: str = None):
         safe_topic = topic[:30].replace(' ', '_').replace('/', '-')
         filename = f"research/{safe_topic}_{timestamp}.md"
 
-        # AgentResult has .data dict and .message for output
-        output_content = research_result.data.get('output', '') or research_result.message or 'No research output generated'
+        # Session 875: Use unified extraction function
+        output_content = _extract_agent_output_content(research_result, f'research on {topic}')
 
         content = f"""# Research: {topic}
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
@@ -26230,8 +26230,8 @@ def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
         safe_topic = topic[:30].replace(' ', '_').replace('/', '-')
         filename = f"content/{content_type}_{safe_topic}_{timestamp}.md"
 
-        # AgentResult has .data dict and .message for output
-        output_content = content_result.data.get('output', '') or content_result.message or 'No content generated'
+        # Session 875: Use unified extraction function (now handles dict content with full_text)
+        output_content = _extract_agent_output_content(content_result, f'{content_type} about {topic}')
 
         content_body = f"""# {topic}
 Type: {content_type.title()}
@@ -27173,8 +27173,28 @@ def _extract_agent_output_content(result, task_description: str) -> str:
     for key in CONTENT_KEYS:
         if key in data and data[key]:
             value = data[key]
-            if isinstance(value, str) and len(value) > 50:  # Substantial content
+            # Session 875: Handle both string and dict content (ContentWriterAgent uses dict with 'full_text')
+            if isinstance(value, str) and len(value) > 50:  # Substantial string content
                 output_parts.append(f"## {key.replace('_', ' ').title()}\n\n{value}")
+            elif isinstance(value, dict):
+                # Extract text from nested dict - common patterns:
+                # - 'full_text' (ContentWriterAgent)
+                # - 'body' (some article agents)
+                # - 'text' (various)
+                text_content = (
+                    value.get('full_text', '') or
+                    value.get('body', '') or
+                    value.get('text', '') or
+                    value.get('content', '') or
+                    value.get('article', '') or
+                    value.get('script', '')
+                )
+                if text_content and len(text_content) > 50:
+                    title = value.get('title', '') or value.get('headline', '')
+                    if title:
+                        output_parts.append(f"## {title}\n\n{text_content}")
+                    else:
+                        output_parts.append(f"## {key.replace('_', ' ').title()}\n\n{text_content}")
 
     # 2. Check for array results
     for key in ARRAY_KEYS:
