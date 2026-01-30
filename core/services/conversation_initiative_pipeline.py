@@ -469,10 +469,29 @@ def handle_stage_task_completion(
         # Check if we should auto-advance (simplified: advance after first successful task)
         # In production, you'd want more sophisticated logic (all tasks complete, human approval, etc.)
         if result['stage_updated'] and stage_num < 5:
-            # Auto-approve stage for demo purposes
+            # Auto-approve current stage
             stage.status = 'APPROVED'
             stage.approved_at = timezone.now()
             stage.save()
+
+            # Session 884: Ensure all PRIOR stages are also APPROVED (backfill fix)
+            # This fixes the issue where initiatives jump ahead without completing earlier stages
+            for prior_stage_num in range(1, stage_num):
+                prior_stage, created = InitiativeStage.objects.get_or_create(
+                    initiative=initiative,
+                    stage=prior_stage_num,
+                    defaults={
+                        'status': 'APPROVED',
+                        'approved_at': timezone.now(),
+                        'notes': f'Auto-backfilled when Stage {stage_num} completed',
+                    }
+                )
+                if not created and prior_stage.status != 'APPROVED':
+                    prior_stage.status = 'APPROVED'
+                    prior_stage.approved_at = timezone.now()
+                    prior_stage.notes = f"{prior_stage.notes}\n\n[Backfilled: approved when Stage {stage_num} completed]"
+                    prior_stage.save()
+                    logger.info(f"📋 Backfilled Stage {prior_stage_num} as APPROVED")
 
             # Advance initiative to next stage
             initiative.current_stage = stage_num + 1
