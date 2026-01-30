@@ -555,6 +555,38 @@ result = auto_spawn_if_needed(
 
 ---
 
+## 12. Prompt Sharpening (PR #534)
+
+### Problem
+
+ChatGPT feedback: "Still Too Polite - They're disagreeing, but gently. You want sharper conflict."
+
+### Solution
+
+Created **Prompt Sharpening** module to transform hedging into decisive language.
+
+**Replacements:**
+| Hedge | Sharp |
+|-------|-------|
+| "We should validate..." | "THIS REQUIRES validation" |
+| "Consider exploring..." | "CRITICAL GAP: we don't know" |
+| "Further analysis..." | "BLOCKED until we have" |
+| "Might be worth..." | "IS REQUIRED because" |
+
+**Usage:**
+```python
+from core.prompts.sharpening import sharpen_prompt, SHARP_DEBATE_RULES
+
+# Sharpen hedging language
+sharp = sharpen_prompt("We should explore this further")
+# → "CRITICAL GAP: we don't know this further"
+
+# Add rules to agent prompts
+prompt = f"{SHARP_DEBATE_RULES}\n\n{base_prompt}"
+```
+
+---
+
 ## Session 872 Summary
 
 | PR | Description | Status |
@@ -562,12 +594,14 @@ result = auto_spawn_if_needed(
 | #520-530 | API fixes, Celery sync, TTS/Image fixes, Research Contract | Merged |
 | #531 | Decision Enforcer Agent - Prefrontal Cortex | Merged |
 | #532 | Synthesis Contract - Structured debate output | Merged |
-| #533 | Auto-Spawner Service - Data insufficiency reflexes | Pending |
+| #533 | Auto-Spawner Service - Data insufficiency reflexes | Merged |
+| #534 | Prompt Sharpening - Decisive language transforms | Pending |
 
 **New Agents**: 1 (DecisionEnforcerAgent)
 **New Contracts**: 3 (ResearchContract, ExecutionMandate, SynthesisContract)
 **New Services**: 1 (AutoSpawnerService)
-**Total PRs**: 12
+**New Prompts**: 1 (Sharpening module)
+**Total PRs**: 13
 
 ---
 
