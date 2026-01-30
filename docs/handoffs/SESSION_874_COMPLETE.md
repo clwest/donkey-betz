@@ -136,15 +136,32 @@ The remaining 13 dreams are recent (2 days old) - correctly awaiting the 3-day a
 
 ## 3. Experiment Linker Verified
 
-The Session 873 experiment linker is correctly configured:
+The Session 873 experiment linker is correctly configured and tested:
 
 | Component | Status |
 |-----------|--------|
 | Signal connected | `auto_link_experiment_on_save` registered |
 | Service available | `find_experiment_for_execution()` working |
-| Running experiments | 0 (all 352 have terminal status) |
+| **Live test: explicit ID** | ✅ FK set when `experiment_id` in `input_data` |
+| **Live test: fallback** | ✅ FK set when single running experiment exists |
 
-The linker will auto-link AgentExecutions when new experiments start running.
+### Test Results (Session 874)
+
+```
+Creating AgentExecution with experiment_id in input_data...
+Created execution: 5ef69a5e-c877-453a-8444-147b7b726f98
+Execution experiment FK: d01e958f-bbfb-4dbe-8244-f3d662c3bfb6
+✅ LINKER WORKING: FK correctly set via signal!
+
+Creating AgentExecution WITHOUT experiment_id (testing fallback)...
+Created execution: 6593a07e-dfbb-4311-a601-fd0bce3f275f
+✅ FALLBACK WORKING: Linked to only running experiment!
+```
+
+The linker auto-links AgentExecutions to experiments via:
+1. Explicit `experiment_id` in `input_data` (highest priority)
+2. Chain lookup via `decision_id` → gate → pilot → experiment
+3. Fallback to single running experiment (if exactly one exists)
 
 ---
 
