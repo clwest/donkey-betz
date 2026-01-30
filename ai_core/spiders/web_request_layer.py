@@ -210,8 +210,10 @@ class WebRequestLayer:
         Fetch URL with all the bells and whistles
         Returns: {'status': int, 'text': str, 'json': dict/None, 'headers': dict}
         """
-        if not self.session:
-            await self.initialize()
+        # Session 884: Always call initialize() to check for event loop changes
+        # The previous check "if not self.session" missed cases where session
+        # existed but was created in a different event loop (common in Celery)
+        await self.initialize()
 
         domain = urlparse(url).netloc
 
