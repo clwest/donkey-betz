@@ -20,8 +20,9 @@ Session 872 completed API path migration analysis, fixed critical 404 errors, an
 | Celery Beat Sync | #525 | **Critical fix** - Tasks now sync to database on deploy |
 | AudioAgent TTS Fix | #527 | Adaptive timeout + retry logic for ElevenLabs TTS |
 | ImageAgent Fix | #528 | Adaptive timeout + retry logic for Stability AI |
+| Research Contract | #529 | Structured research outputs with validation |
 
-**Total: 8 PRs merged**
+**Total: 9 PRs merged**
 
 ---
 
@@ -239,6 +240,73 @@ def stability_request_with_retry(url, headers, ..., max_retries=3):
 
 ---
 
+## 8. Research Contract System (PR #529)
+
+### Problem
+
+Research outputs were inconsistent and sometimes contradictory:
+- "Research completed" + "Insufficient Data" in same report
+- Vague deliverables like "Define specific deliverables"
+- No timeline, confidence levels, or escalation paths
+- Silent failures with no accountability
+
+### Solution
+
+**Created Research Contract system** at `core/contracts/research_contract.py`:
+
+```python
+@dataclass
+class ResearchContract:
+    goal: str
+    status: ResearchStatus  # BLOCKED | IN_PROGRESS | COMPLETE | FAILED
+    owner: str
+    confidence: float
+    confidence_reason: str
+    blocked_on: Optional[str]
+    escalation_path: Optional[str]
+    deliverables: List[str]  # Auto-generated, specific
+    eta: Optional[str]
+    next_trigger: Optional[str]
+```
+
+**Key Features:**
+
+| Feature | Description |
+|---------|-------------|
+| Binary status | No contradictions - BLOCKED, IN_PROGRESS, COMPLETE, or FAILED |
+| Validation | `contract.validate()` catches contradictions |
+| Auto-deliverables | `generate_deliverables_from_goal()` creates specific outputs |
+| Escalation | Required when BLOCKED - defines who to escalate to |
+| Confidence | Always includes reason ("Low - missing logs") |
+
+**Updated ResearchAgent** to output contracts:
+- `_build_research_contract()` - Creates validated contract
+- `_assess_data_sufficiency()` - Determines if data is sufficient
+- `_calculate_research_confidence()` - Calculates confidence with reason
+- `_identify_data_gaps()` - Lists what's missing
+- `_identify_related_agents()` - Suggests agents that can help
+
+### Example Output (BLOCKED)
+
+```json
+{
+  "contract_type": "research",
+  "status": "BLOCKED",
+  "goal": "Analyze experiment halt rules",
+  "blocked_on": "ExperimentExecution logs unavailable",
+  "escalation_path": "If no data in 24h -> escalate to DataExportAgent",
+  "confidence": 0.3,
+  "confidence_reason": "Low - missing 90-day execution logs",
+  "deliverables": [
+    "Table: Halt rules vs firing frequency (90 days)",
+    "List: Top 5 false-positive rules with evidence"
+  ],
+  "next_trigger": "DataExportAgent provides missing data"
+}
+```
+
+---
+
 ## PRs Created
 
 | PR | Title | Status |
@@ -250,7 +318,8 @@ def stability_request_with_retry(url, headers, ..., max_retries=3):
 | #524 | fix(Session 872): Add missing /api/v1/reasoning/gates/ endpoint | Merged |
 | #525 | fix(Session 872): Add release command to sync Celery tasks + add health monitor | Merged |
 | #527 | fix(Session 872): Add ElevenLabs TTS service with adaptive timeout + retry | Merged |
-| #528 | fix(Session 872): Add Stability AI service with adaptive timeout + retry | Pending |
+| #528 | fix(Session 872): Add Stability AI service with adaptive timeout + retry | Merged |
+| #529 | feat(Session 872): Add Research Contract for structured research outputs | Pending |
 
 ---
 
@@ -270,6 +339,9 @@ def stability_request_with_retry(url, headers, ..., max_retries=3):
 | `core/services/podcast_audio_service.py` | Updated to use centralized TTS service |
 | `core/services/stability_ai_service.py` | **NEW** - Centralized Stability AI service with retry logic |
 | `content/image_generation.py` | Updated to use centralized Stability AI service |
+| `core/contracts/__init__.py` | **NEW** - Contracts module |
+| `core/contracts/research_contract.py` | **NEW** - Research Contract with validation |
+| `core/agents/research_agent.py` | Updated to output Research Contracts |
 
 ---
 
@@ -277,13 +349,14 @@ def stability_request_with_retry(url, headers, ..., max_retries=3):
 
 | Metric | Value |
 |--------|-------|
-| PRs Merged | 8 |
-| Files Modified | 15+ |
+| PRs Merged | 9 |
+| Files Modified | 18+ |
 | API Paths Fixed | 19 |
 | Endpoints Added | 1 (gates) |
 | Tasks Now Synced | ~256 |
 | TTS Reliability | +retry logic |
 | Image Gen Reliability | +retry logic |
+| Research Quality | +contract validation |
 
 ---
 

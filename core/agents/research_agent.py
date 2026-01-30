@@ -5,6 +5,7 @@ Research Agent - Specialized for Web & Spider Search ONLY
 Session 268: Phase 2 - Research Agents
 Session 304: Learning Infrastructure Integration
 Session 683: Added ML Integration (DistilBERT for text analysis)
+Session 872: Research Contract Integration - Structured, validated outputs
 
 This agent searches for information. That's ALL it does.
 It has NO access to creation, editing, or generation tools.
@@ -18,6 +19,13 @@ Tools NOT Available (by design):
     - image/video/audio generation
     - editing operations
     - 3D generation
+
+Session 872 - Research Contract:
+    All research outputs now use ResearchContract for:
+    - Binary status (no contradictions)
+    - Specific deliverables (auto-generated)
+    - Confidence with reasoning
+    - Escalation paths for blocked work
 """
 
 import logging
@@ -527,10 +535,20 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         if all_result_data:
                             ml_analysis = self._analyze_text_with_ml(all_result_data)
 
+                        # Session 872: Build Research Contract for structured output
+                        research_contract = self._build_research_contract(
+                            task=task,
+                            all_results=all_results,
+                            ml_analysis=ml_analysis,
+                            tool_calls_made=tool_calls_made
+                        )
+
                         result_data = {
                             'results': all_results,
                             'query': task,
                             'sources_count': len(all_results),
+                            # Session 872: Include Research Contract
+                            'contract': research_contract,
                         }
 
                         # Add ML analysis if performed
@@ -565,13 +583,19 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                         result_data['key_insights'] = key_insights[:5]  # Max 5 insights
 
-                        # Session 856: Build a meaningful summary for human review
+                        # Session 872: Build summary from contract status
+                        contract_status = research_contract.get('status', 'UNKNOWN')
+                        contract_confidence = research_contract.get('confidence', 0)
+                        confidence_reason = research_contract.get('confidence_reason', '')
+
                         summary_parts = [f"Research on: {task[:100]}"]
-                        summary_parts.append(f"Found {len(all_results)} source(s)")
-                        if key_insights:
-                            summary_parts.append(f"Key finding: {key_insights[0][:150]}")
-                        if ml_analysis.get('sentiment') and ml_analysis['sentiment'] != 'unknown':
-                            summary_parts.append(f"Sentiment: {ml_analysis['sentiment']}")
+                        summary_parts.append(f"Status: {contract_status}")
+                        summary_parts.append(f"Confidence: {contract_confidence:.0%}")
+                        if contract_status == 'BLOCKED':
+                            blocked_on = research_contract.get('blocked_on', 'Unknown')
+                            summary_parts.append(f"Blocked: {blocked_on[:100]}")
+                        elif key_insights:
+                            summary_parts.append(f"Key finding: {key_insights[0][:100]}")
 
                         research_summary = ". ".join(summary_parts)
 
@@ -700,6 +724,423 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)
                 )
+
+    # === Session 872: Research Contract Methods ===
+
+    def _build_research_contract(
+        self,
+        task: str,
+        all_results: List[Dict[str, Any]],
+        ml_analysis: Dict[str, Any],
+        tool_calls_made: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Session 872: Build a Research Contract from research results.
+
+        Enforces:
+        - Binary status (no contradictions)
+        - Specific deliverables
+        - Confidence with reasoning
+        - Escalation paths
+
+        Args:
+            task: Original research task
+            all_results: Results from tool calls
+            ml_analysis: ML analysis results
+            tool_calls_made: Record of tool calls
+
+        Returns:
+            ResearchContract as dict
+        """
+        from core.contracts.research_contract import (
+            ResearchContract,
+            ResearchStatus,
+            generate_deliverables_from_goal
+        )
+
+        # Determine status based on results
+        has_results = bool(all_results)
+        has_sufficient_data = self._assess_data_sufficiency(all_results, task)
+
+        # Calculate confidence
+        confidence, confidence_reason = self._calculate_research_confidence(
+            all_results, ml_analysis, has_sufficient_data
+        )
+
+        # Auto-generate specific deliverables
+        deliverables = generate_deliverables_from_goal(task)
+
+        # Determine which deliverables are complete
+        deliverables_complete = []
+        if has_results:
+            # Mark basic deliverables as complete if we have data
+            if len(all_results) > 0:
+                deliverables_complete.append(deliverables[0])  # Summary
+            if len(all_results) >= 3:
+                deliverables_complete.append(deliverables[1])  # Key findings
+            if any(r.get('data', {}).get('url') or r.get('source') for r in all_results):
+                deliverables_complete.append(deliverables[2])  # Sources
+
+        # Identify data gaps
+        data_gaps = self._identify_data_gaps(all_results, task)
+
+        # Build sources list
+        sources_used = []
+        for tc in tool_calls_made:
+            sources_used.append(f"{tc['tool']}: {tc.get('arguments', {}).get('query', 'N/A')[:50]}")
+
+        # Identify related agents that might be needed
+        related_agents = self._identify_related_agents(task, data_gaps)
+
+        try:
+            if not has_results:
+                # FAILED: No results at all
+                contract = ResearchContract.create(
+                    goal=task,
+                    status=ResearchStatus.FAILED,
+                    owner=self.name,
+                    confidence=0.1,
+                    confidence_reason="No results returned from any source",
+                    deliverables=deliverables,
+                    deliverables_complete=[],
+                    data_gaps=["All data sources returned empty results"],
+                    escalation_path="Retry with different search terms or escalate to DataExportAgent",
+                    related_agents=['DataExportAgent', 'SystemAdminAgent']
+                )
+            elif not has_sufficient_data:
+                # BLOCKED: Have some results but not enough
+                blocked_on = self._determine_blocking_reason(data_gaps)
+                contract = ResearchContract.create_blocked(
+                    goal=task,
+                    owner=self.name,
+                    blocked_on=blocked_on,
+                    escalation_path=f"If no additional data in 24h -> escalate to {related_agents[0] if related_agents else 'SystemAdminAgent'}",
+                    inputs_required=data_gaps,
+                    confidence_reason=confidence_reason,
+                    deliverables=deliverables,
+                    deliverables_complete=deliverables_complete,
+                    findings=self._extract_partial_findings(all_results, ml_analysis),
+                    sources_used=sources_used,
+                    data_gaps=data_gaps,
+                    related_agents=related_agents,
+                    next_trigger=f"{related_agents[0] if related_agents else 'DataExportAgent'} provides missing data"
+                )
+            else:
+                # COMPLETE: Have sufficient data
+                contract = ResearchContract.create_complete(
+                    goal=task,
+                    owner=self.name,
+                    deliverables=deliverables,
+                    findings=self._extract_findings(all_results, ml_analysis),
+                    confidence=confidence,
+                    confidence_reason=confidence_reason,
+                    recommendations=self._generate_recommendations(all_results, ml_analysis, task),
+                    sources_used=sources_used,
+                    data_gaps=data_gaps if data_gaps else [],
+                    related_agents=related_agents
+                )
+
+            return contract.to_dict()
+
+        except ValueError as e:
+            # Contract validation failed - return error contract
+            logger.warning(f"Research contract validation failed: {e}")
+            return {
+                'contract_type': 'research',
+                'contract_version': '1.0',
+                'status': 'FAILED',
+                'goal': task,
+                'owner': self.name,
+                'confidence': 0.1,
+                'confidence_reason': f"Contract validation failed: {str(e)}",
+                'error': str(e)
+            }
+
+    def _assess_data_sufficiency(
+        self,
+        all_results: List[Dict[str, Any]],
+        task: str
+    ) -> bool:
+        """
+        Assess if we have sufficient data to complete the research.
+
+        Returns True if data is sufficient, False if blocked.
+        """
+        if not all_results:
+            return False
+
+        # Count total data points
+        total_items = 0
+        for result in all_results:
+            data = result.get('data', result)
+            if isinstance(data, list):
+                total_items += len(data)
+            elif isinstance(data, dict):
+                if 'results' in data:
+                    total_items += len(data['results'])
+                else:
+                    total_items += 1
+
+        # Minimum threshold for "sufficient" data
+        # Adjust based on task complexity
+        task_lower = task.lower()
+        if 'comprehensive' in task_lower or 'detailed' in task_lower:
+            min_items = 10
+        elif 'quick' in task_lower or 'brief' in task_lower:
+            min_items = 3
+        else:
+            min_items = 5
+
+        return total_items >= min_items
+
+    def _calculate_research_confidence(
+        self,
+        all_results: List[Dict[str, Any]],
+        ml_analysis: Dict[str, Any],
+        has_sufficient_data: bool
+    ) -> tuple:
+        """
+        Calculate confidence score and reason.
+
+        Returns:
+            Tuple of (confidence: float, reason: str)
+        """
+        if not all_results:
+            return 0.1, "No results - cannot assess confidence"
+
+        if not has_sufficient_data:
+            return 0.3, "Insufficient data for reliable conclusions"
+
+        # Start with base confidence
+        confidence = 0.5
+
+        # Boost for multiple sources
+        source_count = len(all_results)
+        if source_count >= 3:
+            confidence += 0.15
+        elif source_count >= 2:
+            confidence += 0.1
+
+        # Boost for ML analysis
+        if ml_analysis.get('ml_used'):
+            confidence += 0.1
+            if ml_analysis.get('confidence', 0) > 0.7:
+                confidence += 0.1
+
+        # Boost for diverse source types
+        source_types = set()
+        for r in all_results:
+            source_types.add(r.get('source', 'unknown'))
+        if len(source_types) >= 2:
+            confidence += 0.1
+
+        confidence = min(confidence, 0.95)  # Cap at 95%
+
+        # Build reason
+        reasons = []
+        if source_count >= 3:
+            reasons.append(f"{source_count} sources consulted")
+        if ml_analysis.get('ml_used'):
+            reasons.append("ML analysis applied")
+        if len(source_types) >= 2:
+            reasons.append(f"{len(source_types)} source types")
+
+        if not reasons:
+            reasons.append("Limited data available")
+
+        reason = f"{self._confidence_to_label(confidence)} - {', '.join(reasons)}"
+
+        return confidence, reason
+
+    def _confidence_to_label(self, confidence: float) -> str:
+        """Convert confidence score to label."""
+        if confidence >= 0.8:
+            return "High"
+        elif confidence >= 0.6:
+            return "Medium"
+        elif confidence >= 0.4:
+            return "Low"
+        else:
+            return "Very Low"
+
+    def _identify_data_gaps(
+        self,
+        all_results: List[Dict[str, Any]],
+        task: str
+    ) -> List[str]:
+        """Identify what data is missing."""
+        gaps = []
+        task_lower = task.lower()
+
+        # Check for common data needs
+        if 'trend' in task_lower or 'analysis' in task_lower:
+            # Check if we have time-series data
+            has_temporal = any(
+                'timestamp' in str(r) or 'date' in str(r) or 'time' in str(r)
+                for r in all_results
+            )
+            if not has_temporal:
+                gaps.append("Time-series data for trend analysis")
+
+        if 'competitor' in task_lower or 'market' in task_lower:
+            if len(all_results) < 3:
+                gaps.append("Additional competitor/market data sources")
+
+        if 'experiment' in task_lower or 'execution' in task_lower:
+            # Check for execution logs
+            has_execution_data = any(
+                'execution' in str(r).lower() or 'log' in str(r).lower()
+                for r in all_results
+            )
+            if not has_execution_data:
+                gaps.append("ExperimentExecution logs (core.models_experiment.ExperimentExecution)")
+
+        if not all_results:
+            gaps.append("Primary data sources returned no results")
+
+        return gaps
+
+    def _identify_related_agents(
+        self,
+        task: str,
+        data_gaps: List[str]
+    ) -> List[str]:
+        """Identify agents that might help with data gaps."""
+        agents = []
+        task_lower = task.lower()
+        gaps_str = ' '.join(data_gaps).lower()
+
+        if 'export' in gaps_str or 'log' in gaps_str or 'execution' in gaps_str:
+            agents.append('DataExportAgent')
+
+        if 'competitor' in task_lower or 'market' in task_lower:
+            agents.append('CompetitorAnalysisAgent')
+
+        if 'trend' in task_lower or 'analysis' in task_lower:
+            agents.append('TrendAnalysisAgent')
+
+        if 'user' in task_lower or 'customer' in task_lower:
+            agents.append('CustomerResearchAgent')
+
+        if not agents:
+            agents.append('DataExportAgent')  # Default fallback
+
+        return agents
+
+    def _determine_blocking_reason(self, data_gaps: List[str]) -> str:
+        """Determine the primary blocking reason."""
+        if not data_gaps:
+            return "Insufficient data for reliable conclusions"
+
+        # Prioritize specific data gaps
+        for gap in data_gaps:
+            if 'ExperimentExecution' in gap or 'log' in gap.lower():
+                return f"Missing: {gap}"
+            if 'time-series' in gap.lower() or 'temporal' in gap.lower():
+                return f"Missing: {gap}"
+
+        return f"Missing: {data_gaps[0]}"
+
+    def _extract_partial_findings(
+        self,
+        all_results: List[Dict[str, Any]],
+        ml_analysis: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Extract partial findings when data is insufficient."""
+        findings = {
+            'status': 'Partial - awaiting additional data',
+            'preliminary_observations': []
+        }
+
+        for result in all_results[:3]:  # Top 3
+            data = result.get('data', result)
+            if isinstance(data, dict):
+                if data.get('title') or data.get('query'):
+                    findings['preliminary_observations'].append(
+                        data.get('title') or data.get('query', 'Unknown')
+                    )
+
+        if ml_analysis.get('ml_insights'):
+            findings['ml_observation'] = ml_analysis['ml_insights']
+
+        return findings
+
+    def _extract_findings(
+        self,
+        all_results: List[Dict[str, Any]],
+        ml_analysis: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Extract complete findings from results."""
+        findings = {
+            'summary': '',
+            'key_points': [],
+            'sources_summary': {}
+        }
+
+        # Summarize by source
+        for result in all_results:
+            source = result.get('source', 'unknown')
+            data = result.get('data', result)
+
+            if source not in findings['sources_summary']:
+                findings['sources_summary'][source] = []
+
+            if isinstance(data, dict):
+                title = data.get('title') or data.get('headline') or data.get('query', '')
+                if title:
+                    findings['sources_summary'][source].append(title[:200])
+                    findings['key_points'].append(title[:200])
+
+        # Add ML insights
+        if ml_analysis.get('ml_insights'):
+            findings['ml_analysis'] = ml_analysis['ml_insights']
+
+        if ml_analysis.get('sentiment') and ml_analysis['sentiment'] != 'unknown':
+            findings['sentiment'] = ml_analysis['sentiment']
+
+        if ml_analysis.get('topics_detected'):
+            findings['topics'] = ml_analysis['topics_detected']
+
+        # Build summary
+        point_count = len(findings['key_points'])
+        source_count = len(findings['sources_summary'])
+        findings['summary'] = f"Analyzed {point_count} data points from {source_count} sources."
+
+        return findings
+
+    def _generate_recommendations(
+        self,
+        all_results: List[Dict[str, Any]],
+        ml_analysis: Dict[str, Any],
+        task: str
+    ) -> List[str]:
+        """Generate actionable recommendations."""
+        recommendations = []
+
+        # Based on result count
+        if len(all_results) >= 5:
+            recommendations.append("Consider deeper analysis on top 3 findings")
+        elif len(all_results) < 3:
+            recommendations.append("Expand search to additional sources for validation")
+
+        # Based on ML analysis
+        sentiment = ml_analysis.get('sentiment', 'unknown')
+        if sentiment == 'positive':
+            recommendations.append("Sentiment is positive - explore opportunities")
+        elif sentiment == 'negative':
+            recommendations.append("Sentiment is negative - investigate concerns")
+
+        # Based on task type
+        task_lower = task.lower()
+        if 'trend' in task_lower:
+            recommendations.append("Monitor these trends over next 7-14 days")
+        if 'competitor' in task_lower:
+            recommendations.append("Schedule follow-up competitive analysis in 30 days")
+
+        if not recommendations:
+            recommendations.append("Review findings and determine next steps")
+
+        return recommendations[:5]  # Max 5 recommendations
 
     def _execute_tool_call(
         self,
