@@ -869,7 +869,10 @@ class OrchestrationStepIntelligenceView(View):
                     agent_exec = AgentExecution.objects.get(id=step_exec.execution_id)
 
                     # Session 767: Get full task from input_data (task field is truncated to 500 chars)
+                    # Session 881: Defensive check - input_data might be a list in some edge cases
                     input_data = agent_exec.input_data or {}
+                    if not isinstance(input_data, dict):
+                        input_data = {}
                     full_task = input_data.get('task') or agent_exec.task
 
                     intelligence['agent_execution'] = {
@@ -885,6 +888,7 @@ class OrchestrationStepIntelligenceView(View):
                     }
 
                     # Extract context that was injected
+                    # Session 881: input_data already validated as dict above
                     context_injected = input_data.get('context_injected', {})
                     intelligence['context_injected'] = context_injected
 
