@@ -14,6 +14,7 @@ Session 874 completed all integration work from Sessions 872-873 and verified sy
 2. **Dream Backlog Cleared** - 2,130+ → 13 pending (99.4% reduction)
 3. **Experiment Linker Verified** - Signal connected, working correctly
 4. **Gate Waiver Rate Investigated** - 79.4% is working as designed
+5. **Threshold Sandbox Implemented** - Empirical calibration tool for halt thresholds
 
 ---
 
@@ -178,6 +179,40 @@ The system correctly fast-tracks low-risk experiments while requiring human revi
 
 ---
 
+## 5. Threshold Sandbox Implemented (PR #547)
+
+Created empirical calibration tool for experiment halt thresholds:
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `core/services/threshold_sandbox.py` | Calibration service that replays historical experiments |
+| `core/management/commands/calibrate_halt_thresholds.py` | CLI for running calibration |
+
+### Usage
+
+```bash
+python manage.py calibrate_halt_thresholds --days 90
+python manage.py calibrate_halt_thresholds --cost-fn 20  # Higher FN cost
+python manage.py calibrate_halt_thresholds --apply --profile=conservative
+```
+
+### Calibration Analysis Results
+
+Initial analysis of 352 experiments revealed:
+- All 77 halted experiments had **100% error rate** (genuine failures)
+- FPR = 0% across all threshold values
+- FNR = 10.5% across all threshold values
+- Current threshold (35%) is adequate - threshold value is irrelevant when all halts are at 100%
+
+The system provides three profile recommendations:
+- **Conservative**: Lower threshold, catches more failures
+- **Balanced**: Cost-weighted optimization (10:1 FN:FP ratio)
+- **Permissive**: Higher threshold, fewer unnecessary halts
+
+---
+
 ## Files Changed
 
 | File | Change |
@@ -186,6 +221,8 @@ The system correctly fast-tracks low-risk experiments while requiring human revi
 | `core/agents/research_agent.py` | AutoSpawnerService hook |
 | `core/agents/base_agent.py` | Prompt sharpening for all agents |
 | `core/celery.py` | Dream triage threshold adjustments |
+| `core/services/threshold_sandbox.py` | NEW: Threshold calibration service |
+| `core/management/commands/calibrate_halt_thresholds.py` | NEW: Calibration CLI |
 
 ---
 
@@ -198,6 +235,7 @@ The system correctly fast-tracks low-risk experiments while requiring human revi
 | #543 | feat(Session 874): Hook AutoSpawnerService into ResearchAgent |
 | #544 | feat(Session 874): Apply prompt sharpening to all agents via BaseAgent |
 | #545 | fix(Session 874): Adjust dream triage thresholds to clear limbo backlog |
+| #547 | feat(Session 874): Add threshold sandbox for experiment halt calibration |
 
 ---
 
@@ -212,6 +250,7 @@ The system correctly fast-tracks low-risk experiments while requiring human revi
 | Hook AutoSpawnerService | COMPLETE - PR #543 |
 | Apply prompt sharpening | COMPLETE - PR #544 |
 | Investigate 79.4% gate waiver rate | COMPLETE - Working as designed |
+| Implement threshold sandbox | COMPLETE - PR #547 |
 
 ---
 
@@ -244,4 +283,7 @@ from core.prompts.sharpening import sharpen_prompt
 print(sharpen_prompt('We should validate this before proceeding'))
 # Output: THIS REQUIRES validation before proceeding
 "
+
+# Run threshold calibration
+python manage.py calibrate_halt_thresholds --days 90
 ```
