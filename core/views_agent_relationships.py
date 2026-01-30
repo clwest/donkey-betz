@@ -1,7 +1,9 @@
 """
-Session 253: Agent Rivalries & Alliances API Endpoints
+Session 253: Agent Relationships API Endpoints
+Session 871: Removed Alliance and Rivalry models (0 records, never used)
 
-Provides API for managing agent relationships, alliances, and rivalries.
+Provides API for managing agent relationships.
+Use AgentRelationship.relationship_type for alliance/rivalry tracking.
 """
 
 import json
@@ -13,7 +15,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from core.models_unified_system import (
-    Agent, AgentRelationship, RelationshipEvent, Alliance, Rivalry
+    Agent, AgentRelationship, RelationshipEvent
 )
 
 logger = logging.getLogger(__name__)
@@ -63,46 +65,11 @@ def get_relationships_overview(request):
                 'failed_collaborations': rel.failed_collaborations,
             })
 
-        # Get alliances
-        alliances = Alliance.objects.filter(is_active=True).prefetch_related('members')
-        alliances_data = []
-        for alliance in alliances:
-            alliances_data.append({
-                'id': str(alliance.id),
-                'name': alliance.name,
-                'emoji': alliance.get_alliance_emoji(),
-                'purpose': alliance.purpose,
-                'member_count': alliance.members.count(),
-                'members': [{'id': str(m.id), 'name': m.name} for m in alliance.members.all()[:5]],
-                'leader': {'id': str(alliance.leader.id), 'name': alliance.leader.name} if alliance.leader else None,
-                'combined_strength': alliance.combined_strength,
-                'success_rate': alliance.get_success_rate(),
-            })
-
-        # Get rivalries
-        rivalries = Rivalry.objects.filter(is_active=True)
-        rivalries_data = []
-        for rivalry in rivalries:
-            leader_type, leader_name = rivalry.get_leader()
-            rivalries_data.append({
-                'id': str(rivalry.id),
-                'name': rivalry.name,
-                'emoji': rivalry.get_rivalry_emoji(),
-                'scope': rivalry.scope,
-                'domain': rivalry.domain,
-                'challenger': rivalry.get_challenger_name(),
-                'defender': rivalry.get_defender_name(),
-                'challenger_wins': rivalry.challenger_wins,
-                'defender_wins': rivalry.defender_wins,
-                'draws': rivalry.draws,
-                'intensity': rivalry.intensity,
-                'leader': leader_name,
-            })
-
-        # Session 356: Use relationship_distribution for alliance/rivalry counts
-        # The separate Alliance/Rivalry models are rarely used - AgentRelationship.relationship_type is the source of truth
+        # Session 871: Alliance/Rivalry models removed - use relationship_type counts instead
         alliance_count = relationship_distribution.get('alliance', 0)
         rivalry_count = relationship_distribution.get('rivalry', 0)
+        alliances_data = []  # Session 871: Alliance model removed
+        rivalries_data = []  # Session 871: Rivalry model removed
 
         return JsonResponse({
             'success': True,
@@ -167,23 +134,10 @@ def get_agent_relationships(request, agent_id):
                 'total_interactions': rel.total_interactions,
             })
 
-        # Get agent's alliances
-        agent_alliances = Alliance.objects.filter(members=agent, is_active=True)
-        alliances_data = [{'id': str(a.id), 'name': a.name, 'purpose': a.purpose} for a in agent_alliances]
-
-        # Get agent's rivalries
-        agent_rivalries = Rivalry.objects.filter(
-            Q(agent_challenger=agent) | Q(agent_defender=agent),
-            is_active=True
-        )
-        rivalries_data = []
-        for r in agent_rivalries:
-            rivalries_data.append({
-                'id': str(r.id),
-                'name': r.name,
-                'opponent': r.get_defender_name() if r.agent_challenger == agent else r.get_challenger_name(),
-                'domain': r.domain,
-            })
+        # Session 871: Alliance/Rivalry models removed - use relationship_type instead
+        # Alliance/rivalry info now comes from AgentRelationship.relationship_type
+        alliances_data = []  # Session 871: Alliance model removed
+        rivalries_data = []  # Session 871: Rivalry model removed
 
         return JsonResponse({
             'success': True,
@@ -313,346 +267,9 @@ def record_interaction(request, relationship_id):
 
 
 # =============================================================================
-# ALLIANCES
+# Session 871: Alliance and Rivalry sections removed (models had 0 records)
+# Use AgentRelationship with relationship_type='alliance' or 'rivalry' instead
 # =============================================================================
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def get_alliance(request, alliance_id):
-    """Get detailed alliance information."""
-    try:
-        alliance = Alliance.objects.prefetch_related('members').get(id=alliance_id)
-
-        members = []
-        for member in alliance.members.all():
-            members.append({
-                'id': str(member.id),
-                'name': member.name,
-                'is_leader': member == alliance.leader,
-            })
-
-        return JsonResponse({
-            'success': True,
-            'alliance': {
-                'id': str(alliance.id),
-                'name': alliance.name,
-                'description': alliance.description,
-                'emoji': alliance.get_alliance_emoji(),
-                'purpose': alliance.purpose,
-                'members': members,
-                'leader': {'id': str(alliance.leader.id), 'name': alliance.leader.name} if alliance.leader else None,
-                'total_projects': alliance.total_projects,
-                'successful_projects': alliance.successful_projects,
-                'success_rate': alliance.get_success_rate(),
-                'combined_strength': alliance.combined_strength,
-                'is_active': alliance.is_active,
-                'formed_at': alliance.formed_at.isoformat(),
-            }
-        })
-
-    except Alliance.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Alliance not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error getting alliance: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def create_alliance(request):
-    """Create a new alliance."""
-    try:
-        data = json.loads(request.body)
-
-        # Get members
-        member_ids = data.get('member_ids', [])
-        if len(member_ids) < 2:
-            return JsonResponse({'success': False, 'error': 'Alliance requires at least 2 members'}, status=400)
-
-        members = Agent.objects.filter(id__in=member_ids)
-        if members.count() != len(member_ids):
-            return JsonResponse({'success': False, 'error': 'Some agents not found'}, status=404)
-
-        # Get optional leader
-        leader = None
-        if data.get('leader_id'):
-            leader = Agent.objects.get(id=data['leader_id'])
-
-        alliance = Alliance.objects.create(
-            name=data['name'],
-            description=data.get('description', ''),
-            purpose=data.get('purpose', 'general'),
-            leader=leader,
-        )
-        alliance.members.set(members)
-        alliance.update_combined_strength()
-
-        # Create alliance relationships between all members
-        member_list = list(members)
-        for i, agent1 in enumerate(member_list):
-            for agent2 in member_list[i+1:]:
-                # Create bidirectional alliance relationships
-                AgentRelationship.objects.get_or_create(
-                    agent_from=agent1,
-                    agent_to=agent2,
-                    defaults={
-                        'relationship_type': 'alliance',
-                        'strength': 0.6,
-                        'trust_level': 0.6,
-                        'origin': 'auto_formed',
-                        'origin_details': f'Formed alliance: {alliance.name}',
-                    }
-                )
-                AgentRelationship.objects.get_or_create(
-                    agent_from=agent2,
-                    agent_to=agent1,
-                    defaults={
-                        'relationship_type': 'alliance',
-                        'strength': 0.6,
-                        'trust_level': 0.6,
-                        'origin': 'auto_formed',
-                        'origin_details': f'Formed alliance: {alliance.name}',
-                    }
-                )
-
-        return JsonResponse({
-            'success': True,
-            'alliance_id': str(alliance.id),
-            'message': f'Created alliance "{alliance.name}" with {len(member_ids)} members',
-        })
-
-    except Agent.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Agent not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error creating alliance: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def add_alliance_member(request, alliance_id):
-    """Add a member to an alliance."""
-    try:
-        data = json.loads(request.body)
-        alliance = Alliance.objects.get(id=alliance_id)
-        agent = Agent.objects.get(id=data['agent_id'])
-
-        if agent in alliance.members.all():
-            return JsonResponse({'success': False, 'error': 'Agent already in alliance'}, status=400)
-
-        alliance.members.add(agent)
-
-        # Create alliance relationships with existing members
-        for member in alliance.members.exclude(id=agent.id):
-            AgentRelationship.objects.get_or_create(
-                agent_from=agent,
-                agent_to=member,
-                defaults={
-                    'relationship_type': 'alliance',
-                    'strength': 0.5,
-                    'trust_level': 0.5,
-                    'origin': 'auto_formed',
-                    'origin_details': f'Joined alliance: {alliance.name}',
-                }
-            )
-            AgentRelationship.objects.get_or_create(
-                agent_from=member,
-                agent_to=agent,
-                defaults={
-                    'relationship_type': 'alliance',
-                    'strength': 0.5,
-                    'trust_level': 0.5,
-                    'origin': 'auto_formed',
-                    'origin_details': f'New member joined alliance: {alliance.name}',
-                }
-            )
-
-        alliance.update_combined_strength()
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Added {agent.name} to {alliance.name}',
-        })
-
-    except Alliance.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Alliance not found'}, status=404)
-    except Agent.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Agent not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error adding alliance member: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["DELETE"])
-def disband_alliance(request, alliance_id):
-    """Disband an alliance."""
-    try:
-        alliance = Alliance.objects.get(id=alliance_id)
-        alliance.is_active = False
-        alliance.disbanded_at = timezone.now()
-        alliance.save()
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Alliance "{alliance.name}" disbanded',
-        })
-
-    except Alliance.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Alliance not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error disbanding alliance: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-# =============================================================================
-# RIVALRIES
-# =============================================================================
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def get_rivalry(request, rivalry_id):
-    """Get detailed rivalry information."""
-    try:
-        rivalry = Rivalry.objects.get(id=rivalry_id)
-        leader_type, leader_name = rivalry.get_leader()
-
-        return JsonResponse({
-            'success': True,
-            'rivalry': {
-                'id': str(rivalry.id),
-                'name': rivalry.name,
-                'description': rivalry.description,
-                'emoji': rivalry.get_rivalry_emoji(),
-                'scope': rivalry.scope,
-                'domain': rivalry.domain,
-                'challenger': rivalry.get_challenger_name(),
-                'defender': rivalry.get_defender_name(),
-                'challenger_wins': rivalry.challenger_wins,
-                'defender_wins': rivalry.defender_wins,
-                'draws': rivalry.draws,
-                'total_competitions': rivalry.challenger_wins + rivalry.defender_wins + rivalry.draws,
-                'intensity': rivalry.intensity,
-                'leader': leader_name,
-                'leader_type': leader_type,
-                'is_active': rivalry.is_active,
-                'started_at': rivalry.started_at.isoformat(),
-            }
-        })
-
-    except Rivalry.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Rivalry not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error getting rivalry: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def create_rivalry(request):
-    """Create a new rivalry between agents or alliances."""
-    try:
-        data = json.loads(request.body)
-
-        scope = data.get('scope', 'agent_vs_agent')
-        rivalry_data = {
-            'name': data['name'],
-            'description': data.get('description', ''),
-            'scope': scope,
-            'domain': data.get('domain', 'general'),
-            'intensity': data.get('intensity', 0.5),
-        }
-
-        if scope == 'agent_vs_agent':
-            rivalry_data['agent_challenger'] = Agent.objects.get(id=data['challenger_id'])
-            rivalry_data['agent_defender'] = Agent.objects.get(id=data['defender_id'])
-
-            # Create rivalry relationship
-            AgentRelationship.objects.get_or_create(
-                agent_from=rivalry_data['agent_challenger'],
-                agent_to=rivalry_data['agent_defender'],
-                defaults={
-                    'relationship_type': 'rivalry',
-                    'strength': 0.5,
-                    'trust_level': 0.3,
-                    'origin': 'competition',
-                    'origin_details': f'Rivalry: {data["name"]}',
-                }
-            )
-
-        elif scope == 'alliance_vs_alliance':
-            rivalry_data['alliance_challenger'] = Alliance.objects.get(id=data['challenger_id'])
-            rivalry_data['alliance_defender'] = Alliance.objects.get(id=data['defender_id'])
-
-        elif scope == 'agent_vs_alliance':
-            rivalry_data['agent_challenger'] = Agent.objects.get(id=data['challenger_id'])
-            rivalry_data['alliance_defender'] = Alliance.objects.get(id=data['defender_id'])
-
-        rivalry = Rivalry.objects.create(**rivalry_data)
-
-        return JsonResponse({
-            'success': True,
-            'rivalry_id': str(rivalry.id),
-            'message': f'Created rivalry: {rivalry.name}',
-        })
-
-    except (Agent.DoesNotExist, Alliance.DoesNotExist):
-        return JsonResponse({'success': False, 'error': 'Participant not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error creating rivalry: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def record_competition(request, rivalry_id):
-    """Record a competition result in a rivalry."""
-    try:
-        data = json.loads(request.body)
-        rivalry = Rivalry.objects.get(id=rivalry_id)
-
-        winner = data.get('winner', 'draw')  # 'challenger', 'defender', or 'draw'
-        rivalry.record_competition(winner)
-
-        leader_type, leader_name = rivalry.get_leader()
-
-        return JsonResponse({
-            'success': True,
-            'rivalry_id': str(rivalry.id),
-            'challenger_wins': rivalry.challenger_wins,
-            'defender_wins': rivalry.defender_wins,
-            'draws': rivalry.draws,
-            'intensity': rivalry.intensity,
-            'leader': leader_name,
-        })
-
-    except Rivalry.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Rivalry not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error recording competition: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(["DELETE"])
-def end_rivalry(request, rivalry_id):
-    """End a rivalry."""
-    try:
-        rivalry = Rivalry.objects.get(id=rivalry_id)
-        rivalry.is_active = False
-        rivalry.ended_at = timezone.now()
-        rivalry.save()
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Rivalry "{rivalry.name}" ended',
-        })
-
-    except Rivalry.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Rivalry not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error ending rivalry: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 # =============================================================================

@@ -481,20 +481,12 @@ from core.views_agent_mood import (
     get_mood_prompt_context,
 )
 
-# Session 253: Agent Rivalries & Alliances
+# Session 253: Agent Relationships (Session 871: Alliance/Rivalry removed)
 from core.views_agent_relationships import (
     get_relationships_overview,
     get_agent_relationships,
     create_relationship,
     record_interaction,
-    get_alliance,
-    create_alliance,
-    add_alliance_member,
-    disband_alliance,
-    get_rivalry,
-    create_rivalry,
-    record_competition,
-    end_rivalry,
     get_relationship_events,
     auto_generate_relationships,
 )
@@ -3166,23 +3158,13 @@ urlpatterns = [
     path('api/agent-mood/rules/<uuid:rule_id>/delete/', delete_mood_rule, name='agent-mood-rule-delete'),
     path('api/agent-mood/trigger-from-memory/', trigger_mood_from_memory, name='agent-mood-from-memory'),
 
-    # Session 253: Agent Rivalries & Alliances API
+    # Session 253: Agent Relationships API (Session 871: Alliance/Rivalry routes removed)
     path('api/agent-relationships/', get_relationships_overview, name='agent-relationships-overview'),
     path('api/agent-relationships/agent/<uuid:agent_id>/', get_agent_relationships, name='agent-relationships-detail'),
     path('api/agent-relationships/create/', create_relationship, name='agent-relationship-create'),
     path('api/agent-relationships/relationship/<uuid:relationship_id>/interact/', record_interaction, name='agent-relationship-interact'),
     path('api/agent-relationships/relationship/<uuid:relationship_id>/events/', get_relationship_events, name='agent-relationship-events'),
     path('api/agent-relationships/auto-generate/', auto_generate_relationships, name='agent-relationships-auto'),
-    # Alliances
-    path('api/agent-relationships/alliances/<uuid:alliance_id>/', get_alliance, name='agent-alliance-detail'),
-    path('api/agent-relationships/alliances/create/', create_alliance, name='agent-alliance-create'),
-    path('api/agent-relationships/alliances/<uuid:alliance_id>/add/', add_alliance_member, name='agent-alliance-add'),
-    path('api/agent-relationships/alliances/<uuid:alliance_id>/disband/', disband_alliance, name='agent-alliance-disband'),
-    # Rivalries
-    path('api/agent-relationships/rivalries/<uuid:rivalry_id>/', get_rivalry, name='agent-rivalry-detail'),
-    path('api/agent-relationships/rivalries/create/', create_rivalry, name='agent-rivalry-create'),
-    path('api/agent-relationships/rivalries/<uuid:rivalry_id>/compete/', record_competition, name='agent-rivalry-compete'),
-    path('api/agent-relationships/rivalries/<uuid:rivalry_id>/end/', end_rivalry, name='agent-rivalry-end'),
 
     # Session 254: Agent Evolution System API
     path('api/agent-evolution/', get_evolution_overview, name='agent-evolution-overview'),

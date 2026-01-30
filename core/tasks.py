@@ -11349,45 +11349,28 @@ def evolve_agent_relationships():
 def update_alliance_strengths():
     """
     Session 253: Update combined strength for all active alliances.
-
-    Called by Celery Beat every hour.
+    Session 871: Alliance model removed (0 records, never used).
+    Task kept as stub to avoid Celery Beat errors.
     """
-    try:
-        from core.models_unified_system import Alliance
-
-        alliances = Alliance.objects.filter(is_active=True)
-        updated_count = 0
-
-        for alliance in alliances:
-            old_strength = alliance.combined_strength
-            alliance.update_combined_strength()
-
-            if old_strength != alliance.combined_strength:
-                updated_count += 1
-
-        logger.info(f"🤝 [ALLIANCES] Updated {updated_count} alliance strengths")
-
-        return {
-            'status': 'success',
-            'updated_count': updated_count
-        }
-
-    except Exception as e:
-        logger.exception(f"🤝 [ALLIANCES] Failed to update: {e}")
-        return {'status': 'failed', 'error': str(e)}
+    # Session 871: Alliance model removed
+    return {
+        'status': 'skipped',
+        'reason': 'Alliance model removed in Session 871'
+    }
 
 
 @shared_task(name='core.tasks.broadcast_relationship_status')
 def broadcast_relationship_status():
     """
     Session 253: Broadcast relationship status via WebSocket.
+    Session 871: Removed Alliance/Rivalry references (models removed).
 
     Called by Celery Beat every 2 minutes for real-time UI updates.
     """
     try:
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
-        from core.models_unified_system import AgentRelationship, Alliance, Rivalry
+        from core.models_unified_system import AgentRelationship, RelationshipEvent
         from django.db.models import Count
 
         # Get relationship stats
@@ -11396,12 +11379,11 @@ def broadcast_relationship_status():
         )
         relationship_distribution = {r['relationship_type']: r['count'] for r in relationship_counts}
 
-        # Get active alliances and rivalries
-        active_alliances = Alliance.objects.filter(is_active=True).count()
-        active_rivalries = Rivalry.objects.filter(is_active=True).count()
+        # Session 871: Alliance/Rivalry models removed - use relationship_type counts
+        active_alliances = relationship_distribution.get('alliance', 0)
+        active_rivalries = relationship_distribution.get('rivalry', 0)
 
         # Get recent events
-        from core.models_unified_system import RelationshipEvent
         recent_events = RelationshipEvent.objects.select_related(
             'relationship__agent_from', 'relationship__agent_to'
         ).order_by('-created_at')[:5]
