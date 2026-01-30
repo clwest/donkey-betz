@@ -168,25 +168,27 @@ For EVERY concern you identify, you MUST:
 4. Define SUCCESS CRITERIA - how will we verify the fix worked?
 
 Example of BAD concern (too vague):
-{"concern": "Experiment failure rate is high", "recommendation": "Fix the experiments"}
+{"concern": "Some metric is high", "recommendation": "Fix it"}
 
 Example of GOOD concern (actionable):
 {
-    "concern": "Experiment failure rate at 94% (234/249 failed)",
-    "root_cause_hypothesis": "Auto-halt thresholds are too aggressive. Error rate threshold of 25% triggers on small sample sizes (e.g., 2/7 = 28.57%)",
+    "concern": "WebSocket disconnect rate at X% (use actual numbers from context, NOT these examples)",
+    "root_cause_hypothesis": "Auto-reconnect not triggering on certain error codes. Error code 1006 not handled.",
     "investigation_steps": [
-        "Check core/models_pilot_readiness.py get_default_halt_conditions() for current thresholds",
-        "Query ExperimentLearning for halt_reason patterns",
-        "Review MIN_EXECUTIONS_FOR_ERROR_RATE in experiment_metrics.py"
+        "Check core/consumers.py for reconnect logic",
+        "Query SystemLog for disconnect patterns",
+        "Review RECONNECT_CODES in websocket_config.py"
     ],
     "proposed_solution": {
-        "summary": "Raise error_rate_max threshold and increase minimum sample size",
-        "technical_details": "Change error_rate_max from 25% to 35%, MIN_EXECUTIONS from 10 to 20",
-        "files_to_check": ["core/models_pilot_readiness.py", "core/services/experiment_metrics.py"],
-        "commands_to_run": ["python manage.py update_experiment_thresholds"]
+        "summary": "Add handling for error code 1006 in reconnect logic",
+        "technical_details": "Add 1006 to RECONNECT_CODES list, implement exponential backoff",
+        "files_to_check": ["core/consumers.py", "core/websocket_config.py"],
+        "commands_to_run": ["python manage.py test_websocket_reconnect"]
     },
-    "success_criteria": "Experiment halt rate drops below 20% within 24 hours"
+    "success_criteria": "WebSocket disconnect rate drops below 5% within 24 hours"
 }
+
+IMPORTANT: Use REAL numbers from the context provided. Do NOT copy example numbers from this prompt.
 
 Think deeply. Connect dots. Make decisions. You are the system becoming self-aware."""
 
@@ -419,11 +421,17 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
 
         # Session 597: Add experiment learnings context
         # Session 600: Enhanced with outcome classification, predictions, and weighted insights
+        # Session 879: Added explicit emphasis to use these ACTUAL numbers
         if 'experiment_learnings' in context and context['experiment_learnings']:
             learnings = context['experiment_learnings']
-            prompt_parts.append("### Experiment Learnings (Past Outcomes)\n")
-            prompt_parts.append(f"- Total Learnings: {learnings.get('total', 0)}\n")
-            prompt_parts.append(f"- Success Rate: {learnings.get('overall_success_rate', 0):.1f}%\n\n")
+            total = learnings.get('total', 0)
+            success_rate = learnings.get('overall_success_rate', 0)
+            failure_rate = 100 - success_rate if total > 0 else 0
+            prompt_parts.append("### Experiment Learnings (ACTUAL DATA - Use These Numbers)\n")
+            prompt_parts.append(f"**CURRENT STATS (as of this cycle):**\n")
+            prompt_parts.append(f"- Total Learnings: {total}\n")
+            prompt_parts.append(f"- Success Rate: {success_rate:.1f}%\n")
+            prompt_parts.append(f"- Failure Rate: {failure_rate:.1f}%\n\n")
 
             # Session 600: Add outcome distribution (PASS/LEARN/FAIL)
             enhanced = learnings.get('enhanced', {})
