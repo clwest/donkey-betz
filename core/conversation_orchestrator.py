@@ -50,6 +50,9 @@ ENABLE_RICH_CONTEXT = True  # Inject spider/advisor/learning context
 ENABLE_AUTO_AGENT_SELECTION = True  # Select topic-matched agents
 ENABLE_STRUCTURED_TURNS = True  # Use turn flow patterns
 
+# Session 873: Decision Enforcement - force decisive outcomes after debate
+ENABLE_DECISION_ENFORCEMENT = True  # Force decisions via DecisionEnforcerAgent
+
 
 # Session 826: Structured turn flows for different conversation types
 TURN_FLOWS = {
@@ -912,6 +915,26 @@ class ConversationOrchestrator:
 
         logger.info(f"Conversation complete: {len(messages)} messages, valid={validation['is_valid']}")
 
+        # Session 873: Enforce decision via DecisionEnforcerAgent
+        execution_mandate = None
+        if ENABLE_DECISION_ENFORCEMENT and decision_summary:
+            try:
+                mandate_result = self._enforce_decision(
+                    messages=messages,
+                    decision_summary=decision_summary,
+                    topic=topic,
+                    participants=[agent1['name'], agent2['name']],
+                    conversation_type=conversation_type
+                )
+                execution_mandate = mandate_result.get('mandate')
+                if execution_mandate:
+                    logger.info(
+                        f"🎯 [Session 873] Decision enforced: {execution_mandate.chosen_path[:50]}... "
+                        f"(owner: {execution_mandate.decision_owner})"
+                    )
+            except Exception as e:
+                logger.warning(f"[Session 873] Decision enforcement failed: {e}")
+
         # Session 811: AI World Enhancement - Create memories and dispatch actions
         ai_world_metadata = {
             'dreams_injected': dreams_injected,
@@ -985,7 +1008,91 @@ class ConversationOrchestrator:
             'success_criteria': success_criteria,
             'auto_selected_agents': auto_select_agents,
             'rich_context_injected': bool(agent1_rich_context or agent2_rich_context),
+            # Session 873: Decision Enforcement
+            'execution_mandate': execution_mandate.to_dict() if execution_mandate else None,
         }
+
+    def _enforce_decision(
+        self,
+        messages: List[Dict[str, Any]],
+        decision_summary: Dict[str, Any],
+        topic: str,
+        participants: List[str],
+        conversation_type: str
+    ) -> Dict[str, Any]:
+        """
+        Session 873: Enforce a decisive outcome using DecisionEnforcerAgent.
+
+        This is the "Prefrontal Cortex" - it forces decisions after debate
+        to prevent "further analysis recommended" loops.
+
+        Args:
+            messages: The conversation transcript
+            decision_summary: Extracted decision summary from conversation
+            topic: What the conversation was about
+            participants: List of agent names that participated
+            conversation_type: Type of conversation (debate, analytical, etc.)
+
+        Returns:
+            Dict with 'mandate' (ExecutionMandate) if successful, 'error' if not
+        """
+        from core.agents.decision_enforcer_agent import DecisionEnforcerAgent
+        from core.contracts.execution_mandate import ExecutionMandate
+
+        # Only enforce for debate-like conversations
+        if conversation_type not in ('debate', 'analytical', 'critique', 'planning'):
+            logger.debug(f"[Session 873] Skipping decision enforcement for {conversation_type} conversation")
+            return {'mandate': None, 'skipped': True, 'reason': f'conversation_type={conversation_type}'}
+
+        # Build synthesis dict from decision_summary
+        synthesis = {
+            'insights': decision_summary.get('insights', []),
+            'proposed_feature': decision_summary.get('proposed_feature', ''),
+            'next_steps': decision_summary.get('next_steps', []),
+            'decision': decision_summary.get('decision', ''),
+            'participants': participants,
+        }
+
+        # Execute the DecisionEnforcerAgent
+        agent = DecisionEnforcerAgent(user=getattr(self, 'user', None))
+        result = agent.execute(
+            task=f"Enforce decision from {conversation_type} on: {topic}",
+            context={
+                'debate_messages': messages,
+                'synthesis': synthesis,
+                'topic': topic,
+            }
+        )
+
+        if result.success:
+            mandate_data = result.data.get('mandate', {})
+            # Reconstruct the ExecutionMandate object from dict
+            from core.contracts.execution_mandate import SpawnedTask, MandateStatus
+            spawned_tasks = [
+                SpawnedTask(**t) if isinstance(t, dict) else t
+                for t in mandate_data.get('spawned_tasks', [])
+            ]
+            mandate = ExecutionMandate(
+                chosen_path=mandate_data.get('chosen_path', ''),
+                reason=mandate_data.get('reason', ''),
+                decision_owner=mandate_data.get('decision_owner', ''),
+                kill_criteria=mandate_data.get('kill_criteria', []),
+                deadline=mandate_data.get('deadline', ''),
+                experiments=mandate_data.get('experiments', []),
+                rejected_paths=mandate_data.get('rejected_paths', {}),
+                acknowledged_risks=mandate_data.get('acknowledged_risks', []),
+                confidence=mandate_data.get('confidence', 0.6),
+                confidence_reason=mandate_data.get('confidence_reason', ''),
+                spawned_tasks=spawned_tasks,
+                status=MandateStatus.ACTIVE,
+            )
+            logger.info(
+                f"[Session 873] DecisionEnforcerAgent success: {mandate.chosen_path[:100]}"
+            )
+            return {'mandate': mandate, 'markdown': result.data.get('mandate_markdown', '')}
+        else:
+            logger.warning(f"[Session 873] DecisionEnforcerAgent failed: {result.error}")
+            return {'mandate': None, 'error': result.error}
 
     def _build_turn_prompt(
         self,
