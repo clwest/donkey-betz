@@ -6728,6 +6728,202 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             self.enhanced_profile = EnhancedUserProfile.objects.create(user=self.user)
             logger.info(f"Created enhanced profile for {self.user.username}")
 
+    # Session 878: Goal Collection - Help users define their goals for personalization
+    def _handle_goal_collection(self, message: str) -> Optional[Dict[str, Any]]:
+        """
+        Handle goal collection flow for users who haven't set goals.
+
+        Session 878: Users need goals for the PA to personalize advice effectively.
+        This method handles:
+        1. Detecting if goals are needed
+        2. Prompting for goals
+        3. Extracting and saving goals from user responses
+
+        Args:
+            message: The user's current message
+
+        Returns:
+            Response dict if goal collection is handled, None to continue normal processing
+        """
+        try:
+            # Check if user already has goals
+            if self.enhanced_profile.long_term_goals and len(self.enhanced_profile.long_term_goals) > 0:
+                # User has goals - clear any pending goal collection state
+                if self.enhanced_profile.dynamic_attributes and self.enhanced_profile.dynamic_attributes.get('goals_collection_pending'):
+                    self.enhanced_profile.dynamic_attributes['goals_collection_pending'] = False
+                    self.enhanced_profile.save()
+                return None
+
+            # Get or initialize dynamic_attributes
+            dynamic_attrs = self.enhanced_profile.dynamic_attributes or {}
+
+            # Check if we're waiting for a goal response
+            if dynamic_attrs.get('goals_collection_pending'):
+                # Check if user wants to skip instead of providing goals
+                skip_keywords = ['skip', 'later', 'not now', 'no thanks', 'pass', "don't want to", "i'll pass"]
+                if any(kw in message.lower() for kw in skip_keywords):
+                    # User wants to skip goal setting
+                    dynamic_attrs['goals_collection_pending'] = False
+                    dynamic_attrs['goals_collection_skipped'] = True
+                    dynamic_attrs['goals_collection_skipped_at'] = datetime.now().isoformat()
+                    self.enhanced_profile.dynamic_attributes = dynamic_attrs
+                    self.enhanced_profile.save()
+                    logger.info(f"Session 878: User {self.user.username} skipped goal collection")
+                    return None
+
+                # User is responding to our goal question - try to extract goals
+                extracted_goals = self._extract_goals_from_response(message)
+
+                if extracted_goals:
+                    # Save the goals
+                    self.enhanced_profile.long_term_goals = extracted_goals
+                    self.enhanced_profile.dynamic_attributes = dynamic_attrs
+                    self.enhanced_profile.dynamic_attributes['goals_collection_pending'] = False
+                    self.enhanced_profile.dynamic_attributes['goals_collected_at'] = datetime.now().isoformat()
+                    self.enhanced_profile.save()
+
+                    logger.info(f"Session 878: Saved {len(extracted_goals)} goals for user {self.user.username}")
+
+                    # Return a confirmation and continue to help them
+                    return {
+                        'response': f"Thanks for sharing your goals! I've noted:\n\n" +
+                                   "\n".join([f"- {goal}" for goal in extracted_goals]) +
+                                   "\n\nI'll keep these in mind to help you more effectively. What would you like to work on today?",
+                        'success': True,
+                        'confidence': 0.95,
+                        'type': 'goal_collection_complete',
+                        'goals_saved': extracted_goals
+                    }
+                else:
+                    # Couldn't extract clear goals, ask for clarification
+                    return {
+                        'response': "I want to make sure I understand your goals correctly. "
+                                   "Could you list 2-3 specific things you want to achieve? "
+                                   "For example:\n"
+                                   "- Build a side income of $2000/month\n"
+                                   "- Learn Python and get a developer job\n"
+                                   "- Launch my startup idea",
+                        'success': True,
+                        'confidence': 0.9,
+                        'type': 'goal_collection_clarification'
+                    }
+
+            # Check if we should ask for goals (first time)
+            # Only ask if: no goals, haven't asked recently, and not a skip keyword in message
+            skip_keywords = ['skip', 'later', 'not now', 'no thanks', 'pass']
+            if any(kw in message.lower() for kw in skip_keywords):
+                # User wants to skip goal setting
+                dynamic_attrs['goals_collection_skipped'] = True
+                dynamic_attrs['goals_collection_skipped_at'] = datetime.now().isoformat()
+                self.enhanced_profile.dynamic_attributes = dynamic_attrs
+                self.enhanced_profile.save()
+                logger.info(f"Session 878: User {self.user.username} skipped goal collection")
+                return None
+
+            # Check if we've asked before and were skipped
+            if dynamic_attrs.get('goals_collection_skipped'):
+                # Don't keep asking if they skipped
+                return None
+
+            # Check if we've recently asked (within last 24 hours)
+            last_asked = dynamic_attrs.get('goals_collection_last_asked')
+            if last_asked:
+                try:
+                    last_asked_time = datetime.fromisoformat(last_asked)
+                    if (datetime.now() - last_asked_time).total_seconds() < 86400:  # 24 hours
+                        return None
+                except (ValueError, TypeError):
+                    pass
+
+            # First interaction without goals - ask for them
+            dynamic_attrs['goals_collection_pending'] = True
+            dynamic_attrs['goals_collection_last_asked'] = datetime.now().isoformat()
+            self.enhanced_profile.dynamic_attributes = dynamic_attrs
+            self.enhanced_profile.save()
+
+            logger.info(f"Session 878: Asking user {self.user.username} to set goals")
+
+            return {
+                'response': f"Hi {self.user.first_name or self.user.username}! To help you most effectively, "
+                           "I'd love to know what you're working toward.\n\n"
+                           "**What are your top 2-3 goals right now?**\n\n"
+                           "They could be anything - career goals, learning goals, income targets, or personal projects. "
+                           "For example:\n"
+                           "- Increase my freelance income to $5k/month\n"
+                           "- Build and launch a SaaS product\n"
+                           "- Transition into a data science role\n\n"
+                           "(Type 'skip' if you'd rather set goals later)",
+                'success': True,
+                'confidence': 0.95,
+                'type': 'goal_collection_prompt',
+                'suggestions': [
+                    {'text': 'Set my goals', 'action': 'Tell me your goals'},
+                    {'text': 'Skip for now', 'action': 'skip'}
+                ]
+            }
+
+        except Exception as e:
+            logger.error(f"Session 878: Error in goal collection: {e}")
+            return None
+
+    def _extract_goals_from_response(self, message: str) -> List[str]:
+        """
+        Extract goals from a user's response using pattern matching and AI.
+
+        Session 878: Intelligently parse goals from natural language.
+
+        Args:
+            message: User's response containing their goals
+
+        Returns:
+            List of extracted goals, or empty list if none found
+        """
+        goals = []
+
+        # First, try simple bullet/numbered list extraction
+        import re
+
+        # Match bullet points: - goal, * goal, • goal
+        bullet_matches = re.findall(r'^[\s]*[-*•]\s*(.+)$', message, re.MULTILINE)
+        if bullet_matches:
+            goals.extend([m.strip() for m in bullet_matches if len(m.strip()) > 5])
+
+        # Match numbered lists: 1. goal, 1) goal
+        numbered_matches = re.findall(r'^[\s]*\d+[.)]\s*(.+)$', message, re.MULTILINE)
+        if numbered_matches:
+            goals.extend([m.strip() for m in numbered_matches if len(m.strip()) > 5])
+
+        # If we found formatted goals, return them
+        if goals:
+            return goals[:5]  # Limit to 5 goals
+
+        # Otherwise, try to split on common separators
+        # Split on "and", commas, or newlines for conversational responses
+        if '\n' in message:
+            lines = [l.strip() for l in message.split('\n') if l.strip() and len(l.strip()) > 10]
+            if len(lines) >= 2:
+                return lines[:5]
+
+        # If message is long enough and contains goal-like content, treat it as a single goal
+        goal_indicators = ['want to', 'goal is', 'trying to', 'working on', 'hope to',
+                          'plan to', 'aim to', 'need to', 'going to', 'looking to']
+
+        if len(message) > 20 and any(ind in message.lower() for ind in goal_indicators):
+            # Split by commas if multiple clauses
+            if ',' in message and message.count(',') <= 4:
+                parts = [p.strip() for p in message.split(',') if len(p.strip()) > 10]
+                if len(parts) >= 2:
+                    return parts[:5]
+
+            # Treat the whole message as a goal statement
+            return [message.strip()[:200]]
+
+        # Fallback: if message is substantial, use it as a single goal
+        if len(message) > 30:
+            return [message.strip()[:200]]
+
+        return []
+
     # Session 122: Asset Tracking Methods for Intelligent Chaining
     def track_generated_image(self, image_id: str, image_url: str, prompt: str, asset_type: str = 'logo'):
         """
@@ -9037,6 +9233,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         # Load enhanced profile context for personalization
         profile_context = self.enhanced_profile.get_context_for_ai('chat')
+
+        # Session 878: Goal Collection - Help users define their goals
+        goal_response = self._handle_goal_collection(message)
+        if goal_response:
+            return goal_response
 
         # Merge profile context with provided context
         full_context = {
