@@ -6924,6 +6924,138 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         return []
 
+    # Session 882: Interview System Integration - Auto-trigger for new users
+    def _handle_interview_trigger(self, message: str) -> Optional[Dict[str, Any]]:
+        """
+        Handle interview triggering for users with incomplete profiles.
+
+        Session 882: PA should automatically prompt new users to complete
+        the interview to build their profile for personalization.
+
+        Args:
+            message: The user's current message
+
+        Returns:
+            Response dict if interview prompt is handled, None to continue normal processing
+        """
+        try:
+            # Calculate profile completeness
+            completeness = self.enhanced_profile.calculate_completeness()
+
+            # If profile is reasonably complete (>= 30%), no need for interview
+            if completeness >= 30:
+                return None
+
+            # Get or initialize dynamic_attributes
+            dynamic_attrs = self.enhanced_profile.dynamic_attributes or {}
+
+            # Check if user has already completed an interview
+            interview_state = dynamic_attrs.get('interview_state', {})
+            if interview_state.get('completion_percentage', 0) >= 80:
+                return None
+
+            # Check if user has skipped interview
+            if dynamic_attrs.get('interview_skipped'):
+                # Check if enough time has passed (7 days) to ask again
+                skipped_at = dynamic_attrs.get('interview_skipped_at')
+                if skipped_at:
+                    try:
+                        skipped_time = datetime.fromisoformat(skipped_at)
+                        days_since_skip = (datetime.now() - skipped_time).days
+                        if days_since_skip < 7:
+                            return None
+                    except (ValueError, TypeError):
+                        pass
+
+            # Check if we're currently prompting for interview
+            if dynamic_attrs.get('interview_prompt_pending'):
+                # Check user's response to the interview prompt
+                message_lower = message.lower()
+
+                # User wants to start interview
+                start_keywords = ['yes', 'sure', 'ok', 'okay', 'start', 'let\'s do it', 'ready', 'begin', 'go ahead', 'sounds good']
+                if any(kw in message_lower for kw in start_keywords):
+                    # Clear the pending flag
+                    dynamic_attrs['interview_prompt_pending'] = False
+                    self.enhanced_profile.dynamic_attributes = dynamic_attrs
+                    self.enhanced_profile.save()
+
+                    logger.info(f"Session 882: User {self.user.username} agreed to start interview")
+
+                    return {
+                        'response': "Let's get to know you better! I'll ask you a few questions about "
+                                   "your skills, experience, and goals. This will help me find the best "
+                                   "opportunities for you.\n\n"
+                                   "**To begin, please click the button below or visit the Interview page.**",
+                        'success': True,
+                        'confidence': 0.95,
+                        'type': 'interview_start',
+                        'action': 'start_interview',
+                        'suggestions': [
+                            {'text': 'Start Interview', 'action': 'start_interview', 'url': '/api/interview/start/'},
+                            {'text': 'Skip for now', 'action': 'skip_interview'}
+                        ]
+                    }
+
+                # User wants to skip
+                skip_keywords = ['skip', 'later', 'not now', 'no thanks', 'pass', 'maybe later', 'no']
+                if any(kw in message_lower for kw in skip_keywords):
+                    dynamic_attrs['interview_prompt_pending'] = False
+                    dynamic_attrs['interview_skipped'] = True
+                    dynamic_attrs['interview_skipped_at'] = datetime.now().isoformat()
+                    self.enhanced_profile.dynamic_attributes = dynamic_attrs
+                    self.enhanced_profile.save()
+
+                    logger.info(f"Session 882: User {self.user.username} skipped interview")
+                    return None  # Continue normal processing
+
+                # User responded with something else - they may be ignoring the prompt
+                # Don't force the interview, just continue normal processing
+                return None
+
+            # Check if we've recently prompted (within last 24 hours)
+            last_prompted = dynamic_attrs.get('interview_last_prompted')
+            if last_prompted:
+                try:
+                    last_prompted_time = datetime.fromisoformat(last_prompted)
+                    if (datetime.now() - last_prompted_time).total_seconds() < 86400:  # 24 hours
+                        return None
+                except (ValueError, TypeError):
+                    pass
+
+            # New user with incomplete profile - prompt for interview
+            dynamic_attrs['interview_prompt_pending'] = True
+            dynamic_attrs['interview_last_prompted'] = datetime.now().isoformat()
+            self.enhanced_profile.dynamic_attributes = dynamic_attrs
+            self.enhanced_profile.save()
+
+            logger.info(f"Session 882: Prompting user {self.user.username} to complete interview (completeness: {completeness:.0f}%)")
+
+            user_name = self.user.first_name or self.user.username
+
+            return {
+                'response': f"Hi {user_name}! Welcome to your Personal AI Assistant. 👋\n\n"
+                           f"I noticed your profile is only {completeness:.0f}% complete. "
+                           "To help you find the best income opportunities and give you personalized advice, "
+                           "I'd love to learn more about you.\n\n"
+                           "**Would you like to complete a quick interview?** (Takes about 5-10 minutes)\n\n"
+                           "I'll ask about your skills, experience, and goals so I can match you with "
+                           "opportunities that fit your unique situation.\n\n"
+                           "(Say 'yes' to start, or 'skip' if you'd rather do this later)",
+                'success': True,
+                'confidence': 0.95,
+                'type': 'interview_prompt',
+                'profile_completeness': completeness,
+                'suggestions': [
+                    {'text': 'Yes, let\'s do it!', 'action': 'yes'},
+                    {'text': 'Skip for now', 'action': 'skip'}
+                ]
+            }
+
+        except Exception as e:
+            logger.error(f"Session 882: Error in interview trigger: {e}")
+            return None
+
     # Session 122: Asset Tracking Methods for Intelligent Chaining
     def track_generated_image(self, image_id: str, image_url: str, prompt: str, asset_type: str = 'logo'):
         """
@@ -9234,7 +9366,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         # Load enhanced profile context for personalization
         profile_context = self.enhanced_profile.get_context_for_ai('chat')
 
+        # Session 882: Interview System - Auto-trigger for new users with incomplete profiles
+        interview_response = self._handle_interview_trigger(message)
+        if interview_response:
+            return interview_response
+
         # Session 878: Goal Collection - Help users define their goals
+        # (Only runs if interview was skipped or completed - interview includes goals)
         goal_response = self._handle_goal_collection(message)
         if goal_response:
             return goal_response
