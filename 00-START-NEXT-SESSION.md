@@ -1,14 +1,14 @@
 # Session 885 - Start Here
 
-**Previous Session:** 884 (AI OS Boot Experience + Codebase Workspace + Conversation Deliverables)
+**Previous Session:** 884 (AI OS Boot Experience + Initiative Pipeline Fixes + ResearchAgent Internal Data)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **HOME PAGE LIVE** | **AI OS Boot Experience** | **Codebase Workspace** | **Conversation Deliverables**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **HOME PAGE LIVE** | **179 Initiatives Kickstarted** | **33 Stage Inconsistencies Fixed**
 
 ---
 
 ## What Was Accomplished in Session 884
 
-### 1. AI OS Boot Experience - Home Page
+### 1. AI OS Boot Experience - Home Page (PR #576)
 
 Created the "boot experience" that makes users feel like they're starting up their AI operating system.
 
@@ -25,113 +25,100 @@ Created the "boot experience" that makes users feel like they're starting up the
 - Natural language input routing to PA
 - Quick action buttons (Create, Research, Decide, Review, Build)
 
-**Routing Changes:**
-- `/` now shows HomePage (was redirect to `/workspace`)
-- Home link added to sidebar navigation
+### 2. ResearchAgent Internal Data Query Tool (PR #586)
 
-**Files Created:**
-- `core/views_home.py` - Backend boot API
-- `frontend/src/pages/HomePage.tsx` - Home page component
+Fixed ResearchAgent generating "BLOCKED ON: data export" reports instead of actually querying data.
 
-**Files Modified:**
-- `core/urls.py` - Added `/api/home/boot/` route
-- `frontend/src/lib/api.ts` - Added `homeApi.boot()`
-- `frontend/src/App.tsx` - Changed index route to HomePage
-- `frontend/src/components/layout/Sidebar.tsx` - Added Home nav link
+**Problem:** ResearchAgent couldn't query internal Django models - it would produce plans saying "need data export" instead of actually fetching data.
 
-### 2. Celery Async Timeout Fix
-
-Fixed "Timeout context manager should be used inside a task" error in Celery workers.
-
-**Root Cause:** aiohttp session created in one event loop but used in another when `asyncio.run()` creates new loops in Celery tasks.
-
-**Solution:** Track `_session_loop` and recreate session when event loop changes.
-
-**File Modified:**
-- `ai_core/spiders/web_request_layer.py` - Added event loop tracking
-
-### 3. Codebase Workspace for CodeGeneratorAgent
-
-Enabled CodeGeneratorAgent to read/write actual codebase files (not just sandbox).
-
-**New Command:** `python manage.py setup_codebase_workspace`
-- Auto-detects path (Railway `/app/` vs local project root)
-- Protects sensitive files (.env, .git/, secrets/, etc.)
-- Allows file writes but disables deletes
-- Verified working: can read `intelligence/tasks.py` (81KB)
-
-**Files Created:**
-- `core/management/commands/setup_codebase_workspace.py`
+**Solution:** Added `query_internal_data` tool to ResearchAgent:
+```python
+{
+    "name": "query_internal_data",
+    "data_types": ["experiments", "agent_executions", "initiatives",
+                   "agent_learnings", "deliverables", "spider_data_stats",
+                   "conceptforge_runs", "decision_records"],
+    "filters": ["failed", "halted", "recent", "all", "blocked", "active"]
+}
+```
 
 **Files Modified:**
-- `core/services/workspace_manager.py` - Added `get_codebase_workspace()`
-- `core/agents/code_generator_agent.py` - Prefers codebase workspace for file ops
+- `core/agents/research_agent.py` - Added `query_internal_data` tool and `_query_internal_data` method
 
-### 4. Conversation Deliverable Extractor (Thinking → Doing)
+### 3. Initiative Stage Backfill Fix (PR #587)
 
-Fixed the gap between agent conversations producing great analysis and nothing happening.
+Fixed initiatives showing 12% completion but having Stage 3 without Stages 1 & 2 completed.
 
-**Problem:** Conversations produced valuable content (personas, plans, analyses) but:
-- Output sat in conversation history, unused
-- Next steps were vague ("Document key insights")
-- No Deliverable was created
-- No actionable tasks were dispatched
+**Root Cause:** `handle_stage_task_completion` was advancing stages without ensuring prior stages were APPROVED.
 
-**Solution:** Created `ConversationDeliverableExtractor` that automatically:
-1. Detects deliverable-worthy content via keyword patterns
-2. Creates Deliverable records with proper categorization
-3. Generates concrete next steps (not vague "document insights")
-4. Dispatches tasks to appropriate agents via Celery
-
-**Example Transformation:**
-- Before: "LegalDocDrafterAgent: Validate recommendations against existing system capabilities"
-- After:
-  - Creates Deliverable: "Strategy: Customer Personas"
-  - Tasks: "ResearchAgent: Validate with 5 customer interviews"
-  - Tasks: "ContentStrategyAgent: Create content calendar"
-
-**Files Created:**
-- `core/services/conversation_deliverable_extractor.py`
+**Solution:** Added backfill logic to ensure all prior stages are marked APPROVED when a later stage completes:
+```python
+# Session 884: Backfill prior stages as APPROVED
+for prior_stage_num in range(1, stage_num):
+    prior_stage, created = InitiativeStage.objects.get_or_create(...)
+    if not created and prior_stage.status != 'APPROVED':
+        prior_stage.status = 'APPROVED'
+        prior_stage.save()
+```
 
 **Files Modified:**
-- `core/conversation_orchestrator.py` - Wired up extraction at end of conversations
+- `core/services/conversation_initiative_pipeline.py` - Added backfill logic
+
+**Files Created:**
+- `core/management/commands/fix_initiative_stages.py` - Repair command for existing data
+
+### 4. Fix Initiative Stages API Endpoint (PR #588)
+
+Created API endpoint to fix initiative stages remotely (Railway `run` can't connect to Redis).
+
+**New Endpoint:** `POST /api/initiatives/fix-stages/`
+- Finds initiatives with inconsistent stages (current_stage > 1 but prior stages PENDING)
+- Backfills missing/incomplete stages as APPROVED
+- Supports `dry_run` mode for preview
+
+**Files Modified:**
+- `core/views_initiative_kickstart.py` - Added `fix_initiative_stages` view
+- `core/urls.py` - Added URL route
+
+### 5. Production Fixes Applied
+
+**Kickstarted Initiatives:**
+- 179 stuck initiatives kickstarted (were at 0% with no tasks dispatched)
+- All now have Stage 1 tasks running
+
+**Fixed Stage Inconsistencies:**
+- 33 initiatives had inconsistent stages
+- 71 stages backfilled as APPROVED
+- Stage 3 initiatives went from 12% to 52% completion
 
 ---
 
 ## TOP PRIORITY for Session 885
 
-### 1. Verify Conversation Deliverables in Production
-After deployment, run a conversation that produces personas/plans and verify:
-- Deliverable is created in DB
-- Concrete next steps are dispatched (not vague "document insights")
-- Tasks appear in Celery logs
-
-### 2. Codebase Workspace (AUTOMATED)
-Now runs automatically via Procfile release command. Check Railway logs for:
-```
-CODEBASE WORKSPACE SETUP - Session 884
+### 1. Monitor Initiative Progress
+The 179 kickstarted initiatives should be progressing through stages:
+```bash
+# Check initiative status
+curl -H "Authorization: Token YOUR_TOKEN" \
+  https://donkey-betz-platform-production.up.railway.app/api/initiatives/?status=ACTIVE
 ```
 
 ### 2. Verify Home Page in Production
-After deployment, test:
 - Login redirects to `/` (Home page)
 - Greeting shows correct user name and time of day
 - "While away" stats populate correctly
 - Active projects display with progress bars
-- Natural language input routes to `/assistant?message=...`
-- Quick actions work correctly
 
-### 3. Optional Enhancements
-If home page works well, consider:
-- Boot animation (typewriter effect on greeting)
-- Handle `/assistant?message=...` query param to prefill input
-- Add WebSocket for real-time "while away" updates
-
-### 4. Interview System Verification (Carried from 883)
+### 3. Interview System Verification (Carried from 883)
 The interview system was wired in Session 882 but needs end-to-end testing:
 1. Chat with PA as user with low profile completeness
 2. Verify interview prompt appears
 3. Complete interview and verify data saves to EnhancedUserProfile
+
+### 4. Optional Enhancements
+- Boot animation (typewriter effect on greeting)
+- Handle `/assistant?message=...` query param to prefill input
+- WebSocket for real-time "while away" updates
 
 ---
 
@@ -144,11 +131,17 @@ make start && make celery
 # Test home boot API
 curl -H "Authorization: Token YOUR_TOKEN" http://localhost:8000/api/home/boot/
 
-# Setup codebase workspace (local)
-python manage.py setup_codebase_workspace
+# Kickstart stuck initiatives (Production - inside Railway)
+curl -X POST https://your-app.railway.app/api/initiatives/kickstart/ \
+     -H "Authorization: Token YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"dry_run": true}'
 
-# Setup codebase workspace (Railway production)
-railway run python manage.py setup_codebase_workspace
+# Fix initiative stages (Production - inside Railway)
+curl -X POST https://your-app.railway.app/api/initiatives/fix-stages/ \
+     -H "Authorization: Token YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"dry_run": true}'
 
 # Check profile completeness
 python manage.py ensure_enhanced_profiles --dry-run
@@ -156,29 +149,46 @@ python manage.py ensure_enhanced_profiles --dry-run
 
 ---
 
+## Recent PRs (Session 884)
+
+| PR | Description |
+|----|-------------|
+| #588 | `fix_initiative_stages` API endpoint |
+| #587 | Initiative stage backfill fix |
+| #586 | ResearchAgent `query_internal_data` tool |
+| #576 | AI OS Boot Experience - Home Page |
+
+---
+
 ## Recent Session History
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **884** | AI OS Boot Experience - Home Page | `SESSION_884_HOME_PAGE_BOOT.md` |
+| **884** | AI OS Boot Experience + Initiative Pipeline Fixes | `SESSION_884_HOME_PAGE_BOOT.md` |
 | **883** | Internal Data Registry Fix + Production Cleanup | `SESSION_883_COMPLETE.md` |
 | **882** | Interview System Wiring | `SESSION_882_INTERVIEW_WIRING.md` |
 | **881** | ResearchAgent Citation Fix | `SESSION_881_RESEARCHAGENT_FIX.md` |
 
 ---
 
-## System Architecture Reminder
+## Initiative Pipeline Architecture
 
 ```
-Home Page (/)
-    │
-    ├── /api/home/boot/ → greeting, while_away, active_projects, quick_stats
-    │
-    ├── Natural Language Input → /assistant?message=...
-    │
-    └── Quick Actions → /assistant?message=[Create|Research|Decide|Review|Build]...
+Dream → Initiative → 5 Stages → Deliverable
+
+Stage Flow:
+  PENDING → DRAFT (task dispatched) → IN_REVIEW → APPROVED
+
+Stage Completion Calculation:
+  - Each stage = 20% of total
+  - APPROVED stages count toward approved_percentage
+  - Stages with work (DRAFT+) count toward completion_percentage
+
+Backfill Rule (Session 884):
+  - When Stage N completes, ensure Stages 1..N-1 are APPROVED
+  - Prevents "Stage 3 at 12%" bug
 ```
 
 ---
 
-**Always verify the home page loads correctly after deployment!**
+**179 initiatives are now actively progressing through the pipeline!**
