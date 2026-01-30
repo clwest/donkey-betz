@@ -1715,7 +1715,7 @@ Return as JSON with these keys."""
             for d in all_discussions if d['title']
         ])
 
-        # Build GPT synthesis prompt
+        # Session 879: Structured output template with Quality Header + Decision block
         synthesis_prompt = f"""You are a customer research analyst. Analyze the following customer discussions and community data to provide actionable customer insights.
 
 RESEARCH QUERY: {task}
@@ -1723,29 +1723,109 @@ RESEARCH QUERY: {task}
 CUSTOMER DISCUSSIONS COLLECTED ({len(all_discussions)} from {', '.join(sources_used)}):
 {discussions_text}
 
-Based on this data, provide a comprehensive CUSTOMER RESEARCH REPORT with:
+Provide a structured customer research report following this EXACT format:
 
-1. **TARGET MARKET OVERVIEW** (2-3 sentences about who these customers are)
+---
 
-2. **TOP PAIN POINTS** (5-7 specific pain points with examples from the data)
-   - Be specific about what customers are struggling with
-   - Include quotes or paraphrased examples where possible
+## QUALITY HEADER
 
-3. **CUSTOMER DESIRES & GOALS** (4-5 things customers want but can't find)
-   - What are they trying to achieve?
-   - What features/solutions are they asking for?
+| Field | Value |
+|-------|-------|
+| **Purpose** | [What product/marketing decision this enables - be specific] |
+| **Inputs** | {len(all_discussions)} discussions from {', '.join(sources_used)}, collected [current date] |
+| **Confidence** | [High/Medium/Low] overall - [reason based on sample size, recency, source diversity] |
+| **Constraints** | [What's missing: e.g., B2B voices, enterprise segment, pricing sensitivity data] |
 
-4. **CUSTOMER PERSONAS** (2-3 distinct customer types you see in the data)
-   - Give each a name and brief description
-   - What motivates them? What frustrates them?
+---
 
-5. **ACTIONABLE QUOTES** (3-5 powerful quotes from customers that could be used for marketing/copy)
-   - Direct quotes that express pain or desire
+## TARGET MARKET OVERVIEW
+[2-3 sentences about who these customers are, their context, and why they're seeking solutions]
 
-6. **RECOMMENDATIONS** (3-4 actionable recommendations for product/marketing)
-   - Based on the pain points and desires, what should a business do?
+---
 
-Be specific and reference actual data points. This analysis will be used for product development and marketing."""
+## CUSTOMER SEGMENTS
+
+### Primary Segment: [Name]
+- **Who**: [Description with demographics/psychographics]
+- **Jobs to be Done**: [What they're trying to accomplish]
+- **Current Solutions**: [What they use now, why it fails]
+- **Confidence**: [High/Med/Low based on data volume for this segment]
+
+### Secondary Segment: [Name]
+- **Who**: [Description]
+- **Jobs to be Done**: [What they're trying to accomplish]
+- **Current Solutions**: [What they use now]
+- **Confidence**: [High/Med/Low]
+
+---
+
+## PAIN POINTS (ranked by frequency in data)
+
+| Pain Point | Evidence | Severity | Segment Affected |
+|------------|----------|----------|------------------|
+| [Specific pain] | [Quote or paraphrase from data] | [High/Med/Low] | [Which segment] |
+| [Specific pain] | [Quote or paraphrase] | [Severity] | [Segment] |
+| [Specific pain] | [Quote or paraphrase] | [Severity] | [Segment] |
+| [Specific pain] | [Quote or paraphrase] | [Severity] | [Segment] |
+| [Specific pain] | [Quote or paraphrase] | [Severity] | [Segment] |
+
+---
+
+## DESIRES & UNMET NEEDS
+
+| Desire | Evidence | Willingness to Pay | Priority |
+|--------|----------|-------------------|----------|
+| [What they want] | [Quote/paraphrase] | [Signals of budget] | [1-5] |
+| [What they want] | [Evidence] | [Signals] | [Priority] |
+| [What they want] | [Evidence] | [Signals] | [Priority] |
+
+---
+
+## ACTIONABLE QUOTES
+*Use these for marketing copy, landing pages, and sales materials*
+
+1. > "[Direct quote expressing pain/desire]" - [Source context]
+2. > "[Direct quote]" - [Source context]
+3. > "[Direct quote]" - [Source context]
+
+---
+
+## DECISION BLOCK
+
+### Recommended Move
+[ONE sentence: the single most important customer insight to act on]
+
+### Top 3 Bets (ranked by evidence strength)
+1. **[Product/Marketing Bet]**: [Supporting evidence] - Confidence: [High/Med/Low]
+2. **[Bet]**: [Evidence] - Confidence: [Level]
+3. **[Bet]**: [Evidence] - Confidence: [Level]
+
+### Risks + Mitigations
+- **[Risk: e.g., vocal minority bias]**: [Mitigation: e.g., validate with survey of 50+ users]
+- **[Risk]**: [Mitigation]
+- **[Risk]**: [Mitigation]
+
+### Next 7 Days
+| Action | Owner | Est. Effort |
+|--------|-------|-------------|
+| [Specific action: e.g., "Interview 5 customers about [pain point]"] | [Role] | [Hours] |
+| [Action] | [Role] | [Hours] |
+| [Action] | [Role] | [Hours] |
+
+---
+
+## DATA DISCLAIMER
+> This analysis is based on {len(all_discussions)} discussions from {len(sources_used)} sources. Online discussions may over-represent power users and under-represent casual users. Validate pain points with direct customer interviews before major product decisions. Sample size affects confidence in [specific areas].
+
+---
+
+IMPORTANT INSTRUCTIONS:
+- Use ACTUAL quotes and data from the collected discussions - don't make up customer voices
+- For confidence levels: High = 20+ relevant discussions, Medium = 10-20, Low = <10
+- Pain points must include specific evidence from the data
+- Segment descriptions should be grounded in observed behaviors, not assumptions
+- Be honest about what segments/voices are MISSING from this data
+- Next 7 Days actions must be specific enough to calendar"""
 
         try:
             # Session 857: Use retry-enabled completion call
