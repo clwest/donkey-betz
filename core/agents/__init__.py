@@ -309,6 +309,12 @@ from core.agents.thinking_agent import ThinkingAgent
 # System Intelligence Agent (Session 663: Platform health and attention monitoring)
 from core.agents.system_intelligence_agent import SystemIntelligenceAgent
 
+# Decision Enforcer Agent (Session 872: Prefrontal cortex - forces decisions after debate)
+from core.agents.decision_enforcer_agent import (
+    DecisionEnforcerAgent,
+    enforce_decision_after_synthesis,
+)
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -467,4 +473,8 @@ __all__ = [
 
     # System Intelligence Agent (1) - Session 663
     'SystemIntelligenceAgent',
+
+    # Decision Enforcer Agent (1) - Session 872
+    'DecisionEnforcerAgent',
+    'enforce_decision_after_synthesis',
 ]

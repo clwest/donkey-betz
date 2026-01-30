@@ -14,6 +14,7 @@ Contracts ensure:
 
 Available contracts:
 - ResearchContract: For all research operations
+- ExecutionMandate: For decision enforcement after debate/synthesis
 """
 
 from .research_contract import (
@@ -23,9 +24,26 @@ from .research_contract import (
     generate_deliverables_from_goal,
 )
 
+from .execution_mandate import (
+    ExecutionMandate,
+    MandateStatus,
+    DecisionConfidence,
+    SpawnedTask,
+    extract_experiments_from_debate,
+    extract_kill_criteria_from_debate,
+)
+
 __all__ = [
+    # Research Contract
     'ResearchContract',
     'ResearchStatus',
     'ConfidenceLevel',
     'generate_deliverables_from_goal',
+    # Execution Mandate
+    'ExecutionMandate',
+    'MandateStatus',
+    'DecisionConfidence',
+    'SpawnedTask',
+    'extract_experiments_from_debate',
+    'extract_kill_criteria_from_debate',
 ]
