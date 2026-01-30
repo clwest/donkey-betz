@@ -654,7 +654,7 @@ function LLMRoutingSubTab() {
     queryKey: ['llm-providers-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/llm-routing/providers/')
+        const response = await fetch('/api/llm-routing/providers/')
         if (response.ok) {
           return response.json()
         }
@@ -678,7 +678,7 @@ function LLMRoutingSubTab() {
     queryKey: ['llm-models-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/llm-routing/models/')
+        const response = await fetch('/api/llm-routing/models/')
         if (response.ok) {
           return response.json()
         }
@@ -693,7 +693,7 @@ function LLMRoutingSubTab() {
     queryKey: ['llm-agent-configs-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/v1/llm-routing/agent-configs/')
+        const response = await fetch('/api/llm-routing/agent-configs/')
         if (response.ok) {
           return response.json()
         }

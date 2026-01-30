@@ -47,7 +47,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 // Types - Matching actual backend API responses
 // =============================================================================
 
-// Stats from /api/v1/mythology/stats/
+// Stats from /api/mythology/stats/
 interface MythologyStats {
   // Main dashboard stats
   total_flagged: number
@@ -69,7 +69,7 @@ interface MythologyStats {
   active_patterns?: number
 }
 
-// Events from /api/v1/mythology/recent-events/
+// Events from /api/mythology/recent-events/
 interface MythologyEvent {
   id: string
   event_type: string
@@ -87,7 +87,7 @@ interface MythologyEvent {
   metadata?: Record<string, unknown>
 }
 
-// Quarantine from /api/v1/mythology/quarantine/
+// Quarantine from /api/mythology/quarantine/
 interface QuarantineItem {
   id: string
   teacher: string
