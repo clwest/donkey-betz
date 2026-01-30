@@ -401,6 +401,122 @@ def execute_agent_task(
         }
 
 
+# ==================== SESSION 884: INITIATIVE STAGE EXECUTION ====================
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def execute_initiative_stage_task(
+    self,
+    initiative_id: str,
+    stage_num: int,
+    agent_name: str,
+    task: str,
+    context: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Session 884: Execute a task linked to an Initiative stage.
+
+    This task is part of the Conversation-to-Initiative pipeline.
+    When complete, it updates the stage and potentially advances the Initiative.
+
+    Args:
+        initiative_id: ID of the Initiative
+        stage_num: Stage number (1-5)
+        agent_name: Name of the agent to execute the task
+        task: Task description
+        context: Additional context
+
+    Returns:
+        Dict with execution result and stage update info
+    """
+    from core.agent_router import AgentRouter
+    from core.services.conversation_initiative_pipeline import handle_stage_task_completion
+
+    context = context or {}
+    execution_start = time.time()
+
+    logger.info(
+        f"[execute_initiative_stage_task] Starting: {agent_name} for Initiative {initiative_id[:8]} "
+        f"Stage {stage_num}: '{task[:50]}...'"
+    )
+
+    try:
+        # Execute the agent task
+        router = AgentRouter()
+        result = router.route(
+            agent_name=agent_name,
+            task=task,
+            context={
+                'source': 'initiative_stage_task',
+                'initiative_id': initiative_id,
+                'stage_num': stage_num,
+                **context
+            }
+        )
+
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+
+        # Build task result for stage handler
+        task_result = {
+            'success': result.success,
+            'content': result.content[:5000] if result.content else '',
+            'error': result.error,
+            'execution_time_ms': execution_time_ms,
+        }
+
+        # Handle stage completion (update stage, advance if ready, enrich deliverable)
+        stage_update = handle_stage_task_completion(
+            initiative_id=initiative_id,
+            stage_num=stage_num,
+            agent_name=agent_name,
+            task_result=task_result,
+        )
+
+        logger.info(
+            f"[execute_initiative_stage_task] Completed: {agent_name} Stage {stage_num} "
+            f"(success={result.success}, stage_advanced={stage_update.get('stage_advanced')})"
+        )
+
+        return {
+            'success': result.success,
+            'agent_name': agent_name,
+            'initiative_id': initiative_id,
+            'stage_num': stage_num,
+            'task': task,
+            'content': result.content[:1000] if result.content else None,
+            'execution_time_ms': execution_time_ms,
+            'stage_update': stage_update,
+        }
+
+    except Exception as e:
+        execution_time_ms = int((time.time() - execution_start) * 1000)
+        logger.error(f"[execute_initiative_stage_task] Failed: {agent_name} - {e}")
+
+        # Still try to update stage with failure info
+        try:
+            handle_stage_task_completion(
+                initiative_id=initiative_id,
+                stage_num=stage_num,
+                agent_name=agent_name,
+                task_result={'success': False, 'error': str(e)},
+            )
+        except Exception:
+            pass
+
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e)
+
+        return {
+            'success': False,
+            'agent_name': agent_name,
+            'initiative_id': initiative_id,
+            'stage_num': stage_num,
+            'task': task,
+            'error': str(e),
+            'execution_time_ms': execution_time_ms,
+        }
+
+
 # ==================== SESSION 812: CONTENT PRODUCTION ORCHESTRATION ====================
 
 
