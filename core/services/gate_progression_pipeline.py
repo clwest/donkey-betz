@@ -346,7 +346,8 @@ class GateProgressionPipeline:
                 return
 
             # Build summary
-            decision_title = getattr(gate.decision, 'title', 'Unknown Decision')
+            # Session 873: Fix - Decision model has 'topic' not 'title'
+            decision_title = (gate.decision.topic if gate.decision else None) or f"Decision-{str(gate.id)[:8]}"
             summary = (
                 f"Gate for '{decision_title}' is ready for approval. "
                 f"Risk level: {gate.risk_level.upper()}. "
