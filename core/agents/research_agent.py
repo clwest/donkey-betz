@@ -864,9 +864,18 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         """
         Assess if we have sufficient data to complete the research.
 
+        Session 874: Now includes auto-spawn reflex when data is insufficient.
+
         Returns True if data is sufficient, False if blocked.
         """
         if not all_results:
+            # Session 874: Auto-spawn reflex for empty results
+            self._trigger_auto_spawn_reflex(
+                data_type='spider_data',
+                current_count=0,
+                required_count=5,
+                context={'task': task, 'reason': 'empty_results'}
+            )
             return False
 
         # Count total data points
@@ -891,7 +900,80 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         else:
             min_items = 5
 
-        return total_items >= min_items
+        is_sufficient = total_items >= min_items
+
+        # Session 874: Auto-spawn reflex when data is insufficient
+        if not is_sufficient:
+            # Determine data type from task
+            data_type = self._infer_data_type_from_task(task_lower)
+            self._trigger_auto_spawn_reflex(
+                data_type=data_type,
+                current_count=total_items,
+                required_count=min_items,
+                context={'task': task, 'reason': 'insufficient_data'}
+            )
+
+        return is_sufficient
+
+    def _trigger_auto_spawn_reflex(
+        self,
+        data_type: str,
+        current_count: int,
+        required_count: int,
+        context: Dict[str, Any]
+    ) -> None:
+        """
+        Session 874: Auto-spawn reflex - when data is insufficient, spawn agents/spiders.
+
+        This is the "missing reflex" identified by ChatGPT:
+        "They all note '77 is small.' But no one triggers: DataExpansionAgent."
+        "That's a missing reflex."
+
+        Now we have it: when data is insufficient, we spawn.
+        """
+        try:
+            from core.services.auto_spawner_service import auto_spawn_if_needed
+
+            spawn_result = auto_spawn_if_needed(
+                data_type=data_type,
+                current_count=current_count,
+                required_count=required_count,
+                context={
+                    **context,
+                    'triggered_by': self.name,
+                    'topic': context.get('task', 'research'),
+                }
+            )
+
+            if spawn_result.get('spawned'):
+                logger.info(
+                    f"🔄 [Session 874] AUTO-SPAWN REFLEX: {data_type} had {current_count}/{required_count}, "
+                    f"spawned {len(spawn_result.get('task_ids', []))} tasks"
+                )
+                # Store spawn info for inclusion in contract
+                if not hasattr(self, '_auto_spawn_results'):
+                    self._auto_spawn_results = []
+                self._auto_spawn_results.append(spawn_result)
+            else:
+                logger.debug(
+                    f"[Session 874] Auto-spawn skipped: {spawn_result.get('reason', 'sufficient data')}"
+                )
+
+        except ImportError:
+            logger.warning("[Session 874] AutoSpawnerService not available")
+        except Exception as e:
+            logger.warning(f"[Session 874] Auto-spawn reflex failed: {e}")
+
+    def _infer_data_type_from_task(self, task_lower: str) -> str:
+        """Infer the data type from task description."""
+        if 'job' in task_lower or 'career' in task_lower or 'salary' in task_lower:
+            return 'job_listings'
+        elif 'market' in task_lower or 'competitor' in task_lower:
+            return 'market_trends'
+        elif 'trend' in task_lower or 'news' in task_lower:
+            return 'market_trends'
+        else:
+            return 'spider_data'
 
     def _calculate_research_confidence(
         self,
