@@ -524,17 +524,50 @@ Debate → SynthesisContract → DecisionEnforcerAgent → ExecutionMandate → 
 
 ---
 
+## 11. Auto-Spawner Service (PR #533)
+
+### Problem
+
+ChatGPT feedback: "They all note '77 is small.' But no one triggers: DataExpansionAgent. That's a missing reflex."
+
+### Solution
+
+Created **AutoSpawnerService** - automatic reflex for data gathering.
+
+```python
+from core.services.auto_spawner_service import auto_spawn_if_needed
+
+result = auto_spawn_if_needed(
+    data_type='job_listings',
+    current_count=77,
+    required_count=500,
+)
+# Automatically spawns spider + agent if insufficient
+```
+
+**Thresholds:**
+
+| Data Type | Min | Optimal | Stale Hours |
+|-----------|-----|---------|-------------|
+| job_listings | 100 | 1,000 | 48h |
+| salary_data | 200 | 2,000 | 168h |
+| market_trends | 50 | 500 | 12h |
+
+---
+
 ## Session 872 Summary
 
 | PR | Description | Status |
 |----|-------------|--------|
 | #520-530 | API fixes, Celery sync, TTS/Image fixes, Research Contract | Merged |
 | #531 | Decision Enforcer Agent - Prefrontal Cortex | Merged |
-| #532 | Synthesis Contract - Structured debate output | Pending |
+| #532 | Synthesis Contract - Structured debate output | Merged |
+| #533 | Auto-Spawner Service - Data insufficiency reflexes | Pending |
 
 **New Agents**: 1 (DecisionEnforcerAgent)
-**New Contracts**: 2 (ResearchContract, ExecutionMandate)
-**Total PRs**: 11
+**New Contracts**: 3 (ResearchContract, ExecutionMandate, SynthesisContract)
+**New Services**: 1 (AutoSpawnerService)
+**Total PRs**: 12
 
 ---
 
