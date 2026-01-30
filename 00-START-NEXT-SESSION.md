@@ -49,6 +49,18 @@ Removed 8 unused imports from `core/urls.py`:
 - `AnalyticsDashboardView`, `analytics_api_data`
 - `ai_image_studio`, `diagnostic_dashboard`
 
+### TIER 4: Dead Code Cleanup Phase 3 (PR #518)
+
+Removed Alliance and Rivalry models (0 records, never used) - **744 lines**:
+
+| Component | Lines Removed |
+|-----------|---------------|
+| `models_unified_system.py` | 288 (models) |
+| `views_agent_relationships.py` | 411 (views) |
+| `urls.py` | 14 (routes) |
+| `tasks.py` | 23 (stubbed) |
+| `api.ts` | 8 (endpoints) |
+
 ### TIER 4: Dream → Initiative Documentation (PR #514)
 
 **Created:** `docs/DREAM_INITIATIVE_WORKFLOW.md` (398 lines)
@@ -77,7 +89,7 @@ The system-wide audit from Session 867 identified gaps that have now been addres
 ### Optional Remaining Tasks
 
 - [x] Dead code cleanup Phase 2 - Unused imports (PR #516)
-- [ ] Dead code cleanup Phase 3 - Deprecated models with 0 records
+- [x] Dead code cleanup Phase 3 - Alliance/Rivalry models (PR #518)
 - [ ] API path migration Phase 3 - Resolve conflicting endpoints
 - [ ] Performance optimization - Identify slow queries
 - [ ] Test coverage improvements
@@ -170,7 +182,9 @@ ls core/views_command_center.py 2>/dev/null || echo "Removed"
 | #514 | docs(Session 871): Document Dream → Initiative workflow |
 | #515 | docs(Session 871): Add session handoff document |
 | #516 | chore(Session 871): Remove unused imports from urls.py - Phase 2 |
+| #517 | docs(Session 871): Update documentation for PR #516 |
+| #518 | chore(Session 871): Remove Alliance and Rivalry dead code - Phase 3 |
 
 ---
 
-**All audit tasks complete! Ready for new features or continued optimization.**
+**All audit tasks complete! Dead code cleanup totals: ~3,500 lines removed.**
