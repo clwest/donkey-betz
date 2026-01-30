@@ -1565,10 +1565,11 @@ Return as JSON with these keys."""
 
         try:
             # Session 857: Use retry-enabled completion call
+            # Session 876: Increased tokens for better quality output
             response = self._call_completion_with_retry(
                 messages=[{"role": "user", "content": persona_prompt}],
                 model="gpt-4o-mini",  # Session 857: Fixed model name
-                max_completion_tokens=1000,
+                max_completion_tokens=2000,
             )
 
             content = response.choices[0].message.content

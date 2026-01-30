@@ -190,13 +190,14 @@ def execute_gpt_expansion_step(run: CreativePipelineRun, step: Dict):
 
     user_prompt = f"Creative idea: {idea}\n\nGenerate {num_prompts} detailed image prompts:"
 
+    # Session 876: Increased tokens for GPT-5-mini reasoning headroom
     response = client.chat.completions.create(
         model="gpt-5-mini",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        max_completion_tokens=1000,
+        max_completion_tokens=4000,
         reasoning_effort="medium",
     )
 

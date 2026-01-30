@@ -481,13 +481,14 @@ if st.button('Generate Content'):
                 """
 
                 # Generate content using GPT-5-mini
+                # Session 876: Increased tokens for GPT-5-mini reasoning headroom
                 response = openai.chat.completions.create(
                     model="gpt-5-mini",
                     messages=[
                         {"role": "system", "content": "You are a professional content writer."},
                         {"role": "user", "content": prompt}
                     ],
-                    max_completion_tokens=1000
+                    max_completion_tokens=4000
                 )
 
                 content = response.choices[0].message.content

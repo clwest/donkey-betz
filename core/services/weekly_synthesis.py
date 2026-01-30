@@ -296,6 +296,7 @@ Focus on:
 If data is sparse, note that and provide general guidance."""
 
         try:
+            # Session 876: Increased tokens for GPT-5-mini reasoning headroom
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[
@@ -308,7 +309,7 @@ If data is sparse, note that and provide general guidance."""
                     },
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=1000,
+                max_completion_tokens=4000,
                 response_format={"type": "json_object"}
             )
 

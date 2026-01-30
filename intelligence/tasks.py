@@ -1515,10 +1515,23 @@ def execute_agent_task(agent_id: int, task: str, context: dict = None):
     Returns:
         Execution result dictionary
     """
+    from core.services.context_tracing import ContextTracer
+
+    # Session 875: Initialize context tracer for bad context forensics
+    tracer = ContextTracer(source=f"intelligence.execute_agent_task:agent_id={agent_id}")
+
+    # Session 875: Log context at post-deserialize stage (after Celery receives it)
+    tracer.log_post_deserialize(
+        context=context,
+        agent_name=f"agent_id:{agent_id}",
+        action_name=task[:100] if task else "",
+        task_name="intelligence.execute_agent_task"
+    )
+
     # Session 875: Ensure context is a dict (defensive fix for list being passed)
     if not isinstance(context, dict):
         logger.warning(f"[execute_agent_task] Received non-dict context (type={type(context).__name__}), using empty dict")
-        context = {}
+        context = ContextTracer.auto_repair_context(context)
 
     try:
         from core.models.agents_registry import UnifiedAgentTemplate

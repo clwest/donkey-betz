@@ -81,12 +81,13 @@ def advisor_consult(request):
 
     # LLM call (with fallback)
     try:
+        # Session 876: Increased tokens for GPT-5-mini reasoning headroom
         enforcer = LLMEnforcer()
         guidance = enforcer.generate_completion(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             model="gpt-5-mini",
-            max_completion_tokens=1000,
+            max_completion_tokens=4000,
         )
     except Exception as llm_error:  # noqa: BLE001 (we want to log & fallback)
         logger.error("LLM error during consultation: %s", llm_error, exc_info=True)

@@ -270,12 +270,25 @@ def execute_agent_task(
     """
     from core.agent_router import AgentRouter
     from core.models_unified_system import Agent, AgentExecution
+    from core.services.context_tracing import ContextTracer
     from decimal import Decimal
+
+    # Session 875: Initialize context tracer for bad context forensics
+    tracer = ContextTracer(source=f"execute_agent_task:{agent_name}")
+
+    # Session 875: Log context at post-deserialize stage (after Celery receives it)
+    tracer.log_post_deserialize(
+        context=context,
+        agent_name=agent_name,
+        action_name=task[:100] if task else "",
+        task_name="execute_agent_task"
+    )
 
     # Session 875: Ensure context is a dict (defensive fix for list being passed)
     if not isinstance(context, dict):
         logger.warning(f"[execute_agent_task] Received non-dict context (type={type(context).__name__}), using empty dict")
-        context = {}
+        # Auto-repair the context
+        context = ContextTracer.auto_repair_context(context)
     else:
         context = context or {}
     conversation_id = context.get('conversation_id', 'unknown')
@@ -6285,20 +6298,28 @@ Guidelines:
 
                     for retry_attempt in range(3):
                         try:
-                            # Use chat.completions for gpt-5-mini with high max_completion_tokens
-                            # GPT-5 reasoning models use tokens for internal reasoning first,
-                            # so we need ~500+ tokens to ensure room for reasoning + actual output
-                            # Session 413: Added timeout=120 for reasoning model thinking time
+                            # Session 875: CRITICAL FIX for empty content issue
+                            # GPT-5 reasoning models use tokens for internal reasoning BEFORE output
+                            # With only 1000 tokens, reasoning consumes everything → empty output
+                            # Increased to 4000 to give 2000+ for reasoning AND 2000+ for output
                             response = client.chat.completions.create(
                                 model="gpt-5-mini",
                                 messages=[
                                     {"role": "system", "content": system_prompt},
                                     {"role": "user", "content": user_content}
                                 ],
-                                max_completion_tokens=1000,  # Session 413: Increased for reasoning models
+                                max_completion_tokens=4000,  # Session 875: 4x increase for reasoning headroom
                                 timeout=120,  # Session 413: 2 min timeout for reasoning model
                             )
                             content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
+
+                            # Session 875: Log token usage for empty content debugging
+                            if hasattr(response, 'usage') and response.usage:
+                                total_tokens = response.usage.completion_tokens
+                                logger.info(f"💬 [CONVERSATIONS] {current_speaker.name} used {total_tokens} completion tokens")
+                                if not content:
+                                    logger.warning(f"💬 [CONVERSATIONS] EMPTY CONTENT despite {total_tokens} tokens - check reasoning consumption")
+
                             break  # Success, exit retry loop
 
                         except Exception as api_error:
@@ -8712,23 +8733,27 @@ Guidelines:
                 )
 
                 try:
-                    # Session 317: GPT-5 reasoning models split tokens between reasoning + output
-                    # Session 413: Added timeout for reasoning model thinking time
+                    # Session 875: CRITICAL FIX - Increase tokens for reasoning models
+                    # GPT-5-mini was returning empty content because reasoning consumed all 1000 tokens
                     response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
-                        max_completion_tokens=1000,  # Higher for GPT-5 reasoning (Session 317)
+                        max_completion_tokens=4000,  # Session 875: 4x increase for reasoning headroom
                         timeout=120,  # Session 413: 2 min timeout for reasoning model
                     )
 
                     dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
+                    # Session 875: Log for monitoring
+                    if hasattr(response, 'usage') and response.usage:
+                        logger.debug(f"💭 [DREAMS] {agent.name} used {response.usage.completion_tokens} tokens")
+
                     # Session 842: Skip creating dreams with empty content
                     if not dream_content:
-                        logger.debug(f"💭 [DREAMS] Skipping empty dream for {agent.name}")
+                        logger.warning(f"💭 [DREAMS] Empty dream from {agent.name} despite 4000 token limit")
                         continue
 
                     # Session 356 NOTE: Dreams are intentionally NOT mythology-validated
@@ -26031,8 +26056,8 @@ def agent_workspace_status_report():
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
         filename = f"reports/system_status_{timestamp}.md"
 
-        # AgentResult has .data dict and .message for output
-        output_content = report_content.data.get('output', '') or report_content.message or 'No output generated'
+        # Session 875: Use unified extraction function
+        output_content = _extract_agent_output_content(report_content, 'system status report')
 
         content = f"""# System Status Report
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
@@ -26123,8 +26148,8 @@ def agent_research_to_workspace(topic: str = None):
         safe_topic = topic[:30].replace(' ', '_').replace('/', '-')
         filename = f"research/{safe_topic}_{timestamp}.md"
 
-        # AgentResult has .data dict and .message for output
-        output_content = research_result.data.get('output', '') or research_result.message or 'No research output generated'
+        # Session 875: Use unified extraction function
+        output_content = _extract_agent_output_content(research_result, f'research on {topic}')
 
         content = f"""# Research: {topic}
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
@@ -26217,8 +26242,8 @@ def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
         safe_topic = topic[:30].replace(' ', '_').replace('/', '-')
         filename = f"content/{content_type}_{safe_topic}_{timestamp}.md"
 
-        # AgentResult has .data dict and .message for output
-        output_content = content_result.data.get('output', '') or content_result.message or 'No content generated'
+        # Session 875: Use unified extraction function (now handles dict content with full_text)
+        output_content = _extract_agent_output_content(content_result, f'{content_type} about {topic}')
 
         content_body = f"""# {topic}
 Type: {content_type.title()}
@@ -27160,8 +27185,28 @@ def _extract_agent_output_content(result, task_description: str) -> str:
     for key in CONTENT_KEYS:
         if key in data and data[key]:
             value = data[key]
-            if isinstance(value, str) and len(value) > 50:  # Substantial content
+            # Session 875: Handle both string and dict content (ContentWriterAgent uses dict with 'full_text')
+            if isinstance(value, str) and len(value) > 50:  # Substantial string content
                 output_parts.append(f"## {key.replace('_', ' ').title()}\n\n{value}")
+            elif isinstance(value, dict):
+                # Extract text from nested dict - common patterns:
+                # - 'full_text' (ContentWriterAgent)
+                # - 'body' (some article agents)
+                # - 'text' (various)
+                text_content = (
+                    value.get('full_text', '') or
+                    value.get('body', '') or
+                    value.get('text', '') or
+                    value.get('content', '') or
+                    value.get('article', '') or
+                    value.get('script', '')
+                )
+                if text_content and len(text_content) > 50:
+                    title = value.get('title', '') or value.get('headline', '')
+                    if title:
+                        output_parts.append(f"## {title}\n\n{text_content}")
+                    else:
+                        output_parts.append(f"## {key.replace('_', ' ').title()}\n\n{text_content}")
 
     # 2. Check for array results
     for key in ARRAY_KEYS:
