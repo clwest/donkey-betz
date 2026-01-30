@@ -388,4 +388,99 @@ railway logs --service celery-beat
 
 ---
 
+## 9. Decision Enforcer Agent (PR #531) - NEW
+
+### Problem
+
+ChatGPT feedback identified a critical missing component:
+
+> "Right now you have: Cortex (thinking), Sensors (spiders), Speech (blogs/docs)
+> But you're missing: Prefrontal Cortex (decisions)
+> That's why loops happen. You need a meta-agent that says: 'Enough. Do X.'"
+
+Synthesis outputs were weak:
+- "Productive discussion... Further analysis recommended"
+- No commitment point - everyone asks priorities but nobody decides
+- Loop attractors - endless debate without closure
+
+### Solution
+
+Created the **Decision Enforcer Agent** - the "Prefrontal Cortex" of the system.
+
+**1. ExecutionMandate Contract** (`core/contracts/execution_mandate.py`):
+
+```python
+@dataclass
+class ExecutionMandate:
+    chosen_path: str           # "Build salary negotiation MVP"
+    reason: str                # "3/4 agents agreed + market signal"
+    decision_owner: str        # "SalaryNegotiationExpert"
+    kill_criteria: List[str]   # ["<10% engagement after 7d"]
+    deadline: str              # "2026-02-05"
+    experiments: List[str]     # ["A/B test with 50 users"]
+    rejected_paths: Dict[str, str]  # What we're NOT doing
+    spawned_tasks: List[SpawnedTask]  # Actual tasks to execute
+```
+
+**2. DecisionEnforcerAgent** (`core/agents/decision_enforcer_agent.py`):
+
+| Feature | Description |
+|---------|-------------|
+| Trigger | After synthesis/debate completes |
+| Input | Debate transcript + optional synthesis |
+| Output | Validated ExecutionMandate |
+| Weasel Detection | Rejects "further analysis", "should explore", etc. |
+| Task Spawning | Creates real Celery tasks from mandate |
+
+**3. Anti-Patterns Blocked**:
+
+The agent REJECTS these phrases in decisions:
+- "Further analysis recommended"
+- "More research needed"
+- "Should validate"
+- "Consider exploring"
+- "Needs investigation"
+
+**4. Integration Point**:
+
+```python
+from core.agents import enforce_decision_after_synthesis
+
+result = enforce_decision_after_synthesis(
+    debate_messages=conversation['messages'],
+    synthesis=conversation['decision_summary'],
+    topic="salary negotiation MVP",
+    auto_spawn=True  # Actually spawn tasks
+)
+```
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `core/contracts/execution_mandate.py` | ExecutionMandate contract with validation |
+| `core/agents/decision_enforcer_agent.py` | The "Prefrontal Cortex" agent |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/contracts/__init__.py` | Export ExecutionMandate, MandateStatus, SpawnedTask |
+| `core/agents/__init__.py` | Export DecisionEnforcerAgent, enforce_decision_after_synthesis |
+
+---
+
+## Session 872 Summary
+
+| PR | Description | Status |
+|----|-------------|--------|
+| #520-530 | API fixes, Celery sync, TTS/Image fixes, Research Contract | Merged |
+| #531 | Decision Enforcer Agent - Prefrontal Cortex | Pending |
+
+**New Agents**: 1 (DecisionEnforcerAgent)
+**New Contracts**: 2 (ResearchContract, ExecutionMandate)
+**Total PRs**: 11
+
+---
+
 *Session 872 completed by Claude Code*
