@@ -272,7 +272,12 @@ def execute_agent_task(
     from core.models_unified_system import Agent, AgentExecution
     from decimal import Decimal
 
-    context = context or {}
+    # Session 875: Ensure context is a dict (defensive fix for list being passed)
+    if not isinstance(context, dict):
+        logger.warning(f"[execute_agent_task] Received non-dict context (type={type(context).__name__}), using empty dict")
+        context = {}
+    else:
+        context = context or {}
     conversation_id = context.get('conversation_id', 'unknown')
     execution_start = time.time()
 
