@@ -2,7 +2,7 @@
 
 **Previous Session:** 881 (CodeGeneratorAgent Fix + Async Bug + Defensive Checks)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **CODEGENERATOR FIXED** | **INTELLIGENCE ENGINE ASYNC FIXED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **CODEGENERATOR FIXED** | **RESEARCHAGENT FIXED** | **ASYNC BUGS FIXED**
 
 ---
 
@@ -36,6 +36,16 @@
 
 **Fix:** Added `isinstance(input_data, dict)` check before calling `.get()` methods.
 
+### 4. ResearchAgent List Handling - PR #571
+
+**Problem:** ResearchAgent failing with `'list' object has no attribute 'get'` when processing spider data that returned lists instead of dicts.
+
+**Fix:** Added defensive `isinstance` checks in 4 locations:
+- Main execute loop
+- Key insights extraction
+- `_build_research_contract` deliverables check
+- `_assess_data_sufficiency` data counting
+
 ---
 
 ## PRs Merged in Session 881
@@ -45,6 +55,7 @@
 | #567 | Defensive check for input_data type in views_orchestration.py |
 | #568 | Fix async bug in start_intelligence_engine |
 | #569 | CodeGeneratorAgent writes to actual target files |
+| #571 | ResearchAgent defensive checks for list items in all_results |
 
 ---
 
@@ -55,6 +66,7 @@
 | `core/views_orchestration.py` | Defensive check for input_data type |
 | `intelligence/tasks.py` | Fixed async bug with `asyncio.run()` |
 | `core/agents/code_generator_agent.py` | File path extraction + actual file writes |
+| `core/agents/research_agent.py` | Defensive checks for list items in all_results |
 
 ---
 
