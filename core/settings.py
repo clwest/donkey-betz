@@ -949,6 +949,7 @@ CELERY_TASK_ROUTES = {
     'sports.*': {'queue': 'sports'},
     'content.*': {'queue': 'content'},
     'ml.*': {'queue': 'ml'},
+    'intelligence.*': {'queue': 'long_running'},  # Session 884: Intelligence tasks are long-running
 
     # Session 573: Long-running tasks (1+ minutes) - separate worker
     'core.tasks.run_spider_network': {'queue': 'long_running'},
