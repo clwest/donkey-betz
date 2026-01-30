@@ -818,10 +818,10 @@ class AutonomousActionExecutor:
             # Generic terms -> Specific internal models
             'database': 'PostgreSQL + pgvector via Django ORM',
             'analytics': 'core.services.analytics_service + ContentMetrics model',
-            'experiment data': 'ExperimentExecution model (status, halt_reason, metrics)',
-            'experiment': 'ExperimentExecution model',
-            'halt': 'ExperimentExecution.objects.filter(status="auto_halted")',
-            'failed': 'Filter by status="failed" or success=False',
+            'experiment data': 'Experiment model (status: running/success/failure/partial/inconclusive)',
+            'experiment': 'Experiment model (core.models.Experiment)',
+            'halt': 'Experiment.objects.filter(is_halted=True)',
+            'failed': 'Experiment.objects.filter(status="failure") or AgentExecution.objects.filter(status="failed")',
 
             # Content
             'content': 'SelfBlog / Deliverable models',

@@ -1,95 +1,81 @@
-# Session 883 - Start Here
+# Session 884 - Start Here
 
-**Previous Session:** 882 (Interview System Wired + EnhancedUserProfile Command)
+**Previous Session:** 883 (Internal Data Registry Fix - Prevented AI Hallucinations)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **INTERVIEW SYSTEM WIRED** | **ALL USERS HAVE PROFILES**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **INTERVIEW SYSTEM WIRED** | **SCHEMA HALLUCINATION FIX**
 
 ---
 
-## What Was Accomplished in Session 882
+## What Was Accomplished in Session 883
 
-### 1. Interview System Wired to Personal Assistant
+### Critical Fix: Internal Data Registry Schema Corrections
 
-**Problem:** Interview infrastructure existed (`/api/interview/start/`, `/api/interview/respond/`, etc.) but PA never prompted users to complete it.
+**Problem:** AI agents were generating completely fabricated research reports with made-up statistics (92.57% failure rate, 233 auto-halts). Investigation revealed the root cause:
 
-**Solution:** Added `_handle_interview_trigger()` method to `EnhancedPersonalAIAssistant`:
-- Checks profile completeness (triggers if < 30%)
-- Respects user's skip preferences (7-day cooldown)
-- Prompts new users to start the interview
-- Handles "yes"/"skip" responses to the prompt
-- Runs BEFORE goal collection (interview is more comprehensive)
+- `internal_data_registry.py` contained a **non-existent** model `ExperimentExecution`
+- Fictional fields like `auto_halted` status and `halt_rule_triggered` were defined
+- AI agents read this registry and generated reports based on data that doesn't exist
 
-**File:** `core/personal_ai_assistant_enhanced.py` (lines 6926-7046)
+**Solution:** Corrected all schema definitions to match actual database models:
 
-### 2. EnhancedUserProfile Management Command
+| File | Fix |
+|------|-----|
+| `core/services/internal_data_registry.py` | Corrected `experiments` and `agent_executions` entries with real models and fields |
+| `core/agents/research_agent.py` | Fixed `ExperimentExecution` references (lines 1109, 1150) |
+| `core/contracts/research_contract.py` | Fixed example text referencing non-existent model |
+| `core/services/autonomous_action_executor.py` | Fixed keyword mappings to use correct Experiment model |
 
-**Problem:** Only 11/12 users had EnhancedUserProfile records.
-
-**Solution:** Created `ensure_enhanced_profiles` management command:
-```bash
-python manage.py ensure_enhanced_profiles          # Create missing profiles
-python manage.py ensure_enhanced_profiles --dry-run # Preview what would be created
-python manage.py ensure_enhanced_profiles --verbose # Show details per user
+**Before (Incorrect):**
+```python
+'experiments': {
+    'model': 'core.models_experiment.ExperimentExecution',  # DOESN'T EXIST!
+    'key_fields': [('status', 'str', 'auto_halted/completed/failed')],  # WRONG!
+}
 ```
 
-**Results after running:**
-- All 12 users now have EnhancedUserProfile
-- 10 users have low completeness (< 30%) - will be prompted for interview
-- 1 user has medium completeness (30-70%)
-- 1 user has high completeness (> 70%)
+**After (Correct):**
+```python
+'experiments': {
+    'model': 'core.models.Experiment',
+    'key_fields': [('status', 'str', 'running/success/failure/partial/inconclusive')],
+}
+```
 
-**File:** `core/management/commands/ensure_enhanced_profiles.py`
-
----
-
-## User Connection Gap Status
-
-| Gap | Status | Session |
-|-----|--------|---------|
-| PA missing skills | **FIXED** | 877 |
-| Goals not collected | **FIXED** | 878 |
-| No onboarding flow | **FIXED** | 882 |
-| Interview system unused | **FIXED** | 882 |
-| EnhancedUserProfile sparse | **FIXED** | 882 |
-
-**All 5 User Connection gaps are now FIXED!**
+**PR:** #574
 
 ---
 
-## How the Interview System Works Now
+## Schema Reference (Verified from Production)
 
-1. User chats with PA
-2. PA checks `EnhancedUserProfile.calculate_completeness()`
-3. If completeness < 30%:
-   - PA prompts: "Would you like to complete a quick interview?"
-   - User says "yes" → PA provides link to `/api/interview/start/`
-   - User says "skip" → Set `interview_skipped=True` (7-day cooldown)
-4. Interview collects: skills, experience, goals, work preferences, commitment level
-5. Data saved to `EnhancedUserProfile` incrementally after each answer
+### Experiment Model (core.models.Experiment)
+- `status`: running | success | failure | partial | inconclusive
+- `is_halted`: boolean
+- `halted_by`: string (who/what halted: auto/manual/system)
+- `hypothesis`, `learning_metrics`, `created_at`, etc.
+
+### AgentExecution Model
+- `status`: completed | failed | in_progress
+- `agent`: ForeignKey to Agent (not `agent_name`)
+- `execution_time_ms`, `result`, `error`, etc.
 
 ---
 
-## TOP PRIORITY for Session 883
+## TOP PRIORITY for Session 884
 
-### 1. Verify Interview Flow End-to-End
+### 1. Merge PR #574
+After review, merge the schema fix PR to prevent further hallucinations.
 
+### 2. Verify Interview Flow End-to-End (carried from 883)
 Test the complete flow:
 1. Chat with PA as a user with low profile completeness
 2. Verify interview prompt appears
 3. Complete the interview
 4. Verify data is saved to EnhancedUserProfile
 
-### 2. Frontend Interview UI
-
+### 3. Frontend Interview UI (carried from 883)
 The interview endpoints exist but there may not be a dedicated UI page:
 - Check if `/ai-studio/interview/` or similar route exists
 - If not, create a simple React component that uses the interview API
-
-### 3. Proactive Learning (Optional)
-
-Now that we have user profiles, PA can:
-- Ask follow-up questions based on profile gaps
-- Learn from user interactions and update profile automatically
 
 ---
 
@@ -102,18 +88,11 @@ make start && make celery
 # Check profile completeness
 python manage.py ensure_enhanced_profiles --dry-run
 
-# Check users who need interview
-python manage.py shell -c "
-from core.models import EnhancedUserProfile
-for p in EnhancedUserProfile.objects.all():
-    c = p.calculate_completeness()
-    if c < 30:
-        print(f'{p.user.username}: {c:.0f}% - needs interview')"
-
-# Test interview API
-curl -X POST http://localhost:8000/api/interview/start/ \
-  -H "Authorization: Token YOUR_TOKEN" \
-  -H "Content-Type: application/json"
+# Verify experiment schema (production)
+railway run python manage.py shell -c "
+from core.models import Experiment
+print('Experiment status choices:', [f[0] for f in Experiment._meta.get_field('status').choices])
+"
 ```
 
 ---
@@ -122,49 +101,37 @@ curl -X POST http://localhost:8000/api/interview/start/ \
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **883** | Internal Data Registry Fix - Prevented AI Hallucinations | COMPLETE |
 | **882** | Interview System Wired + EnhancedUserProfile Command | COMPLETE |
 | **881** | CodeGeneratorAgent Fix + Async Bug + Defensive Checks | COMPLETE |
 | **880** | Async Bug + Initiative Pipeline + Agent Workspace Writes | COMPLETE |
 | **879** | Prompt Leakage Fixes + Structured Output Templates | COMPLETE |
-| **878** | Goal Collection Implementation | COMPLETE |
 
 ---
 
-## Session 882 File Changes
+## Session 883 File Changes
 
 | File | Change |
 |------|--------|
-| `core/personal_ai_assistant_enhanced.py` | Added `_handle_interview_trigger()` method |
-| `core/management/commands/ensure_enhanced_profiles.py` | New management command |
-| `00-START-NEXT-SESSION.md` | Updated for Session 883 |
+| `core/services/internal_data_registry.py` | Fixed experiments and agent_executions schema definitions |
+| `core/agents/research_agent.py` | Removed ExperimentExecution references |
+| `core/contracts/research_contract.py` | Fixed example documentation |
+| `core/services/autonomous_action_executor.py` | Corrected keyword mappings |
+| `00-START-NEXT-SESSION.md` | Updated for Session 884 |
 
 ---
 
-## User Personalization Pipeline (COMPLETE)
+## Why This Matters
 
-```
-New User Signs Up
-        ↓
-PA Detects Low Profile Completeness (< 30%)
-        ↓
-PA Prompts: "Would you like to complete an interview?"
-        ↓
-    ┌───┴───┐
-    │       │
-   Yes    Skip
-    │       │
-    ↓       ↓
-Interview  7-day
-  Flow     Cooldown
-    │       │
-    ↓       ↓
-Profile   Goal Collection
-Saved     (Session 878)
-    │       │
-    └───┬───┘
-        ↓
-Personalized Responses
-(Skills, Goals, Preferences in Context)
-```
+The internal data registry is a **source of truth** that AI agents consult when:
+1. Generating research reports
+2. Understanding what data is available
+3. Constructing database queries
+4. Explaining system capabilities
 
-**The full user personalization pipeline is now operational!**
+When the registry contained fictional models and fields, AI agents would:
+- Reference data that doesn't exist
+- Generate statistics from non-existent tables
+- Confuse users with fabricated reports
+
+**This fix ensures AI agents only reference real, queryable data.**

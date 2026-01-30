@@ -19,7 +19,7 @@ Usage:
     contract = ResearchContract.create(
         goal="Analyze experiment halt rules",
         status=ResearchStatus.BLOCKED,
-        blocked_on="ExperimentExecution logs unavailable",
+        blocked_on="Experiment logs unavailable",
         owner="ResearchAgent",
         confidence=0.3,
         confidence_reason="Missing 90-day execution logs"
@@ -132,7 +132,7 @@ class ResearchContract:
     # === METADATA ===
 
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    model_grounded_in: Optional[str] = None  # "core.models_experiment.ExperimentExecution"
+    model_grounded_in: Optional[str] = None  # e.g. "core.models.Experiment"
     related_agents: List[str] = field(default_factory=list)  # Agents that may need to be involved
 
     def validate(self) -> bool:
