@@ -1631,7 +1631,7 @@ export const advisorsApi = {
   insights: () => api.get('/dashboard/advisors/'),
 }
 
-// Session 716: Agent Relationships API - Rivalries, Alliances, Bonds
+// Session 716: Agent Relationships API (Session 871: Alliance/Rivalry endpoints removed)
 export const relationshipsApi = {
   // Overview of all relationships
   overview: () => api.get('/agent-relationships/'),
@@ -1659,15 +1659,6 @@ export const relationshipsApi = {
 
   // Auto-generate relationships based on agent activity
   autoGenerate: () => api.post('/agent-relationships/auto-generate/'),
-
-  // Alliance endpoints
-  allianceDetail: (allianceId: string) => api.get(`/agent-relationships/alliances/${allianceId}/`),
-  createAlliance: (data: { name: string; agent_ids: string[]; purpose?: string }) =>
-    api.post('/agent-relationships/alliances/create/', data),
-  addToAlliance: (allianceId: string, agentId: string) =>
-    api.post(`/agent-relationships/alliances/${allianceId}/add/`, { agent_id: agentId }),
-  disbandAlliance: (allianceId: string) =>
-    api.post(`/agent-relationships/alliances/${allianceId}/disband/`),
 }
 
 // Session 732: RAG/Document Embedding System API
