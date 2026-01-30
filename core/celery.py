@@ -646,12 +646,17 @@ app.conf.beat_schedule = {
     },
     # Session 579: Dream Auto-Triage
     # Auto-promote high-scoring dreams, archive stale low-scoring ones
-    # Addresses: 422 dreams/day generated vs 83 decisions/day processed
+    # Session 873: Increased frequency - 2,130 dream backlog with oldest 62 days old
     'dream-auto-triage': {
         'task': 'core.tasks.auto_triage_dreams',
-        'schedule': crontab(hour='*/4', minute=30),  # Every 4 hours at :30
+        'schedule': crontab(minute=30),  # Every hour at :30 (was every 4 hours)
         'options': {
-            'expires': 14400,  # 4 hours
+            'expires': 3600,  # 1 hour
+        },
+        'kwargs': {
+            'max_promote': 200,  # Session 873: 10x increase (was 20)
+            'max_archive': 500,  # Session 873: 10x increase (was 50)
+            'archive_age_days': 3,  # Session 873: More aggressive (was 7)
         }
     },
     # Session 654: Gate Auto-Approval
