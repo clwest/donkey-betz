@@ -706,7 +706,7 @@ class AgentRouter:
         tracer.log_router(
             context=context,
             agent_name=agent_name,
-            action_name=task[:100] if task else ""
+            task=task[:100] if task else ""
         )
 
         # Session 875: Ensure context is a dict (defensive fix for list being passed)
