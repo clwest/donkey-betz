@@ -218,3 +218,141 @@ def _detect_content_type(topic: str) -> str:
         return 'document'
     else:
         return 'strategy'  # Default
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def fix_initiative_stages(request):
+    """
+    Session 884: Fix initiatives with inconsistent stage completion.
+
+    Finds initiatives where current_stage > 1 but prior stages are still
+    PENDING, and backfills them as APPROVED.
+
+    POST/GET params:
+        dry_run: bool - Preview without making changes (default: False)
+        id: str - Fix a specific initiative by ID
+
+    Returns:
+        JSON with fix results
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+
+    # Parse params
+    if request.method == 'POST':
+        data = request.data
+    else:
+        data = request.query_params
+
+    dry_run = data.get('dry_run', False)
+    if isinstance(dry_run, str):
+        dry_run = dry_run.lower() in ('true', '1', 'yes')
+
+    specific_id = data.get('id')
+
+    result = {
+        'dry_run': dry_run,
+        'initiatives_checked': 0,
+        'initiatives_fixed': 0,
+        'stages_backfilled': 0,
+        'fixes': [],
+        'errors': [],
+    }
+
+    # Find initiatives with inconsistent stages
+    if specific_id:
+        initiatives = Initiative.objects.filter(id=specific_id).prefetch_related('stages')
+    else:
+        initiatives = Initiative.objects.filter(
+            current_stage__gt=1,
+            status='ACTIVE'
+        ).prefetch_related('stages')
+
+    result['initiatives_checked'] = initiatives.count()
+
+    for initiative in initiatives:
+        current_stage = initiative.current_stage
+        existing_stages = {s.stage: s for s in initiative.stages.all()}
+
+        fixes_needed = []
+
+        # Check all stages before current_stage
+        for stage_num in range(1, current_stage):
+            stage = existing_stages.get(stage_num)
+
+            if not stage:
+                fixes_needed.append({
+                    'stage': stage_num,
+                    'action': 'create',
+                    'reason': 'Stage missing',
+                })
+            elif stage.status in ['PENDING', 'DRAFT', 'IN_REVIEW']:
+                fixes_needed.append({
+                    'stage': stage_num,
+                    'action': 'approve',
+                    'reason': f'Stage was {stage.status}',
+                })
+
+        if not fixes_needed:
+            continue
+
+        fix_record = {
+            'initiative_id': str(initiative.id),
+            'initiative_name': initiative.name[:80],
+            'current_stage': current_stage,
+            'stages_fixed': [],
+        }
+
+        if dry_run:
+            fix_record['status'] = 'would_fix'
+            fix_record['stages_fixed'] = fixes_needed
+            result['initiatives_fixed'] += 1
+            result['stages_backfilled'] += len(fixes_needed)
+            result['fixes'].append(fix_record)
+            continue
+
+        # Apply fixes
+        try:
+            for fix in fixes_needed:
+                stage_num = fix['stage']
+
+                if fix['action'] == 'create':
+                    InitiativeStage.objects.create(
+                        initiative=initiative,
+                        stage=stage_num,
+                        status='APPROVED',
+                        approved_at=timezone.now(),
+                        notes=f'Backfilled via API at {timezone.now().isoformat()}',
+                    )
+                elif fix['action'] == 'approve':
+                    stage = existing_stages[stage_num]
+                    stage.status = 'APPROVED'
+                    stage.approved_at = timezone.now()
+                    stage.notes = f"{stage.notes}\n\n[Backfilled via API at {timezone.now().isoformat()}]"
+                    stage.save()
+
+                fix_record['stages_fixed'].append(fix)
+                result['stages_backfilled'] += 1
+
+            fix_record['status'] = 'fixed'
+            result['initiatives_fixed'] += 1
+
+        except Exception as e:
+            fix_record['status'] = 'error'
+            fix_record['error'] = str(e)
+            result['errors'].append(f"{initiative.name[:30]}: {e}")
+
+        result['fixes'].append(fix_record)
+
+    result['message'] = (
+        f"{'[DRY RUN] Would fix' if dry_run else 'Fixed'} "
+        f"{result['initiatives_fixed']} initiatives with "
+        f"{result['stages_backfilled']} stages backfilled"
+    )
+
+    logger.info(
+        f"[fix_stages_api] {result['message']} - "
+        f"checked={result['initiatives_checked']}, errors={len(result['errors'])}"
+    )
+
+    return Response(result)
