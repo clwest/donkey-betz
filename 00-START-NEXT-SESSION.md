@@ -1,8 +1,8 @@
 # Session 885 - Start Here
 
-**Previous Session:** 884 (AI OS Boot Experience + Codebase Workspace)
+**Previous Session:** 884 (AI OS Boot Experience + Codebase Workspace + Conversation Deliverables)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **HOME PAGE LIVE** | **AI OS Boot Experience** | **Codebase Workspace**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **HOME PAGE LIVE** | **AI OS Boot Experience** | **Codebase Workspace** | **Conversation Deliverables**
 
 ---
 
@@ -67,16 +67,50 @@ Enabled CodeGeneratorAgent to read/write actual codebase files (not just sandbox
 - `core/services/workspace_manager.py` - Added `get_codebase_workspace()`
 - `core/agents/code_generator_agent.py` - Prefers codebase workspace for file ops
 
+### 4. Conversation Deliverable Extractor (Thinking → Doing)
+
+Fixed the gap between agent conversations producing great analysis and nothing happening.
+
+**Problem:** Conversations produced valuable content (personas, plans, analyses) but:
+- Output sat in conversation history, unused
+- Next steps were vague ("Document key insights")
+- No Deliverable was created
+- No actionable tasks were dispatched
+
+**Solution:** Created `ConversationDeliverableExtractor` that automatically:
+1. Detects deliverable-worthy content via keyword patterns
+2. Creates Deliverable records with proper categorization
+3. Generates concrete next steps (not vague "document insights")
+4. Dispatches tasks to appropriate agents via Celery
+
+**Example Transformation:**
+- Before: "LegalDocDrafterAgent: Validate recommendations against existing system capabilities"
+- After:
+  - Creates Deliverable: "Strategy: Customer Personas"
+  - Tasks: "ResearchAgent: Validate with 5 customer interviews"
+  - Tasks: "ContentStrategyAgent: Create content calendar"
+
+**Files Created:**
+- `core/services/conversation_deliverable_extractor.py`
+
+**Files Modified:**
+- `core/conversation_orchestrator.py` - Wired up extraction at end of conversations
+
 ---
 
 ## TOP PRIORITY for Session 885
 
-### 1. Setup Codebase Workspace on Railway
-Run after production deployment:
-```bash
-railway run python manage.py setup_codebase_workspace
+### 1. Verify Conversation Deliverables in Production
+After deployment, run a conversation that produces personas/plans and verify:
+- Deliverable is created in DB
+- Concrete next steps are dispatched (not vague "document insights")
+- Tasks appear in Celery logs
+
+### 2. Codebase Workspace (AUTOMATED)
+Now runs automatically via Procfile release command. Check Railway logs for:
 ```
-This enables CodeGeneratorAgent to access actual source files in production.
+CODEBASE WORKSPACE SETUP - Session 884
+```
 
 ### 2. Verify Home Page in Production
 After deployment, test:
