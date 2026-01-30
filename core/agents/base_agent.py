@@ -222,6 +222,10 @@ class BaseAgent(ABC, TimeTravelMixin):
     can_delegate: bool = True  # Session 744: Enable autonomous delegation to specialists
     requires_system_context: bool = False  # Session 820: Inject CLAUDE.md + critical docs for system-aware agents
 
+    # Session 874: Prompt sharpening - transforms hedging language into decisive language
+    enable_prompt_sharpening: bool = True  # Enable decisive language transformation
+    sharpening_type: str = 'debate'  # 'debate', 'synthesis', or 'analysis'
+
     def __init__(self, user=None, health_check_mode: bool = False):
         """
         Initialize the agent.
@@ -353,6 +357,38 @@ class BaseAgent(ABC, TimeTravelMixin):
             except Exception as e:
                 logger.warning(f"Could not get/create Agent model: {e}")
         return self._agent_model
+
+    @property
+    def sharpened_system_prompt(self) -> str:
+        """
+        Session 874: Get the sharpened version of the system prompt.
+
+        Transforms hedging language into decisive language based on
+        ChatGPT feedback about needing "sharper conflict" in agent debates.
+
+        Uses the sharpening_type class attribute to determine which rules to apply:
+        - 'debate': For debate/discussion agents
+        - 'synthesis': For synthesis/conclusion agents
+        - 'analysis': For analysis-focused agents
+
+        Returns:
+            Sharpened system prompt with decisive language
+        """
+        if not self.enable_prompt_sharpening or not self.system_prompt:
+            return self.system_prompt
+
+        try:
+            from core.prompts.sharpening import get_sharpened_agent_prompt
+            return get_sharpened_agent_prompt(
+                base_prompt=self.system_prompt,
+                agent_type=self.sharpening_type
+            )
+        except ImportError:
+            logger.debug("Prompt sharpening module not available")
+            return self.system_prompt
+        except Exception as e:
+            logger.warning(f"Prompt sharpening failed: {e}")
+            return self.system_prompt
 
     @property
     def mythology_enforcer(self):
@@ -1098,7 +1134,8 @@ Use delegation when you need expertise outside your specialty. For example:
         attribution = self._build_knowledge_attribution(relevant_knowledge)
 
         # Build the prompt (using the already-retrieved knowledge)
-        parts = [self.system_prompt]
+        # Session 874: Use sharpened system prompt for decisive language
+        parts = [self.sharpened_system_prompt]
 
         # Session 575: Add current date/time context so agents know they have recent data
         from datetime import datetime
@@ -1265,7 +1302,8 @@ Use delegation when you need expertise outside your specialty. For example:
         Returns:
             Complete prompt string
         """
-        parts = [self.system_prompt]
+        # Session 874: Use sharpened system prompt for decisive language
+        parts = [self.sharpened_system_prompt]
 
         # Session 400: Add relevant learned knowledge
         relevant_knowledge = self._get_relevant_knowledge_for_task(task)
@@ -1465,7 +1503,8 @@ Use delegation when you need expertise outside your specialty. For example:
         month_year = now.strftime('%B %Y')
         today = now.strftime('%B %d, %Y')
 
-        prompt_parts = [self.system_prompt]
+        # Session 874: Use sharpened system prompt for decisive language
+        prompt_parts = [self.sharpened_system_prompt]
 
         # Session 817: Add AUTONOMOUS BEHAVIOR directive to ALL agents
         # This ensures agents work autonomously and don't try to converse with users
