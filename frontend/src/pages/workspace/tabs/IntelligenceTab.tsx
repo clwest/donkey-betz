@@ -465,7 +465,7 @@ function SafetySubTab() {
   const { data: patternsData, isLoading: patternsLoading } = useQuery({
     queryKey: ['mythology-patterns-list', visibleCount],
     queryFn: async () => {
-      const res = await fetch(`/api/v1/mythology/patterns/?limit=${visibleCount}`)
+      const res = await fetch(`/api/mythology/patterns/?limit=${visibleCount}`)
       return res.json()
     },
   })
@@ -473,7 +473,7 @@ function SafetySubTab() {
   const { data: guardsData, isLoading: guardsLoading } = useQuery({
     queryKey: ['mythology-guards-list', visibleCount],
     queryFn: async () => {
-      const res = await fetch(`/api/v1/mythology/guards/?limit=${visibleCount}`)
+      const res = await fetch(`/api/mythology/guards/?limit=${visibleCount}`)
       return res.json()
     },
     enabled: expandedSection === 'guards',

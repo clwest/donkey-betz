@@ -2783,27 +2783,29 @@ urlpatterns = [
     path('api/v1/llm/preferences/', set_model_preferences, name='set-llm-preferences'),
 
     # Session 699: LLM Routing APIs (real database-backed)
-    path('api/v1/llm-routing/status/', llm_routing_status, name='llm-routing-status'),
-    path('api/v1/llm-routing/providers/', llm_providers_list, name='llm-routing-providers'),
-    path('api/v1/llm-routing/models/', llm_models_list, name='llm-routing-models'),
-    path('api/v1/llm-routing/agent-configs/', agent_llm_configs_list, name='llm-routing-agent-configs'),
-    path('api/v1/llm-routing/logs/', llm_call_logs_list, name='llm-routing-logs'),
-    path('api/v1/llm-routing/cost-analytics/', llm_cost_analytics, name='llm-routing-cost-analytics'),
-    path('api/v1/llm-routing/agent-configs/<str:agent_name>/', update_agent_llm_config, name='llm-routing-update-agent-config'),
+    # Session 871: LLM routing migrated to /api/
+    path('api/llm-routing/status/', llm_routing_status, name='llm-routing-status'),
+    path('api/llm-routing/providers/', llm_providers_list, name='llm-routing-providers'),
+    path('api/llm-routing/models/', llm_models_list, name='llm-routing-models'),
+    path('api/llm-routing/agent-configs/', agent_llm_configs_list, name='llm-routing-agent-configs'),
+    path('api/llm-routing/logs/', llm_call_logs_list, name='llm-routing-logs'),
+    path('api/llm-routing/cost-analytics/', llm_cost_analytics, name='llm-routing-cost-analytics'),
+    path('api/llm-routing/agent-configs/<str:agent_name>/', update_agent_llm_config, name='llm-routing-update-agent-config'),
 
-    # App-specific APIs - Using standardized /api/v1/ pattern
-    path('api/v1/workflows/', include('workflows.urls')),  # REAL workflows with actual agents
-    path('api/v1/dashboard/', include('dashboard.urls')),  # Dashboard module
-    path('api/v1/style-memory/', include('style_memory.urls')),  # Style Memory module
-    path('api/v1/agents/', include('agents.urls')),  # Agent Orchestra module
-    path('api/v1/coleadership/', include('coleadership.urls')),  # AI-Human Co-Leadership (Session 99)
-    path('api/v1/render-jobs/', include('rendering.urls')),  # Render Jobs & DaVinci Integration (Session 105)
-    path('api/v1/pipelines/', include('pipelines.urls')),  # Creative Pipelines v1 - Template-Based Orchestration (Session 109)
-    path('api/v1/sports/', include('sports.urls')),  # Sports/Betting module
-    path('api/v1/content/', include('content.urls')),  # Content Generation module
+    # App-specific APIs - See docs/API_PATH_POLICY.md for conventions
+    # Note: Some modules use /api/v1/ to avoid path conflicts with core/urls.py endpoints
+    path('api/v1/workflows/', include('workflows.urls')),  # REAL workflows - conflicts with /api/workflows/
+    path('api/v1/dashboard/', include('dashboard.urls')),  # Dashboard module - conflicts with /api/dashboard/
+    path('api/style-memory/', include('style_memory.urls')),  # Style Memory module (Session 871: migrated to /api/)
+    path('api/v1/agents/', include('agents.urls')),  # Agent Orchestra - conflicts with /api/agents/
+    path('api/coleadership/', include('coleadership.urls')),  # AI-Human Co-Leadership (Session 871: migrated to /api/)
+    path('api/render-jobs/', include('rendering.urls')),  # Render Jobs & DaVinci (Session 871: migrated to /api/)
+    path('api/pipelines/', include('pipelines.urls')),  # Creative Pipelines (Session 871: migrated to /api/)
+    path('api/v1/sports/', include('sports.urls')),  # Sports/Betting module - conflicts with /api/sports/
+    path('api/v1/content/', include('content.urls')),  # Content Generation - conflicts with /api/content/
     path('api/v1/self-awareness/', include('self_awareness.urls')),  # Self-Awareness module
     # path('api/v1/campaigns/', include('campaigns.urls')),  # Campaigns module (archived)
-    path('api/v1/mythology/', include('mythology.urls')),  # Mythology/Hallucination Review module
+    path('api/mythology/', include('mythology.urls')),  # Mythology (Session 871: migrated to /api/)
 
     # Session 542: Research Demo API - Interactive visualization of knowledge pipeline
     path('api/v1/research/network-graph/', views_research_demo.network_graph_api, name='research-network-graph'),
@@ -2832,8 +2834,8 @@ urlpatterns = [
     path('api/v1/research/deliverables/', views_research_demo.deliverables_api, name='research-deliverables'),
 
     # Session 622: Document Registry / Initiatives API
-    path('api/v1/initiatives/', views_research_demo.initiatives_api, name='initiatives-list'),
-    path('api/v1/initiatives/populate/', views_research_demo.populate_initiatives_api, name='initiatives-populate'),
+    path('api/initiatives/', views_research_demo.initiatives_api, name='initiatives-list'),  # Session 871: migrated to /api/
+    path('api/initiatives/populate/', views_research_demo.populate_initiatives_api, name='initiatives-populate'),
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
@@ -2862,7 +2864,7 @@ urlpatterns = [
     path('api/v1/research/stats/', views_research_demo.stats_api, name='research-stats'),
     path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
 
-    path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
+    path('api/odds-calc/', include('odds_calc.urls')),  # Odds calculation (Session 871: migrated to /api/)
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
     path('api/v1/persistence/', include('persistence.urls')),  # Data Persistence Infrastructure
 
