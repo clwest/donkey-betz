@@ -57,6 +57,16 @@ You can read, write, and edit actual files in the project workspace. When asked 
 
 NEVER just output code snippets when asked to fix something - actually use your file tools to make the changes!
 
+CRITICAL - FILE PATHS FROM TASK:
+When your task includes "Relevant File Locations:" or mentions specific file paths like:
+- `intelligence/tasks.py:19`
+- `core/views.py:95`
+
+You MUST:
+1. Use read_file to read THOSE SPECIFIC FILES first
+2. Use edit_file to modify THOSE SPECIFIC FILES
+3. NEVER create new files like "generated_1.py" - edit the actual target files!
+
 Your file operation tools:
 - read_file: Read file contents (USE THIS FIRST to understand existing code)
 - write_file: Create new files or completely replace existing files
@@ -65,15 +75,15 @@ Your file operation tools:
 - search_in_files: Find where things are defined/used
 
 Your code generation tools:
-- generate_code: Generate code from specifications
+- generate_code: Generate code from specifications (for NEW code only)
 - create_project_structure: Scaffold new projects
 - analyze_code: Analyze code quality
 - refactor_code: Improve existing code
 - generate_tests: Create tests
 
 WORKFLOW for fixing code issues:
-1. list_files or search_in_files to find relevant files
-2. read_file to see the actual code
+1. Extract file paths from the task (look for "Relevant File Locations" or file:line patterns)
+2. read_file to see the actual code at those paths
 3. edit_file to make the specific fix (find exact text to replace)
 4. Verify the change was successful
 
@@ -82,6 +92,8 @@ IMPORTANT RULES:
 - For edit_file: The old_text must match EXACTLY what's in the file
 - Always read a file before trying to edit it
 - If old_text isn't found, re-read the file and try again with exact text
+- NEVER create generic files like generated_1.py, output.py, etc.
+- ALWAYS edit the actual source files mentioned in the task
 
 DELEGATION (Session 744):
 If you need something outside your expertise, use delegate_to_specialist:
@@ -94,7 +106,7 @@ If you need something outside your expertise, use delegate_to_specialist:
             "type": "function",
             "function": {
                 "name": "generate_code",
-                "description": "Generate code from a specification or description. Use this for creating functions, classes, modules, or code snippets.",
+                "description": "Generate NEW code from a specification. ONLY use for creating NEW files. For fixing existing code, use read_file + edit_file instead!",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -110,6 +122,10 @@ If you need something outside your expertise, use delegate_to_specialist:
                         "framework": {
                             "type": "string",
                             "description": "Optional framework context (django, react, vue, fastapi, express, etc.)"
+                        },
+                        "target_file": {
+                            "type": "string",
+                            "description": "File path to write the generated code to (e.g., 'core/services/my_service.py')"
                         },
                         "include_tests": {
                             "type": "boolean",
@@ -383,6 +399,41 @@ If you need something outside your expertise, use delegate_to_specialist:
         }
     ]
 
+    def _extract_file_paths_from_task(self, task: str) -> List[str]:
+        """
+        Session 881: Extract file paths mentioned in the task.
+
+        Looks for patterns like:
+        - `intelligence/tasks.py:19`
+        - - `core/views_ecosystem_activation.py:95`
+        - Relevant File Locations: sections
+        """
+        file_paths = []
+
+        # Pattern 1: `file_path:line_number` or `file_path`
+        backtick_pattern = r'`([a-zA-Z0-9_/\-\.]+\.(?:py|js|ts|tsx|jsx|json|yaml|yml|md|txt|html|css|sql))'
+        matches = re.findall(backtick_pattern, task)
+        file_paths.extend(matches)
+
+        # Pattern 2: - `path` bullet points
+        bullet_pattern = r'-\s*`([^`]+)`'
+        matches = re.findall(bullet_pattern, task)
+        for m in matches:
+            # Clean up line numbers
+            clean_path = m.split(':')[0]
+            if '.' in clean_path:
+                file_paths.append(clean_path)
+
+        # Deduplicate while preserving order
+        seen = set()
+        unique_paths = []
+        for p in file_paths:
+            if p not in seen:
+                seen.add(p)
+                unique_paths.append(p)
+
+        return unique_paths
+
     def execute(
         self,
         task: str,
@@ -412,15 +463,30 @@ If you need something outside your expertise, use delegate_to_specialist:
         MAX_TOOL_ITERATIONS = 5  # Prevent infinite loops
         iteration = 0
 
+        # Session 881: Extract file paths from task to guide the agent
+        target_files = self._extract_file_paths_from_task(task)
+        if target_files:
+            logger.info(f"📁 Session 881: Extracted target files from task: {target_files}")
+
         with self.time_travel_session("code_generation", task, input_data=context):
             try:
                 # Session 529: Use intelligent prompting
                 full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
                 knowledge_attribution = None  # Legacy compatibility
 
+                # Session 881: Enhance task with explicit file instructions if targets found
+                enhanced_task = task
+                if target_files:
+                    file_list = ', '.join(target_files)
+                    enhanced_task = f"""TARGET FILES TO MODIFY: {file_list}
+
+IMPORTANT: You MUST use read_file and edit_file on these specific files. Do NOT create new files.
+
+{task}"""
+
                 # Session 830: Build conversation history for multi-turn
                 conversation_history = [
-                    {"role": "user", "content": task}
+                    {"role": "user", "content": enhanced_task}
                 ]
 
                 final_message = None
@@ -586,7 +652,8 @@ If you need something outside your expertise, use delegate_to_specialist:
                 language=arguments.get("language", "python"),
                 framework=arguments.get("framework"),
                 include_tests=arguments.get("include_tests", False),
-                include_docs=arguments.get("include_docs", True)
+                include_docs=arguments.get("include_docs", True),
+                target_file=arguments.get("target_file")  # Session 881: Persist to file
             )
 
         elif tool_name == "create_project_structure":
@@ -666,9 +733,13 @@ If you need something outside your expertise, use delegate_to_specialist:
         language: str,
         framework: Optional[str] = None,
         include_tests: bool = False,
-        include_docs: bool = True
+        include_docs: bool = True,
+        target_file: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Generate code from a specification using GPT."""
+        """Generate code from a specification using GPT.
+
+        Session 881: Added target_file parameter to persist generated code.
+        """
         from openai import OpenAI
 
         client = OpenAI()
@@ -701,13 +772,33 @@ Return the code in a properly formatted code block."""
 
         generated_code = response.choices[0].message.content
 
-        return {
+        # Session 881: Extract actual code from markdown code blocks
+        code_match = re.search(r'```(?:\w+)?\n(.*?)\n```', generated_code, re.DOTALL)
+        clean_code = code_match.group(1) if code_match else generated_code
+
+        result = {
             "success": True,
             "language": language,
             "framework": framework,
             "code": generated_code,
             "specification": specification
         }
+
+        # Session 881: If target_file specified, write the code to that file
+        if target_file:
+            write_result = self._write_file(
+                file_path=target_file,
+                content=clean_code,
+                description=f"Generated {language} code: {specification[:100]}"
+            )
+            result['file_written'] = write_result.get('success', False)
+            result['file_path'] = target_file
+            if write_result.get('success'):
+                logger.info(f"✅ Generated code written to {target_file}")
+            else:
+                result['write_error'] = write_result.get('error')
+
+        return result
 
     def _create_project_structure(
         self,
@@ -760,6 +851,25 @@ content
         # Parse the structure into files
         files = self._parse_project_files(project_structure)
 
+        # Session 881: Actually write the generated files to workspace
+        files_written = 0
+        write_errors = []
+        for file_info in files:
+            file_path = f"{project_name}/{file_info['filename']}"
+            write_result = self._write_file(
+                file_path=file_path,
+                content=file_info['content'],
+                description=f"Project scaffold: {project_name}"
+            )
+            if write_result.get('success'):
+                files_written += 1
+                logger.info(f"✅ Created {file_path}")
+            else:
+                write_errors.append({
+                    'file': file_path,
+                    'error': write_result.get('error')
+                })
+
         return {
             "success": True,
             "project_name": project_name,
@@ -767,7 +877,9 @@ content
             "description": description,
             "structure": project_structure,
             "files": files,
-            "file_count": len(files)
+            "file_count": len(files),
+            "files_written": files_written,
+            "write_errors": write_errors if write_errors else None
         }
 
     def _parse_project_files(self, content: str) -> List[Dict[str, str]]:
