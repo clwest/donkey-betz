@@ -36,48 +36,48 @@ from typing import Dict, List, Any
 # These transform hedging phrases into decisive ones
 
 SHARPENING_REPLACEMENTS: Dict[str, str] = {
-    # Validation hedges
-    "we should validate": "THIS REQUIRES validation before proceeding",
-    "should validate": "MUST validate - not optional",
-    "needs validation": "BLOCKED until validated",
-    "consider validating": "VALIDATE THIS - not negotiable",
+    # Validation hedges - replacements should be standalone, not include trailing words
+    "we should validate": "THIS REQUIRES validation of",
+    "should validate": "MUST validate",
+    "needs validation": "BLOCKED until validated:",
+    "consider validating": "VALIDATE",
 
     # Exploration hedges
-    "we should explore": "CRITICAL GAP: we don't know",
-    "should explore": "UNKNOWN - this is a blocker",
-    "consider exploring": "MUST investigate immediately",
-    "might want to explore": "UNKNOWN - this blocks progress",
+    "we should explore": "CRITICAL GAP:",
+    "should explore": "MUST investigate",
+    "consider exploring": "MUST investigate",
+    "might want to explore": "UNKNOWN BLOCKER:",
 
     # Analysis hedges
-    "further analysis": "BLOCKED - cannot proceed without",
-    "more research needed": "MISSING DATA - must gather before continuing",
-    "needs investigation": "BLOCKER - investigate now",
-    "requires study": "UNKNOWN RISK - study is mandatory",
+    "further analysis": "BLOCKED until we analyze",
+    "more research needed": "MISSING DATA:",
+    "needs investigation": "BLOCKER - investigate",
+    "requires study": "UNKNOWN RISK - must study",
 
     # Suggestion hedges
     "we might want to": "WE MUST",
     "could potentially": "WILL",
-    "might be worth": "IS REQUIRED",
+    "might be worth": "IS REQUIRED:",
     "perhaps we should": "WE WILL",
     "it might be good to": "WE NEED TO",
 
     # Politeness hedges
     "I think we should": "WE MUST",
     "I believe": "THE DATA SHOWS",
-    "in my opinion": "BASED ON EVIDENCE",
+    "in my opinion": "BASED ON EVIDENCE,",
     "I would suggest": "THE SOLUTION IS",
 
     # Agreement hedges
-    "that's a good point": "AGREED - and the implication is",
+    "that's a good point": "AGREED, and",
     "interesting perspective": "YOUR DATA SHOWS",
     "I see your point": "YOUR EVIDENCE INDICATES",
-    "that makes sense": "CONFIRMED BY",
+    "that makes sense": "CONFIRMED:",
 
     # Uncertainty hedges
     "I'm not sure but": "THE UNCERTAINTY IS",
-    "maybe": "LIKELY (70%+) or UNLIKELY (<30%) - pick one",
+    "maybe": "LIKELY or UNLIKELY -",
     "possibly": "PROBABILITY:",
-    "potentially": "RISK ASSESSMENT:",
+    "potentially": "RISK:",
 }
 
 # === SHARP DEBATE RULES ===
@@ -189,9 +189,14 @@ def sharpen_prompt(prompt: str) -> str:
     """
     sharpened = prompt
 
-    # Apply replacements (case-insensitive)
-    for hedge, sharp in SHARPENING_REPLACEMENTS.items():
-        pattern = re.compile(re.escape(hedge), re.IGNORECASE)
+    # Apply replacements (case-insensitive, with word boundaries)
+    # Sort by length descending to match longer phrases first
+    sorted_hedges = sorted(SHARPENING_REPLACEMENTS.items(), key=lambda x: -len(x[0]))
+
+    for hedge, sharp in sorted_hedges:
+        # Use word boundaries to avoid partial matches and duplication
+        # \b matches word boundary
+        pattern = re.compile(r'\b' + re.escape(hedge) + r'\b', re.IGNORECASE)
         sharpened = pattern.sub(sharp, sharpened)
 
     return sharpened
