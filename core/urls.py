@@ -2786,7 +2786,7 @@ urlpatterns = [
     # App-specific APIs - See docs/API_PATH_POLICY.md for conventions
     # Note: Some modules use /api/v1/ to avoid path conflicts with core/urls.py endpoints
     path('api/v1/workflows/', include('workflows.urls')),  # REAL workflows - conflicts with /api/workflows/
-    path('api/v1/dashboard/', include('dashboard.urls')),  # Dashboard module - conflicts with /api/dashboard/
+    # Session 872: Removed dashboard.urls include - endpoints unused (frontend uses /api/dashboard/ from core)
     path('api/style-memory/', include('style_memory.urls')),  # Style Memory module (Session 871: migrated to /api/)
     path('api/v1/agents/', include('agents.urls')),  # Agent Orchestra - conflicts with /api/agents/
     path('api/coleadership/', include('coleadership.urls')),  # AI-Human Co-Leadership (Session 871: migrated to /api/)
