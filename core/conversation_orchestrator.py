@@ -53,6 +53,9 @@ ENABLE_STRUCTURED_TURNS = True  # Use turn flow patterns
 # Session 873: Decision Enforcement - force decisive outcomes after debate
 ENABLE_DECISION_ENFORCEMENT = True  # Force decisions via DecisionEnforcerAgent
 
+# Session 874: Synthesis Contract - structured debate output
+ENABLE_SYNTHESIS_CONTRACT = True  # Convert DecisionSummary to SynthesisContract
+
 
 # Session 826: Structured turn flows for different conversation types
 TURN_FLOWS = {
@@ -935,6 +938,39 @@ class ConversationOrchestrator:
             except Exception as e:
                 logger.warning(f"[Session 873] Decision enforcement failed: {e}")
 
+        # Session 874: Convert to SynthesisContract for debate-like conversations
+        synthesis_contract = None
+        synthesis_contract_dict = None
+        if ENABLE_SYNTHESIS_CONTRACT and conversation_type in ('debate', 'analytical', 'critique', 'planning'):
+            try:
+                from core.contracts.synthesis_contract import (
+                    SynthesisContract,
+                    extract_synthesis_from_decision_summary
+                )
+                if decision_summary:
+                    synthesis_contract = extract_synthesis_from_decision_summary(
+                        decision_summary=decision_summary,
+                        topic=topic,
+                        participants=[agent1['name'], agent2['name']]
+                    )
+                    # Try to validate but don't fail on weak synthesis
+                    try:
+                        synthesis_contract.validate()
+                        synthesis_contract_dict = synthesis_contract.to_dict()
+                        logger.info(
+                            f"📋 [Session 874] SynthesisContract created: "
+                            f"{len(synthesis_contract.validated)} validated, "
+                            f"{len(synthesis_contract.rejected)} rejected, "
+                            f"quality_score={synthesis_contract.get_quality_score()}"
+                        )
+                    except ValueError as ve:
+                        # Contract validation failed - still include the raw contract
+                        logger.warning(f"[Session 874] SynthesisContract validation warning: {ve}")
+                        synthesis_contract_dict = synthesis_contract.to_dict()
+                        synthesis_contract_dict['validation_warning'] = str(ve)
+            except Exception as e:
+                logger.warning(f"[Session 874] SynthesisContract creation failed: {e}")
+
         # Session 811: AI World Enhancement - Create memories and dispatch actions
         ai_world_metadata = {
             'dreams_injected': dreams_injected,
@@ -1010,6 +1046,8 @@ class ConversationOrchestrator:
             'rich_context_injected': bool(agent1_rich_context or agent2_rich_context),
             # Session 873: Decision Enforcement
             'execution_mandate': execution_mandate.to_dict() if execution_mandate else None,
+            # Session 874: SynthesisContract for structured debate output
+            'synthesis_contract': synthesis_contract_dict,
         }
 
     def _enforce_decision(
