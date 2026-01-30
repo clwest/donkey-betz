@@ -1,101 +1,53 @@
-# Session 872 - Start Here
+# Session 873 - Start Here
 
-**Previous Session:** 871 (TIER 4 Technical Debt - API Standardization, Dead Code, Documentation)
+**Previous Session:** 872 (API Path Migration Phase 3 + Frontend 404 Fixes)
 **Date:** January 29, 2026
-**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | **17 Workspace Tabs** | **TIER 3 & 4 COMPLETE**
+**Status:** 75 Agents | 77 Spiders | 25 Advisors | 139 Personas | 77 Celery Tasks Scheduled | **17 Workspace Tabs** | **ALL AUDIT TASKS COMPLETE**
 
 ---
 
-## What Was Accomplished in Session 871
+## What Was Accomplished in Session 872
 
-**Handoff:** `docs/handoffs/SESSION_871_COMPLETE.md`
+**Handoff:** `docs/handoffs/SESSION_872_COMPLETE.md`
 
-### TIER 4: API Path Standardization (PR #510)
+### API Path Migration Phase 3 (PR #520)
 
-Migrated 8 module includes from `/api/v1/` to `/api/`:
+Analyzed "conflicts" between `/api/` and `/api/v1/` paths - found they are **NOT true conflicts** but different endpoint sets:
 
-| Endpoint | Frontend Updates |
-|----------|------------------|
-| `/api/llm-routing/*` | InfrastructureTab.tsx (3 calls) |
-| `/api/style-memory/*` | None |
-| `/api/coleadership/*` | None |
-| `/api/render-jobs/*` | None |
-| `/api/pipelines/*` | None |
-| `/api/mythology/*` | IntelligenceTab.tsx (2 calls) |
-| `/api/odds-calc/*` | None |
-| `/api/initiatives/*` | None |
+| Module | `/api/` (core) | `/api/v1/` (module) | Action |
+|--------|----------------|---------------------|--------|
+| workflows | 26 endpoints | 6 endpoints | Keep both (different purposes) |
+| agents | 35+ endpoints | 8 ViewSets | Keep both (47 frontend refs) |
+| dashboard | 11 endpoints | 3 endpoints | **Module REMOVED** (unused) |
 
-**Created:** `docs/API_PATH_POLICY.md` (204 lines)
+### Frontend 404 Fixes (PR #521)
 
-### TIER 4: Dead Code Cleanup Phase 1 (PR #512)
+Fixed 19 broken API paths in production:
 
-Removed 2,767 lines of unused code:
+| Category | Paths Fixed | Example |
+|----------|-------------|---------|
+| Mythology | 17 endpoints | `/v1/mythology/stats/` → `/mythology/stats/` |
+| Initiatives | 2 endpoints | `/v1/initiatives/` → `/initiatives/` |
 
-| File | Lines | Type |
-|------|-------|------|
-| `views_command_center.py` | 1,134 | Backend |
-| `views_project_builder.py` | 536 | Backend |
-| `views_agent_hybrid.py` | 340 | Backend |
-| `views_consciousness_test.py` | 200 | Backend |
-| `views_consciousness.py` | 104 | Backend |
-| `views_master_demo.py` | 77 | Backend |
-| `DiagnosticPanel.tsx` | 376 | Frontend |
-
-### TIER 4: Dead Code Cleanup Phase 2 (PR #516)
-
-Removed 8 unused imports from `core/urls.py`:
-- `visualization_redirect`, `assistant_redirect`
-- `income_builder_view`, `neural_orchestra_view`
-- `AnalyticsDashboardView`, `analytics_api_data`
-- `ai_image_studio`, `diagnostic_dashboard`
-
-### TIER 4: Dead Code Cleanup Phase 3 (PR #518)
-
-Removed Alliance and Rivalry models (0 records, never used) - **744 lines**:
-
-| Component | Lines Removed |
-|-----------|---------------|
-| `models_unified_system.py` | 288 (models) |
-| `views_agent_relationships.py` | 411 (views) |
-| `urls.py` | 14 (routes) |
-| `tasks.py` | 23 (stubbed) |
-| `api.ts` | 8 (endpoints) |
-
-### TIER 4: Dream → Initiative Documentation (PR #514)
-
-**Created:** `docs/DREAM_INITIATIVE_WORKFLOW.md` (398 lines)
-
-Documented the complete autonomous pipeline:
-1. Dream Generation (idle agents)
-2. Scoring & Promotion (composite score ≥ 0.7)
-3. Boardroom Decision (human review)
-4. Initiative Creation (signal-triggered)
-5. 5-Stage Pipeline (Research → Prototype → Evaluation → Design → Pilot)
-6. Completion (final Deliverable)
+**Root cause:** Backend migrated in Session 871 but frontend paths weren't updated.
 
 ---
 
-## Priority for Session 872
+## Priority for Session 873
 
-### All TIERs Complete!
+### All Audit Tasks Complete!
 
-The system-wide audit from Session 867 identified gaps that have now been addressed:
+The system-wide audit from Session 867 is fully resolved:
 
 - [x] TIER 1: Critical fixes (Session 868)
 - [x] TIER 2: High priority (Sessions 868-869)
 - [x] TIER 3: Medium priority (Sessions 869-870)
-- [x] TIER 4: Technical debt (Session 871)
+- [x] TIER 4: Technical debt (Sessions 871-872)
 
-### Optional Remaining Tasks
+### Optional Improvements
 
-- [x] Dead code cleanup Phase 2 - Unused imports (PR #516)
-- [x] Dead code cleanup Phase 3 - Alliance/Rivalry models (PR #518)
-- [x] API path migration Phase 3 - Analysis complete (PR #520) - Not conflicts, different endpoints
 - [ ] Performance optimization - Identify slow queries
 - [ ] Test coverage improvements
-
-### Feature Ideas
-
 - [ ] Add more workspace tabs for specific agent categories
 - [ ] Enhance Dream → Initiative UI with better visualization
 - [ ] Add bulk operations to Learning Journey
@@ -112,11 +64,9 @@ make start && make celery
 # Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# Verify API paths migrated
-grep "api/llm-routing" core/urls.py  # Should NOT have /v1/
-
-# Check dead code removed
-ls core/views_command_center.py 2>/dev/null || echo "Removed"
+# Verify 404 fixes deployed
+curl https://donkey-betz-platform-production.up.railway.app/api/mythology/stats/
+curl https://donkey-betz-platform-production.up.railway.app/api/initiatives/
 ```
 
 ---
@@ -149,11 +99,11 @@ ls core/views_command_center.py 2>/dev/null || echo "Removed"
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **872** | API Path Migration Phase 3 + Frontend 404 Fixes | COMPLETE |
 | **871** | TIER 4: API Standardization + Dead Code + Documentation | COMPLETE |
 | **870** | TIER 3: Frontend Error States + Learning Journey UI | COMPLETE |
 | **869** | TIER 2-3: Stub Replacement + Voice Marketplace UI | COMPLETE |
 | **868** | TIER 1: Critical Fixes - Gallery Series, Reasoning Gates | COMPLETE |
-| **867** | System-Wide Audit + Initiative Pipeline Fix | COMPLETE |
 
 ---
 
@@ -161,8 +111,8 @@ ls core/views_command_center.py 2>/dev/null || echo "Removed"
 
 | Doc | Purpose |
 |-----|---------|
-| `docs/handoffs/SESSION_871_COMPLETE.md` | **Full session details** |
-| `docs/handoffs/SESSION_870_COMPLETE.md` | Session 870 full details |
+| `docs/handoffs/SESSION_872_COMPLETE.md` | **Full session details** |
+| `docs/handoffs/SESSION_871_COMPLETE.md` | Session 871 full details |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | **Dream → Initiative pipeline** |
 | `docs/API_PATH_POLICY.md` | **API path conventions** |
 | `docs/audits/MODEL_DEDUPLICATION_AUDIT.md` | Model deduplication audit |
@@ -171,20 +121,13 @@ ls core/views_command_center.py 2>/dev/null || echo "Removed"
 
 ---
 
-## Session 871 PRs
+## Session 872 PRs
 
 | PR | Title |
 |----|-------|
-| #510 | feat(Session 871): API path standardization - Phase 1 & 2 |
-| #511 | docs(Session 871): Mark API path standardization complete |
-| #512 | chore(Session 871): Remove dead code - Phase 1 |
-| #513 | docs(Session 871): Mark dead code cleanup Phase 1 complete |
-| #514 | docs(Session 871): Document Dream → Initiative workflow |
-| #515 | docs(Session 871): Add session handoff document |
-| #516 | chore(Session 871): Remove unused imports from urls.py - Phase 2 |
-| #517 | docs(Session 871): Update documentation for PR #516 |
-| #518 | chore(Session 871): Remove Alliance and Rivalry dead code - Phase 3 |
+| #520 | feat(Session 872): API path migration Phase 3 - Analysis and cleanup |
+| #521 | fix(Session 872): Fix 404 errors for mythology and initiatives APIs |
 
 ---
 
-**All audit tasks complete! Dead code cleanup totals: ~3,500 lines removed.**
+**System audit complete! Platform stable and production-ready.**
