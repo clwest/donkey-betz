@@ -113,6 +113,9 @@ print(sharpen_prompt('We should validate this before proceeding'))
 
 # Verify Celery tasks
 python manage.py sync_celery_beat
+
+# Run threshold calibration
+python manage.py calibrate_halt_thresholds --days 90
 ```
 
 ---
@@ -176,6 +179,7 @@ python manage.py sync_celery_beat
 | #543 | feat(Session 874): Hook AutoSpawnerService into ResearchAgent |
 | #544 | feat(Session 874): Apply prompt sharpening to all agents via BaseAgent |
 | #545 | fix(Session 874): Adjust dream triage thresholds to clear limbo backlog |
+| #547 | feat(Session 874): Add threshold sandbox for experiment halt calibration |
 
 ---
 
