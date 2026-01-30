@@ -441,6 +441,33 @@ Be constructive and brief."""
                             elif tool_used == 'suggest_improvements':
                                 goals = tool_data.get('goals', [])
                                 descriptive_msg = f"Code improvements suggested for {language}: {', '.join(goals[:3])}"
+
+                                # Session 880: Write improved code to workspace if we have a file path
+                                if file_path_read and tool_data.get('improved_code'):
+                                    improved_code = tool_data['improved_code']
+                                    # Extract code from markdown if present
+                                    import re
+                                    code_match = re.search(r'```(?:\w+)?\n(.*?)\n```', improved_code, re.DOTALL)
+                                    if code_match:
+                                        clean_code = code_match.group(1)
+                                    else:
+                                        clean_code = improved_code
+
+                                    # Prepare file for workspace write
+                                    files_to_write = [{
+                                        'filename': file_path_read,
+                                        'language': language,
+                                        'content': clean_code
+                                    }]
+                                    workspace_write_result = self._write_files_to_workspace(
+                                        files=files_to_write,
+                                        user=self.user
+                                    )
+                                    if workspace_write_result.get('written'):
+                                        descriptive_msg += f" | 📁 Updated {file_path_read}"
+                                        logger.info(f"✅ [CodeReviewAgent] Wrote improvements to {file_path_read}")
+                                    else:
+                                        logger.warning(f"⚠️ [CodeReviewAgent] Could not write improvements: {workspace_write_result.get('reason')}")
                             else:
                                 descriptive_msg = f"Code review '{tool_used}' completed for {language}"
                         else:

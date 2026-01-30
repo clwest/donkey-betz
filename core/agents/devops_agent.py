@@ -361,6 +361,61 @@ Only use these tools when explicitly asked to generate configs. For questions or
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 880: Write generated configs to workspace
+                        workspace_write_result = None
+                        all_files = []
+
+                        for res in all_results:
+                            tool_name = res.get('source', '')
+                            data = res.get('data', {})
+                            config_content = data.get('config') or data.get('manifests')
+
+                            if config_content:
+                                # Determine filename based on tool
+                                if tool_name == 'create_ci_pipeline':
+                                    platform = data.get('platform', 'github')
+                                    if platform == 'github':
+                                        filename = '.github/workflows/ci.yml'
+                                    elif platform == 'gitlab':
+                                        filename = '.gitlab-ci.yml'
+                                    else:
+                                        filename = f'{platform}-ci.yml'
+                                    lang = 'yaml'
+                                elif tool_name == 'create_docker_config':
+                                    filename = 'Dockerfile'
+                                    lang = 'dockerfile'
+                                elif tool_name == 'create_k8s_deployment':
+                                    app_name = data.get('app_name', 'app')
+                                    filename = f'k8s/{app_name}-deployment.yaml'
+                                    lang = 'yaml'
+                                elif tool_name == 'create_terraform_config':
+                                    provider = data.get('cloud_provider', 'main')
+                                    filename = f'terraform/{provider}.tf'
+                                    lang = 'hcl'
+                                elif tool_name == 'create_monitoring_config':
+                                    stack = data.get('stack', 'monitoring')
+                                    filename = f'monitoring/{stack}-config.yaml'
+                                    lang = 'yaml'
+                                else:
+                                    filename = f'devops/{tool_name}.txt'
+                                    lang = 'text'
+
+                                all_files.append({
+                                    'filename': filename,
+                                    'language': lang,
+                                    'content': config_content
+                                })
+
+                        if all_files:
+                            workspace_write_result = self._write_files_to_workspace(
+                                files=all_files,
+                                user=self.user
+                            )
+                            if workspace_write_result.get('written'):
+                                logger.info(f"✅ [DevOpsAgent] Wrote {workspace_write_result.get('total_written', 0)} config files to workspace")
+                            else:
+                                logger.warning(f"⚠️ [DevOpsAgent] Workspace write skipped: {workspace_write_result.get('reason', 'unknown')}")
+
                         # Session 856: Build descriptive message based on tool used
                         first_result = all_results[0]
                         tool_used = first_result['source']
@@ -388,6 +443,10 @@ Only use these tools when explicitly asked to generate configs. For questions or
                         else:
                             descriptive_msg = f"DevOps task '{tool_used}' completed"
 
+                        # Session 880: Append workspace write info to message
+                        if workspace_write_result and workspace_write_result.get('written'):
+                            descriptive_msg += f" | 📁 {workspace_write_result.get('total_written', 0)} config files written"
+
                         # Enrich result data with tool_used for content review
                         result_data = {
                             'results': all_results,
@@ -396,7 +455,8 @@ Only use these tools when explicitly asked to generate configs. For questions or
                             'platform': tool_data.get('platform'),
                             'environment': tool_data.get('environment'),
                             'app_type': tool_data.get('app_type'),
-                            'cloud_provider': tool_data.get('cloud_provider')
+                            'cloud_provider': tool_data.get('cloud_provider'),
+                            'workspace_write': workspace_write_result  # Session 880
                         }
 
                         result = AgentResult(
