@@ -171,6 +171,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | [SPIDERS.md](docs/SPIDERS.md) | Spider network (77 spiders) |
 | [SERVICES.md](docs/SERVICES.md) | Services layer (120 services) |
 | [DATABASE_MODEL_REFERENCE.md](docs/DATABASE_MODEL_REFERENCE.md) | Which DB table for what |
+| [API_PATH_POLICY.md](docs/API_PATH_POLICY.md) | API path conventions (`/api/` vs `/api/v1/`) |
 
 **Documentation Index:** Run `python manage.py build_docs_index` to regenerate `docs/INDEX.md`
 
