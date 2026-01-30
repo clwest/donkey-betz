@@ -137,27 +137,14 @@ function MonitorSubTab() {
             const workers = celeryData.workers || []
             const activeWorkers = workers.filter((w: any) => w.status === 'online').length
 
-            // Also try to get recent agent operations
-            const opsRes = await fetch('/api/v1/agents/recent-operations/?limit=10')
-            let recentOps: any[] = []
-            if (opsRes.ok) {
-              const opsData = await opsRes.json()
-              recentOps = (opsData.operations || []).map((op: any) => ({
-                id: op.id || Math.random().toString(),
-                workflow_name: op.agent_name || op.name || 'Agent Operation',
-                status: op.status === 'success' ? 'completed' : op.status === 'error' ? 'failed' : 'running',
-                started_at: op.created_at || op.timestamp,
-                completed_at: op.completed_at,
-              }))
-            }
-
+            // Session 884: Return Celery worker stats as the activity indicator
             return {
-              executions: recentOps,
-              count: recentOps.length,
+              executions: [],
+              count: 0,
               stats: {
                 running: activeWorkers,
-                completed: recentOps.filter((e: any) => e.status === 'completed').length,
-                failed: recentOps.filter((e: any) => e.status === 'failed').length,
+                completed: 0,
+                failed: 0,
               }
             }
           }
@@ -430,14 +417,14 @@ function WorkflowsSubTab() {
           return res.data
         }
 
-        // Session 884: Fallback to v1 orchestrations endpoint (has 6 records)
-        const v1Res = await fetch('/api/v1/orchestrations/', {
+        // Session 884: Fallback to orchestrations endpoint (has 6 records)
+        const orchRes = await fetch('/api/orchestrations/', {
           headers: { 'Content-Type': 'application/json' }
         })
-        if (v1Res.ok) {
-          const v1Data = await v1Res.json()
-          // Map v1 orchestrations to workflow format
-          const workflows = (v1Data.orchestrations || []).map((o: any) => ({
+        if (orchRes.ok) {
+          const orchData = await orchRes.json()
+          // Map orchestrations to workflow format
+          const workflows = (orchData.orchestrations || []).map((o: any) => ({
             id: o.id,
             name: o.name,
             description: o.description || `${o.execution_strategy} workflow`,

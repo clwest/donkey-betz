@@ -2116,7 +2116,7 @@ urlpatterns = [
     path('api/nexus/approve-proposal/', approve_proposal, name='nexus-approve-proposal'),
     path('api/nexus/reject-proposal/', reject_proposal, name='nexus-reject-proposal'),
 
-    path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
+    path('api/orchestrations/', orchestrations_list, name='orchestrations-list'),  # Session 884: Migrated from /api/v1/
     
     # Agent execution instances endpoints
     path('api/v1/instances/', list_instances, name='agent-instances'),
