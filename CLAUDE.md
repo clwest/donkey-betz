@@ -1,24 +1,26 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 29, 2026 - Session 865
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 46 Pages | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Podcast TTS: RECONNECTED** | **Content Intelligence: IMPROVED** | **ConceptForge: ACTIVE** | **Content Flow: COMPLETE** | **Data Persistence: COMPLETE** | **Initiative Pipeline: ACTIVE** | **Citation Gate: ACTIVE** | **Diagnostic Pipeline: ACTIVE** | **User Context: ACTIVE** | **Workspace Inline: ACTIVE**
+**Last Updated:** January 29, 2026 - Session 872
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 46 Pages | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 75 | All synced to database + workspace integration (+1 EditorAgent) |
+| **Agents** | 76 | All synced + DecisionEnforcerAgent ("Prefrontal Cortex") |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **PA Tools** | 86 | +body tools for all 9 systems |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **LLM Models** | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
 | **Database Models** | 378+ | Including Deliverable, AuditReport, AgentMemory, ToolCallRecord, DecisionRecord, ResearchResult |
-| **Celery Tasks** | 241 | ALL body systems active, autonomous remediation, async conversations, ConceptForge, health monitoring |
-| **Services** | 124 | Including diagnostic pipeline, context optimization, self-healing orchestrator |
+| **Celery Tasks** | 256 | ALL body systems active, autonomous remediation, async conversations, ConceptForge, health monitoring |
+| **Services** | 125 | Including AutoSpawnerService for data insufficiency reflexes |
+| **Contracts** | 3 | ResearchContract, ExecutionMandate, SynthesisContract |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Executive Function + Contracts (872):** DecisionEnforcerAgent forces decisions after debate. ResearchContract, ExecutionMandate, SynthesisContract prevent vague outputs. AutoSpawnerService triggers data gathering reflexes. Prompt sharpening transforms hedging → decisive language.
 - **Podcast TTS + Voice Profiles + ConceptForge UI (865):** Reconnected ElevenLabs TTS pipeline, VoiceProfileModal fetches real voices, custom voice selection. Added Dossiers tab with full 6-stage pipeline visualization. Celery health monitoring sends Discord alerts every 30 min.
 - **Content Intelligence Improvements (864):** EditorAgent for auto-enhancement, operational title detection (auto-internal), lowered structure threshold 0.65→0.55. Expected: 2%→15%+ publish ready.
 - **ConceptForge Pipeline (863):** Content → Intelligence → Strategy → Product. 6-stage autonomous think tank with 139 persona agents and 25 legendary advisors. Gate: quality >= 0.80 + strategic_tag.
@@ -139,6 +141,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **872** | Executive Function - DecisionEnforcerAgent, 3 Contracts, AutoSpawner, Prompt Sharpening | `SESSION_872_COMPLETE.md` |
 | **867** | System-Wide Audit - 231 unscheduled tasks, 40+ stubs, Initiative Pipeline fix | `SESSION_867_SYSTEM_AUDIT.md` |
 | **866** | ATS Keyword Optimization Module + Career Tab UI + Cleanup Command | `SESSION_866_ATS_KEYWORD_MODULE.md` |
 | **865** | Podcast TTS + Voice Profile Integration + Celery Health Monitoring | `SESSION_865_PODCAST_TTS_VOICE_PROFILES.md` |
@@ -154,8 +157,6 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **841** | Experiment Monitoring Fixes - Stop global halts, provider health tracking | `SESSION_841_EXPERIMENT_MONITORING_FIXES.md` |
 | **836** | Experiment System Diagnosis - Celery Beat fix, 251 learnings created | `SESSION_836_EXPERIMENT_SYSTEM_DIAGNOSIS.md` |
 | **835** | Agent Output Audit (80+ agents) + 4 New Renderers + Deep Linking Fix | `SESSION_835_AGENT_OUTPUT_AUDIT.md` |
-| **834** | Sidebar Cleanup (44→15) + Advisors Panel + Grouped Operations + Detail Modals | `SESSION_834_UI_CONSOLIDATION.md` |
-| **833** | Workspace Improvements + Blog Approval + 50 Agent Fixes | `SESSION_833_WORKSPACE_IMPROVEMENTS.md` |
 | **832** | Recent Activity Enhancement - New fields, system activity | `SESSION_832_RECENT_ACTIVITY_ENHANCEMENT.md` |
 
 **Older sessions:** See `docs/handoffs/` directory (Sessions 197-865)
