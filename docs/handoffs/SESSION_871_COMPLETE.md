@@ -164,6 +164,8 @@ Removed 8 unused imports from `core/urls.py`:
 | #514 | docs(Session 871): Document Dream → Initiative workflow | Merged |
 | #515 | docs(Session 871): Add session handoff document | Merged |
 | #516 | chore(Session 871): Remove unused imports from urls.py - Phase 2 | Merged |
+| #517 | docs(Session 871): Update documentation for PR #516 | Merged |
+| #518 | chore(Session 871): Remove Alliance and Rivalry dead code - Phase 3 | Merged |
 
 ---
 
