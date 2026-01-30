@@ -1366,6 +1366,7 @@ class AgentRouter:
             return {}
 
     # ==================== Session 858: User Context Injection ====================
+    # Session 877: Added 'personal_assistant' category for full user context
 
     # Agent category mappings for injection policy
     # Controls what user data each agent type receives to avoid prompt bloat
@@ -1385,11 +1386,21 @@ class AgentRouter:
         # Research agents get interests and learning goals
         'research': ['interests', 'learning_goals', 'preferred_topics'],
 
+        # Session 877: Personal Assistant needs comprehensive user context
+        # PA is the main user-facing agent and needs to know the user well
+        'personal_assistant': [
+            'skills', 'goals', 'communication_style', 'job_preferences',
+            'work_history', 'success_patterns', 'interests', 'risk_tolerance'
+        ],
+
         # Default: minimal context for all others
         'default': ['name', 'goals', 'communication_style']
     }
 
     AGENT_CATEGORY_MAP = {
+        # Session 877: Personal Assistant gets full user context
+        'PersonalAssistantAgent': 'personal_assistant',
+
         # Career agents
         'OpportunityPipelineAgent': 'career',
         'CustomerResearchAgent': 'career',

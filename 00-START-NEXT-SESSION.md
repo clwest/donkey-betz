@@ -1,78 +1,85 @@
-# Session 877 - Start Here
+# Session 879 - Start Here
 
-**Previous Session:** 876 (GPT-5-mini Token Limits Fix)
-**Date:** January 29, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **CONTEXT TRACING ACTIVE** | **TOKEN LIMITS FIXED**
-
----
-
-## What Was Accomplished in Session 876
-
-**Handoff:** `docs/handoffs/SESSION_876_TOKEN_LIMITS_FIX.md`
-
-### Critical Production Fix: GPT-5-mini Empty Content (PR #554 updated)
-
-**Problem:** Agents returning empty content in production despite HTTP 200 responses.
-
-**Root Cause:** GPT-5-mini reasoning models consume tokens internally for reasoning BEFORE generating visible output. With `max_completion_tokens=1000`, all tokens were consumed by reasoning, leaving nothing for actual content.
-
-**Solution:** Increased `max_completion_tokens` from 1000 → 4000 across 12 production files:
-
-| File | Change |
-|------|--------|
-| `core/tasks.py` | 2 occurrences (conversation + dream generation) |
-| `core/views_rag_embeddings.py` | RAG query response |
-| `core/views_advisor_api.py` | Advisor consultations |
-| `core/views_assistant_rag_enhanced.py` | Enhanced assistant |
-| `core/views_assistant_intelligent.py` | Intelligent assistant |
-| `core/services/weekly_synthesis.py` | Weekly reports |
-| `core/services/research_orchestrator.py` | Opportunity scoring |
-| `core/agents/ai_series_workflow_agent.py` | Script generation |
-| `core/agents/business/customer_research_agent.py` | Persona generation (1000→2000) |
-| `pipelines/services.py` | Image prompt generation |
-| `agents/executors/income_builder_executor.py` | Income analysis |
-| `agents/executors/ai_project_executor.py` | Content generation |
-| `coleadership/reflections.py` | Decision reflections |
-
-### Context Tracing System (from Session 875)
-
-Still active - monitoring for `'list' object has no attribute 'get'` errors:
-- `BadContextEvent` model captures context type violations
-- Tracing at 4 pipeline stages: post_deserialize, pre_enqueue, router, agent
+**Previous Session:** 878 (Goal Collection Implementation)
+**Date:** January 30, 2026
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **TOKEN LIMITS FIXED** | **WORKSPACE FIX APPLIED** | **PA USER CONTEXT FIXED** | **GOAL COLLECTION ACTIVE**
 
 ---
 
-## Priority for Session 877
+## What Was Accomplished in Session 878
 
-### Verify Production Fix
+**Handoff:** `docs/handoffs/SESSION_878_GOAL_COLLECTION.md`
 
-After Railway deploys, check that agents are now generating content:
+### Goal Collection Implementation - COMPLETE
 
-```bash
-# Check Operations Tab for recent content
-# Should see actual content instead of "No content generated"
+**Problem:** All users had empty `goals: []` - PA couldn't personalize advice
 
-# Check Memory Palace for new entries
-# Should see activity after the fix is deployed
+**Solution:** Added automatic goal collection to Personal Assistant
+
+**Files Changed:**
+- `core/personal_ai_assistant_enhanced.py` - Added `_handle_goal_collection()` and `_extract_goals_from_response()` methods
+- `core/agent_context_middleware.py` - Added EnhancedUserProfile loading and goals to personalization dict
+
+**How It Works:**
+1. First interaction → PA prompts user for goals
+2. User provides goals → Extracted and saved to `EnhancedUserProfile.long_term_goals`
+3. User can skip → Won't be asked again (respects user preference)
+4. Goals now flow through AgentRouter to PA context
+
+**Verification:**
+```
+# Before Session 878:
+PA context goals: []
+
+# After Session 878:
+PA context goals: ['Build passive income...', 'Learn ML...', 'Launch SaaS...']
 ```
 
-### Monitor Context Tracing
+---
+
+## User Connection Gap Status (Updated)
+
+| Gap | Status | Session |
+|-----|--------|---------|
+| PA missing skills | **FIXED** | 877 |
+| Goals not collected | **FIXED** | 878 |
+| No onboarding flow | NOT FIXED | - |
+| Interview system unused | NOT FIXED | - |
+| EnhancedUserProfile sparse | NOT FIXED | - |
+
+---
+
+## TOP PRIORITY for Session 879
+
+### 1. Test Goal Collection in Browser
+
+Verify the implementation works in the actual PA UI:
+1. Start platform: `make start && make celery`
+2. Log in as a user WITHOUT goals (e.g., `pipeline_test_user`)
+3. Open Personal Assistant
+4. Should see the goal collection prompt
+5. Provide goals and verify they're saved
+
+### 2. Wire Interview System
+
+The interview infrastructure exists but isn't connected to PA:
+
+**Existing Endpoints:**
+- `POST /api/interview/start/` - Start interview
+- `POST /api/interview/respond/` - Process response
+- `GET /api/interview/status/` - Get status
+
+**File:** `core/views_interview.py`
+
+**Goal:** Make PA automatically trigger interview for new users
+
+### 3. Create EnhancedUserProfile for All Users
+
+Only 3/12 users have EnhancedUserProfile. Need management command:
 
 ```bash
-python manage.py shell -c "
-from core.models_unified_system import BadContextEvent
-print(f'Bad context events: {BadContextEvent.objects.count()}')
-if BadContextEvent.objects.exists():
-    for e in BadContextEvent.objects.order_by('-created_at')[:5]:
-        print(f'  {e.stage}: {e.context_type} - {e.agent_name}')
-"
+python manage.py ensure_enhanced_profiles
 ```
-
-### Potential Work
-
-- [ ] Review Session 867 audit findings (231 unscheduled tasks, 40+ stubs)
-- [ ] Complete remaining tracing integration points (log_llm_output, log_parser_output, log_agent)
-- [ ] Add token usage logging/monitoring to track reasoning overhead
 
 ---
 
@@ -82,57 +89,53 @@ if BadContextEvent.objects.exists():
 # Start platform
 make start && make celery
 
-# Access AI Studio
-open http://localhost:8000/ai-studio/
-
-# Check bad context events
+# Test goal collection flow
 python manage.py shell -c "
-from core.models_unified_system import BadContextEvent
-print(f'Events: {BadContextEvent.objects.count()}')
-for e in BadContextEvent.get_stage_summary(hours=24):
-    print(f'  {e[\"stage\"]}: {e[\"count\"]} events')
-"
+from django.contrib.auth import get_user_model
+from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+from core.models import EnhancedUserProfile
 
-# Verify Celery tasks
-python manage.py sync_celery_beat
+User = get_user_model()
+user = User.objects.get(username='pipeline_test_user')
+
+# Clear previous state
+profile, _ = EnhancedUserProfile.objects.get_or_create(user=user)
+profile.long_term_goals = []
+profile.dynamic_attributes = {}
+profile.save()
+
+# Test goal collection
+assistant = EnhancedPersonalAIAssistant(user)
+result = assistant._handle_goal_collection('Hello')
+print(f'Type: {result.get(\"type\")}')"
+
+# Check users with goals
+python manage.py shell -c "
+from core.models import EnhancedUserProfile
+with_goals = EnhancedUserProfile.objects.exclude(long_term_goals=[]).count()
+total = EnhancedUserProfile.objects.count()
+print(f'Users with goals: {with_goals}/{total}')"
+
+# Verify PA context includes goals
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+from core.agent_router import AgentRouter
+User = get_user_model()
+user = User.objects.get(username='admin')
+router = AgentRouter(user=user)
+ctx = router._get_user_context('PersonalAssistantAgent', 'test')
+print(f'Goals: {ctx.get(\"goals\")}')"
 ```
 
 ---
 
-## Workspace Tabs (17 total)
+## Remediation Status
 
-| Tab | Icon | Description |
-|-----|------|-------------|
-| Command | Target | Agent command center |
-| Infrastructure | Server | System health & services |
-| Orchestration | Workflow | Multi-agent workflows |
-| Initiatives | Workflow | Dream → Initiative pipeline |
-| Content | Palette | Content Studio |
-| Data | Database | Spider data sources |
-| AI Mind | Sparkles | AI consciousness & memory |
-| Intel | Lightbulb | Reasoning & intelligence |
-| Governance | Shield | Safety & policies |
-| Knowledge | BookOpen | Knowledge base |
-| Files | FolderTree | Workspace files |
-| Operations | History | Activity history |
-| Triggers | Zap | Automation triggers |
-| Dossiers | FlaskConical | ConceptForge pipeline |
-| Career | Briefcase | ATS Resume Optimizer |
-| Voices | Mic | Voice Marketplace |
-| Learn | GraduationCap | Learning Journey Dashboard |
-
----
-
-## Recent Session History
-
-| Session | Focus | Status |
-|---------|-------|--------|
-| **876** | GPT-5-mini Token Limits Fix (1000 → 4000) for empty content | COMPLETE |
-| **875** | Context Tracing System for diagnosing list-as-dict errors | COMPLETE |
-| **874** | Executive Function Integration + Dream Backlog Cleared | COMPLETE |
-| **873** | Dream Triage + Experiment Halt Instrumentation Fixes | COMPLETE |
-| **872** | API Migration + 404 Fixes + Executive Function (4 new components) | COMPLETE |
-| **871** | TIER 4: API Standardization + Dead Code + Documentation | COMPLETE |
+| Component | Count |
+|-----------|-------|
+| Open findings | 192 |
+| Assigned tasks | 28 |
+| Completed | 23 |
 
 ---
 
@@ -140,21 +143,38 @@ python manage.py sync_celery_beat
 
 | Doc | Purpose |
 |-----|---------|
-| `docs/handoffs/SESSION_876_TOKEN_LIMITS_FIX.md` | Session 876 details |
-| `docs/handoffs/SESSION_875_CONTEXT_TRACING_SYSTEM.md` | Session 875 details |
-| `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | System-wide audit findings |
-| `docs/DREAM_INITIATIVE_WORKFLOW.md` | Dream → Initiative pipeline |
-| `docs/AGENTS.md` | Agent documentation (76 agents) |
-| `docs/SPIDERS.md` | Spider network (77 spiders) |
+| `docs/handoffs/SESSION_878_GOAL_COLLECTION.md` | Goal collection implementation |
+| `docs/handoffs/SESSION_877_USER_CONNECTION_GAPS.md` | Full user connection analysis |
+| `docs/handoffs/SESSION_877_WORKSPACE_FIX.md` | Workspace fix details |
 
 ---
 
-## Session 876 PRs
+## Recent Session History
 
-| PR | Title |
-|----|-------|
-| #554 | feat(Session 875): Add comprehensive context tracing system + GPT-5-mini token fix |
+| Session | Focus | Status |
+|---------|-------|--------|
+| **878** | Goal Collection Implementation | COMPLETE |
+| **877** | Workspace Fix + User Connection Gaps | COMPLETE |
+| **876** | GPT-5-mini Token Limits Fix | COMPLETE |
+| **875** | Context Tracing System | COMPLETE |
 
 ---
 
-**GPT-5-mini token limits fixed. Agents should now generate actual content instead of empty responses.**
+## Session 878 Changes
+
+| File | Change |
+|------|--------|
+| `core/personal_ai_assistant_enhanced.py` | Added `_handle_goal_collection()`, `_extract_goals_from_response()` |
+| `core/agent_context_middleware.py` | Added EnhancedUserProfile loading, goals to personalization |
+| `docs/handoffs/SESSION_878_GOAL_COLLECTION.md` | Implementation documentation |
+
+---
+
+## User Connection Priority Order (Updated)
+
+1. ~~Goal Collection~~ **DONE** (Session 878)
+2. **Interview Flow** - Wire up existing infrastructure (NEXT)
+3. **EnhancedProfile** - Populate for all users
+4. **Proactive Learning** - System asks follow-up questions
+
+**Progress: 2/4 gaps fixed. Core user personalization now works!**
