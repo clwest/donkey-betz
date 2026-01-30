@@ -49,8 +49,8 @@ Created `LearningJourneyTab.tsx` (1,086 lines):
 
 - [x] ~~API path standardization~~ DONE (PR #510) - 8 module includes migrated to `/api/`
 - [x] ~~Dead code cleanup Phase 1~~ DONE (PR #512) - 2,767 lines removed
+- [x] ~~Document Dream → Initiative workflow~~ DONE (PR #514)
 - [ ] Dead code cleanup Phase 2 - Deprecated models (optional)
-- [ ] Document Dream → Initiative workflow
 
 ---
 
@@ -122,6 +122,7 @@ grep -c "id:.*as WorkspaceTab" frontend/src/pages/WorkspacePageNew.tsx
 | `docs/handoffs/SESSION_867_SYSTEM_AUDIT.md` | System audit with gaps |
 | `docs/audits/MODEL_DEDUPLICATION_AUDIT.md` | **Model deduplication audit (281 models)** |
 | `docs/API_PATH_POLICY.md` | **API path conventions (`/api/` vs `/api/v1/`)** |
+| `docs/DREAM_INITIATIVE_WORKFLOW.md` | **Dream → Initiative 5-stage pipeline** |
 | `docs/AGENTS.md` | Agent documentation (75 agents) |
 | `docs/SPIDERS.md` | Spider network (77 spiders) |
 
