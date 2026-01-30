@@ -1,44 +1,37 @@
-# Session 880 - Start Here
+# Session 881 - Start Here
 
-**Previous Session:** 879 (Prompt Leakage Fixes + Structured Output Templates)
+**Previous Session:** 880 (Production Async Bug Fix)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **TOKEN LIMITS FIXED** | **WORKSPACE FIX APPLIED** | **PA USER CONTEXT FIXED** | **GOAL COLLECTION ACTIVE** | **STRUCTURED OUTPUT TEMPLATES**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **276 Celery Tasks Synced** | **TOKEN LIMITS FIXED** | **WORKSPACE FIX APPLIED** | **PA USER CONTEXT FIXED** | **GOAL COLLECTION ACTIVE** | **ASYNC BUG FIXED**
 
 ---
 
-## What Was Accomplished in Session 879
+## What Was Accomplished in Session 880
 
-### 1. Prompt Leakage Fixes - COMPLETE
+### 1. Production Async Bug Fix - COMPLETE
 
-**Problem:** System Insights showed "92% experiment failure rate" when actual DB showed ~24.7%
+**Problem:** All spider web requests failing in production with error:
+```
+"Timeout context manager should be used inside a task"
+```
 
-**Root Cause:** LLM was copying hardcoded example numbers from prompts instead of using actual context data
+**Impact:**
+- Memories not being created (last 6+ hours ago)
+- Spider opportunity scanning broken
+- All web fetches failing
 
-**Fixes Applied:**
-- `core/agents/thinking_agent.py` - Replaced hardcoded example `"94% (234/249 failed)"` with placeholder + explicit instruction
-- `core/agents/decision_enforcer_agent.py` - Replaced specific example numbers with `[X]%`, `[N/M]` placeholders
+**Root Cause:** Using `asyncio.new_event_loop()` + `loop.run_until_complete()` does not create a proper Task context that aiohttp's `ClientTimeout` requires.
 
-**PRs Merged:**
-- #558 - Fix System Insights showing stale example numbers
-- #559 - Prevent prompt leakage in DecisionEnforcerAgent
+**Solution:** Replaced with `asyncio.run()` which properly wraps coroutines in a Task context.
 
-### 2. Structured Output Templates - COMPLETE
+**Tasks Fixed:**
+- `scan_spider_opportunities`
+- `scan_income_spider_orchestrator`
+- `fetch_all_opportunities`
 
-**Problem:** Research agent outputs lacked structure for decision-making, confidence tracking, and semantic clarity
+**File Changed:** `intelligence/tasks.py`
 
-**Solution:** Added Quality Header + Decision Block format to research agents
-
-**Files Changed:**
-- `core/agents/business/competitor_analysis_agent.py` - Updated `_synthesize_analysis()` method
-- `core/agents/business/customer_research_agent.py` - Updated `_synthesize_research()` method
-
-**New Output Format:**
-- **Quality Header**: Purpose, Inputs, Confidence level, Constraints
-- **Semantic Drift Prevention**: "Direct Competitors" vs "Analogs" split
-- **Decision Block**: Recommended Move, Top 3 Bets, Risks + Mitigations, Next 7 Days
-- **Data Disclaimer**: Sample size caveats
-
-**PR Merged:** #560 - Add structured output templates to research agents
+**PR Merged:** #562 - Fix async bug causing spider web requests to fail
 
 ---
 
@@ -54,16 +47,19 @@
 
 ---
 
-## TOP PRIORITY for Session 880
+## TOP PRIORITY for Session 881
 
-### 1. Test Goal Collection in Browser
+### 1. Verify Production Fix
 
-Verify the implementation works in the actual PA UI:
-1. Start platform: `make start && make celery`
-2. Log in as a user WITHOUT goals (e.g., `pipeline_test_user`)
-3. Open Personal Assistant
-4. Should see the goal collection prompt
-5. Provide goals and verify they're saved
+After Railway deploys, verify:
+- Spider tasks complete without async errors
+- Memories start being created again
+- Opportunity scanning works
+
+```bash
+# Check Railway logs for spider tasks
+railway logs --filter "spider"
+```
 
 ### 2. Wire Interview System
 
@@ -156,22 +152,19 @@ print(f'Actual failure rate: {rate:.1f}% ({failed}/{total})')"
 
 | Session | Focus | Status |
 |---------|-------|--------|
+| **880** | Production Async Bug Fix (spider web requests) | COMPLETE |
 | **879** | Prompt Leakage Fixes + Structured Output Templates | COMPLETE |
 | **878** | Goal Collection Implementation | COMPLETE |
 | **877** | Workspace Fix + User Connection Gaps | COMPLETE |
 | **876** | GPT-5-mini Token Limits Fix | COMPLETE |
-| **875** | Context Tracing System | COMPLETE |
 
 ---
 
-## Session 879 Changes
+## Session 880 Changes
 
 | File | Change |
 |------|--------|
-| `core/agents/thinking_agent.py` | Fixed prompt leakage - replaced hardcoded example numbers |
-| `core/agents/decision_enforcer_agent.py` | Preventive fix - replaced specific examples with placeholders |
-| `core/agents/business/competitor_analysis_agent.py` | Added Quality Header + Decision Block output format |
-| `core/agents/business/customer_research_agent.py` | Added Quality Header + Decision Block output format |
+| `intelligence/tasks.py` | Fixed async bug - replaced `new_event_loop()` with `asyncio.run()` for 3 spider tasks |
 
 ---
 
