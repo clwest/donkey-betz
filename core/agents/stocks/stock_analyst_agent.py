@@ -202,7 +202,12 @@ Alert on:
             AgentResult with analysis findings
         """
         start_time = datetime.now()
-        context = context or {}
+        # Session 875: Ensure context is a dict (defensive fix for list being passed)
+        if not isinstance(context, dict):
+            logger.warning(f"StockAnalystAgent received non-dict context (type={type(context).__name__}), using empty dict")
+            context = {}
+        else:
+            context = context or {}
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 

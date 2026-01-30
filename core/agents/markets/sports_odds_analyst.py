@@ -141,7 +141,12 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
             AgentResult with odds analysis and betting signals
         """
         start_time = datetime.now()
-        context = context or {}
+        # Session 875: Ensure context is a dict (defensive fix for list being passed)
+        if not isinstance(context, dict):
+            logger.warning(f"SportsOddsAnalyst received non-dict context (type={type(context).__name__}), using empty dict")
+            context = {}
+        else:
+            context = context or {}
         spider_context = spider_context or {}
 
         # Session 858: Extract user context for personalized betting analysis

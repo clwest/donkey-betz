@@ -699,7 +699,12 @@ class AgentRouter:
         Raises:
             AgentNotFoundError: If agent_name is not in AGENT_MAP
         """
-        context = context or {}
+        # Session 875: Ensure context is a dict (defensive fix for list being passed)
+        if not isinstance(context, dict):
+            logger.warning(f"AgentRouter.route received non-dict context (type={type(context).__name__}), using empty dict")
+            context = {}
+        else:
+            context = context or {}
 
         # Validate agent name
         agent_class = self.AGENT_MAP.get(agent_name)
