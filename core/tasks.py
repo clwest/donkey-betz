@@ -270,12 +270,25 @@ def execute_agent_task(
     """
     from core.agent_router import AgentRouter
     from core.models_unified_system import Agent, AgentExecution
+    from core.services.context_tracing import ContextTracer
     from decimal import Decimal
+
+    # Session 875: Initialize context tracer for bad context forensics
+    tracer = ContextTracer(source=f"execute_agent_task:{agent_name}")
+
+    # Session 875: Log context at post-deserialize stage (after Celery receives it)
+    tracer.log_post_deserialize(
+        context=context,
+        agent_name=agent_name,
+        action_name=task[:100] if task else "",
+        task_name="execute_agent_task"
+    )
 
     # Session 875: Ensure context is a dict (defensive fix for list being passed)
     if not isinstance(context, dict):
         logger.warning(f"[execute_agent_task] Received non-dict context (type={type(context).__name__}), using empty dict")
-        context = {}
+        # Auto-repair the context
+        context = ContextTracer.auto_repair_context(context)
     else:
         context = context or {}
     conversation_id = context.get('conversation_id', 'unknown')

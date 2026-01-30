@@ -699,10 +699,20 @@ class AgentRouter:
         Raises:
             AgentNotFoundError: If agent_name is not in AGENT_MAP
         """
+        from core.services.context_tracing import ContextTracer
+
+        # Session 875: Initialize tracer and log context at router stage
+        tracer = ContextTracer(source=f"AgentRouter.route:{agent_name}")
+        tracer.log_router(
+            context=context,
+            agent_name=agent_name,
+            action_name=task[:100] if task else ""
+        )
+
         # Session 875: Ensure context is a dict (defensive fix for list being passed)
         if not isinstance(context, dict):
             logger.warning(f"AgentRouter.route received non-dict context (type={type(context).__name__}), using empty dict")
-            context = {}
+            context = ContextTracer.auto_repair_context(context)
         else:
             context = context or {}
 
