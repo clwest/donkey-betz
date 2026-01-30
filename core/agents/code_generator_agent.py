@@ -1063,7 +1063,12 @@ Generate complete, runnable test code."""
     # ================================================================
 
     def _read_file(self, file_path: str) -> Dict[str, Any]:
-        """Read a file from the workspace."""
+        """
+        Read a file from the workspace.
+
+        Session 884: Prefers codebase workspace for reading actual source code.
+        Falls back to active workspace if codebase workspace not available.
+        """
         if not file_path:
             return {"success": False, "error": "file_path is required"}
 
@@ -1071,19 +1076,45 @@ Generate complete, runnable test code."""
         if not manager:
             return {"success": False, "error": "WorkspaceManager not available"}
 
-        workspace = manager.get_active_workspace()
+        # Session 884: Prefer codebase workspace for reading source files
+        workspace = manager.get_codebase_workspace()
+        workspace_type = "codebase"
+
+        # Fall back to active workspace if no codebase workspace
+        if not workspace:
+            workspace = manager.get_active_workspace()
+            workspace_type = "active"
+
         if not workspace:
             return {
                 "success": False,
-                "error": "No active workspace. Register a workspace first."
+                "error": "No workspace available. Run 'python manage.py setup_codebase_workspace' to enable codebase access."
             }
 
         content = manager.read_file(workspace, file_path)
         if content is None:
+            # Session 884: If codebase workspace failed, try active workspace as fallback
+            if workspace_type == "codebase":
+                fallback_workspace = manager.get_active_workspace()
+                if fallback_workspace and fallback_workspace.id != workspace.id:
+                    content = manager.read_file(fallback_workspace, file_path)
+                    if content is not None:
+                        return {
+                            "success": True,
+                            "file_path": file_path,
+                            "content": content,
+                            "lines": len(content.split('\n')),
+                            "size": len(content),
+                            "workspace": fallback_workspace.name,
+                            "workspace_type": "fallback"
+                        }
+
             return {
                 "success": False,
                 "error": f"File not found or unreadable: {file_path}",
-                "workspace": workspace.name
+                "workspace": workspace.name,
+                "workspace_path": workspace.root_path,
+                "hint": "Ensure the file path is relative to the workspace root"
             }
 
         return {
@@ -1092,7 +1123,8 @@ Generate complete, runnable test code."""
             "content": content,
             "lines": len(content.split('\n')),
             "size": len(content),
-            "workspace": workspace.name
+            "workspace": workspace.name,
+            "workspace_type": workspace_type
         }
 
     def _write_file(
@@ -1101,7 +1133,12 @@ Generate complete, runnable test code."""
         content: str,
         description: str = ""
     ) -> Dict[str, Any]:
-        """Write or create a file in the workspace."""
+        """
+        Write or create a file in the workspace.
+
+        Session 884: Prefers codebase workspace for writing source files.
+        Falls back to active workspace for generated content.
+        """
         if not file_path:
             return {"success": False, "error": "file_path is required"}
         if not content:
@@ -1111,18 +1148,27 @@ Generate complete, runnable test code."""
         if not manager:
             return {"success": False, "error": "WorkspaceManager not available"}
 
-        workspace = manager.get_active_workspace()
+        # Session 884: Prefer codebase workspace for source files
+        workspace = manager.get_codebase_workspace()
+        workspace_type = "codebase"
+
+        # Fall back to active workspace if no codebase workspace or if it doesn't allow writes
+        if not workspace or not workspace.allow_file_write:
+            workspace = manager.get_active_workspace()
+            workspace_type = "active"
+
         if not workspace:
             return {
                 "success": False,
-                "error": "No active workspace. Register a workspace first."
+                "error": "No workspace available. Run 'python manage.py setup_codebase_workspace' to enable codebase access."
             }
 
         if not workspace.allow_file_write:
             return {
                 "success": False,
                 "error": "Workspace does not allow file writes",
-                "workspace": workspace.name
+                "workspace": workspace.name,
+                "hint": "Run 'python manage.py setup_codebase_workspace' without --read-only to enable writes"
             }
 
         # Use WorkspaceManager to write with audit trail
@@ -1163,7 +1209,11 @@ Generate complete, runnable test code."""
         new_text: str,
         description: str = ""
     ) -> Dict[str, Any]:
-        """Make a targeted edit to a file by replacing specific text."""
+        """
+        Make a targeted edit to a file by replacing specific text.
+
+        Session 884: Prefers codebase workspace for editing source files.
+        """
         if not file_path:
             return {"success": False, "error": "file_path is required"}
         if not old_text:
@@ -1173,18 +1223,27 @@ Generate complete, runnable test code."""
         if not manager:
             return {"success": False, "error": "WorkspaceManager not available"}
 
-        workspace = manager.get_active_workspace()
+        # Session 884: Prefer codebase workspace for source files
+        workspace = manager.get_codebase_workspace()
+        workspace_type = "codebase"
+
+        # Fall back to active workspace if no codebase workspace or if it doesn't allow writes
+        if not workspace or not workspace.allow_file_write:
+            workspace = manager.get_active_workspace()
+            workspace_type = "active"
+
         if not workspace:
             return {
                 "success": False,
-                "error": "No active workspace. Register a workspace first."
+                "error": "No workspace available. Run 'python manage.py setup_codebase_workspace' to enable codebase access."
             }
 
         if not workspace.allow_file_write:
             return {
                 "success": False,
                 "error": "Workspace does not allow file writes",
-                "workspace": workspace.name
+                "workspace": workspace.name,
+                "hint": "Run 'python manage.py setup_codebase_workspace' without --read-only to enable writes"
             }
 
         # Read current content

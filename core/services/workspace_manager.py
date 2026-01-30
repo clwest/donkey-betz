@@ -1131,6 +1131,42 @@ class WorkspaceManager:
             logger.warning(f"Could not create personal workspace for {self.user.username}: {e}")
             return None
 
+    def get_codebase_workspace(self) -> Optional[ProjectWorkspace]:
+        """
+        Session 884: Get the codebase workspace for code maintenance operations.
+
+        The codebase workspace points to the actual project source code, allowing
+        CodeGeneratorAgent and CodeReviewAgent to read and modify the real codebase.
+
+        This is different from sandbox workspaces (generated_content/) which are
+        for agent-generated content.
+
+        Returns:
+            ProjectWorkspace pointing to the codebase, or None if not configured
+        """
+        # Look for codebase workspace (created by setup_codebase_workspace command)
+        codebase_workspace = ProjectWorkspace.objects.filter(
+            workspace_type='codebase',
+            is_active=True
+        ).first()
+
+        if codebase_workspace:
+            logger.debug(f"📂 Found codebase workspace: {codebase_workspace.name} at {codebase_workspace.root_path}")
+            return codebase_workspace
+
+        # Fallback: Look by name pattern
+        codebase_workspace = ProjectWorkspace.objects.filter(
+            name__icontains='codebase',
+            is_active=True
+        ).first()
+
+        if codebase_workspace:
+            logger.debug(f"📂 Found codebase workspace by name: {codebase_workspace.name}")
+            return codebase_workspace
+
+        logger.debug("📂 No codebase workspace found. Run 'python manage.py setup_codebase_workspace' to create one.")
+        return None
+
     def set_active_workspace(self, workspace_id: UUID) -> ProjectWorkspace:
         """Set a workspace as the active target for operations."""
         workspace = ProjectWorkspace.objects.get(id=workspace_id, user=self.user)
