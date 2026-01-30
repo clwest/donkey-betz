@@ -657,6 +657,9 @@ app.conf.beat_schedule = {
             'max_promote': 200,  # Session 873: 10x increase (was 20)
             'max_archive': 500,  # Session 873: 10x increase (was 50)
             'archive_age_days': 3,  # Session 873: More aggressive (was 7)
+            # Session 874: Adjusted thresholds to clear 1,292 limbo dreams (all scored 0.45-0.60)
+            'promote_threshold': 0.55,  # Was 0.75 - promotes top half of limbo dreams
+            'archive_score_threshold': 0.55,  # Was 0.40 - archives bottom half of limbo dreams
         }
     },
     # Session 654: Gate Auto-Approval
