@@ -2836,6 +2836,7 @@ urlpatterns = [
     path('api/initiatives/populate/', views_research_demo.populate_initiatives_api, name='initiatives-populate'),
     path('api/initiatives/trigger/', views_research_demo.trigger_initiative_pipeline_api, name='initiatives-trigger'),  # Session 880: Manual trigger
     path('api/initiatives/kickstart/', views_initiative_kickstart.kickstart_initiatives, name='initiatives-kickstart'),  # Session 884: Kickstart stuck initiatives
+    path('api/initiatives/fix-stages/', views_initiative_kickstart.fix_initiative_stages, name='initiatives-fix-stages'),  # Session 884: Fix inconsistent stages
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
