@@ -18,8 +18,9 @@ Session 872 completed API path migration analysis, fixed critical 404 errors, an
 | UI Cleanup | #523 | Removed duplicate Voices from sidebar |
 | Missing Gates Endpoint | #524 | Added `/api/v1/reasoning/gates/` for Intelligence Tab |
 | Celery Beat Sync | #525 | **Critical fix** - Tasks now sync to database on deploy |
+| AudioAgent TTS Fix | #526 | Adaptive timeout + retry logic for ElevenLabs TTS |
 
-**Total: 6 PRs merged**
+**Total: 7 PRs merged**
 
 ---
 
@@ -139,6 +140,59 @@ Sends Discord alerts when:
 
 ---
 
+## 6. AudioAgent TTS Fix (PR #526)
+
+### Problem
+
+AudioAgent voiceover generation tasks were failing with timeout errors. Investigation revealed:
+
+1. **ElevenLabs 60s timeout** too short for long podcast scripts
+2. **No retry logic** for transient API failures (rate limits, server errors)
+3. **Duplicate API key retrieval** code across multiple files
+
+### Root Cause Analysis
+
+| Issue | Location | Impact |
+|-------|----------|--------|
+| Fixed 60s timeout | `views_image.py:14942` | Fails for text >3000 chars |
+| No retry on 429/500 | Both TTS functions | Transient failures = permanent failure |
+| Duplicated code | 3 files | Inconsistent behavior |
+
+### Solution
+
+**Created centralized ElevenLabs TTS service** at `core/services/elevenlabs_tts_service.py`:
+
+```python
+# Adaptive timeout based on text length
+def calculate_adaptive_timeout(text, base_timeout=60):
+    # Short (<500 chars): 60s
+    # Medium (500-2000): 90s
+    # Long (2000-5000): 120s
+    # Very long (>5000): up to 300s
+
+# Retry with exponential backoff
+def generate_speech_with_retry(text, voice_id, max_retries=3):
+    # Retries on 429, 500, 502, 503, 504
+    # Exponential backoff: 2s, 5s, 9s
+    # Increases timeout on retry
+```
+
+**Updated consumers to use centralized service:**
+- `core/views_image.py` - `_execute_generate_voice()`
+- `core/services/podcast_audio_service.py` - `generate_segment_audio()`
+
+### Timeout Calculation
+
+| Text Length | Timeout |
+|-------------|---------|
+| <500 chars | 60s |
+| 500-2000 chars | 90s |
+| 2000-5000 chars | 120s |
+| 5000-8000 chars | 200s |
+| >10000 chars | 280s (capped at 300s) |
+
+---
+
 ## PRs Created
 
 | PR | Title | Status |
@@ -149,6 +203,7 @@ Sends Discord alerts when:
 | #523 | fix(Session 872): Remove duplicate Voices from sidebar | Merged |
 | #524 | fix(Session 872): Add missing /api/v1/reasoning/gates/ endpoint | Merged |
 | #525 | fix(Session 872): Add release command to sync Celery tasks + add health monitor | Merged |
+| #526 | fix(Session 872): Add ElevenLabs TTS service with adaptive timeout + retry | Pending |
 
 ---
 
@@ -163,6 +218,9 @@ Sends Discord alerts when:
 | `frontend/src/lib/api.ts` | Fixed 19 mythology/initiatives API paths |
 | `frontend/src/components/layout/Sidebar.tsx` | Removed duplicate Voices |
 | `docs/API_PATH_POLICY.md` | Updated Phase 3 section |
+| `core/services/elevenlabs_tts_service.py` | **NEW** - Centralized TTS service with retry logic |
+| `core/views_image.py` | Updated to use centralized TTS service |
+| `core/services/podcast_audio_service.py` | Updated to use centralized TTS service |
 
 ---
 
@@ -170,11 +228,12 @@ Sends Discord alerts when:
 
 | Metric | Value |
 |--------|-------|
-| PRs Merged | 6 |
-| Files Modified | 10+ |
+| PRs Merged | 7 |
+| Files Modified | 13+ |
 | API Paths Fixed | 19 |
 | Endpoints Added | 1 (gates) |
 | Tasks Now Synced | ~256 |
+| TTS Reliability | +retry logic |
 
 ---
 
