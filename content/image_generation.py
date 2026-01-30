@@ -460,13 +460,28 @@ class ImageGenerationService:
             if negative_prompt:
                 body["text_prompts"].append({"text": negative_prompt, "weight": -1})
 
-            response = requests.post(url, headers=headers, json=body)
+            # Session 872: Use centralized service with retry logic and adaptive timeout
+            from core.services.stability_ai_service import (
+                stability_request_with_retry, calculate_adaptive_timeout
+            )
 
-            if response.status_code != 200:
-                error = ErrorMessageBuilder.parse_api_error("Stability AI", response.status_code, response.text)
+            timeout = calculate_adaptive_timeout('sdxl', num_images)
+            result = stability_request_with_retry(
+                url=url,
+                headers=headers,
+                json_data=body,
+                timeout=timeout,
+                max_retries=3,
+                accept_type="application/json"
+            )
+
+            if not result['success']:
+                error = ErrorMessageBuilder.parse_api_error(
+                    "Stability AI", result.get('status_code', 500), result.get('error', 'Unknown error')
+                )
                 raise Exception(error["user_message"])
 
-            data = response.json()
+            data = result['data']
 
             # Extract base64 images and seeds
             images = []
@@ -576,26 +591,36 @@ class ImageGenerationService:
             if negative_prompt:
                 payload["negative_prompt"] = negative_prompt
 
+            # Session 872: Use centralized service with retry logic and adaptive timeout
+            from core.services.stability_ai_service import (
+                stability_request_with_retry, calculate_adaptive_timeout
+            )
+
             # Note: num_images > 1 may not be supported by all models
             # We'll generate multiple times if needed
             images = []
             total_cost = 0
 
             for _ in range(num_images):
-                response = requests.post(
-                    url,
+                timeout = calculate_adaptive_timeout(model, 1)
+                result = stability_request_with_retry(
+                    url=url,
                     headers=headers,
                     files={"none": ''},  # Makes it multipart/form-data
                     data=payload,
-                    timeout=60
+                    timeout=timeout,
+                    max_retries=3,
+                    accept_type="image/*"
                 )
 
-                if response.status_code != 200:
-                    error = ErrorMessageBuilder.parse_api_error("Stability AI", response.status_code, response.text)
+                if not result['success']:
+                    error = ErrorMessageBuilder.parse_api_error(
+                        "Stability AI", result.get('status_code', 500), result.get('error', 'Unknown error')
+                    )
                     raise Exception(error["user_message"])
 
                 # Response is raw image bytes
-                image_bytes = response.content
+                image_bytes = result['content']
                 base64_image = base64.b64encode(image_bytes).decode('utf-8')
                 images.append(f"data:image/png;base64,{base64_image}")
 

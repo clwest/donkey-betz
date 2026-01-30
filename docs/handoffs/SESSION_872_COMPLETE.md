@@ -18,9 +18,10 @@ Session 872 completed API path migration analysis, fixed critical 404 errors, an
 | UI Cleanup | #523 | Removed duplicate Voices from sidebar |
 | Missing Gates Endpoint | #524 | Added `/api/v1/reasoning/gates/` for Intelligence Tab |
 | Celery Beat Sync | #525 | **Critical fix** - Tasks now sync to database on deploy |
-| AudioAgent TTS Fix | #526 | Adaptive timeout + retry logic for ElevenLabs TTS |
+| AudioAgent TTS Fix | #527 | Adaptive timeout + retry logic for ElevenLabs TTS |
+| ImageAgent Fix | #528 | Adaptive timeout + retry logic for Stability AI |
 
-**Total: 7 PRs merged**
+**Total: 8 PRs merged**
 
 ---
 
@@ -193,6 +194,51 @@ def generate_speech_with_retry(text, voice_id, max_retries=3):
 
 ---
 
+## 7. ImageAgent Fix (PR #528)
+
+### Problem
+
+ImageAgent image generation tasks were failing with timeout errors, similar to AudioAgent.
+
+### Root Cause Analysis
+
+| Issue | Location | Impact |
+|-------|----------|--------|
+| No timeout | `_generate_with_sdxl` | Could hang indefinitely |
+| Fixed 60s timeout | `_generate_with_stable_image` | Fails for Ultra/SD3 models |
+| No retry logic | Both functions | Transient failures = permanent failure |
+
+### Solution
+
+**Created centralized Stability AI service** at `core/services/stability_ai_service.py`:
+
+```python
+# Adaptive timeout based on model and image count
+def calculate_adaptive_timeout(model, num_images, base_timeout=45):
+    # Core: 60s, SDXL: 67s, SD3: 75s, Ultra: 82s (per image)
+    # Scales with num_images, capped at 180s
+
+# Retry with exponential backoff
+def stability_request_with_retry(url, headers, ..., max_retries=3):
+    # Retries on 429, 500, 502, 503, 504
+    # Exponential backoff: 2s, 5s, 9s
+```
+
+**Updated ImageGenerationService:**
+- `_generate_with_sdxl()` - Now uses retry logic
+- `_generate_with_stable_image()` - Now uses retry logic
+
+### Timeout Calculation
+
+| Model | 1 Image | 3 Images | 5 Images |
+|-------|---------|----------|----------|
+| Core | 60s | 90s | 120s |
+| SDXL | 67s | 112s | 157s |
+| SD3 | 75s | 135s | 180s |
+| Ultra | 82s | 157s | 180s |
+
+---
+
 ## PRs Created
 
 | PR | Title | Status |
@@ -203,7 +249,8 @@ def generate_speech_with_retry(text, voice_id, max_retries=3):
 | #523 | fix(Session 872): Remove duplicate Voices from sidebar | Merged |
 | #524 | fix(Session 872): Add missing /api/v1/reasoning/gates/ endpoint | Merged |
 | #525 | fix(Session 872): Add release command to sync Celery tasks + add health monitor | Merged |
-| #526 | fix(Session 872): Add ElevenLabs TTS service with adaptive timeout + retry | Pending |
+| #527 | fix(Session 872): Add ElevenLabs TTS service with adaptive timeout + retry | Merged |
+| #528 | fix(Session 872): Add Stability AI service with adaptive timeout + retry | Pending |
 
 ---
 
@@ -221,6 +268,8 @@ def generate_speech_with_retry(text, voice_id, max_retries=3):
 | `core/services/elevenlabs_tts_service.py` | **NEW** - Centralized TTS service with retry logic |
 | `core/views_image.py` | Updated to use centralized TTS service |
 | `core/services/podcast_audio_service.py` | Updated to use centralized TTS service |
+| `core/services/stability_ai_service.py` | **NEW** - Centralized Stability AI service with retry logic |
+| `content/image_generation.py` | Updated to use centralized Stability AI service |
 
 ---
 
@@ -228,12 +277,13 @@ def generate_speech_with_retry(text, voice_id, max_retries=3):
 
 | Metric | Value |
 |--------|-------|
-| PRs Merged | 7 |
-| Files Modified | 13+ |
+| PRs Merged | 8 |
+| Files Modified | 15+ |
 | API Paths Fixed | 19 |
 | Endpoints Added | 1 (gates) |
 | Tasks Now Synced | ~256 |
 | TTS Reliability | +retry logic |
+| Image Gen Reliability | +retry logic |
 
 ---
 

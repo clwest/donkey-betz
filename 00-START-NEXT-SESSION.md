@@ -31,7 +31,8 @@ Now on every deploy, all 256 tasks sync to the database and execute.
 | #523 | Removed duplicate Voices from sidebar |
 | #524 | Added missing `/api/v1/reasoning/gates/` endpoint |
 | #525 | **Celery Beat sync + health monitoring** |
-| #526 | **AudioAgent TTS fix** - Adaptive timeout + retry logic |
+| #527 | **AudioAgent TTS fix** - Adaptive timeout + retry logic |
+| #528 | **ImageAgent fix** - Adaptive timeout + retry logic for Stability AI |
 
 ---
 
