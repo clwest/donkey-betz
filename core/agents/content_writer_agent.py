@@ -422,6 +422,11 @@ For this {content_type}, ensure:
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
+        # Session 875: Ensure context is a dict (defensive fix for list being passed)
+        if not isinstance(context, dict):
+            logger.warning(f"ContentWriterAgent received non-dict context (type={type(context).__name__}), using empty dict")
+            context = {}
+
         # Session 858: Extract user context for personalization
         user_context = context.get('user', {})
         self._user_context = user_context  # Store for use in prompt building
