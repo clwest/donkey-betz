@@ -319,7 +319,7 @@ class ResearchContract:
 | #525 | fix(Session 872): Add release command to sync Celery tasks + add health monitor | Merged |
 | #527 | fix(Session 872): Add ElevenLabs TTS service with adaptive timeout + retry | Merged |
 | #528 | fix(Session 872): Add Stability AI service with adaptive timeout + retry | Merged |
-| #529 | feat(Session 872): Add Research Contract for structured research outputs | Pending |
+| #529 | feat(Session 872): Add Research Contract for structured research outputs | Merged |
 
 ---
 
