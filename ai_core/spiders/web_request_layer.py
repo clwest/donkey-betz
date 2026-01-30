@@ -19,7 +19,12 @@ import os
 logger = logging.getLogger(__name__)
 
 class WebRequestLayer:
-    """Unified request handler for all spiders with advanced features"""
+    """Unified request handler for all spiders with advanced features
+
+    Session 884: Fixed "Timeout context manager should be used inside a task" error
+    by tracking which event loop the session was created in and recreating it
+    when called from a different loop (common when asyncio.run() is used in Celery).
+    """
 
     # User agent rotation pool
     USER_AGENTS = [
@@ -37,6 +42,7 @@ class WebRequestLayer:
 
     def __init__(self):
         self.session = None
+        self._session_loop = None  # Session 884: Track which event loop owns the session
         self.rate_limiters = {}  # Per-domain rate limiting
         self.cache = {}  # Response cache with TTL
         self.cookie_jars = {}  # Per-domain cookie management
@@ -63,7 +69,27 @@ class WebRequestLayer:
         return [None]  # Direct connection if no proxy configured
 
     async def initialize(self):
-        """Initialize the aiohttp session with connection pooling"""
+        """Initialize the aiohttp session with connection pooling
+
+        Session 884: Check if session was created in a different event loop.
+        When asyncio.run() is used (common in Celery tasks), each call creates
+        a new event loop. Sessions from old loops must be recreated.
+        """
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        # Session 884: If session exists but was created in a different loop, close it
+        if self.session and self._session_loop and current_loop and self._session_loop != current_loop:
+            logger.debug("Session created in different event loop, recreating...")
+            try:
+                # Don't await close in a different loop - just discard
+                self.session = None
+                self._session_loop = None
+            except Exception:
+                pass
+
         if not self.session:
             connector = aiohttp.TCPConnector(
                 limit=100,  # Total connection pool limit
@@ -83,6 +109,7 @@ class WebRequestLayer:
                 timeout=timeout,
                 headers={'Accept-Encoding': 'gzip, deflate, br'}
             )
+            self._session_loop = current_loop
 
     async def close(self):
         """Clean up session"""
