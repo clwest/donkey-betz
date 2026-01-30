@@ -966,6 +966,9 @@ from core.views_dashboard_stats import (
     dashboard_summary,  # Session 459: Personalized greeting + "While You Were Away"
 )
 from core.views_public_stats import public_system_stats
+
+# Session 884: Home Page Boot API
+from core.views_home import home_boot
 # Import agent instance views
 from agents.views_instances import (
     list_instances, get_instance_status, delete_instance, delete_multiple_instances
@@ -2089,6 +2092,9 @@ urlpatterns = [
     path('api/freelance/approve/<str:approval_id>/', process_approval, name='process_approval'),
     path('api/freelance/projects/', get_active_projects, name='active_projects'),
     path('api/freelance/spider/start/', start_freelance_spider, name='start_freelance_spider'),
+
+    # Session 884: Home Page Boot API - AI OS boot experience
+    path('api/home/boot/', home_boot, name='home-boot'),
 
     # Dashboard Statistics - The Heart of Everything!
     path('api/dashboard/stats/', dashboard_stats, name='dashboard-stats'),

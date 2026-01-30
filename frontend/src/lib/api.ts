@@ -55,6 +55,12 @@ api.interceptors.response.use(
 )
 
 // API endpoints
+
+// Session 884: Home Page Boot API
+export const homeApi = {
+  boot: () => api.get('/home/boot/'),
+}
+
 export const authApi = {
   login: (username: string, password: string) =>
     api.post('/v1/auth/login/', { username, password }),
