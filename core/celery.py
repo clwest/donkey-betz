@@ -2275,6 +2275,18 @@ app.conf.beat_schedule = {
             'queue': 'long_running',
         }
     },
+
+    # ==================== SESSION 872: CELERY HEALTH MONITORING ====================
+    # Monitor task execution and send Discord alerts on failures
+    # Checks spider data freshness, task completion, and schedule staleness
+
+    'monitor-celery-health': {
+        'task': 'core.tasks.monitor_celery_health',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
 }
 
 # Task routing configuration
