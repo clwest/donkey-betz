@@ -49,6 +49,13 @@ class AgentContextMiddleware:
             extended_profile = getattr(user, 'extended_profile', None)
             stats = getattr(user, 'userstatistics', None)
 
+            # Session 878: Get EnhancedUserProfile for goals
+            try:
+                from core.models import EnhancedUserProfile
+                enhanced_profile = EnhancedUserProfile.objects.filter(user=user).first()
+            except Exception:
+                enhanced_profile = None
+
             # Build comprehensive context
             context = {
                 'user_id': str(user.id),
@@ -87,7 +94,9 @@ class AgentContextMiddleware:
                     'last_active': user.last_login.isoformat() if user.last_login else None,
                     'account_created': user.date_joined.isoformat(),
                     'platform_role': getattr(user, 'platform_role', 'unified_user'),
-                    'subscription_tier': getattr(user, 'subscription_tier', 'free')
+                    'subscription_tier': getattr(user, 'subscription_tier', 'free'),
+                    # Session 878: Add goals from EnhancedUserProfile
+                    'goals': enhanced_profile.long_term_goals if enhanced_profile and enhanced_profile.long_term_goals else []
                 }
             }
 
