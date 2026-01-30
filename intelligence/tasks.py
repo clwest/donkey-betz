@@ -1577,13 +1577,12 @@ def scan_spider_opportunities(self):
     and save them to database. This is the missing cron job!
 
     Should run every 30 minutes to keep opportunities fresh.
+
+    Session 880: Fixed async bug - use asyncio.run() instead of new_event_loop()
+    to ensure aiohttp's ClientTimeout has proper task context.
     """
     try:
         logger.info("🕷️ Starting scheduled spider opportunity scan...")
-
-        # Create event loop for async code
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
         # Scan with spider decision bridge
         from intelligence.spider_decision_bridge import spider_decision_bridge
@@ -1594,7 +1593,10 @@ def scan_spider_opportunities(self):
             stats = await spider_decision_bridge.get_statistics()
             return opportunities, stats
 
-        opportunities, stats = loop.run_until_complete(run_scan())
+        # Session 880: Use asyncio.run() which properly creates a Task context
+        # that aiohttp's ClientTimeout requires (fixes "Timeout context manager
+        # should be used inside a task" error)
+        opportunities, stats = asyncio.run(run_scan())
 
         logger.info(f"✅ Spider scan complete: {len(opportunities)} opportunities found")
         logger.info(f"📊 Stats: {stats}")
@@ -1612,8 +1614,6 @@ def scan_spider_opportunities(self):
             'status': 'error',
             'message': str(e)
         }
-    finally:
-        loop.close()
 
 
 @shared_task(bind=True)
@@ -1623,6 +1623,9 @@ def scan_income_spider_orchestrator(self):
     Discovers opportunities and saves them to database
 
     Should run every hour to gather opportunities from multiple sources.
+
+    Session 880: Fixed async bug - use asyncio.run() instead of new_event_loop()
+    to ensure aiohttp's ClientTimeout has proper task context.
     """
     try:
         logger.info("💰 Starting Income Spider Orchestrator scan...")
@@ -1632,10 +1635,6 @@ def scan_income_spider_orchestrator(self):
         from django.contrib.auth import get_user_model
 
         User = get_user_model()
-
-        # Create event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
         async def run_discovery():
             # Get first user or create a default profile
@@ -1662,7 +1661,10 @@ def scan_income_spider_orchestrator(self):
 
             return result
 
-        result = loop.run_until_complete(run_discovery())
+        # Session 880: Use asyncio.run() which properly creates a Task context
+        # that aiohttp's ClientTimeout requires (fixes "Timeout context manager
+        # should be used inside a task" error)
+        result = asyncio.run(run_discovery())
 
         logger.info(f"✅ Income orchestrator scan complete")
         logger.info(f"   Found: {result.total_found} opportunities")
@@ -1684,8 +1686,6 @@ def scan_income_spider_orchestrator(self):
             'status': 'error',
             'message': str(e)
         }
-    finally:
-        loop.close()
 
 
 @shared_task(name='intelligence.tasks.fetch_all_opportunities')
@@ -1747,20 +1747,17 @@ def fetch_all_opportunities():
 
         return {'total': total_opportunities, 'saved': saved_count}
 
-    # Run the async function
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(fetch_all())
-        logger.info(f"✅ Spider orchestration complete: {result['saved']}/{result['total']} opportunities saved")
-        return {
-            'success': True,
-            'total_opportunities': result['total'],
-            'saved_opportunities': result['saved'],
-            'timestamp': datetime.now().isoformat()
-        }
-    finally:
-        loop.close()
+    # Session 880: Use asyncio.run() which properly creates a Task context
+    # that aiohttp's ClientTimeout requires (fixes "Timeout context manager
+    # should be used inside a task" error)
+    result = asyncio.run(fetch_all())
+    logger.info(f"✅ Spider orchestration complete: {result['saved']}/{result['total']} opportunities saved")
+    return {
+        'success': True,
+        'total_opportunities': result['total'],
+        'saved_opportunities': result['saved'],
+        'timestamp': datetime.now().isoformat()
+    }
 
 
 @shared_task(name='intelligence.tasks.cleanup_old_opportunities')
