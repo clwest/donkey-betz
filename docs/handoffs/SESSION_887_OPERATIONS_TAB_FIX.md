@@ -108,4 +108,41 @@ Operations Tab is now working and will continue to update automatically via Cele
 
 ---
 
-**Operations Tab is now live and will continue to auto-update.**
+## Part 2: System Status Report Output Fix
+
+### Problem
+SystemIntelligenceAgent status reports were only showing JSON counts:
+```json
+{"items_count": 11, "warning_count": 1, "info_count": 10, "execution_time": 32.566}
+```
+Instead of the full LLM-generated report text.
+
+### Root Cause
+The `_extract_agent_output_content()` function in `core/tasks.py` was falling back to JSON serialization of `data` instead of using `result.message` when data only contained metadata counts.
+
+### Fix Applied (PR #613)
+Added `METADATA_ONLY_KEYS` detection to prefer `result.message` when data only contains counts:
+
+```python
+METADATA_ONLY_KEYS = {
+    'items_count', 'critical_count', 'warning_count', 'info_count',
+    'execution_time', 'count', 'total', 'success_count', 'error_count',
+    'processed', 'skipped', 'duration', 'elapsed', 'timestamp'
+}
+
+# If data only contains metadata keys AND message is substantial, use message
+if data_keys.issubset(METADATA_ONLY_KEYS):
+    if hasattr(result, 'message') and result.message and len(result.message) > 100:
+        return result.message
+```
+
+### Current System Warning
+
+Found via `/api/assistant/attention-items/`:
+- **WARNING**: 54 stale agent suggestions (over 7 days old)
+  - Action: Archive or reject outdated suggestions
+- **5 INFO**: Boardroom items awaiting review
+
+---
+
+**Operations Tab is now live. Status reports will now include full content.**
