@@ -964,14 +964,18 @@ CELERY_TASK_ROUTES = {
     'core.tasks.agent_think_and_synthesize': {'queue': 'long_running'},
     'core.tasks.score_and_promote_dreams': {'queue': 'long_running'},
     'core.tasks.process_approved_dreams': {'queue': 'long_running'},
-    # Session 885: Self-blog generation involves LLM calls
-    'core.tasks.generate_self_blog_task': {'queue': 'long_running'},
-    # Session 885: Initiative stage tasks involve LLM calls
-    'core.tasks.execute_initiative_stage_task': {'queue': 'long_running'},
-    'core.tasks.advance_initiative_pipeline': {'queue': 'long_running'},
-    'core.tasks.auto_kickstart_stuck_initiatives': {'queue': 'long_running'},
-    'core.tasks.execute_dream_implementations': {'queue': 'long_running'},
-    'autonomous_studio.run_main_loop': {'queue': 'long_running'},
+    # Session 885: Content generation tasks - dedicated content worker
+    'core.tasks.generate_self_blog_task': {'queue': 'content'},
+    'core.tasks.execute_initiative_stage_task': {'queue': 'content'},
+    'core.tasks.advance_initiative_pipeline': {'queue': 'content'},
+    'core.tasks.auto_kickstart_stuck_initiatives': {'queue': 'content'},
+    'core.tasks.execute_dream_implementations': {'queue': 'content'},
+    'autonomous_studio.run_main_loop': {'queue': 'content'},
+    # Session 885: Podcast and media generation
+    'core.tasks.generate_podcast_task': {'queue': 'content'},
+    'core.tasks.generate_image_task': {'queue': 'content'},
+    'core.tasks.generate_video_task': {'queue': 'content'},
+    'content.tasks.poll_pending_trainings': {'queue': 'content'},
     'autonomous.blockchain_security_monitor': {'queue': 'long_running'},
     'autonomous.stock_market_intelligence': {'queue': 'long_running'},
 
