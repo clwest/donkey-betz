@@ -2072,14 +2072,35 @@ def get_system_health(request):
 
 
 @require_http_methods(["POST"])
-@login_required
 def promote_decision(request, decision_id):
     """
     Promote a decision to canonical policy status.
     Session 657: Also creates a learning record and feeds to collective intelligence.
 
     POST /api/boardroom/decisions/{decision_id}/promote/
+
+    Session 887: Removed @login_required to support Token auth (same as reject_decision).
     """
+    # Session 887: Manual auth check to support both session and Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'success': False,
+            'error': 'Authentication required'
+        }, status=401)
+
     try:
         from core.models_unified_system import AgentDecisionSummary
         from core.models import KnowledgeTransfer
@@ -2153,13 +2174,37 @@ def promote_decision(request, decision_id):
 
 
 @require_http_methods(["POST"])
-@login_required
 def reject_decision(request, decision_id):
     """
     Reject a decision (mark as not applicable).
 
     POST /api/boardroom/decisions/{decision_id}/reject/
+
+    Session 887: Removed @login_required to support Token auth.
+    Since /api/boardroom/ is in PUBLIC_PATHS, middleware doesn't authenticate.
+    We check auth manually here.
     """
+    # Session 887: Manual auth check to support both session and Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        # Try to authenticate via Token header
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'success': False,
+            'error': 'Authentication required'
+        }, status=401)
+
     try:
         from core.models_unified_system import AgentDecisionSummary
 
