@@ -512,3 +512,87 @@ def retry_stuck_initiatives(request):
     )
 
     return Response(result)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def initiative_circuit_breaker(request):
+    """
+    Session 884: Circuit breaker API for initiative creation.
+
+    GET: Returns current circuit breaker status
+    POST: Pause or resume initiative creation
+
+    POST params:
+        action: 'pause' or 'resume'
+        reason: Optional reason for pausing
+
+    Example:
+        # Check status
+        curl -X GET https://your-app.railway.app/api/initiatives/circuit-breaker/ \
+             -H "Authorization: Token YOUR_TOKEN"
+
+        # Pause creation
+        curl -X POST https://your-app.railway.app/api/initiatives/circuit-breaker/ \
+             -H "Authorization: Token YOUR_TOKEN" \
+             -H "Content-Type: application/json" \
+             -d '{"action": "pause", "reason": "Clearing backlog"}'
+
+        # Resume creation
+        curl -X POST https://your-app.railway.app/api/initiatives/circuit-breaker/ \
+             -H "Authorization: Token YOUR_TOKEN" \
+             -H "Content-Type: application/json" \
+             -d '{"action": "resume"}'
+    """
+    from core.services.initiative_circuit_breaker import (
+        get_backlog_status,
+        pause_initiative_creation,
+        resume_initiative_creation,
+    )
+
+    if request.method == 'GET':
+        status = get_backlog_status()
+        return Response({
+            'status': 'paused' if not status['can_create'] else 'active',
+            **status,
+        })
+
+    # POST - pause or resume
+    data = request.data
+    action = data.get('action', '').lower()
+
+    if action == 'pause':
+        reason = data.get('reason', f'Paused via API by user {request.user.id}')
+        success = pause_initiative_creation(reason)
+        if success:
+            return Response({
+                'success': True,
+                'message': 'Initiative creation PAUSED',
+                'reason': reason,
+                **get_backlog_status(),
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'Failed to pause - check logs',
+            }, status=500)
+
+    elif action == 'resume':
+        success = resume_initiative_creation()
+        if success:
+            return Response({
+                'success': True,
+                'message': 'Initiative creation RESUMED',
+                **get_backlog_status(),
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'Failed to resume - check logs',
+            }, status=500)
+
+    else:
+        return Response({
+            'error': f"Invalid action: '{action}'. Use 'pause' or 'resume'.",
+            'current_status': get_backlog_status(),
+        }, status=400)
