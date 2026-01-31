@@ -438,14 +438,31 @@ class GateProgressionPipeline:
             logger.info(f"✅ Created PilotExecution {pilot.id} for gate {gate.id}")
 
             # Session 794: Also create an Experiment for learning tracking
+            # Session 886: Enhanced with KPI templates and validation
             try:
-                experiment = Experiment.objects.create(
-                    name=f"Experiment: {decision_topic}",
-                    hypothesis=f"Testing decision: {decision_topic}",
-                    pilot=pilot,
-                    status='running',
-                )
-                logger.info(f"✅ Created Experiment {experiment.id} for pilot {pilot.id}")
+                # Skip if decision topic is empty or too generic
+                if not decision_topic or decision_topic.startswith('Gate-') or len(decision_topic) < 10:
+                    logger.warning(f"⚠️ Skipping experiment creation - invalid topic: '{decision_topic}'")
+                else:
+                    # Get KPI template based on decision's impact area
+                    impact_area = getattr(gate.decision, 'impact_area', None) or 'general'
+                    kpi_template = Experiment.KPI_TEMPLATES.get(
+                        impact_area,
+                        Experiment.DEFAULT_KPI
+                    )
+
+                    experiment = Experiment.objects.create(
+                        name=f"Experiment: {decision_topic}",
+                        hypothesis=f"Testing decision: {decision_topic}",
+                        pilot=pilot,
+                        status='running',
+                        # Session 886: Add proper KPI configuration
+                        kpi_owner=kpi_template['owner'],
+                        primary_kpi=kpi_template['kpi'],
+                        target_value=kpi_template['target'],
+                        halt_conditions=Experiment.get_default_halt_conditions(),
+                    )
+                    logger.info(f"✅ Created Experiment {experiment.id} for pilot {pilot.id} (KPI: {kpi_template['kpi']})")
             except Exception as exp_error:
                 logger.warning(f"Could not create Experiment: {exp_error}")
 

@@ -1,41 +1,60 @@
-# Session 886 - Start Here
+# Session 887 - Start Here
 
-**Previous Session:** 885 (Celery Content Pipeline + Operations Tab Fix)
+**Previous Session:** 886 (Content Feedback Loop - Phase 1)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CONTENT PIPELINE FIXED** | **Blogs Working** | **Operations Tab Scheduled**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CONTENT FEEDBACK LOOP ACTIVE** | **Blogs Learning from Past Performance**
 
 ---
 
-## What Was Accomplished in Session 885
+## What Was Accomplished in Session 886
 
-### 1. Fixed Content Generation Pipeline
-**Problem:** No new blogs/content generated in 2+ days.
+### 1. Content Feedback Loop - Phase 1 Complete
 
-**Root Cause:** `celery-long-running` worker (2 slots) fully occupied by conversation tasks, blocking content tasks.
+**Problem:** ContentWriterAgent was writing blogs in a vacuum with no knowledge of what worked or what to improve.
 
-**Solution (PR #607):** Created dedicated `celery-content` worker with 4 concurrency.
+**Solution:** Created `BlogPerformanceContextBuilder` that injects performance context into agent prompts.
 
-**Result:** Blogs are now being generated!
+**Files Created:**
+- `core/services/blog_performance_context.py` - Main service (527 lines)
+- `core/views_content_learning.py` - API endpoints for debugging
 
-### 2. Fixed Task Routing (PRs #605, #606, #607)
-- LLM tasks → `long_running` queue
-- Content tasks → `content` queue (new dedicated worker)
-- Renamed Procfile workers to match Railway service names
+**Files Modified:**
+- `core/agents/content_writer_agent.py` - Added context injection
+- `core/urls.py` - Added 4 API routes
 
-### 3. Fixed Operations Tab (PR #608)
-**Problem:** Operations tab hadn't updated since January 29th.
+**What Gets Injected:**
+1. Quality metrics (avg quality/novelty/structure scores)
+2. Top/weak performing topics
+3. Strengths and weaknesses patterns
+4. Active learning rules from PipelineLearningInsight
+5. Engagement data (views, likes, shares)
 
-**Root Causes:**
-1. Workspace-writing tasks were NOT scheduled in CELERY_BEAT_SCHEDULE
-2. Tasks looked for superuser's workspace, but workspace belongs to 'system' user
+**New API Endpoints:**
+```
+GET /api/content-learning/performance-context/  # See what agent "knows"
+GET /api/content-learning/metrics/              # Structured metrics
+GET /api/content-learning/rules/                # Active learning rules
+GET /api/content-learning/trends/               # Quality trends over time
+```
 
-**Solution:**
-- Added `_get_workspace_for_skin_layer()` helper
-- Scheduled all workspace-writing tasks
-- Added 8 financial/sports agents to AGENT_WORKSPACE_REGISTRY
+### 2. Experiment Audit & Cleanup Complete
 
-### 4. Added Initiative Auto-Recovery (PR #604)
-`auto_kickstart_stuck_initiatives` task runs every 10 minutes to unstick initiatives.
+**Problem:** 2.4% success rate, 234 failures, 77 halted experiments
+
+**Root Cause:** 81 junk "Unknown Decision" experiments + aggressive 25% error threshold
+
+**Fixes Applied:**
+1. Updated 352 experiments to 35% error threshold
+2. Deleted 81 junk experiments + 77 related learnings
+3. Fixed `gate_progression_pipeline.py` to require valid topics + assign KPIs
+4. Calibrated thresholds using sandbox
+
+**Results:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Success Rate | 2.4% | **87.5%** |
+| Junk Experiments | 81 | 0 |
+| Halted | 77 | 0 |
 
 ---
 
@@ -43,7 +62,7 @@
 
 ```
 celery-worker: -Q default,agents,sports,ml (4 concurrency)
-celery-content: -Q content (4 concurrency)        # NEW - dedicated content worker
+celery-content: -Q content (4 concurrency)        # Dedicated content worker
 celery-long-running: -Q long_running (2 concurrency)
 celery-broadcast: -Q broadcast (2 concurrency)
 celery-beat: scheduler
@@ -51,10 +70,10 @@ celery-beat: scheduler
 
 ---
 
-## TOP PRIORITY for Session 886
+## TOP PRIORITY for Session 887
 
 ### 1. Verify Operations Tab
-The workspace-writing tasks are now scheduled. Verify new operations appear:
+The workspace-writing tasks were scheduled in Session 885. Verify new operations appear:
 ```bash
 curl -H "Authorization: Token $TOKEN" \
   "https://donkey-betz-platform-production.up.railway.app/api/workspace-operations/?limit=5"
@@ -67,17 +86,20 @@ Expected entries:
 - Financial agent rotation (every 4 hours at :00)
 - Daily summaries (daily at 12:30 AM)
 
-### 2. Check Celery Logs
-If Operations still not updating, check `celery-beat` and `celery-content` logs for:
-- `Scheduler: Sending due task agent-research-to-workspace`
-- `🔬 [SKIN LAYER] Starting research task...`
-- Any error messages
+### 2. Monitor Content Quality
+With the feedback loop active, monitor if blog quality scores improve over the next few days.
 
-### 3. Monitor Content Pipeline
-Blogs are working. Continue monitoring for:
-- Podcasts
-- Images
-- Initiative progress
+```bash
+# Check recent blogs and their quality scores
+curl -H "Authorization: Token $TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/documents/?doc_type=blog&limit=10"
+
+# See what context is being injected
+curl http://localhost:8000/api/content-learning/performance-context/
+```
+
+### 3. Consider Phase 2: Human Feedback
+Add thumbs up/down UI for published blogs to gather explicit human feedback.
 
 ---
 
@@ -87,8 +109,8 @@ Blogs are working. Continue monitoring for:
 # Start platform
 make start && make celery
 
-# Sync celery beat schedules (after deployment)
-python manage.py sync_celery_beat --apply
+# Test feedback loop locally
+curl http://localhost:8000/api/content-learning/performance-context/
 
 # Check workspace operations
 curl -H "Authorization: Token $TOKEN" \
@@ -105,10 +127,11 @@ curl -H "Authorization: Token $TOKEN" \
 
 ---
 
-## Recent PRs (Session 885)
+## Recent PRs
 
 | PR | Description |
 |----|-------------|
+| *Session 886* | Content Feedback Loop - BlogPerformanceContextBuilder (not yet PRed) |
 | #608 | Fix Operations tab - schedule workspace-writing tasks |
 | #607 | Add dedicated celery-content worker for content generation |
 | #606 | Rename celery-default to celery-worker in Procfile |
@@ -121,11 +144,11 @@ curl -H "Authorization: Token $TOKEN" \
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **886** | Content Feedback Loop - BlogPerformanceContextBuilder Phase 1 | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
 | **885** | Celery Content Pipeline + Operations Tab Fix | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | Initiative Pipeline Fix + Circuit Breaker | `SESSION_884_INITIATIVE_PIPELINE_FIX.md` |
 | **883** | Internal Data Registry Fix + Production Cleanup | `SESSION_883_COMPLETE.md` |
 | **882** | Interview System Wiring | `SESSION_882_INTERVIEW_WIRING.md` |
-| **881** | ResearchAgent Citation Fix | `SESSION_881_RESEARCHAGENT_FIX.md` |
 
 ---
 
@@ -143,16 +166,16 @@ curl -H "Authorization: Token $TOKEN" \
 
 ---
 
-## Workspace Operations Schedule
+## Content Feedback Loop Status
 
-| Task | Schedule | Creates |
-|------|----------|---------|
-| agent-daily-summary | Daily 12:30 AM | summaries/daily_*.md |
-| agent-workspace-status-report | Every 8 hours at :00 | reports/system_status_*.md |
-| agent-research-to-workspace | Every 4 hours at :45 | research/*.md |
-| agent-content-to-workspace | Every 6 hours at :15 | content/*.md |
-| financial-agent-category-rotation | Every 4 hours at :00 | financial/*.md |
+| Component | Status |
+|-----------|--------|
+| BlogPerformanceContextBuilder | Active |
+| Context Injection | Enabled in ContentWriterAgent |
+| API Endpoints | 4 new endpoints |
+| Human Feedback UI | Phase 2 (not implemented) |
+| Learning Rule Compiler | Phase 3 (not implemented) |
 
 ---
 
-**Blogs are working! Verify Operations tab updates at scheduled times.**
+**The feedback loop is now active. ContentWriterAgent learns from past performance!**
