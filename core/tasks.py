@@ -31054,3 +31054,130 @@ def _get_previous_stage_context(initiative, current_stage: int) -> str:
         return "No previous stage documents available - this is a new initiative."
 
     return "\n\n".join(context_parts)
+
+
+# =============================================================================
+# Session 885: Auto-Kickstart Stuck Initiatives
+# =============================================================================
+
+@shared_task
+def auto_kickstart_stuck_initiatives(limit: int = 10):
+    """
+    Session 885: Automatically kickstart initiatives stuck at Stage 1.
+
+    Problem: Initiatives are created but Stage 1 tasks are never dispatched,
+    leaving them stuck with 0% completion.
+
+    This task runs every 10 minutes and:
+    1. Finds ACTIVE initiatives at Stage 1 with no work done (stages_with_work=0)
+    2. Dispatches Stage 1 tasks (ResearchAgent + MarketIntelligenceAgent)
+    3. Updates Stage 1 status to DRAFT
+
+    Args:
+        limit: Maximum initiatives to kickstart per run (default: 10)
+
+    Returns:
+        Summary of kickstart results
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.services.conversation_initiative_pipeline import CONTENT_TYPE_STAGES
+
+    logger.info(f"🚀 [AUTO-KICKSTART] Starting auto-kickstart for up to {limit} stuck initiatives...")
+
+    results = {
+        'found': 0,
+        'kickstarted': 0,
+        'tasks_dispatched': 0,
+        'errors': [],
+    }
+
+    # Find stuck initiatives: ACTIVE, Stage 1, no work done
+    stuck_initiatives = []
+    for initiative in Initiative.objects.filter(status='ACTIVE', current_stage=1).order_by('-created_at')[:limit * 2]:
+        if initiative.stages_with_work == 0:
+            stuck_initiatives.append(initiative)
+
+    stuck_initiatives = stuck_initiatives[:limit]
+    results['found'] = len(stuck_initiatives)
+
+    if not stuck_initiatives:
+        logger.info("🚀 [AUTO-KICKSTART] No stuck initiatives found")
+        return results
+
+    logger.info(f"🚀 [AUTO-KICKSTART] Found {len(stuck_initiatives)} stuck initiatives to kickstart")
+
+    for initiative in stuck_initiatives:
+        topic = initiative.parent_topic or initiative.name
+        content_type = _detect_initiative_content_type(topic)
+
+        try:
+            # Ensure Stage 1 exists and is in DRAFT
+            stage_1, created = InitiativeStage.objects.get_or_create(
+                initiative=initiative,
+                stage=1,
+                defaults={
+                    'status': 'DRAFT',
+                    'notes': f'Auto-kickstarted at {timezone.now().isoformat()}',
+                }
+            )
+
+            if stage_1.status == 'PENDING':
+                stage_1.status = 'DRAFT'
+                stage_1.notes = f'Auto-kickstarted at {timezone.now().isoformat()}'
+                stage_1.save()
+
+            # Get stage 1 tasks for this content type
+            stage_config = CONTENT_TYPE_STAGES.get(content_type, CONTENT_TYPE_STAGES.get('document', {}))
+            stage_1_info = stage_config.get(1, {'tasks': []})
+            tasks = stage_1_info.get('tasks', []) if isinstance(stage_1_info, dict) else []
+
+            # Dispatch each task
+            for task_config in tasks:
+                agent_name = task_config['agent']
+                task_template = task_config['task_template']
+                task_description = task_template.format(topic=topic)
+
+                try:
+                    execute_initiative_stage_task.delay(
+                        initiative_id=str(initiative.id),
+                        stage_num=1,
+                        agent_name=agent_name,
+                        task=task_description,
+                        context={
+                            'source': 'auto_kickstart',
+                            'topic': topic,
+                        }
+                    )
+                    results['tasks_dispatched'] += 1
+                except Exception as e:
+                    results['errors'].append(f"{initiative.name[:30]}: {agent_name} - {e}")
+
+            results['kickstarted'] += 1
+            logger.info(f"🚀 [AUTO-KICKSTART] Kickstarted: {initiative.name[:50]}...")
+
+        except Exception as e:
+            results['errors'].append(f"{initiative.name[:30]}: {e}")
+            logger.error(f"🚀 [AUTO-KICKSTART] Error: {initiative.name[:30]} - {e}")
+
+    logger.info(
+        f"🚀 [AUTO-KICKSTART] Complete: {results['kickstarted']} kickstarted, "
+        f"{results['tasks_dispatched']} tasks dispatched, {len(results['errors'])} errors"
+    )
+
+    return results
+
+
+def _detect_initiative_content_type(topic: str) -> str:
+    """Detect content type from initiative topic text."""
+    topic_lower = topic.lower()
+
+    if any(kw in topic_lower for kw in ['persona', 'customer', 'user', 'buyer']):
+        return 'strategy'
+    elif any(kw in topic_lower for kw in ['plan', 'roadmap', 'timeline', 'milestone']):
+        return 'plan'
+    elif any(kw in topic_lower for kw in ['research', 'study', 'analysis', 'audit']):
+        return 'research'
+    elif any(kw in topic_lower for kw in ['content', 'blog', 'article', 'post']):
+        return 'document'
+    else:
+        return 'strategy'  # Default
