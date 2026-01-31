@@ -27246,6 +27246,67 @@ AGENT_WORKSPACE_REGISTRY = {
         'task_template': 'Personal assistant activity summary for {topic}',
         'default_topic': 'recent interactions and tasks',
     },
+
+    # =========================================================================
+    # Session 885: FINANCIAL/STOCK AGENTS - Produce market analysis and stock reviews
+    # These agents were missing from the registry, preventing workspace operations
+    # =========================================================================
+    'StockAnalystAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/stocks',
+        'output_type': 'stock_analysis',
+        'task_template': 'Analyze stock market conditions for {topic}',
+        'default_topic': 'current market trends and notable movements',
+    },
+    'StockAuditCoordinator': {
+        'category': 'financial',
+        'output_dir': 'financial/audits',
+        'output_type': 'market_audit',
+        'task_template': 'Coordinate market health audit for {topic}',
+        'default_topic': 'overall market conditions',
+    },
+    'BullCaseAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/bull_cases',
+        'output_type': 'bullish_analysis',
+        'task_template': 'Build bullish case for {topic}',
+        'default_topic': 'strongest market opportunities',
+    },
+    'BearCaseAgent': {
+        'category': 'financial',
+        'output_dir': 'financial/bear_cases',
+        'output_type': 'bearish_analysis',
+        'task_template': 'Build bearish case for {topic}',
+        'default_topic': 'key market risks and warnings',
+    },
+    'MarketIntelligenceCoordinator': {
+        'category': 'financial',
+        'output_dir': 'financial/intelligence',
+        'output_type': 'market_intel',
+        'task_template': 'Synthesize market intelligence for {topic}',
+        'default_topic': 'cross-market analysis',
+    },
+    'PredictionMarketAnalyst': {
+        'category': 'financial',
+        'output_dir': 'financial/predictions',
+        'output_type': 'prediction_analysis',
+        'task_template': 'Analyze prediction markets for {topic}',
+        'default_topic': 'high-value prediction opportunities',
+    },
+    'SportsOddsAnalyst': {
+        'category': 'sports',
+        'output_dir': 'sports/odds',
+        'output_type': 'odds_analysis',
+        'task_template': 'Analyze sports odds for {topic}',
+        'default_topic': 'current betting value opportunities',
+    },
+    'ArbitrageDetector': {
+        'category': 'sports',
+        'output_dir': 'sports/arbitrage',
+        'output_type': 'arb_report',
+        'task_template': 'Detect arbitrage opportunities in {topic}',
+        'default_topic': 'current betting markets',
+    },
 }
 
 # Get all categories for scheduling
