@@ -13,7 +13,7 @@ Configuration:
         INITIATIVE_BACKLOG_THRESHOLD=50  - Max pending initiatives before auto-pause
 
     Database:
-        SystemSetting with key='initiative_creation_paused' and value='true'
+        SystemConfiguration with key='initiative_creation_paused' and value=True
 
 Usage:
     from core.services.initiative_circuit_breaker import can_create_initiative, get_backlog_status
@@ -49,10 +49,15 @@ def is_creation_paused_by_env() -> bool:
 def is_creation_paused_by_db() -> bool:
     """Check if creation is paused via database setting."""
     try:
-        from core.models import SystemSetting
-        setting = SystemSetting.objects.filter(key='initiative_creation_paused').first()
-        if setting:
-            return setting.value.lower() in ('true', '1', 'yes')
+        from core.models import SystemConfiguration
+        setting = SystemConfiguration.objects.filter(key='initiative_creation_paused').first()
+        if setting and setting.value:
+            # value is JSONField - can be True/False or string
+            if isinstance(setting.value, bool):
+                return setting.value
+            if isinstance(setting.value, str):
+                return setting.value.lower() in ('true', '1', 'yes')
+            return bool(setting.value)
     except Exception:
         pass  # Model might not exist or DB error
     return False
@@ -166,15 +171,20 @@ def clear_cache():
 def pause_initiative_creation(reason: str = "Manual pause"):
     """Pause initiative creation via database setting."""
     try:
-        from core.models import SystemSetting
-        setting, created = SystemSetting.objects.get_or_create(
+        from core.models import SystemConfiguration
+        setting, created = SystemConfiguration.objects.get_or_create(
             key='initiative_creation_paused',
-            defaults={'value': 'true', 'description': reason}
+            defaults={
+                'value': True,  # JSONField stores native Python types
+                'description': reason,
+                'category': 'system',
+            }
         )
         if not created:
-            setting.value = 'true'
+            setting.value = True
             setting.description = reason
             setting.save()
+        clear_cache()
         logger.info(f"[circuit_breaker] Initiative creation PAUSED: {reason}")
         return True
     except Exception as e:
@@ -185,8 +195,8 @@ def pause_initiative_creation(reason: str = "Manual pause"):
 def resume_initiative_creation():
     """Resume initiative creation via database setting."""
     try:
-        from core.models import SystemSetting
-        SystemSetting.objects.filter(key='initiative_creation_paused').delete()
+        from core.models import SystemConfiguration
+        SystemConfiguration.objects.filter(key='initiative_creation_paused').delete()
         clear_cache()
         logger.info("[circuit_breaker] Initiative creation RESUMED")
         return True
