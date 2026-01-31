@@ -69,7 +69,6 @@ def _channel_episode_to_dict(ep):
 
 @require_http_methods(["GET"])
 def podcast_list(request):
-    # Session 688: Removed @login_required for React frontend access
     """
     List all podcast episodes for the current user.
     Combines PodcastEpisode + ChannelEpisode (Autonomous Content Studio).
@@ -81,8 +80,24 @@ def podcast_list(request):
         - source: Filter by source (podcast, studio, or empty for all)
         - limit: Number of results (default 20)
         - offset: Pagination offset (default 0)
+
+    Session 887: Added Token auth support since /api/podcasts/ is in PUBLIC_PATHS.
     """
-    # Session 688: Return empty for anonymous users
+    # Session 887: Manual auth check to support Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    # Return empty for anonymous users (still no auth)
     if not request.user.is_authenticated:
         return JsonResponse({'success': True, 'episodes': [], 'total': 0, 'limit': 20, 'offset': 0})
 
@@ -615,7 +630,22 @@ def podcast_stats(request):
 
     GET /api/podcasts/stats/
     """
-    # Session 688: Return empty stats for anonymous users
+    # Session 887: Manual auth check to support Token auth
+    # /api/podcasts/ is in PUBLIC_PATHS so middleware skips auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    # Return empty stats for anonymous users (still no auth after Token check)
     if not request.user.is_authenticated:
         return JsonResponse({
             'success': True,
