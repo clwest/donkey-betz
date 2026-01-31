@@ -29008,6 +29008,121 @@ def run_podcast_debate_agents():
 
 
 @shared_task
+def auto_generate_podcast_episode():
+    """
+    Session 887: Auto-generate podcast episodes from trending topics.
+
+    Runs every 12 hours. Creates a new podcast episode script based on:
+    1. Recent spider intelligence trends
+    2. ThinkingAgent insights
+    3. Popular boardroom decisions
+
+    Note: This creates scripts only, not audio (TTS requires manual trigger).
+    """
+    from core.models_podcast_studio import PodcastEpisode
+    from django.contrib.auth import get_user_model
+    from django.db.models import Count
+
+    User = get_user_model()
+    logger.info("🎙️ [AUTO-PODCAST] Starting auto-generation...")
+
+    # Get system user for automated episodes
+    try:
+        system_user = User.objects.filter(is_superuser=True).first()
+        if not system_user:
+            system_user = User.objects.first()
+        if not system_user:
+            logger.warning("🎙️ [AUTO-PODCAST] No users found, skipping")
+            return {'status': 'skipped', 'reason': 'No users'}
+    except Exception as e:
+        logger.error(f"🎙️ [AUTO-PODCAST] Error getting user: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+    # Check if we already have a recent podcast (don't spam)
+    from django.utils import timezone
+    from datetime import timedelta
+    recent_cutoff = timezone.now() - timedelta(hours=6)
+    recent_count = PodcastEpisode.objects.filter(created_at__gte=recent_cutoff).count()
+    if recent_count >= 2:
+        logger.info(f"🎙️ [AUTO-PODCAST] Already {recent_count} recent episodes, skipping")
+        return {'status': 'skipped', 'reason': f'{recent_count} recent episodes exist'}
+
+    # Get trending topic from various sources
+    topic = None
+
+    # Try 1: Get from recent ThinkingAgent insights
+    try:
+        from core.models_reasoning_engine import ThinkingCycleRecord
+        recent_thought = ThinkingCycleRecord.objects.filter(
+            insights_count__gt=0
+        ).order_by('-started_at').first()
+        if recent_thought and recent_thought.context_summary:
+            # Extract a topic from the context
+            summary = recent_thought.context_summary[:200]
+            topic = f"AI System Analysis: {summary}"
+    except Exception as e:
+        logger.debug(f"No ThinkingCycleRecord: {e}")
+
+    # Try 2: Get from recent boardroom decisions
+    if not topic:
+        try:
+            from core.models_unified_system import AgentDecisionSummary
+            recent_decision = AgentDecisionSummary.objects.filter(
+                status='draft'
+            ).order_by('-created_at').first()
+            if recent_decision:
+                topic = f"Tech Debate: {recent_decision.topic[:100]}"
+        except Exception as e:
+            logger.debug(f"No AgentDecisionSummary: {e}")
+
+    # Try 3: Fallback to general tech topics
+    if not topic:
+        import random
+        fallback_topics = [
+            "The Future of AI Agents in Software Development",
+            "Autonomous Systems: Benefits and Risks",
+            "Should AI Make Financial Decisions for Humans?",
+            "The Ethics of AI Content Generation",
+            "Decentralized AI: Promise vs Reality",
+        ]
+        topic = random.choice(fallback_topics)
+
+    # Create the episode
+    try:
+        episode = PodcastEpisode.objects.create(
+            user=system_user,
+            topic=topic,
+            title=topic[:200],
+            status='pending',
+            generation_config={
+                'format': 'debate',
+                'participant_count': 3,
+                'generate_audio': False,  # Scripts only for now
+            }
+        )
+        logger.info(f"🎙️ [AUTO-PODCAST] Created episode: {episode.id} - {topic[:50]}...")
+
+        # Queue the generation task
+        generate_podcast_episode.delay(
+            episode_id=str(episode.id),
+            topic=topic,
+            format_type='debate',
+            participants=3,
+            generate_audio=False
+        )
+
+        return {
+            'status': 'success',
+            'episode_id': str(episode.id),
+            'topic': topic
+        }
+
+    except Exception as e:
+        logger.error(f"🎙️ [AUTO-PODCAST] Error creating episode: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
 def run_content_studio_agents():
     """
     Session 787: Run content studio agents every 4 hours.

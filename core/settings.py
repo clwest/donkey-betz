@@ -1361,6 +1361,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.run_podcast_debate_agents',
         'schedule': crontab(minute=45, hour='*/8'),  # Every 8 hours at :45
     },
+    # Session 887: Auto-generate podcast scripts
+    'auto-generate-podcast-episode': {
+        'task': 'core.tasks.auto_generate_podcast_episode',
+        'schedule': crontab(minute=15, hour='*/12'),  # Every 12 hours at :15
+    },
     'run-content-studio-agents': {
         'task': 'core.tasks.run_content_studio_agents',
         'schedule': crontab(minute=55, hour='*/4'),  # Every 4 hours at :55
