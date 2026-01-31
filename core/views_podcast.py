@@ -277,14 +277,32 @@ def podcast_create(request):
         }, status=500)
 
 
-@login_required
 @require_http_methods(["GET"])
 def podcast_status(request, episode_id):
     """
     Get status of a specific podcast episode.
 
     GET /api/podcasts/<episode_id>/status/
+
+    Session 889: Removed @login_required, added Token auth support.
     """
+    # Session 889: Manual auth check to support Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
     from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
@@ -321,14 +339,32 @@ def podcast_status(request, episode_id):
         }, status=500)
 
 
-@login_required
 @require_http_methods(["GET"])
 def podcast_script(request, episode_id):
     """
     Get the full script of a podcast episode.
 
     GET /api/podcasts/<episode_id>/script/
+
+    Session 889: Removed @login_required, added Token auth support.
     """
+    # Session 889: Manual auth check to support Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
     from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
@@ -417,14 +453,33 @@ def podcast_script(request, episode_id):
         }, status=500)
 
 
-@login_required
+@csrf_exempt
 @require_http_methods(["DELETE"])
 def podcast_delete(request, episode_id):
     """
     Delete a podcast episode.
 
     DELETE /api/podcasts/<episode_id>/
+
+    Session 889: Removed @login_required, added Token auth support.
     """
+    # Session 889: Manual auth check to support Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
     from core.models_podcast_studio import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
@@ -465,7 +520,6 @@ def podcast_delete(request, episode_id):
         }, status=500)
 
 
-@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def podcast_generate_audio(request, episode_id):
@@ -479,7 +533,26 @@ def podcast_generate_audio(request, episode_id):
 
     Works for both PodcastEpisode and ChannelEpisode.
     For ChannelEpisode, creates a linked PodcastEpisode with audio.
+
+    Session 889: Removed @login_required, added Token auth support.
     """
+    # Session 889: Manual auth check to support Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
     import logging
     logger = logging.getLogger(__name__)
 
