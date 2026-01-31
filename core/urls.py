@@ -442,6 +442,14 @@ from core.views_content_calendar import (
     content_episode_detail,  # Session 741
 )
 
+# Session 886: Content Learning Feedback Loop API
+from core.views_content_learning import (
+    BlogPerformanceContextView,
+    BlogPerformanceMetricsView,
+    LearningRulesView,
+    ContentQualityTrendsView,
+)
+
 # Session 250: Hive Mind Mode
 from core.views_hive_mind import (
     start_hive_mind_session,
@@ -1783,6 +1791,12 @@ urlpatterns = [
     path('api/pipeline-learning/insights/', pipeline_get_insights, name='pipeline-learning-insights'),
     path('api/pipeline-learning/insights/generate/', pipeline_generate_insights, name='pipeline-learning-insights-generate'),
     path('api/pipeline-learning/stats/', pipeline_get_statistics, name='pipeline-learning-stats'),
+
+    # Session 886: Content Learning Feedback Loop (BlogPerformanceContextBuilder)
+    path('api/content-learning/performance-context/', BlogPerformanceContextView.as_view(), name='content-learning-performance-context'),
+    path('api/content-learning/metrics/', BlogPerformanceMetricsView.as_view(), name='content-learning-metrics'),
+    path('api/content-learning/rules/', LearningRulesView.as_view(), name='content-learning-rules'),
+    path('api/content-learning/trends/', ContentQualityTrendsView.as_view(), name='content-learning-trends'),
 
     # Session 234: Proactive System APIs (Phase 6)
     # Dashboard & Overview
