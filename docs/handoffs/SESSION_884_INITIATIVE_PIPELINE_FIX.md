@@ -3,19 +3,28 @@
 **Date:** January 30, 2026
 **Status:** Complete
 
-## Problem
+## Problems Found
 
-The Initiative Pipeline was completely broken:
+The Initiative Pipeline was completely broken due to multiple issues:
+
+### 1. Worker Saturation
 - 288 initiatives accumulated, none making progress
 - Celery workers were blocked by 4 long-running `intelligence.tasks.scan_spider_opportunities` tasks
 - All 4 concurrency slots on `celery-default` were occupied for 30+ minutes
-- New initiatives kept being created faster than they could be processed
 
-## Root Cause
+### 2. No Rate Limiting
+- Dream/thinking cycles kept creating initiatives even when backlog existed
+- No mechanism to pause creation when overwhelmed
 
-1. **Worker Saturation:** Intelligence tasks (~30 min each) blocked the default queue
-2. **No Rate Limiting:** Dream/thinking cycles kept creating initiatives even when backlog existed
-3. **No Cleanup Mechanism:** Stuck initiatives had no way to be archived or deleted
+### 3. LLM Integration Broken (Critical)
+- **Syntax error** in `agent_llm_integration.py` (broken indentation)
+- Error: `expected 'except' or 'finally' block (agent_llm_integration.py, line 79)`
+- This prevented ALL agents from making LLM calls
+
+### 4. GPT-5 Parameter Mismatch
+- Code used `max_tokens` but GPT-5 requires `max_completion_tokens`
+- Code used `temperature` but GPT-5 reasoning models don't support it
+- Token limit was too low (800) for reasoning - needs 6000+
 
 ## Solutions Implemented
 
@@ -47,11 +56,43 @@ New endpoint `POST /api/initiatives/cleanup/`:
 - Configurable completion threshold
 - Dry-run/preview mode
 
+### PR #601: Fix LLM Integration Syntax Error
+Fixed broken indentation in `ai_core/agents/agent_llm_integration.py`:
+```python
+# BEFORE (broken - no indentation)
+            content = await AsyncLLMAdapter().chat(
+    messages,
+    model=...,
+)
+return {  # <-- outside try block!
+
+# AFTER (fixed)
+            response = await AsyncLLMAdapter().chat(
+                messages,
+                model=...,
+            )
+            return {  # <-- inside try block
+```
+
+### PR #602: GPT-5 Parameter Fix
+Fixed parameters for GPT-5 models:
+```python
+# GPT-5 uses max_completion_tokens, not max_tokens
+# GPT-5 reasoning models don't support temperature
+if is_gpt5:
+    kwargs['max_completion_tokens'] = 6000  # Higher for reasoning
+else:
+    kwargs['max_tokens'] = 800
+    kwargs['temperature'] = 0.2
+```
+
 ## Actions Taken
 
 1. **Restarted all Celery workers on Railway** - Cleared blocked tasks
 2. **Kickstarted 15 stuck initiatives** - Dispatched Stage 1 tasks
 3. **Archived 288 initiatives** - Clean slate for the system
+4. **Fixed LLM integration** - Agents can now make LLM calls
+5. **Fixed GPT-5 parameters** - Correct token settings for reasoning
 
 ## API Endpoints Added
 
@@ -97,14 +138,28 @@ curl -X POST "https://your-app.railway.app/api/initiatives/cleanup/" \
 | `core/models_unified_system.py` | Added circuit breaker check to `promote_to_initiative()` |
 | `core/views_initiative_kickstart.py` | Added circuit breaker + cleanup endpoints |
 | `core/urls.py` | Added new endpoint routes |
+| `ai_core/agents/agent_llm_integration.py` | Fixed syntax error + GPT-5 parameters |
+
+## PRs in This Session
+
+| PR | Description |
+|----|-------------|
+| #596 | Route intelligence tasks to long_running queue |
+| #597 | Initiative Circuit Breaker |
+| #598 | Fix circuit breaker to use SystemConfiguration |
+| #599 | Initiative cleanup endpoint |
+| #600 | Session handoff documentation |
+| #601 | Fix LLM integration syntax error |
+| #602 | Fix GPT-5 max_completion_tokens parameter |
 
 ## Result
 
-- **Before:** 288 stuck initiatives, 0% processing, workers blocked
-- **After:** 0 active initiatives, clean slate, circuit breaker in place
+- **Before:** 288 stuck initiatives, LLM integration broken, workers blocked
+- **After:** 0 active initiatives, LLM fixed, circuit breaker in place, clean slate
 
 ## Next Steps
 
-1. Monitor initiative creation rate vs processing rate
-2. Consider lowering `INITIATIVE_BACKLOG_THRESHOLD` if issues recur
-3. May need to tune dream/thinking cycle frequency to match processing capacity
+1. **Restart Celery workers** after deployment to pick up LLM fixes
+2. Monitor initiative creation rate vs processing rate
+3. Consider lowering `INITIATIVE_BACKLOG_THRESHOLD` if issues recur
+4. Check Railway memory limits if workers keep crashing
