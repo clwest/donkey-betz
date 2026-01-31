@@ -1,8 +1,29 @@
-# Session 889 - Start Here
+# Session 890 - Start Here
 
-**Previous Session:** 887 (Operations Tab Fix + Content Improvements)
+**Previous Session:** 889 (Intel Tab + Podcast Tab Fixes)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **Operations Tab FIXED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **Operations Tab FIXED** | **Podcast Tab FIXED**
+
+---
+
+## What Was Accomplished in Session 889
+
+### Part 1: Intel Tab "Recent Thoughts" Fix
+**Problem:** "Recent Thoughts" section showed "..." instead of actual content.
+**Root Cause:** API returns `context_summary`, `cycle_type` but frontend expected `content`, `thought_type`.
+**Fix:** Added field mapping in `IntelligenceTab.tsx` query function to normalize API response.
+
+### Part 2: Podcast Tab Token Auth Fix
+**Problem:** Podcasts weren't displaying in Content Tab despite being created successfully.
+**Root Cause:** `/api/podcasts/` is in `PUBLIC_PATHS` so middleware skips auth. Endpoints returned empty for anonymous users.
+**Fix:** Added manual Token auth check to:
+- `podcast_list` endpoint (PR #625)
+- `podcast_stats` endpoint (PR #625)
+
+### Part 3: Auto-Generate Podcast Task
+**Added:** `auto_generate_podcast_episode` Celery task to automatically create podcast scripts from trending topics (every 12 hours at :15).
+
+**Handoff:** `SESSION_889_INTEL_PODCAST_FIXES.md`
 
 ---
 
@@ -121,6 +142,7 @@ curl -H "Authorization: Token $TOKEN" \
 
 | PR | Description |
 |----|-------------|
+| #625 | Add Token auth to podcast_list and podcast_stats endpoints |
 | #619 | Add @csrf_exempt to boardroom decision endpoints |
 | #618 | Support Token auth for boardroom decision actions |
 | #617 | Gather research before content generation |
@@ -136,12 +158,12 @@ curl -H "Authorization: Token $TOKEN" \
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **889** | Intel Tab Thoughts + Podcast Tab Token Auth + Auto-Podcast | `SESSION_889_INTEL_PODCAST_FIXES.md` |
 | **887** | Operations Tab Fix + Content Improvements + Boardroom Auth | `SESSION_887_OPERATIONS_TAB_FIX.md` |
 | **886** | Content Feedback Loop - BlogPerformanceContextBuilder Phase 1 | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
 | **885** | Celery Content Pipeline + Operations Tab Fix | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | Initiative Pipeline Fix + Circuit Breaker | `SESSION_884_INITIATIVE_PIPELINE_FIX.md` |
 | **883** | Internal Data Registry Fix + Production Cleanup | `SESSION_883_COMPLETE.md` |
-| **882** | Interview System Wiring | `SESSION_882_INTERVIEW_WIRING.md` |
 
 ---
 
@@ -190,6 +212,17 @@ curl -H "Authorization: Token $TOKEN" \
 | GET /api/boardroom/decisions/ | ✅ | Works (public) |
 | POST /api/boardroom/decisions/{id}/promote/ | ✅ | Fixed (#618, #619) |
 | POST /api/boardroom/decisions/{id}/reject/ | ✅ | Fixed (#618, #619) |
+
+---
+
+## Podcast API Status
+
+| Endpoint | Token Auth | Status |
+|----------|------------|--------|
+| GET /api/podcasts/list/ | ✅ | Fixed (#625) |
+| GET /api/podcasts/stats/ | ✅ | Fixed (#625) |
+| POST /api/podcasts/create/ | ✅ | Fixed (Session 887) |
+| Auto-generate task | ✅ | Every 12 hours at :15 |
 
 ---
 
