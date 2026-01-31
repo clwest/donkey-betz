@@ -2071,6 +2071,7 @@ def get_system_health(request):
         }, status=500)
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def promote_decision(request, decision_id):
     """
@@ -2080,6 +2081,7 @@ def promote_decision(request, decision_id):
     POST /api/boardroom/decisions/{decision_id}/promote/
 
     Session 887: Removed @login_required to support Token auth (same as reject_decision).
+    Added @csrf_exempt for API calls.
     """
     # Session 887: Manual auth check to support both session and Token auth
     from rest_framework.authtoken.models import Token
@@ -2173,6 +2175,7 @@ def promote_decision(request, decision_id):
         }, status=500)
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def reject_decision(request, decision_id):
     """
@@ -2182,7 +2185,7 @@ def reject_decision(request, decision_id):
 
     Session 887: Removed @login_required to support Token auth.
     Since /api/boardroom/ is in PUBLIC_PATHS, middleware doesn't authenticate.
-    We check auth manually here.
+    We check auth manually here. Added @csrf_exempt for API calls.
     """
     # Session 887: Manual auth check to support both session and Token auth
     from rest_framework.authtoken.models import Token
