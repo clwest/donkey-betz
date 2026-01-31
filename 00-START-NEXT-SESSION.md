@@ -1,60 +1,28 @@
-# Session 887 - Start Here
+# Session 888 - Start Here
 
-**Previous Session:** 886 (Content Feedback Loop - Phase 1)
+**Previous Session:** 887 (Operations Tab Fix)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CONTENT FEEDBACK LOOP ACTIVE** | **Blogs Learning from Past Performance**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CONTENT FEEDBACK LOOP ACTIVE** | **Operations Tab FIXED**
 
 ---
 
-## What Was Accomplished in Session 886
+## What Was Accomplished in Session 887
 
-### 1. Content Feedback Loop - Phase 1 Complete
+### Operations Tab Fix
 
-**Problem:** ContentWriterAgent was writing blogs in a vacuum with no knowledge of what worked or what to improve.
+**Problem:** Operations Tab hadn't updated since January 29th (2 days gap).
 
-**Solution:** Created `BlogPerformanceContextBuilder` that injects performance context into agent prompts.
+**Root Cause:** Production workspace had `allow_file_write=None` instead of `True`. The helper function `_get_workspace_for_skin_layer()` couldn't find a matching workspace.
 
-**Files Created:**
-- `core/services/blog_performance_context.py` - Main service (527 lines)
-- `core/views_content_learning.py` - API endpoints for debugging
+**Fix:** Updated production workspace via PATCH request to set `allow_file_write=true`.
 
-**Files Modified:**
-- `core/agents/content_writer_agent.py` - Added context injection
-- `core/urls.py` - Added 4 API routes
+**Result:** 4 new operations created immediately after fix:
+- ResearchAgent
+- ContentWriterAgent
+- DailySummaryTask
+- SystemIntelligenceAgent
 
-**What Gets Injected:**
-1. Quality metrics (avg quality/novelty/structure scores)
-2. Top/weak performing topics
-3. Strengths and weaknesses patterns
-4. Active learning rules from PipelineLearningInsight
-5. Engagement data (views, likes, shares)
-
-**New API Endpoints:**
-```
-GET /api/content-learning/performance-context/  # See what agent "knows"
-GET /api/content-learning/metrics/              # Structured metrics
-GET /api/content-learning/rules/                # Active learning rules
-GET /api/content-learning/trends/               # Quality trends over time
-```
-
-### 2. Experiment Audit & Cleanup Complete
-
-**Problem:** 2.4% success rate, 234 failures, 77 halted experiments
-
-**Root Cause:** 81 junk "Unknown Decision" experiments + aggressive 25% error threshold
-
-**Fixes Applied:**
-1. Updated 352 experiments to 35% error threshold
-2. Deleted 81 junk experiments + 77 related learnings
-3. Fixed `gate_progression_pipeline.py` to require valid topics + assign KPIs
-4. Calibrated thresholds using sandbox
-
-**Results:**
-| Metric | Before | After |
-|--------|--------|-------|
-| Success Rate | 2.4% | **87.5%** |
-| Junk Experiments | 81 | 0 |
-| Halted | 77 | 0 |
+**Handoff:** `SESSION_887_OPERATIONS_TAB_FIX.md`
 
 ---
 
@@ -62,7 +30,7 @@ GET /api/content-learning/trends/               # Quality trends over time
 
 ```
 celery-worker: -Q default,agents,sports,ml (4 concurrency)
-celery-content: -Q content (4 concurrency)        # Dedicated content worker
+celery-content: -Q content (4 concurrency)        # Workspace writing tasks
 celery-long-running: -Q long_running (2 concurrency)
 celery-broadcast: -Q broadcast (2 concurrency)
 celery-beat: scheduler
@@ -70,27 +38,24 @@ celery-beat: scheduler
 
 ---
 
-## TOP PRIORITY for Session 887
+## TOP PRIORITY for Session 888
 
-### 1. Verify Operations Tab
-The workspace-writing tasks were scheduled in Session 885. Verify new operations appear:
+### 1. Monitor Operations Tab
+Verify that scheduled tasks continue to create entries automatically:
 ```bash
 curl -H "Authorization: Token $TOKEN" \
-  "https://donkey-betz-platform-production.up.railway.app/api/workspace-operations/?limit=5"
+  "https://donkey-betz-platform-production.up.railway.app/api/workspace-operations/?limit=10&ordering=-created_at"
 ```
 
-Expected entries:
+Expected entries (now working):
 - Research reports (every 4 hours at :45)
 - Content generation (every 6 hours at :15)
 - Status reports (every 8 hours at :00)
-- Financial agent rotation (every 4 hours at :00)
 - Daily summaries (daily at 12:30 AM)
 
 ### 2. Monitor Content Quality
-With the feedback loop active, monitor if blog quality scores improve over the next few days.
-
+With the feedback loop active (Session 886), monitor if blog quality scores improve:
 ```bash
-# Check recent blogs and their quality scores
 curl -H "Authorization: Token $TOKEN" \
   "https://donkey-betz-platform-production.up.railway.app/api/documents/?doc_type=blog&limit=10"
 
@@ -109,12 +74,18 @@ Add thumbs up/down UI for published blogs to gather explicit human feedback.
 # Start platform
 make start && make celery
 
+# Check workspace operations (now working)
+curl -H "Authorization: Token $TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/workspace-operations/?limit=10&ordering=-created_at"
+
 # Test feedback loop locally
 curl http://localhost:8000/api/content-learning/performance-context/
 
-# Check workspace operations
-curl -H "Authorization: Token $TOKEN" \
-  "https://donkey-betz-platform-production.up.railway.app/api/workspace-operations/?limit=10"
+# Manually trigger all operations tasks
+curl -X POST -H "Authorization: Token $TOKEN" \
+  -H "Content-Type: application/json" \
+  --data-raw '{"task":"all"}' \
+  "https://donkey-betz-platform-production.up.railway.app/api/workspace-triggers/trigger-operations/"
 
 # Check recent blogs
 curl -H "Authorization: Token $TOKEN" \
@@ -131,7 +102,7 @@ curl -H "Authorization: Token $TOKEN" \
 
 | PR | Description |
 |----|-------------|
-| *Session 886* | Content Feedback Loop - BlogPerformanceContextBuilder (not yet PRed) |
+| *Session 886* | Content Feedback Loop - BlogPerformanceContextBuilder |
 | #608 | Fix Operations tab - schedule workspace-writing tasks |
 | #607 | Add dedicated celery-content worker for content generation |
 | #606 | Rename celery-default to celery-worker in Procfile |
@@ -144,6 +115,7 @@ curl -H "Authorization: Token $TOKEN" \
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **887** | Operations Tab Fix - workspace allow_file_write | `SESSION_887_OPERATIONS_TAB_FIX.md` |
 | **886** | Content Feedback Loop - BlogPerformanceContextBuilder Phase 1 | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
 | **885** | Celery Content Pipeline + Operations Tab Fix | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | Initiative Pipeline Fix + Circuit Breaker | `SESSION_884_INITIATIVE_PIPELINE_FIX.md` |
@@ -178,4 +150,15 @@ curl -H "Authorization: Token $TOKEN" \
 
 ---
 
-**The feedback loop is now active. ContentWriterAgent learns from past performance!**
+## Operations Tab Status
+
+| Component | Status |
+|-----------|--------|
+| Workspace Config | `allow_file_write=true` (fixed in 887) |
+| Scheduled Tasks | Working via Celery Beat |
+| Manual Trigger | `/api/workspace-triggers/trigger-operations/` |
+| Last Verified | 2026-01-31 14:30 |
+
+---
+
+**Operations Tab is working. Content Feedback Loop is active. System is healthy.**
