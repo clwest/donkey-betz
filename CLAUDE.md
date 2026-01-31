@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 30, 2026 - Session 884
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE**
+**Last Updated:** January 31, 2026 - Session 886
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
@@ -20,6 +20,7 @@
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Content Feedback Loop (886):** BlogPerformanceContextBuilder injects past performance data into ContentWriterAgent prompts. Agent now "knows" quality scores, top topics, strengths/weaknesses, and active learning rules. Experiment audit: cleaned 81 junk experiments, raised error threshold 25%→35%, 87.5% real success rate.
 - **AI OS Boot Experience (884):** Home page at `/` with personalized greeting, "while you were away" activity cards, active projects with progress bars, natural language input routing to PA, quick action buttons (Create, Research, Decide, Review, Build).
 - **Executive Function + Contracts (872):** DecisionEnforcerAgent forces decisions after debate. ResearchContract, ExecutionMandate, SynthesisContract prevent vague outputs. AutoSpawnerService triggers data gathering reflexes. Prompt sharpening transforms hedging → decisive language.
 - **Podcast TTS + Voice Profiles + ConceptForge UI (865):** Reconnected ElevenLabs TTS pipeline, VoiceProfileModal fetches real voices, custom voice selection. Added Dossiers tab with full 6-stage pipeline visualization. Celery health monitoring sends Discord alerts every 30 min.
@@ -142,10 +143,11 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **886** | Content Feedback Loop + Experiment Audit - BlogPerformanceContextBuilder, cleaned 81 junk experiments, 87.5% success rate | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
+| **885** | Celery Content Pipeline + Operations Tab Fix - dedicated celery-content worker | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | AI OS Boot Experience - Home Page with greeting, while-away stats, projects, NL input | `SESSION_884_HOME_PAGE_BOOT.md` |
 | **872** | Executive Function - DecisionEnforcerAgent, 3 Contracts, AutoSpawner, Prompt Sharpening | `SESSION_872_COMPLETE.md` |
 | **867** | System-Wide Audit - 231 unscheduled tasks, 40+ stubs, Initiative Pipeline fix | `SESSION_867_SYSTEM_AUDIT.md` |
-| **866** | ATS Keyword Optimization Module + Career Tab UI + Cleanup Command | `SESSION_866_ATS_KEYWORD_MODULE.md` |
 | **865** | Podcast TTS + Voice Profile Integration + Celery Health Monitoring | `SESSION_865_PODCAST_TTS_VOICE_PROFILES.md` |
 | **864** | Content Intelligence Improvements - EditorAgent, operational titles, threshold 0.65→0.55 | `SESSION_864_RUN_MODE_TRACKING.md` |
 | **863** | ConceptForge - Autonomous Think Tank Pipeline (Content → Intelligence → Strategy → Product) | `SESSION_863_CONCEPTFORGE.md` |
