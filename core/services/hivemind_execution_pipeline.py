@@ -424,7 +424,8 @@ class HiveMindExecutionPipeline:
         self,
         proposed_feature: Dict[str, Any],
         session,
-        user
+        user,
+        bypass_circuit_breaker: bool = False
     ) -> 'Initiative':
         """
         Session 866: Create an Initiative from the Proposed Feature.
@@ -437,6 +438,11 @@ class HiveMindExecutionPipeline:
         5. Pilot Execution
         """
         from core.models_document_registry import Initiative, InitiativeStage
+
+        # Session 884: Circuit breaker check
+        from core.services.initiative_circuit_breaker import can_create_initiative
+        if not can_create_initiative(bypass_check=bypass_circuit_breaker):
+            raise ValueError("Initiative creation paused by circuit breaker - backlog too high")
 
         # Create the initiative
         initiative = Initiative.objects.create(

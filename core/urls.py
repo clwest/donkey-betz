@@ -2838,6 +2838,7 @@ urlpatterns = [
     path('api/initiatives/kickstart/', views_initiative_kickstart.kickstart_initiatives, name='initiatives-kickstart'),  # Session 884: Kickstart stuck initiatives
     path('api/initiatives/fix-stages/', views_initiative_kickstart.fix_initiative_stages, name='initiatives-fix-stages'),  # Session 884: Fix inconsistent stages
     path('api/initiatives/retry-stuck/', views_initiative_kickstart.retry_stuck_initiatives, name='initiatives-retry-stuck'),  # Session 884: Retry stuck Stage 1 initiatives
+    path('api/initiatives/circuit-breaker/', views_initiative_kickstart.initiative_circuit_breaker, name='initiatives-circuit-breaker'),  # Session 884: Pause/resume initiative creation
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
