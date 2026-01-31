@@ -142,6 +142,7 @@ curl -H "Authorization: Token $TOKEN" \
 
 | PR | Description |
 |----|-------------|
+| #627 | Add Token auth to podcast status, script, delete, generate-audio |
 | #625 | Add Token auth to podcast_list and podcast_stats endpoints |
 | #619 | Add @csrf_exempt to boardroom decision endpoints |
 | #618 | Support Token auth for boardroom decision actions |
