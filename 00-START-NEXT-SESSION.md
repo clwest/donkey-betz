@@ -1,124 +1,126 @@
 # Session 885 - Start Here
 
-**Previous Session:** 884 (AI OS Boot Experience + Initiative Pipeline Fixes + ResearchAgent Internal Data)
+**Previous Session:** 884 (Initiative Pipeline Fix + Circuit Breaker + Cleanup)
 **Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **HOME PAGE LIVE** | **179 Initiatives Kickstarted** | **33 Stage Inconsistencies Fixed**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE PIPELINE FIXED** | **Circuit Breaker Active** | **Clean Slate: 0 Active Initiatives**
 
 ---
 
-## What Was Accomplished in Session 884
+## What Was Accomplished in Session 884 (Part 2)
 
-### 1. AI OS Boot Experience - Home Page (PR #576)
+### 1. Diagnosed Initiative Pipeline Blockage
 
-Created the "boot experience" that makes users feel like they're starting up their AI operating system.
+**Problem:** 288 initiatives accumulated, none making progress. Workers completely blocked.
 
-**New Endpoint:** `/api/home/boot/`
-- Personalized greeting (time of day + user name)
-- "While you were away" stats (spider findings, dreams, initiatives, decisions)
-- Active projects with completion % and pending decisions
-- System health status
+**Root Cause:**
+- 4 `intelligence.tasks.scan_spider_opportunities` tasks (~30 min each) blocked all 4 concurrency slots on `celery-default`
+- No other tasks could process, including `execute_initiative_stage_task`
+- Dreams/thinking cycles kept creating new initiatives into the blocked queue
 
-**New Component:** `HomePage.tsx`
-- Boot greeting with partnership language
-- Clickable activity cards since last visit
-- Project cards with progress bars
-- Natural language input routing to PA
-- Quick action buttons (Create, Research, Decide, Review, Build)
+### 2. Fixed Celery Task Routing (PR #596)
 
-### 2. ResearchAgent Internal Data Query Tool (PR #586)
-
-Fixed ResearchAgent generating "BLOCKED ON: data export" reports instead of actually querying data.
-
-**Problem:** ResearchAgent couldn't query internal Django models - it would produce plans saying "need data export" instead of actually fetching data.
-
-**Solution:** Added `query_internal_data` tool to ResearchAgent:
+Routed intelligence tasks to `long_running` queue to prevent blocking default queue:
 ```python
-{
-    "name": "query_internal_data",
-    "data_types": ["experiments", "agent_executions", "initiatives",
-                   "agent_learnings", "deliverables", "spider_data_stats",
-                   "conceptforge_runs", "decision_records"],
-    "filters": ["failed", "halted", "recent", "all", "blocked", "active"]
+CELERY_TASK_ROUTES = {
+    'intelligence.*': {'queue': 'long_running'},
+    ...
 }
 ```
 
-**Files Modified:**
-- `core/agents/research_agent.py` - Added `query_internal_data` tool and `_query_internal_data` method
+### 3. Added Initiative Circuit Breaker (PR #597, #598)
 
-### 3. Initiative Stage Backfill Fix (PR #587)
+New service to prevent initiative creation when system is overloaded:
 
-Fixed initiatives showing 12% completion but having Stage 3 without Stages 1 & 2 completed.
+**File:** `core/services/initiative_circuit_breaker.py`
 
-**Root Cause:** `handle_stage_task_completion` was advancing stages without ensuring prior stages were APPROVED.
+**Features:**
+- Auto-pauses when pending initiatives exceed threshold (default: 100)
+- Manual pause/resume via API or environment variable
+- Checks in all 3 creation points
 
-**Solution:** Added backfill logic to ensure all prior stages are marked APPROVED when a later stage completes:
-```python
-# Session 884: Backfill prior stages as APPROVED
-for prior_stage_num in range(1, stage_num):
-    prior_stage, created = InitiativeStage.objects.get_or_create(...)
-    if not created and prior_stage.status != 'APPROVED':
-        prior_stage.status = 'APPROVED'
-        prior_stage.save()
+**API:** `GET/POST /api/initiatives/circuit-breaker/`
+```bash
+# Check status
+curl -X GET ".../api/initiatives/circuit-breaker/" -H "Authorization: Token ..."
+
+# Pause creation
+curl -X POST ".../api/initiatives/circuit-breaker/" \
+  -H "Authorization: Token ..." \
+  -d '{"action": "pause", "reason": "Clearing backlog"}'
+
+# Resume creation
+curl -X POST ".../api/initiatives/circuit-breaker/" \
+  -H "Authorization: Token ..." \
+  -d '{"action": "resume"}'
 ```
 
-**Files Modified:**
-- `core/services/conversation_initiative_pipeline.py` - Added backfill logic
+### 4. Added Initiative Cleanup Endpoint (PR #599)
 
-**Files Created:**
-- `core/management/commands/fix_initiative_stages.py` - Repair command for existing data
+New endpoint to archive or delete stuck initiatives:
 
-### 4. Fix Initiative Stages API Endpoint (PR #588)
+**API:** `GET/POST /api/initiatives/cleanup/`
+```bash
+# Preview what would be archived
+curl -X GET ".../api/initiatives/cleanup/" -H "Authorization: Token ..."
 
-Created API endpoint to fix initiative stages remotely (Railway `run` can't connect to Redis).
+# Archive all stuck initiatives
+curl -X POST ".../api/initiatives/cleanup/" \
+  -H "Authorization: Token ..." \
+  -d '{"action": "archive", "max_completion": 100}'
+```
 
-**New Endpoint:** `POST /api/initiatives/fix-stages/`
-- Finds initiatives with inconsistent stages (current_stage > 1 but prior stages PENDING)
-- Backfills missing/incomplete stages as APPROVED
-- Supports `dry_run` mode for preview
+### 5. Production Cleanup Executed
 
-**Files Modified:**
-- `core/views_initiative_kickstart.py` - Added `fix_initiative_stages` view
-- `core/urls.py` - Added URL route
+1. **Restarted all Celery workers** on Railway (cleared blocked tasks)
+2. **Kickstarted 15 remaining stuck initiatives**
+3. **Archived 288 initiatives** (clean slate)
 
-### 5. Production Fixes Applied
+**Result:** 0 active initiatives, system ready for fresh start
 
-**Kickstarted Initiatives:**
-- 179 stuck initiatives kickstarted (were at 0% with no tasks dispatched)
-- All now have Stage 1 tasks running
+---
 
-**Fixed Stage Inconsistencies:**
-- 33 initiatives had inconsistent stages
-- 71 stages backfilled as APPROVED
-- Stage 3 initiatives went from 12% to 52% completion
+## Current State
+
+| Metric | Value |
+|--------|-------|
+| Active Initiatives | 0 |
+| Circuit Breaker | Active, can_create=true |
+| Backlog Threshold | 100 |
+| Celery Workers | All restarted, processing |
 
 ---
 
 ## TOP PRIORITY for Session 885
 
-### 1. Monitor Initiative Progress
-The 179 kickstarted initiatives should be progressing through stages:
+### 1. Test Initiative Pipeline Fresh Start
+Create a new initiative manually and verify it progresses through stages:
 ```bash
-# Check initiative status
-curl -H "Authorization: Token YOUR_TOKEN" \
-  https://donkey-betz-platform-production.up.railway.app/api/initiatives/?status=ACTIVE
+# Via the Home page or PA conversation
+# Or trigger via API
 ```
 
-### 2. Verify Home Page in Production
-- Login redirects to `/` (Home page)
-- Greeting shows correct user name and time of day
-- "While away" stats populate correctly
-- Active projects display with progress bars
+### 2. Monitor Dream → Initiative Flow
+The thinking cycle will start creating new initiatives. Verify:
+- Circuit breaker allows creation (pending < 100)
+- Tasks dispatch to workers
+- Stages progress from DRAFT → APPROVED
 
-### 3. Interview System Verification (Carried from 883)
-The interview system was wired in Session 882 but needs end-to-end testing:
-1. Chat with PA as user with low profile completeness
-2. Verify interview prompt appears
-3. Complete interview and verify data saves to EnhancedUserProfile
+### 3. Verify Home Page Still Works
+Session 884 Part 1 created the Home page. Verify:
+- Greeting shows correctly
+- "While away" stats update
+- Active projects section (now empty, will populate as initiatives are created)
 
-### 4. Optional Enhancements
-- Boot animation (typewriter effect on greeting)
-- Handle `/assistant?message=...` query param to prefill input
-- WebSocket for real-time "while away" updates
+### 4. Consider Tuning
+If initiatives pile up again:
+```bash
+# Lower threshold
+export INITIATIVE_BACKLOG_THRESHOLD=50
+
+# Or pause creation
+curl -X POST ".../api/initiatives/circuit-breaker/" \
+  -d '{"action": "pause"}'
+```
 
 ---
 
@@ -128,23 +130,19 @@ The interview system was wired in Session 882 but needs end-to-end testing:
 # Start platform
 make start && make celery
 
-# Test home boot API
-curl -H "Authorization: Token YOUR_TOKEN" http://localhost:8000/api/home/boot/
+# Check circuit breaker status (Production)
+curl -H "Authorization: Token YOUR_TOKEN" \
+  https://donkey-betz-platform-production.up.railway.app/api/initiatives/circuit-breaker/
 
-# Kickstart stuck initiatives (Production - inside Railway)
-curl -X POST https://your-app.railway.app/api/initiatives/kickstart/ \
-     -H "Authorization: Token YOUR_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{"dry_run": true}'
+# Check active initiatives (Production)
+curl -H "Authorization: Token YOUR_TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/initiatives/?status=ACTIVE"
 
-# Fix initiative stages (Production - inside Railway)
-curl -X POST https://your-app.railway.app/api/initiatives/fix-stages/ \
-     -H "Authorization: Token YOUR_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{"dry_run": true}'
-
-# Check profile completeness
-python manage.py ensure_enhanced_profiles --dry-run
+# Archive stuck initiatives (if needed)
+curl -X POST "https://donkey-betz-platform-production.up.railway.app/api/initiatives/cleanup/" \
+  -H "Authorization: Token YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "archive", "max_completion": 12}'
 ```
 
 ---
@@ -153,6 +151,10 @@ python manage.py ensure_enhanced_profiles --dry-run
 
 | PR | Description |
 |----|-------------|
+| #599 | Initiative cleanup endpoint (archive/delete) |
+| #598 | Fix circuit breaker to use SystemConfiguration |
+| #597 | Initiative circuit breaker (pause/resume creation) |
+| #596 | Route intelligence tasks to long_running queue |
 | #588 | `fix_initiative_stages` API endpoint |
 | #587 | Initiative stage backfill fix |
 | #586 | ResearchAgent `query_internal_data` tool |
@@ -164,7 +166,7 @@ python manage.py ensure_enhanced_profiles --dry-run
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **884** | AI OS Boot Experience + Initiative Pipeline Fixes | `SESSION_884_HOME_PAGE_BOOT.md` |
+| **884** | Initiative Pipeline Fix + Circuit Breaker | `SESSION_884_INITIATIVE_PIPELINE_FIX.md` |
 | **883** | Internal Data Registry Fix + Production Cleanup | `SESSION_883_COMPLETE.md` |
 | **882** | Interview System Wiring | `SESSION_882_INTERVIEW_WIRING.md` |
 | **881** | ResearchAgent Citation Fix | `SESSION_881_RESEARCHAGENT_FIX.md` |
@@ -176,19 +178,20 @@ python manage.py ensure_enhanced_profiles --dry-run
 ```
 Dream → Initiative → 5 Stages → Deliverable
 
+Circuit Breaker:
+  - Checks pending count before any creation
+  - Auto-pauses if pending >= threshold (100)
+  - Manual pause/resume via API
+
 Stage Flow:
   PENDING → DRAFT (task dispatched) → IN_REVIEW → APPROVED
 
-Stage Completion Calculation:
-  - Each stage = 20% of total
-  - APPROVED stages count toward approved_percentage
-  - Stages with work (DRAFT+) count toward completion_percentage
-
-Backfill Rule (Session 884):
-  - When Stage N completes, ensure Stages 1..N-1 are APPROVED
-  - Prevents "Stage 3 at 12%" bug
+Celery Queues:
+  - default: Standard tasks (4 concurrency)
+  - long_running: Intelligence tasks (2 concurrency)
+  - broadcast: Notifications (2 concurrency)
 ```
 
 ---
 
-**179 initiatives are now actively progressing through the pipeline!**
+**Clean slate achieved. Initiative pipeline ready for fresh start!**
