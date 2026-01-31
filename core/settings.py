@@ -1051,6 +1051,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.broadcast_dream_journal',
         'schedule': 180.0,  # Every 3 minutes
     },
+    # Session 885: Auto-kickstart stuck initiatives
+    'auto-kickstart-initiatives': {
+        'task': 'core.tasks.auto_kickstart_stuck_initiatives',
+        'schedule': 600.0,  # Every 10 minutes
+    },
     # Session 360/361: Multi-Agent Panel Conversations
     'multi-agent-panel-cycle': {
         'task': 'core.tasks.run_multi_agent_conversation',
