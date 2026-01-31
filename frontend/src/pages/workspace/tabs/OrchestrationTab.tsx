@@ -120,37 +120,49 @@ function MonitorSubTab() {
     setVisibleCount(10)
   }
 
-  // Session 840: Try orchestration API first, fallback to platform stats
-  // Session 884: Enhanced to fetch Celery stats when executions are empty
+  // Session 889: Fetch real agent execution data from monitoring endpoints
+  // Shows actual agent activity instead of Celery worker counts
   const { data: executionsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['orchestration-executions-monitor'],
     queryFn: async () => {
       try {
-        const res = await orchestrationApi.listExecutions({ limit: 20 })
-        const executions = res.data?.executions || []
+        // Fetch real agent execution stats from monitoring dashboard
+        const [dashboardRes, executionsRes] = await Promise.all([
+          fetch('/api/v1/agents/monitoring/dashboard/'),
+          fetch('/api/v1/agents/unified-executions/?limit=20')
+        ])
 
-        // Session 884: If executions empty, get stats from Celery
-        if (executions.length === 0) {
-          const celeryRes = await fetch('/api/celery/status/')
-          if (celeryRes.ok) {
-            const celeryData = await celeryRes.json()
-            const workers = celeryData.workers || []
-            const activeWorkers = workers.filter((w: any) => w.status === 'online').length
+        let stats = { running: 0, completed: 0, failed: 0 }
+        let executions: any[] = []
 
-            // Session 884: Return Celery worker stats as the activity indicator
-            return {
-              executions: [],
-              count: 0,
-              stats: {
-                running: activeWorkers,
-                completed: 0,
-                failed: 0,
-              }
-            }
+        if (dashboardRes.ok) {
+          const dashboardData = await dashboardRes.json()
+          const summary = dashboardData.data?.summary || {}
+          stats = {
+            running: summary.active_agents || 0,
+            completed: summary.completed || 0,
+            failed: summary.failed || 0,
           }
         }
 
-        return res.data
+        if (executionsRes.ok) {
+          const executionsData = await executionsRes.json()
+          const rawExecutions = executionsData.data?.executions || []
+          // Map to expected format
+          executions = rawExecutions.map((e: any) => ({
+            id: e.id,
+            workflow_name: e.agent_name,
+            name: e.task?.substring(0, 100) || 'Agent execution',
+            status: e.status || 'completed',
+            started_at: e.started_at || e.created_at,
+            completed_at: e.completed_at,
+            current_step: 1,
+            total_steps: 1,
+            agent_name: e.agent_name,
+          }))
+        }
+
+        return { executions, count: executions.length, stats }
       } catch (e) {
         // Fallback: return minimal stats
         return {
@@ -190,17 +202,19 @@ function MonitorSubTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
+      {/* Session 889: Show agent activity stats */}
       <InlineHeaderRow
         title="Live Agent Monitor"
-        subtitle={runningCount > 0 ? `${runningCount} running` : 'No active'}
+        subtitle={runningCount > 0 ? `${runningCount} active agents` : 'No active agents'}
         onRefresh={refetch}
         isFetching={isFetching}
       />
 
       {/* Quick Stats - Session 857: Inline expandable sections */}
+      {/* Session 889: Updated labels to reflect agent activity */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard
-          label="Running"
+          label="Active Agents"
           value={runningCount}
           icon={Play}
           color="text-blue-400"
@@ -208,7 +222,7 @@ function MonitorSubTab() {
           isExpanded={expandedSection === 'running'}
         />
         <StatCard
-          label="Completed"
+          label="Completed (24h)"
           value={completedCount}
           icon={CheckCircle}
           color="text-green-400"
@@ -216,7 +230,7 @@ function MonitorSubTab() {
           isExpanded={expandedSection === 'completed'}
         />
         <StatCard
-          label="Failed"
+          label="Failed (24h)"
           value={failedCount}
           icon={XCircle}
           color="text-red-400"
