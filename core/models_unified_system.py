@@ -9038,7 +9038,7 @@ class AgentDream(models.Model):
         return qs.select_related('agent').order_by('-dreamed_at')[:limit]
 
     # Session 862: Content Flow Unification - Dream → Initiative Bridge
-    def promote_to_initiative(self, approved_by='system'):
+    def promote_to_initiative(self, approved_by='system', bypass_circuit_breaker=False):
         """
         Session 862: Create an Initiative from this Dream.
 
@@ -9047,15 +9047,24 @@ class AgentDream(models.Model):
 
         Args:
             approved_by: Who approved this dream (user or 'system')
+            bypass_circuit_breaker: Skip backlog check (for manual/admin use)
 
         Returns:
             Initiative: The created initiative, or existing one if already promoted
+
+        Raises:
+            ValueError: If circuit breaker blocks creation due to backlog
         """
         from core.models_document_registry import Initiative, InitiativeStage
 
         # Already promoted - return existing Initiative
         if self.initiative:
             return self.initiative
+
+        # Session 884: Circuit breaker check
+        from core.services.initiative_circuit_breaker import can_create_initiative
+        if not can_create_initiative(bypass_check=bypass_circuit_breaker):
+            raise ValueError("Initiative creation paused by circuit breaker - backlog too high")
 
         # Create the Initiative from Dream
         initiative = Initiative.objects.create(

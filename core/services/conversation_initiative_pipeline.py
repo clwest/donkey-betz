@@ -223,7 +223,8 @@ class ConversationInitiativePipeline:
         decision_summary: Optional[Dict[str, Any]],
         participants: List[str],
         topic: str,
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
+        bypass_circuit_breaker: bool = False
     ) -> PipelineResult:
         """
         Process a conversation into a full Initiative pipeline.
@@ -235,11 +236,23 @@ class ConversationInitiativePipeline:
             participants: Participating agents
             topic: Conversation topic
             user_id: Optional user ID
+            bypass_circuit_breaker: Skip backlog check (for manual/admin use)
 
         Returns:
             PipelineResult with Initiative, Deliverable, and task info
         """
         result = PipelineResult(conversation_id=conversation_id)
+
+        # Session 884: Circuit breaker check - pause creation when backlog is too high
+        from core.services.initiative_circuit_breaker import can_create_initiative, get_backlog_status
+        if not can_create_initiative(bypass_check=bypass_circuit_breaker):
+            status = get_backlog_status()
+            result.errors.append(
+                f"Initiative creation paused: {status['pending_count']} pending "
+                f"(threshold: {status['threshold']}). Set INITIATIVE_CREATION_PAUSED=false to resume."
+            )
+            logger.warning(f"[pipeline] Circuit breaker blocked initiative creation for: {topic[:50]}")
+            return result
 
         # Extract best content
         extracted = self.extract_best_content(messages)
