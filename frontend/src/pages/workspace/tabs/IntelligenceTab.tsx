@@ -107,6 +107,7 @@ function ReasoningSubTab() {
   })
 
   // Fetch thoughts for expanded view
+  // Session 887: Map API fields to frontend interface
   const { data: thoughtsData, isLoading: thoughtsLoading, isError: thoughtsError } = useQuery({
     queryKey: ['reasoning-thoughts-list', visibleCount],
     queryFn: async () => {
@@ -114,7 +115,17 @@ function ReasoningSubTab() {
       if (!res.ok) {
         throw new Error('Failed to fetch thoughts')
       }
-      return res.json()
+      const data = await res.json()
+      // Map API fields to frontend interface
+      const mappedThoughts = (data.thoughts || data.results || []).map((t: any) => ({
+        ...t,
+        content: t.content || t.context_summary || t.reflection || '',
+        thought_type: t.thought_type || t.cycle_type || 'scheduled',
+        context: t.context || t.reflection || '',
+        agent_name: t.agent_name || 'ThinkingAgent',
+        created_at: t.created_at || t.started_at || new Date().toISOString(),
+      }))
+      return { ...data, thoughts: mappedThoughts, results: mappedThoughts }
     },
   })
 
