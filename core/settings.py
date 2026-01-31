@@ -976,6 +976,14 @@ CELERY_TASK_ROUTES = {
     'core.tasks.generate_image_task': {'queue': 'content'},
     'core.tasks.generate_video_task': {'queue': 'content'},
     'content.tasks.poll_pending_trainings': {'queue': 'content'},
+    # Session 885: Workspace-writing tasks (Operations tab)
+    'core.tasks.agent_daily_summary': {'queue': 'content'},
+    'core.tasks.agent_workspace_status_report': {'queue': 'content'},
+    'core.tasks.agent_research_to_workspace': {'queue': 'content'},
+    'core.tasks.agent_content_to_workspace': {'queue': 'content'},
+    'core.tasks.universal_agent_workspace_output': {'queue': 'content'},
+    'core.tasks.agent_category_rotation': {'queue': 'content'},
+    'core.tasks.full_agent_rotation': {'queue': 'content'},
     'autonomous.blockchain_security_monitor': {'queue': 'long_running'},
     'autonomous.stock_market_intelligence': {'queue': 'long_running'},
 
@@ -1383,6 +1391,32 @@ CELERY_BEAT_SCHEDULE = {
     'monitor-celery-health': {
         'task': 'core.tasks.monitor_celery_health',
         'schedule': 1800.0,  # Every 30 minutes - check spider/task health
+    },
+    # =========================================================================
+    # Session 885: Workspace Operations (SKIN Layer) - Creates Operations tab entries
+    # These tasks write files to workspaces, creating WorkspaceOperation records
+    # =========================================================================
+    'agent-daily-summary': {
+        'task': 'core.tasks.agent_daily_summary',
+        'schedule': crontab(hour=0, minute=30),  # Daily at 12:30 AM
+    },
+    'agent-workspace-status-report': {
+        'task': 'core.tasks.agent_workspace_status_report',
+        'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours at :00
+    },
+    'agent-research-to-workspace': {
+        'task': 'core.tasks.agent_research_to_workspace',
+        'schedule': crontab(minute=45, hour='*/4'),  # Every 4 hours at :45
+    },
+    'agent-content-to-workspace': {
+        'task': 'core.tasks.agent_content_to_workspace',
+        'schedule': crontab(minute=15, hour='*/6'),  # Every 6 hours at :15
+    },
+    # Session 885: Financial agent rotation for stock reviews in Operations tab
+    'financial-agent-category-rotation': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'args': ['financial'],
     },
 }
 
