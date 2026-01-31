@@ -69,13 +69,25 @@ class OpenAIProvider(LLMProvider):
 
         try:
             # Use Responses API for GPT-5 models
-            response = await AsyncLLMAdapter().chat(
-                messages,
-                model=getattr(self, 'model_name', None) or getattr(self, 'model', None) or 'qwen2.5:14b-instruct',
-                tools=getattr(self, 'tools_schema', None),
-                temperature=getattr(self, 'temperature', 0.2),
-                max_tokens=getattr(self, 'max_tokens', 800),
-            )
+            # Note: GPT-5 uses max_completion_tokens, not max_tokens
+            # GPT-5 reasoning models don't support temperature parameter
+            model = getattr(self, 'model_name', None) or getattr(self, 'model', None) or 'qwen2.5:14b-instruct'
+            is_gpt5 = 'gpt-5' in model.lower() if model else False
+
+            kwargs = {
+                'model': model,
+                'tools': getattr(self, 'tools_schema', None),
+            }
+
+            # GPT-5 uses max_completion_tokens and doesn't support temperature
+            # GPT-5 reasoning models need higher token limits for thinking
+            if is_gpt5:
+                kwargs['max_completion_tokens'] = getattr(self, 'max_tokens', 6000)  # Higher for reasoning
+            else:
+                kwargs['max_tokens'] = getattr(self, 'max_tokens', 800)
+                kwargs['temperature'] = getattr(self, 'temperature', 0.2)
+
+            response = await AsyncLLMAdapter().chat(messages, **kwargs)
             return {
                 'content': response.output_text,
                 'response_id': response.id,
