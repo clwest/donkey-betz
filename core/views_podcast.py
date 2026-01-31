@@ -164,7 +164,6 @@ def podcast_list(request):
         }, status=500)
 
 
-@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def podcast_create(request):
@@ -178,7 +177,29 @@ def podcast_create(request):
         - format_type: debate, interview, panel, solo (default: debate)
         - participant_count: Number of AI participants 2-5 (default: 3)
         - generate_audio: Whether to generate TTS audio (default: false)
+
+    Session 887: Removed @login_required to support Token auth.
     """
+    # Session 887: Manual auth check to support both session and Token auth
+    from rest_framework.authtoken.models import Token
+
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'success': False,
+            'error': 'Authentication required'
+        }, status=401)
+
     from core.models_podcast_studio import PodcastEpisode
     from core.tasks import generate_podcast_episode
 
