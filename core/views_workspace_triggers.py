@@ -546,6 +546,71 @@ class WorkspaceTriggerConfigViewSet(viewsets.ModelViewSet):
 # =============================================================================
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_operations_task(request):
+    """
+    Session 886: Manually trigger Operations Tab tasks.
+
+    POST /api/workspace-triggers/trigger-operations/
+
+    Body:
+        task: One of 'daily_summary', 'status_report', 'research', 'content', 'all'
+
+    This is useful for testing and for on-demand generation of Operations Tab entries
+    when Celery Beat is not dispatching scheduled tasks.
+    """
+    from core.tasks import (
+        agent_daily_summary,
+        agent_workspace_status_report,
+        agent_research_to_workspace,
+        agent_content_to_workspace,
+    )
+
+    task_name = request.data.get('task', 'status_report')
+
+    task_map = {
+        'daily_summary': agent_daily_summary,
+        'status_report': agent_workspace_status_report,
+        'research': agent_research_to_workspace,
+        'content': agent_content_to_workspace,
+    }
+
+    if task_name == 'all':
+        results = {}
+        for name, task_func in task_map.items():
+            try:
+                result = task_func.delay()
+                results[name] = {'task_id': str(result.id), 'status': 'queued'}
+            except Exception as e:
+                results[name] = {'error': str(e)}
+        return Response({
+            'success': True,
+            'message': 'All operations tasks triggered',
+            'results': results,
+        })
+
+    if task_name not in task_map:
+        return Response({
+            'success': False,
+            'error': f"Unknown task: {task_name}. Valid options: {list(task_map.keys())} or 'all'",
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        task_func = task_map[task_name]
+        result = task_func.delay()
+        return Response({
+            'success': True,
+            'message': f'Task {task_name} triggered',
+            'task_id': str(result.id),
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e),
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def autopilot_status(request):
