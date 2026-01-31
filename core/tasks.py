@@ -26118,6 +26118,52 @@ def promote_to_shared_knowledge(min_confidence: float = 0.7):
 # ==================== SESSION 776: SKIN LAYER AGENT INTEGRATION ====================
 
 
+def _get_workspace_for_skin_layer():
+    """
+    Session 885: Helper to get an active workspace for SKIN layer tasks.
+
+    Looks for workspaces in this order:
+    1. Codebase workspace (type='codebase')
+    2. Any active workspace with allow_file_write=True
+    3. System user's workspace
+
+    Returns:
+        Tuple of (user, workspace) or (None, None) if not found
+    """
+    from django.contrib.auth import get_user_model
+    from core.models_skin_layer import ProjectWorkspace
+
+    User = get_user_model()
+
+    # 1. Try codebase workspace first
+    workspace = ProjectWorkspace.objects.filter(
+        workspace_type='codebase',
+        is_active=True,
+        allow_file_write=True
+    ).first()
+
+    if workspace:
+        return workspace.user, workspace
+
+    # 2. Try any active workspace that allows writes
+    workspace = ProjectWorkspace.objects.filter(
+        is_active=True,
+        allow_file_write=True
+    ).first()
+
+    if workspace:
+        return workspace.user, workspace
+
+    # 3. Try superuser's workspace as last resort
+    user = User.objects.filter(is_superuser=True).first()
+    if user:
+        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        if workspace:
+            return user, workspace
+
+    return None, None
+
+
 @shared_task(name='core.tasks.agent_workspace_status_report')
 def agent_workspace_status_report():
     """
@@ -26134,24 +26180,16 @@ def agent_workspace_status_report():
     Returns:
         Operation result
     """
-    from django.contrib.auth import get_user_model
-    from core.models_skin_layer import ProjectWorkspace
     from core.services.workspace_manager import WorkspaceManager
     from core.agents.system_intelligence_agent import SystemIntelligenceAgent
 
     logger.info("🖥️ [SKIN LAYER] Starting workspace status report generation...")
 
-    User = get_user_model()
-
     try:
-        # Get admin user and active workspace
-        user = User.objects.filter(is_superuser=True).first()
-        if not user:
-            return {'success': False, 'error': 'No admin user found'}
-
-        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        # Session 885: Use helper to find workspace (handles codebase workspace)
+        user, workspace = _get_workspace_for_skin_layer()
         if not workspace:
-            return {'success': False, 'error': 'No active workspace found'}
+            return {'success': False, 'error': 'No active workspace found (run setup_codebase_workspace)'}
 
         # Generate status report using SystemIntelligenceAgent
         agent = SystemIntelligenceAgent()
@@ -26234,16 +26272,11 @@ def agent_research_to_workspace(topic: str = None):
 
     logger.info(f"🔬 [SKIN LAYER] Starting research task (topic: {topic or 'trending'})...")
 
-    User = get_user_model()
-
     try:
-        user = User.objects.filter(is_superuser=True).first()
-        if not user:
-            return {'success': False, 'error': 'No admin user found'}
-
-        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        # Session 885: Use helper to find workspace (handles codebase workspace)
+        user, workspace = _get_workspace_for_skin_layer()
         if not workspace:
-            return {'success': False, 'error': 'No active workspace found'}
+            return {'success': False, 'error': 'No active workspace found (run setup_codebase_workspace)'}
 
         # Determine topic
         if not topic:
@@ -26327,16 +26360,11 @@ def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
 
     logger.info(f"✍️ [SKIN LAYER] Starting content generation ({content_type})...")
 
-    User = get_user_model()
-
     try:
-        user = User.objects.filter(is_superuser=True).first()
-        if not user:
-            return {'success': False, 'error': 'No admin user found'}
-
-        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        # Session 885: Use helper to find workspace (handles codebase workspace)
+        user, workspace = _get_workspace_for_skin_layer()
         if not workspace:
-            return {'success': False, 'error': 'No active workspace found'}
+            return {'success': False, 'error': 'No active workspace found (run setup_codebase_workspace)'}
 
         # Determine topic
         if not topic:
@@ -26568,16 +26596,11 @@ def agent_daily_summary():
 
     logger.info("📊 [SKIN LAYER] Generating daily summary...")
 
-    User = get_user_model()
-
     try:
-        user = User.objects.filter(is_superuser=True).first()
-        if not user:
-            return {'success': False, 'error': 'No admin user found'}
-
-        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        # Session 885: Use helper to find workspace (handles codebase workspace)
+        user, workspace = _get_workspace_for_skin_layer()
         if not workspace:
-            return {'success': False, 'error': 'No active workspace found'}
+            return {'success': False, 'error': 'No active workspace found (run setup_codebase_workspace)'}
 
         # Gather daily statistics
         yesterday = timezone.now() - timedelta(days=1)
@@ -27730,16 +27753,11 @@ def universal_agent_workspace_output(
             'default_topic': 'general task',
         }
 
-    User = get_user_model()
-
     try:
-        user = User.objects.filter(is_superuser=True).first()
-        if not user:
-            return {'success': False, 'error': 'No admin user found', 'run_mode': run_mode}
-
-        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
+        # Session 885: Use helper to find workspace (handles codebase workspace)
+        user, workspace = _get_workspace_for_skin_layer()
         if not workspace:
-            return {'success': False, 'error': 'No active workspace found', 'run_mode': run_mode}
+            return {'success': False, 'error': 'No active workspace found (run setup_codebase_workspace)', 'run_mode': run_mode}
 
         # Determine topic - use provided or fall back to default
         actual_topic = topic or config['default_topic']
