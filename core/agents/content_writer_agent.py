@@ -15,6 +15,12 @@ Session 523: INTEGRATED WITH INTELLIGENT PROMPTING SYSTEM
 - Uses platform context (capabilities, agents, etc.)
 - Dynamic year/date references
 
+Session 886: FEEDBACK LOOP INTEGRATION
+- Injects BlogPerformanceContext before each generation
+- Shows recent quality scores, strengths, weaknesses
+- Includes active learning rules from PipelineLearningInsight
+- Agent learns from past content performance
+
 Content Types Supported:
     - blog_post: Title, intro, sections with headers, conclusion, SEO metadata
     - podcast_script: Intro hook, segments with talking points, transitions, outro
@@ -67,6 +73,14 @@ try:
 except ImportError:
     MEMORY_AVAILABLE = False
     ConversationMemory = None
+
+# Session 886: Import Blog Performance Context for feedback loop
+try:
+    from core.services.blog_performance_context import get_blog_performance_context
+    PERFORMANCE_CONTEXT_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_CONTEXT_AVAILABLE = False
+    get_blog_performance_context = None
 
 logger = logging.getLogger(__name__)
 
@@ -372,6 +386,20 @@ Current trending topics from spider network:
 {trend_text}
 
 Consider these trends when crafting the content to maximize relevance and engagement.""")
+
+        # Session 886: Add performance context for feedback loop
+        if PERFORMANCE_CONTEXT_AVAILABLE and get_blog_performance_context:
+            try:
+                performance_context = get_blog_performance_context(
+                    limit=10,
+                    include_learning_rules=True,
+                    include_engagement=True
+                )
+                if performance_context:
+                    prompt_parts.append(f"\n\n{performance_context}")
+                    logger.info(f"📊 Session 886: Injected performance context ({len(performance_context)} chars)")
+            except Exception as e:
+                logger.warning(f"Could not inject performance context: {e}")
 
         # Add content-type specific enhancement
         prompt_parts.append(f"""
