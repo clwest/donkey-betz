@@ -1,126 +1,83 @@
-# Session 885 - Start Here
+# Session 886 - Start Here
 
-**Previous Session:** 884 (Initiative Pipeline Fix + Circuit Breaker + Cleanup)
-**Date:** January 30, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE PIPELINE FIXED** | **Circuit Breaker Active** | **Clean Slate: 0 Active Initiatives**
-
----
-
-## What Was Accomplished in Session 884 (Part 2)
-
-### 1. Diagnosed Initiative Pipeline Blockage
-
-**Problem:** 288 initiatives accumulated, none making progress. Workers completely blocked.
-
-**Root Cause:**
-- 4 `intelligence.tasks.scan_spider_opportunities` tasks (~30 min each) blocked all 4 concurrency slots on `celery-default`
-- No other tasks could process, including `execute_initiative_stage_task`
-- Dreams/thinking cycles kept creating new initiatives into the blocked queue
-
-### 2. Fixed Celery Task Routing (PR #596)
-
-Routed intelligence tasks to `long_running` queue to prevent blocking default queue:
-```python
-CELERY_TASK_ROUTES = {
-    'intelligence.*': {'queue': 'long_running'},
-    ...
-}
-```
-
-### 3. Added Initiative Circuit Breaker (PR #597, #598)
-
-New service to prevent initiative creation when system is overloaded:
-
-**File:** `core/services/initiative_circuit_breaker.py`
-
-**Features:**
-- Auto-pauses when pending initiatives exceed threshold (default: 100)
-- Manual pause/resume via API or environment variable
-- Checks in all 3 creation points
-
-**API:** `GET/POST /api/initiatives/circuit-breaker/`
-```bash
-# Check status
-curl -X GET ".../api/initiatives/circuit-breaker/" -H "Authorization: Token ..."
-
-# Pause creation
-curl -X POST ".../api/initiatives/circuit-breaker/" \
-  -H "Authorization: Token ..." \
-  -d '{"action": "pause", "reason": "Clearing backlog"}'
-
-# Resume creation
-curl -X POST ".../api/initiatives/circuit-breaker/" \
-  -H "Authorization: Token ..." \
-  -d '{"action": "resume"}'
-```
-
-### 4. Added Initiative Cleanup Endpoint (PR #599)
-
-New endpoint to archive or delete stuck initiatives:
-
-**API:** `GET/POST /api/initiatives/cleanup/`
-```bash
-# Preview what would be archived
-curl -X GET ".../api/initiatives/cleanup/" -H "Authorization: Token ..."
-
-# Archive all stuck initiatives
-curl -X POST ".../api/initiatives/cleanup/" \
-  -H "Authorization: Token ..." \
-  -d '{"action": "archive", "max_completion": 100}'
-```
-
-### 5. Production Cleanup Executed
-
-1. **Restarted all Celery workers** on Railway (cleared blocked tasks)
-2. **Kickstarted 15 remaining stuck initiatives**
-3. **Archived 288 initiatives** (clean slate)
-
-**Result:** 0 active initiatives, system ready for fresh start
+**Previous Session:** 885 (Celery Content Pipeline + Operations Tab Fix)
+**Date:** January 31, 2026
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CONTENT PIPELINE FIXED** | **Blogs Working** | **Operations Tab Scheduled**
 
 ---
 
-## Current State
+## What Was Accomplished in Session 885
 
-| Metric | Value |
-|--------|-------|
-| Active Initiatives | 0 |
-| Circuit Breaker | Active, can_create=true |
-| Backlog Threshold | 100 |
-| Celery Workers | All restarted, processing |
+### 1. Fixed Content Generation Pipeline
+**Problem:** No new blogs/content generated in 2+ days.
+
+**Root Cause:** `celery-long-running` worker (2 slots) fully occupied by conversation tasks, blocking content tasks.
+
+**Solution (PR #607):** Created dedicated `celery-content` worker with 4 concurrency.
+
+**Result:** Blogs are now being generated!
+
+### 2. Fixed Task Routing (PRs #605, #606, #607)
+- LLM tasks → `long_running` queue
+- Content tasks → `content` queue (new dedicated worker)
+- Renamed Procfile workers to match Railway service names
+
+### 3. Fixed Operations Tab (PR #608)
+**Problem:** Operations tab hadn't updated since January 29th.
+
+**Root Causes:**
+1. Workspace-writing tasks were NOT scheduled in CELERY_BEAT_SCHEDULE
+2. Tasks looked for superuser's workspace, but workspace belongs to 'system' user
+
+**Solution:**
+- Added `_get_workspace_for_skin_layer()` helper
+- Scheduled all workspace-writing tasks
+- Added 8 financial/sports agents to AGENT_WORKSPACE_REGISTRY
+
+### 4. Added Initiative Auto-Recovery (PR #604)
+`auto_kickstart_stuck_initiatives` task runs every 10 minutes to unstick initiatives.
 
 ---
 
-## TOP PRIORITY for Session 885
+## Current Celery Architecture
 
-### 1. Test Initiative Pipeline Fresh Start
-Create a new initiative manually and verify it progresses through stages:
-```bash
-# Via the Home page or PA conversation
-# Or trigger via API
+```
+celery-worker: -Q default,agents,sports,ml (4 concurrency)
+celery-content: -Q content (4 concurrency)        # NEW - dedicated content worker
+celery-long-running: -Q long_running (2 concurrency)
+celery-broadcast: -Q broadcast (2 concurrency)
+celery-beat: scheduler
 ```
 
-### 2. Monitor Dream → Initiative Flow
-The thinking cycle will start creating new initiatives. Verify:
-- Circuit breaker allows creation (pending < 100)
-- Tasks dispatch to workers
-- Stages progress from DRAFT → APPROVED
+---
 
-### 3. Verify Home Page Still Works
-Session 884 Part 1 created the Home page. Verify:
-- Greeting shows correctly
-- "While away" stats update
-- Active projects section (now empty, will populate as initiatives are created)
+## TOP PRIORITY for Session 886
 
-### 4. Consider Tuning
-If initiatives pile up again:
+### 1. Verify Operations Tab
+The workspace-writing tasks are now scheduled. Verify new operations appear:
 ```bash
-# Lower threshold
-export INITIATIVE_BACKLOG_THRESHOLD=50
-
-# Or pause creation
-curl -X POST ".../api/initiatives/circuit-breaker/" \
-  -d '{"action": "pause"}'
+curl -H "Authorization: Token $TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/workspace-operations/?limit=5"
 ```
+
+Expected entries:
+- Research reports (every 4 hours at :45)
+- Content generation (every 6 hours at :15)
+- Status reports (every 8 hours at :00)
+- Financial agent rotation (every 4 hours at :00)
+- Daily summaries (daily at 12:30 AM)
+
+### 2. Check Celery Logs
+If Operations still not updating, check `celery-beat` and `celery-content` logs for:
+- `Scheduler: Sending due task agent-research-to-workspace`
+- `🔬 [SKIN LAYER] Starting research task...`
+- Any error messages
+
+### 3. Monitor Content Pipeline
+Blogs are working. Continue monitoring for:
+- Podcasts
+- Images
+- Initiative progress
 
 ---
 
@@ -130,35 +87,33 @@ curl -X POST ".../api/initiatives/circuit-breaker/" \
 # Start platform
 make start && make celery
 
-# Check circuit breaker status (Production)
-curl -H "Authorization: Token YOUR_TOKEN" \
-  https://donkey-betz-platform-production.up.railway.app/api/initiatives/circuit-breaker/
+# Sync celery beat schedules (after deployment)
+python manage.py sync_celery_beat --apply
 
-# Check active initiatives (Production)
-curl -H "Authorization: Token YOUR_TOKEN" \
-  "https://donkey-betz-platform-production.up.railway.app/api/initiatives/?status=ACTIVE"
+# Check workspace operations
+curl -H "Authorization: Token $TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/workspace-operations/?limit=10"
 
-# Archive stuck initiatives (if needed)
-curl -X POST "https://donkey-betz-platform-production.up.railway.app/api/initiatives/cleanup/" \
-  -H "Authorization: Token YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"action": "archive", "max_completion": 12}'
+# Check recent blogs
+curl -H "Authorization: Token $TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/documents/?doc_type=blog&limit=5"
+
+# Check circuit breaker status
+curl -H "Authorization: Token $TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/initiatives/circuit-breaker/"
 ```
 
 ---
 
-## Recent PRs (Session 884)
+## Recent PRs (Session 885)
 
 | PR | Description |
 |----|-------------|
-| #599 | Initiative cleanup endpoint (archive/delete) |
-| #598 | Fix circuit breaker to use SystemConfiguration |
-| #597 | Initiative circuit breaker (pause/resume creation) |
-| #596 | Route intelligence tasks to long_running queue |
-| #588 | `fix_initiative_stages` API endpoint |
-| #587 | Initiative stage backfill fix |
-| #586 | ResearchAgent `query_internal_data` tool |
-| #576 | AI OS Boot Experience - Home Page |
+| #608 | Fix Operations tab - schedule workspace-writing tasks |
+| #607 | Add dedicated celery-content worker for content generation |
+| #606 | Rename celery-default to celery-worker in Procfile |
+| #605 | Route LLM tasks to long_running queue |
+| #604 | Auto-kickstart stuck initiatives every 10 minutes |
 
 ---
 
@@ -166,6 +121,7 @@ curl -X POST "https://donkey-betz-platform-production.up.railway.app/api/initiat
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **885** | Celery Content Pipeline + Operations Tab Fix | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | Initiative Pipeline Fix + Circuit Breaker | `SESSION_884_INITIATIVE_PIPELINE_FIX.md` |
 | **883** | Internal Data Registry Fix + Production Cleanup | `SESSION_883_COMPLETE.md` |
 | **882** | Interview System Wiring | `SESSION_882_INTERVIEW_WIRING.md` |
@@ -173,25 +129,30 @@ curl -X POST "https://donkey-betz-platform-production.up.railway.app/api/initiat
 
 ---
 
-## Initiative Pipeline Architecture
+## System Stats
 
-```
-Dream → Initiative → 5 Stages → Deliverable
-
-Circuit Breaker:
-  - Checks pending count before any creation
-  - Auto-pauses if pending >= threshold (100)
-  - Manual pause/resume via API
-
-Stage Flow:
-  PENDING → DRAFT (task dispatched) → IN_REVIEW → APPROVED
-
-Celery Queues:
-  - default: Standard tasks (4 concurrency)
-  - long_running: Intelligence tasks (2 concurrency)
-  - broadcast: Notifications (2 concurrency)
-```
+| Component | Count |
+|-----------|-------|
+| Agents | 76 |
+| Spiders | 77 |
+| Advisors | 25 |
+| Personas | 139 |
+| Database Models | 378+ |
+| Celery Tasks | 281 (after sync) |
+| Services | 125 |
 
 ---
 
-**Clean slate achieved. Initiative pipeline ready for fresh start!**
+## Workspace Operations Schedule
+
+| Task | Schedule | Creates |
+|------|----------|---------|
+| agent-daily-summary | Daily 12:30 AM | summaries/daily_*.md |
+| agent-workspace-status-report | Every 8 hours at :00 | reports/system_status_*.md |
+| agent-research-to-workspace | Every 4 hours at :45 | research/*.md |
+| agent-content-to-workspace | Every 6 hours at :15 | content/*.md |
+| financial-agent-category-rotation | Every 4 hours at :00 | financial/*.md |
+
+---
+
+**Blogs are working! Verify Operations tab updates at scheduled times.**
