@@ -69,14 +69,14 @@ class OpenAIProvider(LLMProvider):
 
         try:
             # Use Responses API for GPT-5 models
-            content = await AsyncLLMAdapter().chat(
-    messages,
-    model=getattr(self, 'model_name', None) or getattr(self, 'model', None) or 'qwen2.5:14b-instruct',
-    tools=getattr(self, 'tools_schema', None),
-    temperature=getattr(self, 'temperature', 0.2),
-    max_tokens=getattr(self, 'max_tokens', 800),
-)
-return {
+            response = await AsyncLLMAdapter().chat(
+                messages,
+                model=getattr(self, 'model_name', None) or getattr(self, 'model', None) or 'qwen2.5:14b-instruct',
+                tools=getattr(self, 'tools_schema', None),
+                temperature=getattr(self, 'temperature', 0.2),
+                max_tokens=getattr(self, 'max_tokens', 800),
+            )
+            return {
                 'content': response.output_text,
                 'response_id': response.id,
                 'usage': {
