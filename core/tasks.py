@@ -27385,7 +27385,12 @@ def _extract_agent_output_content(result, task_description: str) -> str:
         # No data dict, use message or fallback
         if hasattr(result, 'message') and result.message:
             return result.message
-        return f'Execution completed for: {task_description}'
+        # Session 887: Check for error message if agent failed
+        if hasattr(result, 'error') and result.error:
+            return f'Agent error: {result.error}\n\nTask: {task_description}'
+        # Session 887: Show success status for debugging
+        success_status = getattr(result, 'success', 'unknown')
+        return f'Execution completed for: {task_description}\n\n(Agent returned success={success_status}, no data or message)'
 
     data = result.data
 
@@ -27688,8 +27693,16 @@ def _extract_agent_output_content(result, task_description: str) -> str:
             except Exception:
                 pass
 
-    # Ultimate fallback
-    return f'Execution completed for: {task_description}\n\nAgent returned data with keys: {list(data.keys())}'
+    # Ultimate fallback - Session 887: Include more diagnostic info
+    keys_info = list(data.keys()) if data else []
+    content_preview = ''
+    if 'content' in data and isinstance(data['content'], dict):
+        content_keys = list(data['content'].keys())
+        content_preview = f"\nContent dict has keys: {content_keys}"
+        if 'full_text' in data['content']:
+            ft = data['content']['full_text']
+            content_preview += f"\nfull_text length: {len(ft) if ft else 0}"
+    return f'Execution completed for: {task_description}\n\nAgent data keys: {keys_info}{content_preview}'
 
 
 @shared_task(name='core.tasks.universal_agent_workspace_output')
