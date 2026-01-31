@@ -1,26 +1,36 @@
-# Session 888 - Start Here
+# Session 889 - Start Here
 
-**Previous Session:** 887 (Operations Tab Fix)
+**Previous Session:** 887 (Operations Tab Fix + Content Improvements)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CONTENT FEEDBACK LOOP ACTIVE** | **Operations Tab FIXED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CONTENT FEEDBACK LOOP ACTIVE** | **Operations Tab FIXED** | **Boardroom Token Auth FIXED**
 
 ---
 
 ## What Was Accomplished in Session 887
 
-### Operations Tab Fix
-
+### Part 1: Operations Tab Fix
 **Problem:** Operations Tab hadn't updated since January 29th (2 days gap).
+**Root Cause:** Production workspace had `allow_file_write=None` instead of `True`.
+**Fix:** Updated production workspace via PATCH request.
+**Result:** 4 new operations created immediately.
 
-**Root Cause:** Production workspace had `allow_file_write=None` instead of `True`. The helper function `_get_workspace_for_skin_layer()` couldn't find a matching workspace.
+### Part 2: Content Extraction Improvements
+**Problem:** Reports showing sparse data instead of full content.
+**Fixes:**
+- Added `METADATA_ONLY_KEYS` detection to prefer `result.message` over count-only data
+- Added `results`, `posts`, `items`, `search_results` keys to extraction
+- Added better diagnostics when extraction fails
 
-**Fix:** Updated production workspace via PATCH request to set `allow_file_write=true`.
+### Part 3: Research-Before-Content Generation
+**Problem:** ContentWriterAgent had no research to transform.
+**Fix:** Added pre-step to call ResearchAgent before content generation.
 
-**Result:** 4 new operations created immediately after fix:
-- ResearchAgent
-- ContentWriterAgent
-- DailySummaryTask
-- SystemIntelligenceAgent
+### Part 4: Boardroom Token Auth Fix
+**Problem:** `/api/boardroom/decisions/{id}/reject/` returned 302 with Token auth.
+**Fixes:**
+- Removed `@login_required` decorator
+- Added manual Token auth check
+- Added `@csrf_exempt` decorator
 
 **Handoff:** `SESSION_887_OPERATIONS_TAB_FIX.md`
 
@@ -38,7 +48,7 @@ celery-beat: scheduler
 
 ---
 
-## TOP PRIORITY for Session 888
+## TOP PRIORITY for Session 889
 
 ### 1. Monitor Operations Tab
 Verify that scheduled tasks continue to create entries automatically:
@@ -54,7 +64,7 @@ Expected entries (now working):
 - Daily summaries (daily at 12:30 AM)
 
 ### 2. Monitor Content Quality
-With the feedback loop active (Session 886), monitor if blog quality scores improve:
+With the feedback loop active (Session 886) and research pre-step (Session 887), monitor if blog quality improves:
 ```bash
 curl -H "Authorization: Token $TOKEN" \
   "https://donkey-betz-platform-production.up.railway.app/api/documents/?doc_type=blog&limit=10"
@@ -91,6 +101,10 @@ curl -X POST -H "Authorization: Token $TOKEN" \
 curl -H "Authorization: Token $TOKEN" \
   "https://donkey-betz-platform-production.up.railway.app/api/documents/?doc_type=blog&limit=5"
 
+# Test boardroom reject (now works with Token auth!)
+curl -X POST -H "Authorization: Token $TOKEN" \
+  "https://donkey-betz-platform-production.up.railway.app/api/boardroom/decisions/{decision_id}/reject/"
+
 # Check circuit breaker status
 curl -H "Authorization: Token $TOKEN" \
   "https://donkey-betz-platform-production.up.railway.app/api/initiatives/circuit-breaker/"
@@ -102,12 +116,14 @@ curl -H "Authorization: Token $TOKEN" \
 
 | PR | Description |
 |----|-------------|
-| *Session 886* | Content Feedback Loop - BlogPerformanceContextBuilder |
+| #619 | Add @csrf_exempt to boardroom decision endpoints |
+| #618 | Support Token auth for boardroom decision actions |
+| #617 | Gather research before content generation |
+| #616 | Add better diagnostics to content extraction |
+| #615 | Add web_search/reddit_search keys to extraction |
+| #613 | Prefer message over metadata-only data in extraction |
 | #608 | Fix Operations tab - schedule workspace-writing tasks |
 | #607 | Add dedicated celery-content worker for content generation |
-| #606 | Rename celery-default to celery-worker in Procfile |
-| #605 | Route LLM tasks to long_running queue |
-| #604 | Auto-kickstart stuck initiatives every 10 minutes |
 
 ---
 
@@ -115,7 +131,7 @@ curl -H "Authorization: Token $TOKEN" \
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **887** | Operations Tab Fix - workspace allow_file_write | `SESSION_887_OPERATIONS_TAB_FIX.md` |
+| **887** | Operations Tab Fix + Content Improvements + Boardroom Auth | `SESSION_887_OPERATIONS_TAB_FIX.md` |
 | **886** | Content Feedback Loop - BlogPerformanceContextBuilder Phase 1 | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
 | **885** | Celery Content Pipeline + Operations Tab Fix | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | Initiative Pipeline Fix + Circuit Breaker | `SESSION_884_INITIATIVE_PIPELINE_FIX.md` |
@@ -144,6 +160,7 @@ curl -H "Authorization: Token $TOKEN" \
 |-----------|--------|
 | BlogPerformanceContextBuilder | Active |
 | Context Injection | Enabled in ContentWriterAgent |
+| Research Pre-Step | Enabled (Session 887) |
 | API Endpoints | 4 new endpoints |
 | Human Feedback UI | Phase 2 (not implemented) |
 | Learning Rule Compiler | Phase 3 (not implemented) |
@@ -157,8 +174,18 @@ curl -H "Authorization: Token $TOKEN" \
 | Workspace Config | `allow_file_write=true` (fixed in 887) |
 | Scheduled Tasks | Working via Celery Beat |
 | Manual Trigger | `/api/workspace-triggers/trigger-operations/` |
-| Last Verified | 2026-01-31 14:30 |
+| Last Verified | 2026-01-31 |
 
 ---
 
-**Operations Tab is working. Content Feedback Loop is active. System is healthy.**
+## Boardroom API Status
+
+| Endpoint | Token Auth | Status |
+|----------|------------|--------|
+| GET /api/boardroom/decisions/ | ✅ | Works (public) |
+| POST /api/boardroom/decisions/{id}/promote/ | ✅ | Fixed (#618, #619) |
+| POST /api/boardroom/decisions/{id}/reject/ | ✅ | Fixed (#618, #619) |
+
+---
+
+**Operations Tab working. Content quality improving. Boardroom API fixed. System is healthy.**

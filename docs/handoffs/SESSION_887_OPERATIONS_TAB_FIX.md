@@ -1,7 +1,11 @@
-# Session 887: Operations Tab Fix
+# Session 887: Operations Tab Fix + Content Improvements
 
 **Date:** January 31, 2026
 **Status:** Complete
+
+---
+
+## Part 1: Operations Tab Fix
 
 ## Problem Statement
 
@@ -108,4 +112,79 @@ Operations Tab is now working and will continue to update automatically via Cele
 
 ---
 
-**Operations Tab is now live and will continue to auto-update.**
+## Part 2: Content Extraction Improvements
+
+### Problem
+Reports were showing sparse data instead of full content:
+- System Status Reports showed only JSON counts like `{"items_count": 5, "critical_count": 2}`
+- Research Reports showed empty `web_search/reddit_search` fields
+- ContentWriterAgent blogs showed only "Execution completed for..." stub text
+
+### Fixes Applied
+
+#### Fix 1: Detect Metadata-Only Data Dicts (PR #613)
+Added `METADATA_ONLY_KEYS` detection in `_extract_agent_output_content()`:
+```python
+METADATA_ONLY_KEYS = {'items_count', 'critical_count', 'warning_count', ...}
+# If data only contains counts/metrics, prefer result.message
+```
+
+#### Fix 2: Add Search Result Keys (PR #615)
+Added `results`, `posts`, `items`, `search_results`, etc. to extraction keys.
+
+#### Fix 3: Better Diagnostics (PR #616)
+When extraction fails, now returns meaningful error info instead of stub text.
+
+---
+
+## Part 3: Research-Before-Content Generation (PR #617)
+
+### Problem
+`agent_content_to_workspace()` was calling ContentWriterAgent without any research context, resulting in empty or generic content.
+
+### Fix
+Added a pre-step that calls ResearchAgent first:
+```python
+# Step 1: Gather research on the topic
+research_agent = ResearchAgent()
+research_result = research_agent.execute(task=f"Research the topic: {topic}...")
+
+# Step 2: Pass research to ContentWriterAgent
+content_result = agent.execute(
+    context={'research': research_content, ...}
+)
+```
+
+---
+
+## Part 4: Boardroom Token Auth Fix (PR #618, #619)
+
+### Problem
+`/api/boardroom/decisions/{id}/reject/` and `/promote/` endpoints returned HTTP 302 redirect when using Token auth.
+
+### Root Cause
+- `/api/boardroom/` was in `PUBLIC_PATHS` in auth middleware
+- Middleware skipped auth for public paths
+- `@login_required` decorator then failed (no session auth)
+
+### Fix
+1. Removed `@login_required` decorator
+2. Added manual Token auth check in the view
+3. Added `@csrf_exempt` decorator (Token auth doesn't need CSRF)
+
+---
+
+## PRs Created
+
+| PR | Description |
+|----|-------------|
+| #613 | Prefer message over metadata-only data in extraction |
+| #615 | Add web_search/reddit_search keys to extraction |
+| #616 | Add better diagnostics to content extraction |
+| #617 | Gather research before content generation |
+| #618 | Support Token auth for boardroom decision actions |
+| #619 | Add @csrf_exempt to boardroom decision endpoints |
+
+---
+
+**Operations Tab is now live. Content generation improved. Boardroom API works with Token auth.**
