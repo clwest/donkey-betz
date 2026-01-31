@@ -26343,8 +26343,10 @@ Agent: ResearchAgent
 def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
     """
     Session 776: Have ContentWriterAgent generate content and write to workspace.
+    Session 887: Now gathers research first before generating content.
 
     Generates content (blog post, article, etc.) and writes it to the workspace.
+    First calls ResearchAgent to gather research, then passes to ContentWriterAgent.
 
     Args:
         content_type: Type of content ('blog', 'article', 'tutorial')
@@ -26357,6 +26359,7 @@ def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
     from core.models_skin_layer import ProjectWorkspace
     from core.services.workspace_manager import WorkspaceManager
     from core.agents.content_writer_agent import ContentWriterAgent
+    from core.agents.research_agent import ResearchAgent
 
     logger.info(f"✍️ [SKIN LAYER] Starting content generation ({content_type})...")
 
@@ -26370,12 +26373,59 @@ def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
         if not topic:
             topic = "AI-assisted software development best practices"
 
-        # Generate content
+        # Session 887: Map common content type names to ContentWriterAgent's expected types
+        content_type_map = {
+            'blog': 'blog_post',
+            'article': 'article',
+            'podcast': 'podcast_script',
+            'video': 'video_script',
+            'social': 'social_thread',
+            'newsletter': 'newsletter',
+        }
+        mapped_content_type = content_type_map.get(content_type, content_type)
+
+        # Session 887: First gather research on the topic
+        logger.info(f"🔬 [SKIN LAYER] Step 1: Gathering research on '{topic}'...")
+        research_agent = ResearchAgent()
+        research_result = research_agent.execute(
+            task=f"Research the topic: {topic}. "
+                 f"Find current trends, statistics, expert opinions, and practical examples. "
+                 f"Focus on information that would be useful for a {content_type}.",
+            context={'research_topic': topic, 'output_format': 'markdown'},
+            scifi_context={},
+            spider_context={}
+        )
+
+        # Extract research content
+        research_content = ""
+        if research_result.success:
+            if research_result.message:
+                research_content = research_result.message
+            elif research_result.data:
+                # Try to get research from data
+                research_content = (
+                    research_result.data.get('research', '') or
+                    research_result.data.get('summary', '') or
+                    research_result.data.get('content', '') or
+                    str(research_result.data)
+                )
+            logger.info(f"✅ Research gathered: {len(research_content)} chars")
+        else:
+            logger.warning(f"⚠️ Research failed: {research_result.error}, proceeding with topic only")
+            research_content = f"Topic: {topic}\n\nWrite an informative {content_type} about this topic."
+
+        # Session 887: Generate content with research context
+        logger.info(f"✍️ [SKIN LAYER] Step 2: Generating {mapped_content_type} from research...")
         agent = ContentWriterAgent()
         content_result = agent.execute(
-            task=f"Write a {content_type} about: {topic}. "
+            task=f"Transform this research into a compelling {mapped_content_type} about: {topic}. "
                  f"Include practical examples, clear explanations, and actionable insights.",
-            context={'content_type': content_type, 'topic': topic, 'output_format': 'markdown'},
+            context={
+                'content_type': mapped_content_type,
+                'topic': topic,
+                'research': research_content,
+                'output_format': 'markdown'
+            },
             scifi_context={},
             spider_context={}
         )
@@ -26389,17 +26439,20 @@ def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
         # Session 875: Use unified extraction function (now handles dict content with full_text)
         output_content = _extract_agent_output_content(content_result, f'{content_type} about {topic}')
 
+        # Session 887: Include research info in header
+        research_note = f"Research: {len(research_content)} chars gathered" if research_content else "No research available"
         content_body = f"""# {topic}
-Type: {content_type.title()}
+Type: {mapped_content_type.replace('_', ' ').title()}
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-Agent: ContentWriterAgent
+Agent: ResearchAgent → ContentWriterAgent
+{research_note}
 
 ---
 
 {output_content}
 
 ---
-*Content generated via SKIN Layer automation.*
+*Content generated via SKIN Layer automation (research-backed).*
 """
 
         manager = WorkspaceManager(user)
