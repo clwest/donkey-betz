@@ -596,3 +596,127 @@ def initiative_circuit_breaker(request):
             'error': f"Invalid action: '{action}'. Use 'pause' or 'resume'.",
             'current_status': get_backlog_status(),
         }, status=400)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def cleanup_initiatives(request):
+    """
+    Session 884: Cleanup stuck initiatives by archiving or deleting them.
+
+    GET: Preview what would be cleaned up
+    POST: Execute cleanup
+
+    POST params:
+        action: 'archive' or 'delete' (default: archive)
+        max_completion: Archive/delete initiatives at or below this % (default: 12)
+        status_filter: Only affect initiatives with this status (default: ACTIVE)
+        dry_run: Preview without making changes (default: False)
+
+    Example:
+        # Preview cleanup
+        curl -X GET https://your-app.railway.app/api/initiatives/cleanup/ \
+             -H "Authorization: Token YOUR_TOKEN"
+
+        # Archive all stuck initiatives (<=12% completion)
+        curl -X POST https://your-app.railway.app/api/initiatives/cleanup/ \
+             -H "Authorization: Token YOUR_TOKEN" \
+             -H "Content-Type: application/json" \
+             -d '{"action": "archive"}'
+
+        # Delete all stuck initiatives
+        curl -X POST https://your-app.railway.app/api/initiatives/cleanup/ \
+             -H "Authorization: Token YOUR_TOKEN" \
+             -H "Content-Type: application/json" \
+             -d '{"action": "delete", "max_completion": 12}'
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+
+    # Parse params
+    if request.method == 'POST':
+        data = request.data
+    else:
+        data = request.query_params
+
+    action = data.get('action', 'archive').lower()
+    max_completion = int(data.get('max_completion', 12))
+    status_filter = data.get('status_filter', 'ACTIVE')
+    dry_run = data.get('dry_run', request.method == 'GET')
+    if isinstance(dry_run, str):
+        dry_run = dry_run.lower() in ('true', '1', 'yes')
+
+    result = {
+        'action': action,
+        'max_completion': max_completion,
+        'status_filter': status_filter,
+        'dry_run': dry_run,
+        'initiatives_found': 0,
+        'initiatives_affected': 0,
+        'stages_deleted': 0,
+        'errors': [],
+    }
+
+    if action not in ('archive', 'delete'):
+        return Response({
+            'error': f"Invalid action: '{action}'. Use 'archive' or 'delete'.",
+        }, status=400)
+
+    # Find initiatives to clean up
+    initiatives = Initiative.objects.filter(status=status_filter)
+
+    # Filter by completion percentage
+    to_cleanup = []
+    for initiative in initiatives:
+        if initiative.completion_percentage <= max_completion:
+            to_cleanup.append(initiative)
+
+    result['initiatives_found'] = len(to_cleanup)
+
+    if dry_run:
+        # Preview mode - show what would be affected
+        result['message'] = f"[DRY RUN] Would {action} {len(to_cleanup)} initiatives"
+        result['preview'] = [
+            {
+                'id': str(i.id),
+                'name': i.name[:80],
+                'completion': i.completion_percentage,
+                'stage': i.current_stage,
+            }
+            for i in to_cleanup[:20]  # Limit preview to 20
+        ]
+        if len(to_cleanup) > 20:
+            result['preview_note'] = f"Showing 20 of {len(to_cleanup)} initiatives"
+        return Response(result)
+
+    # Execute cleanup
+    for initiative in to_cleanup:
+        try:
+            if action == 'archive':
+                initiative.status = 'ARCHIVED'
+                initiative.save(update_fields=['status', 'updated_at'])
+                result['initiatives_affected'] += 1
+            elif action == 'delete':
+                # Delete related stages first
+                stages_count = InitiativeStage.objects.filter(initiative=initiative).count()
+                InitiativeStage.objects.filter(initiative=initiative).delete()
+                result['stages_deleted'] += stages_count
+                # Delete initiative
+                initiative.delete()
+                result['initiatives_affected'] += 1
+        except Exception as e:
+            result['errors'].append(f"{initiative.name[:30]}: {str(e)}")
+
+    result['message'] = (
+        f"{'Archived' if action == 'archive' else 'Deleted'} "
+        f"{result['initiatives_affected']} initiatives"
+    )
+
+    if action == 'delete':
+        result['message'] += f" and {result['stages_deleted']} stages"
+
+    logger.info(
+        f"[cleanup_api] {result['message']} - "
+        f"found={result['initiatives_found']}, errors={len(result['errors'])}"
+    )
+
+    return Response(result)
