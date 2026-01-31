@@ -3775,6 +3775,7 @@ from core.views_workspace_triggers import (
     WorkspaceTriggerViewSet,
     WorkspaceTriggerConfigViewSet,
     autopilot_status,
+    trigger_operations_task,  # Session 886: Manual trigger for Operations Tab
 )
 
 # Create dedicated router for workspace triggers
@@ -3785,6 +3786,8 @@ trigger_router.register(r'workspace-trigger-configs', WorkspaceTriggerConfigView
 urlpatterns += [
     # Autopilot status endpoint
     path('api/workspace-triggers/autopilot-status/', autopilot_status, name='workspace-autopilot-status'),
+    # Session 886: Manual trigger for Operations Tab tasks
+    path('api/workspace-triggers/trigger-operations/', trigger_operations_task, name='workspace-trigger-operations'),
 
     # Trigger Router URLs
     path('api/', include(trigger_router.urls)),
