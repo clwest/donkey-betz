@@ -27339,6 +27339,7 @@ AGENT_CATEGORIES = list(set(config['category'] for config in AGENT_WORKSPACE_REG
 def _extract_agent_output_content(result, task_description: str) -> str:
     """
     Session 813: Extract meaningful content from agent results.
+    Session 887: Improved to prefer message over sparse metadata dicts.
 
     Agents return structured data with various keys. This function extracts
     the actual content to write to workspace files.
@@ -27372,6 +27373,14 @@ def _extract_agent_output_content(result, task_description: str) -> str:
     ARRAY_KEYS = ['results', 'items', 'data', 'entries', 'records',
                   'tool_results', 'opportunities', 'top_opportunities', 'scored_items']
 
+    # Session 887: Metadata-only keys that indicate data dict is just counts/metrics
+    # If data only contains these keys, prefer result.message instead
+    METADATA_ONLY_KEYS = {
+        'items_count', 'critical_count', 'warning_count', 'info_count',
+        'execution_time', 'count', 'total', 'success_count', 'error_count',
+        'processed', 'skipped', 'duration', 'elapsed', 'timestamp'
+    }
+
     if not hasattr(result, 'data') or not result.data:
         # No data dict, use message or fallback
         if hasattr(result, 'message') and result.message:
@@ -27379,6 +27388,15 @@ def _extract_agent_output_content(result, task_description: str) -> str:
         return f'Execution completed for: {task_description}'
 
     data = result.data
+
+    # Session 887: Check if data only contains metadata counts
+    # If so AND result.message is substantial, prefer the message
+    data_keys = set(data.keys())
+    if data_keys.issubset(METADATA_ONLY_KEYS):
+        if hasattr(result, 'message') and result.message and len(result.message) > 100:
+            # Data is just metadata counts, message has the actual content
+            return result.message
+
     output_parts = []
 
     # 1. Check for direct content keys
