@@ -27440,8 +27440,11 @@ def _extract_agent_output_content(result, task_description: str) -> str:
                         # Extract content from the tool result
                         if isinstance(tool_result, dict):
                             # Look for key content in tool result
+                            # Session 887: Added results, posts, items, search_results for web_search/reddit_search
                             for content_key in ['analysis', 'opportunities', 'top_opportunities',
-                                               'items_scored', 'topic', 'thesis', 'summary']:
+                                               'items_scored', 'topic', 'thesis', 'summary',
+                                               'results', 'posts', 'items', 'search_results',
+                                               'organic_results', 'news_results', 'submissions']:
                                 if content_key in tool_result:
                                     val = tool_result[content_key]
                                     if isinstance(val, str):
