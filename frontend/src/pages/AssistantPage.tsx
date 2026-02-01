@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { assistantApi, userLearningApi, bodyApi, humanApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -7,9 +7,38 @@ import {
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
   ChevronRight, CheckCircle, XCircle, Zap, MessageSquare,
   Heart, TrendingUp, Lightbulb, Palette, Settings2, ExternalLink,
-  Bell, ClipboardList, Play, Check, X, Clock, HelpCircle
+  Bell, ClipboardList, Play, Check, X, Clock, HelpCircle,
+  Volume2, VolumeX, Settings
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+
+// Session 894: Voice Mode Settings
+interface VoiceSettings {
+  voiceInputEnabled: boolean  // Auto-send after transcription
+  voiceOutputEnabled: boolean // TTS for assistant responses
+  autoPlayTTS: boolean        // Auto-play TTS when response arrives
+}
+
+const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
+  voiceInputEnabled: false,
+  voiceOutputEnabled: false,
+  autoPlayTTS: false,
+}
+
+const VOICE_SETTINGS_KEY = 'assistant-voice-settings'
+
+function loadVoiceSettings(): VoiceSettings {
+  try {
+    const saved = localStorage.getItem(VOICE_SETTINGS_KEY)
+    return saved ? { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(saved) } : DEFAULT_VOICE_SETTINGS
+  } catch {
+    return DEFAULT_VOICE_SETTINGS
+  }
+}
+
+function saveVoiceSettings(settings: VoiceSettings): void {
+  localStorage.setItem(VOICE_SETTINGS_KEY, JSON.stringify(settings))
+}
 
 interface Message {
   id: string
@@ -109,6 +138,22 @@ export default function AssistantPage() {
   const queryClient = useQueryClient()
   const { isAuthenticated } = useAuthStore()
 
+  // Session 894: Voice Mode
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(loadVoiceSettings)
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Persist voice settings changes
+  useEffect(() => {
+    saveVoiceSettings(voiceSettings)
+  }, [voiceSettings])
+
+  const updateVoiceSetting = useCallback(<K extends keyof VoiceSettings>(key: K, value: VoiceSettings[K]) => {
+    setVoiceSettings(prev => ({ ...prev, [key]: value }))
+  }, [])
+
   // Fetch attention items
   const { data: attentionData } = useQuery({
     queryKey: ['attention-items'],
@@ -197,6 +242,12 @@ export default function AssistantPage() {
         tools_used: response.data.tools_used || [],
       }
       setMessages((prev) => [...prev, assistantMessage])
+
+      // Session 894: Auto-play TTS if enabled
+      if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
+        setSpeakingMessageId(assistantMessage.id)
+        ttsMutation.mutate(content)
+      }
     },
     onError: () => {
       const errorMessage: Message = {
@@ -209,7 +260,7 @@ export default function AssistantPage() {
     },
   })
 
-  // Voice transcription mutation
+  // Voice transcription mutation (transcribe only - puts text in input)
   const transcribeMutation = useMutation({
     mutationFn: (audioBlob: Blob) => assistantApi.transcribe(audioBlob),
     onSuccess: (response) => {
@@ -223,6 +274,100 @@ export default function AssistantPage() {
       setActionResult({ type: 'error', message: 'Failed to transcribe voice' })
     },
   })
+
+  // Session 894: Voice chat mutation (transcribe + auto-send to assistant)
+  const voiceChatMutation = useMutation({
+    mutationFn: (audioBlob: Blob) => assistantApi.voiceChat(audioBlob),
+    onSuccess: (response) => {
+      // Add user message from transcription
+      const userText = response.data.user_text
+      if (userText) {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: userText,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, userMessage])
+      }
+
+      // Add assistant response
+      const assistantResponse = response.data.assistant_message
+      if (assistantResponse) {
+        const rawContent = assistantResponse.response || assistantResponse.message || 'No response'
+        const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content,
+          timestamp: new Date(),
+          tools_used: assistantResponse.tools_used || [],
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+
+        // Auto-play TTS if enabled
+        if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
+          speakMessage(assistantMessage.id, content)
+        }
+      }
+
+      setActionResult({ type: 'success', message: 'Voice processed!' })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to process voice' })
+    },
+  })
+
+  // Session 894: TTS mutation (text-to-speech)
+  const ttsMutation = useMutation({
+    mutationFn: (text: string) => assistantApi.speak(text),
+    onSuccess: (response, _variables) => {
+      if (response.data.success && response.data.audio) {
+        // Play the audio
+        const audioData = `data:${response.data.audio_format || 'audio/mpeg'};base64,${response.data.audio}`
+        if (audioRef.current) {
+          audioRef.current.src = audioData
+          audioRef.current.play()
+          setIsSpeaking(true)
+        }
+      }
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to generate speech' })
+      setIsSpeaking(false)
+      setSpeakingMessageId(null)
+    },
+  })
+
+  // Session 894: Speak a message
+  const speakMessage = useCallback((messageId: string, text: string) => {
+    if (isSpeaking && speakingMessageId === messageId) {
+      // Stop current playback
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+      setIsSpeaking(false)
+      setSpeakingMessageId(null)
+    } else {
+      setSpeakingMessageId(messageId)
+      ttsMutation.mutate(text)
+    }
+  }, [isSpeaking, speakingMessageId, ttsMutation])
+
+  // Session 894: Handle audio end
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleEnded = () => {
+      setIsSpeaking(false)
+      setSpeakingMessageId(null)
+    }
+
+    audio.addEventListener('ended', handleEnded)
+    return () => audio.removeEventListener('ended', handleEnded)
+  }, [])
 
   // Feedback mutation
   const feedbackMutation = useMutation({
@@ -318,7 +463,12 @@ export default function AssistantPage() {
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        transcribeMutation.mutate(audioBlob)
+        // Session 894: Use voiceChat (auto-send) or transcribe based on settings
+        if (voiceSettings.voiceInputEnabled) {
+          voiceChatMutation.mutate(audioBlob)
+        } else {
+          transcribeMutation.mutate(audioBlob)
+        }
         stream.getTracks().forEach((track) => track.stop())
       }
 
@@ -336,6 +486,16 @@ export default function AssistantPage() {
       setIsRecording(false)
     }
   }
+
+  // Session 894: Stop any playing audio
+  const stopSpeaking = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+    setIsSpeaking(false)
+    setSpeakingMessageId(null)
+  }, [])
 
   const copyMessage = (content: string) => {
     navigator.clipboard.writeText(content)
@@ -368,6 +528,111 @@ export default function AssistantPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            {/* Session 894: Voice Mode Toggle */}
+            <div className="relative">
+              <button
+                className={cn(
+                  'btn text-sm flex items-center gap-1.5',
+                  (voiceSettings.voiceInputEnabled || voiceSettings.voiceOutputEnabled)
+                    ? 'btn-primary'
+                    : 'btn-secondary'
+                )}
+                onClick={() => setShowVoiceSettings(!showVoiceSettings)}
+                title="Voice Settings"
+              >
+                {voiceSettings.voiceOutputEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                Voice
+                <Settings size={12} className="opacity-60" />
+              </button>
+
+              {/* Voice Settings Dropdown */}
+              {showVoiceSettings && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-dark-card border border-dark-border rounded-lg shadow-xl z-50 p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium">Voice Settings</h4>
+                    <button
+                      onClick={() => setShowVoiceSettings(false)}
+                      className="p-1 rounded hover:bg-dark-border"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Voice Input Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Voice Input Mode</p>
+                        <p className="text-xs text-gray-400">Auto-send after recording</p>
+                      </div>
+                      <button
+                        onClick={() => updateVoiceSetting('voiceInputEnabled', !voiceSettings.voiceInputEnabled)}
+                        className={cn(
+                          'w-10 h-6 rounded-full transition-colors relative',
+                          voiceSettings.voiceInputEnabled ? 'bg-primary-600' : 'bg-dark-border'
+                        )}
+                      >
+                        <span className={cn(
+                          'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
+                          voiceSettings.voiceInputEnabled ? 'translate-x-5' : 'translate-x-1'
+                        )} />
+                      </button>
+                    </div>
+
+                    {/* Voice Output Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Voice Output</p>
+                        <p className="text-xs text-gray-400">Enable TTS for responses</p>
+                      </div>
+                      <button
+                        onClick={() => updateVoiceSetting('voiceOutputEnabled', !voiceSettings.voiceOutputEnabled)}
+                        className={cn(
+                          'w-10 h-6 rounded-full transition-colors relative',
+                          voiceSettings.voiceOutputEnabled ? 'bg-primary-600' : 'bg-dark-border'
+                        )}
+                      >
+                        <span className={cn(
+                          'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
+                          voiceSettings.voiceOutputEnabled ? 'translate-x-5' : 'translate-x-1'
+                        )} />
+                      </button>
+                    </div>
+
+                    {/* Auto-Play Toggle (only visible when output enabled) */}
+                    {voiceSettings.voiceOutputEnabled && (
+                      <div className="flex items-center justify-between pl-4 border-l-2 border-primary-600/30">
+                        <div>
+                          <p className="text-sm font-medium">Auto-Play</p>
+                          <p className="text-xs text-gray-400">Speak responses automatically</p>
+                        </div>
+                        <button
+                          onClick={() => updateVoiceSetting('autoPlayTTS', !voiceSettings.autoPlayTTS)}
+                          className={cn(
+                            'w-10 h-6 rounded-full transition-colors relative',
+                            voiceSettings.autoPlayTTS ? 'bg-accent-green' : 'bg-dark-border'
+                          )}
+                        >
+                          <span className={cn(
+                            'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
+                            voiceSettings.autoPlayTTS ? 'translate-x-5' : 'translate-x-1'
+                          )} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-dark-border">
+                    <p className="text-xs text-gray-400">
+                      {voiceSettings.voiceInputEnabled
+                        ? '🎤 Recording will auto-send to assistant'
+                        : '🎤 Recording will fill the input field'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               className="btn btn-secondary text-sm"
               onClick={() => setShowSidebar(!showSidebar)}
@@ -376,7 +641,7 @@ export default function AssistantPage() {
             </button>
             <button
               className="btn btn-secondary text-sm text-accent-red"
-              onClick={() => resetMutation.mutate()}
+              onClick={() => { resetMutation.mutate(); stopSpeaking(); }}
               disabled={resetMutation.isPending || messages.length === 0}
             >
               {resetMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
@@ -480,6 +745,26 @@ export default function AssistantPage() {
 
                     {message.role === 'assistant' && (
                       <>
+                        {/* Session 894: Speaker button for TTS */}
+                        {voiceSettings.voiceOutputEnabled && (
+                          <button
+                            onClick={() => speakMessage(message.id, message.content)}
+                            className={cn(
+                              'p-1 rounded hover:bg-dark-border',
+                              speakingMessageId === message.id && 'bg-primary-500/20'
+                            )}
+                            title={speakingMessageId === message.id ? 'Stop speaking' : 'Speak this message'}
+                            disabled={ttsMutation.isPending && speakingMessageId !== message.id}
+                          >
+                            {ttsMutation.isPending && speakingMessageId === message.id ? (
+                              <Loader2 size={14} className="animate-spin text-primary-400" />
+                            ) : speakingMessageId === message.id && isSpeaking ? (
+                              <VolumeX size={14} className="text-primary-400" />
+                            ) : (
+                              <Volume2 size={14} className="text-gray-400" />
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={() => copyMessage(message.content)}
                           className="p-1 rounded hover:bg-dark-border"
@@ -551,12 +836,14 @@ export default function AssistantPage() {
             <button
               className={cn(
                 'btn',
-                isRecording ? 'btn-primary animate-pulse' : 'btn-secondary'
+                isRecording ? 'btn-primary animate-pulse' :
+                voiceSettings.voiceInputEnabled ? 'btn-secondary ring-2 ring-primary-500/50' : 'btn-secondary'
               )}
               onClick={isRecording ? stopRecording : startRecording}
-              disabled={transcribeMutation.isPending}
+              disabled={transcribeMutation.isPending || voiceChatMutation.isPending}
+              title={voiceSettings.voiceInputEnabled ? 'Voice mode: Auto-send enabled' : 'Click to record'}
             >
-              {transcribeMutation.isPending ? (
+              {(transcribeMutation.isPending || voiceChatMutation.isPending) ? (
                 <Loader2 size={20} className="animate-spin" />
               ) : isRecording ? (
                 <MicOff size={20} />
@@ -569,13 +856,21 @@ export default function AssistantPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={isRecording ? 'Recording... Click mic to stop' : 'Type your message...'}
+              placeholder={
+                isRecording
+                  ? voiceSettings.voiceInputEnabled
+                    ? 'Recording... Will auto-send when stopped'
+                    : 'Recording... Click mic to stop'
+                  : voiceSettings.voiceInputEnabled
+                    ? 'Voice mode active - speak or type...'
+                    : 'Type your message...'
+              }
               className="input flex-1"
-              disabled={chatMutation.isPending || isRecording}
+              disabled={chatMutation.isPending || isRecording || voiceChatMutation.isPending}
             />
             <button
               onClick={() => sendMessage()}
-              disabled={chatMutation.isPending || !input.trim()}
+              disabled={chatMutation.isPending || !input.trim() || voiceChatMutation.isPending}
               className="btn btn-primary"
             >
               {chatMutation.isPending ? (
@@ -586,7 +881,9 @@ export default function AssistantPage() {
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2 text-center">
-            Press Enter to send, Shift+Enter for new line
+            {voiceSettings.voiceInputEnabled
+              ? 'Voice mode: Recording will auto-send to assistant'
+              : 'Press Enter to send, Shift+Enter for new line'}
           </p>
         </div>
       </div>
@@ -1021,6 +1318,17 @@ export default function AssistantPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Session 894: Hidden audio element for TTS playback */}
+      <audio ref={audioRef} className="hidden" />
+
+      {/* Click outside to close voice settings */}
+      {showVoiceSettings && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowVoiceSettings(false)}
+        />
       )}
 
       {/* Toast notification */}

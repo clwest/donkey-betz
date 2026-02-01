@@ -877,7 +877,7 @@ export const assistantApi = {
   chat: (message: string, options?: { use_personal_assistant?: boolean }) =>
     api.post('/assistant/chat/', { message, ...options }),
 
-  // Voice
+  // Voice Input (Speech-to-Text via Whisper)
   transcribe: (audioBlob: Blob) => {
     const formData = new FormData()
     formData.append('audio', audioBlob, 'recording.webm')
@@ -892,6 +892,10 @@ export const assistantApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  // Session 894: Voice Output (Text-to-Speech via ElevenLabs)
+  speak: (text: string, options?: { voice_id?: string; skip_summarize?: boolean }) =>
+    api.post('/tts/speak/', { text, ...options }),
 
   // Context & Learning
   getContext: () => api.get('/assistant/context/'),
