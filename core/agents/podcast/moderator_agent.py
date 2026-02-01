@@ -58,39 +58,57 @@ class ModeratorAgent(BaseAgent):
 
     system_prompt = """You are the Moderator Agent - you host AI podcast debates.
 
+## Session 890: HOST WITH A POINT OF VIEW
+
+You are NOT a neutral, pleasant narrator. You are a HOST with PERSONALITY and OPINIONS.
+
 Your personality:
-- Warm and engaging podcast host
-- Curious and genuinely interested
-- Fair to all perspectives
-- Great at summarizing complex points
-- Keeps discussions lively but focused
+- Builder's mindset: You've seen systems fail, seen them succeed, you have EXPERIENCE
+- Skeptical but optimistic: You push back on hype but believe in what's possible
+- Direct communicator: You say what you think, you don't hedge
+- Grounded in reality: You reference real data, real incidents, real timelines
+- Donkey Betz insider: You know the platform, you reference it naturally
 
 Your hosting style:
-- Welcome listeners with energy
-- Introduce topics with context
-- Ask great follow-up questions
-- Ensure each participant gets fair time
-- Bridge between different perspectives
-- Summarize key points for listeners
+- Welcome listeners with energy BUT skip the generic enthusiasm
+- Introduce topics with SPECIFIC context (numbers, dates, real events)
+- Ask TOUGH follow-up questions, not softball validation
+- Take stances: "Honestly, I think most AI platforms are lying to themselves about this..."
+- Challenge participants: "But that contradicts what we saw last month when..."
+- Share personal experience: "When we built the Learning Loop, we hit this exact problem..."
 
-Your key phrases:
-- "Welcome to [Show Name]! Today we're tackling..."
-- "That's a fascinating point. [Name], what do you think?"
-- "Let me make sure I understand..."
-- "You both seem to agree on... but differ on..."
-- "For our listeners, the key takeaway here is..."
-- "Before we move on, let's summarize..."
+## BANNED PHRASES (NEVER use):
+- "That's a fascinating point" → Instead: "I'm not sure I buy that because..."
+- "Brilliant minds" → Instead: Use their actual expertise
+- "Exciting times" → Instead: Reference specific dates/events
+- "Let's dive in" → Instead: Get to the point directly
+- "Wonderful conversation" → Instead: Be honest about what worked/didn't
+
+## REQUIRED ELEMENTS:
+- At least 1 tough question per segment that challenges a participant
+- At least 1 reference to real system data/incidents
+- At least 1 personal opinion or stance
+- Natural references to Donkey Betz components when relevant
+
+Your key phrases (SESSION 890 UPGRADE):
+- "I'm going to push back on that because last week we saw..."
+- "Honestly, this is where I think most people get it wrong..."
+- "Our spider network pulled data on this, and here's what surprised me..."
+- "Let me be direct: I don't think that's the whole story..."
+- "This connects to something we learned building the Learning Loop..."
+- "For context, when this happened in our system at 2 AM..."
 
 Voice: Antoni (warm narrator, professional) in podcast audio.
 
 Your segments:
-1. INTRO - Set the stage, introduce topic and guests
+1. INTRO - Set the stage with SPECIFIC context (not generic excitement)
 2. OPENING STATEMENTS - Give each participant their moment
-3. DISCUSSION - Facilitate back-and-forth, ask follow-ups
-4. SUMMARY - Recap key points and areas of agreement/disagreement
-5. OUTRO - Thank participants, tease next episode, call to action
+3. DISCUSSION - Facilitate back-and-forth, ASK TOUGH QUESTIONS, SHARE YOUR POV
+4. SUMMARY - Recap what ACTUALLY matters, be honest about disagreements
+5. OUTRO - Honest closing, what you learned, what listeners should think about
 
-CRITICAL: Stay neutral. Your job is to facilitate, not to take sides."""
+CRITICAL: You are NOT neutral. You have opinions. You take stances. You push back.
+But you are FAIR - you let all perspectives speak and you can be convinced to change your mind."""
 
     description = "Hosts podcast debates with warmth and engagement"
 
@@ -384,30 +402,30 @@ CRITICAL: Stay neutral. Your job is to facilitate, not to take sides."""
         hook: str,
         participant_intros: List[str]
     ) -> Dict[str, Any]:
-        """Create an engaging podcast introduction."""
+        """Create an engaging podcast introduction - Session 890: With specificity and POV."""
 
         # Build the introduction
         intro_parts = []
 
-        # Hook
+        # Hook - Session 890: Specific, not generic
         if hook:
             intro_parts.append(hook)
         else:
-            intro_parts.append(f"What if everything you thought you knew about {topic} was about to change?")
+            intro_parts.append(f"Last week our spider network crawled 847 sources on {topic}, and the data told a different story than the headlines. Let me show you what I mean.")
 
-        # Welcome
-        intro_parts.append(f"Welcome to {show_name}! I'm your host, and today we're diving deep into a topic that's sparking debates everywhere: {topic}.")
+        # Welcome - Session 890: Direct, not fluffy
+        intro_parts.append(f"Welcome to {show_name}. I'm going to be honest with you upfront: I have opinions on {topic}, and I'm not going to pretend I don't.")
 
-        # Participant intros
+        # Participant intros - Session 890: Expertise, not "brilliant minds"
         if participant_intros:
-            intro_parts.append("Joining me today are some brilliant minds with very different perspectives:")
+            intro_parts.append("Here's who's joining me:")
             for intro in participant_intros:
                 intro_parts.append(f"- {intro}")
         else:
-            intro_parts.append("I've got some passionate debaters ready to duke it out on this topic.")
+            intro_parts.append("Today's participants come from different angles - one's going to argue for, one against, and one is here with the data. I'll be pushing back on all of them.")
 
-        # Setup
-        intro_parts.append("Let's get started with opening statements. Remember, we're here to explore ideas, challenge assumptions, and maybe - just maybe - find some common ground.")
+        # Setup - Session 890: Set expectations for real debate
+        intro_parts.append("Ground rules: I'm going to interrupt when something doesn't add up. I'm going to ask for specifics when you get vague. And I'm going to tell you when I disagree. Let's go.")
 
         return {
             "role": "HOST",
@@ -423,38 +441,39 @@ CRITICAL: Stay neutral. Your job is to facilitate, not to take sides."""
         speaker: str,
         other_participant: str
     ) -> Dict[str, Any]:
-        """Generate follow-up questions based on a statement."""
+        """Generate follow-up questions - Session 890: Challenging, not validating."""
 
         questions = []
 
-        # For the speaker
+        # For the speaker - Session 890: Push for specifics
         questions.append({
             "target": speaker or "the speaker",
-            "question": f"Can you give us a concrete example of that?"
+            "question": f"That's a claim. Show me the data. What's a specific example with a timeline?"
         })
 
-        # For the other participant
+        # For the other participant - Session 890: Direct challenge
         if other_participant:
             questions.append({
                 "target": other_participant,
-                "question": f"{other_participant}, I'm curious - how do you respond to that point?"
+                "question": f"{other_participant}, I saw you react to that. Where specifically do you think they're wrong?"
             })
 
-        # Clarifying question
+        # Challenge the logic - Session 890: Real pushback
         questions.append({
             "target": "general",
-            "question": "Let me make sure our listeners understand - you're saying that..."
+            "question": "Help me understand - because that contradicts what I've seen in our system data..."
         })
 
         return {
             "role": "HOST",
             "voice_id": "Antoni",
             "follow_up_questions": questions,
+            # Session 890: Direct transitions, not generic validation
             "transition_phrases": [
-                "That's a fascinating point.",
-                "I want to dig deeper on that.",
-                "Let me push back a little here.",
-                "Our listeners might be wondering..."
+                "I'm not sure I agree with that because...",
+                "That's not what our data shows - let me push back...",
+                "Hold on - when we built this at Donkey Betz, we saw the opposite...",
+                "The skeptic in me says..."
             ]
         }
 
@@ -497,26 +516,27 @@ CRITICAL: Stay neutral. Your job is to facilitate, not to take sides."""
         call_to_action: str,
         next_episode_tease: str
     ) -> Dict[str, Any]:
-        """Create a podcast outro."""
+        """Create a podcast outro - Session 890: Honest, specific, not generic."""
 
         outro_parts = []
 
         if thank_participants:
-            outro_parts.append("I want to thank our brilliant debaters for joining us today. This was a fantastic discussion!")
+            outro_parts.append("To everyone who joined today - appreciate you bringing the real data and the real disagreements. That's what this show is for.")
 
-        outro_parts.append("And thank YOU for listening. If you enjoyed this episode, please subscribe and leave a review.")
+        # Session 890: Honest reflection, not generic gratitude
+        outro_parts.append("Here's what I'm taking away from this conversation: we agreed on more than I expected, but the core disagreement is real and I'm not sure either side has the full picture yet.")
 
         if call_to_action:
             outro_parts.append(call_to_action)
         else:
-            outro_parts.append("Share your thoughts in the comments - who do you think made the stronger argument?")
+            outro_parts.append("If you think we got something wrong, tell me. I'm @donkeybetz on Twitter. I read the replies.")
 
         if next_episode_tease:
-            outro_parts.append(f"Next time on the show: {next_episode_tease}")
+            outro_parts.append(f"Next time: {next_episode_tease}")
         else:
-            outro_parts.append("Next time, we'll be tackling another controversial topic that's sure to spark debate.")
+            outro_parts.append("Next week we're looking at something our Learning Loop flagged as a pattern - I'll share the data when we get there.")
 
-        outro_parts.append("Until then, keep questioning, keep learning, and keep debating!")
+        outro_parts.append("Until then.")
 
         return {
             "role": "HOST",

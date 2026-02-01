@@ -112,6 +112,43 @@ HOST: That's all for today...
 - ANALYST: Paul (calm, data-driven)
 
 CRITICAL: When creating scripts, maintain clear speaker labels for TTS generation.
+
+## Session 890: QUALITY STANDARDS - AVOID GENERIC AI CONTENT
+
+### BANNED PHRASES (NEVER use these):
+- "fascinating world", "exciting episode", "eye-opening"
+- "vibrant and evolving", "game-changer", "cutting-edge"
+- "incredible journey", "amazing insights", "brilliant minds"
+- "the future is bright", "exciting times", "without further ado"
+- "let's dive in", "let's unpack that", "super exciting"
+- "groundbreaking", "mind-blowing", "truly remarkable"
+- "fantastic discussion", "wonderful conversation"
+- Any phrase that sounds like "every other AI podcast"
+
+### REQUIRE SPECIFICITY:
+- Every segment MUST include at least ONE concrete example with specifics:
+  - Actual timestamps ("At 2:17 AM on Tuesday...")
+  - Real numbers ("67% of users", "crashed 3 pipelines")
+  - Named systems ("The Learning Loop", "Spider Network")
+  - Real incidents ("Last month we saw...", "When we deployed...")
+- Replace vague statements with specific ones:
+  - BAD: "there's a pressing need for real-time data"
+  - GOOD: "Last month, we ran a crawl across five major AI forums, and by the time the data finished processing, half was already outdated"
+
+### PLATFORM ANCHORING (Reference Donkey Betz features naturally):
+- Mention specific system components when relevant:
+  - "This is exactly why we built the Learning Loop..."
+  - "Our Spider Network handles this by..."
+  - "The 76 agents in our system work together to..."
+- NOT salesy - grounded and educational
+- Shows real system capability without marketing speak
+
+### QUALITY CHECKLIST for scripts:
+1. Does each segment have at least 1 specific example/story?
+2. Are there any banned generic phrases?
+3. Does the host take real stances (not just moderate)?
+4. Is there at least 1 "war story" with timestamps?
+5. Is the platform referenced naturally (not forced)?
 """
 
     description = "Orchestrates multi-agent podcast creation with debates"
@@ -241,6 +278,33 @@ CRITICAL: When creating scripts, maintain clear speaker labels for TTS generatio
                             }
                         },
                         "required": ["topic", "participant_agents"]
+                    }
+                }
+            },
+            # Session 890: System War Stories - Pull real incidents for specific examples
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_system_war_stories",
+                    "description": "Fetch real system incidents, operations, and events to use as specific examples in the podcast. Returns timestamped stories with actual data.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic_keywords": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Keywords to filter relevant stories (e.g., ['spider', 'agent', 'celery', 'learning'])"
+                            },
+                            "max_stories": {
+                                "type": "integer",
+                                "description": "Maximum number of stories to return (default: 5)"
+                            },
+                            "include_failures": {
+                                "type": "boolean",
+                                "description": "Whether to include failure stories (often the most interesting)"
+                            }
+                        },
+                        "required": []
                     }
                 }
             }
@@ -405,6 +469,14 @@ Create a structured podcast debate with:
                 arguments.get("topic", ""),
                 arguments.get("participant_agents", []),
                 arguments.get("rounds", 3)
+            )
+
+        # Session 890: System War Stories
+        elif tool_name == "get_system_war_stories":
+            return self._get_system_war_stories(
+                arguments.get("topic_keywords", []),
+                arguments.get("max_stories", 5),
+                arguments.get("include_failures", True)
             )
 
         elif tool_name == "delegate_to_specialist":
@@ -776,6 +848,193 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
         else:
             return 'EXPERT'
 
+    def _get_system_war_stories(
+        self,
+        topic_keywords: List[str] = [],
+        max_stories: int = 5,
+        include_failures: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Session 890: Fetch real system incidents and events for specific examples.
+
+        Pulls from:
+        - WorkspaceOperation (recent operations with timestamps)
+        - AgentExecution (agent runs, especially failures)
+        - SpiderData (spider network activity)
+        - DecisionRecord (AI decisions made)
+
+        Returns timestamped stories that can be used as concrete examples in podcasts.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        stories = []
+        keywords = topic_keywords or []
+        cutoff = timezone.now() - timedelta(days=7)  # Last 7 days
+
+        # 1. Fetch interesting workspace operations
+        try:
+            from core.models_skin_layer import WorkspaceOperation
+
+            operations = WorkspaceOperation.objects.filter(
+                created_at__gte=cutoff
+            ).order_by('-created_at')[:20]
+
+            for op in operations:
+                # Filter by keywords if provided
+                op_text = f"{op.operation_type} {op.description or ''} {op.agent_name or ''}".lower()
+                if keywords and not any(kw.lower() in op_text for kw in keywords):
+                    continue
+
+                # Prefer failures if requested (they make better stories)
+                if include_failures and not op.success:
+                    stories.append({
+                        'type': 'operation_failure',
+                        'timestamp': op.created_at.strftime('%Y-%m-%d at %H:%M'),
+                        'headline': f"Operation failed: {op.operation_type}",
+                        'detail': f"The {op.agent_name or 'system'} attempted {op.operation_type} "
+                                  f"but failed with: {op.error_message or 'unknown error'}",
+                        'narrative': f"At {op.created_at.strftime('%I:%M %p')} on "
+                                     f"{op.created_at.strftime('%A')}, our {op.agent_name or 'system'} "
+                                     f"tried to {op.operation_type} and hit a wall.",
+                        'data_point': op.result or {},
+                    })
+                elif op.success and len(stories) < max_stories:
+                    stories.append({
+                        'type': 'operation_success',
+                        'timestamp': op.created_at.strftime('%Y-%m-%d at %H:%M'),
+                        'headline': f"Successful: {op.operation_type}",
+                        'detail': f"The {op.agent_name or 'system'} completed {op.operation_type}",
+                        'narrative': f"When we ran {op.operation_type} on "
+                                     f"{op.created_at.strftime('%A')}, it processed cleanly.",
+                        'data_point': op.result or {},
+                    })
+
+                if len(stories) >= max_stories * 2:  # Get extras for filtering
+                    break
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch workspace operations: {e}")
+
+        # 2. Fetch agent execution data
+        try:
+            from core.models import AgentExecution
+
+            executions = AgentExecution.objects.filter(
+                started_at__gte=cutoff
+            ).select_related().order_by('-started_at')[:20]
+
+            for ex in executions:
+                ex_text = f"{ex.agent_name} {ex.task or ''}".lower()
+                if keywords and not any(kw.lower() in ex_text for kw in keywords):
+                    continue
+
+                if include_failures and ex.status == 'failed':
+                    stories.append({
+                        'type': 'agent_failure',
+                        'timestamp': ex.started_at.strftime('%Y-%m-%d at %H:%M'),
+                        'headline': f"{ex.agent_name} failed",
+                        'detail': f"Agent {ex.agent_name} failed on task: {(ex.task or '')[:100]}",
+                        'narrative': f"At {ex.started_at.strftime('%I:%M %p')}, "
+                                     f"{ex.agent_name} crashed trying to execute. "
+                                     f"This is why we need fallbacks.",
+                        'data_point': {
+                            'execution_time_ms': ex.execution_time_ms,
+                            'error': ex.error_message,
+                        },
+                    })
+                elif ex.status == 'success' and ex.execution_time_ms and ex.execution_time_ms > 5000:
+                    # Interesting: slow but successful
+                    stories.append({
+                        'type': 'slow_success',
+                        'timestamp': ex.started_at.strftime('%Y-%m-%d at %H:%M'),
+                        'headline': f"{ex.agent_name} finished slowly",
+                        'detail': f"Agent took {ex.execution_time_ms}ms to complete",
+                        'narrative': f"The {ex.agent_name} took {ex.execution_time_ms // 1000} seconds "
+                                     f"to finish - usually that means heavy processing or an API hiccup.",
+                        'data_point': {'execution_time_ms': ex.execution_time_ms},
+                    })
+
+                if len(stories) >= max_stories * 2:
+                    break
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch agent executions: {e}")
+
+        # 3. Fetch spider activity
+        try:
+            from ai_core.models import SpiderData
+
+            spider_data = SpiderData.objects.filter(
+                created_at__gte=cutoff
+            ).order_by('-created_at')[:20]
+
+            spider_count = spider_data.count()
+            if spider_count > 0:
+                stories.append({
+                    'type': 'spider_activity',
+                    'timestamp': timezone.now().strftime('%Y-%m-%d'),
+                    'headline': f"Spider network crawled {spider_count} sources this week",
+                    'detail': f"Our spider network has been actively gathering intelligence",
+                    'narrative': f"In the last 7 days, our spider network pulled data from "
+                                 f"{spider_count} sources. That's {spider_count // 7} per day on average.",
+                    'data_point': {'total_crawls': spider_count},
+                })
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch spider data: {e}")
+
+        # 4. Add platform stats for context
+        try:
+            from core.models import AgentExecution
+            from django.db.models import Count, Avg
+
+            from django.db.models import Q as DjangoQ
+            stats = AgentExecution.objects.filter(
+                started_at__gte=cutoff
+            ).aggregate(
+                total=Count('id'),
+                avg_time=Avg('execution_time_ms'),
+                failures=Count('id', filter=DjangoQ(status='failed'))
+            )
+
+            if stats['total'] and stats['total'] > 0:
+                success_rate = ((stats['total'] - (stats['failures'] or 0)) / stats['total']) * 100
+                stories.append({
+                    'type': 'platform_stats',
+                    'timestamp': timezone.now().strftime('%Y-%m-%d'),
+                    'headline': f"Platform processed {stats['total']} agent executions",
+                    'detail': f"{success_rate:.1f}% success rate with {stats['avg_time'] or 0:.0f}ms avg",
+                    'narrative': f"Looking at the numbers: {stats['total']} agent executions, "
+                                 f"{success_rate:.1f}% success rate, average time of "
+                                 f"{(stats['avg_time'] or 0) / 1000:.1f} seconds. "
+                                 f"{'That failure rate is something we need to address.' if stats['failures'] > stats['total'] * 0.1 else 'Pretty solid.'}",
+                    'data_point': stats,
+                })
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch platform stats: {e}")
+
+        # Prioritize failures and interesting stories
+        if include_failures:
+            stories.sort(key=lambda s: (
+                s['type'] in ('operation_failure', 'agent_failure'),
+                s['type'] == 'slow_success'
+            ), reverse=True)
+
+        # Limit to max_stories
+        stories = stories[:max_stories]
+
+        logger.info(f"🎙️ [SESSION 890] Fetched {len(stories)} system war stories for podcast")
+
+        return {
+            "success": True,
+            "stories": stories,
+            "count": len(stories),
+            "time_range": "last 7 days",
+            "usage_hint": "Include these as specific examples with timestamps in your script"
+        }
+
     def _transcript_to_script(
         self,
         topic: str,
@@ -805,7 +1064,7 @@ Let's hear from our participants!
 
         script += """[OUTRO]
 
-HOST: That was a fascinating debate! Thank you to all our participants for their unique perspectives.
+HOST: We covered a lot of ground today - real data, real disagreements, and some points I hadn't considered before. Thank you to our participants for bringing their expertise and honest takes. If you're building in this space, I'd love to hear what you think we got wrong. Until next time.
 
 [OUTRO MUSIC - 5 seconds]
 """

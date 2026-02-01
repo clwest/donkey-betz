@@ -72,7 +72,9 @@ INTENT_TYPES = {
 }
 
 # Generic phrases that indicate lack of distinctiveness
+# Session 890: Expanded with podcast-specific AI clichés from ChatGPT feedback
 GENERIC_PHRASES = [
+    # Corporate buzzwords
     'in today\'s fast-paced world',
     'it\'s no secret that',
     'in recent years',
@@ -100,6 +102,33 @@ GENERIC_PHRASES = [
     'impactful',
     'actionable insights',
     'thought leadership',
+    # Session 890: Podcast-specific AI clichés
+    'fascinating world',
+    'exciting episode',
+    'eye-opening',
+    'vibrant and evolving',
+    'that\'s a fascinating point',
+    'this is fascinating',
+    'incredible journey',
+    'amazing insights',
+    'brilliant minds',
+    'cutting-edge technology',
+    'the future is bright',
+    'exciting times',
+    'stay tuned',
+    'without further ado',
+    'let\'s dive in',
+    'let\'s unpack that',
+    'really interesting',
+    'super exciting',
+    'absolutely crucial',
+    'incredibly important',
+    'groundbreaking',
+    'game-changing',
+    'mind-blowing',
+    'truly remarkable',
+    'fantastic discussion',
+    'wonderful conversation',
 ]
 
 # Hedging phrases that indicate weak opinion
