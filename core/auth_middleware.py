@@ -451,6 +451,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 894: Dossiers tab (ConceptForge)
         '/api/conceptforge/runs/',  # ConceptForge runs list
         '/api/conceptforge/stats/',  # ConceptForge stats
+
+        # Session 894: Knowledge/Learn tab (Learning Journeys)
+        '/api/learning/journeys/',  # Learning journeys list
+        '/api/learning/journeys/analytics/',  # Learning analytics
+        '/api/learning/journeys/active/',  # Active journeys
+        '/api/learning/achievements/',  # Achievements
+        '/api/learning/templates/',  # Journey templates
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
