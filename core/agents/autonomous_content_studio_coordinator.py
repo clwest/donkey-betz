@@ -34,6 +34,8 @@ from typing import Dict, Any, List
 from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import time
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.services.memory_context_service import get_memory_context_service
@@ -576,17 +578,28 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                 prev_position = agent_positions[-1]['position'] if agent_positions else ""
                 task = f"Contribute your unique perspective on {channel.topic_domain} content strategy. Consider the discussion so far: {prev_position[:500]}"
 
-            # Execute the agent
+            # Execute the agent with timeout (Session 895: Fix hanging debates)
+            # Each debate agent gets 2 minutes max to prevent blocking the whole debate
+            DEBATE_AGENT_TIMEOUT = 120  # 2 minutes per agent
             try:
-                result = agent.execute(
-                    task=task,
-                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
-                    scifi_context=scifi_context,
-                    spider_context=spider_context
-                )
+                def run_agent():
+                    return agent.execute(
+                        task=task,
+                        context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
+                        scifi_context=scifi_context,
+                        spider_context=spider_context
+                    )
+
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(run_agent)
+                    result = future.result(timeout=DEBATE_AGENT_TIMEOUT)
+
                 position = result.message or f"{agent_name} had no response"
                 if result.data and result.data.get('tool_results'):
                     position += f"\n\nData: {json.dumps(result.data['tool_results'], indent=2)[:1000]}"
+            except FuturesTimeoutError:
+                logger.warning(f"⏰ {agent_name} timed out after {DEBATE_AGENT_TIMEOUT}s in content debate")
+                position = f"{agent_name} timed out after {DEBATE_AGENT_TIMEOUT}s - moving to next debater"
             except Exception as e:
                 logger.error(f"{agent_name} error: {e}")
                 position = f"{agent_name} error: {str(e)}"
