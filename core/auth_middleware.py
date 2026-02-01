@@ -16,8 +16,57 @@ from channels.middleware import BaseMiddleware
 from urllib.parse import parse_qs
 
 from .api_responses import api_unauthorized, api_forbidden
+from functools import wraps
 
 logger = logging.getLogger(__name__)
+
+
+def token_auth_required(view_func):
+    """
+    Decorator that ensures Token authentication for API views.
+
+    Works for paths in PUBLIC_PATHS that bypass the middleware.
+    Supports both session auth and Token auth.
+
+    Usage:
+        @token_auth_required
+        def my_view(request):
+            # request.user is guaranteed to be authenticated
+            ...
+
+    Session 891: Created to provide consistent Token auth across all API endpoints.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Check if already authenticated via session
+        if hasattr(request, 'user') and request.user.is_authenticated:
+            return view_func(request, *args, **kwargs)
+
+        # Try Token auth
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+                    return view_func(request, *args, **kwargs)
+            except Token.DoesNotExist:
+                pass
+        elif auth_header.startswith('Bearer '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+                    return view_func(request, *args, **kwargs)
+            except Token.DoesNotExist:
+                pass
+
+        # No valid auth found
+        return api_unauthorized("Authentication required")
+
+    return _wrapped_view
 User = get_user_model()
 
 

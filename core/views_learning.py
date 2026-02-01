@@ -22,7 +22,7 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
+from core.auth_middleware import token_auth_required
 import json
 
 from core.services.pipeline_learning import get_pipeline_learning_service
@@ -39,7 +39,7 @@ def get_json_body(request):
 
 
 @csrf_exempt
-@login_required
+@token_auth_required
 @require_http_methods(["POST"])
 def record_feedback(request):
     """
@@ -136,7 +136,7 @@ def record_feedback(request):
 
 
 @csrf_exempt
-@login_required
+@token_auth_required
 @require_http_methods(["POST"])
 def record_engagement(request):
     """
@@ -204,7 +204,7 @@ def record_engagement(request):
         }, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def recommend_style(request):
     """
@@ -258,7 +258,7 @@ def recommend_style(request):
         }, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def recommend_voice(request):
     """
@@ -306,7 +306,7 @@ def recommend_voice(request):
         }, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def style_leaderboard(request):
     """
@@ -363,7 +363,7 @@ def style_leaderboard(request):
         }, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def get_insights(request):
     """
@@ -412,7 +412,7 @@ def get_insights(request):
         }, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def get_statistics(request):
     """
@@ -467,7 +467,7 @@ def get_statistics(request):
         }, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["POST"])
 def generate_insights(request):
     """

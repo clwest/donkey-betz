@@ -8,7 +8,7 @@ Session 36: Enhanced with A/B Testing Analytics & Performance Dashboard
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from core.auth_middleware import token_auth_required
 from django.db.models import Sum, Avg, Count, Q
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
@@ -512,7 +512,7 @@ class AnalyticsDashboardView(LoginRequiredMixin, TemplateView):
         return context
 
 
-@login_required
+@token_auth_required
 def analytics_api_data(request):
     """
     Comprehensive analytics API endpoint

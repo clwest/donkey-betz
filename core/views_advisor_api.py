@@ -7,8 +7,8 @@ import json
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
+from core.auth_middleware import token_auth_required
 from django.utils import timezone
 
 from core.models_unified_system import Advisor
@@ -28,7 +28,7 @@ def _json_body(request) -> dict:
         raise
 
 
-@login_required
+@token_auth_required
 @csrf_exempt  # allow API clients without CSRF cookie
 @require_http_methods(["POST"])
 def advisor_consult(request):
