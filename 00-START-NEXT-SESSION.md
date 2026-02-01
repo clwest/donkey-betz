@@ -1,56 +1,59 @@
-# Session 891 - Start Here
+# Session 892 - Start Here
 
-**Previous Session:** 890 (Podcast Quality Improvements)
+**Previous Session:** 891 (Domain Content Context System)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **PODCAST QUALITY SYSTEM ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **DOMAIN CONTEXT INJECTION ACTIVE**
+
+---
+
+## What Was Accomplished in Session 891
+
+### Domain Content Context System
+
+Created a unified system that injects domain-specific platform data into ALL content types, giving every domain the same authentic "builder voice."
+
+#### Files Created
+
+| File | Purpose |
+|------|---------|
+| `core/services/finance_content_context.py` | Finance/Markets context (spider data, advisor wisdom) |
+| `core/services/sports_content_context.py` | Sports/Betting context (live odds, betting performance) |
+| `core/services/domain_content_context.py` | Unified router - auto-detects domains |
+
+#### Supported Domains (9 Total)
+
+| Domain | Example Keywords |
+|--------|------------------|
+| **finance** | stock, market, NVIDIA, invest |
+| **crypto** | bitcoin, ethereum, blockchain |
+| **sports** | NFL, NBA, UFC, game, match |
+| **betting** | odds, spread, moneyline, parlay |
+| **ai_tech** | AI, machine learning, agent, python |
+| **legal** | law, court, attorney, contract |
+| **career** | job, resume, interview, salary |
+| **health** | fitness, nutrition, mental health |
+| **education** | course, learning, bootcamp |
+
+#### ContentWriterAgent Integration
+
+- Auto-detects content domain from topic
+- Injects up to 2 domain contexts for cross-domain content
+- Logs domain detection with confidence score
+
+**Handoff:** `SESSION_891_DOMAIN_CONTENT_CONTEXT.md`
 
 ---
 
 ## What Was Accomplished in Session 890
 
-### Podcast Quality Improvements (PR #632)
+### Podcast Quality Improvements
 
-Based on ChatGPT quality feedback, implemented comprehensive improvements to raise podcast scripts from 7.5/10 to 9.5/10 potential.
-
-#### 1. Anti-Cliché Enforcement (VoiceCriticAgent)
-- Added 25+ podcast-specific generic phrases to `GENERIC_PHRASES` list
-- New phrases detected: "fascinating world", "exciting episode", "eye-opening", "vibrant and evolving", "brilliant minds", "groundbreaking", etc.
-
-#### 2. PodcastStyleProfile Model
-- New Django model for tracking podcast quality metrics
-- **Voice scores**: distinctiveness, specificity, opinion strength (0-100)
-- **Podcast metrics**: humor_percent, technical_depth, story_density, authority_score
-- **Quality flags**: generic_flag, has_concrete_examples, host_has_pov
-- **War stories tracking**: platform_mentions, war_stories_count
-- Weighted `overall_quality_score` calculation with bonuses/penalties
-
-#### 3. PodcastCoordinatorAgent Improvements
-- **BANNED PHRASES** section in system prompt
-- **REQUIRE SPECIFICITY** guidelines (timestamps, real numbers, named systems)
-- **PLATFORM ANCHORING** instructions (reference Donkey Betz features naturally)
-- New `get_system_war_stories` tool that fetches real system incidents
-
-#### 4. ModeratorAgent Personality Upgrade
-- Host now has **opinions and takes stances**
-- No longer "neutral pleasant narrator" - has a builder's mindset
-- **Direct challenging questions** instead of generic validation
-- Removed generic phrases from intro/outro templates
+- Anti-cliché detection (50+ banned phrases)
+- PodcastStyleProfile model for quality tracking
+- Host POV upgrade (takes stances, challenges)
+- System war stories tool integration
 
 **Handoff:** `SESSION_890_PODCAST_QUALITY.md`
-
----
-
-## What Was Accomplished in Session 889
-
-### Fixes Completed
-| PR | Issue | Fix |
-|----|-------|-----|
-| #625, #627 | Podcast endpoints empty | Token auth added to 6 endpoints |
-| #629 | SKIN health 25% | Workspace permissions management command |
-| #630 | Live Monitor empty | Real agent activity data source |
-| #631 | Session documentation | Handoff docs prepared |
-
-**Handoff:** `SESSION_889_COMPLETE.md`
 
 ---
 
@@ -66,28 +69,26 @@ celery-broadcast: -Q broadcast (2 concurrency)
 
 ---
 
-## TOP PRIORITY for Session 891
+## TOP PRIORITY for Session 892
 
-### 1. Run Podcast Migration on Production
-```bash
-railway run python manage.py migrate core
-```
+### 1. Monitor Domain Context Quality
+Generate test content for different domains and verify:
+- Finance blogs reference market data/advisor wisdom
+- Sports content includes betting performance/odds
+- AI/Tech content shows agent ecosystem stats
 
-### 2. Test Podcast Quality Improvements
-Generate a test podcast and verify:
-- No generic phrases in output
-- Specific examples with timestamps
-- Host takes stances/pushes back
-- Platform features mentioned naturally
+### 2. Test Cross-Domain Content
+Try topics that span multiple domains:
+- "Bitcoin and AI Trading Bots" (crypto + ai_tech)
+- "NFL Betting with Machine Learning" (sports + betting + ai_tech)
 
-### 3. Monitor Body Health
-```bash
-curl -H "Authorization: Token $TOKEN" \
-  "https://donkey-betz-platform-production.up.railway.app/api/body/health/"
-```
+### 3. Consider Adding More Domains
+- Entertainment (movies, TV, streaming)
+- Travel (destinations, airlines)
+- Food (restaurants, recipes)
 
-### 4. Consider Phase 2: Human Feedback
-Add thumbs up/down UI for published blogs to gather explicit human feedback.
+### 4. Human Feedback UI (Phase 2)
+Add thumbs up/down to published blogs to track which domain contexts work best.
 
 ---
 
@@ -97,26 +98,23 @@ Add thumbs up/down UI for published blogs to gather explicit human feedback.
 # Start platform
 make start && make celery
 
-# Run podcast migration (production)
-railway run python manage.py migrate core
+# Test domain detection
+python manage.py shell -c "
+from core.services.domain_content_context import detect_all_content_domains
+print(detect_all_content_domains('NVIDIA Stock Analysis'))
+"
 
-# Check podcast quality profile
-curl -H "Authorization: Token $TOKEN" \
-  "https://donkey-betz-platform-production.up.railway.app/api/podcasts/list/"
+# Test context generation
+python manage.py shell -c "
+from core.services.domain_content_context import get_domain_content_context
+ctx = get_domain_content_context('NFL Week 15 Best Bets')
+print(f'Context: {len(ctx)} chars')
+print(ctx[:500])
+"
 
 # Check body health
 curl -H "Authorization: Token $TOKEN" \
   "https://donkey-betz-platform-production.up.railway.app/api/body/health/"
-
-# Check agent executions
-curl -H "Authorization: Token $TOKEN" \
-  "https://donkey-betz-platform-production.up.railway.app/api/v1/agents/monitoring/dashboard/"
-
-# Manually trigger podcast generation
-curl -X POST -H "Authorization: Token $TOKEN" \
-  -H "Content-Type: application/json" \
-  --data-raw '{"topic":"AI Agent Orchestration"}' \
-  "https://donkey-betz-platform-production.up.railway.app/api/podcasts/create/"
 ```
 
 ---
@@ -125,12 +123,11 @@ curl -X POST -H "Authorization: Token $TOKEN" \
 
 | PR | Description |
 |----|-------------|
+| #633 | Domain Content Context System (finance, sports, 9 domains) |
 | #632 | Podcast quality improvements (anti-cliché, war stories, host POV) |
 | #631 | Session 889 documentation |
 | #630 | Live Monitor shows real agent activity |
 | #629 | Workspace permissions management command |
-| #627 | Add Token auth to podcast status, script, delete, generate-audio |
-| #625 | Add Token auth to podcast_list and podcast_stats endpoints |
 
 ---
 
@@ -138,11 +135,11 @@ curl -X POST -H "Authorization: Token $TOKEN" \
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **891** | Domain Content Context System (9 domains, unified router) | `SESSION_891_DOMAIN_CONTENT_CONTEXT.md` |
 | **890** | Podcast Quality Improvements (anti-cliché, war stories, host POV) | `SESSION_890_PODCAST_QUALITY.md` |
 | **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
 | **887** | Operations Tab Fix + Content Improvements + Boardroom Auth | `SESSION_887_OPERATIONS_TAB_FIX.md` |
 | **886** | Content Feedback Loop - BlogPerformanceContextBuilder Phase 1 | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
-| **885** | Celery Content Pipeline + Operations Tab Fix | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 
 ---
 
@@ -154,21 +151,21 @@ curl -X POST -H "Authorization: Token $TOKEN" \
 | Spiders | 77 |
 | Advisors | 25 |
 | Personas | 139 |
-| Database Models | 379+ (added PodcastStyleProfile) |
+| Database Models | 379+ |
 | Celery Tasks | 281 |
-| Services | 125 |
+| Services | 128 (+3 new domain context services) |
 
 ---
 
-## Podcast Quality System Status
+## Domain Context System Status
 
 | Component | Status |
 |-----------|--------|
-| Anti-Cliché Detection | Active (50+ phrases) |
-| PodcastStyleProfile Model | Created (needs migration) |
-| System War Stories Tool | Implemented |
-| Host POV Upgrade | Active |
-| Quality Scoring | Ready |
+| Finance Context Builder | Active |
+| Sports Context Builder | Active |
+| Domain Router | Active (9 domains) |
+| ContentWriterAgent Integration | Active |
+| Cross-Domain Support | Up to 2 domains |
 
 ---
 
@@ -177,34 +174,10 @@ curl -X POST -H "Authorization: Token $TOKEN" \
 | Component | Status |
 |-----------|--------|
 | BlogPerformanceContextBuilder | Active |
-| Context Injection | Enabled in ContentWriterAgent |
+| Domain Context Injection | Active (Session 891) |
 | Research Pre-Step | Enabled (Session 887) |
 | Human Feedback UI | Phase 2 (not implemented) |
 
 ---
 
-## Podcast API Status
-
-| Endpoint | Token Auth | Status |
-|----------|------------|--------|
-| GET /api/podcasts/list/ | ✅ | Working |
-| GET /api/podcasts/{id}/script/ | ✅ | Working |
-| POST /api/podcasts/create/ | ✅ | Working |
-| Auto-generate task | ✅ | Every 12 hours |
-
----
-
-## Initiative Pipeline Status
-
-| Metric | Count |
-|--------|-------|
-| Total Active | 103 |
-| Stage 1 (Research) | 11 |
-| Stage 2 (Analysis) | 49 |
-| Stage 3 (Synthesis) | 40 |
-| Stage 4 (Validation) | 2 |
-| Stage 5 (Delivery) | 1 |
-
----
-
-**All systems operational. Podcast quality system implemented. Run migration on production to activate PodcastStyleProfile.**
+**All systems operational. Domain context injection active for 9 content domains.**
