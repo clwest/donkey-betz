@@ -3116,6 +3116,14 @@ export const platformApi = {
           started_at: string | null
           ended_at?: string | null
           completed_at?: string | null
+          // Session 899: Actual conversation messages
+          messages?: Array<{
+            id: string
+            agent_name: string
+            content: string
+            message_type: string
+            sequence_number: number
+          }>
         } | null
         trigger: {
           type: string
