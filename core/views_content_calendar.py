@@ -21,7 +21,7 @@ from decimal import Decimal
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
+from core.auth_middleware import token_auth_required
 from django.views.decorators.csrf import csrf_exempt
 
 from core.models_autonomous_studio import (
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 @require_http_methods(["GET"])
 def content_calendar_main(request):
-    # Session 688: Removed @login_required for React frontend access
+    # Session 688: Removed @token_auth_required for React frontend access
     """
     GET /api/content-calendar/
 
@@ -221,7 +221,7 @@ def content_calendar_main(request):
     })
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def content_calendar_upcoming(request):
     """
@@ -282,7 +282,7 @@ def content_calendar_upcoming(request):
     })
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def content_calendar_history(request):
     """
@@ -365,7 +365,7 @@ def content_calendar_history(request):
     })
 
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def content_calendar_reschedule(request):
@@ -440,7 +440,7 @@ def content_calendar_reschedule(request):
         }, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def content_calendar_episode_detail(request, episode_id):
     """
@@ -543,7 +543,7 @@ def content_calendar_episode_detail(request, episode_id):
     return JsonResponse(response_data)
 
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def content_calendar_generate(request, channel_id):

@@ -21,7 +21,7 @@ import json
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
+from core.auth_middleware import token_auth_required
 
 from core.services.agent_collaboration_hub import (
     get_collaboration_hub,
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def send_message(request):
     """
     Send a message between agents.
@@ -82,7 +82,7 @@ def send_message(request):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_messages(request, agent_name: str):
     """
     Get messages for an agent.
@@ -114,7 +114,7 @@ def get_messages(request, agent_name: str):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def initiate_collaboration(request):
     """
     Initiate a collaboration between agents.
@@ -159,7 +159,7 @@ def initiate_collaboration(request):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def consult_expert(request):
     """
     Quick consultation with an expert agent.
@@ -199,7 +199,7 @@ def consult_expert(request):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def request_consensus(request):
     """
     Request consensus from multiple agents.
@@ -245,7 +245,7 @@ def request_consensus(request):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def submit_vote(request):
     """
     Submit a vote in a consensus request.
@@ -287,7 +287,7 @@ def submit_vote(request):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_consensus_status(request, consensus_id: str):
     """
     Get status of a consensus request.
@@ -312,7 +312,7 @@ def get_consensus_status(request, consensus_id: str):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def share_knowledge(request):
     """
     Share knowledge with other agents.
@@ -361,7 +361,7 @@ def share_knowledge(request):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def query_knowledge(request):
     """
     Query the knowledge base.
@@ -407,7 +407,7 @@ def query_knowledge(request):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_collaboration_stats(request):
     """
     Get collaboration hub statistics.
@@ -432,7 +432,7 @@ def get_collaboration_stats(request):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_agent_activity(request, agent_name: str):
     """
     Get activity summary for an agent.

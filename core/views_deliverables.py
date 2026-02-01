@@ -15,7 +15,7 @@ import logging
 from datetime import timedelta
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
-from django.contrib.auth.decorators import login_required
+from core.auth_middleware import token_auth_required
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -151,7 +151,7 @@ def get_deliverable(request, deliverable_id):
 
 
 @require_POST
-@login_required
+@token_auth_required
 def save_deliverable(request, deliverable_id):
     """Save a deliverable to the user's library."""
     try:
@@ -186,7 +186,7 @@ def save_deliverable(request, deliverable_id):
 
 
 @require_POST
-@login_required
+@token_auth_required
 def unsave_deliverable(request, deliverable_id):
     """Remove a deliverable from the user's library."""
     try:
@@ -214,7 +214,7 @@ def unsave_deliverable(request, deliverable_id):
 
 
 @require_POST
-@login_required
+@token_auth_required
 def clone_deliverable(request, deliverable_id):
     """Create a copy of a deliverable."""
     try:
@@ -263,7 +263,7 @@ def clone_deliverable(request, deliverable_id):
 
 
 @require_POST
-@login_required
+@token_auth_required
 def templateize_deliverable(request, deliverable_id):
     """Convert a deliverable into a reusable template."""
     try:
@@ -291,7 +291,7 @@ def templateize_deliverable(request, deliverable_id):
 
 
 @require_POST
-@login_required
+@token_auth_required
 def export_deliverable(request, deliverable_id):
     """Export a deliverable to PDF, DOCX, or HTML."""
     import json
