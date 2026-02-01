@@ -44,9 +44,14 @@ Usage:
 import logging
 import time
 from typing import Dict, Any, List, Optional
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from ml.auto_selection import TaskType
+
+# Session 895: Timeout for legacy workflow execution to prevent hangs
+# Extended to 8 min - workflows contain multiple steps with thinking models
+COORDINATOR_TIMEOUT = 480  # 8 minutes for nested coordinator/workflow operations
 
 logger = logging.getLogger(__name__)
 
@@ -280,16 +285,21 @@ You execute complete workflow packages, not individual steps."""
                 style_preferences = context.get('style_preferences', '')
                 user_message = context.get('user_message', task)
 
-                # Execute via legacy agent
-                legacy_result = self.legacy_agent.execute(
-                    workflow=workflow,
-                    topic=topic,
-                    count=count,
-                    style_preferences=style_preferences,
-                    user_message=user_message,
-                    **{k: v for k, v in context.items()
-                       if k not in ['workflow', 'topic', 'count', 'style_preferences', 'user_message']}
-                )
+                # Session 895: Execute via legacy agent with timeout protection
+                def execute_legacy():
+                    return self.legacy_agent.execute(
+                        workflow=workflow,
+                        topic=topic,
+                        count=count,
+                        style_preferences=style_preferences,
+                        user_message=user_message,
+                        **{k: v for k, v in context.items()
+                           if k not in ['workflow', 'topic', 'count', 'style_preferences', 'user_message']}
+                    )
+
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(execute_legacy)
+                    legacy_result = future.result(timeout=COORDINATOR_TIMEOUT)
 
                 execution_time = int((time.time() - start_time) * 1000)
 
@@ -360,6 +370,15 @@ You execute complete workflow packages, not individual steps."""
 
                     return result
 
+            except FuturesTimeoutError:
+                logger.warning(f"⏰ Legacy workflow timed out after {COORDINATOR_TIMEOUT}s for workflow: {workflow}")
+                return AgentResult(
+                    success=False,
+                    error=f"Workflow execution timed out after {COORDINATOR_TIMEOUT}s",
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    data={'workflow': workflow, 'timeout': True}
+                )
             except Exception as e:
                 logger.error(f"WorkflowOrchestrationAgent error: {e}", exc_info=True)
                 return AgentResult(

@@ -20,9 +20,14 @@ from typing import Dict, Any, List, Tuple
 from datetime import datetime, timedelta
 from django.utils import timezone
 from decimal import Decimal
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from ml.auto_selection import TaskType
+
+# Session 895: Timeout for sub-agent executions to prevent coordinator hangs
+# Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
+SUB_AGENT_TIMEOUT = 300  # 5 minutes per sub-agent
 
 logger = logging.getLogger(__name__)
 
@@ -814,41 +819,68 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
         scifi_context = {}
         spider_context = {}
 
-        # 1. Historian Analysis
+        # 1. Historian Analysis - Session 895: Added timeout protection
         try:
             historian = NarrativeHistorianAgent(user=self.user)
             historian_task = f"Analyze the history of the narrative '{shift.old_narrative.title}' (ID: {shift.old_narrative.id}). What patterns led to this shift? Are there historical parallels?"
 
-            historian_result = historian.execute(historian_task, context, scifi_context, spider_context)
+            def execute_historian():
+                return historian.execute(historian_task, context, scifi_context, spider_context)
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_historian)
+                historian_result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             if historian_result.success:
                 analyses['agent_analyses']['historian'] = historian_result.result
                 shift.historian_analysis = historian_result.result[:2000]
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ NarrativeHistorianAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            analyses['agent_analyses']['historian'] = f"Timeout after {SUB_AGENT_TIMEOUT}s"
         except Exception as e:
             logger.error(f"Historian analysis failed: {e}")
             analyses['agent_analyses']['historian'] = f"Error: {str(e)}"
 
-        # 2. Trend Break Analysis
+        # 2. Trend Break Analysis - Session 895: Added timeout protection
         try:
             trend_break = TrendBreakDetectorAgent(user=self.user)
             trend_task = f"Analyze the shift from '{shift.old_narrative.title}' to '{shift.new_narrative.title if shift.new_narrative else 'unknown'}'. What triggered it? How confident are we in this shift?"
 
-            trend_result = trend_break.execute(trend_task, context, scifi_context, spider_context)
+            def execute_trend_break():
+                return trend_break.execute(trend_task, context, scifi_context, spider_context)
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_trend_break)
+                trend_result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             if trend_result.success:
                 analyses['agent_analyses']['trend_break'] = trend_result.result
                 shift.trend_break_analysis = trend_result.result[:2000]
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ TrendBreakDetectorAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            analyses['agent_analyses']['trend_break'] = f"Timeout after {SUB_AGENT_TIMEOUT}s"
         except Exception as e:
             logger.error(f"Trend break analysis failed: {e}")
             analyses['agent_analyses']['trend_break'] = f"Error: {str(e)}"
 
-        # 3. Cultural Impact Analysis
+        # 3. Cultural Impact Analysis - Session 895: Added timeout protection
         try:
             cultural = CulturalImpactAgent(user=self.user)
             cultural_task = f"Analyze the cultural impact of this narrative shift (ID: {shift_id}). What are the second-order effects? What actions should be taken?"
 
-            cultural_result = cultural.execute(cultural_task, context, scifi_context, spider_context)
+            def execute_cultural():
+                return cultural.execute(cultural_task, context, scifi_context, spider_context)
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_cultural)
+                cultural_result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             if cultural_result.success:
                 analyses['agent_analyses']['cultural_impact'] = cultural_result.result
                 shift.cultural_impact_analysis = cultural_result.result[:2000]
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ CulturalImpactAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            analyses['agent_analyses']['cultural_impact'] = f"Timeout after {SUB_AGENT_TIMEOUT}s"
         except Exception as e:
             logger.error(f"Cultural impact analysis failed: {e}")
             analyses['agent_analyses']['cultural_impact'] = f"Error: {str(e)}"
