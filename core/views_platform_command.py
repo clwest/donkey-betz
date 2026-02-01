@@ -2674,3 +2674,64 @@ def cleanup_stale_executions_view(request):
             'success': False,
             'error': str(e),
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST", "DELETE"])
+def delete_failed_executions_view(request):
+    """
+    DELETE /api/platform/delete-failed-executions/
+
+    Session 895: Delete old failed agent executions to clean up the UI.
+
+    Query params:
+        hours_old: Only delete failures older than this (default 1)
+        limit: Max number to delete (default 100)
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models_unified_system import AgentExecution
+
+        hours_old = int(request.GET.get('hours_old', 1))
+        limit = int(request.GET.get('limit', 100))
+        cutoff_time = timezone.now() - timedelta(hours=hours_old)
+
+        failed_tasks = AgentExecution.objects.filter(
+            status='failed',
+            created_at__lt=cutoff_time
+        ).order_by('created_at')[:limit]
+
+        count = failed_tasks.count()
+
+        if count > 0:
+            # Get details before deleting
+            sample_details = list(failed_tasks.values('id', 'agent__name', 'task', 'created_at')[:10])
+
+            # Delete the failed executions
+            deleted_ids = list(failed_tasks.values_list('id', flat=True))
+            AgentExecution.objects.filter(id__in=deleted_ids).delete()
+
+            logger.info(f"🗑️ [SESSION 895] Deleted {count} failed agent executions older than {hours_old}h")
+
+            return JsonResponse({
+                'success': True,
+                'deleted_count': count,
+                'hours_old': hours_old,
+                'sample_deleted': sample_details,
+                'message': f'Deleted {count} failed executions older than {hours_old} hours',
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'deleted_count': 0,
+                'hours_old': hours_old,
+                'message': f'No failed executions found older than {hours_old} hours',
+            })
+
+    except Exception as e:
+        logger.error(f"Failed to delete failed executions: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
