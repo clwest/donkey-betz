@@ -1,4 +1,5 @@
 // Session 847: Initiative Pipeline Dashboard
+// Session 898: Added Completed filter and comprehensive origin trace view
 // ChatGPT feedback: "Build 'Initiative Dashboard' View - One screen showing all initiatives"
 // Shows: Initiative name, status, owner, progress bar (Stage 1-5), health indicator
 import { useState } from 'react'
@@ -12,6 +13,8 @@ import {
   Clock,
   AlertTriangle,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   FileText,
   ArrowRight,
   Sparkles,
@@ -19,6 +22,11 @@ import {
   GitBranch,
   Lightbulb,
   Download,
+  Users,
+  Zap,
+  BookOpen,
+  Trophy,
+  Eye,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
@@ -146,39 +154,54 @@ function StageProgress({ initiative }: { initiative: Initiative }) {
 // Single initiative card
 function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative; onViewDetails: () => void }) {
   const health = getHealth(initiative)
+  const isCompleted = initiative.status === 'COMPLETED'
 
   return (
     <div
       className={cn(
         'bg-dark-card border rounded-lg p-4 hover:border-primary-500/50 transition-colors cursor-pointer',
-        health === 'healthy' && 'border-dark-border',
-        health === 'stale' && 'border-yellow-500/30',
-        health === 'blocked' && 'border-red-500/30'
+        // Session 898: Special styling for completed initiatives
+        isCompleted && 'border-emerald-500/30 bg-emerald-500/5',
+        !isCompleted && health === 'healthy' && 'border-dark-border',
+        !isCompleted && health === 'stale' && 'border-yellow-500/30',
+        !isCompleted && health === 'blocked' && 'border-red-500/30'
       )}
       onClick={onViewDetails}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <FolderKanban size={16} className="text-primary-400 flex-shrink-0" />
+            {/* Session 898: Trophy icon for completed initiatives */}
+            {isCompleted ? (
+              <Trophy size={16} className="text-emerald-400 flex-shrink-0" />
+            ) : (
+              <FolderKanban size={16} className="text-primary-400 flex-shrink-0" />
+            )}
             <h3 className="font-medium truncate">{initiative.name}</h3>
           </div>
           <p className="text-xs text-gray-400 truncate">{initiative.description || 'No description'}</p>
         </div>
         <div className="flex items-center gap-2 ml-3">
-          {/* Health indicator */}
-          <span
-            className={cn(
-              'px-2 py-0.5 rounded text-xs font-medium',
-              health === 'healthy' && 'bg-green-500/20 text-green-400',
-              health === 'stale' && 'bg-yellow-500/20 text-yellow-400',
-              health === 'blocked' && 'bg-red-500/20 text-red-400'
-            )}
-          >
-            {health === 'healthy' && 'On Track'}
-            {health === 'stale' && 'Stale'}
-            {health === 'blocked' && 'Blocked'}
-          </span>
+          {/* Status/Health indicator - Session 898: Show Completed status */}
+          {isCompleted ? (
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-400 flex items-center gap-1">
+              <CheckCircle2 size={12} />
+              Completed
+            </span>
+          ) : (
+            <span
+              className={cn(
+                'px-2 py-0.5 rounded text-xs font-medium',
+                health === 'healthy' && 'bg-green-500/20 text-green-400',
+                health === 'stale' && 'bg-yellow-500/20 text-yellow-400',
+                health === 'blocked' && 'bg-red-500/20 text-red-400'
+              )}
+            >
+              {health === 'healthy' && 'On Track'}
+              {health === 'stale' && 'Stale'}
+              {health === 'blocked' && 'Blocked'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -561,6 +584,440 @@ function InitiativeDetailModal({
   )
 }
 
+// Session 898: Comprehensive Initiative Detail Modal with full origin trace
+// Shows: Origin (trigger, conversation, agents), all stages with documents, summary
+function ComprehensiveInitiativeModal({
+  initiativeId,
+  onClose,
+}: {
+  initiativeId: string
+  onClose: () => void
+}) {
+  const [viewingDocument, setViewingDocument] = useState<{ id: string; stageName: string } | null>(null)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    origin: true,
+    conversation: false,
+    stages: true,
+    deliverable: true,
+  })
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['initiative-trace', initiativeId],
+    queryFn: async () => {
+      const res = await platformApi.originTrace(initiativeId)
+      return res.data
+    },
+  })
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-dark-card border border-dark-border rounded-xl p-8">
+          <Loader2 size={32} className="animate-spin text-primary-400 mx-auto" />
+          <p className="text-gray-400 mt-4">Loading initiative details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError || !data?.success) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+        <div className="bg-dark-card border border-dark-border rounded-xl p-8 text-center">
+          <AlertTriangle size={32} className="text-red-400 mx-auto mb-2" />
+          <p className="text-gray-400">Failed to load initiative details</p>
+          <button onClick={onClose} className="btn btn-ghost mt-4">Close</button>
+        </div>
+      </div>
+    )
+  }
+
+  const trace = data.trace
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-dark-card border border-dark-border rounded-xl w-full max-w-5xl mx-4 max-h-[95vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header with Summary */}
+        <div className="p-6 border-b border-dark-border bg-gradient-to-r from-primary-500/10 to-purple-500/10 shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                {trace.initiative.status === 'COMPLETED' ? (
+                  <Trophy size={24} className="text-green-400" />
+                ) : (
+                  <FolderKanban size={24} className="text-primary-400" />
+                )}
+                <h2 className="text-xl font-bold">{trace.initiative.name}</h2>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">{trace.initiative.description}</p>
+
+              {/* Completeness Score */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-24 h-2 bg-dark-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-green-500 to-emerald-400"
+                      style={{ width: `${trace.trace_completeness.completeness_score}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-green-400 font-medium">
+                    {trace.trace_completeness.completeness_score.toFixed(0)}% Complete
+                  </span>
+                </div>
+                <span className={cn(
+                  'px-2 py-1 rounded text-xs font-medium',
+                  trace.initiative.status === 'COMPLETED' && 'bg-green-500/20 text-green-400',
+                  trace.initiative.status === 'ACTIVE' && 'bg-blue-500/20 text-blue-400',
+                )}>
+                  {trace.initiative.status}
+                </span>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg">
+              &times;
+            </button>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-4 gap-4 mt-4">
+            <div className="text-center p-2 bg-dark-bg/50 rounded-lg">
+              <div className="text-lg font-bold text-primary-400">{trace.agents.length}</div>
+              <div className="text-xs text-gray-400">Agents</div>
+            </div>
+            <div className="text-center p-2 bg-dark-bg/50 rounded-lg">
+              <div className="text-lg font-bold text-blue-400">
+                {trace.conversation?.message_count || trace.conversation?.contribution_count || 0}
+              </div>
+              <div className="text-xs text-gray-400">Messages</div>
+            </div>
+            <div className="text-center p-2 bg-dark-bg/50 rounded-lg">
+              <div className="text-lg font-bold text-green-400">
+                {trace.stages.filter(s => s.status === 'APPROVED').length}/5
+              </div>
+              <div className="text-xs text-gray-400">Stages Done</div>
+            </div>
+            <div className="text-center p-2 bg-dark-bg/50 rounded-lg">
+              <div className="text-lg font-bold text-purple-400">
+                {trace.deliverable ? Math.round(trace.deliverable.content_length / 1000) + 'k' : '—'}
+              </div>
+              <div className="text-xs text-gray-400">Content (chars)</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {/* ORIGIN SECTION */}
+          <div className="border border-dark-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleSection('origin')}
+              className="w-full flex items-center justify-between p-4 bg-dark-bg hover:bg-dark-bg/80 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Zap size={18} className="text-yellow-400" />
+                <span className="font-medium">Origin & Trigger</span>
+                {trace.trigger && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
+                    {trace.trigger.type}
+                  </span>
+                )}
+              </div>
+              {expandedSections.origin ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+
+            {expandedSections.origin && (
+              <div className="p-4 border-t border-dark-border space-y-4">
+                {/* Trigger */}
+                {trace.trigger && (
+                  <div className="p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
+                    <div className="text-xs text-yellow-400 mb-1">Trigger</div>
+                    <div className="font-medium">{trace.trigger.description}</div>
+                  </div>
+                )}
+
+                {/* Agents */}
+                {trace.agents.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                      <Users size={14} />
+                      <span>Participating Agents</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {trace.agents.map((agent, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1.5 rounded-full bg-primary-500/10 text-primary-400 text-sm"
+                        >
+                          {agent}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Decision */}
+                {trace.decision && (
+                  <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-purple-400">Decision Created</div>
+                      <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">
+                        {trace.decision.artifact_type}
+                      </span>
+                    </div>
+                    <div className="font-medium mb-2">{trace.decision.topic}</div>
+                    {trace.decision.recommended_stance && (
+                      <div className="text-sm text-gray-300 mb-2">
+                        <span className="text-gray-500">Recommendation:</span> {trace.decision.recommended_stance}
+                      </div>
+                    )}
+                    {trace.decision.key_insights && trace.decision.key_insights.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-500">Key Insights:</div>
+                        {trace.decision.key_insights.slice(0, 3).map((insight, idx) => (
+                          <div key={idx} className="text-xs text-gray-400 pl-3 border-l-2 border-purple-500/30">
+                            {insight.slice(0, 200)}...
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* CONVERSATION SECTION */}
+          {trace.conversation && (
+            <div className="border border-dark-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection('conversation')}
+                className="w-full flex items-center justify-between p-4 bg-dark-bg hover:bg-dark-bg/80 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <MessageSquare size={18} className="text-blue-400" />
+                  <span className="font-medium">Source Conversation</span>
+                  <span className="text-sm text-gray-400">
+                    {trace.conversation.message_count || trace.conversation.contribution_count || 0} messages
+                  </span>
+                  {trace.conversation.quality_score && (
+                    <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">
+                      Quality: {trace.conversation.quality_score}
+                    </span>
+                  )}
+                </div>
+                {expandedSections.conversation ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+
+              {expandedSections.conversation && (
+                <div className="p-4 border-t border-dark-border space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Type:</span>{' '}
+                      <span className="text-gray-300">{trace.conversation.type}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Status:</span>{' '}
+                      <span className="text-gray-300">{trace.conversation.status}</span>
+                    </div>
+                    {trace.conversation.started_at && (
+                      <div>
+                        <span className="text-gray-500">Started:</span>{' '}
+                        <span className="text-gray-300">
+                          {new Date(trace.conversation.started_at).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Conversation Topic */}
+                  <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                    <div className="text-xs text-blue-400 mb-1">Topic</div>
+                    <div className="text-sm">{trace.conversation.topic}</div>
+                  </div>
+
+                  {/* Conclusion/Synthesis */}
+                  {(trace.conversation.conclusion || trace.conversation.synthesis_summary) && (
+                    <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
+                      <div className="text-xs text-green-400 mb-1">Conclusion</div>
+                      <div className="text-sm text-gray-300">
+                        {trace.conversation.conclusion || trace.conversation.synthesis_summary}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STAGES SECTION */}
+          <div className="border border-dark-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleSection('stages')}
+              className="w-full flex items-center justify-between p-4 bg-dark-bg hover:bg-dark-bg/80 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <GitBranch size={18} className="text-green-400" />
+                <span className="font-medium">Pipeline Stages</span>
+                <span className="text-sm text-gray-400">
+                  {trace.stages.filter(s => s.status === 'APPROVED').length} of 5 approved
+                </span>
+              </div>
+              {expandedSections.stages ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+
+            {expandedSections.stages && (
+              <div className="p-4 border-t border-dark-border space-y-3">
+                {trace.stages.map((stage) => (
+                  <div
+                    key={stage.stage}
+                    className={cn(
+                      'flex items-center gap-4 p-3 rounded-lg border transition-colors',
+                      stage.status === 'APPROVED' && 'bg-green-500/5 border-green-500/30',
+                      stage.status === 'DRAFT' && 'bg-yellow-500/5 border-yellow-500/30',
+                      stage.status === 'PENDING' && 'bg-dark-bg border-dark-border',
+                    )}
+                  >
+                    <div className={cn(
+                      'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold',
+                      stage.status === 'APPROVED' && 'bg-green-500/20 text-green-400',
+                      stage.status === 'DRAFT' && 'bg-yellow-500/20 text-yellow-400',
+                      stage.status === 'PENDING' && 'bg-dark-border text-gray-500',
+                    )}>
+                      {stage.status === 'APPROVED' ? <CheckCircle2 size={20} /> : stage.stage}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">{stage.name}</div>
+                      <div className="text-xs text-gray-400">
+                        {stage.status === 'APPROVED' && stage.approved_at
+                          ? `Approved ${new Date(stage.approved_at).toLocaleDateString()}`
+                          : stage.status}
+                      </div>
+                    </div>
+                    {stage.document_id && (
+                      <button
+                        onClick={() => setViewingDocument({ id: stage.document_id!, stageName: stage.name })}
+                        className="flex items-center gap-2 px-3 py-2 bg-primary-500/10 hover:bg-primary-500/20 rounded-lg text-primary-400 text-sm transition-colors"
+                      >
+                        <Eye size={14} />
+                        View Document
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* DELIVERABLE SECTION */}
+          {trace.deliverable && (
+            <div className="border border-dark-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection('deliverable')}
+                className="w-full flex items-center justify-between p-4 bg-dark-bg hover:bg-dark-bg/80 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <BookOpen size={18} className="text-emerald-400" />
+                  <span className="font-medium">Final Deliverable</span>
+                  <span className={cn(
+                    'px-2 py-0.5 rounded text-xs',
+                    trace.deliverable.status === 'published' && 'bg-green-500/20 text-green-400',
+                    trace.deliverable.status === 'draft' && 'bg-yellow-500/20 text-yellow-400',
+                  )}>
+                    {trace.deliverable.status}
+                  </span>
+                </div>
+                {expandedSections.deliverable ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+
+              {expandedSections.deliverable && (
+                <div className="p-4 border-t border-dark-border">
+                  <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                    <div className="font-medium mb-2">{trace.deliverable.title}</div>
+                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                      <span>{trace.deliverable.deliverable_type}</span>
+                      <span>{Math.round(trace.deliverable.content_length / 1000)}k characters</span>
+                      <span>{new Date(trace.deliverable.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* FLOW VISUALIZATION */}
+          <div className="p-4 bg-dark-bg rounded-lg">
+            <div className="text-xs text-gray-500 mb-3">Complete Journey</div>
+            <div className="flex items-center justify-center gap-2 text-xs flex-wrap">
+              {trace.trigger && (
+                <>
+                  <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded">
+                    {trace.trigger.type} Trigger
+                  </span>
+                  <ArrowRight size={12} className="text-gray-500" />
+                </>
+              )}
+              {trace.conversation && (
+                <>
+                  <span className="px-2 py-1 bg-blue-500/10 text-blue-400 rounded">
+                    {trace.conversation.message_count || trace.conversation.contribution_count || '?'} Messages
+                  </span>
+                  <ArrowRight size={12} className="text-gray-500" />
+                </>
+              )}
+              {trace.decision && (
+                <>
+                  <span className="px-2 py-1 bg-purple-500/10 text-purple-400 rounded">Decision</span>
+                  <ArrowRight size={12} className="text-gray-500" />
+                </>
+              )}
+              <span className="px-2 py-1 bg-primary-500/10 text-primary-400 rounded">Initiative</span>
+              <ArrowRight size={12} className="text-gray-500" />
+              <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded">
+                {trace.stages.filter(s => s.status === 'APPROVED').length} Stages
+              </span>
+              {trace.deliverable && (
+                <>
+                  <ArrowRight size={12} className="text-gray-500" />
+                  <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded">
+                    Deliverable
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-bg/50 shrink-0">
+          <div className="text-xs text-gray-400">
+            Created: {new Date(trace.initiative.created_at).toLocaleDateString()} •
+            Updated: {new Date(trace.initiative.updated_at).toLocaleDateString()}
+          </div>
+          <button onClick={onClose} className="btn btn-ghost">Close</button>
+        </div>
+
+        {/* Document Viewer Modal */}
+        {viewingDocument && (
+          <DocumentViewerModal
+            documentId={viewingDocument.id}
+            stageName={viewingDocument.stageName}
+            initiativeName={trace.initiative.name}
+            onClose={() => setViewingDocument(null)}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
 // Empty state
 function EmptyState({ onPopulate, isPopulating }: { onPopulate: () => void; isPopulating: boolean }) {
   return (
@@ -597,7 +1054,9 @@ function EmptyState({ onPopulate, isPopulating }: { onPopulate: () => void; isPo
 export function InitiativesTab() {
   const queryClient = useQueryClient()
   const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(null)
-  const [filter, setFilter] = useState<'all' | 'active' | 'stale' | 'blocked'>('all')
+  // Session 898: Track comprehensive modal separately for completed initiatives
+  const [comprehensiveInitiativeId, setComprehensiveInitiativeId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'stale' | 'blocked'>('all')
 
   const {
     data,
@@ -625,6 +1084,8 @@ export function InitiativesTab() {
     if (filter === 'all') return true
     const health = getHealth(init)
     if (filter === 'active') return init.status === 'ACTIVE'
+    // Session 898: Filter by completed status
+    if (filter === 'completed') return init.status === 'COMPLETED'
     return health === filter
   })
 
@@ -632,6 +1093,8 @@ export function InitiativesTab() {
   const stats = {
     total: data?.initiatives?.length || 0,
     active: data?.initiatives?.filter((i) => i.status === 'ACTIVE').length || 0,
+    // Session 898: Track completed initiatives for comprehensive view
+    completed: data?.initiatives?.filter((i) => i.status === 'COMPLETED').length || 0,
     stale: data?.initiatives?.filter((i) => getHealth(i) === 'stale').length || 0,
     blocked: data?.initiatives?.filter((i) => getHealth(i) === 'blocked').length || 0,
   }
@@ -685,6 +1148,19 @@ export function InitiativesTab() {
             >
               Active ({stats.active})
             </button>
+            {/* Session 898: Completed filter for comprehensive view */}
+            {stats.completed > 0 && (
+              <button
+                onClick={() => setFilter('completed')}
+                className={cn(
+                  'px-3 py-1 rounded-full transition-colors flex items-center gap-1',
+                  filter === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                <Trophy size={14} />
+                Completed ({stats.completed})
+              </button>
+            )}
             {stats.stale > 0 && (
               <button
                 onClick={() => setFilter('stale')}
@@ -724,7 +1200,14 @@ export function InitiativesTab() {
           <InitiativeCard
             key={initiative.id}
             initiative={initiative}
-            onViewDetails={() => setSelectedInitiative(initiative)}
+            onViewDetails={() => {
+              // Session 898: Open comprehensive modal for completed initiatives
+              if (initiative.status === 'COMPLETED') {
+                setComprehensiveInitiativeId(initiative.id)
+              } else {
+                setSelectedInitiative(initiative)
+              }
+            }}
           />
         ))}
       </div>
@@ -735,11 +1218,19 @@ export function InitiativesTab() {
         </div>
       )}
 
-      {/* Detail modal */}
+      {/* Detail modal - Basic view for active initiatives */}
       {selectedInitiative && (
         <InitiativeDetailModal
           initiative={selectedInitiative}
           onClose={() => setSelectedInitiative(null)}
+        />
+      )}
+
+      {/* Session 898: Comprehensive modal for completed initiatives */}
+      {comprehensiveInitiativeId && (
+        <ComprehensiveInitiativeModal
+          initiativeId={comprehensiveInitiativeId}
+          onClose={() => setComprehensiveInitiativeId(null)}
         />
       )}
     </div>

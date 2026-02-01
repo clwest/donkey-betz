@@ -3073,6 +3073,82 @@ export const platformApi = {
       created_initiatives: Array<{ name: string; stages_linked: number }>
       message: string
     }>('/initiatives/populate/'),
+
+  // Session 898: Get full origin trace for an initiative
+  originTrace: (initiativeId: string) =>
+    api.get<{
+      success: boolean
+      trace: {
+        initiative: {
+          id: string
+          name: string
+          description: string
+          status: string
+          current_stage: number
+          created_at: string
+          updated_at: string
+        }
+        decision: {
+          id: string
+          decision_type: string
+          artifact_type: string
+          topic: string
+          key_insights: string[]
+          recommended_stance: string
+          suggested_feature: string | null
+          rationale: string
+          participants: string[]
+          status: string
+          created_at: string
+        } | null
+        conversation: {
+          id: string
+          type: string
+          topic: string
+          conversation_type: string
+          trigger_type?: string
+          status: string
+          message_count?: number
+          contribution_count?: number
+          quality_score?: number
+          conclusion: string | null
+          synthesis_summary?: string | null
+          started_at: string | null
+          ended_at?: string | null
+          completed_at?: string | null
+        } | null
+        trigger: {
+          type: string
+          description: string
+        } | null
+        agents: string[]
+        stages: Array<{
+          stage: number
+          name: string
+          status: string
+          document_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+        }>
+        deliverable: {
+          id: string
+          title: string
+          deliverable_type: string
+          status: string
+          content_length: number
+          created_at: string
+        } | null
+        trace_completeness: {
+          has_decision: boolean
+          has_conversation: boolean
+          has_trigger: boolean
+          has_agents: boolean
+          has_stages: boolean
+          has_deliverable: boolean
+          completeness_score: number
+        }
+      }
+    }>(`/initiatives/${initiativeId}/origin-trace/`),
 }
 
 // Session 833: Blogs API for approval workflow
