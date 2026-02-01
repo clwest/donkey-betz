@@ -11,6 +11,7 @@ export type WorkspaceTab =
   | 'datasources'
   | 'governance'
   | 'initiatives'  // Session 847: Initiative Pipeline Dashboard
+  | 'hub'  // Session 899: Unified Initiative Hub
   | 'knowledge'
   | 'files'
   | 'operations'

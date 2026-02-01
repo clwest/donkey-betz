@@ -3149,6 +3149,95 @@ export const platformApi = {
         }
       }
     }>(`/initiatives/${initiativeId}/origin-trace/`),
+
+  // Session 899: Unified Initiative Hub - ALL initiatives with traces + orphaned items
+  initiativeHub: () =>
+    api.get<{
+      success: boolean
+      stats: {
+        total_initiatives: number
+        active_initiatives: number
+        completed_initiatives: number
+        orphaned_conversations: number
+        orphaned_dreams: number
+        avg_completeness: number
+      }
+      initiatives: Array<{
+        id: string
+        name: string
+        description: string
+        status: string
+        current_stage: number
+        created_at: string
+        updated_at: string
+        completeness_score: number
+        decision: {
+          id: string
+          topic: string
+          artifact_type: string
+          decision_type: string
+          recommended_stance: string
+          key_insights: string[]
+          status: string
+        } | null
+        conversation: {
+          id: string
+          type: string
+          topic: string
+          message_count?: number
+          contribution_count?: number
+          quality_score?: number
+          conclusion?: string | null
+          synthesis_summary?: string | null
+          trigger_type?: string
+          status: string
+          started_at: string | null
+        } | null
+        trigger: {
+          type: string
+          description: string
+        } | null
+        agents: string[]
+        stages: Array<{
+          stage: number
+          name: string
+          status: string
+          document_id: string | null
+          approved_at: string | null
+        }>
+        deliverable: {
+          id: string
+          title: string
+          deliverable_type: string
+          status: string
+          content_length: number
+        } | null
+      }>
+      orphaned: {
+        conversations: Array<{
+          id: string
+          type: string
+          topic: string
+          agents: string[]
+          message_count: number
+          status: string
+          trigger_type?: string
+          conclusion?: string | null
+          started_at: string | null
+          quality_score?: number
+        }>
+        dreams: Array<{
+          id: string
+          type: string
+          title: string
+          agent: string
+          content_preview?: string | null
+          dream_type?: string | null
+          dreamed_at: string
+        }>
+      }
+      timestamp: string
+    }>('/initiative-hub/'),
 }
 
 // Session 833: Blogs API for approval workflow
