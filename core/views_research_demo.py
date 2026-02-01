@@ -1388,7 +1388,19 @@ def initiative_origin_trace_api(request, initiative_id):
                     'conclusion': conv.conclusion[:500] if conv.conclusion else None,
                     'started_at': conv.started_at.isoformat() if conv.started_at else None,
                     'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
+                    # Session 899: Include actual conversation messages
+                    'messages': [],
                 }
+                # Session 899: Get conversation messages
+                messages = conv.messages.select_related('agent').order_by('sequence_number')[:50]
+                for msg in messages:
+                    trace['conversation']['messages'].append({
+                        'id': str(msg.id),
+                        'agent_name': msg.agent.name if msg.agent else 'Unknown',
+                        'content': msg.content,
+                        'message_type': msg.message_type,
+                        'sequence_number': msg.sequence_number,
+                    })
                 trace['trigger'] = {
                     'type': conv.trigger_type or 'unknown',
                     'description': f'{conv.trigger_type} triggered conversation' if conv.trigger_type else 'Unknown trigger',
@@ -1410,7 +1422,19 @@ def initiative_origin_trace_api(request, initiative_id):
                     'synthesis_summary': hive.synthesis_summary[:500] if hive.synthesis_summary else None,
                     'started_at': hive.started_at.isoformat() if hive.started_at else None,
                     'completed_at': hive.completed_at.isoformat() if hive.completed_at else None,
+                    # Session 899: Include actual contributions as messages
+                    'messages': [],
                 }
+                # Session 899: Get HiveMind contributions (similar to messages)
+                contributions = hive.contributions.select_related('agent').order_by('created_at')[:50]
+                for idx, contrib in enumerate(contributions, 1):
+                    trace['conversation']['messages'].append({
+                        'id': str(contrib.id),
+                        'agent_name': contrib.agent.name if contrib.agent else 'Unknown',
+                        'content': contrib.contribution,
+                        'message_type': contrib.perspective_type or 'contribution',
+                        'sequence_number': idx,
+                    })
                 trace['trigger'] = {
                     'type': 'scheduled' if hive.auto_selected_agents else 'manual',
                     'description': 'Scheduled autonomous discussion' if hive.auto_selected_agents else 'Manual conversation',
