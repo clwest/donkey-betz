@@ -1281,26 +1281,51 @@ class AgentRouter:
             Dict with workspace structure info, or empty dict if no workspace
         """
         try:
-            # Session 800: Skip workspace context for system/scheduled tasks (no user)
+            from core.services.workspace_manager import get_workspace_manager, WorkspaceManager
+            from core.models_skin_layer import AgentWorkspace
+
+            # Session 893: Get workspace for ALL agents, including system tasks
+            # Previously skipped workspace for system tasks (no user) - now fall back to default workspace
+            manager = None
             if self.user is None:
-                logger.debug(f"📁 [Session 800] Skipping workspace context for {agent_name} (system task, no user)")
-                return {}
+                # Fall back to the "Codebase" workspace which is the main system workspace
+                workspace = AgentWorkspace.objects.filter(
+                    name__icontains='codebase'
+                ).first() or AgentWorkspace.objects.filter(is_active=True).first()
 
-            from core.services.workspace_manager import get_workspace_manager
+                if not workspace:
+                    logger.debug(f"📁 [Session 893] No default workspace available for system task {agent_name}")
+                    return {}
 
-            manager = get_workspace_manager(self.user)
-            workspace = manager.get_active_workspace()
+                logger.debug(f"📁 [Session 893] Using default workspace '{workspace.name}' for system task {agent_name}")
+            else:
+                manager = get_workspace_manager(self.user)
+                workspace = manager.get_active_workspace()
 
-            if not workspace:
-                logger.debug(f"📁 [Session 798] No active workspace for {agent_name}")
-                return {}
+                if not workspace:
+                    logger.debug(f"📁 [Session 798] No active workspace for {agent_name}")
+                    return {}
 
             # Get workspace context for this agent
-            context = manager.get_workspace_context_for_agent(
-                workspace=workspace,
-                agent_name=agent_name,
-                task=task
-            )
+            if manager:
+                context = manager.get_workspace_context_for_agent(
+                    workspace=workspace,
+                    agent_name=agent_name,
+                    task=task
+                )
+            else:
+                # Session 893: Build basic context directly from workspace for system tasks
+                context = {
+                    'workspace_name': workspace.name,
+                    'root_path': workspace.root_path,
+                    'tech_stack': workspace.tech_stack or {},
+                    'key_files': workspace.key_files or {},
+                    'directory_purposes': workspace.directory_purposes or {},
+                    'coding_patterns': workspace.coding_patterns or {},
+                    'import_aliases': workspace.import_aliases or {},
+                    'protected_paths': workspace.protected_paths or [],
+                    'total_files': workspace.total_files or 0,
+                }
 
             workspace_context = {
                 'has_workspace': True,
