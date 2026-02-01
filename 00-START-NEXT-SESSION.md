@@ -1,36 +1,75 @@
 # Session 894 - Start Here
 
-**Previous Session:** 893 (Deliverables String Bug Fix)
+**Previous Session:** 893 (Multiple Bug Fixes)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **DOMAIN CONTEXT INJECTION ACTIVE** | **WORKFLOW ORCHESTRATION FIXED** | **DELIVERABLES BUG FIXED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **DOMAIN CONTEXT INJECTION ACTIVE** | **WORKFLOW ORCHESTRATION FIXED** | **ALL AGENTS HAVE WORKSPACE CONTEXT**
 
 ---
 
 ## What Was Accomplished in Session 893
 
-### Deliverables String Bug Fix
+### 1. Deliverables String Bug Fix
 
 Fixed single-letter document titles in the Technical sub-tab caused by LLM output format bug.
 
 #### Problem
-Documents were appearing with titles like `[Stage 1 - Research Brief] n`, `[Stage 1 - Research Brief] o`, etc.
+Documents appearing with titles like `[Stage 1 - Research Brief] n`, `[Stage 1 - Research Brief] o`, etc.
 The letters spelled out "summary.json" - character-by-character iteration over a string instead of a list.
 
-#### Root Cause
-ThinkingAgent's LLM output `"deliverables": "summary.json"` (string) instead of `"deliverables": ["summary.json"]` (list).
-When iterating over the string, each character became a separate document.
+#### Solution
+- Added defensive validation in `autonomous_action_executor.py` (2 locations)
+- Created cleanup command `cleanup_single_letter_docs.py`
+- Deleted 67 bad documents from production
+
+**PR:** #638 | **Handoff:** `SESSION_893_DELIVERABLES_BUG_FIX.md`
+
+---
+
+### 2. Intel Page 401 Fix
+
+Fixed console 401 Unauthorized errors on the Intel page.
+
+#### Problem
+Intel page endpoints had `@permission_classes([AllowAny])` but `UnifiedTokenAuthenticationMiddleware` was blocking them.
 
 #### Solution
-1. **Added defensive validation** in `autonomous_action_executor.py` (2 locations)
-2. **Created cleanup command** `cleanup_single_letter_docs.py`
+Added endpoints to PUBLIC_PATHS whitelist in `core/auth_middleware.py`:
+- `/api/v1/agents/unified-executions/`
+- `/api/orchestrations/`
+- `/api/v1/reasoning/gates/`
 
-#### Files Modified
-| File | Changes |
-|------|---------|
-| `core/services/autonomous_action_executor.py` | Added string-to-list validation at 2 locations |
-| `core/management/commands/cleanup_single_letter_docs.py` | NEW - cleanup command |
+**PR:** #639
 
-**Handoff:** `SESSION_893_DELIVERABLES_BUG_FIX.md`
+---
+
+### 3. Social Sub-Tab Modal Fix
+
+Fixed conversation modal showing "0 messages" and "No message details available".
+
+#### Problem
+API returns `{ success, conversation: {...} }` but code passed `conversationDetail` directly.
+Also, interface mismatch: API returns `agent` but code expected `agent_id`.
+
+#### Solution
+- Fixed data access: `conversationDetail?.conversation`
+- Updated interface to match API: `agent` field instead of `agent_id`
+- Display emoji and sequence in message list
+
+**PR:** #640
+
+---
+
+### 4. Workspace Context for All Agents
+
+Fixed agents running as system tasks showing `workspace: False`.
+
+#### Problem
+System tasks (Celery Beat, scheduled jobs) have `self.user = None`, which caused workspace context to be skipped entirely.
+
+#### Solution
+Modified `_get_workspace_context()` in `agent_router.py` to fall back to default "Codebase" workspace for system tasks.
+
+**PR:** #641 | **Handoff:** `SESSION_893_WORKSPACE_CONTEXT_FIX.md`
 
 ---
 
@@ -38,43 +77,13 @@ When iterating over the string, each character became a separate document.
 
 ### WorkflowAgent Multi-Step Orchestration Fix
 
-Fixed the "Research X and create a business plan" workflow capability that had stopped working.
+Fixed the "Research X and create a business plan" workflow capability.
 
-#### Problem
-WorkflowAgent's `delegate_to_agent` tool only had **20 agents** in its enum, but the system has **76+ agents**. Critical agents were missing:
-- `ContentWriterAgent` (for business plans, articles)
-- `BrandIdentityAgent` (for color palettes, brand guidelines)
-- `LegalDocDrafterAgent`, `SportsOddsAnalyst`, development agents, etc.
-
-#### Solution
-1. **Expanded WorkflowAgent's agent list** from 20 → 36 agents
-2. **Added new example workflow** for business plan creation
-3. **Updated PersonalAssistantAgent** with more workflow patterns
-
-#### Files Modified
-| File | Changes |
-|------|---------|
-| `core/agents/workflow_agent.py` | Expanded delegate_to_agent enum (20→36), updated system_prompt |
-| `core/agents/personal_assistant_agent.py` | Added more workflow patterns |
+- Expanded WorkflowAgent's agent list from 20 → 36 agents
+- Added new example workflow for business plan creation
+- Updated PersonalAssistantAgent with more workflow patterns
 
 **Handoff:** `SESSION_892_WORKFLOW_AGENT_FIX.md`
-
----
-
-## What Was Accomplished in Session 891
-
-### Domain Content Context System
-
-Created a unified system that injects domain-specific platform data into ALL content types.
-
-#### Files Created
-| File | Purpose |
-|------|---------|
-| `core/services/finance_content_context.py` | Finance/Markets context |
-| `core/services/sports_content_context.py` | Sports/Betting context |
-| `core/services/domain_content_context.py` | Unified router (9 domains) |
-
-**Handoff:** `SESSION_891_DOMAIN_CONTENT_CONTEXT.md`
 
 ---
 
@@ -92,24 +101,18 @@ celery-broadcast: -Q broadcast (2 concurrency)
 
 ## TOP PRIORITY for Session 894
 
-### 1. Deploy and Clean Up Production Data
-Run the cleanup command on production to delete single-letter title documents:
-```bash
-python manage.py cleanup_single_letter_docs --dry-run  # Preview
-python manage.py cleanup_single_letter_docs            # Delete
-```
+### 1. Test Workspace Context Fix
+Verify all agents now show `workspace: True` in Command tab:
+- Trigger a scheduled task via Celery Beat
+- Check MarketIntelligenceAgent execution shows workspace context
 
-### 2. Test Multi-Step Workflow Orchestration
+### 2. Investigate Stuck Tasks (Optional)
+Command tab showed tasks "Running" for 3-4+ hours. Database query returned 0 stuck executions - may be UI caching issue.
+
+### 3. Test Multi-Step Workflow Orchestration
 Test the fixed WorkflowAgent with complex requests:
 - "Research Tesla and create a business plan"
 - "Create a brand package with logo, colors, and style guide"
-- "Analyze market trends and write a strategy document"
-
-### 3. Monitor Domain Context Quality
-Generate test content for different domains and verify:
-- Finance blogs reference market data/advisor wisdom
-- Sports content includes betting performance/odds
-- AI/Tech content shows agent ecosystem stats
 
 ---
 
@@ -146,12 +149,12 @@ print(f'WorkflowAgent can delegate to {len(agents)} agents')
 
 | PR | Description |
 |----|-------------|
-| #635 | Deliverables String Bug Fix (LLM output validation) |
-| #634 | WorkflowAgent Multi-Step Orchestration Fix (20→36 agents) |
-| #633 | Domain Content Context System (finance, sports, 9 domains) |
-| #632 | Podcast quality improvements (anti-cliché, war stories, host POV) |
-| #631 | Session 889 documentation |
-| #630 | Live Monitor shows real agent activity |
+| #641 | Workspace context for all agents (system tasks fallback) |
+| #640 | Social sub-tab conversation modal fix |
+| #639 | Intel page 401 Unauthorized fix |
+| #638 | Deliverables String Bug Fix (LLM output validation) |
+| #637 | WorkflowAgent Multi-Step Orchestration Fix (20→36 agents) |
+| #636 | Domain Content Context System (finance, sports, 9 domains) |
 
 ---
 
@@ -159,7 +162,7 @@ print(f'WorkflowAgent can delegate to {len(agents)} agents')
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **893** | Deliverables String Bug Fix (LLM output validation) | `SESSION_893_DELIVERABLES_BUG_FIX.md` |
+| **893** | 4 Bug Fixes: Deliverables, Intel 401, Social Modal, Workspace Context | `SESSION_893_*.md` |
 | **892** | WorkflowAgent Multi-Step Orchestration Fix (20→36 agents) | `SESSION_892_WORKFLOW_AGENT_FIX.md` |
 | **891** | Domain Content Context System (9 domains, unified router) | `SESSION_891_DOMAIN_CONTENT_CONTEXT.md` |
 | **890** | Podcast Quality Improvements (anti-cliché, war stories, host POV) | `SESSION_890_PODCAST_QUALITY.md` |
@@ -182,16 +185,15 @@ print(f'WorkflowAgent can delegate to {len(agents)} agents')
 
 ---
 
-## Multi-Step Orchestration Status
+## Session 893 Summary
 
-| Component | Status |
-|-----------|--------|
-| WorkflowAgent | Fixed (36 agents available) |
-| PersonalAssistant Routing | Updated (new workflow patterns) |
-| Business Plan Workflows | Working |
-| Brand Package Workflows | Working |
-| Cross-Agent Delegation | Full support |
+| Fix | PR | Status |
+|-----|-----|--------|
+| Deliverables string → list validation | #638 | Merged |
+| Intel page PUBLIC_PATHS | #639 | Merged |
+| Social modal data structure | #640 | Merged |
+| Workspace context for system tasks | #641 | Merged |
 
 ---
 
-**All systems operational. WorkflowAgent can now orchestrate 36 agents for complex multi-step workflows.**
+**All systems operational. All 76 agents now have workspace context regardless of trigger source.**
