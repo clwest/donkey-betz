@@ -1,65 +1,40 @@
-# Session 898 - Start Here
+# Session 899 - Start Here
 
-**Previous Session:** 897 (Experiment Pipeline Fix + Initiatives Performance)
+**Previous Session:** 898 (Mythology Lab Agent Name Fix)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **EXPERIMENT PIPELINE: HEALTHY** | **820 SUCCESSFUL EXPERIMENTS** | **INITIATIVES: FAST LOADING**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **MYTHOLOGY LAB: FULLY FUNCTIONAL** | **820 SUCCESSFUL EXPERIMENTS** | **INITIATIVES: FAST LOADING**
 
 ---
 
-## What Was Accomplished in Session 897
+## What Was Accomplished in Session 898
 
-### 1. Experiment Pipeline Fix (PRs #660-#663)
+### Mythology Lab Deep Review & Fix (PR #668)
 
-Fixed completely stuck experiment pipeline - 68.3% of experiments were frozen.
+Fixed missing agent names in the Mythology Lab "Recent Events" tab.
 
-**Root Cause:** All 875 running pilots had `started_at = NULL`, making them invisible to the evaluation task.
+**Root Cause:** The API wasn't exposing the agent name despite having it in `source_id`.
 
-**Solution:** Created `fix_pilot_started_at` command to backfill values.
+**Solution:** Added `agent_name` field to `recent_events` API response and updated frontend to use it.
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Running experiments | 604 | **0** |
-| Successful experiments | 33 | **820** |
-| Learnings created | - | **658** |
+| Component | Status |
+|-----------|--------|
+| Stats Dashboard | Working - All 15 metrics |
+| Recent Events Tab | Fixed - Agent names now display |
+| Quarantine Tab | Working - Teacher/student agents shown |
 
-### 2. Initiatives Tab Performance Fix (PRs #665-#666)
-
-Fixed 30+ second load time caused by N+1 query problem (~3,000 queries).
-
-**Solution:** Rewrote `initiatives_api` with `prefetch_related` to batch load data.
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Database queries | ~3,000 | **3** |
-| Load time | 30+ seconds | **<1 second** |
+### Files Changed
+- `mythology/views.py` - Added agent_name to API
+- `frontend/src/pages/MythologyLabPage.tsx` - Use API field instead of regex
 
 ---
 
-## New Management Commands (Session 897)
-
-```bash
-# Diagnose experiment/pilot pipeline
-python manage.py check_experiment_status
-
-# Fix NULL started_at on pilots (if needed)
-python manage.py fix_pilot_started_at
-
-# Manually trigger pilot evaluation
-python manage.py trigger_pilot_evaluation
-
-# Test initiatives API performance
-python manage.py test_initiatives_perf
-```
-
----
-
-## TOP PRIORITY for Session 898
+## TOP PRIORITY for Session 899
 
 ### 1. Discussion → Initiative Linkage
 User identified gap: agent discussions (HiveMindSessions) need better connection to resulting Initiatives for YouTube demo. The "Origin Trace" section exists but may need enhancement.
 
 ### 2. YouTube Demo Preparation
-System is now performant. Focus on demo flow:
+System is now performant and Mythology Lab is functional. Focus on demo flow:
 - Agent Discussion → Dream/Decision → Initiative → 5 Stages → Deliverable
 
 ---
@@ -95,6 +70,7 @@ railway ssh -s donkey-betz-platform python manage.py test_initiatives_perf
 
 | PR | Description |
 |----|-------------|
+| #668 | Mythology Lab - Add agent name to Recent Events |
 | #666 | Add initiatives performance test command |
 | #665 | Fix initiatives API N+1 query - 30s → <1s |
 | #663 | Add trigger_pilot_evaluation command |
@@ -102,7 +78,6 @@ railway ssh -s donkey-betz-platform python manage.py test_initiatives_perf
 | #661 | Enhanced experiment pipeline diagnostics |
 | #660 | Add experiment status diagnostic command |
 | #658 | PDF Export - Download initiative documents |
-| #657 | Codebase Workspace Fix |
 
 ---
 
@@ -110,11 +85,11 @@ railway ssh -s donkey-betz-platform python manage.py test_initiatives_perf
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **898** | Mythology Lab Agent Name Fix | `SESSION_898_MYTHOLOGY_LAB_FIX.md` |
 | **897** | Experiment Pipeline Fix + Initiatives Performance | `SESSION_897_COMPLETE.md` |
 | **896** | Codebase Workspace Fix + PDF Export | `SESSION_896_CODEBASE_WORKSPACE_FIX.md` |
 | **895** | Coordinator Timeout Protection | `SESSION_895_COORDINATOR_TIMEOUT_PROTECTION.md` |
 | **894** | Voice Mode (Whisper + ElevenLabs) | Previous START file |
-| **893** | 4 Bug Fixes | `SESSION_893_*.md` |
 
 ---
 
@@ -146,4 +121,4 @@ railway ssh -s donkey-betz-platform python manage.py test_initiatives_perf
 
 ---
 
-**Platform is now fast and healthy - ready for YouTube demo!**
+**Platform is ready for YouTube demo!**
