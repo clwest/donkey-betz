@@ -1,8 +1,8 @@
-# Session 896 - Codebase Workspace Fix
+# Session 896 - Codebase Workspace Fix + PDF Export
 
 **Date:** February 1, 2026
-**Focus:** Fixed CodeGeneratorAgent producing stub files by setting up proper codebase workspace on production
-**PR:** #656
+**Focus:** Fixed CodeGeneratorAgent + Added PDF export for initiative documents
+**PRs:** #657 (Codebase Workspace), #658 (PDF Export)
 
 ---
 
@@ -110,3 +110,38 @@ The `setup_codebase_workspace` command was added in Session 884 to create a sepa
 | Codebase workspace | None | `donkey-betz-codebase` at `/app` |
 | CodeGeneratorAgent file access | ❌ Can't read files | ✅ Full codebase access |
 | Agent output | Stub comments | Real code modifications |
+
+---
+
+## Part 2: PDF Export for Initiative Documents (PR #658)
+
+Added ability to download initiative stage documents as professional PDFs.
+
+### Problem
+Users could only copy/paste document content to share reports, which looked unprofessional.
+
+### Solution
+Added client-side PDF generation using jsPDF library.
+
+### Features
+- Platform branding header with initiative/stage name
+- Document metadata (word count, creation date, status)
+- Markdown formatting support:
+  - Headers (# ## ###)
+  - Bullet points and numbered lists
+  - Bold text
+- Automatic page breaks with continuation headers
+- Page numbers and professional footer
+
+### Files Added/Modified
+| File | Changes |
+|------|---------|
+| `frontend/src/lib/pdfExport.ts` | New PDF generation utility (256 lines) |
+| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added Download PDF button |
+| `frontend/package.json` | Added jspdf dependency |
+
+### Usage
+1. Navigate to Initiatives tab
+2. Click on an initiative card
+3. Click on a stage document (FileText icon)
+4. Click "Download PDF" button in the modal footer
