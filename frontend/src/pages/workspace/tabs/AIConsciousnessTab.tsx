@@ -1311,14 +1311,17 @@ interface Conversation {
   id: string
   topic: string
   message_count: number
-  participants?: string[]
+  participants?: string[] | Array<{ name: string; emoji?: string }>
   created_at?: string
   last_message_at?: string
   messages?: Array<{
     id: string
-    agent_id: string
+    agent: string  // Session 893: API returns 'agent' not 'agent_id'
+    agent_id?: string
+    agent_emoji?: string
     content: string
-    created_at: string
+    sequence?: number
+    created_at?: string
   }>
 }
 
@@ -1509,7 +1512,7 @@ function SocialSubTab() {
       {/* Conversation Detail Modal */}
       {selectedConversation && (
         <ConversationDetailModal
-          conversation={conversationDetail || selectedConversation}
+          conversation={conversationDetail?.conversation || selectedConversation}
           onClose={() => setSelectedConversation(null)}
         />
       )}
@@ -1535,7 +1538,9 @@ function ConversationDetailModal({ conversation, onClose }: { conversation: Conv
             conversation.messages.map((msg) => (
               <div key={msg.id} className="bg-gray-800/50 rounded p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-primary-400">{msg.agent_id}</span>
+                  {msg.agent_emoji && <span>{msg.agent_emoji}</span>}
+                  <span className="text-xs font-medium text-primary-400">{msg.agent || msg.agent_id}</span>
+                  {msg.sequence && <span className="text-xs text-gray-600">#{msg.sequence}</span>}
                   {msg.created_at && (
                     <span className="text-xs text-gray-500">
                       {new Date(msg.created_at).toLocaleString()}
