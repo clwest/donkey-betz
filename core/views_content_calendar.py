@@ -663,6 +663,7 @@ def content_channels_list(request):
             'target_audience': channel.target_audience,
             'content_frequency': channel.content_frequency,
             'status': channel.status,
+            'is_active': channel.status == ChannelStatus.ACTIVE,  # Session 891: For frontend badge
             'visual_style': channel.visual_style,
             'voice_name': channel.voice_name or 'Default',
             'platform': channel.platform,
@@ -768,6 +769,7 @@ def content_channel_detail(request, channel_id):
             'target_audience': channel.target_audience,
             'content_frequency': channel.content_frequency,
             'status': channel.status,
+            'is_active': channel.status == ChannelStatus.ACTIVE,  # Session 891: For frontend badge
             'visual_style': channel.visual_style,
             'voice_name': channel.voice_name or 'Default',
             'platform': channel.platform,
