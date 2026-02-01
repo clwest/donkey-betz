@@ -15,8 +15,13 @@ Key capabilities:
 import logging
 from typing import Dict, Any, List
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+
+# Session 895: Timeout for sub-agent executions to prevent coordinator hangs
+# Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
+SUB_AGENT_TIMEOUT = 300  # 5 minutes per sub-agent
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -236,57 +241,101 @@ Always prioritize:
             return result
 
     def _run_stock_analyst(self, context: Dict) -> Dict[str, Any]:
-        """Run the StockAnalystAgent."""
+        """Run the StockAnalystAgent with timeout protection."""
         try:
             from .stock_analyst_agent import StockAnalystAgent
             agent = StockAnalystAgent()
-            result = agent.execute(
-                task="Analyze recent SEC filings for material information",
-                context=context
-            )
+
+            def execute_agent():
+                return agent.execute(
+                    task="Analyze recent SEC filings for material information",
+                    context=context
+                )
+
+            # Session 895: Add timeout to prevent coordinator hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             return result.to_dict() if hasattr(result, 'to_dict') else {'data': result.data if hasattr(result, 'data') else {}}
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ StockAnalystAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            return {'error': f'Timeout after {SUB_AGENT_TIMEOUT}s', 'timed_out': True}
         except Exception as e:
             logger.error(f"StockAnalystAgent error: {e}")
             return {'error': str(e)}
 
     def _run_movement_monitor(self, context: Dict) -> Dict[str, Any]:
-        """Run the MarketMovementMonitorAgent."""
+        """Run the MarketMovementMonitorAgent with timeout protection."""
         try:
             from .market_movement_monitor_agent import MarketMovementMonitorAgent
             agent = MarketMovementMonitorAgent()
-            result = agent.execute(
-                task="Scan for unusual price and volume movements",
-                context=context
-            )
+
+            def execute_agent():
+                return agent.execute(
+                    task="Scan for unusual price and volume movements",
+                    context=context
+                )
+
+            # Session 895: Add timeout to prevent coordinator hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             return result.to_dict() if hasattr(result, 'to_dict') else {'data': result.data if hasattr(result, 'data') else {}}
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ MarketMovementMonitorAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            return {'error': f'Timeout after {SUB_AGENT_TIMEOUT}s', 'timed_out': True}
         except Exception as e:
             logger.error(f"MarketMovementMonitorAgent error: {e}")
             return {'error': str(e)}
 
     def _run_institutional_watcher(self, context: Dict) -> Dict[str, Any]:
-        """Run the InstitutionalWatcherAgent."""
+        """Run the InstitutionalWatcherAgent with timeout protection."""
         try:
             from .institutional_watcher_agent import InstitutionalWatcherAgent
             agent = InstitutionalWatcherAgent()
-            result = agent.execute(
-                task="Monitor insider trading and institutional activity",
-                context=context
-            )
+
+            def execute_agent():
+                return agent.execute(
+                    task="Monitor insider trading and institutional activity",
+                    context=context
+                )
+
+            # Session 895: Add timeout to prevent coordinator hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             return result.to_dict() if hasattr(result, 'to_dict') else {'data': result.data if hasattr(result, 'data') else {}}
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ InstitutionalWatcherAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            return {'error': f'Timeout after {SUB_AGENT_TIMEOUT}s', 'timed_out': True}
         except Exception as e:
             logger.error(f"InstitutionalWatcherAgent error: {e}")
             return {'error': str(e)}
 
     def _run_anomaly_detector(self, context: Dict) -> Dict[str, Any]:
-        """Run the MarketAnomalyDetectorAgent."""
+        """Run the MarketAnomalyDetectorAgent with timeout protection."""
         try:
             from .market_anomaly_detector_agent import MarketAnomalyDetectorAgent
             agent = MarketAnomalyDetectorAgent()
-            result = agent.execute(
-                task="Detect market anomalies and potential manipulation",
-                context=context
-            )
+
+            def execute_agent():
+                return agent.execute(
+                    task="Detect market anomalies and potential manipulation",
+                    context=context
+                )
+
+            # Session 895: Add timeout to prevent coordinator hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             return result.to_dict() if hasattr(result, 'to_dict') else {'data': result.data if hasattr(result, 'data') else {}}
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ MarketAnomalyDetectorAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            return {'error': f'Timeout after {SUB_AGENT_TIMEOUT}s', 'timed_out': True}
         except Exception as e:
             logger.error(f"MarketAnomalyDetectorAgent error: {e}")
             return {'error': str(e)}

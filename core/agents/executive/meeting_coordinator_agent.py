@@ -27,9 +27,14 @@ Usage:
 import logging
 import time
 from typing import Dict, Any, List
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from ml.auto_selection import TaskType
+
+# Session 895: Timeout for sub-agent executions to prevent coordinator hangs
+# Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
+SUB_AGENT_TIMEOUT = 300  # 5 minutes per agent perspective
 
 logger = logging.getLogger(__name__)
 
@@ -410,12 +415,17 @@ Include:
 
 Be concrete and specific - no placeholder text."""
 
-            # Route to the specific agent
-            result = router.route(
-                agent_name=agent_name,
-                task=perspective_task,
-                context={'meeting_topic': topic, 'meeting_type': meeting_type}
-            )
+            # Session 895: Add timeout protection to prevent coordinator hangs
+            def route_to_agent():
+                return router.route(
+                    agent_name=agent_name,
+                    task=perspective_task,
+                    context={'meeting_topic': topic, 'meeting_type': meeting_type}
+                )
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(route_to_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
             if result and result.success:
                 # Parse the response to extract structured data
@@ -437,6 +447,15 @@ Be concrete and specific - no placeholder text."""
                     'error': result.error if result else 'No response'
                 }
 
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ {agent_name} timed out after {SUB_AGENT_TIMEOUT}s")
+            return {
+                'agent': agent_name,
+                'perspective': f"[{agent_name} timed out after {SUB_AGENT_TIMEOUT}s]",
+                'recommendations': [],
+                'concerns': ['Agent timed out'],
+                'timeout': True
+            }
         except Exception as e:
             logger.error(f"Error getting perspective from {agent_name}: {e}")
             return {

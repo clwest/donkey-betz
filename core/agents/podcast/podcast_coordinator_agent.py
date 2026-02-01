@@ -16,9 +16,14 @@ import logging
 import json
 from typing import Dict, Any, List
 from django.utils import timezone
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from ml.auto_selection import TaskType
+
+# Session 895: Timeout for debate agent executions to prevent coordinator hangs
+# Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
+DEBATE_AGENT_TIMEOUT = 300  # 5 minutes per debate turn
 
 logger = logging.getLogger(__name__)
 
@@ -765,13 +770,18 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
 {"Summarize your key position for the conclusion." if round_num == rounds else ""}"""
 
                 try:
-                    # Session 739: Pass spider_context to sub-agents for real intelligence
-                    result = agent.execute(
-                        task=debate_task,
-                        context={'debate_topic': topic, 'round': round_num},
-                        scifi_context=getattr(self, '_current_scifi_context', {}),
-                        spider_context=getattr(self, '_current_spider_context', {})
-                    )
+                    # Session 895: Add timeout protection to prevent coordinator hangs
+                    def execute_debate_agent():
+                        return agent.execute(
+                            task=debate_task,
+                            context={'debate_topic': topic, 'round': round_num},
+                            scifi_context=getattr(self, '_current_scifi_context', {}),
+                            spider_context=getattr(self, '_current_spider_context', {})
+                        )
+
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(execute_debate_agent)
+                        result = future.result(timeout=DEBATE_AGENT_TIMEOUT)
 
                     turn_text = result.message if result.success else f"{agent_name} declined to comment."
 
@@ -787,6 +797,15 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
 
                     logger.info(f"✅ {agent_name}: {turn_text[:100]}...")
 
+                except FuturesTimeoutError:
+                    logger.warning(f"⏰ {agent_name} timed out after {DEBATE_AGENT_TIMEOUT}s")
+                    transcript.append({
+                        'round': round_num,
+                        'speaker': agent_name,
+                        'role': role,
+                        'text': f"[{agent_name} timed out after {DEBATE_AGENT_TIMEOUT}s]",
+                        'generated_by': 'timeout'
+                    })
                 except Exception as e:
                     logger.error(f"Error getting response from {agent_name}: {e}")
                     transcript.append({

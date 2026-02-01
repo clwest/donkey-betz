@@ -21,8 +21,13 @@ import logging
 import time
 from typing import Dict, Any, List
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
+
+# Session 895: Timeout for sub-agent executions to prevent coordinator hangs
+# Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
+SUB_AGENT_TIMEOUT = 300  # 5 minutes per sub-agent
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -736,18 +741,26 @@ For each ad copy, provide:
 
 Format: Return 5 distinct ad variations with different angles (benefit-focused, urgency, social proof, question-based, direct)."""
 
-                    result = agent.execute(
-                        task=task,
-                        context={'campaign_id': str(campaign.id), 'phase': 'creation'},
-                        scifi_context={},
-                        spider_context={'trends': trends}
-                    )
+                    # Session 895: Add timeout to prevent coordinator hangs
+                    def execute_agent():
+                        return agent.execute(
+                            task=task,
+                            context={'campaign_id': str(campaign.id), 'phase': 'creation'},
+                            scifi_context={},
+                            spider_context={'trends': trends}
+                        )
+
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(execute_agent)
+                        result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
                     # Parse agent response into structured format
                     if result.success and result.message:
                         logger.info(f"✅ ContentWriterAgent generated ad copies for campaign {campaign.id}")
                         return self._parse_ad_copies_from_agent(result.message, trends)
 
+            except FuturesTimeoutError:
+                logger.warning(f"⏰ ContentWriterAgent timed out after {SUB_AGENT_TIMEOUT}s for ad copies")
             except Exception as e:
                 logger.warning(f"Agent-based ad copy generation failed, falling back to templates: {e}")
 
@@ -828,17 +841,25 @@ Create posts for each platform:
 
 Label each post clearly with the platform name."""
 
-                    result = agent.execute(
-                        task=task,
-                        context={'campaign_id': str(campaign.id), 'phase': 'creation'},
-                        scifi_context={},
-                        spider_context={'trends': trends}
-                    )
+                    # Session 895: Add timeout to prevent coordinator hangs
+                    def execute_agent():
+                        return agent.execute(
+                            task=task,
+                            context={'campaign_id': str(campaign.id), 'phase': 'creation'},
+                            scifi_context={},
+                            spider_context={'trends': trends}
+                        )
+
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(execute_agent)
+                        result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
                     if result.success and result.message:
                         logger.info(f"✅ SocialMediaAgent generated posts for campaign {campaign.id}")
                         return self._parse_social_posts_from_agent(result.message, campaign, trends)
 
+            except FuturesTimeoutError:
+                logger.warning(f"⏰ SocialMediaAgent timed out after {SUB_AGENT_TIMEOUT}s for social posts")
             except Exception as e:
                 logger.warning(f"Agent-based social post generation failed, falling back to templates: {e}")
 
@@ -933,18 +954,25 @@ For each email provide:
 
 Label each email clearly (Email 1, Email 2, etc.)."""
 
-                    # Session 739: Pass spider_context to sub-agents for real intelligence
-                    result = agent.execute(
-                        task=task,
-                        context={'campaign_id': str(campaign.id), 'phase': 'creation'},
-                        scifi_context=getattr(self, '_current_scifi_context', {}),
-                        spider_context=getattr(self, '_current_spider_context', {})
-                    )
+                    # Session 895: Add timeout to prevent coordinator hangs
+                    def execute_agent():
+                        return agent.execute(
+                            task=task,
+                            context={'campaign_id': str(campaign.id), 'phase': 'creation'},
+                            scifi_context=getattr(self, '_current_scifi_context', {}),
+                            spider_context=getattr(self, '_current_spider_context', {})
+                        )
+
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(execute_agent)
+                        result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
                     if result.success and result.message:
                         logger.info(f"✅ ContentWriterAgent generated email sequence for campaign {campaign.id}")
                         return self._parse_emails_from_agent(result.message, campaign)
 
+            except FuturesTimeoutError:
+                logger.warning(f"⏰ ContentWriterAgent timed out after {SUB_AGENT_TIMEOUT}s for email sequence")
             except Exception as e:
                 logger.warning(f"Agent-based email generation failed, falling back to templates: {e}")
 

@@ -17,9 +17,14 @@ import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from ..base_agent import BaseAgent, AgentResult
 from ml.auto_selection import TaskType
+
+# Session 895: Timeout for sub-agent executions to prevent coordinator hangs
+# Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
+SUB_AGENT_TIMEOUT = 300  # 5 minutes per sub-agent
 
 logger = logging.getLogger(__name__)
 
@@ -516,13 +521,18 @@ You have access to:
             if not agent_instance:
                 return {"error": f"Agent not found: {agent}"}
 
-            # Session 739: Pass spider_context to sub-agents for real intelligence
-            result = agent_instance.execute(
-                task=task,
-                context=context or {},
-                scifi_context=getattr(self, '_current_scifi_context', {}),
-                spider_context=getattr(self, '_current_spider_context', {})
-            )
+            # Session 895: Add timeout to prevent coordinator hangs
+            def execute_agent():
+                return agent_instance.execute(
+                    task=task,
+                    context=context or {},
+                    scifi_context=getattr(self, '_current_scifi_context', {}),
+                    spider_context=getattr(self, '_current_spider_context', {})
+                )
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
 
             return {
                 "success": result.success,
@@ -531,6 +541,9 @@ You have access to:
                 "result": result.to_dict()
             }
 
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ {agent} timed out after {SUB_AGENT_TIMEOUT}s")
+            return {"error": f"{agent} timed out after {SUB_AGENT_TIMEOUT}s", "timeout": True}
         except Exception as e:
             logger.error(f"Error routing to {agent}: {e}")
             return {"error": str(e)}

@@ -1,112 +1,55 @@
-# Session 895 - Start Here
+# Session 896 - Start Here
 
-**Previous Session:** 894 (Voice Mode Implementation)
+**Previous Session:** 895 (Coordinator Timeout Protection)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **VOICE MODE ACTIVE** | **ALL AGENTS HAVE WORKSPACE CONTEXT**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **TIMEOUT PROTECTION ACTIVE** | **THINKING MODEL SUPPORT**
 
 ---
 
-## What Was Accomplished in Session 894
+## What Was Accomplished in Session 895
 
-### Voice Mode for AI Assistant
+### Coordinator Timeout Protection
 
-Added complete voice input/output system with user controls to the AI Assistant page.
+Added timeout protection to ALL coordinator agents to prevent indefinite hangs (tasks were running 4+ hours).
 
-#### Features
-- **Voice Input Mode** - Toggle to auto-send after recording (uses Whisper STT)
-- **Voice Output** - Toggle to enable TTS for assistant responses (uses ElevenLabs)
-- **Auto-Play** - Option to automatically speak new responses
-- **Speaker Button** - Play/stop audio on any assistant message
-- **Settings Persistence** - Stored in localStorage
+#### Two-Tier Timeout System
+| Tier | Timeout | Use Case |
+|------|---------|----------|
+| **SUB_AGENT_TIMEOUT** | 5 min (300s) | Standard sub-agent calls |
+| **COORDINATOR_TIMEOUT** | 8 min (480s) | Nested coordinators / multi-step workflows |
 
-#### Files Modified
-| File | Changes |
-|------|---------|
-| `frontend/src/lib/api.ts` | Added `speak()` method for TTS |
-| `frontend/src/pages/AssistantPage.tsx` | Full voice mode implementation |
+#### Why These Values?
+- **Thinking models** (GPT-5.1, o1, o3) take 30-90 seconds for internal reasoning
+- **Research agents** need: spider fetch (5-15s) + LLM thinking (30-90s) + processing (5-10s)
+- 5 minutes gives room for LLM + research while catching true hangs
+- 8 minutes for nested coordinators that run multiple sub-agents
 
-**PR:** #643
+#### Coordinators Updated
+| Coordinator | Timeout | Methods |
+|------------|---------|---------|
+| BlockchainAuditCoordinator | 5 min | `_route_to_agent` |
+| CampaignOrchestratorAgent | 5 min | All 3 content generation methods |
+| MeetingCoordinatorAgent | 5 min | `_get_agent_perspective` |
+| NarrativeDriftCoordinator | 5 min | All 3 analysis agents |
+| PodcastCoordinatorAgent | 5 min | Debate agent executions |
+| MarketIntelligenceCoordinator | 5 min + 8 min | Agents + nested StockAuditCoordinator |
+| StockAuditCoordinator | 5 min | All 4 sub-agents |
+| WorkflowOrchestrationAgent | 8 min | Legacy workflow execution |
 
----
-
-## What Was Accomplished in Session 893
-
-### 1. Deliverables String Bug Fix
-
-Fixed single-letter document titles in the Technical sub-tab caused by LLM output format bug.
-
-#### Problem
-Documents appearing with titles like `[Stage 1 - Research Brief] n`, `[Stage 1 - Research Brief] o`, etc.
-The letters spelled out "summary.json" - character-by-character iteration over a string instead of a list.
-
-#### Solution
-- Added defensive validation in `autonomous_action_executor.py` (2 locations)
-- Created cleanup command `cleanup_single_letter_docs.py`
-- Deleted 67 bad documents from production
-
-**PR:** #638 | **Handoff:** `SESSION_893_DELIVERABLES_BUG_FIX.md`
+**PR:** #655 | **Handoff:** `SESSION_895_COORDINATOR_TIMEOUT_PROTECTION.md`
 
 ---
 
-### 2. Intel Page 401 Fix
+### Also Fixed in Session 895
 
-Fixed console 401 Unauthorized errors on the Intel page.
+#### 1. PUBLIC_PATHS Audit (PR #652)
+- Added `/api/mythology/guards/` to fix Intel page Safety sub-tab 401 error
 
-#### Problem
-Intel page endpoints had `@permission_classes([AllowAny])` but `UnifiedTokenAuthenticationMiddleware` was blocking them.
+#### 2. Workspace Context Fix (PR #653)
+- Fixed `workspace: False` for system tasks by changing lookup from "codebase" to "donkey"
 
-#### Solution
-Added endpoints to PUBLIC_PATHS whitelist in `core/auth_middleware.py`:
-- `/api/v1/agents/unified-executions/`
-- `/api/orchestrations/`
-- `/api/v1/reasoning/gates/`
-
-**PR:** #639
-
----
-
-### 3. Social Sub-Tab Modal Fix
-
-Fixed conversation modal showing "0 messages" and "No message details available".
-
-#### Problem
-API returns `{ success, conversation: {...} }` but code passed `conversationDetail` directly.
-Also, interface mismatch: API returns `agent` but code expected `agent_id`.
-
-#### Solution
-- Fixed data access: `conversationDetail?.conversation`
-- Updated interface to match API: `agent` field instead of `agent_id`
-- Display emoji and sequence in message list
-
-**PR:** #640
-
----
-
-### 4. Workspace Context for All Agents
-
-Fixed agents running as system tasks showing `workspace: False`.
-
-#### Problem
-System tasks (Celery Beat, scheduled jobs) have `self.user = None`, which caused workspace context to be skipped entirely.
-
-#### Solution
-Modified `_get_workspace_context()` in `agent_router.py` to fall back to default "Codebase" workspace for system tasks.
-
-**PR:** #641 | **Handoff:** `SESSION_893_WORKSPACE_CONTEXT_FIX.md`
-
----
-
-## What Was Accomplished in Session 892
-
-### WorkflowAgent Multi-Step Orchestration Fix
-
-Fixed the "Research X and create a business plan" workflow capability.
-
-- Expanded WorkflowAgent's agent list from 20 → 36 agents
-- Added new example workflow for business plan creation
-- Updated PersonalAssistantAgent with more workflow patterns
-
-**Handoff:** `SESSION_892_WORKFLOW_AGENT_FIX.md`
+#### 3. Production Task Cleanup
+- Cleaned up 6 stuck production tasks (3 MarketIntelligenceAgent, 3 AutonomousContentStudioCoordinator)
 
 ---
 
@@ -122,20 +65,20 @@ celery-broadcast: -Q broadcast (2 concurrency)
 
 ---
 
-## TOP PRIORITY for Session 894
+## TOP PRIORITY for Session 896
 
-### 1. Test Workspace Context Fix
-Verify all agents now show `workspace: True` in Command tab:
-- Trigger a scheduled task via Celery Beat
-- Check MarketIntelligenceAgent execution shows workspace context
+### 1. Monitor Production Timeouts
+Check that coordinators are completing within timeout windows:
+```bash
+# Check for timeout warnings
+grep "⏰" logs/celery.log
 
-### 2. Investigate Stuck Tasks (Optional)
-Command tab showed tasks "Running" for 3-4+ hours. Database query returned 0 stuck executions - may be UI caching issue.
+# Check for completed coordinator tasks
+grep "MarketIntelligenceCoordinator\|StockAuditCoordinator" logs/celery.log | tail -20
+```
 
-### 3. Test Multi-Step Workflow Orchestration
-Test the fixed WorkflowAgent with complex requests:
-- "Research Tesla and create a business plan"
-- "Create a brand package with logo, colors, and style guide"
+### 2. Verify No More Stuck Tasks
+Confirm no tasks running 4+ hours in production Command tab.
 
 ---
 
@@ -145,24 +88,20 @@ Test the fixed WorkflowAgent with complex requests:
 # Start platform
 make start && make celery
 
-# Test workflow routing
-python manage.py shell -c "
-from core.agents.personal_assistant_agent import PersonalAssistantAgent
-pa = PersonalAssistantAgent()
-test_tasks = [
-    'Research Tesla and create a business plan',
-    'Create a brand package with logo and colors',
-]
-for task in test_tasks:
-    agent = pa._detect_agent(task)
-    print(f'{task[:50]:50} -> {agent}')
-"
+# Check timeout configuration
+grep -r "SUB_AGENT_TIMEOUT\|COORDINATOR_TIMEOUT" core/agents/
 
-# Check WorkflowAgent delegation options
+# Test coordinator with timeout
 python manage.py shell -c "
-from core.agents.workflow_agent import WorkflowAgent
-agents = WorkflowAgent.tools[0]['function']['parameters']['properties']['agent_name']['enum']
-print(f'WorkflowAgent can delegate to {len(agents)} agents')
+from core.agents.stocks.market_intelligence_coordinator import MarketIntelligenceCoordinator
+coord = MarketIntelligenceCoordinator()
+result = coord.execute(
+    task='Generate market brief for AAPL',
+    context={'tickers': ['AAPL']},
+    scifi_context={},
+    spider_context={}
+)
+print(f'Success: {result.success}')
 "
 ```
 
@@ -172,12 +111,10 @@ print(f'WorkflowAgent can delegate to {len(agents)} agents')
 
 | PR | Description |
 |----|-------------|
-| #643 | Voice Mode for AI Assistant (Whisper STT + ElevenLabs TTS) |
-| #642 | Session 893 documentation |
-| #641 | Workspace context for all agents (system tasks fallback) |
-| #640 | Social sub-tab conversation modal fix |
-| #639 | Intel page 401 Unauthorized fix |
-| #638 | Deliverables String Bug Fix (LLM output validation) |
+| #655 | Coordinator Timeout Protection (5 min sub-agents, 8 min nested) |
+| #653 | Workspace context fix for system tasks |
+| #652 | PUBLIC_PATHS audit - mythology guards endpoint |
+| #643 | Voice Mode for AI Assistant |
 
 ---
 
@@ -185,12 +122,11 @@ print(f'WorkflowAgent can delegate to {len(agents)} agents')
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **894** | Voice Mode for AI Assistant (Whisper + ElevenLabs) | This file |
+| **895** | Coordinator Timeout Protection (8 coordinators, 2-tier timeout) | `SESSION_895_COORDINATOR_TIMEOUT_PROTECTION.md` |
+| **894** | Voice Mode for AI Assistant (Whisper + ElevenLabs) | Previous START file |
 | **893** | 4 Bug Fixes: Deliverables, Intel 401, Social Modal, Workspace Context | `SESSION_893_*.md` |
 | **892** | WorkflowAgent Multi-Step Orchestration Fix (20→36 agents) | `SESSION_892_WORKFLOW_AGENT_FIX.md` |
 | **891** | Domain Content Context System (9 domains, unified router) | `SESSION_891_DOMAIN_CONTENT_CONTEXT.md` |
-| **890** | Podcast Quality Improvements (anti-cliché, war stories, host POV) | `SESSION_890_PODCAST_QUALITY.md` |
-| **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
 
 ---
 
@@ -208,13 +144,21 @@ print(f'WorkflowAgent can delegate to {len(agents)} agents')
 
 ---
 
-## Session 894 Summary
+## Timeout Constants Reference
 
-| Feature | PR | Status |
-|---------|-----|--------|
-| Voice Mode (Whisper STT + ElevenLabs TTS) | #643 | Merged |
-| Session 893 Workspace Fix | #641 | Merged |
+```python
+# core/agents/stocks/market_intelligence_coordinator.py
+SUB_AGENT_TIMEOUT = 300    # 5 minutes per sub-agent
+COORDINATOR_TIMEOUT = 480  # 8 minutes for nested coordinators
+
+# Pattern used across all coordinators:
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+
+with ThreadPoolExecutor(max_workers=1) as executor:
+    future = executor.submit(execute_agent)
+    result = future.result(timeout=SUB_AGENT_TIMEOUT)
+```
 
 ---
 
-**All systems operational. Voice mode available in AI Assistant with user-controlled settings.**
+**All coordinators now have timeout protection. No more indefinite hangs.**
