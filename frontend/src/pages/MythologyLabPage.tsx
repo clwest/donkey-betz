@@ -84,6 +84,8 @@ interface MythologyEvent {
   original_content?: string  // Full content for expanded view
   mutated_content?: string | null  // If mutation occurred
   source_type?: string | null
+  source_id?: string | null  // Session 898: The source identifier
+  agent_name?: string | null  // Session 898: Direct agent name from backend
   metadata?: Record<string, unknown>
 }
 
@@ -381,6 +383,11 @@ function EventRow({
   // Format the content for cleaner display
   const formatted = formatMythologyContent(event.original_content || event.content_preview)
 
+  // Session 898: Use agent_name from API if available, fallback to regex extraction
+  const displayAgents = event.agent_name
+    ? [event.agent_name]
+    : formatted.agents
+
   return (
     <div
       className={`border-b border-dark-border p-4 cursor-pointer transition-colors ${
@@ -414,18 +421,18 @@ function EventRow({
             </div>
           )}
 
-          {/* Agents Involved */}
-          {formatted.agents.length > 0 && (
+          {/* Agent - Session 898: Use API field instead of regex */}
+          {displayAgents.length > 0 && (
             <div className="flex items-center gap-1 mb-2 text-xs">
               <User className="h-3 w-3 text-blue-400" />
-              <span className="text-gray-500">Agents:</span>
-              {formatted.agents.slice(0, 3).map((agent, idx) => (
-                <span key={idx} className="text-blue-300">
-                  {agent}{idx < Math.min(formatted.agents.length - 1, 2) ? ',' : ''}
+              <span className="text-gray-500">Agent:</span>
+              {displayAgents.slice(0, 3).map((agent, idx) => (
+                <span key={idx} className="text-blue-300 font-medium">
+                  {agent}{idx < Math.min(displayAgents.length - 1, 2) ? ',' : ''}
                 </span>
               ))}
-              {formatted.agents.length > 3 && (
-                <span className="text-gray-500">+{formatted.agents.length - 3} more</span>
+              {displayAgents.length > 3 && (
+                <span className="text-gray-500">+{displayAgents.length - 3} more</span>
               )}
             </div>
           )}
@@ -542,12 +549,12 @@ function EventRow({
                 </div>
               )}
 
-              {/* Agents Involved */}
-              {formatted.agents.length > 0 && (
+              {/* Agent - Session 898: Use API field instead of regex */}
+              {displayAgents.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-dark-border">
-                  <span className="text-xs text-gray-500">Agents involved:</span>
-                  {formatted.agents.map((agent, idx) => (
-                    <span key={idx} className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                  <span className="text-xs text-gray-500">Agent:</span>
+                  {displayAgents.map((agent, idx) => (
+                    <span key={idx} className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-medium">
                       {agent}
                     </span>
                   ))}

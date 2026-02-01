@@ -624,6 +624,11 @@ def recent_events(request):
         # Serialize events
         events_data = []
         for event in events:
+            # Session 898: Extract agent name from source_id when source_type is 'agent'
+            agent_name = None
+            if event.source_type == 'agent' and event.source_id:
+                agent_name = event.source_id  # source_id contains the agent name
+
             events_data.append({
                 'id': str(event.id),
                 'event_type': event.get_event_type_display(),
@@ -638,6 +643,8 @@ def recent_events(request):
                 'original_content': event.original_content,  # Full content for expanded view
                 'mutated_content': event.mutated_content if event.mutated_content else None,  # If mutation occurred
                 'source_type': event.source_type if event.source_type else None,
+                'source_id': event.source_id if event.source_id else None,  # Session 898: Include source_id
+                'agent_name': agent_name,  # Session 898: Direct agent name field
                 'metadata': event.metadata if event.metadata else {},
             })
         
