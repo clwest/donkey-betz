@@ -82,6 +82,15 @@ except ImportError:
     PERFORMANCE_CONTEXT_AVAILABLE = False
     get_blog_performance_context = None
 
+# Session 891: Import Domain Content Context for all topic areas
+try:
+    from core.services.domain_content_context import get_domain_content_context, detect_content_domain
+    DOMAIN_CONTEXT_AVAILABLE = True
+except ImportError:
+    DOMAIN_CONTEXT_AVAILABLE = False
+    get_domain_content_context = None
+    detect_content_domain = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -236,7 +245,8 @@ Always delegate tasks you cannot perform yourself rather than refusing or making
         self,
         scifi_context: Dict[str, Any],
         spider_context: Dict[str, Any],
-        content_type: str = 'blog_post'
+        content_type: str = 'blog_post',
+        topic: str = ''  # Session 891: Added for finance context injection
     ) -> str:
         """
         Session 523: Build an intelligent, context-aware system prompt.
@@ -401,6 +411,21 @@ Consider these trends when crafting the content to maximize relevance and engage
             except Exception as e:
                 logger.warning(f"Could not inject performance context: {e}")
 
+        # Session 891: Add domain-specific content context (finance, sports, AI, crypto, etc.)
+        if DOMAIN_CONTEXT_AVAILABLE and get_domain_content_context:
+            try:
+                # Get domain context for any topic - auto-detects relevant domains
+                domain_context = get_domain_content_context(
+                    topic=topic or "",
+                    max_domains=2  # Include up to 2 relevant domain contexts
+                )
+                if domain_context and len(domain_context) > 100:  # Skip if only generic
+                    prompt_parts.append(f"\n\n{domain_context}")
+                    domain, confidence = detect_content_domain(topic or "") if detect_content_domain else ("unknown", 0)
+                    logger.info(f"📚 Session 891: Injected {domain} domain context ({len(domain_context)} chars, {confidence:.0%} confidence)")
+            except Exception as e:
+                logger.warning(f"Could not inject domain context: {e}")
+
         # Add content-type specific enhancement
         prompt_parts.append(f"""
 
@@ -553,11 +578,13 @@ For this {content_type}, ensure:
                         logger.warning(f"Could not add flagship injection: {e}")
 
                 # Session 523: Generate content via GPT with intelligent prompting
+                # Session 891: Pass topic for finance context injection
                 generated_content = self._generate_content(
                     prompt,
                     content_type,
                     scifi_context=scifi_context,
-                    spider_context=spider_context
+                    spider_context=spider_context,
+                    topic=topic
                 )
 
                 if not generated_content:
@@ -1004,7 +1031,8 @@ Generate the {content_config['name']} now:"""
         prompt: str,
         content_type: str,
         scifi_context: Dict[str, Any] = None,
-        spider_context: Dict[str, Any] = None
+        spider_context: Dict[str, Any] = None,
+        topic: str = ''  # Session 891: Added for finance context injection
     ) -> Optional[Dict[str, Any]]:
         """
         Generate content using GPT with intelligent prompting.
@@ -1023,10 +1051,12 @@ Generate the {content_config['name']} now:"""
             )
 
             # Session 523: Build intelligent system prompt with all context
+            # Session 891: Added topic parameter for finance context injection
             intelligent_system_prompt = self._build_intelligent_system_prompt(
                 scifi_context=scifi_context or {},
                 spider_context=spider_context or {},
-                content_type=content_type
+                content_type=content_type,
+                topic=topic
             )
 
             logger.info(f"📝 Session 523: Using intelligent prompt ({len(intelligent_system_prompt)} chars)")

@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 31, 2026 - Session 886
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE**
+**Last Updated:** January 31, 2026 - Session 891
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
@@ -13,13 +13,15 @@
 | **LLM Models** | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
 | **Database Models** | 378+ | Including Deliverable, AuditReport, AgentMemory, ToolCallRecord, DecisionRecord, ResearchResult |
 | **Celery Tasks** | 256 | ALL body systems active, autonomous remediation, async conversations, ConceptForge, health monitoring |
-| **Services** | 125 | Including AutoSpawnerService for data insufficiency reflexes |
+| **Services** | 128 | Including AutoSpawnerService, DomainContentContextBuilder (9 domains) |
 | **Contracts** | 3 | ResearchContract, ExecutionMandate, SynthesisContract |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Domain Content Context (891):** Unified system injects domain-specific platform data into ALL content. 9 domains: finance, crypto, sports, betting, ai_tech, legal, career, health, education. Auto-detects topic domain, supports cross-domain content (up to 2 domains). Gives every content type the "builder voice."
+- **Podcast Quality System (890):** Anti-cliché detection (50+ phrases), PodcastStyleProfile model, host POV upgrade (takes stances), system war stories tool.
 - **Content Feedback Loop (886):** BlogPerformanceContextBuilder injects past performance data into ContentWriterAgent prompts. Agent now "knows" quality scores, top topics, strengths/weaknesses, and active learning rules. Experiment audit: cleaned 81 junk experiments, raised error threshold 25%→35%, 87.5% real success rate.
 - **AI OS Boot Experience (884):** Home page at `/` with personalized greeting, "while you were away" activity cards, active projects with progress bars, natural language input routing to PA, quick action buttons (Create, Research, Decide, Review, Build).
 - **Executive Function + Contracts (872):** DecisionEnforcerAgent forces decisions after debate. ResearchContract, ExecutionMandate, SynthesisContract prevent vague outputs. AutoSpawnerService triggers data gathering reflexes. Prompt sharpening transforms hedging → decisive language.
@@ -143,6 +145,9 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **891** | Domain Content Context - 9 domains (finance, sports, crypto, etc.), unified router, cross-domain support | `SESSION_891_DOMAIN_CONTENT_CONTEXT.md` |
+| **890** | Podcast Quality Improvements - Anti-cliché, PodcastStyleProfile, host POV upgrade | `SESSION_890_PODCAST_QUALITY.md` |
+| **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
 | **886** | Content Feedback Loop + Experiment Audit - BlogPerformanceContextBuilder, cleaned 81 junk experiments, 87.5% success rate | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
 | **885** | Celery Content Pipeline + Operations Tab Fix - dedicated celery-content worker | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | AI OS Boot Experience - Home Page with greeting, while-away stats, projects, NL input | `SESSION_884_HOME_PAGE_BOOT.md` |
