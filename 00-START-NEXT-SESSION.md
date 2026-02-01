@@ -1,14 +1,14 @@
 # Session 897 - Start Here
 
-**Previous Session:** 896 (Codebase Workspace Fix)
+**Previous Session:** 896 (Codebase Workspace Fix + PDF Export)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **TIMEOUT PROTECTION ACTIVE** | **THINKING MODEL SUPPORT** | **CODEBASE WORKSPACE ENABLED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **TIMEOUT PROTECTION ACTIVE** | **THINKING MODEL SUPPORT** | **CODEBASE WORKSPACE ENABLED** | **PDF EXPORT**
 
 ---
 
 ## What Was Accomplished in Session 896
 
-### CodeGeneratorAgent Codebase Access Fix
+### 1. CodeGeneratorAgent Codebase Access Fix
 
 Fixed CodeGeneratorAgent producing stub files instead of real code in production.
 
@@ -24,7 +24,28 @@ railway ssh -s donkey-betz-platform python manage.py setup_codebase_workspace
 - CodeGeneratorAgent can now read/write actual source files
 - Verified access to `manage.py`, `core/views.py`, `intelligence/tasks.py`, `frontend/src/App.tsx`
 
-**PR:** #656 | **Handoff:** `SESSION_896_CODEBASE_WORKSPACE_FIX.md`
+**PR:** #657 | **Handoff:** `SESSION_896_CODEBASE_WORKSPACE_FIX.md`
+
+---
+
+### 2. PDF Export for Initiative Documents
+
+Added ability to download initiative stage documents as professional PDFs.
+
+**Features:**
+- Platform branding header with initiative/stage name
+- Document metadata (word count, creation date, status)
+- Markdown formatting support (headers, bullets, numbered lists)
+- Page numbers and continuation headers
+- Professional footer
+
+**Usage:** Initiatives Tab → Click Initiative → Click stage document icon → Download PDF
+
+**Files:**
+- `frontend/src/lib/pdfExport.ts` - PDF generation utility
+- `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` - Download button
+
+**PR:** #658
 
 ---
 
@@ -84,11 +105,11 @@ grep -r "SUB_AGENT_TIMEOUT\|COORDINATOR_TIMEOUT" core/agents/
 
 | PR | Description |
 |----|-------------|
-| #656 | Codebase Workspace Fix - CodeGeneratorAgent can access real code |
+| #658 | PDF Export - Download initiative documents as professional PDFs |
+| #657 | Codebase Workspace Fix - CodeGeneratorAgent can access real code |
 | #655 | Coordinator Timeout Protection (5 min sub-agents, 8 min nested) |
 | #653 | Workspace context fix for system tasks |
 | #652 | PUBLIC_PATHS audit - mythology guards endpoint |
-| #643 | Voice Mode for AI Assistant |
 
 ---
 
@@ -96,7 +117,7 @@ grep -r "SUB_AGENT_TIMEOUT\|COORDINATOR_TIMEOUT" core/agents/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **896** | Codebase Workspace Fix - CodeGeneratorAgent access to real code | `SESSION_896_CODEBASE_WORKSPACE_FIX.md` |
+| **896** | Codebase Workspace Fix + PDF Export for Initiative Documents | `SESSION_896_CODEBASE_WORKSPACE_FIX.md` |
 | **895** | Coordinator Timeout Protection (8 coordinators, 2-tier timeout) | `SESSION_895_COORDINATOR_TIMEOUT_PROTECTION.md` |
 | **894** | Voice Mode for AI Assistant (Whisper + ElevenLabs) | Previous START file |
 | **893** | 4 Bug Fixes: Deliverables, Intel 401, Social Modal, Workspace Context | `SESSION_893_*.md` |
