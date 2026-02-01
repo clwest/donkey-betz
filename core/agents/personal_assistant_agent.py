@@ -4048,11 +4048,19 @@ Actions:
 
         # =========================================================================
         # TIER 0: Workflow patterns (highest priority - must check before semantic)
+        # Session 892: Expanded patterns for business research + creation workflows
         # =========================================================================
         workflow_patterns = [
+            # Original patterns
             'research and create', 'research then create',
             'brand identity package', 'brand package',
             'thumbnail package', 'complete package',
+            # Session 892: Business workflow patterns
+            'business plan', 'create a business', 'write a business plan',
+            'business model', 'startup plan', 'go to market plan',
+            'with logo', 'with colors', 'with branding',
+            'full package', 'complete branding', 'brand and logo',
+            'research and write', 'analyze and create', 'analyze and write',
         ]
         for pattern in workflow_patterns:
             if pattern in task_lower:
