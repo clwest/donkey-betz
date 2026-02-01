@@ -19,7 +19,7 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
+from core.auth_middleware import token_auth_required
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def record_interaction(request):
     """
     Record a user interaction with an agent.
@@ -90,7 +90,7 @@ def record_interaction(request):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_preferences(request, agent_name: str):
     """
     Get learned preferences for an agent.
@@ -130,7 +130,7 @@ def get_preferences(request, agent_name: str):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_adaptive_context(request, agent_name: str):
     """
     Get adaptive context string for an agent.
@@ -163,7 +163,7 @@ def get_adaptive_context(request, agent_name: str):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_learning_stats(request):
     """
     Get learning statistics for the user.
@@ -228,7 +228,7 @@ def get_learning_stats(request):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def apply_preferences(request):
     """
     Apply learned preferences to generation parameters.
@@ -278,7 +278,7 @@ def apply_preferences(request):
 
 
 @require_http_methods(["DELETE"])
-@login_required
+@token_auth_required
 def clear_preferences(request):
     """
     Clear learned preferences.
@@ -311,7 +311,7 @@ def clear_preferences(request):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_preferences_summary(request, agent_name: str):
     """
     Get a summary of learned preferences for an agent.
@@ -342,7 +342,7 @@ def get_preferences_summary(request, agent_name: str):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def share_learning(request, agent_name: str):
     """
     Share learned preferences with other agents via collaboration hub.
@@ -373,7 +373,7 @@ def share_learning(request, agent_name: str):
 
 
 @require_http_methods(["GET"])
-@login_required
+@token_auth_required
 def get_all_preferences(request):
     """
     Get all learned preferences across all agents.
@@ -417,7 +417,7 @@ def get_all_preferences(request):
 # ============================================================================
 
 @require_http_methods(["GET"])
-# Session 564: Removed @login_required - now public for Command Center UI
+# Session 564: Removed @token_auth_required - now public for Command Center UI
 def get_agent_conversations(request):
     """
     Get recent agent conversations for display in UI with pagination.
@@ -843,7 +843,7 @@ def get_agent_conversation_detail(request, conversation_id):
 
 
 @require_http_methods(["POST"])
-# Session 751: Removed @login_required to match get_agent_conversations (Session 564)
+# Session 751: Removed @token_auth_required to match get_agent_conversations (Session 564)
 # This allows the UI to trigger conversations without authentication
 # Session 827: Made async via Celery to fix production 502 timeouts
 def trigger_agent_conversation(request):
@@ -2080,7 +2080,7 @@ def promote_decision(request, decision_id):
 
     POST /api/boardroom/decisions/{decision_id}/promote/
 
-    Session 887: Removed @login_required to support Token auth (same as reject_decision).
+    Session 887: Removed @token_auth_required to support Token auth (same as reject_decision).
     Added @csrf_exempt for API calls.
     """
     # Session 887: Manual auth check to support both session and Token auth
@@ -2183,7 +2183,7 @@ def reject_decision(request, decision_id):
 
     POST /api/boardroom/decisions/{decision_id}/reject/
 
-    Session 887: Removed @login_required to support Token auth.
+    Session 887: Removed @token_auth_required to support Token auth.
     Since /api/boardroom/ is in PUBLIC_PATHS, middleware doesn't authenticate.
     We check auth manually here. Added @csrf_exempt for API calls.
     """
@@ -2573,7 +2573,7 @@ def get_boardroom_dreams(request):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def decide_dream(request, dream_id):
     """
     Make a decision on a promoted dream.
@@ -2712,7 +2712,7 @@ def get_dream_implementations(request):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def validate_implementation(request, implementation_id):
     """
     Validate or reject a completed dream implementation.
@@ -2787,7 +2787,7 @@ def validate_implementation(request, implementation_id):
 
 
 @require_http_methods(["POST"])
-@login_required
+@token_auth_required
 def rate_dream(request, dream_id):
     """
     Quick thumbs up/down rating for dreams (simpler than full reaction).
