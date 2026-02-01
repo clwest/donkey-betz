@@ -1,41 +1,66 @@
 # Session 898 - Start Here
 
-**Previous Session:** 897 (Experiment Pipeline Fix)
+**Previous Session:** 897 (Experiment Pipeline Fix + Initiatives Performance)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **EXPERIMENT PIPELINE: CLEARED** | **820 SUCCESSFUL EXPERIMENTS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **EXPERIMENT PIPELINE: HEALTHY** | **820 SUCCESSFUL EXPERIMENTS** | **INITIATIVES: FAST LOADING**
 
 ---
 
 ## What Was Accomplished in Session 897
 
-### Experiment Pipeline Fix - 604 Running → 0
+### 1. Experiment Pipeline Fix (PRs #660-#663)
 
-Fixed the completely stuck experiment pipeline that had 68.3% of experiments in "running" status.
+Fixed completely stuck experiment pipeline - 68.3% of experiments were frozen.
 
-**Root Cause:** All 875 running pilots had `started_at = NULL`, making them invisible to the evaluation task's filter.
+**Root Cause:** All 875 running pilots had `started_at = NULL`, making them invisible to the evaluation task.
 
-**Solution:** Created `fix_pilot_started_at` command to backfill started_at values.
+**Solution:** Created `fix_pilot_started_at` command to backfill values.
 
-**Results:**
 | Metric | Before | After |
 |--------|--------|-------|
 | Running experiments | 604 | **0** |
-| Running pilots | 875 | **0** |
-| Stuck >24h | 511 | **0** |
 | Successful experiments | 33 | **820** |
 | Learnings created | - | **658** |
 
-**PRs:** #660, #661, #662, #663 | **Handoff:** `SESSION_897_EXPERIMENT_PIPELINE_FIX.md`
+### 2. Initiatives Tab Performance Fix (PRs #665-#666)
+
+Fixed 30+ second load time caused by N+1 query problem (~3,000 queries).
+
+**Solution:** Rewrote `initiatives_api` with `prefetch_related` to batch load data.
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Database queries | ~3,000 | **3** |
+| Load time | 30+ seconds | **<1 second** |
 
 ---
 
-## New Management Commands
+## New Management Commands (Session 897)
 
-| Command | Purpose |
-|---------|---------|
-| `check_experiment_status` | Diagnose experiment/pilot pipeline issues |
-| `fix_pilot_started_at` | Backfill NULL started_at values |
-| `trigger_pilot_evaluation` | Manually trigger evaluation task |
+```bash
+# Diagnose experiment/pilot pipeline
+python manage.py check_experiment_status
+
+# Fix NULL started_at on pilots (if needed)
+python manage.py fix_pilot_started_at
+
+# Manually trigger pilot evaluation
+python manage.py trigger_pilot_evaluation
+
+# Test initiatives API performance
+python manage.py test_initiatives_perf
+```
+
+---
+
+## TOP PRIORITY for Session 898
+
+### 1. Discussion → Initiative Linkage
+User identified gap: agent discussions (HiveMindSessions) need better connection to resulting Initiatives for YouTube demo. The "Origin Trace" section exists but may need enhancement.
+
+### 2. YouTube Demo Preparation
+System is now performant. Focus on demo flow:
+- Agent Discussion → Dream/Decision → Initiative → 5 Stages → Deliverable
 
 ---
 
@@ -43,30 +68,10 @@ Fixed the completely stuck experiment pipeline that had 68.3% of experiments in 
 
 ```
 celery-worker: -Q default,agents,sports,ml (4 concurrency)
-celery-content: -Q content (4 concurrency)        # Workspace writing tasks
+celery-content: -Q content (4 concurrency)
 celery-long-running: -Q long_running (2 concurrency)
 celery-beat: scheduler
 celery-broadcast: -Q broadcast (2 concurrency)
-```
-
----
-
-## TOP PRIORITY for Session 898
-
-### 1. Monitor New Experiment Creation
-Verify that newly created pilots get `started_at` populated:
-```bash
-railway ssh -s donkey-betz-platform python manage.py check_experiment_status
-```
-
-### 2. Check CodeGeneratorAgent Tasks
-Verify agents are producing real code (Session 896 codebase workspace fix):
-```bash
-railway ssh -s donkey-betz-platform python manage.py shell -c "
-from core.models import AgentExecution
-for e in AgentExecution.objects.filter(agent_name='CodeGeneratorAgent').order_by('-created_at')[:5]:
-    print(f'{e.status}: {e.task[:50]}...')
-"
 ```
 
 ---
@@ -77,14 +82,11 @@ for e in AgentExecution.objects.filter(agent_name='CodeGeneratorAgent').order_by
 # Start platform
 make start && make celery
 
-# Check experiment status on production
+# Production experiment status
 railway ssh -s donkey-betz-platform python manage.py check_experiment_status
 
-# Fix any NULL started_at (if needed)
-railway ssh -s donkey-betz-platform python manage.py fix_pilot_started_at
-
-# Trigger pilot evaluation manually
-railway ssh -s donkey-betz-platform python manage.py trigger_pilot_evaluation
+# Production initiatives performance
+railway ssh -s donkey-betz-platform python manage.py test_initiatives_perf
 ```
 
 ---
@@ -93,12 +95,14 @@ railway ssh -s donkey-betz-platform python manage.py trigger_pilot_evaluation
 
 | PR | Description |
 |----|-------------|
+| #666 | Add initiatives performance test command |
+| #665 | Fix initiatives API N+1 query - 30s → <1s |
 | #663 | Add trigger_pilot_evaluation command |
 | #662 | Fix pilots with NULL started_at (root cause) |
 | #661 | Enhanced experiment pipeline diagnostics |
 | #660 | Add experiment status diagnostic command |
-| #658 | PDF Export - Download initiative documents as professional PDFs |
-| #657 | Codebase Workspace Fix - CodeGeneratorAgent can access real code |
+| #658 | PDF Export - Download initiative documents |
+| #657 | Codebase Workspace Fix |
 
 ---
 
@@ -106,11 +110,11 @@ railway ssh -s donkey-betz-platform python manage.py trigger_pilot_evaluation
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **897** | Experiment Pipeline Fix - 604 stuck experiments → 0 | `SESSION_897_EXPERIMENT_PIPELINE_FIX.md` |
-| **896** | Codebase Workspace Fix + PDF Export for Initiative Documents | `SESSION_896_CODEBASE_WORKSPACE_FIX.md` |
-| **895** | Coordinator Timeout Protection (8 coordinators, 2-tier timeout) | `SESSION_895_COORDINATOR_TIMEOUT_PROTECTION.md` |
-| **894** | Voice Mode for AI Assistant (Whisper + ElevenLabs) | Previous START file |
-| **893** | 4 Bug Fixes: Deliverables, Intel 401, Social Modal, Workspace Context | `SESSION_893_*.md` |
+| **897** | Experiment Pipeline Fix + Initiatives Performance | `SESSION_897_COMPLETE.md` |
+| **896** | Codebase Workspace Fix + PDF Export | `SESSION_896_CODEBASE_WORKSPACE_FIX.md` |
+| **895** | Coordinator Timeout Protection | `SESSION_895_COORDINATOR_TIMEOUT_PROTECTION.md` |
+| **894** | Voice Mode (Whisper + ElevenLabs) | Previous START file |
+| **893** | 4 Bug Fixes | `SESSION_893_*.md` |
 
 ---
 
@@ -128,6 +132,7 @@ railway ssh -s donkey-betz-platform python manage.py trigger_pilot_evaluation
 | Experiments (Success) | 820 |
 | Experiments (Partial) | 91 |
 | Learnings | 658+ |
+| Initiatives | 223 |
 
 ---
 
@@ -135,10 +140,10 @@ railway ssh -s donkey-betz-platform python manage.py trigger_pilot_evaluation
 
 | Workspace | Path | Purpose |
 |-----------|------|---------|
-| `donkey-betz-codebase` | `/app` (production) | CodeGeneratorAgent access to source code |
+| `donkey-betz-codebase` | `/app` (production) | CodeGeneratorAgent source access |
 | `System Autonomous Workspace` | `/app/workspace` | Generated content storage |
-| `{username}-personal` | `/generated_content/users/{username}` | Per-user generated files |
+| `{username}-personal` | `/generated_content/users/{username}` | Per-user files |
 
 ---
 
-**Experiment pipeline is now healthy - 820 successful experiments!**
+**Platform is now fast and healthy - ready for YouTube demo!**
