@@ -447,6 +447,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 894: Intel Page - Safety & Collective sub-tabs
         '/api/mythology/patterns/',  # Safety patterns
         '/api/v1/collective/shared-knowledge/',  # Collective shared knowledge
+
+        # Session 894: Dossiers tab (ConceptForge)
+        '/api/conceptforge/runs/',  # ConceptForge runs list
+        '/api/conceptforge/stats/',  # ConceptForge stats
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
