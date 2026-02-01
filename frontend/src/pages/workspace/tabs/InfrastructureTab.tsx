@@ -956,7 +956,13 @@ function AnalyticsSubTab() {
     },
   })
 
-  const stats = statsData || { total_tokens: 15000000, total_cost: 245.67, api_calls: 223896, avg_latency: 1.2 }
+  // Session 894: Use defaults for each property to prevent undefined.toLocaleString() errors
+  const stats = {
+    total_tokens: statsData?.total_tokens ?? 15000000,
+    total_cost: statsData?.total_cost ?? 245.67,
+    api_calls: statsData?.api_calls ?? 223896,
+    avg_latency: statsData?.avg_latency ?? 1.2,
+  }
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section)
