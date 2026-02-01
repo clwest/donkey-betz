@@ -843,6 +843,41 @@ function ComprehensiveInitiativeModal({
                     <div className="text-sm">{trace.conversation.topic}</div>
                   </div>
 
+                  {/* Session 899: Actual Conversation Messages */}
+                  {trace.conversation.messages && trace.conversation.messages.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="text-xs text-gray-500 font-medium">Conversation Transcript</div>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {trace.conversation.messages.map((msg, idx) => (
+                          <div
+                            key={msg.id || idx}
+                            className={cn(
+                              'p-3 rounded-lg',
+                              idx % 2 === 0
+                                ? 'bg-blue-500/5 border border-blue-500/20 ml-0 mr-8'
+                                : 'bg-purple-500/5 border border-purple-500/20 ml-8 mr-0'
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={cn(
+                                'text-xs font-medium',
+                                idx % 2 === 0 ? 'text-blue-400' : 'text-purple-400'
+                              )}>
+                                {msg.agent_name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {msg.message_type}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-300 whitespace-pre-wrap">
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Conclusion/Synthesis */}
                   {(trace.conversation.conclusion || trace.conversation.synthesis_summary) && (
                     <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
