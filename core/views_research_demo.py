@@ -1307,6 +1307,168 @@ def initiatives_api(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def initiative_origin_trace_api(request, initiative_id):
+    """
+    Session 898: Get the complete origin trace for an initiative.
+
+    This endpoint returns the entire chain:
+    Trigger → Conversation → Decision → Initiative → Stages → Deliverable
+
+    ChatGPT feedback: "This is the 'holy shit' moment in the video."
+    """
+    try:
+        from core.models_document_registry import Initiative, InitiativeStage, STAGE_NAMES
+        from core.models import AgentDecisionSummary, Deliverable
+        import uuid as uuid_module
+
+        # Handle both string and UUID for initiative_id
+        if isinstance(initiative_id, str):
+            try:
+                initiative_id = uuid_module.UUID(initiative_id)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid initiative ID format'}, status=400)
+
+        # Get the initiative
+        try:
+            initiative = Initiative.objects.get(id=initiative_id)
+        except Initiative.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
+
+        # Build the trace response
+        trace = {
+            'initiative': {
+                'id': str(initiative.id),
+                'name': initiative.name,
+                'description': initiative.description,
+                'status': initiative.status,
+                'current_stage': initiative.current_stage,
+                'created_at': initiative.created_at.isoformat(),
+                'updated_at': initiative.updated_at.isoformat(),
+            },
+            'decision': None,
+            'conversation': None,
+            'trigger': None,
+            'agents': [],
+            'stages': [],
+            'deliverable': None,
+        }
+
+        # Get source decision(s)
+        decisions = initiative.source_decisions.all()
+        if decisions.exists():
+            decision = decisions.first()
+            trace['decision'] = {
+                'id': str(decision.id),
+                'decision_type': decision.decision_type,
+                'artifact_type': decision.artifact_type,
+                'topic': decision.topic,
+                'key_insights': decision.key_insights[:3] if decision.key_insights else [],
+                'recommended_stance': decision.recommended_stance,
+                'suggested_feature': decision.suggested_feature[:500] if decision.suggested_feature else None,
+                'rationale': decision.rationale,
+                'participants': decision.participants,
+                'status': decision.status,
+                'created_at': decision.created_at.isoformat(),
+            }
+            trace['agents'] = decision.participants or []
+
+            # Get source conversation (legacy AgentConversation or HiveMindSession)
+            if decision.conversation:
+                conv = decision.conversation
+                trace['conversation'] = {
+                    'id': str(conv.id),
+                    'type': 'AgentConversation',
+                    'topic': conv.topic,
+                    'conversation_type': conv.conversation_type,
+                    'trigger_type': conv.trigger_type,
+                    'status': conv.status,
+                    'message_count': conv.message_count,
+                    'quality_score': conv.quality_score,
+                    'conclusion': conv.conclusion[:500] if conv.conclusion else None,
+                    'started_at': conv.started_at.isoformat() if conv.started_at else None,
+                    'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
+                }
+                trace['trigger'] = {
+                    'type': conv.trigger_type or 'unknown',
+                    'description': f'{conv.trigger_type} triggered conversation' if conv.trigger_type else 'Unknown trigger',
+                }
+                # Get participants from conversation
+                if hasattr(conv, 'participants') and conv.participants.exists():
+                    trace['agents'] = [p.name for p in conv.participants.all()]
+
+            elif decision.hive_session:
+                hive = decision.hive_session
+                trace['conversation'] = {
+                    'id': str(hive.id),
+                    'type': 'HiveMindSession',
+                    'topic': hive.conversation_topic or hive.question[:100] if hive.question else None,
+                    'conversation_type': hive.conversation_type if hasattr(hive, 'conversation_type') else hive.session_mode,
+                    'status': hive.status,
+                    'contribution_count': hive.contribution_count,
+                    'total_thinking_time': hive.total_thinking_time,
+                    'synthesis_summary': hive.synthesis_summary[:500] if hive.synthesis_summary else None,
+                    'started_at': hive.started_at.isoformat() if hive.started_at else None,
+                    'completed_at': hive.completed_at.isoformat() if hive.completed_at else None,
+                }
+                trace['trigger'] = {
+                    'type': 'scheduled' if hive.auto_selected_agents else 'manual',
+                    'description': 'Scheduled autonomous discussion' if hive.auto_selected_agents else 'Manual conversation',
+                }
+
+        # Get stages
+        stages = InitiativeStage.objects.filter(initiative=initiative).order_by('stage')
+        for stage in stages:
+            trace['stages'].append({
+                'stage': stage.stage,
+                'name': STAGE_NAMES.get(stage.stage, f'Stage {stage.stage}'),
+                'status': stage.status,
+                'document_id': str(stage.document_id) if stage.document_id else None,
+                'approved_at': stage.approved_at.isoformat() if stage.approved_at else None,
+                'approved_by': stage.approved_by,
+            })
+
+        # Get deliverable
+        deliverables = Deliverable.objects.filter(initiative=initiative).order_by('-created_at')
+        if deliverables.exists():
+            deliv = deliverables.first()
+            trace['deliverable'] = {
+                'id': str(deliv.id),
+                'title': deliv.title,
+                'deliverable_type': deliv.deliverable_type,
+                'status': deliv.status,
+                'content_length': len(deliv.content) if deliv.content else 0,
+                'created_at': deliv.created_at.isoformat(),
+            }
+
+        # Calculate trace completeness
+        trace['trace_completeness'] = {
+            'has_decision': trace['decision'] is not None,
+            'has_conversation': trace['conversation'] is not None,
+            'has_trigger': trace['trigger'] is not None,
+            'has_agents': len(trace['agents']) > 0,
+            'has_stages': len(trace['stages']) > 0,
+            'has_deliverable': trace['deliverable'] is not None,
+            'completeness_score': sum([
+                1 if trace['decision'] else 0,
+                1 if trace['conversation'] else 0,
+                1 if trace['trigger'] else 0,
+                1 if trace['agents'] else 0,
+                1 if trace['stages'] else 0,
+                1 if trace['deliverable'] else 0,
+            ]) / 6 * 100,
+        }
+
+        return JsonResponse({
+            'success': True,
+            'trace': trace,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in initiative_origin_trace_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 @require_http_methods(["POST"])
 def populate_initiatives_api(request):
     """
