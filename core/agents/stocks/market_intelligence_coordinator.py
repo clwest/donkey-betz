@@ -23,8 +23,14 @@ Architecture:
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta, date
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
+
+# Session 895: Timeout for sub-agent executions to prevent coordinator hangs
+# Extended to accommodate thinking models (GPT-5.1, o1, o3)
+SUB_AGENT_TIMEOUT = 300  # 5 minutes per sub-agent
+COORDINATOR_TIMEOUT = 480  # 8 minutes for nested coordinator calls (e.g., StockAuditCoordinator)
 from core.models_unified_system import MarketIntelligenceBrief
 from content.elevenlabs_provider import elevenlabs_provider
 from ml.auto_selection import TaskType
@@ -300,43 +306,78 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
         return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'SPY', 'QQQ', 'VTI']
 
     def _run_bull_case(self, tickers: List[str], context: Dict) -> Dict[str, Any]:
-        """Run the Bull Case Agent."""
+        """Run the Bull Case Agent with timeout protection."""
         try:
             from .bull_case_agent import BullCaseAgent
             agent = BullCaseAgent()
-            result = agent.execute(
-                task="Build bull cases for today's watchlist",
-                context={'tickers': tickers}
-            )
+
+            def execute_agent():
+                return agent.execute(
+                    task="Build bull cases for today's watchlist",
+                    context={'tickers': tickers}
+                )
+
+            # Session 895: Add timeout to prevent coordinator hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             return result.data if hasattr(result, 'data') else {}
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ BullCaseAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            return {'error': f'Timeout after {SUB_AGENT_TIMEOUT}s', 'timed_out': True}
         except Exception as e:
             logger.error(f"BullCaseAgent error: {e}")
             return {'error': str(e)}
 
     def _run_bear_case(self, tickers: List[str], context: Dict) -> Dict[str, Any]:
-        """Run the Bear Case Agent."""
+        """Run the Bear Case Agent with timeout protection."""
         try:
             from .bear_case_agent import BearCaseAgent
             agent = BearCaseAgent()
-            result = agent.execute(
-                task="Build bear cases for today's watchlist",
-                context={'tickers': tickers}
-            )
+
+            def execute_agent():
+                return agent.execute(
+                    task="Build bear cases for today's watchlist",
+                    context={'tickers': tickers}
+                )
+
+            # Session 895: Add timeout to prevent coordinator hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_agent)
+                result = future.result(timeout=SUB_AGENT_TIMEOUT)
+
             return result.data if hasattr(result, 'data') else {}
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ BearCaseAgent timed out after {SUB_AGENT_TIMEOUT}s")
+            return {'error': f'Timeout after {SUB_AGENT_TIMEOUT}s', 'timed_out': True}
         except Exception as e:
             logger.error(f"BearCaseAgent error: {e}")
             return {'error': str(e)}
 
     def _run_risk_assessment(self, tickers: List[str], context: Dict) -> Dict[str, Any]:
-        """Run the Stock Audit Coordinator for risk signals."""
+        """Run the Stock Audit Coordinator for risk signals with timeout protection."""
+        # Session 895: Uses module-level COORDINATOR_TIMEOUT (8 min) for nested coordinator
+        # StockAuditCoordinator runs 4 sub-agents, each with 5-min timeout
         try:
             from .stock_audit_coordinator import StockAuditCoordinator
             coordinator = StockAuditCoordinator()
-            result = coordinator.execute(
-                task="Assess risks and anomalies for watchlist",
-                context={'tickers': tickers}
-            )
+
+            def execute_coordinator():
+                return coordinator.execute(
+                    task="Assess risks and anomalies for watchlist",
+                    context={'tickers': tickers}
+                )
+
+            # Session 895: Add timeout to prevent coordinator hangs
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_coordinator)
+                result = future.result(timeout=COORDINATOR_TIMEOUT)
+
             return result.data if hasattr(result, 'data') else {}
+        except FuturesTimeoutError:
+            logger.warning(f"⏰ StockAuditCoordinator timed out after {COORDINATOR_TIMEOUT}s")
+            return {'error': f'Timeout after {COORDINATOR_TIMEOUT}s', 'timed_out': True}
         except Exception as e:
             logger.error(f"Risk assessment error: {e}")
             return {'error': str(e)}
