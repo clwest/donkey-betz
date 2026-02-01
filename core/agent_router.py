@@ -1286,18 +1286,22 @@ class AgentRouter:
 
             # Session 893: Get workspace for ALL agents, including system tasks
             # Previously skipped workspace for system tasks (no user) - now fall back to default workspace
+            # Session 895: Fixed workspace lookup - search for "donkey" (primary project) first
             manager = None
             if self.user is None:
-                # Fall back to the "Codebase" workspace which is the main system workspace
-                workspace = AgentWorkspace.objects.filter(
-                    name__icontains='codebase'
-                ).first() or AgentWorkspace.objects.filter(is_active=True).first()
+                # Fall back to the primary "Donkey Betz" workspace for system tasks
+                # Priority: 1) donkey-betz, 2) any active workspace with operations, 3) any active workspace
+                workspace = (
+                    AgentWorkspace.objects.filter(name__icontains='donkey', is_active=True).first()
+                    or AgentWorkspace.objects.filter(is_active=True, total_operations__gt=0).first()
+                    or AgentWorkspace.objects.filter(is_active=True).first()
+                )
 
                 if not workspace:
                     logger.debug(f"📁 [Session 893] No default workspace available for system task {agent_name}")
                     return {}
 
-                logger.debug(f"📁 [Session 893] Using default workspace '{workspace.name}' for system task {agent_name}")
+                logger.debug(f"📁 [Session 895] Using workspace '{workspace.name}' for system task {agent_name}")
             else:
                 manager = get_workspace_manager(self.user)
                 workspace = manager.get_active_workspace()
