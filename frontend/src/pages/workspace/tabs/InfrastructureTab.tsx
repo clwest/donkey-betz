@@ -649,6 +649,8 @@ interface LLMProvider {
 
 function LLMRoutingSubTab() {
   const [selectedProvider, setSelectedProvider] = useState<LLMProvider | null>(null)
+  // Session 894: Moved useState before early return to fix React hooks error #310
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
   const { data: providersData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['llm-providers-tab'],
@@ -730,8 +732,6 @@ function LLMRoutingSubTab() {
   const modelCount = modelsData?.count || modelsData?.models?.length || 16
   const agentConfigCount = agentConfigsData?.count || agentConfigsData?.configs?.length || 75
   const callLogCount = callLogsData?.count || 223896
-
-  const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section)
