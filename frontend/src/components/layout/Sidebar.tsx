@@ -53,10 +53,10 @@ const navItems = [
   { path: '/human', label: 'Human', icon: User },
   { path: '/agents', label: 'Agents', icon: Bot },
 
-  // Domain Features
-  { path: '/betting', label: 'Betting', icon: TrendingUp },
-  { path: '/legal', label: 'Legal', icon: Scale },
-  { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
+  // Domain Features - Session 899: Commented out for YouTube demo focus
+  // { path: '/betting', label: 'Betting', icon: TrendingUp },
+  // { path: '/legal', label: 'Legal', icon: Scale },
+  // { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
 
   // Reference & Tools
   { path: '/docs-index', label: 'Docs Index', icon: Book },
