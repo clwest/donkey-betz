@@ -1,8 +1,35 @@
-# Session 892 - Start Here
+# Session 893 - Start Here
 
-**Previous Session:** 891 (Domain Content Context System)
+**Previous Session:** 892 (WorkflowAgent Multi-Step Orchestration Fix)
 **Date:** January 31, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **DOMAIN CONTEXT INJECTION ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **103 Active Initiatives** | **CONTENT FEEDBACK LOOP ACTIVE** | **DOMAIN CONTEXT INJECTION ACTIVE** | **WORKFLOW ORCHESTRATION FIXED**
+
+---
+
+## What Was Accomplished in Session 892
+
+### WorkflowAgent Multi-Step Orchestration Fix
+
+Fixed the "Research X and create a business plan" workflow capability that had stopped working.
+
+#### Problem
+WorkflowAgent's `delegate_to_agent` tool only had **20 agents** in its enum, but the system has **76+ agents**. Critical agents were missing:
+- `ContentWriterAgent` (for business plans, articles)
+- `BrandIdentityAgent` (for color palettes, brand guidelines)
+- `LegalDocDrafterAgent`, `SportsOddsAnalyst`, development agents, etc.
+
+#### Solution
+1. **Expanded WorkflowAgent's agent list** from 20 → 36 agents
+2. **Added new example workflow** for business plan creation
+3. **Updated PersonalAssistantAgent** with more workflow patterns
+
+#### Files Modified
+| File | Changes |
+|------|---------|
+| `core/agents/workflow_agent.py` | Expanded delegate_to_agent enum (20→36), updated system_prompt |
+| `core/agents/personal_assistant_agent.py` | Added more workflow patterns |
+
+**Handoff:** `SESSION_892_WORKFLOW_AGENT_FIX.md`
 
 ---
 
@@ -10,50 +37,16 @@
 
 ### Domain Content Context System
 
-Created a unified system that injects domain-specific platform data into ALL content types, giving every domain the same authentic "builder voice."
+Created a unified system that injects domain-specific platform data into ALL content types.
 
 #### Files Created
-
 | File | Purpose |
 |------|---------|
-| `core/services/finance_content_context.py` | Finance/Markets context (spider data, advisor wisdom) |
-| `core/services/sports_content_context.py` | Sports/Betting context (live odds, betting performance) |
-| `core/services/domain_content_context.py` | Unified router - auto-detects domains |
-
-#### Supported Domains (9 Total)
-
-| Domain | Example Keywords |
-|--------|------------------|
-| **finance** | stock, market, NVIDIA, invest |
-| **crypto** | bitcoin, ethereum, blockchain |
-| **sports** | NFL, NBA, UFC, game, match |
-| **betting** | odds, spread, moneyline, parlay |
-| **ai_tech** | AI, machine learning, agent, python |
-| **legal** | law, court, attorney, contract |
-| **career** | job, resume, interview, salary |
-| **health** | fitness, nutrition, mental health |
-| **education** | course, learning, bootcamp |
-
-#### ContentWriterAgent Integration
-
-- Auto-detects content domain from topic
-- Injects up to 2 domain contexts for cross-domain content
-- Logs domain detection with confidence score
+| `core/services/finance_content_context.py` | Finance/Markets context |
+| `core/services/sports_content_context.py` | Sports/Betting context |
+| `core/services/domain_content_context.py` | Unified router (9 domains) |
 
 **Handoff:** `SESSION_891_DOMAIN_CONTENT_CONTEXT.md`
-
----
-
-## What Was Accomplished in Session 890
-
-### Podcast Quality Improvements
-
-- Anti-cliché detection (50+ banned phrases)
-- PodcastStyleProfile model for quality tracking
-- Host POV upgrade (takes stances, challenges)
-- System war stories tool integration
-
-**Handoff:** `SESSION_890_PODCAST_QUALITY.md`
 
 ---
 
@@ -69,26 +62,25 @@ celery-broadcast: -Q broadcast (2 concurrency)
 
 ---
 
-## TOP PRIORITY for Session 892
+## TOP PRIORITY for Session 893
 
-### 1. Monitor Domain Context Quality
+### 1. Test Multi-Step Workflow Orchestration
+Test the fixed WorkflowAgent with complex requests:
+- "Research Tesla and create a business plan"
+- "Create a brand package with logo, colors, and style guide"
+- "Analyze market trends and write a strategy document"
+
+### 2. Monitor Domain Context Quality
 Generate test content for different domains and verify:
 - Finance blogs reference market data/advisor wisdom
 - Sports content includes betting performance/odds
 - AI/Tech content shows agent ecosystem stats
 
-### 2. Test Cross-Domain Content
-Try topics that span multiple domains:
-- "Bitcoin and AI Trading Bots" (crypto + ai_tech)
-- "NFL Betting with Machine Learning" (sports + betting + ai_tech)
-
-### 3. Consider Adding More Domains
-- Entertainment (movies, TV, streaming)
-- Travel (destinations, airlines)
-- Food (restaurants, recipes)
-
-### 4. Human Feedback UI (Phase 2)
-Add thumbs up/down to published blogs to track which domain contexts work best.
+### 3. Consider Adding Video/Audio to Workflows
+The WorkflowAgent now includes VideoAgent, AudioAgent, PodcastCoordinatorAgent.
+Test end-to-end content pipelines:
+- "Research topic → Write script → Create podcast"
+- "Research trends → Create blog → Generate images"
 
 ---
 
@@ -98,23 +90,25 @@ Add thumbs up/down to published blogs to track which domain contexts work best.
 # Start platform
 make start && make celery
 
-# Test domain detection
+# Test workflow routing
 python manage.py shell -c "
-from core.services.domain_content_context import detect_all_content_domains
-print(detect_all_content_domains('NVIDIA Stock Analysis'))
+from core.agents.personal_assistant_agent import PersonalAssistantAgent
+pa = PersonalAssistantAgent()
+test_tasks = [
+    'Research Tesla and create a business plan',
+    'Create a brand package with logo and colors',
+]
+for task in test_tasks:
+    agent = pa._detect_agent(task)
+    print(f'{task[:50]:50} -> {agent}')
 "
 
-# Test context generation
+# Check WorkflowAgent delegation options
 python manage.py shell -c "
-from core.services.domain_content_context import get_domain_content_context
-ctx = get_domain_content_context('NFL Week 15 Best Bets')
-print(f'Context: {len(ctx)} chars')
-print(ctx[:500])
+from core.agents.workflow_agent import WorkflowAgent
+agents = WorkflowAgent.tools[0]['function']['parameters']['properties']['agent_name']['enum']
+print(f'WorkflowAgent can delegate to {len(agents)} agents')
 "
-
-# Check body health
-curl -H "Authorization: Token $TOKEN" \
-  "https://donkey-betz-platform-production.up.railway.app/api/body/health/"
 ```
 
 ---
@@ -123,11 +117,11 @@ curl -H "Authorization: Token $TOKEN" \
 
 | PR | Description |
 |----|-------------|
+| #634 | WorkflowAgent Multi-Step Orchestration Fix (20→36 agents) |
 | #633 | Domain Content Context System (finance, sports, 9 domains) |
 | #632 | Podcast quality improvements (anti-cliché, war stories, host POV) |
 | #631 | Session 889 documentation |
 | #630 | Live Monitor shows real agent activity |
-| #629 | Workspace permissions management command |
 
 ---
 
@@ -135,6 +129,7 @@ curl -H "Authorization: Token $TOKEN" \
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **892** | WorkflowAgent Multi-Step Orchestration Fix (20→36 agents) | `SESSION_892_WORKFLOW_AGENT_FIX.md` |
 | **891** | Domain Content Context System (9 domains, unified router) | `SESSION_891_DOMAIN_CONTENT_CONTEXT.md` |
 | **890** | Podcast Quality Improvements (anti-cliché, war stories, host POV) | `SESSION_890_PODCAST_QUALITY.md` |
 | **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
@@ -153,31 +148,20 @@ curl -H "Authorization: Token $TOKEN" \
 | Personas | 139 |
 | Database Models | 379+ |
 | Celery Tasks | 281 |
-| Services | 128 (+3 new domain context services) |
+| Services | 128 |
 
 ---
 
-## Domain Context System Status
+## Multi-Step Orchestration Status
 
 | Component | Status |
 |-----------|--------|
-| Finance Context Builder | Active |
-| Sports Context Builder | Active |
-| Domain Router | Active (9 domains) |
-| ContentWriterAgent Integration | Active |
-| Cross-Domain Support | Up to 2 domains |
+| WorkflowAgent | Fixed (36 agents available) |
+| PersonalAssistant Routing | Updated (new workflow patterns) |
+| Business Plan Workflows | Working |
+| Brand Package Workflows | Working |
+| Cross-Agent Delegation | Full support |
 
 ---
 
-## Content Feedback Loop Status
-
-| Component | Status |
-|-----------|--------|
-| BlogPerformanceContextBuilder | Active |
-| Domain Context Injection | Active (Session 891) |
-| Research Pre-Step | Enabled (Session 887) |
-| Human Feedback UI | Phase 2 (not implemented) |
-
----
-
-**All systems operational. Domain context injection active for 9 content domains.**
+**All systems operational. WorkflowAgent can now orchestrate 36 agents for complex multi-step workflows.**

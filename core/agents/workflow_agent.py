@@ -88,38 +88,61 @@ You have ONE tool:
 
 Available agents to delegate to:
 
-**Creation Agents:**
+**WRITING & CONTENT (Session 892 - use for business plans, articles, reports):**
+- ContentWriterAgent: Write blog posts, articles, business plans, reports, scripts
+- PodcastCoordinatorAgent: Create podcast episodes with AI debates
+
+**CREATION (generating new assets):**
 - ImageAgent: Create NEW images (logos, banners, illustrations)
 - VideoAgent: Create NEW videos (text-to-video, image animation)
 - AudioAgent: Create audio (text-to-speech, voiceovers)
 - ThreeDAgent: Create 3D models from images
 
-**Editing Agents:**
+**EDITING (modifying existing assets):**
 - ImageEditingAgent: EDIT existing images (upscale, remove bg, variations)
 - VideoEditingAgent: EDIT existing videos (trim, effects, text)
 
-**Research Agents:**
+**RESEARCH & ANALYSIS:**
 - ResearchAgent: Search web and spider network for information
 - TrendAnalysisAgent: Analyze market and design trends
 - CompetitorAnalysisAgent: Research competitors and market landscape
 - CustomerResearchAgent: Research customer personas and pain points
 
-**Strategy Agents:**
+**STRATEGY & BRANDING:**
 - BrandStrategyAgent: Create brand positioning and strategy
+- BrandIdentityAgent: Create visual identity, color palettes, brand guidelines
 - SEOOptimizerAgent: Optimize content for search engines
 - ContentStrategyAgent: Plan content strategy
 - SocialMediaAgent: Create social media content plans
 
-**Executive Agents (Session 341):**
+**DEVELOPMENT (code, infrastructure):**
+- CodeGeneratorAgent: Write new code from specifications
+- CodeReviewAgent: Review existing code for bugs and security
+- FullStackDeveloperAgent: Build complete features (frontend + backend)
+- DevOpsAgent: CI/CD, Docker, Kubernetes, infrastructure
+
+**EXECUTIVE AGENTS:**
 - CreativeDirectorAgent: High-level creative direction
 - ContentAuditAgent: Check content for bias/ethics issues
 - CTOAgent: Technical planning and analysis
 - COOAgent: Operations planning and risk assessment
 
-**Security Agents (Session 341):**
-- MemoryIsolationAgent: Audit memory isolation and security
+**SPORTS & BETTING (LIVE DATA):**
+- SportsOddsAnalyst: Live sports odds/scores from 40+ bookmakers
+- PredictionMarketAnalyst: Prediction markets (Kalshi, Polymarket)
+- ArbitrageDetector: Find arbitrage opportunities across sportsbooks
 
-**Training Agents (Session 341):**
+**ANALYSIS & AUDIT:**
+- StockAuditCoordinator: Stock market analysis and audit
+- BlockchainAuditCoordinator: Blockchain/crypto analysis and audit
+
+**SPECIALIZED:**
+- LegalDocDrafterAgent: Legal document drafting (NOT legal advice)
+- OpportunityScoringAgent: Score business opportunities
+- MeetingCoordinatorAgent: Coordinate multi-agent meetings
+
+**SECURITY & TRAINING:**
+- MemoryIsolationAgent: Audit memory isolation and security
 - CharacterTrainingAgent: Train new character/style models
 - TrainedCreationAgent: Generate with trained characters
 
@@ -162,6 +185,13 @@ Example workflow: "Research cyberpunk trends and create 3 logos"
 3. delegate_to_agent("ImageAgent", "create 3 cyberpunk logos incorporating [trends from research]")
 4. Return combined results
 
+Example workflow: "Research X company and create a business plan with logo and colors"
+1. delegate_to_agent("CompetitorAnalysisAgent", "research X company market, competitors, and positioning")
+2. delegate_to_agent("ContentWriterAgent", "write a comprehensive business plan based on [research results]")
+3. delegate_to_agent("BrandIdentityAgent", "create brand colors, typography, and visual guidelines")
+4. delegate_to_agent("ImageAgent", "create a logo that reflects the brand identity")
+5. Return combined business package
+
 You orchestrate. You don't create content directly."""
 
     tools = [
@@ -177,24 +207,50 @@ You orchestrate. You don't create content directly."""
                             "type": "string",
                             "description": "Which agent to delegate to",
                             "enum": [
+                                # Writing & Content (Session 892)
+                                "ContentWriterAgent",
+                                "PodcastCoordinatorAgent",
+                                # Creation
                                 "ImageAgent",
                                 "VideoAgent",
                                 "AudioAgent",
                                 "ThreeDAgent",
+                                # Editing
                                 "ImageEditingAgent",
                                 "VideoEditingAgent",
+                                # Research & Analysis
                                 "ResearchAgent",
                                 "TrendAnalysisAgent",
                                 "CompetitorAnalysisAgent",
                                 "CustomerResearchAgent",
+                                # Strategy & Branding
                                 "BrandStrategyAgent",
+                                "BrandIdentityAgent",
                                 "SEOOptimizerAgent",
                                 "ContentStrategyAgent",
                                 "SocialMediaAgent",
+                                # Development
+                                "CodeGeneratorAgent",
+                                "CodeReviewAgent",
+                                "FullStackDeveloperAgent",
+                                "DevOpsAgent",
+                                # Executive
                                 "CreativeDirectorAgent",
                                 "ContentAuditAgent",
                                 "CTOAgent",
                                 "COOAgent",
+                                "MeetingCoordinatorAgent",
+                                # Sports & Betting
+                                "SportsOddsAnalyst",
+                                "PredictionMarketAnalyst",
+                                "ArbitrageDetector",
+                                # Analysis & Audit
+                                "StockAuditCoordinator",
+                                "BlockchainAuditCoordinator",
+                                # Specialized
+                                "LegalDocDrafterAgent",
+                                "OpportunityScoringAgent",
+                                # Security & Training
                                 "MemoryIsolationAgent",
                                 "CharacterTrainingAgent",
                                 "TrainedCreationAgent"
