@@ -14,7 +14,7 @@ from decimal import Decimal
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
+from core.auth_middleware import token_auth_required
 from django.db.models import Q, Sum
 
 from core.models import VoiceProfile, VoiceTransaction, VoiceReview, VoiceCloneRequest
@@ -192,7 +192,7 @@ def voice_detail(request, voice_id):
 
 # ==================== MY VOICES ====================
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def my_voices(request):
     """
@@ -232,7 +232,7 @@ def my_voices(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def publish_voice(request, voice_id):
@@ -268,7 +268,7 @@ def publish_voice(request, voice_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def unpublish_voice(request, voice_id):
@@ -294,7 +294,7 @@ def unpublish_voice(request, voice_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["PUT", "PATCH"])
 def update_voice(request, voice_id):
@@ -339,7 +339,7 @@ def update_voice(request, voice_id):
 
 # ==================== VOICE GENERATION ====================
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def generate_speech(request, voice_id):
@@ -501,7 +501,7 @@ def preview_voice(request, voice_id):
 
 # ==================== REVIEWS ====================
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def add_review(request, voice_id):
@@ -547,7 +547,7 @@ def add_review(request, voice_id):
 
 # ==================== EARNINGS & TRANSACTIONS ====================
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def earnings_summary(request):
     """
@@ -607,7 +607,7 @@ def earnings_summary(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def transaction_history(request):
     """
@@ -645,7 +645,7 @@ def transaction_history(request):
 
 # ==================== VOICE CLONING ====================
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_voice_from_elevenlabs(request):
@@ -704,7 +704,7 @@ def create_voice_from_elevenlabs(request):
 
 # ==================== VOICE CLONE REQUESTS ====================
 
-@login_required
+@token_auth_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def start_clone_request(request):
@@ -735,7 +735,7 @@ def start_clone_request(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@token_auth_required
 @require_http_methods(["GET"])
 def clone_request_status(request, request_id):
     """
