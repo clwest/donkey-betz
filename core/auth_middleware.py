@@ -430,6 +430,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 842: Celery Debug & Cleanup (for production debugging)
         '/api/platform/celery-debug/',  # Celery status and stale task info
         '/api/platform/cleanup-stale-executions/',  # Manual cleanup of stuck tasks
+
+        # Session 893: Intel Page APIs (read-only for React frontend)
+        '/api/v1/agents/unified-executions/',  # Agent execution history
+        '/api/orchestrations/',  # Active orchestrations list
+        '/api/v1/reasoning/gates/',  # Pilot readiness gates
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
