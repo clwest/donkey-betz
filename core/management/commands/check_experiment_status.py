@@ -53,3 +53,53 @@ class Command(BaseCommand):
             oldest_pilot = old_pilots.order_by('started_at').first()
             pilot_age = (now - oldest_pilot.started_at).total_seconds() / 3600
             self.stdout.write(f"  Oldest: {pilot_age:.1f} hours ({oldest_pilot.name[:50]}...)")
+
+        # Session 897: Additional diagnostics for stuck pipeline
+        self.stdout.write("\n=== Pilot Pipeline Blockers ===")
+
+        # 1. Pilots with NULL started_at (can't be evaluated)
+        null_started = PilotExecution.objects.filter(
+            status='running',
+            started_at__isnull=True
+        ).count()
+        self.stdout.write(f"  Pilots with NULL started_at: {null_started}")
+
+        # 2. Running pilots by outcome (must be 'pending' to be eligible)
+        pilot_outcomes = dict(
+            PilotExecution.objects.filter(status='running')
+            .values_list('outcome')
+            .annotate(c=Count('id'))
+        )
+        self.stdout.write(f"  Running pilots by outcome:")
+        for outcome, count in sorted(pilot_outcomes.items(), key=lambda x: -x[1]):
+            self.stdout.write(f"    {outcome or 'NULL'}: {count}")
+
+        # 3. Running pilots eligible for evaluation (running, >1h old, pending)
+        eligible = PilotExecution.objects.filter(
+            status='running',
+            started_at__lte=now - timedelta(hours=1),
+            outcome='pending'
+        ).count()
+        self.stdout.write(f"  Eligible for evaluation (>1h, pending): {eligible}")
+
+        # 4. Running experiments without linked pilots
+        exp_without_pilot = Experiment.objects.filter(
+            status='running'
+        ).exclude(
+            pilot__isnull=False
+        ).count()
+        self.stdout.write(f"  Running experiments without pilot link: {exp_without_pilot}")
+
+        # 5. Show a few stuck experiments for investigation
+        self.stdout.write("\n=== Sample Stuck Experiments (5 oldest) ===")
+        stuck = Experiment.objects.filter(
+            status='running',
+            started_at__lt=now - timedelta(hours=24)
+        ).order_by('started_at')[:5]
+        for exp in stuck:
+            age = (now - exp.started_at).total_seconds() / 3600
+            has_pilot = hasattr(exp, 'pilot') and exp.pilot is not None
+            self.stdout.write(
+                f"  [{age:.0f}h] {exp.name[:40]}... | "
+                f"Pilot: {'Yes' if has_pilot else 'No'}"
+            )
