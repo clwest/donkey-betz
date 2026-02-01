@@ -443,6 +443,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/llm-routing/agent-configs/',  # Agent LLM configs
         '/api/llm-routing/logs/',  # LLM call logs
         '/api/llm-routing/cost-analytics/',  # LLM cost analytics
+
+        # Session 894: Intel Page - Safety & Collective sub-tabs
+        '/api/mythology/patterns/',  # Safety patterns
+        '/api/v1/collective/shared-knowledge/',  # Collective shared knowledge
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
