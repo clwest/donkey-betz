@@ -33,6 +33,7 @@ import {
   Briefcase,  // Session 866: Career tab icon
   Mic,  // Session 869: Voice Marketplace tab icon
   GraduationCap,  // Session 870: Learning Journey tab icon
+  LayoutDashboard,  // Session 899: Initiative Hub tab icon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -57,6 +58,7 @@ import {
   AIConsciousnessTab,
   IntelligenceTab,
   InitiativesTab,  // Session 847: Initiative Pipeline Dashboard
+  InitiativeHubTab,  // Session 899: Unified Initiative Hub
   TriggersTab,  // Session 861B: WorkspaceTrigger Autopilot Queue
   ConceptForgeTab,  // Session 865: ConceptForge Dossier Pipeline
   CareerTab,  // Session 866: ATS Resume Optimizer
@@ -69,6 +71,7 @@ import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 // Tab configuration - using 'as const' to preserve the icon types
 const tabs = [
   { id: 'command' as WorkspaceTab, label: 'Command', icon: Target },
+  { id: 'hub' as WorkspaceTab, label: 'Hub', icon: LayoutDashboard },  // Session 899: Unified Initiative Hub
   { id: 'infrastructure' as WorkspaceTab, label: 'Infrastructure', icon: Server },
   { id: 'orchestration' as WorkspaceTab, label: 'Orchestration', icon: Workflow },
   { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: Workflow },  // Session 847
@@ -894,6 +897,9 @@ export default function WorkspacePage() {
           {activeTab === 'intelligence' && <IntelligenceTab />}
 
           {activeTab === 'initiatives' && <InitiativesTab />}
+
+          {/* Session 899: Unified Initiative Hub */}
+          {activeTab === 'hub' && <InitiativeHubTab />}
 
           {activeTab === 'governance' && <GovernanceTab />}
 
