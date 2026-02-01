@@ -18,9 +18,11 @@ import {
   MessageSquare,
   GitBranch,
   Lightbulb,
+  Download,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
+import { generateDocumentPDF } from '@/lib/pdfExport'
 
 // Stage names for display
 const STAGE_NAMES: Record<number, string> = {
@@ -199,13 +201,16 @@ function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative;
 }
 
 // Session 866: Document viewer modal for stage documents
+// Session 896: Added PDF download functionality
 function DocumentViewerModal({
   documentId,
   stageName,
+  initiativeName,
   onClose,
 }: {
   documentId: string
   stageName: string
+  initiativeName?: string
   onClose: () => void
 }) {
   const { data, isLoading, isError } = useQuery({
@@ -281,7 +286,28 @@ function DocumentViewerModal({
           )}
         </div>
 
-        <div className="flex items-center justify-end p-4 border-t border-dark-border bg-dark-bg/50 shrink-0">
+        <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-bg/50 shrink-0">
+          {/* Session 896: PDF download button */}
+          {data && (
+            <button
+              onClick={() => {
+                generateDocumentPDF({
+                  title: data.title,
+                  content: data.full_text || data.content || '',
+                  stageName: stageName,
+                  initiativeName: initiativeName,
+                  wordCount: data.word_count,
+                  createdAt: data.created_at,
+                  status: data.status,
+                })
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary-500/20 hover:bg-primary-500/30 text-primary-400 rounded-lg transition-colors"
+            >
+              <Download size={16} />
+              Download PDF
+            </button>
+          )}
+          {!data && <div />}
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
@@ -521,10 +547,12 @@ function InitiativeDetailModal({
         </div>
 
         {/* Session 866: Document viewer modal */}
+        {/* Session 896: Added initiativeName for PDF export */}
         {viewingDocument && (
           <DocumentViewerModal
             documentId={viewingDocument.id}
             stageName={viewingDocument.stageName}
+            initiativeName={initiative.name}
             onClose={() => setViewingDocument(null)}
           />
         )}
