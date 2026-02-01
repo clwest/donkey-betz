@@ -495,6 +495,14 @@ class AutonomousActionExecutor:
         topic = params.get('topic') or name
         depth = params.get('depth', 'comprehensive')
         deliverables = params.get('deliverables', [])
+
+        # Session 893: Fix LLM output bug - ensure deliverables is always a list
+        # ThinkingAgent's LLM sometimes outputs "deliverables": "filename" instead of ["filename"]
+        # This caused character-by-character iteration creating docs with single-letter titles
+        if isinstance(deliverables, str):
+            deliverables = [deliverables] if deliverables else []
+            logger.warning(f"[Session 893] Converted deliverables string to list: {deliverables}")
+
         synthesize_deliverables = params.get('synthesize_deliverables', True)  # Session 620.1
         owner_agent = params.get('owner_agent', 'ResearchAgent')
         deadline_hours = params.get('deadline_hours', 72)
@@ -698,6 +706,11 @@ class AutonomousActionExecutor:
         synthesized_deliverables = []
 
         if synthesize_deliverables and deliverables and research_successful:
+            # Session 893: Double-check deliverables is a list before iteration
+            if isinstance(deliverables, str):
+                deliverables = [deliverables] if deliverables else []
+                logger.warning(f"[Session 893] Synthesis phase - converted string to list: {deliverables}")
+
             logger.info(f"Starting synthesis phase for {len(deliverables)} deliverables")
 
             from core.agents.content_writer_agent import ContentWriterAgent
