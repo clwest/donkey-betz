@@ -1170,26 +1170,50 @@ def initiatives_api(request):
     Session 622: Get all initiatives with their stage status.
     Session 848: Added health calculation.
     Session 897: PERFORMANCE FIX - prefetch_related to eliminate N+1 queries.
+    Session 901: Added priority sorting, program/purpose filtering, portfolio grouping.
     Provides a single source of truth for document lifecycle tracking.
     """
     try:
         from core.models_document_registry import Initiative, InitiativeStage, STAGE_NAMES
         from django.utils import timezone
-        from django.db.models import Prefetch
+        from django.db.models import Prefetch, F, Value, FloatField
+        from django.db.models.functions import Coalesce
 
         # Session 884: Support limit and status filter query params
         # Session 897: Reduced default from 200 to 50 for performance
         limit = int(request.GET.get('limit', 50))
         status_filter = request.GET.get('status')  # Optional: ACTIVE, COMPLETED, etc.
+        # Session 901: New filters
+        program_filter = request.GET.get('program')  # Optional: growth_intelligence, etc.
+        purpose_filter = request.GET.get('purpose')  # Optional: revenue, stability, etc.
+        sort_by = request.GET.get('sort', 'priority')  # 'priority' (default) or 'updated'
 
         # Session 897: Use prefetch_related to batch load stages and decisions
         # This reduces ~3000 queries to just 3 queries total
-        initiatives = Initiative.objects.all().order_by('-updated_at').prefetch_related(
+        initiatives = Initiative.objects.all().prefetch_related(
             Prefetch('stages', queryset=InitiativeStage.objects.all()),
             Prefetch('source_decisions'),
         )
+
         if status_filter:
             initiatives = initiatives.filter(status=status_filter)
+        if program_filter:
+            initiatives = initiatives.filter(program=program_filter)
+        if purpose_filter:
+            initiatives = initiatives.filter(purpose=purpose_filter)
+
+        # Session 901: Sort by priority score (computed) or updated_at
+        if sort_by == 'priority':
+            # Annotate with computed priority score for database sorting
+            # priority = impact_score * 0.4 + urgency * 0.2 + confidence * 0.2 + revenue_potential * 0.2
+            initiatives = initiatives.annotate(
+                computed_priority=Coalesce(F('impact_score'), Value(0.5)) * 0.4 +
+                                  Coalesce(F('urgency'), Value(0.5)) * 0.2 +
+                                  Coalesce(F('confidence'), Value(0.5)) * 0.2 +
+                                  Coalesce(F('revenue_potential'), Value(0.0)) * 0.2
+            ).order_by('-computed_priority', '-updated_at')
+        else:
+            initiatives = initiatives.order_by('-updated_at')
 
         # Get total count before slicing (uses cached queryset)
         total_count = initiatives.count()
@@ -1272,6 +1296,22 @@ def initiatives_api(request):
                     'created_at': decision.created_at.isoformat(),
                 })
 
+            # Session 901: Compute priority score and level
+            priority_score = (
+                (init.impact_score or 0.5) * 0.4 +
+                (init.urgency or 0.5) * 0.2 +
+                (init.confidence or 0.5) * 0.2 +
+                (init.revenue_potential or 0.0) * 0.2
+            )
+            if priority_score >= 0.8:
+                priority_level = 'critical'
+            elif priority_score >= 0.6:
+                priority_level = 'high'
+            elif priority_score >= 0.4:
+                priority_level = 'medium'
+            else:
+                priority_level = 'low'
+
             initiatives_list.append({
                 'id': str(init.id),
                 'name': init.name,
@@ -1290,9 +1330,69 @@ def initiatives_api(request):
                 'source_decision_id': str(init.source_decision_id) if init.source_decision_id else None,
                 'parent_topic': init.parent_topic,
                 'source_decisions': source_decisions,
+                # Session 901: Priority and categorization
+                'purpose': init.purpose,
+                'purpose_display': init.get_purpose_display() if hasattr(init, 'get_purpose_display') else init.purpose,
+                'program': init.program,
+                'program_display': init.get_program_display() if hasattr(init, 'get_program_display') else init.program,
+                'priority_score': round(priority_score, 2),
+                'priority_level': priority_level,
+                'impact_score': init.impact_score,
+                'urgency': init.urgency,
+                'confidence': init.confidence,
+                'revenue_potential': init.revenue_potential,
                 'created_at': init.created_at.isoformat(),
                 'updated_at': init.updated_at.isoformat(),
             })
+
+        # Session 901: Calculate portfolio stats for tabs
+        all_initiatives = Initiative.objects.all()
+        stats = {
+            'total': all_initiatives.count(),
+            'active': all_initiatives.filter(status='ACTIVE').count(),
+            'completed': all_initiatives.filter(status='COMPLETED').count(),
+            'archived': all_initiatives.filter(status='ARCHIVED').count(),
+            'on_hold': all_initiatives.filter(status='ON_HOLD').count(),
+            # Program breakdown
+            'by_program': {},
+            # Purpose breakdown
+            'by_purpose': {},
+            # Priority breakdown
+            'by_priority': {
+                'critical': 0,
+                'high': 0,
+                'medium': 0,
+                'low': 0,
+            },
+        }
+
+        # Count by program
+        for init in all_initiatives:
+            prog = init.program or 'uncategorized'
+            if prog not in stats['by_program']:
+                stats['by_program'][prog] = 0
+            stats['by_program'][prog] += 1
+
+            purp = init.purpose or 'learning'
+            if purp not in stats['by_purpose']:
+                stats['by_purpose'][purp] = 0
+            stats['by_purpose'][purp] += 1
+
+            # Priority level
+            priority_score = (
+                (init.impact_score or 0.5) * 0.4 +
+                (init.urgency or 0.5) * 0.2 +
+                (init.confidence or 0.5) * 0.2 +
+                (init.revenue_potential or 0.0) * 0.2
+            )
+            if priority_score >= 0.8:
+                stats['by_priority']['critical'] += 1
+            elif priority_score >= 0.6:
+                stats['by_priority']['high'] += 1
+            elif priority_score >= 0.4:
+                stats['by_priority']['medium'] += 1
+            else:
+                stats['by_priority']['low'] += 1
 
         return JsonResponse({
             'success': True,
@@ -1300,6 +1400,7 @@ def initiatives_api(request):
             'total_count': total_count,
             'limit': limit,
             'initiatives': initiatives_list,
+            'stats': stats,
         })
 
     except Exception as e:
