@@ -567,7 +567,9 @@ class InitiativeIntegrationService:
         # If a blog/document was created, link it
         blog_id = result.get('blog_id') or result.get('report_id') or result.get('research_blog_id')
         if blog_id:
-            self._link_result_document(initiative, blog_id, action_type)
+            # Session 906: Force stage 1 for research actions to ensure proper linking
+            force_stage = 1 if action_type == 'request_research' else None
+            self._link_result_document(initiative, blog_id, action_type, force_stage=force_stage)
 
         # Link any synthesized deliverables
         synthesized = result.get('synthesized_deliverables', [])
