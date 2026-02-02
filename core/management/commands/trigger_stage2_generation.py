@@ -171,9 +171,14 @@ Include:
 
         try:
             # Get the agent
-            agent_model = Agent.objects.filter(name='ThinkingAgent').first()
+            # Session 912: Use ContentWriterAgent instead of ThinkingAgent
+            # ThinkingAgent ignores the task and returns system diagnostics
+            agent_model = Agent.objects.filter(name='ContentWriterAgent').first()
             if not agent_model:
-                return {'success': False, 'error': 'ThinkingAgent not found'}
+                # Fallback to any content-related agent
+                agent_model = Agent.objects.filter(name__icontains='Content').first()
+            if not agent_model:
+                return {'success': False, 'error': 'ContentWriterAgent not found'}
 
             # Execute the agent
             router = AgentRouter()

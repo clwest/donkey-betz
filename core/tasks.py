@@ -32224,15 +32224,17 @@ def generate_initiative_stage_document(self, initiative_id: str, stage_num: int)
         return {'success': False, 'error': 'Stage already has document', 'document_id': str(stage.document.id)}
 
     # Stage-specific configuration
+    # Session 912: Use ContentWriterAgent instead of ThinkingAgent for document generation
+    # ThinkingAgent ignores the task and returns system diagnostics instead of documents
     stage_config = {
         1: {'agent': 'ResearchAgent', 'template': 'Research Brief'},
-        2: {'agent': 'ThinkingAgent', 'template': 'Prototype Plan'},
-        3: {'agent': 'ThinkingAgent', 'template': 'Evaluation Protocol'},
+        2: {'agent': 'ContentWriterAgent', 'template': 'Prototype Plan'},
+        3: {'agent': 'ContentWriterAgent', 'template': 'Evaluation Protocol'},
         4: {'agent': 'FullStackDeveloperAgent', 'template': 'Technical Design'},
-        5: {'agent': 'ThinkingAgent', 'template': 'Pilot Execution Plan'},
+        5: {'agent': 'ContentWriterAgent', 'template': 'Pilot Execution Plan'},
     }
 
-    config = stage_config.get(stage_num, {'agent': 'ThinkingAgent', 'template': 'Stage Document'})
+    config = stage_config.get(stage_num, {'agent': 'ContentWriterAgent', 'template': 'Stage Document'})
 
     # Build context from previous stages
     previous_context = []
