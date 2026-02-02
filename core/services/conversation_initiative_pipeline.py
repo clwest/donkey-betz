@@ -288,26 +288,24 @@ class ConversationInitiativePipeline:
                 initiative_name = f"{base_name} ({counter})"
                 counter += 1
 
-            # Session 908: Get workspace for initiative
+            # Session 908/909: Get workspace for initiative
+            # Session 909: Use same logic as _get_workspace_for_skin_layer() - prefer Donkey Betz
             workspace = None
             try:
                 from core.models_skin_layer import ProjectWorkspace
-                from core.services.workspace_manager import WorkspaceManager
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
 
-                if user_id:
-                    user = User.objects.filter(id=user_id).first()
-                    if user:
-                        manager = WorkspaceManager(user)
-                        workspace = manager.get_active_workspace()
+                # Session 909: First try "Donkey Betz" workspace explicitly
+                workspace = ProjectWorkspace.objects.filter(
+                    name__icontains='donkey betz',
+                    is_active=True
+                ).order_by('-total_operations').first()
 
+                # Fallback to any active workspace ordered by operations
                 if not workspace:
-                    # Fall back to system user's workspace
-                    system_user = User.objects.filter(username='system_autonomous').first()
-                    if system_user:
-                        manager = WorkspaceManager(system_user)
-                        workspace = manager.get_active_workspace()
+                    workspace = ProjectWorkspace.objects.filter(
+                        is_active=True
+                    ).order_by('-total_operations').first()
+
             except Exception as ws_error:
                 logger.warning(f"Could not get workspace for initiative: {ws_error}")
 
