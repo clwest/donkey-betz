@@ -31991,6 +31991,18 @@ def retry_blocked_research(self, research_result_id: str):
                 research.initiative_stage.notes = f"Research completed after {research.retry_count} retry(ies)"
                 research.initiative_stage.save(update_fields=['status', 'notes', 'updated_at'])
 
+                # Session 912: Update document content to mark data as available
+                # This removes the "Insufficient Data" marker that blocks auto-progression
+                if research.initiative_stage.document:
+                    doc = research.initiative_stage.document
+                    if doc.full_text and '⚠️ Insufficient Data' in doc.full_text:
+                        doc.full_text = doc.full_text.replace(
+                            '⚠️ Insufficient Data - DataExportAgent may be needed',
+                            '✅ Data Available - Research completed on retry'
+                        )
+                        doc.save(update_fields=['full_text', 'updated_at'])
+                        logger.info(f"🔄 [RESEARCH-RETRY] Updated document {doc.id} - marked data as available")
+
             logger.info(f"🔄 [RESEARCH-RETRY] SUCCESS! Research completed on retry #{research.retry_count}")
             return {
                 'status': 'success',
