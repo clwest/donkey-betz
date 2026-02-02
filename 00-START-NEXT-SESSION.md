@@ -1,43 +1,23 @@
 # Session 913 - Start Here
 
-**Previous Session:** 912 (Topic Validation + Cleanup Schedule)
+**Previous Session:** 912 (Initiative Pipeline Unblocked)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **136 INITIATIVES** | **ALL CONNECTED TO DONKEY BETZ**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **173 INITIATIVES** | **PIPELINE FLOWING**
 
 ---
 
 ## What Was Accomplished in Session 912
 
-### 1. Topic Validation (Critical - Merged Session 911)
+### 1. Fixed Stuck Initiative Documents (Critical)
 
-**Problem:** ResearchAgent tasks failing with "Research returned no results" because garbage action-item topics were being passed as research topics (e.g., "Validate item confidence scores; export structured persona profiles...")
-
-**Root Cause:** `conversation_initiative_pipeline.py` was dispatching tasks without validating if the topic was actually researchable.
-
-**Solution:** Added `is_valid_topic()` function that rejects:
-- Topics starting with action verbs (validate, export, create, build, etc.)
-- Topics containing task-like patterns ("; export", "you must", etc.)
-
-### 2. Increased Zombie Cleanup Frequency
-
-**Problem:** Zombie cleanup ran every hour but threshold was 30 minutes, meaning tasks could sit in "running" state for up to 90 minutes.
-
-**Solution:** Changed cleanup schedule from every hour to every 15 minutes.
-
-| Before | After |
-|--------|-------|
-| 3600s (1 hour) | 900s (15 minutes) |
-| Max zombie lifetime: 90 min | Max zombie lifetime: 45 min |
-
-### 3. Fixed Stuck Initiative Documents (Critical)
-
-**Problem:** Initiatives showing "Awaiting Data Collection" for 9+ hours even though research completed. Documents were stuck and wouldn't progress.
+**Problem:** Initiatives showing "Awaiting Data Collection" for 9+ hours even though research completed. 14 documents were stuck and wouldn't progress.
 
 **Root Cause:** When research completed on retry, the document content wasn't updated to remove the "⚠️ Insufficient Data" marker. The UI shows a warning banner whenever document content contains that text, and auto-progression blocks on it.
 
 **Solution:**
 1. Updated `retry_blocked_research` task to replace "Insufficient Data" with "Data Available" in document content when research completes
 2. Created `fix_stuck_initiatives` management command to repair existing stuck documents
+3. Ran fix on production: **14 documents fixed**, **0 documents with "Insufficient Data" remaining**
 
 **Usage:**
 ```bash
@@ -48,11 +28,42 @@ python manage.py fix_stuck_initiatives --dry-run
 python manage.py fix_stuck_initiatives --fix
 ```
 
-### 4. Verified Session 910/911 Fixes Working
+### 2. Unblocked Initiative Pipeline
+
+**Problem:** After fixing documents, initiatives weren't progressing through stages automatically.
+
+**Actions Taken:**
+1. Triggered `process_initiative_auto_progression` - approved 5 Stage 1 initiatives
+2. Ran `trigger_stage2_generation --sync` - generated 6 Stage 2 documents
+3. Pipeline now flowing through all 5 stages
+
+**Current Pipeline State (Production):**
+
+| Stage | Initiatives | Approved Documents |
+|-------|------------|-------------------|
+| Stage 1 (Research Brief) | 3 | 157 |
+| Stage 2 (Prototype Plan) | 30 | 141 |
+| Stage 3 (Evaluation) | **87** | 53 |
+| Stage 4 (Technical Design) | 22 | 31 |
+| Stage 5 (Pilot Execution) | **31** | 26 |
+
+### 3. Increased Zombie Cleanup Frequency
+
+**Problem:** Zombie cleanup ran every hour but threshold was 30 minutes.
+
+**Solution:** Changed cleanup schedule from every hour to every 15 minutes.
+
+### 4. Topic Validation (From Session 911)
+
+Added `is_valid_topic()` function that rejects garbage topics (action items mistaken for research topics).
+
+### 5. Verified All Fixes Working
 
 - ✅ `workspace: true` showing correctly in Agent Tasks UI
 - ✅ Spider connector no longer crashes on persistence.models.SpiderData
-- ✅ Zombie cleanup now catches both 'running' and 'in_progress' statuses
+- ✅ Zombie cleanup catches both 'running' and 'in_progress' statuses
+- ✅ No documents with "Insufficient Data" markers remaining
+- ✅ Pipeline auto-progression working
 
 ---
 
@@ -64,6 +75,8 @@ python manage.py fix_stuck_initiatives --fix
 | #742 | Increase zombie task cleanup frequency (1 hour → 15 min) |
 | #743 | Update handoff document |
 | #744 | Fix stuck initiative documents + management command |
+| #745 | Handoff update |
+| #746 | Fix SelfBlog save fields (updated_at doesn't exist) |
 
 ---
 
