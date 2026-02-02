@@ -8,6 +8,7 @@ showing the knowledge pipeline: Spiders -> Agents -> Learning Network -> Mytholo
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db import models
 from datetime import timedelta
@@ -1768,4 +1769,419 @@ def trigger_initiative_pipeline_api(request):
 
     except Exception as e:
         logger.error(f"Error triggering initiative pipeline: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
+# Session 902: Initiative Action Items API
+# =============================================================================
+
+@require_http_methods(["GET"])
+def initiative_action_items_api(request, initiative_id):
+    """
+    Session 902: Get action items for an initiative.
+
+    Query params:
+    - status: Filter by status (pending, in_progress, completed, blocked, cancelled)
+    - priority: Filter by priority (critical, high, medium, low)
+    """
+    try:
+        from core.models_document_registry import Initiative, InitiativeActionItem
+        import uuid as uuid_module
+
+        # Handle UUID
+        if isinstance(initiative_id, str):
+            try:
+                initiative_id = uuid_module.UUID(initiative_id)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
+
+        # Verify initiative exists
+        try:
+            initiative = Initiative.objects.get(id=initiative_id)
+        except Initiative.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
+
+        # Get action items with optional filters
+        items = InitiativeActionItem.objects.filter(initiative=initiative)
+
+        status_filter = request.GET.get('status')
+        if status_filter:
+            items = items.filter(status=status_filter)
+
+        priority_filter = request.GET.get('priority')
+        if priority_filter:
+            items = items.filter(priority=priority_filter)
+
+        items = items.order_by('order', '-priority', 'created_at')
+
+        # Calculate stats
+        all_items = InitiativeActionItem.objects.filter(initiative=initiative)
+        stats = {
+            'total': all_items.count(),
+            'pending': all_items.filter(status='pending').count(),
+            'in_progress': all_items.filter(status='in_progress').count(),
+            'completed': all_items.filter(status='completed').count(),
+            'blocked': all_items.filter(status='blocked').count(),
+            'completion_rate': 0,
+        }
+        if stats['total'] > 0:
+            stats['completion_rate'] = round(stats['completed'] / stats['total'] * 100, 1)
+
+        items_list = []
+        for item in items:
+            items_list.append({
+                'id': str(item.id),
+                'title': item.title,
+                'description': item.description,
+                'assigned_agent': item.assigned_agent,
+                'assigned_user_id': item.assigned_user_id,
+                'timeline_text': item.timeline_text,
+                'due_date': item.due_date.isoformat() if item.due_date else None,
+                'estimated_hours': item.estimated_hours,
+                'status': item.status,
+                'priority': item.priority,
+                'started_at': item.started_at.isoformat() if item.started_at else None,
+                'completed_at': item.completed_at.isoformat() if item.completed_at else None,
+                'completed_by': item.completed_by,
+                'completion_notes': item.completion_notes,
+                'blocked_reason': item.blocked_reason,
+                'is_overdue': item.is_overdue,
+                'days_until_due': item.days_until_due,
+                'source_conversation_id': str(item.source_conversation_id) if item.source_conversation_id else None,
+                'source_text': item.source_text,
+                'order': item.order,
+                'created_at': item.created_at.isoformat(),
+                'updated_at': item.updated_at.isoformat(),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'initiative_id': str(initiative_id),
+            'initiative_name': initiative.name,
+            'count': len(items_list),
+            'stats': stats,
+            'action_items': items_list,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in initiative_action_items_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def action_item_update_api(request, item_id):
+    """
+    Session 902: Update an action item's status or details.
+
+    POST body (JSON):
+    - status: 'pending', 'in_progress', 'completed', 'blocked', 'cancelled'
+    - priority: 'critical', 'high', 'medium', 'low'
+    - title: Updated title
+    - description: Updated description
+    - assigned_agent: Agent name
+    - due_date: 'YYYY-MM-DD'
+    - completion_notes: Notes when completing
+    - blocked_reason: Reason when blocking
+    """
+    try:
+        import json
+        from core.models_document_registry import InitiativeActionItem
+        from django.utils import timezone
+        import uuid as uuid_module
+
+        # Handle UUID
+        if isinstance(item_id, str):
+            try:
+                item_id = uuid_module.UUID(item_id)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid item ID'}, status=400)
+
+        # Get the action item
+        try:
+            item = InitiativeActionItem.objects.get(id=item_id)
+        except InitiativeActionItem.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Action item not found'}, status=404)
+
+        # Parse request body
+        try:
+            body = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        # Track what was updated
+        updated_fields = []
+
+        # Update status with side effects
+        if 'status' in body:
+            new_status = body['status']
+            if new_status in ['pending', 'in_progress', 'completed', 'blocked', 'cancelled']:
+                old_status = item.status
+                item.status = new_status
+
+                # Handle status-specific logic
+                if new_status == 'in_progress' and old_status == 'pending':
+                    item.started_at = timezone.now()
+                    updated_fields.append('started_at')
+                elif new_status == 'completed':
+                    item.completed_at = timezone.now()
+                    item.completed_by = body.get('completed_by', 'user')
+                    if 'completion_notes' in body:
+                        item.completion_notes = body['completion_notes']
+                    updated_fields.extend(['completed_at', 'completed_by', 'completion_notes'])
+                elif new_status == 'blocked' and 'blocked_reason' in body:
+                    item.blocked_reason = body['blocked_reason']
+                    updated_fields.append('blocked_reason')
+
+                updated_fields.append('status')
+
+        # Update other fields
+        if 'priority' in body and body['priority'] in ['critical', 'high', 'medium', 'low']:
+            item.priority = body['priority']
+            updated_fields.append('priority')
+
+        if 'title' in body:
+            item.title = body['title'][:300]
+            updated_fields.append('title')
+
+        if 'description' in body:
+            item.description = body['description']
+            updated_fields.append('description')
+
+        if 'assigned_agent' in body:
+            item.assigned_agent = body['assigned_agent'][:100]
+            updated_fields.append('assigned_agent')
+
+        if 'due_date' in body:
+            if body['due_date']:
+                from datetime import datetime
+                try:
+                    item.due_date = datetime.strptime(body['due_date'], '%Y-%m-%d').date()
+                    updated_fields.append('due_date')
+                except ValueError:
+                    pass
+            else:
+                item.due_date = None
+                updated_fields.append('due_date')
+
+        if 'estimated_hours' in body:
+            item.estimated_hours = float(body['estimated_hours']) if body['estimated_hours'] else None
+            updated_fields.append('estimated_hours')
+
+        if 'order' in body:
+            item.order = int(body['order'])
+            updated_fields.append('order')
+
+        # Save if anything changed
+        if updated_fields:
+            item.save()
+
+        return JsonResponse({
+            'success': True,
+            'item_id': str(item.id),
+            'updated_fields': updated_fields,
+            'action_item': {
+                'id': str(item.id),
+                'title': item.title,
+                'status': item.status,
+                'priority': item.priority,
+                'is_overdue': item.is_overdue,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in action_item_update_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def action_item_create_api(request, initiative_id):
+    """
+    Session 902: Create a new action item for an initiative.
+
+    POST body (JSON):
+    - title: Required
+    - description: Optional
+    - assigned_agent: Optional agent name
+    - priority: Optional (default: medium)
+    - due_date: Optional 'YYYY-MM-DD'
+    - timeline_text: Optional
+    """
+    try:
+        import json
+        from core.models_document_registry import Initiative, InitiativeActionItem
+        import uuid as uuid_module
+
+        # Handle UUID
+        if isinstance(initiative_id, str):
+            try:
+                initiative_id = uuid_module.UUID(initiative_id)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
+
+        # Verify initiative exists
+        try:
+            initiative = Initiative.objects.get(id=initiative_id)
+        except Initiative.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
+
+        # Parse request body
+        try:
+            body = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        if not body.get('title'):
+            return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
+
+        # Get next order number
+        max_order = InitiativeActionItem.objects.filter(
+            initiative=initiative
+        ).values_list('order', flat=True).order_by('-order').first() or 0
+
+        # Parse due_date if provided
+        due_date = None
+        if body.get('due_date'):
+            from datetime import datetime
+            try:
+                due_date = datetime.strptime(body['due_date'], '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        # Create the action item
+        item = InitiativeActionItem.objects.create(
+            initiative=initiative,
+            title=body['title'][:300],
+            description=body.get('description', ''),
+            assigned_agent=body.get('assigned_agent', '')[:100] if body.get('assigned_agent') else '',
+            priority=body.get('priority', 'medium'),
+            due_date=due_date,
+            timeline_text=body.get('timeline_text', '')[:50] if body.get('timeline_text') else '',
+            estimated_hours=float(body['estimated_hours']) if body.get('estimated_hours') else None,
+            order=max_order + 1,
+            created_by='user',
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Action item created',
+            'action_item': {
+                'id': str(item.id),
+                'title': item.title,
+                'status': item.status,
+                'priority': item.priority,
+                'order': item.order,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in action_item_create_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["DELETE"])
+@csrf_exempt
+def action_item_delete_api(request, item_id):
+    """Session 902: Delete an action item."""
+    try:
+        from core.models_document_registry import InitiativeActionItem
+        import uuid as uuid_module
+
+        # Handle UUID
+        if isinstance(item_id, str):
+            try:
+                item_id = uuid_module.UUID(item_id)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid item ID'}, status=400)
+
+        # Get and delete the action item
+        try:
+            item = InitiativeActionItem.objects.get(id=item_id)
+            title = item.title
+            item.delete()
+        except InitiativeActionItem.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Action item not found'}, status=404)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Action item "{title}" deleted',
+        })
+
+    except Exception as e:
+        logger.error(f"Error in action_item_delete_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def extract_action_items_api(request, initiative_id=None):
+    """
+    Session 902: Extract action items from conversation conclusions.
+
+    If initiative_id provided: Extract from conversations linked to that initiative
+    If no initiative_id: Bulk extract from recent conversations (limit param)
+    """
+    try:
+        import json
+        from core.services.action_item_parser import (
+            extract_action_items_from_conversation,
+            bulk_extract_action_items
+        )
+
+        body = {}
+        if request.body:
+            try:
+                body = json.loads(request.body)
+            except json.JSONDecodeError:
+                pass
+
+        if initiative_id:
+            # Extract from specific initiative's conversations
+            from core.models_document_registry import Initiative
+            import uuid as uuid_module
+
+            if isinstance(initiative_id, str):
+                try:
+                    initiative_id = uuid_module.UUID(initiative_id)
+                except ValueError:
+                    return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
+
+            try:
+                initiative = Initiative.objects.get(id=initiative_id)
+            except Initiative.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
+
+            # Find conversations linked to this initiative via decisions
+            from core.models import AgentDecisionSummary
+            decisions = AgentDecisionSummary.objects.filter(initiative=initiative)
+            session_ids = set()
+            for d in decisions:
+                if d.hive_session_id:
+                    session_ids.add(str(d.hive_session_id))
+
+            items_created = 0
+            for session_id in session_ids:
+                items = extract_action_items_from_conversation(session_id)
+                items_created += len(items)
+
+            return JsonResponse({
+                'success': True,
+                'initiative_id': str(initiative_id),
+                'sessions_processed': len(session_ids),
+                'items_created': items_created,
+            })
+        else:
+            # Bulk extract
+            limit = int(body.get('limit', 50))
+            stats = bulk_extract_action_items(limit=limit)
+
+            return JsonResponse({
+                'success': True,
+                'stats': stats,
+            })
+
+    except Exception as e:
+        logger.error(f"Error in extract_action_items_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
