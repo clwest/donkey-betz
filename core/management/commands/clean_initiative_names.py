@@ -53,8 +53,12 @@ def is_bad_name(name: str) -> bool:
     return any(bad_indicators)
 
 
-def extract_clean_title(initiative) -> str:
-    """Try to extract a clean title from initiative data."""
+def extract_clean_title(initiative, max_length: int = 80) -> str:
+    """
+    Extract a clean title from initiative data.
+
+    Session 907: Improved extraction strategies that preserve meaning.
+    """
     name = initiative.name
     description = initiative.description or ''
     parent_topic = initiative.parent_topic or ''
@@ -72,20 +76,46 @@ def extract_clean_title(initiative) -> str:
             if topic and len(topic) < 60:
                 return _title_case(topic)
 
-    # Option 3: Clean the name aggressively
+    # Option 3: Extract meaningful title from name using multiple strategies
+    original = name.strip()
+
+    # Strategy 3a: Extract quoted text at start
+    # e.g., "'Persona Generator' component..." -> "Persona Generator"
+    quote_match = re.match(r"^['\"]([^'\"]+)['\"]", original)
+    if quote_match:
+        extracted = quote_match.group(1).strip()
+        if 10 <= len(extracted) <= max_length:
+            return _title_case(extracted)
+
+    # Strategy 3b: Text before colon if meaningful
+    # e.g., "Bootstrap Knowledge Enhancement: a pipeline..." -> "Bootstrap Knowledge Enhancement"
+    if ':' in original:
+        before_colon = original.split(':')[0].strip()
+        # Only use if reasonably sized and not just "Add" or "Create"
+        if 15 <= len(before_colon) <= max_length and len(before_colon.split()) >= 2:
+            return _title_case(before_colon)
+
+    # Strategy 3c: First sentence if short enough
+    sentence_match = re.match(r'^([^.!?]+[.!?])', original)
+    if sentence_match:
+        first_sentence = sentence_match.group(1).strip().rstrip('.')
+        if len(first_sentence) <= max_length:
+            return _title_case(first_sentence)
+
+    # Strategy 3d: Truncate at word boundary preserving meaning
     # Remove leading special chars
-    clean = re.sub(r'^[>\-\s]+', '', name)
-    # Replace ALL delimiters/special chars with space (arrows, colons, slashes, etc.)
-    clean = re.sub(r'[→\->:;,/=\(\)\[\]]+', ' ', clean)
-    # Normalize whitespace
-    clean = re.sub(r'\s+', ' ', clean).strip()
+    clean = re.sub(r'^[>\-\s]+', '', original)
 
-    # Take first 2 words only for clean titles
-    words = clean.split()[:2]
-    if words:
-        return _title_case(' '.join(words))
+    if len(clean) > max_length:
+        truncated = clean[:max_length]
+        # Find last space to avoid cutting words
+        last_space = truncated.rfind(' ')
+        if last_space > max_length // 2:
+            truncated = truncated[:last_space]
+        return _title_case(truncated.strip())
 
-    return name[:30]
+    # Fallback: return cleaned name as-is
+    return _title_case(clean) if clean else name[:max_length]
 
 
 def _title_case(text: str) -> str:
