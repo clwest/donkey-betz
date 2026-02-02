@@ -57,13 +57,39 @@ python manage.py fix_stuck_initiatives --fix
 
 Added `is_valid_topic()` function that rejects garbage topics (action items mistaken for research topics).
 
-### 5. Verified All Fixes Working
+### 5. Fixed Stage Document Generation (Critical)
+
+**Problem:** Stage 2/3/5 documents contained system diagnostics ("Observed system-state snapshot...") instead of actual document content.
+
+**Root Cause:** `ThinkingAgent` ignores the task parameter and runs autonomous thinking cycles, returning system state instead of responding to the prompt.
+
+**Solution:** Changed stage document generation to use `ContentWriterAgent` instead of `ThinkingAgent` for stages 2, 3, and 5.
+
+**Cleanup:** Deleted 13 bad documents with system diagnostics and reset their stages to PENDING for regeneration.
+
+### 6. Verified All Fixes Working
 
 - ✅ `workspace: true` showing correctly in Agent Tasks UI
 - ✅ Spider connector no longer crashes on persistence.models.SpiderData
 - ✅ Zombie cleanup catches both 'running' and 'in_progress' statuses
 - ✅ No documents with "Insufficient Data" markers remaining
 - ✅ Pipeline auto-progression working
+- ✅ Stage documents now generate actual content (not system diagnostics)
+
+---
+
+## NEXT PRIORITIES for Session 913
+
+### 1. Improve Stage Document Quality
+ContentWriterAgent generates generic blog posts instead of structured Prototype Plans. Consider:
+- Customizing the prompt to enforce structure
+- Creating a dedicated `TechnicalDocumentAgent` for stage documents
+- Adding post-processing to validate document structure
+
+### 2. Monitor Pipeline Progression
+- Check that regenerated documents pass quality gates
+- Verify initiatives continue progressing through stages
+- Review Stage 3/4/5 document quality
 
 ---
 
@@ -77,6 +103,8 @@ Added `is_valid_topic()` function that rejects garbage topics (action items mist
 | #744 | Fix stuck initiative documents + management command |
 | #745 | Handoff update |
 | #746 | Fix SelfBlog save fields (updated_at doesn't exist) |
+| #747 | Final handoff - Pipeline Unblocked |
+| #748 | Use ContentWriterAgent for stage document generation |
 
 ---
 
