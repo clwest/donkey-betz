@@ -1,70 +1,95 @@
-# Session 905 - Start Here
+# Session 906 - Start Here
 
-**Previous Session:** 904 (Initiative UI Overhaul)
+**Previous Session:** 905/906 (Initiative Auto-Progression + Title Cleanup)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE UI OVERHAULED** | **LIVE ACTIVITY TRACKING** | **820 SUCCESSFUL EXPERIMENTS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE AUTO-PROGRESSION** | **TITLE CLEANUP COMPLETE** | **3 STAGE 2 DOCS GENERATED**
 
 ---
 
-## What Was Accomplished in Session 904
+## What Was Accomplished in Session 905/906
 
-### Initiative UI Overhaul - 5 PRs Merged
+### Initiative Auto-Progression Pipeline - 7 PRs Merged
 
 | PR | Feature |
 |----|---------|
-| #688 | **List View** - Default compact list with stages/list/cards toggle |
-| #689 | **Comprehensive Modal for All** - All initiatives get full detail view |
-| #690 | **Stages View** - Group initiatives by pipeline phase (1-5) |
-| #691 | **Live Activity** - Show active agents working in modal |
-| #692 | **Conversation Details** - Show synthesis, objective, criteria in modal |
+| #703 | **Auto-Progression Service** - Quality-based stage advancement (60%+ confidence) |
+| #704 | **Import Fix** - Fixed `Document` → `SelfBlog` import in Celery task |
+| #705 | **trigger_stage2_generation command** - Management command for Stage 2 docs |
+| #706 | **Sync Mode** - `--sync` flag for railway run without Celery |
+| #707 | **clean_initiative_names command** - Detect/fix technical description titles |
+| #709 | **Aggressive Title Extraction** - Stop at first special character |
+| #710 | **2-Word Titles** - Replace all delimiters, take first 2 words only |
 
-### Key UI Changes:
+### Key Changes:
 
-**1. Three View Modes (Default: Stages)**
-- **Stages View** - Groups initiatives by pipeline phase (1-5) with color-coded headers
-- **List View** - Compact single-column with stage progress bars
-- **Card View** - Original 2-column grid
+**1. Initiative Auto-Progression**
+- Quality-based stage advancement when criteria met (60%+ confidence)
+- Stage 1→2→3→4→5 automatic progression
+- Flexible section name matching (alternatives for each required section)
+- `check_stage_for_progression()`, `progress_initiative_stage()`, `trigger_next_stage_generation()`
 
-**2. Comprehensive Modal for ALL Initiatives**
-- Previously only completed initiatives got the full modal
-- Now ALL initiatives show: action items, signal intelligence, full trace
+**2. Stage 2 Document Generation**
+- Fixed import error blocking generation
+- Management command: `python manage.py trigger_stage2_generation --run --sync --limit=5`
+- **3 Prototype Plan documents generated** in production
 
-**3. Live Activity Section in Modal**
-- Shows which agents are currently working on the initiative
-- Progress percentage, current step, stage number
-- Recently completed work (last hour)
-
-**4. Enhanced Origin & Trigger Section**
-- Trigger confidence percentage
-- **Conversation Summary** (NEW):
-  - Topic, Objective, Success Criteria
-  - Synthesis/conclusion from the conversation
-  - Contribution count, thinking time
-  - Start/completion timestamps
+**3. Initiative Title Cleanup**
+- Replaced all special characters (→, >, :, ;, ,, /, =) with spaces
+- Takes only first 2 words for clean titles
+- **4 initiatives cleaned**: "Derived Expertise", "Normalization Analysis", "Flagging Redaction", "Format Headline"
 
 ---
 
-## Session 903 Recap: Celery OOM Fix + Signal Intelligence
+## Database Changes (Session 905/906)
 
-- **Signal Intelligence Wired** (PR #686) - HiveMindSessions link to SignalCluster/AutoTopic
-- **Celery OOM Fixed** (PR #687) - Task lock, reduced frequency, aiohttp cleanup
-- **Auto-Extraction** (PR #684) - Action items extracted on conversation complete
+**3 New Stage 2 Documents Created:**
+- Research briefs progressed from Stage 1 → Stage 2
+- Prototype Plan documents generated via ThinkingAgent
+
+**4 Initiative Titles Cleaned:**
+| Before | After |
+|--------|-------|
+| `derived expertise as inputs, outputs ranked...` | `Derived Expertise` |
+| `> normalization -> analysis (top-perform...` | `Normalization Analysis` |
+| `flagging/redaction at ingest, Persona AP...` | `Flagging Redaction` |
+| `format/headline/frequency/engagement ext...` | `Format Headline` |
 
 ---
 
-## NEXT PRIORITIES for Session 905
+## NEXT PRIORITIES for Session 907
 
-### 1. Test Live Activity in Production
-- Trigger a conversation and open initiative modal while it's running
-- Verify Live Activity section shows agent work
+### 1. Run Full Auto-Progression Batch
+- Run `process_initiative_auto_progression` Celery task
+- Progress more Stage 1 → Stage 2 initiatives
 
-### 2. WebSocket Real-Time Updates (Optional)
-- Currently modal needs refresh to see updates
-- Could add WebSocket push for live progress
+### 2. Backfill Research Brief Links
+- 269/288 research briefs still unlinked to InitiativeStages
+- Run `python manage.py backfill_research_brief_links --fix`
 
-### 3. Initiative Stage Actions
-- Add "Generate Document" button for pending stages
-- Allow manual stage transitions
+### 3. UI Verification
+- Verify clean initiative titles display in UI
+- Check Stage 2 documents appear in modal
+
+---
+
+## New Management Commands
+
+```bash
+# Clean initiative names (dry run)
+python manage.py clean_initiative_names
+
+# Clean initiative names (fix)
+python manage.py clean_initiative_names --fix --limit=50
+
+# Trigger Stage 2 document generation (sync mode for railway)
+python manage.py trigger_stage2_generation --run --sync --limit=5
+
+# Backfill research brief links (dry run)
+python manage.py backfill_research_brief_links
+
+# Backfill research brief links (fix)
+python manage.py backfill_research_brief_links --fix --limit=50
+```
 
 ---
 
@@ -86,13 +111,12 @@ celery-broadcast: -Q broadcast (2 concurrency)
 # Start platform
 make start && make celery
 
-# Check active agent executions
+# Check initiative pipeline status
 python manage.py shell -c "
-from core.models.agents_registry.models import AgentExecution
-running = AgentExecution.objects.filter(status='running')
-print(f'Running: {running.count()}')
-for e in running[:5]:
-    print(f'  {e.template.name}: {e.progress_percentage}% - {e.current_step}')
+from core.models_document_registry import Initiative, InitiativeStage
+stages = Initiative.objects.values_list('current_stage', flat=True)
+from collections import Counter
+print(Counter(stages))
 "
 
 # Production experiment status
@@ -105,13 +129,13 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | PR | Description |
 |----|-------------|
-| #692 | feat(Session 904): Show full conversation details in Origin & Trigger |
-| #691 | feat(Session 904): Show live agent activity in initiative modal |
-| #690 | feat(Session 904): Group initiatives by pipeline stage |
-| #689 | feat(Session 904): Use comprehensive modal for all initiatives |
-| #688 | feat(Session 904): Add list view for initiatives UI |
-| #687 | fix(Session 902): Celery worker OOM fixes |
-| #686 | fix(Session 902): Wire Signal Intelligence |
+| #710 | fix(Session 906): Simplify title extraction to 2 clean words |
+| #709 | fix(Session 906): Make initiative title extraction more aggressive |
+| #707 | feat(Session 906): Add clean_initiative_names management command |
+| #706 | fix(Session 906): Add sync mode for trigger_stage2_generation |
+| #705 | feat(Session 906): Add trigger_stage2_generation management command |
+| #704 | fix(Session 906): Fix SelfBlog import in generate_initiative_stage_document |
+| #703 | feat(Session 905): Add auto-progression service with flexible section matching |
 
 ---
 
@@ -119,11 +143,11 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity, conversation details | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
+| **906** | Initiative Title Cleanup - clean_initiative_names command, 4 titles fixed | This file |
+| **905** | Initiative Auto-Progression - Quality-based stage advancement, Stage 2 doc generation | `SESSION_905_AUTO_PROGRESSION.md` |
+| **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
 | **903** | Celery OOM Fix + Signal Intelligence Wired | `SESSION_903_SIGNAL_CELERY_FIX.md` |
 | **902** | Action Item Tracking | `SESSION_902_ACTION_ITEM_TRACKING.md` |
-| **901** | Initiative Priority & Portfolio | `SESSION_901_INITIATIVE_PRIORITY.md` |
-| **900** | Signal Intelligence | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
 
 ---
 
@@ -146,32 +170,24 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 ---
 
-## Initiative UI Architecture
+## Initiative Pipeline Architecture
 
-**View Modes:**
 ```
-┌─────────────────────────────────────────┐
-│ [Layers] [List] [Grid]    Filter: All  │
-├─────────────────────────────────────────┤
-│ Stages View (default):                  │
-│   Stage 1: Research Brief     [12]      │
-│   Stage 2: Prototype Plan     [45]      │
-│   Stage 3: Evaluation         [23]      │
-│   Stage 4: Tech Design        [8]       │
-│   Stage 5: Pilot Execution    [5]       │
-└─────────────────────────────────────────┘
+Dream → Initiative → 5 Stages → Deliverable
+
+Stage 1: Research Brief     (Auto-progress at 60%+ confidence)
+Stage 2: Prototype Plan     (Generated via ThinkingAgent)
+Stage 3: Evaluation Protocol
+Stage 4: Technical Design
+Stage 5: Pilot Execution    → Final Deliverable
 ```
 
-**Modal Sections:**
-1. Header (name, description, progress, priority/purpose badges)
-2. Quick Stats (agents, messages, stages, content)
-3. **Live Activity** (running agents, progress)
-4. Origin & Trigger (signals, conversation summary, decision)
-5. Conversation (expandable messages)
-6. Pipeline Stages (with document links)
-7. Action Items (status toggles, priority)
-8. Deliverable (if published)
+**Auto-Progression Service:**
+- `core/services/initiative_auto_progression.py`
+- Evaluates quality: content length, required sections, no "insufficient data" markers
+- Confidence threshold: 60%
+- Triggers next stage document generation via Celery
 
 ---
 
-**Initiative UI Complete - Deploy and test Live Activity in production!**
+**Initiative Auto-Progression Complete - UI should show clean titles!**

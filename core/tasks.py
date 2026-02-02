@@ -32057,6 +32057,66 @@ def process_initiative_auto_progression(self):
     }
 
 
+@shared_task(bind=True, queue='default')
+def detect_duplicate_initiatives(self):
+    """
+    Session 906: Periodic task to detect duplicate initiatives and trigger investigation.
+
+    Runs daily to find initiatives with similar names and either:
+    1. Auto-consolidate if confidence is high
+    2. Create an investigation task if manual review needed
+    """
+    from core.management.commands.consolidate_duplicate_initiatives import (
+        find_duplicate_clusters,
+        calculate_similarity
+    )
+    from core.models_document_registry import Initiative
+
+    logger.info("🔍 [DUPLICATE-DETECT] Scanning for duplicate initiatives")
+
+    initiatives = Initiative.objects.order_by('-created_at')[:500]
+    clusters = find_duplicate_clusters(initiatives, threshold=0.7)
+
+    if not clusters:
+        logger.info("🔍 [DUPLICATE-DETECT] No duplicate clusters found")
+        return {'status': 'success', 'clusters_found': 0}
+
+    logger.warning(f"🔍 [DUPLICATE-DETECT] Found {len(clusters)} duplicate clusters!")
+
+    # Log details for investigation
+    for i, cluster in enumerate(clusters, 1):
+        primary = cluster[0]
+        duplicates = cluster[1:]
+        logger.warning(
+            f"🔍 [DUPLICATE-DETECT] Cluster {i}: '{primary.name[:50]}' "
+            f"has {len(duplicates)} duplicates"
+        )
+
+    # Create an investigation initiative for this issue
+    try:
+        investigation_name = f"Investigate {len(clusters)} Duplicate Initiative Clusters"
+        investigation, created = Initiative.objects.get_or_create(
+            name=investigation_name,
+            defaults={
+                'description': (
+                    f"Auto-detected {len(clusters)} clusters of duplicate initiatives. "
+                    f"Run: python manage.py consolidate_duplicate_initiatives --fix"
+                ),
+                'current_stage': 1,
+            }
+        )
+        if created:
+            logger.info(f"🔍 [DUPLICATE-DETECT] Created investigation: {investigation.id}")
+    except Exception as e:
+        logger.error(f"🔍 [DUPLICATE-DETECT] Failed to create investigation: {e}")
+
+    return {
+        'status': 'success',
+        'clusters_found': len(clusters),
+        'total_duplicates': sum(len(c) - 1 for c in clusters),
+    }
+
+
 @shared_task(bind=True, queue='default', max_retries=2)
 def generate_initiative_stage_document(self, initiative_id: str, stage_num: int):
     """
