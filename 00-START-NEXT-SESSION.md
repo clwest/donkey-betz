@@ -1,113 +1,125 @@
 # Session 907 - Start Here
 
-**Previous Session:** 906 (Initiative Tracking + Duplicate Detection + Docs Update)
+**Previous Session:** 906 (Initiative Tracking + Major Database Cleanup)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE AUTO-PROGRESSION** | **TRACKING COMPLETE** | **DOCS UPDATED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **DATABASE CLEANED** | **229 INITIATIVES** | **4 STAGE 1**
 
 ---
 
 ## What Was Accomplished in Session 906
 
-### Initiative Tracking & Quality - 6 New Features
+### Major Database Cleanup - Production Data Quality
 
-| Feature | Description |
-|---------|-------------|
-| **Orphan Initiative Tracking Fix** | Auto-creates HiveMindSession + AgentExecution for initiatives missing Origin & Trigger |
-| **Duplicate Initiative Detection** | Jaccard similarity clustering to find/merge similar initiatives |
-| **`fix_orphan_initiative_tracking` command** | Backfill tracking records for pre-Session 906 initiatives |
-| **`consolidate_duplicate_initiatives` command** | Detect and merge duplicate initiatives |
-| **`autonomous` session mode** | New HiveMindSession mode for system-triggered sessions |
-| **Documentation Update** | Updated DREAM_INITIATIVE_WORKFLOW.md and SERVICES.md |
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| **Total Initiatives** | 306 | **229** | -77 |
+| **Stage 1 (Research Brief)** | 86 | **4** | -82 (95% reduction) |
+| **Orphan Documents** | 306 | **0** | -306 |
+| **Duplicate Documents** | 25x, 10x, etc. | **0** | All cleaned |
 
-### Key Changes:
+### Cleanup Actions Performed
 
-**1. Origin & Trigger Tracking**
-- Auto-created initiatives now get full tracking records:
-  - `HiveMindSession` with `session_mode='autonomous'`
-  - `HiveMindContribution` linking agent to session
-  - `AgentExecution` with `metadata.initiative_id`
-- Source: `autonomous_action_executor.py:_create_blocked_research_result`
-- 99 orphan initiatives fixed via backfill script
+1. **Consolidated "experiment_failures" duplicates**
+   - 70 duplicate initiatives about same topic → kept 1 best (2193 words)
+   - Deleted 69 redundant initiatives
 
-**2. Duplicate Initiative Detection**
-- Jaccard keyword similarity (threshold: 0.7)
-- Merges duplicates into oldest (primary) initiative
-- Preserves all stage documents during merge
-- 41 duplicates merged into 17 primaries
+2. **Deleted empty/stub initiatives**
+   - 11 initiatives with no document or <100 words removed
 
-**3. Management Commands Verified in Production**
-```bash
-# All commands tested with railway run:
-railway run python manage.py clean_initiative_names --limit=10           # 4 would fix
-railway run python manage.py consolidate_duplicate_initiatives --limit=50  # No new dupes
-railway run python manage.py fix_orphan_initiative_tracking --limit=10    # 1 would fix
-railway run python manage.py backfill_research_brief_links --limit=10     # 10 would link
+3. **Cleaned orphan documents**
+   - 236 orphan research documents (not linked to any stage) deleted
+   - 70 additional orphans from initiative deletion cleaned
+
+4. **Fixed initiative names**
+   - 4 technical description titles → clean 2-word titles
+
+5. **Fixed orphan tracking**
+   - 1 initiative missing HiveMindSession/AgentExecution records fixed
+
+### New Management Commands
+
+| Command | Purpose |
+|---------|---------|
+| `cleanup_orphan_documents` | Delete research docs not linked to any stage |
+| `consolidate_duplicate_initiatives` | Merge similar initiatives (Jaccard similarity) |
+| `fix_orphan_initiative_tracking` | Create tracking records for auto-created initiatives |
+| `clean_initiative_names` | Fix technical description titles |
+
+### PRs Merged (Session 906)
+- #714 - Documentation update (DREAM_INITIATIVE_WORKFLOW.md, SERVICES.md)
+- #715 - cleanup_orphan_documents management command
+
+---
+
+## Current Initiative Pipeline State
+
 ```
+Stage 1 (Research Brief):     4 initiatives
+Stage 2 (Prototype Plan):   109 initiatives
+Stage 3 (Evaluation):        77 initiatives
+Stage 4 (Technical Design):  20 initiatives
+Stage 5 (Pilot Execution):   19 initiatives
+─────────────────────────────────────────────
+TOTAL:                      229 initiatives
+```
+
+### Remaining Stage 1 Initiatives
+| Name | Words | Status |
+|------|-------|--------|
+| Audit Monitoring Halt Conditions & Integrity Check | 132 | DRAFT |
+| experiment_integrity_anomalies_root_cause | 178 | DRAFT |
+| Investigate integrity-halt anomaly cluster | 121 | DRAFT |
+| Audit auto-halt / monitoring thresholds | 124 | DRAFT |
+
+These need more content (500+ words) before auto-progression.
 
 ---
 
 ## NEXT PRIORITIES for Session 907
 
-### 1. Backfill Research Brief Links (High Priority)
-- 269+ research briefs still unlinked to InitiativeStages
-- Run: `railway run python manage.py backfill_research_brief_links --fix --limit=100`
+### 1. Generate Content for Remaining Stage 1 Initiatives
+- 4 initiatives need documents expanded to 500+ words
+- Run auto-progression after content generation
 
-### 2. Clean Remaining Initiative Names
-- 4 initiatives still have technical description titles
-- Run: `railway run python manage.py clean_initiative_names --fix --limit=50`
+### 2. Review Stage 2 Initiatives
+- 109 initiatives at Prototype Plan stage
+- Check quality and progress best ones to Stage 3
 
-### 3. Fix Last Orphan Initiative
-- 1 initiative still missing tracking records
-- Run: `railway run python manage.py fix_orphan_initiative_tracking --fix`
-
-### 4. UI Verification
-- Verify Origin & Trigger shows in Initiative modal
-- Check that Agents/Messages counts are populated
+### 3. Monitor for New Duplicates
+- Celery Beat task `detect_duplicate_initiatives` runs daily at 2 AM
+- Check logs for any new duplicate clusters
 
 ---
 
-## New Management Commands (Session 906)
+## Management Commands Reference
 
 ```bash
-# Fix orphan initiatives (create tracking records)
-python manage.py fix_orphan_initiative_tracking              # Dry run
-python manage.py fix_orphan_initiative_tracking --fix        # Apply fixes
-python manage.py fix_orphan_initiative_tracking --initiative-id=<uuid>  # Single
+# Cleanup orphan documents
+python manage.py cleanup_orphan_documents              # Dry run
+python manage.py cleanup_orphan_documents --delete     # Delete orphans
 
 # Consolidate duplicate initiatives
 python manage.py consolidate_duplicate_initiatives            # Dry run
-python manage.py consolidate_duplicate_initiatives --fix      # Merge duplicates
-python manage.py consolidate_duplicate_initiatives --threshold=0.8  # Higher similarity
+python manage.py consolidate_duplicate_initiatives --fix      # Merge
 
-# Clean initiative names (from Session 905)
-python manage.py clean_initiative_names                       # Dry run
-python manage.py clean_initiative_names --fix --limit=50      # Apply fixes
+# Fix initiative names
+python manage.py clean_initiative_names --fix --limit=50
 
-# Backfill research brief links
-python manage.py backfill_research_brief_links                # Dry run
-python manage.py backfill_research_brief_links --fix --limit=100
+# Fix orphan tracking
+python manage.py fix_orphan_initiative_tracking --fix
+
+# Trigger Stage 2 generation
+python manage.py trigger_stage2_generation --run --sync --limit=5
 ```
 
 ---
 
-## Celery Beat Schedules (Auto-Running)
+## Celery Beat Schedules
 
 | Task | Schedule | Purpose |
 |------|----------|---------|
 | `process_initiative_auto_progression` | Every 10 min | Progress stages at 60%+ quality |
 | `detect_duplicate_initiatives` | Daily 2 AM | Alert on new duplicate clusters |
-
----
-
-## Current Celery Architecture
-
-```
-celery-worker: -Q default,agents,sports,ml (4 concurrency)
-celery-content: -Q content (4 concurrency)
-celery-long-running: -Q long_running (2 concurrency)
-celery-beat: scheduler
-celery-broadcast: -Q broadcast (2 concurrency)
-```
 
 ---
 
@@ -117,16 +129,16 @@ celery-broadcast: -Q broadcast (2 concurrency)
 # Start platform
 make start && make celery
 
-# Check initiative pipeline status
+# Check initiative status
 python manage.py shell -c "
-from core.models_document_registry import Initiative, InitiativeStage
-stages = Initiative.objects.values_list('current_stage', flat=True)
+from core.models_document_registry import Initiative
 from collections import Counter
+stages = Initiative.objects.values_list('current_stage', flat=True)
 print(Counter(stages))
 "
 
-# Production experiment status
-railway run -s donkey-betz-platform python manage.py check_experiment_status
+# Production commands
+railway run -s donkey-betz-platform python manage.py <command>
 ```
 
 ---
@@ -135,11 +147,10 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **906** | Initiative Tracking + Duplicate Detection + Docs Update | This file |
+| **906** | Major Database Cleanup - 77 initiatives deleted, 306 orphan docs removed | This file |
 | **905** | Initiative Auto-Progression - Quality-based stage advancement | `SESSION_905_AUTO_PROGRESSION.md` |
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
 | **903** | Celery OOM Fix + Signal Intelligence Wired | `SESSION_903_SIGNAL_CELERY_FIX.md` |
-| **902** | Action Item Tracking | `SESSION_902_ACTION_ITEM_TRACKING.md` |
 
 ---
 
@@ -154,31 +165,10 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 | Database Models | 386+ |
 | Celery Tasks | 262 |
 | Services | 129 |
-| Experiments (Success) | 820 |
-| Learnings | 1,152,295 |
-| Initiatives | 200+ |
+| **Initiatives** | **229** |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
 ---
 
-## Initiative Pipeline Architecture
-
-```
-Dream → Initiative → 5 Stages → Deliverable
-
-Stage 1: Research Brief     (Auto-progress at 60%+ confidence)
-Stage 2: Prototype Plan     (Generated via ThinkingAgent)
-Stage 3: Evaluation Protocol
-Stage 4: Technical Design
-Stage 5: Pilot Execution    → Final Deliverable
-```
-
-**Session 906 Tracking:**
-- Auto-created initiatives now get HiveMindSession + AgentExecution records
-- Origin & Trigger UI can display provenance chain
-- `session_mode='autonomous'` identifies system-triggered sessions
-
----
-
-**Session 906 Complete - Origin & Trigger tracking now works for all initiatives!**
+**Session 906 Complete - Database is clean and ready for quality content generation!**
