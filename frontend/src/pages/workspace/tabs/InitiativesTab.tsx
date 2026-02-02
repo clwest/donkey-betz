@@ -937,8 +937,8 @@ function ComprehensiveInitiativeModal({
               </div>
               <p className="text-gray-400 text-sm mb-4">{trace.initiative.description}</p>
 
-              {/* Completeness Score */}
-              <div className="flex items-center gap-4">
+              {/* Completeness Score + Priority/Purpose badges */}
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-dark-border rounded-full overflow-hidden">
                     <div
@@ -957,6 +957,25 @@ function ComprehensiveInitiativeModal({
                 )}>
                   {trace.initiative.status}
                 </span>
+                {/* Session 904: Show priority if set */}
+                {trace.initiative.priority_level && trace.initiative.priority_level !== 'medium' && (
+                  <span className={cn(
+                    'px-2 py-1 rounded text-xs font-medium flex items-center gap-1',
+                    trace.initiative.priority_level === 'critical' && 'bg-red-500/20 text-red-400',
+                    trace.initiative.priority_level === 'high' && 'bg-orange-500/20 text-orange-400',
+                    trace.initiative.priority_level === 'low' && 'bg-gray-500/20 text-gray-400',
+                  )}>
+                    {trace.initiative.priority_level === 'critical' && <Flame size={10} />}
+                    {trace.initiative.priority_level.charAt(0).toUpperCase() + trace.initiative.priority_level.slice(1)} Priority
+                  </span>
+                )}
+                {/* Session 904: Show purpose if set */}
+                {trace.initiative.purpose && trace.initiative.purpose !== 'uncategorized' && (
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                    <PurposeIcon purpose={trace.initiative.purpose} />
+                    {trace.initiative.purpose_display || trace.initiative.purpose}
+                  </span>
+                )}
               </div>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg">
@@ -1984,13 +2003,8 @@ export function InitiativesTab() {
                 <InitiativeRow
                   key={initiative.id}
                   initiative={initiative}
-                  onViewDetails={() => {
-                    if (initiative.status === 'COMPLETED') {
-                      setComprehensiveInitiativeId(initiative.id)
-                    } else {
-                      setSelectedInitiative(initiative)
-                    }
-                  }}
+                  // Session 904: Always use comprehensive modal for all initiatives
+                  onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
                 />
               ))}
             </div>
@@ -2001,13 +2015,8 @@ export function InitiativesTab() {
                 <InitiativeCard
                   key={initiative.id}
                   initiative={initiative}
-                  onViewDetails={() => {
-                    if (initiative.status === 'COMPLETED') {
-                      setComprehensiveInitiativeId(initiative.id)
-                    } else {
-                      setSelectedInitiative(initiative)
-                    }
-                  }}
+                  // Session 904: Always use comprehensive modal for all initiatives
+                  onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
                 />
               ))}
             </div>
@@ -2047,13 +2056,8 @@ export function InitiativesTab() {
                       <InitiativeCard
                         key={initiative.id}
                         initiative={initiative}
-                        onViewDetails={() => {
-                          if (initiative.status === 'COMPLETED') {
-                            setComprehensiveInitiativeId(initiative.id)
-                          } else {
-                            setSelectedInitiative(initiative)
-                          }
-                        }}
+                        // Session 904: Always use comprehensive modal
+                        onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
                       />
                     ))}
                   </div>
