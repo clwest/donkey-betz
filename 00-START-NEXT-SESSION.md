@@ -1,73 +1,70 @@
-# Session 904 - Start Here
+# Session 905 - Start Here
 
-**Previous Session:** 903 (Auto-Extraction + Celery OOM Fix)
+**Previous Session:** 904 (Initiative UI Overhaul)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CELERY OOM FIXED** | **SIGNAL INTELLIGENCE WIRED** | **820 SUCCESSFUL EXPERIMENTS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE UI OVERHAULED** | **LIVE ACTIVITY TRACKING** | **820 SUCCESSFUL EXPERIMENTS**
 
 ---
 
-## What Was Accomplished in Session 902/903
+## What Was Accomplished in Session 904
 
-### Signal Intelligence Wired ✅ (PR #686)
-- `process_pending_auto_topics` task now creates HiveMindSessions with `signal_cluster` and `auto_topic` FK links
-- `trigger_signal_driven_conversation` dispatches conversations with full provenance chain
-- `run_triggered_conversation` accepts `hive_session_id` parameter and updates session status on completion
-- Fixed missing `django.db.models` import that broke AutoTopic processing
+### Initiative UI Overhaul - 5 PRs Merged
 
-### Celery OOM Fix ✅ (PR #687)
-- Added task lock to `scan_spider_opportunities` using Django cache (prevents concurrent execution)
-- Reduced spider scan frequency from 15 to 30 minutes
-- Fixed aiohttp session cleanup - properly closes connector before discarding session
-- Added `close_sync()` method for cleanup outside async context
+| PR | Feature |
+|----|---------|
+| #688 | **List View** - Default compact list with stages/list/cards toggle |
+| #689 | **Comprehensive Modal for All** - All initiatives get full detail view |
+| #690 | **Stages View** - Group initiatives by pipeline phase (1-5) |
+| #691 | **Live Activity** - Show active agents working in modal |
+| #692 | **Conversation Details** - Show synthesis, objective, criteria in modal |
 
-Root cause: 5 simultaneous spider scans with unclosed aiohttp ClientSessions exhausted worker memory.
+### Key UI Changes:
 
-### Auto-Extraction on Conversation Complete ✅ (PR #684)
-`extract_action_items_from_session` Celery task auto-runs when HiveMind sessions complete.
+**1. Three View Modes (Default: Stages)**
+- **Stages View** - Groups initiatives by pipeline phase (1-5) with color-coded headers
+- **List View** - Compact single-column with stage progress bars
+- **Card View** - Original 2-column grid
 
----
+**2. Comprehensive Modal for ALL Initiatives**
+- Previously only completed initiatives got the full modal
+- Now ALL initiatives show: action items, signal intelligence, full trace
 
-## Session 902 Recap: Action Item Tracking
+**3. Live Activity Section in Modal**
+- Shows which agents are currently working on the initiative
+- Progress percentage, current step, stage number
+- Recently completed work (last hour)
 
-**Problem Solved:** Conversation conclusions contained "Next Steps" as plain text - not trackable, not assignable
-
-**Solution Deployed:** Full action item tracking system:
-
-### Backend:
-1. **InitiativeActionItem Model** - Status, priority, timeline, assignments, dependencies
-2. **Parser Service** - Extracts items from `=== DecisionSummary ===` sections
-3. **API Endpoints** - CRUD + bulk extraction (6 endpoints)
-4. **Migration** - 0213_session_902_action_items applied
-
-### Frontend:
-- **Stats Bar:** X pending | Y in progress | Z completed (completion %)
-- **Status Checkboxes:** Click to cycle pending → in_progress → completed
-- **Priority Badges:** Critical (red), High (orange), Medium (yellow), Low (gray)
-- **Timeline Indicators:** "Week 0-1", overdue warning
-- **Extract Button:** Pull action items from linked conversations
-- **Manual Creation:** Input field to add new items
+**4. Enhanced Origin & Trigger Section**
+- Trigger confidence percentage
+- **Conversation Summary** (NEW):
+  - Topic, Objective, Success Criteria
+  - Synthesis/conclusion from the conversation
+  - Contribution count, thinking time
+  - Start/completion timestamps
 
 ---
 
-## Session 901 Recap: Initiative Priority & Portfolio
+## Session 903 Recap: Celery OOM Fix + Signal Intelligence
 
-- **Priority Scoring:** impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2
-- **4-Tab UI:** Active | Portfolio | Archive | Stats
-- **Purpose Categories:** revenue, stability, learning, expansion, maintenance
-- **Program Groupings:** 10 programs for portfolio organization
+- **Signal Intelligence Wired** (PR #686) - HiveMindSessions link to SignalCluster/AutoTopic
+- **Celery OOM Fixed** (PR #687) - Task lock, reduced frequency, aiohttp cleanup
+- **Auto-Extraction** (PR #684) - Action items extracted on conversation complete
 
 ---
 
-## NEXT PRIORITIES for Session 903
+## NEXT PRIORITIES for Session 905
 
-### 1. Test Action Items End-to-End
-- Trigger a conversation that generates synthesis with Next Steps
-- Verify auto-extraction creates InitiativeActionItem records
-- Test status toggle in UI (pending → in_progress → completed)
+### 1. Test Live Activity in Production
+- Trigger a conversation and open initiative modal while it's running
+- Verify Live Activity section shows agent work
 
-### 2. Action Item Kanban View (Optional)
-- Drag-and-drop board: Pending | In Progress | Completed | Blocked
-- Filter by priority/agent
+### 2. WebSocket Real-Time Updates (Optional)
+- Currently modal needs refresh to see updates
+- Could add WebSocket push for live progress
+
+### 3. Initiative Stage Actions
+- Add "Generate Document" button for pending stages
+- Allow manual stage transitions
 
 ---
 
@@ -89,13 +86,13 @@ celery-broadcast: -Q broadcast (2 concurrency)
 # Start platform
 make start && make celery
 
-# Apply migrations
-python manage.py migrate core 0213_session_902_action_items
-
-# Test action item extraction
+# Check active agent executions
 python manage.py shell -c "
-from core.services.action_item_parser import bulk_extract_action_items
-print(bulk_extract_action_items(limit=20))
+from core.models.agents_registry.models import AgentExecution
+running = AgentExecution.objects.filter(status='running')
+print(f'Running: {running.count()}')
+for e in running[:5]:
+    print(f'  {e.template.name}: {e.progress_percentage}% - {e.current_step}')
 "
 
 # Production experiment status
@@ -108,11 +105,13 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | PR | Description |
 |----|-------------|
-| #687 | fix(Session 902): Celery worker OOM fixes for spider scan task |
-| #686 | fix(Session 902): Wire Signal Intelligence to trigger HiveMindSessions |
-| #684 | feat(Session 903): Auto-extract action items on conversation complete |
-| #683 | docs(Session 902): Add Action Item Tracking documentation |
-| #681 | feat(Session 902): Initiative Action Items |
+| #692 | feat(Session 904): Show full conversation details in Origin & Trigger |
+| #691 | feat(Session 904): Show live agent activity in initiative modal |
+| #690 | feat(Session 904): Group initiatives by pipeline stage |
+| #689 | feat(Session 904): Use comprehensive modal for all initiatives |
+| #688 | feat(Session 904): Add list view for initiatives UI |
+| #687 | fix(Session 902): Celery worker OOM fixes |
+| #686 | fix(Session 902): Wire Signal Intelligence |
 
 ---
 
@@ -120,12 +119,11 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **903** | Auto-Extraction + Celery OOM Fix - Signal Intelligence wired, spider task memory fix | This session |
-| **902** | Action Item Tracking - Extract & track next steps from conversations | `SESSION_902_ACTION_ITEM_TRACKING.md` |
-| **901** | Initiative Priority & Portfolio - 4 tabs, priority scoring, purpose/program | `SESSION_901_INITIATIVE_PRIORITY.md` |
-| **900** | Signal Intelligence - SignalCluster, AutoTopic models for Origin & Trigger UI | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
-| **899** | Comprehensive Initiative View | `SESSION_899_COMPREHENSIVE_INITIATIVE_VIEW.md` |
-| **898** | Mythology Lab Agent Name Fix | `SESSION_898_MYTHOLOGY_LAB_FIX.md` |
+| **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity, conversation details | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
+| **903** | Celery OOM Fix + Signal Intelligence Wired | `SESSION_903_SIGNAL_CELERY_FIX.md` |
+| **902** | Action Item Tracking | `SESSION_902_ACTION_ITEM_TRACKING.md` |
+| **901** | Initiative Priority & Portfolio | `SESSION_901_INITIATIVE_PRIORITY.md` |
+| **900** | Signal Intelligence | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
 
 ---
 
@@ -142,20 +140,38 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 | Services | 130 |
 | Experiments (Success) | 820 |
 | Learnings | 1,152,295 |
-| Initiatives | 199 |
+| Initiatives | 200+ |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
 ---
 
-## Workspace Architecture
+## Initiative UI Architecture
 
-| Workspace | Path | Purpose |
-|-----------|------|---------|
-| `donkey-betz-codebase` | `/app` (production) | CodeGeneratorAgent source access |
-| `System Autonomous Workspace` | `/app/workspace` | Generated content storage |
-| `{username}-personal` | `/generated_content/users/{username}` | Per-user files |
+**View Modes:**
+```
+┌─────────────────────────────────────────┐
+│ [Layers] [List] [Grid]    Filter: All  │
+├─────────────────────────────────────────┤
+│ Stages View (default):                  │
+│   Stage 1: Research Brief     [12]      │
+│   Stage 2: Prototype Plan     [45]      │
+│   Stage 3: Evaluation         [23]      │
+│   Stage 4: Tech Design        [8]       │
+│   Stage 5: Pilot Execution    [5]       │
+└─────────────────────────────────────────┘
+```
+
+**Modal Sections:**
+1. Header (name, description, progress, priority/purpose badges)
+2. Quick Stats (agents, messages, stages, content)
+3. **Live Activity** (running agents, progress)
+4. Origin & Trigger (signals, conversation summary, decision)
+5. Conversation (expandable messages)
+6. Pipeline Stages (with document links)
+7. Action Items (status toggles, priority)
+8. Deliverable (if published)
 
 ---
 
-**Auto-Extraction COMPLETE - Test end-to-end by triggering a HiveMind conversation!**
+**Initiative UI Complete - Deploy and test Live Activity in production!**
