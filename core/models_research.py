@@ -34,9 +34,12 @@ class ResearchResult(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Initiative link
+    # Session 905 fix: Allow null for blocked research that can't link to initiative yet
     initiative = models.ForeignKey(
         'core.Initiative',
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='research_results',
         help_text='Initiative this research supports'
     )
