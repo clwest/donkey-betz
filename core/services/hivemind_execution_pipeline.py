@@ -459,6 +459,7 @@ class HiveMindExecutionPipeline:
         )
 
         # Create the initiative
+        # Session 913: Include signal_cluster and auto_topic from HiveMind session
         initiative = Initiative.objects.create(
             name=initiative_name,
             description=f"""
@@ -485,6 +486,9 @@ Initiative created from HiveMind brainstorm session.
             created_by=f"HiveMind:{str(session.id)[:8]}",
             parent_topic=session.question[:200] if session.question else '',
             source_decision_id=session.id,
+            # Session 913: Link to Signal Intelligence for Origin & Trigger
+            signal_cluster=getattr(session, 'signal_cluster', None),
+            auto_topic=getattr(session, 'auto_topic', None),
         )
 
         # Create the 5 stages in PENDING status
