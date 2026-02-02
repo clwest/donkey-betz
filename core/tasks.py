@@ -477,6 +477,46 @@ def execute_initiative_stage_task(
             f"(success={result.success}, stage_advanced={stage_update.get('stage_advanced')})"
         )
 
+        # Session 908: Create WorkspaceOperation for Initiative tracking
+        if result.success and result.content:
+            try:
+                from core.models_document_registry import Initiative
+                from core.models_skin_layer import WorkspaceOperation
+                from core.services.workspace_manager import WorkspaceManager
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                initiative = Initiative.objects.get(id=initiative_id)
+
+                # Get workspace - prefer initiative's target, fall back to user's active
+                workspace = initiative.target_workspace
+                if not workspace:
+                    # Try to get system user's workspace
+                    system_user = User.objects.filter(username='system_autonomous').first()
+                    if system_user:
+                        manager = WorkspaceManager(system_user)
+                        workspace = manager.get_active_workspace()
+
+                if workspace:
+                    # Create workspace operation to track this Initiative work
+                    WorkspaceOperation.objects.create(
+                        workspace=workspace,
+                        user=workspace.user,
+                        agent_name=agent_name,
+                        agent_task=task[:500] if task else '',
+                        operation_type='file_create',
+                        file_path=f'initiatives/{initiative.name[:50]}/stage_{stage_num}.md',
+                        file_content_after=result.content[:10000] if result.content else '',
+                        success=True,
+                        initiative_id=initiative.id,
+                        trigger_source='initiative',
+                        run_mode='production',
+                        execution_time_ms=execution_time_ms,
+                    )
+                    logger.info(f"[execute_initiative_stage_task] Created WorkspaceOperation for {initiative.name[:30]} Stage {stage_num}")
+            except Exception as ws_error:
+                logger.warning(f"[execute_initiative_stage_task] Could not create WorkspaceOperation: {ws_error}")
+
         return {
             'success': result.success,
             'agent_name': agent_name,
