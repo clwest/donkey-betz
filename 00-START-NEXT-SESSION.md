@@ -47,6 +47,14 @@ These were hardcoded in `core/services/content_voice_system.py` and randomly inj
 
 **PR:** #752 - merged and deployed to production
 
+### 3. Production Cleanup - Deleted Blogs with Fictional Content
+
+Cleaned up existing blogs that contained the fictional stories:
+- **7 blogs deleted** from production
+  - 6 with "The Great Agent Rebellion of 2025"
+  - 1 with "The 3am Debug Sessions"
+- **0 blogs remaining** with fictional content
+
 ---
 
 ## What Was Accomplished in Session 912
