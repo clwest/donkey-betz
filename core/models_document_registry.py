@@ -136,6 +136,25 @@ class Initiative(models.Model):
         help_text='Target workspace for this initiative\'s outputs'
     )
 
+    # Session 913: Link to Signal Intelligence (Origin & Trigger)
+    signal_cluster = models.ForeignKey(
+        'core.SignalCluster',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='initiatives',
+        help_text='Session 913: Signal cluster that triggered this initiative'
+    )
+
+    auto_topic = models.ForeignKey(
+        'core.AutoTopic',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='initiatives',
+        help_text='Session 913: Auto-generated topic that created this initiative'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
