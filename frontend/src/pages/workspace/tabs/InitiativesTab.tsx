@@ -27,6 +27,12 @@ import {
   BookOpen,
   Trophy,
   Eye,
+  Radio,
+  Brain,
+  Target,
+  TrendingUp,
+  Tag,
+  Quote,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
@@ -724,7 +730,14 @@ function ComprehensiveInitiativeModal({
               <div className="flex items-center gap-3">
                 <Zap size={18} className="text-yellow-400" />
                 <span className="font-medium">Origin & Trigger</span>
-                {trace.trigger && (
+                {/* Session 900: Show signal intelligence badge if present */}
+                {trace.origin_signals?.signal_cluster && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-cyan-500/20 text-cyan-400 flex items-center gap-1">
+                    <Radio size={10} />
+                    Signal-Driven
+                  </span>
+                )}
+                {trace.trigger && !trace.origin_signals?.signal_cluster && (
                   <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
                     {trace.trigger.type}
                   </span>
@@ -735,6 +748,138 @@ function ComprehensiveInitiativeModal({
 
             {expandedSections.origin && (
               <div className="p-4 border-t border-dark-border space-y-4">
+                {/* Session 900: Signal Intelligence - Origin Signals */}
+                {trace.origin_signals?.signal_cluster && (
+                  <div className="p-4 bg-cyan-500/5 border border-cyan-500/20 rounded-lg space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Radio size={16} className="text-cyan-400" />
+                        <span className="text-sm font-medium text-cyan-400">Origin Signals</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-xs bg-cyan-500/20 text-cyan-400">
+                        {trace.origin_signals.signal_cluster.pattern_type?.replace('_', ' ') || 'pattern'}
+                      </span>
+                    </div>
+
+                    {/* Source Breakdown */}
+                    {trace.origin_signals.signal_cluster.source_breakdown &&
+                     Object.keys(trace.origin_signals.signal_cluster.source_breakdown).length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(trace.origin_signals.signal_cluster.source_breakdown).map(([source, count]) => (
+                          <div
+                            key={source}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-dark-bg rounded-lg"
+                          >
+                            <Radio size={12} className="text-cyan-400" />
+                            <span className="text-sm capitalize">{source.replace('_', ' ')}</span>
+                            <span className="text-xs text-cyan-400 font-medium">({String(count)})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Pattern Metrics */}
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <TrendingUp size={12} className="text-green-400" />
+                        <span className="text-gray-400">Strength:</span>
+                        <span className="text-green-400 font-medium">
+                          {(trace.origin_signals.signal_cluster.strength * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Brain size={12} className="text-blue-400" />
+                        <span className="text-gray-400">Confidence:</span>
+                        <span className="text-blue-400 font-medium">
+                          {(trace.origin_signals.signal_cluster.confidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      {trace.origin_signals.signal_cluster.novelty > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Sparkles size={12} className="text-purple-400" />
+                          <span className="text-gray-400">Novelty:</span>
+                          <span className="text-purple-400 font-medium">
+                            {(trace.origin_signals.signal_cluster.novelty * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Keywords */}
+                    {trace.origin_signals.signal_cluster.keywords &&
+                     trace.origin_signals.signal_cluster.keywords.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+                          <Tag size={10} />
+                          Keywords
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {trace.origin_signals.signal_cluster.keywords.slice(0, 8).map((keyword, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 bg-dark-border rounded text-xs text-gray-300"
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sample Signals */}
+                    {trace.origin_signals.signal_cluster.sample_signals &&
+                     trace.origin_signals.signal_cluster.sample_signals.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+                          <Quote size={10} />
+                          Sample Signals
+                        </div>
+                        <div className="space-y-2">
+                          {trace.origin_signals.signal_cluster.sample_signals.slice(0, 3).map((signal, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-gray-400 pl-3 border-l-2 border-cyan-500/30"
+                            >
+                              <span className="text-cyan-400 font-medium capitalize">
+                                {signal.source}:
+                              </span>{' '}
+                              {signal.text?.slice(0, 150)}{signal.text?.length > 150 ? '...' : ''}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Session 900: Auto Topic - WHY this topic was chosen */}
+                {trace.origin_signals?.auto_topic && (
+                  <div className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Target size={16} className="text-orange-400" />
+                        <span className="text-sm font-medium text-orange-400">Auto Topic</span>
+                      </div>
+                      {trace.origin_signals.auto_topic.confidence > 0 && (
+                        <span className="text-xs text-orange-400">
+                          {(trace.origin_signals.auto_topic.confidence * 100).toFixed(0)}% confidence
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-medium">{trace.origin_signals.auto_topic.name}</div>
+                    {trace.origin_signals.auto_topic.rationale && (
+                      <div className="text-sm text-gray-400 italic">
+                        "{trace.origin_signals.auto_topic.rationale}"
+                      </div>
+                    )}
+                    {trace.origin_signals.auto_topic.triggered_at && (
+                      <div className="text-xs text-gray-500">
+                        Triggered: {new Date(trace.origin_signals.auto_topic.triggered_at).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Trigger */}
                 {trace.trigger && (
                   <div className="p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
@@ -991,7 +1136,27 @@ function ComprehensiveInitiativeModal({
           <div className="p-4 bg-dark-bg rounded-lg">
             <div className="text-xs text-gray-500 mb-3">Complete Journey</div>
             <div className="flex items-center justify-center gap-2 text-xs flex-wrap">
-              {trace.trigger && (
+              {/* Session 900: Show signal-driven origin if present */}
+              {trace.origin_signals?.signal_cluster && (
+                <>
+                  <span className="px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded flex items-center gap-1">
+                    <Radio size={10} />
+                    {trace.origin_signals.signal_cluster.total_signals ||
+                     Object.values(trace.origin_signals.signal_cluster.source_breakdown || {}).reduce((a: number, b: unknown) => a + (Number(b) || 0), 0)} Signals
+                  </span>
+                  <ArrowRight size={12} className="text-gray-500" />
+                </>
+              )}
+              {trace.origin_signals?.auto_topic && (
+                <>
+                  <span className="px-2 py-1 bg-orange-500/10 text-orange-400 rounded flex items-center gap-1">
+                    <Target size={10} />
+                    Auto Topic
+                  </span>
+                  <ArrowRight size={12} className="text-gray-500" />
+                </>
+              )}
+              {trace.trigger && !trace.origin_signals?.signal_cluster && (
                 <>
                   <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded">
                     {trace.trigger.type} Trigger

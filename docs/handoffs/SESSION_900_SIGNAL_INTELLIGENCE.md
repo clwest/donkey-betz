@@ -140,6 +140,11 @@ trigger_confidence = models.FloatField(
 | `core/models/__init__.py` | Added import for signal intelligence models |
 | `core/models_unified_system.py` | Added signal_cluster, auto_topic, trigger_confidence to HiveMindSession |
 | `core/migrations/0211_session_900_signal_intelligence.py` | NEW - Migration for new models |
+| `core/services/signal_aggregation_service.py` | NEW - Signal clustering and auto-topic generation |
+| `core/tasks.py` | Added signal aggregation Celery tasks |
+| `core/celery.py` | Added Celery Beat schedules for signal tasks |
+| `core/views_research_demo.py` | Extended origin-trace API with origin_signals |
+| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added Signal Intelligence display in Initiative modal |
 
 ---
 
@@ -182,11 +187,35 @@ The service clusters recent SpiderData into SignalClusters:
 
 ---
 
-## Next Steps (Not Yet Implemented)
+## Deployment Complete
 
-1. **API Endpoint** - `GET /api/initiatives/{id}/origin-signals/` returning the full chain
-2. **UI Update** - Display Origin Signals section in Initiative modal
-3. **Deploy to Railway** - Apply migration and restart services
+All components deployed and verified in production:
+
+### 1. Railway Migration
+- Applied `0211_session_900_signal_intelligence` migration
+- Created SignalCluster, AutoTopic, TopicSuggestion tables
+
+### 2. Signal Aggregation Verified
+- Ran `aggregate_spider_signals` task in production
+- Created **22 SignalClusters** from spider data
+- Generated **10 AutoTopics** from actionable patterns
+
+### 3. API Endpoint Extended
+- Extended `GET /api/initiatives/{id}/origin-trace/` to include `origin_signals`
+- Returns `signal_cluster` and `auto_topic` data when available
+- Updated `trigger.type` to `signal_driven` when provenance exists
+
+### 4. UI Update Implemented
+**File:** `frontend/src/pages/workspace/tabs/InitiativesTab.tsx`
+
+Added to ComprehensiveInitiativeModal:
+- **Origin Signals** section with source breakdown (Bluesky, Reddit, etc.)
+- **Pattern metrics** (strength, confidence, novelty percentages)
+- **Keywords** extracted from signals
+- **Sample signals** with source attribution
+- **Auto Topic** section with name, rationale, and triggered timestamp
+- **Signal-Driven badge** in Origin & Trigger section header
+- **Complete Journey visualization** now shows signal chain
 
 ---
 
@@ -197,10 +226,12 @@ Connected to Railway production and verified:
 - **782,640** learnings in last 7 days
 - **820** successful experiments (88.2% success rate)
 - **236** UserAgentLearning records
+- **22** SignalClusters created
+- **10** AutoTopics generated
 
 ---
 
-## API Response Structure (Future)
+## API Response Structure
 
 ```json
 {
