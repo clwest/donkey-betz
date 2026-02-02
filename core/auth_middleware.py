@@ -141,6 +141,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 622: Document Registry / Initiatives API
         '/api/v1/initiatives/',  # View initiatives and their stages
         '/api/v1/initiatives/populate/',  # Auto-populate from deliverables
+        # Session 912: Initiative Action Items API (non-versioned)
+        '/api/initiatives/',  # Action items endpoints (/api/initiatives/<uuid>/action-items/*)
+        '/api/action-items/',  # Bulk action item operations
 
         # Session 544: Autonomous Reasoning Engine APIs
         '/api/v1/reasoning/thoughts/',  # View thought records
