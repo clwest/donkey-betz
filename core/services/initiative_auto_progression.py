@@ -1,0 +1,347 @@
+"""
+Initiative Auto-Progression Service
+====================================
+
+Session 905: Automatically progresses initiatives through stages when quality
+criteria are met.
+
+Problem: Initiatives were getting stuck at Stage 1 DRAFT even when research
+was complete and sufficient. No automation existed to move them forward.
+
+Solution: Auto-progression based on quality signals:
+1. Stage 1 (Research Brief) → Stage 2 (Prototype Plan) when findings sufficient
+2. Stage 2 → Stage 3 when plan is concrete
+3. etc.
+
+Usage:
+    from core.services.initiative_auto_progression import (
+        check_stage_for_progression,
+        progress_initiative_stage,
+        trigger_next_stage_generation
+    )
+
+    # Check and progress a single initiative
+    result = check_stage_for_progression(initiative_id)
+
+    # Or use the Celery task
+    from core.tasks import process_initiative_auto_progression
+    process_initiative_auto_progression.delay()
+"""
+
+import logging
+from typing import Dict, Any, Optional, Tuple
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
+
+# Quality thresholds for auto-progression
+STAGE_QUALITY_THRESHOLDS = {
+    1: {  # Research Brief
+        'min_findings_length': 100,  # At least 100 chars of findings
+        'min_sources': 1,  # At least 1 data source
+        'required_sections': ['Research Findings', 'Data Sources'],
+    },
+    2: {  # Prototype Plan
+        'min_content_length': 200,
+        'required_sections': ['Architecture', 'Implementation'],
+    },
+    3: {  # Evaluation Protocol
+        'min_content_length': 150,
+        'required_sections': ['Success Criteria', 'Metrics'],
+    },
+    4: {  # Technical Design
+        'min_content_length': 300,
+        'required_sections': ['Specification', 'Dependencies'],
+    },
+    5: {  # Pilot Execution
+        'min_content_length': 100,
+        'required_sections': ['Results', 'Learnings'],
+    },
+}
+
+
+def evaluate_stage_quality(initiative_stage) -> Tuple[bool, float, str]:
+    """
+    Evaluate if a stage document meets quality criteria for auto-progression.
+
+    Args:
+        initiative_stage: InitiativeStage instance
+
+    Returns:
+        Tuple of (passes_quality, confidence_score, reason)
+    """
+    stage_num = initiative_stage.stage
+    document = initiative_stage.document
+
+    if not document:
+        return False, 0.0, "No document attached to stage"
+
+    # Get document content
+    content = document.full_text or document.content or ""
+    content_length = len(content)
+
+    thresholds = STAGE_QUALITY_THRESHOLDS.get(stage_num, {})
+    min_length = thresholds.get('min_content_length', thresholds.get('min_findings_length', 50))
+    required_sections = thresholds.get('required_sections', [])
+
+    # Check minimum length
+    if content_length < min_length:
+        return False, 0.3, f"Content too short ({content_length} < {min_length} chars)"
+
+    # Check for required sections
+    missing_sections = []
+    for section in required_sections:
+        if section.lower() not in content.lower():
+            missing_sections.append(section)
+
+    if missing_sections:
+        return False, 0.5, f"Missing sections: {', '.join(missing_sections)}"
+
+    # Calculate confidence based on content quality signals
+    confidence = 0.6  # Base confidence
+
+    # Bonus for longer content
+    if content_length > min_length * 2:
+        confidence += 0.1
+    if content_length > min_length * 3:
+        confidence += 0.1
+
+    # Bonus for all required sections present
+    if not missing_sections and required_sections:
+        confidence += 0.1
+
+    # Check for "Insufficient Data" markers (should NOT progress)
+    insufficient_markers = ['insufficient data', 'awaiting data', 'blocked']
+    for marker in insufficient_markers:
+        if marker in content.lower():
+            return False, 0.2, f"Document contains '{marker}' marker"
+
+    # Check for positive completion markers
+    completion_markers = ['research completed', 'data available', 'findings']
+    has_completion_marker = any(m in content.lower() for m in completion_markers)
+    if has_completion_marker:
+        confidence += 0.1
+
+    confidence = min(confidence, 1.0)  # Cap at 1.0
+
+    return True, confidence, f"Quality check passed (confidence: {confidence:.0%})"
+
+
+def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
+    """
+    Check if an initiative's current stage is ready for auto-progression.
+
+    Args:
+        initiative_id: UUID of the initiative
+
+    Returns:
+        Dict with progression status and details
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+
+    try:
+        initiative = Initiative.objects.get(id=initiative_id)
+    except Initiative.DoesNotExist:
+        return {'success': False, 'error': 'Initiative not found'}
+
+    current_stage_num = initiative.current_stage
+
+    # Get current stage
+    try:
+        current_stage = InitiativeStage.objects.get(
+            initiative=initiative,
+            stage=current_stage_num
+        )
+    except InitiativeStage.DoesNotExist:
+        return {'success': False, 'error': f'Stage {current_stage_num} not found'}
+
+    # Only auto-progress from DRAFT status
+    if current_stage.status != 'DRAFT':
+        return {
+            'success': False,
+            'error': f'Stage status is {current_stage.status}, not DRAFT',
+            'stage': current_stage_num,
+            'status': current_stage.status
+        }
+
+    # Evaluate quality
+    passes_quality, confidence, reason = evaluate_stage_quality(current_stage)
+
+    if not passes_quality:
+        return {
+            'success': False,
+            'error': reason,
+            'stage': current_stage_num,
+            'confidence': confidence,
+            'can_progress': False
+        }
+
+    # Quality check passed - ready for progression
+    return {
+        'success': True,
+        'stage': current_stage_num,
+        'confidence': confidence,
+        'reason': reason,
+        'can_progress': True,
+        'initiative_id': str(initiative_id),
+        'initiative_name': initiative.name
+    }
+
+
+def progress_initiative_stage(
+    initiative_id: str,
+    auto_generate_next: bool = True
+) -> Dict[str, Any]:
+    """
+    Progress an initiative from current stage to next stage.
+
+    Args:
+        initiative_id: UUID of the initiative
+        auto_generate_next: Whether to trigger next stage document generation
+
+    Returns:
+        Dict with progression result
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+
+    # First check if ready for progression
+    check_result = check_stage_for_progression(initiative_id)
+    if not check_result.get('can_progress'):
+        return check_result
+
+    try:
+        initiative = Initiative.objects.get(id=initiative_id)
+        current_stage = InitiativeStage.objects.get(
+            initiative=initiative,
+            stage=initiative.current_stage
+        )
+    except (Initiative.DoesNotExist, InitiativeStage.DoesNotExist) as e:
+        return {'success': False, 'error': str(e)}
+
+    # Approve the current stage
+    confidence = check_result.get('confidence', 0.7)
+    approval_notes = f"Auto-approved with {confidence:.0%} confidence. {check_result.get('reason', '')}"
+
+    logger.info(f"[Session 905] Auto-approving Stage {current_stage.stage} for initiative {initiative.name}")
+
+    # Use the approve method which also advances the initiative
+    deliverable = current_stage.approve(
+        approved_by='AutoProgressionService',
+        notes=approval_notes
+    )
+
+    result = {
+        'success': True,
+        'previous_stage': current_stage.stage,
+        'new_stage': initiative.current_stage,
+        'confidence': confidence,
+        'initiative_id': str(initiative_id),
+        'initiative_name': initiative.name,
+        'approved_at': timezone.now().isoformat()
+    }
+
+    if deliverable:
+        result['final_deliverable_id'] = str(deliverable.id)
+        result['completed'] = True
+        logger.info(f"[Session 905] Initiative {initiative.name} completed! Final deliverable: {deliverable.id}")
+        return result
+
+    # Trigger next stage generation if requested
+    if auto_generate_next and initiative.current_stage <= 5:
+        next_stage_result = trigger_next_stage_generation(initiative_id)
+        result['next_stage_triggered'] = next_stage_result.get('success', False)
+        result['next_stage_details'] = next_stage_result
+
+    return result
+
+
+def trigger_next_stage_generation(initiative_id: str) -> Dict[str, Any]:
+    """
+    Trigger generation of the next stage document for an initiative.
+
+    Args:
+        initiative_id: UUID of the initiative
+
+    Returns:
+        Dict with generation status
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.tasks import generate_initiative_stage_document
+
+    try:
+        initiative = Initiative.objects.get(id=initiative_id)
+    except Initiative.DoesNotExist:
+        return {'success': False, 'error': 'Initiative not found'}
+
+    current_stage = initiative.current_stage
+
+    if current_stage > 5:
+        return {'success': False, 'error': 'Initiative already complete'}
+
+    # Get or create the stage record
+    stage, created = InitiativeStage.objects.get_or_create(
+        initiative=initiative,
+        stage=current_stage,
+        defaults={'status': 'PENDING'}
+    )
+
+    if stage.document:
+        return {
+            'success': False,
+            'error': f'Stage {current_stage} already has a document',
+            'document_id': str(stage.document.id)
+        }
+
+    # Schedule async generation
+    try:
+        task = generate_initiative_stage_document.delay(
+            str(initiative_id),
+            current_stage
+        )
+        logger.info(f"[Session 905] Scheduled Stage {current_stage} generation for {initiative.name}: task {task.id}")
+
+        return {
+            'success': True,
+            'stage': current_stage,
+            'task_id': task.id,
+            'initiative_name': initiative.name,
+            'message': f'Stage {current_stage} document generation scheduled'
+        }
+    except Exception as e:
+        logger.error(f"[Session 905] Failed to schedule stage generation: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def get_initiatives_ready_for_progression() -> list:
+    """
+    Find all initiatives with DRAFT stages ready for auto-progression.
+
+    Returns:
+        List of initiative IDs ready for progression
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+
+    # Find stages in DRAFT status with documents
+    draft_stages = InitiativeStage.objects.filter(
+        status='DRAFT',
+        document__isnull=False
+    ).select_related('initiative')
+
+    ready_initiatives = []
+
+    for stage in draft_stages:
+        # Only check if this is the current stage of the initiative
+        if stage.stage != stage.initiative.current_stage:
+            continue
+
+        passes_quality, confidence, reason = evaluate_stage_quality(stage)
+        if passes_quality and confidence >= 0.6:  # Minimum 60% confidence to auto-progress
+            ready_initiatives.append({
+                'initiative_id': str(stage.initiative.id),
+                'initiative_name': stage.initiative.name,
+                'stage': stage.stage,
+                'confidence': confidence,
+                'reason': reason
+            })
+
+    return ready_initiatives
