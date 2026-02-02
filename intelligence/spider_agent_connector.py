@@ -195,15 +195,29 @@ class SpiderAgentConnector:
     def _create_agent_solution(self, agent: Agent, spider_data: SpiderData) -> Optional[AgentSolution]:
         """Create a solution based on spider data"""
         try:
-            # Parse spider data (use processed_data or raw_data from unified SpiderData model)
+            # Session 911: Handle both SpiderData models
+            # - core.models_unified_system.SpiderData has processed_data/raw_data
+            # - persistence.models.SpiderData has structured_data/content
             data = {}
-            if spider_data.processed_data:
-                data = spider_data.processed_data if isinstance(spider_data.processed_data, dict) else {}
-            elif spider_data.raw_data:
-                data = spider_data.raw_data if isinstance(spider_data.raw_data, dict) else {}
 
-            # Generate solution title and description (unified model has no title field)
-            title = data.get('title') or f"Opportunity from {spider_data.spider_name}"
+            # Try processed_data (unified model)
+            processed = getattr(spider_data, 'processed_data', None)
+            if processed and isinstance(processed, dict):
+                data = processed
+            # Try raw_data (unified model)
+            elif hasattr(spider_data, 'raw_data'):
+                raw = getattr(spider_data, 'raw_data', None)
+                if raw and isinstance(raw, dict):
+                    data = raw
+            # Try structured_data (persistence model)
+            elif hasattr(spider_data, 'structured_data'):
+                structured = getattr(spider_data, 'structured_data', None)
+                if structured and isinstance(structured, dict):
+                    data = structured
+
+            # Generate solution title and description
+            # Check for title field on persistence model, or get from data dict
+            title = getattr(spider_data, 'title', None) or data.get('title') or f"Opportunity from {spider_data.spider_name}"
             description = data.get('description', f"Data collected by {spider_data.spider_name}")
 
             # Create code snippet if relevant data exists
@@ -426,12 +440,12 @@ const opportunityRef = {{
 
     def get_routing_statistics(self) -> Dict[str, Any]:
         """Get statistics about spider-agent routing"""
+        # Session 911: SpiderData model doesn't have is_processed field
+        # Just count total spider data
         stats = {
             'routing_map': {cat: len(agents) for cat, agents in self.routing_map.items()},
             'processing_stats': self.processing_stats,
             'total_spider_data': SpiderData.objects.count(),
-            'unprocessed_data': SpiderData.objects.filter(is_processed=False).count(),
-            'processed_data': SpiderData.objects.filter(is_processed=True).count(),
             'success_rate': 0
         }
 
