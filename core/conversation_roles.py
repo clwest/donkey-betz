@@ -417,9 +417,16 @@ def validate_decision_summary(summary: Optional[Dict]) -> Dict:
     # Session 840: Apply generic summary penalty
     generic_penalty_count = summary.get('generic_penalty_count', 0)
     generic_penalty = generic_penalty_count * 10  # -10 points per generic phrase
+    is_generic = generic_penalty_count >= 2
 
+    # Session 909: Reject generic summaries - they must contain specific, actionable content
     return {
-        'is_valid': insights_count >= 3 and has_feature and next_steps_count >= 2,
+        'is_valid': (
+            insights_count >= 3 and
+            has_feature and
+            next_steps_count >= 2 and
+            not is_generic  # Session 909: Generic summaries are INVALID
+        ),
         'has_insights': insights_count >= 3,
         'has_feature': has_feature,
         'has_next_steps': next_steps_count >= 2,
@@ -429,7 +436,9 @@ def validate_decision_summary(summary: Optional[Dict]) -> Dict:
         'high_value_score': high_value_score,
         'generic_penalty': generic_penalty,
         'signal_breakdown': signal_breakdown,
-        'is_generic': generic_penalty_count >= 2  # Flag if too many generic phrases
+        'is_generic': is_generic,
+        # Session 909: Rejection reason for debugging
+        'rejection_reason': 'Generic summary with vague phrases' if is_generic else None
     }
 
 
