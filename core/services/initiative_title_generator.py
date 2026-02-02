@@ -183,9 +183,15 @@ def _generate_title_with_llm(content: str, topic_hint: Optional[str] = None) -> 
     Use LLM to generate a concise title from content.
     """
     try:
-        from core.llm_client import get_llm_client
+        import os
+        from openai import OpenAI
 
-        client = get_llm_client()
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            logger.debug("No OpenAI API key found for title generation")
+            return None
+
+        client = OpenAI(api_key=api_key)
 
         # Truncate content for token efficiency
         content_preview = content[:1500] if content else ""
@@ -316,27 +322,43 @@ def _capitalize_title(text: str) -> str:
 def _create_fallback_title(content: str, topic_hint: Optional[str] = None) -> str:
     """
     Create a reasonable fallback title when all else fails.
+    Includes a unique identifier to prevent duplicate key errors.
     """
+    import uuid
+    unique_suffix = str(uuid.uuid4())[:6]
+
     # Try to extract any meaningful noun phrase
     if content:
         # Look for capitalized phrases
         cap_phrases = re.findall(r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', content)
         if cap_phrases:
             for phrase in cap_phrases:
-                if 5 <= len(phrase) <= 60:
-                    return phrase
+                if 5 <= len(phrase) <= 50:  # Leave room for suffix
+                    return f"{phrase} ({unique_suffix})"
 
-    # Use date-based fallback
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # Try to extract key terms from content
+    if content:
+        # Look for common module/feature patterns
+        patterns = [
+            r'((?:Pipeline|Engine|Module|System|Service|Agent|Audit|Analysis)\s*)',
+            r'((?:Enhancement|Generator|Validator|Builder|Creator)\s*)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                term = match.group(1).strip().title()
+                return f"{term} ({unique_suffix})"
 
     if topic_hint:
         # Take first 3 meaningful words from hint
         words = [w for w in topic_hint.split() if len(w) > 2][:3]
         if words:
-            return f"Initiative: {' '.join(words).title()}"
+            return f"Initiative: {' '.join(words).title()} ({unique_suffix})"
 
-    return f"Initiative {timestamp}"
+    # Ultimate fallback with timestamp and UUID
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%m-%d %H:%M")
+    return f"Initiative {timestamp} ({unique_suffix})"
 
 
 # Quick test function
