@@ -1,8 +1,57 @@
 # Session 915 - Start Here
 
-**Previous Session:** 914.3 (Semantic Quality Gates)
+**Previous Session:** 914.4 (Rate Limits)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **FOUNDER INTENT + EXECUTION TRACKS + SEMANTIC DRIFT** | **PIPELINE GOVERNED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **FOUNDER INTENT + EXECUTION TRACKS + SEMANTIC DRIFT + RATE LIMITS** | **PIPELINE GOVERNED**
+
+---
+
+## What Was Accomplished in Session 914.4
+
+### Rate Limits (ChatGPT-Suggested Governance #4)
+
+**Problem:** No throttling on stage progressions - system could burn through LLM API budget uncontrollably with unlimited progressions.
+
+**Solution:** Added daily rate limits using Django cache:
+
+**Configuration:**
+- Default limit: 40 progressions/day
+- Configurable via `INITIATIVE_DAILY_PROGRESSION_LIMIT` setting
+- Count resets at midnight
+- Admin can reset/override via management command
+
+**New Functions:**
+| Function | Purpose |
+|----------|---------|
+| `get_daily_progression_stats()` | Get current count, limit, remaining |
+| `check_rate_limit()` | Check if can progress, returns stats |
+| `increment_progression_count()` | Increment after successful progression |
+| `reset_daily_progression_count()` | Admin reset to 0 |
+
+**New Management Command:**
+```bash
+# View current rate limit status
+python manage.py initiative_rate_limit --status
+
+# Reset daily count (admin override)
+python manage.py initiative_rate_limit --reset
+
+# Set custom limit for today
+python manage.py initiative_rate_limit --set-limit=60
+
+# View recent progression history
+python manage.py initiative_rate_limit --history
+```
+
+**Integration:**
+- `check_stage_for_progression()` checks rate limit first (fail fast)
+- `progress_initiative_stage()` increments count after approval
+- Returns `rate_limited: True` and `rate_stats` in error response
+
+**Files Changed:**
+- `core/services/initiative_auto_progression.py` - Added rate limit functions and integration
+- `core/management/commands/initiative_rate_limit.py` - NEW: Management command
+- `docs/DREAM_INITIATIVE_WORKFLOW.md` - Updated documentation
 
 ---
 
