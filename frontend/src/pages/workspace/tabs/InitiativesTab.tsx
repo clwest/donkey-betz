@@ -33,6 +33,15 @@ import {
   TrendingUp,
   Tag,
   Quote,
+  Flame,
+  Archive,
+  BarChart3,
+  Layers,
+  DollarSign,
+  Shield,
+  Beaker,
+  Rocket,
+  Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
@@ -78,8 +87,67 @@ interface Initiative {
   source_decision_id: string | null
   parent_topic: string
   source_decisions: SourceDecision[]
+  // Session 901: Priority and categorization
+  purpose?: string
+  purpose_display?: string
+  program?: string
+  program_display?: string
+  priority_score?: number
+  priority_level?: 'critical' | 'high' | 'medium' | 'low'
+  impact_score?: number
+  urgency?: number
+  confidence?: number
+  revenue_potential?: number
   created_at: string
   updated_at: string
+}
+
+// Session 901: Stats interface
+interface InitiativeStats {
+  total: number
+  active: number
+  completed: number
+  archived: number
+  on_hold: number
+  by_program: Record<string, number>
+  by_purpose: Record<string, number>
+  by_priority: {
+    critical: number
+    high: number
+    medium: number
+    low: number
+  }
+}
+
+// Session 901: Priority indicator component
+function PriorityBadge({ level }: { level?: string }) {
+  const config = {
+    critical: { icon: Flame, color: 'text-red-400 bg-red-500/20', label: 'Critical' },
+    high: { icon: TrendingUp, color: 'text-orange-400 bg-orange-500/20', label: 'High' },
+    medium: { icon: Circle, color: 'text-yellow-400 bg-yellow-500/20', label: 'Medium' },
+    low: { icon: Circle, color: 'text-gray-400 bg-gray-500/20', label: 'Low' },
+  }
+  const cfg = config[level as keyof typeof config] || config.medium
+  const Icon = cfg.icon
+  return (
+    <span className={cn('px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1', cfg.color)}>
+      <Icon size={10} />
+      {cfg.label}
+    </span>
+  )
+}
+
+// Session 901: Purpose icon mapping
+function PurposeIcon({ purpose }: { purpose?: string }) {
+  const icons: Record<string, typeof DollarSign> = {
+    revenue: DollarSign,
+    stability: Shield,
+    learning: Beaker,
+    expansion: Rocket,
+    maintenance: Wrench,
+  }
+  const Icon = icons[purpose || 'learning'] || Beaker
+  return <Icon size={12} />
 }
 
 // Health indicator based on status and update time
@@ -170,7 +238,9 @@ function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative;
         isCompleted && 'border-emerald-500/30 bg-emerald-500/5',
         !isCompleted && health === 'healthy' && 'border-dark-border',
         !isCompleted && health === 'stale' && 'border-yellow-500/30',
-        !isCompleted && health === 'blocked' && 'border-red-500/30'
+        !isCompleted && health === 'blocked' && 'border-red-500/30',
+        // Session 901: Highlight critical priority
+        !isCompleted && initiative.priority_level === 'critical' && 'ring-1 ring-red-500/50'
       )}
       onClick={onViewDetails}
     >
@@ -184,10 +254,20 @@ function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative;
               <FolderKanban size={16} className="text-primary-400 flex-shrink-0" />
             )}
             <h3 className="font-medium truncate">{initiative.name}</h3>
+            {/* Session 901: Purpose indicator */}
+            {initiative.purpose && (
+              <span className="text-gray-500" title={initiative.purpose_display}>
+                <PurposeIcon purpose={initiative.purpose} />
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-400 truncate">{initiative.description || 'No description'}</p>
         </div>
         <div className="flex items-center gap-2 ml-3">
+          {/* Session 901: Priority badge */}
+          {!isCompleted && initiative.priority_level && (
+            <PriorityBadge level={initiative.priority_level} />
+          )}
           {/* Status/Health indicator - Session 898: Show Completed status */}
           {isCompleted ? (
             <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-400 flex items-center gap-1">
@@ -215,6 +295,10 @@ function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative;
       <div className="flex items-center justify-between">
         <StageProgress initiative={initiative} />
         <div className="flex items-center gap-3 text-xs text-gray-400">
+          {/* Session 901: Show program if available */}
+          {initiative.program_display && initiative.program !== 'uncategorized' && (
+            <span className="text-gray-500">{initiative.program_display}</span>
+          )}
           {/* Session 857: Show weighted progress and approved count */}
           <span>
             {initiative.completion_percentage}% progress
@@ -1256,7 +1340,11 @@ export function InitiativesTab() {
   const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(null)
   // Session 898: Track comprehensive modal separately for completed initiatives
   const [comprehensiveInitiativeId, setComprehensiveInitiativeId] = useState<string | null>(null)
+  // Session 901: Tab-based navigation
+  const [activeTab, setActiveTab] = useState<'active' | 'portfolio' | 'archive' | 'stats'>('active')
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'stale' | 'blocked'>('all')
+  // Session 901: Expanded program groups
+  const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({})
 
   const {
     data,
@@ -1279,24 +1367,57 @@ export function InitiativesTab() {
     },
   })
 
-  // Filter initiatives by health
+  // Session 901: Get stats from API response
+  const stats: InitiativeStats = data?.stats || {
+    total: 0,
+    active: 0,
+    completed: 0,
+    archived: 0,
+    on_hold: 0,
+    by_program: {},
+    by_purpose: {},
+    by_priority: { critical: 0, high: 0, medium: 0, low: 0 },
+  }
+
+  // Filter initiatives based on active tab
   const filteredInitiatives = (data?.initiatives || []).filter((init) => {
-    if (filter === 'all') return true
-    const health = getHealth(init)
-    if (filter === 'active') return init.status === 'ACTIVE'
-    // Session 898: Filter by completed status
-    if (filter === 'completed') return init.status === 'COMPLETED'
-    return health === filter
+    if (activeTab === 'active') {
+      // Active tab: show ACTIVE and ON_HOLD, filter by health
+      if (init.status !== 'ACTIVE' && init.status !== 'ON_HOLD') return false
+      if (filter === 'all') return true
+      const health = getHealth(init)
+      if (filter === 'active') return init.status === 'ACTIVE'
+      if (filter === 'completed') return false // No completed in active tab
+      return health === filter
+    }
+    if (activeTab === 'portfolio') {
+      // Portfolio: show all active initiatives
+      return init.status === 'ACTIVE' || init.status === 'ON_HOLD'
+    }
+    if (activeTab === 'archive') {
+      // Archive: completed and archived
+      return init.status === 'COMPLETED' || init.status === 'ARCHIVED'
+    }
+    return true
   })
 
-  // Stats
-  const stats = {
-    total: data?.initiatives?.length || 0,
-    active: data?.initiatives?.filter((i) => i.status === 'ACTIVE').length || 0,
-    // Session 898: Track completed initiatives for comprehensive view
-    completed: data?.initiatives?.filter((i) => i.status === 'COMPLETED').length || 0,
-    stale: data?.initiatives?.filter((i) => getHealth(i) === 'stale').length || 0,
-    blocked: data?.initiatives?.filter((i) => getHealth(i) === 'blocked').length || 0,
+  // Session 901: Group initiatives by program for portfolio view
+  const groupedByProgram = filteredInitiatives.reduce((acc, init) => {
+    const program = init.program || 'uncategorized'
+    if (!acc[program]) acc[program] = []
+    acc[program].push(init)
+    return acc
+  }, {} as Record<string, Initiative[]>)
+
+  // Toggle program expansion
+  const toggleProgram = (program: string) => {
+    setExpandedPrograms(prev => ({ ...prev, [program]: !prev[program] }))
+  }
+
+  // Session 901: Calculate health-based stats locally
+  const healthStats = {
+    stale: data?.initiatives?.filter((i: Initiative) => getHealth(i) === 'stale').length || 0,
+    blocked: data?.initiatives?.filter((i: Initiative) => getHealth(i) === 'blocked').length || 0,
   }
 
   if (isLoading) {
@@ -1325,65 +1446,59 @@ export function InitiativesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header with stats */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-semibold">Initiative Pipeline</h2>
-          <div className="flex items-center gap-2 text-sm">
-            <button
-              onClick={() => setFilter('all')}
-              className={cn(
-                'px-3 py-1 rounded-full transition-colors',
-                filter === 'all' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
-              )}
-            >
-              All ({stats.total})
-            </button>
-            <button
-              onClick={() => setFilter('active')}
-              className={cn(
-                'px-3 py-1 rounded-full transition-colors',
-                filter === 'active' ? 'bg-green-500/20 text-green-400' : 'text-gray-400 hover:text-white'
-              )}
-            >
-              Active ({stats.active})
-            </button>
-            {/* Session 898: Completed filter for comprehensive view */}
-            {stats.completed > 0 && (
-              <button
-                onClick={() => setFilter('completed')}
-                className={cn(
-                  'px-3 py-1 rounded-full transition-colors flex items-center gap-1',
-                  filter === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:text-white'
-                )}
-              >
-                <Trophy size={14} />
-                Completed ({stats.completed})
-              </button>
+      {/* Session 901: Tab Navigation */}
+      <div className="flex items-center justify-between border-b border-dark-border pb-4">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+              activeTab === 'active'
+                ? 'bg-primary-500/20 text-primary-400'
+                : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
             )}
-            {stats.stale > 0 && (
-              <button
-                onClick={() => setFilter('stale')}
-                className={cn(
-                  'px-3 py-1 rounded-full transition-colors',
-                  filter === 'stale' ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-white'
-                )}
-              >
-                Stale ({stats.stale})
-              </button>
+          >
+            <Zap size={16} />
+            Active
+            <span className="px-1.5 py-0.5 rounded bg-dark-border text-xs">{stats.active}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('portfolio')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+              activeTab === 'portfolio'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
             )}
-            {stats.blocked > 0 && (
-              <button
-                onClick={() => setFilter('blocked')}
-                className={cn(
-                  'px-3 py-1 rounded-full transition-colors',
-                  filter === 'blocked' ? 'bg-red-500/20 text-red-400' : 'text-gray-400 hover:text-white'
-                )}
-              >
-                Blocked ({stats.blocked})
-              </button>
+          >
+            <Layers size={16} />
+            Portfolio
+          </button>
+          <button
+            onClick={() => setActiveTab('archive')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+              activeTab === 'archive'
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
             )}
-          </div>
+          >
+            <Archive size={16} />
+            Archive
+            <span className="px-1.5 py-0.5 rounded bg-dark-border text-xs">{stats.completed + stats.archived}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+              activeTab === 'stats'
+                ? 'bg-purple-500/20 text-purple-400'
+                : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
+            )}
+          >
+            <BarChart3 size={16} />
+            Stats
+          </button>
         </div>
         <button
           onClick={() => refetch()}
@@ -1394,25 +1509,232 @@ export function InitiativesTab() {
         </button>
       </div>
 
-      {/* Initiative grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {filteredInitiatives.map((initiative) => (
-          <InitiativeCard
-            key={initiative.id}
-            initiative={initiative}
-            onViewDetails={() => {
-              // Session 898: Open comprehensive modal for completed initiatives
-              if (initiative.status === 'COMPLETED') {
-                setComprehensiveInitiativeId(initiative.id)
-              } else {
-                setSelectedInitiative(initiative)
-              }
-            }}
-          />
-        ))}
-      </div>
+      {/* Active Tab: Execution Layer */}
+      {activeTab === 'active' && (
+        <>
+          {/* Health Filters */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">Filter:</span>
+            <button
+              onClick={() => setFilter('all')}
+              className={cn(
+                'px-3 py-1 rounded-full transition-colors',
+                filter === 'all' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
+              )}
+            >
+              All
+            </button>
+            {healthStats.stale > 0 && (
+              <button
+                onClick={() => setFilter('stale')}
+                className={cn(
+                  'px-3 py-1 rounded-full transition-colors',
+                  filter === 'stale' ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                Stale ({healthStats.stale})
+              </button>
+            )}
+            {healthStats.blocked > 0 && (
+              <button
+                onClick={() => setFilter('blocked')}
+                className={cn(
+                  'px-3 py-1 rounded-full transition-colors',
+                  filter === 'blocked' ? 'bg-red-500/20 text-red-400' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                Blocked ({healthStats.blocked})
+              </button>
+            )}
+            {/* Priority quick filters */}
+            {stats.by_priority.critical > 0 && (
+              <span className="ml-4 px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs flex items-center gap-1">
+                <Flame size={10} />
+                {stats.by_priority.critical} Critical
+              </span>
+            )}
+          </div>
 
-      {filteredInitiatives.length === 0 && (
+          {/* Initiative grid sorted by priority */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {filteredInitiatives.map((initiative) => (
+              <InitiativeCard
+                key={initiative.id}
+                initiative={initiative}
+                onViewDetails={() => {
+                  if (initiative.status === 'COMPLETED') {
+                    setComprehensiveInitiativeId(initiative.id)
+                  } else {
+                    setSelectedInitiative(initiative)
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Portfolio Tab: Strategy Layer - Grouped by Program */}
+      {activeTab === 'portfolio' && (
+        <div className="space-y-4">
+          {Object.entries(groupedByProgram)
+            .sort(([, a], [, b]) => b.length - a.length) // Sort by count
+            .map(([program, initiatives]) => (
+              <div key={program} className="border border-dark-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => toggleProgram(program)}
+                  className="w-full flex items-center justify-between p-4 bg-dark-bg hover:bg-dark-bg/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Layers size={18} className="text-blue-400" />
+                    <span className="font-medium capitalize">
+                      {program.replace(/_/g, ' ')}
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-dark-border text-xs text-gray-400">
+                      {initiatives.length} initiatives
+                    </span>
+                  </div>
+                  {expandedPrograms[program] !== false ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
+                </button>
+                {expandedPrograms[program] !== false && (
+                  <div className="p-4 border-t border-dark-border grid gap-3 md:grid-cols-2">
+                    {initiatives.map((initiative) => (
+                      <InitiativeCard
+                        key={initiative.id}
+                        initiative={initiative}
+                        onViewDetails={() => {
+                          if (initiative.status === 'COMPLETED') {
+                            setComprehensiveInitiativeId(initiative.id)
+                          } else {
+                            setSelectedInitiative(initiative)
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* Archive Tab: Memory Layer */}
+      {activeTab === 'archive' && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {filteredInitiatives.map((initiative) => (
+            <InitiativeCard
+              key={initiative.id}
+              initiative={initiative}
+              onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
+            />
+          ))}
+          {filteredInitiatives.length === 0 && (
+            <div className="col-span-2 text-center py-8 text-gray-400">
+              No archived initiatives yet
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Stats Tab */}
+      {activeTab === 'stats' && (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Total Stats */}
+          <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+            <h3 className="text-sm font-medium text-gray-400 mb-4">Overview</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Total Initiatives</span>
+                <span className="text-2xl font-bold text-primary-400">{stats.total}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Active</span>
+                <span className="text-lg font-medium text-green-400">{stats.active}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Completed</span>
+                <span className="text-lg font-medium text-emerald-400">{stats.completed}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Archived</span>
+                <span className="text-lg font-medium text-gray-500">{stats.archived}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Priority Breakdown */}
+          <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+            <h3 className="text-sm font-medium text-gray-400 mb-4">By Priority</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2 text-red-400">
+                  <Flame size={14} /> Critical
+                </span>
+                <span className="font-medium">{stats.by_priority.critical}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2 text-orange-400">
+                  <TrendingUp size={14} /> High
+                </span>
+                <span className="font-medium">{stats.by_priority.high}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2 text-yellow-400">
+                  <Circle size={14} /> Medium
+                </span>
+                <span className="font-medium">{stats.by_priority.medium}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2 text-gray-400">
+                  <Circle size={14} /> Low
+                </span>
+                <span className="font-medium">{stats.by_priority.low}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* By Program */}
+          <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+            <h3 className="text-sm font-medium text-gray-400 mb-4">By Program</h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {Object.entries(stats.by_program)
+                .sort(([, a], [, b]) => b - a)
+                .map(([program, count]) => (
+                  <div key={program} className="flex justify-between items-center">
+                    <span className="text-gray-400 capitalize text-sm">
+                      {program.replace(/_/g, ' ')}
+                    </span>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* By Purpose */}
+          <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+            <h3 className="text-sm font-medium text-gray-400 mb-4">By Purpose</h3>
+            <div className="space-y-2">
+              {Object.entries(stats.by_purpose)
+                .sort(([, a], [, b]) => b - a)
+                .map(([purpose, count]) => (
+                  <div key={purpose} className="flex justify-between items-center">
+                    <span className="flex items-center gap-2 text-gray-400 capitalize text-sm">
+                      <PurposeIcon purpose={purpose} />
+                      {purpose.replace(/_/g, ' ')}
+                    </span>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {filteredInitiatives.length === 0 && activeTab !== 'stats' && activeTab !== 'archive' && (
         <div className="text-center py-8 text-gray-400">
           No initiatives match the selected filter
         </div>
