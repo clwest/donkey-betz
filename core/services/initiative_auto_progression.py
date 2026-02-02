@@ -55,7 +55,12 @@ RATE_LIMIT_DATE_KEY = "initiative_progression_date"
 
 
 def get_daily_progression_limit() -> int:
-    """Get the daily progression limit from settings or default."""
+    """Get the daily progression limit from cache, settings, or default."""
+    # Check for temporary custom limit in cache first
+    custom_limit = cache.get('initiative_progression_custom_limit')
+    if custom_limit is not None:
+        return int(custom_limit)
+    # Fall back to settings or default
     return getattr(settings, 'INITIATIVE_DAILY_PROGRESSION_LIMIT', DEFAULT_DAILY_PROGRESSION_LIMIT)
 
 
