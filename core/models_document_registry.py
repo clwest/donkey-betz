@@ -157,10 +157,19 @@ class Initiative(models.Model):
 
     # =========================================================================
     # Session 914: Founder Intent Fields
+    # Session 914.2: Execution Track (Fast Track vs Institutional)
     # =========================================================================
     # These fields capture the founder's explicit intent for each initiative.
     # Auto-progression pauses if founder_intent_set=False, requiring human input.
+    #
+    # Execution Tracks:
+    # - FAST_TRACK: Stage 1-2 only, minimal gates, for quick experiments
+    # - INSTITUTIONAL: Full 5 stages, compliance gates, for public/legal/data
     # =========================================================================
+
+    class ExecutionTrack(models.TextChoices):
+        FAST_TRACK = 'fast_track', 'Fast Track (Stage 1-2, quick experiments)'
+        INSTITUTIONAL = 'institutional', 'Institutional (Full 5-stage, compliance required)'
 
     class ExecutionSpeed(models.TextChoices):
         FAST = 'fast', 'Fast (MVP, stop at Stage 2)'
@@ -171,6 +180,15 @@ class Initiative(models.Model):
         LOW = 'low', 'Low (require all approvals)'
         MEDIUM = 'medium', 'Medium (standard gates)'
         HIGH = 'high', 'High (move fast, minimal gates)'
+
+    # Session 914.2: Content flags that trigger Institutional track
+    class ContentFlags(models.TextChoices):
+        EXTERNAL_DATA = 'external_data', 'Uses External Data/APIs'
+        USER_DATA = 'user_data', 'Handles User Data'
+        PUBLIC_PUBLISHING = 'public_publishing', 'Public Publishing'
+        LEGAL_COMPLIANCE = 'legal_compliance', 'Legal/Compliance'
+        FINANCIAL = 'financial', 'Financial Transactions'
+        IRREVERSIBLE = 'irreversible', 'Irreversible Actions'
 
     # Whether founder has explicitly set intent for this initiative
     founder_intent_set = models.BooleanField(
@@ -236,6 +254,67 @@ class Initiative(models.Model):
         blank=True,
         default='',
         help_text='Session 914: Who set the founder intent?'
+    )
+
+    # =========================================================================
+    # Session 914.2: Execution Track Fields
+    # =========================================================================
+
+    # Execution track determines the pipeline path
+    execution_track = models.CharField(
+        max_length=20,
+        choices=ExecutionTrack.choices,
+        default=ExecutionTrack.FAST_TRACK,
+        help_text='Session 914.2: Fast Track (Stage 1-2) or Institutional (Full 5-stage)'
+    )
+
+    # Content flags that triggered Institutional track (comma-separated)
+    content_flags = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        help_text='Session 914.2: Content flags detected (e.g., external_data,user_data)'
+    )
+
+    # Whether track was auto-detected or manually set
+    track_auto_detected = models.BooleanField(
+        default=False,
+        help_text='Session 914.2: Was the execution track auto-detected from content?'
+    )
+
+    # Compliance review status (for Institutional track)
+    compliance_reviewed = models.BooleanField(
+        default=False,
+        help_text='Session 914.2: Has compliance review been completed?'
+    )
+
+    compliance_reviewed_by = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Session 914.2: Who completed compliance review?'
+    )
+
+    compliance_reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Session 914.2: When was compliance review completed?'
+    )
+
+    # Stage-specific approval gates (for Institutional track)
+    stage_2_approved = models.BooleanField(
+        default=False,
+        help_text='Session 914.2: Has Stage 2 (Prototype Plan) been explicitly approved?'
+    )
+
+    stage_3_approved = models.BooleanField(
+        default=False,
+        help_text='Session 914.2: Has Stage 3 (Evaluation Protocol) been explicitly approved?'
+    )
+
+    stage_4_approved = models.BooleanField(
+        default=False,
+        help_text='Session 914.2: Has Stage 4 (Technical Design) been explicitly approved?'
     )
 
     class Meta:
@@ -554,6 +633,240 @@ class Initiative(models.Model):
             'requires_boardroom_approval': self.requires_boardroom_approval,
             'can_auto_progress': self.can_auto_progress,
             'blocked_reason': self.progression_blocked_reason,
+        }
+
+    # =========================================================================
+    # Session 914.2: Execution Track Methods
+    # =========================================================================
+
+    # Keywords that trigger Institutional track
+    INSTITUTIONAL_KEYWORDS = {
+        'external_data': [
+            'api', 'external', 'third-party', 'integration', 'webhook',
+            'scrape', 'crawl', 'fetch', 'ingest', 'import'
+        ],
+        'user_data': [
+            'user data', 'personal', 'pii', 'privacy', 'gdpr', 'ccpa',
+            'customer', 'account', 'profile', 'credentials', 'password'
+        ],
+        'public_publishing': [
+            'publish', 'public', 'blog', 'article', 'content', 'post',
+            'social media', 'twitter', 'linkedin', 'youtube', 'podcast'
+        ],
+        'legal_compliance': [
+            'legal', 'compliance', 'regulation', 'contract', 'terms',
+            'license', 'copyright', 'trademark', 'patent', 'audit'
+        ],
+        'financial': [
+            'payment', 'transaction', 'billing', 'subscription', 'revenue',
+            'money', 'price', 'cost', 'fee', 'charge', 'refund'
+        ],
+        'irreversible': [
+            'delete', 'remove', 'destroy', 'migrate', 'deploy', 'production',
+            'rollout', 'launch', 'release', 'ship'
+        ],
+    }
+
+    def detect_content_flags(self) -> list:
+        """
+        Session 914.2: Auto-detect content flags from initiative name/description.
+
+        Scans the initiative name and description for keywords that indicate
+        the initiative should use the Institutional track.
+
+        Returns:
+            List of detected content flag keys (e.g., ['external_data', 'public_publishing'])
+        """
+        detected_flags = []
+        content = f"{self.name} {self.description}".lower()
+
+        for flag_key, keywords in self.INSTITUTIONAL_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword.lower() in content:
+                    detected_flags.append(flag_key)
+                    break  # Only add each flag once
+
+        return detected_flags
+
+    def auto_detect_execution_track(self, save: bool = True) -> str:
+        """
+        Session 914.2: Auto-detect and set execution track based on content.
+
+        If any Institutional keywords are detected, sets track to INSTITUTIONAL.
+        Otherwise, defaults to FAST_TRACK.
+
+        Args:
+            save: Whether to save the initiative after detection
+
+        Returns:
+            The detected execution track ('fast_track' or 'institutional')
+        """
+        flags = self.detect_content_flags()
+
+        if flags:
+            self.execution_track = 'institutional'
+            self.content_flags = ','.join(flags)
+            self.requires_boardroom_approval = True
+        else:
+            self.execution_track = 'fast_track'
+            self.content_flags = ''
+
+        self.track_auto_detected = True
+
+        if save:
+            self.save(update_fields=[
+                'execution_track', 'content_flags',
+                'track_auto_detected', 'requires_boardroom_approval'
+            ])
+
+        return self.execution_track
+
+    def set_execution_track(
+        self,
+        track: str,
+        content_flags: list = None,
+        set_by: str = 'founder'
+    ):
+        """
+        Session 914.2: Manually set execution track.
+
+        Args:
+            track: 'fast_track' or 'institutional'
+            content_flags: Optional list of content flags
+            set_by: Who is setting the track
+
+        Returns:
+            self for chaining
+        """
+        self.execution_track = track
+        self.track_auto_detected = False
+
+        if content_flags:
+            self.content_flags = ','.join(content_flags)
+
+        # Institutional track requires boardroom approval by default
+        if track == 'institutional':
+            self.requires_boardroom_approval = True
+
+        self.save()
+        return self
+
+    @property
+    def is_fast_track(self) -> bool:
+        """Session 914.2: Check if initiative is on Fast Track."""
+        return self.execution_track == 'fast_track'
+
+    @property
+    def is_institutional(self) -> bool:
+        """Session 914.2: Check if initiative is on Institutional track."""
+        return self.execution_track == 'institutional'
+
+    @property
+    def max_stage(self) -> int:
+        """
+        Session 914.2: Maximum stage for this initiative's track.
+
+        Fast Track: Stage 2 (Research Brief + Prototype Plan)
+        Institutional: Stage 5 (Full pipeline)
+        """
+        if self.is_fast_track:
+            return 2
+        return 5
+
+    def requires_stage_approval(self, stage_num: int) -> bool:
+        """
+        Session 914.2: Check if a specific stage requires explicit approval.
+
+        For Institutional track, stages 2, 3, and 4 require explicit approval.
+        For Fast Track, only stage 2 requires approval (end of track).
+
+        Args:
+            stage_num: The stage number to check (1-5)
+
+        Returns:
+            True if the stage requires explicit approval
+        """
+        if self.is_fast_track:
+            return stage_num == 2  # End of Fast Track
+
+        # Institutional track - stages 2, 3, 4 require approval
+        return stage_num in [2, 3, 4]
+
+    def is_stage_approved(self, stage_num: int) -> bool:
+        """
+        Session 914.2: Check if a specific stage has been explicitly approved.
+
+        Args:
+            stage_num: The stage number to check (2, 3, or 4)
+
+        Returns:
+            True if the stage has been approved
+        """
+        if stage_num == 2:
+            return self.stage_2_approved
+        elif stage_num == 3:
+            return self.stage_3_approved
+        elif stage_num == 4:
+            return self.stage_4_approved
+        return True  # Stages 1 and 5 don't require explicit approval
+
+    def approve_stage(self, stage_num: int, approved_by: str = 'founder'):
+        """
+        Session 914.2: Approve a specific stage for progression.
+
+        Args:
+            stage_num: The stage number to approve (2, 3, or 4)
+            approved_by: Who is approving the stage
+
+        Returns:
+            self for chaining
+        """
+        if stage_num == 2:
+            self.stage_2_approved = True
+        elif stage_num == 3:
+            self.stage_3_approved = True
+        elif stage_num == 4:
+            self.stage_4_approved = True
+
+        self.save()
+        return self
+
+    def complete_compliance_review(self, reviewed_by: str = 'compliance'):
+        """
+        Session 914.2: Mark compliance review as complete.
+
+        Required for Institutional track before Stage 4 (Technical Design).
+
+        Args:
+            reviewed_by: Who completed the compliance review
+
+        Returns:
+            self for chaining
+        """
+        self.compliance_reviewed = True
+        self.compliance_reviewed_by = reviewed_by
+        self.compliance_reviewed_at = timezone.now()
+        self.save()
+        return self
+
+    @property
+    def execution_track_summary(self) -> dict:
+        """
+        Session 914.2: Return a summary of execution track settings.
+        """
+        return {
+            'track': self.execution_track,
+            'track_display': self.get_execution_track_display() if self.execution_track else None,
+            'is_fast_track': self.is_fast_track,
+            'is_institutional': self.is_institutional,
+            'max_stage': self.max_stage,
+            'content_flags': self.content_flags.split(',') if self.content_flags else [],
+            'track_auto_detected': self.track_auto_detected,
+            'compliance_reviewed': self.compliance_reviewed,
+            'compliance_reviewed_by': self.compliance_reviewed_by,
+            'stage_2_approved': self.stage_2_approved,
+            'stage_3_approved': self.stage_3_approved,
+            'stage_4_approved': self.stage_4_approved,
         }
 
 

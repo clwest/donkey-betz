@@ -1,8 +1,8 @@
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
-**Updated:** Session 914 (February 2, 2026)
-**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | TRACKING COMPLETE
+**Updated:** Session 914.2 (February 2, 2026)
+**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | TRACKING COMPLETE
 
 ---
 
@@ -288,13 +288,81 @@ else:
 
 ---
 
+### Execution Track (Session 914.2)
+
+Initiatives follow one of two tracks based on their content and risk profile:
+
+**Track Types:**
+| Track | Max Stage | Use Case |
+|-------|-----------|----------|
+| `fast_track` | Stage 2 | Quick experiments, low-risk features, internal tools |
+| `institutional` | Stage 5 | Public-facing, compliance-required, high-risk initiatives |
+
+**Content Flags (Auto-Detection):**
+| Flag | Meaning | Triggers Institutional |
+|------|---------|----------------------|
+| `external_data` | Uses external data/APIs | Yes |
+| `user_data` | Handles user PII | Yes |
+| `public_publishing` | Public-facing content | Yes |
+| `legal_compliance` | Legal/regulatory requirements | Yes |
+| `financial` | Financial transactions | Yes |
+| `irreversible` | Irreversible actions | Yes |
+
+**Institutional Stage Approvals:**
+- Stage 2: Requires explicit approval before Stage 3
+- Stage 3: Requires explicit approval before Stage 4
+- Stage 4: Requires explicit approval before Stage 5
+- Compliance review must be completed before any stage progression
+
+**Setting Execution Track:**
+```bash
+# Auto-detect track based on content
+python manage.py set_founder_intent --initiative-id=<uuid> --auto-detect-track
+
+# Explicitly set track
+python manage.py set_founder_intent --initiative-id=<uuid> --track=institutional
+
+# Approve a stage (institutional track)
+python manage.py set_founder_intent --initiative-id=<uuid> --approve-stage=2
+
+# Complete compliance review
+python manage.py set_founder_intent --initiative-id=<uuid> --complete-compliance
+```
+
+**Code Reference:**
+```python
+# Auto-detect track
+track = initiative.auto_detect_execution_track()  # Returns 'fast_track' or 'institutional'
+
+# Set track explicitly
+initiative.set_execution_track(
+    track='institutional',
+    content_flags=['user_data', 'public_publishing'],
+    set_by='founder'
+)
+
+# Check track properties
+if initiative.is_fast_track:
+    print(f"Max stage: {initiative.max_stage}")  # 2
+
+if initiative.is_institutional:
+    # Check if stage needs approval
+    if initiative.requires_stage_approval(2):
+        if not initiative.is_stage_approved(2):
+            # Need to approve before progression
+            initiative.approve_stage(2, approved_by='founder')
+```
+
+---
+
 ### Auto-Progression (Session 906)
 
 The system automatically advances initiatives through stages based on document quality. Runs every 10 minutes via Celery Beat.
 
-**Prerequisites (Session 914):**
+**Prerequisites (Session 914 & 914.2):**
 - Founder intent must be set (for Stage 2+)
-- Initiative must not be in Fast Track mode at Stage 2+
+- Execution track limits respected (Fast Track stops at Stage 2)
+- Institutional track requires stage approvals (Stages 2-4)
 - Boardroom approval requirements must be satisfied
 
 **Quality Criteria:**
@@ -555,6 +623,7 @@ python manage.py fix_stuck_initiatives --fix
 | 906 | Title Cleanup + Duplicate Detection + Orphan Tracking Fix |
 | 913 | Signal Intelligence linking - Initiative FK to SignalCluster/AutoTopic |
 | **914** | **Founder Intent** - execution_speed, risk_tolerance, stop_rule, budget controls |
+| **914.2** | **Execution Tracks** - Fast Track (Stage 1-2) vs Institutional (Full 5-stage), content flag auto-detection, stage approvals |
 
 ---
 
@@ -570,8 +639,10 @@ python manage.py fix_stuck_initiatives --fix
 2. Verify origin is `serious` or `speculative`
 3. Check `promote_threshold` setting
 
-### Stages Not Advancing (Session 914)
+### Stages Not Advancing (Session 914 & 914.2)
 1. **Check founder intent** - `python manage.py set_founder_intent --list`
+2. **Check execution track** - Fast Track stops at Stage 2
+3. **Check stage approvals** - Institutional requires approvals for Stages 2-4
 2. If Stage 2+, founder intent must be set: `initiative.founder_intent_set`
 3. If Fast Track mode, stops at Stage 2 by design
 4. Verify stage status is `APPROVED`

@@ -83,6 +83,34 @@ class Command(BaseCommand):
             action='store_true',
             help='Require explicit Boardroom approval'
         )
+        # Session 914.2: Execution Track options
+        parser.add_argument(
+            '--track',
+            type=str,
+            choices=['fast_track', 'institutional'],
+            help='Execution track (fast_track: Stage 1-2, institutional: Full 5-stage)'
+        )
+        parser.add_argument(
+            '--auto-detect-track',
+            action='store_true',
+            help='Auto-detect execution track based on content flags'
+        )
+        parser.add_argument(
+            '--content-flags',
+            type=str,
+            help='Comma-separated content flags (external_data,user_data,public_publishing,legal_compliance,financial,irreversible)'
+        )
+        parser.add_argument(
+            '--approve-stage',
+            type=int,
+            choices=[2, 3, 4],
+            help='Approve a specific stage (institutional track only)'
+        )
+        parser.add_argument(
+            '--complete-compliance',
+            action='store_true',
+            help='Mark compliance review as complete (institutional track only)'
+        )
         parser.add_argument(
             '--dry-run',
             action='store_true',
@@ -146,8 +174,10 @@ class Command(BaseCommand):
 
         for init in pending:
             blocked = init.progression_blocked_reason or 'Unknown'
+            track = getattr(init, 'execution_track', 'fast_track') or 'fast_track'
+            max_stage = getattr(init, 'max_stage', 5) if hasattr(init, 'max_stage') else (2 if track == 'fast_track' else 5)
             self.stdout.write(f"\n  📌 {init.name[:60]}...")
-            self.stdout.write(f"     Stage: {init.current_stage}/5")
+            self.stdout.write(f"     Stage: {init.current_stage}/{max_stage} ({track})")
             self.stdout.write(f"     Blocked: {blocked}")
             self.stdout.write(f"     ID: {init.id}")
 
@@ -175,7 +205,20 @@ class Command(BaseCommand):
         if options['boardroom']:
             self.stdout.write(f"   Requires Boardroom: Yes")
 
+        # Session 914.2: Execution Track options
+        if options.get('track'):
+            self.stdout.write(f"   Track: {options['track']}")
+        if options.get('auto_detect_track'):
+            self.stdout.write(f"   Auto-detect track: Yes")
+        if options.get('content_flags'):
+            self.stdout.write(f"   Content flags: {options['content_flags']}")
+        if options.get('approve_stage'):
+            self.stdout.write(f"   Approve stage: {options['approve_stage']}")
+        if options.get('complete_compliance'):
+            self.stdout.write(f"   Complete compliance: Yes")
+
         if not dry_run:
+            # Set founder intent
             initiative.set_founder_intent(
                 execution_speed=options['speed'],
                 risk_tolerance=options['risk'],
@@ -186,6 +229,32 @@ class Command(BaseCommand):
                 set_by='CLI:set_founder_intent'
             )
             self.stdout.write(self.style.SUCCESS(f"   ✅ Intent set"))
+
+            # Session 914.2: Handle execution track
+            if options.get('auto_detect_track'):
+                track = initiative.auto_detect_execution_track()
+                self.stdout.write(self.style.SUCCESS(f"   ✅ Auto-detected track: {track}"))
+                if initiative.content_flags:
+                    self.stdout.write(f"      Flags: {initiative.content_flags}")
+            elif options.get('track'):
+                content_flags = options.get('content_flags', '').split(',') if options.get('content_flags') else None
+                initiative.set_execution_track(
+                    track=options['track'],
+                    content_flags=content_flags,
+                    set_by='CLI:set_founder_intent'
+                )
+                self.stdout.write(self.style.SUCCESS(f"   ✅ Track set: {options['track']}"))
+
+            # Handle stage approval
+            if options.get('approve_stage'):
+                stage_num = options['approve_stage']
+                initiative.approve_stage(stage_num, approved_by='CLI:set_founder_intent')
+                self.stdout.write(self.style.SUCCESS(f"   ✅ Stage {stage_num} approved"))
+
+            # Handle compliance review
+            if options.get('complete_compliance'):
+                initiative.complete_compliance_review(reviewed_by='CLI:set_founder_intent')
+                self.stdout.write(self.style.SUCCESS(f"   ✅ Compliance review complete"))
         else:
             self.stdout.write(self.style.WARNING(f"   ⚠️ Would set intent (dry run)"))
 
@@ -205,13 +274,20 @@ class Command(BaseCommand):
             self.stdout.write(f"Stage: {init.current_stage}/5")
             self.stdout.write(f"Purpose: {init.get_purpose_display()}")
             self.stdout.write(f"Description: {init.description[:200]}...")
+
+            # Session 914.2: Show auto-detected content flags
+            flags = init.detect_content_flags() if hasattr(init, 'detect_content_flags') else []
+            if flags:
+                self.stdout.write(f"Detected Flags: {', '.join(flags)}")
+                self.stdout.write(self.style.WARNING("  ⚠️ Recommend Institutional Track"))
+
             self.stdout.write(f"{'=' * 60}")
 
             # Get user input
             self.stdout.write("\nOptions:")
-            self.stdout.write("  1. Fast Track (stop at Stage 2)")
-            self.stdout.write("  2. Balanced (normal flow)")
-            self.stdout.write("  3. Thorough (extended validation)")
+            self.stdout.write("  1. Fast Track (Stage 1-2 only, quick experiment)")
+            self.stdout.write("  2. Institutional (Full 5-stage, compliance gates)")
+            self.stdout.write("  3. Auto-detect Track (based on content)")
             self.stdout.write("  4. Skip (leave without intent)")
             self.stdout.write("  5. Kill (archive this initiative)")
             self.stdout.write("  q. Quit")
@@ -222,27 +298,43 @@ class Command(BaseCommand):
                 self.stdout.write("\nExiting interactive mode")
                 break
             elif choice == '1':
+                # Fast Track
                 init.set_founder_intent(
                     execution_speed='fast',
                     risk_tolerance='high',
                     set_by='CLI:interactive'
                 )
-                self.stdout.write(self.style.SUCCESS("✅ Set to Fast Track"))
-            elif choice == '2':
-                init.set_founder_intent(
-                    execution_speed='balanced',
-                    risk_tolerance='medium',
+                init.set_execution_track(
+                    track='fast_track',
                     set_by='CLI:interactive'
                 )
-                self.stdout.write(self.style.SUCCESS("✅ Set to Balanced"))
-            elif choice == '3':
+                self.stdout.write(self.style.SUCCESS("✅ Set to Fast Track (Stage 1-2)"))
+            elif choice == '2':
+                # Institutional Track
                 init.set_founder_intent(
                     execution_speed='thorough',
                     risk_tolerance='low',
                     requires_boardroom_approval=True,
                     set_by='CLI:interactive'
                 )
-                self.stdout.write(self.style.SUCCESS("✅ Set to Thorough"))
+                init.set_execution_track(
+                    track='institutional',
+                    content_flags=flags,
+                    set_by='CLI:interactive'
+                )
+                self.stdout.write(self.style.SUCCESS("✅ Set to Institutional (Full 5-stage)"))
+            elif choice == '3':
+                # Auto-detect
+                init.set_founder_intent(
+                    execution_speed='balanced',
+                    risk_tolerance='medium',
+                    set_by='CLI:interactive'
+                )
+                track = init.auto_detect_execution_track()
+                if track == 'institutional':
+                    self.stdout.write(self.style.SUCCESS(f"✅ Auto-detected: Institutional (flags: {init.content_flags})"))
+                else:
+                    self.stdout.write(self.style.SUCCESS("✅ Auto-detected: Fast Track"))
             elif choice == '4':
                 self.stdout.write(self.style.WARNING("⏭️ Skipped"))
             elif choice == '5':
