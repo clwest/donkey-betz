@@ -1,8 +1,8 @@
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
-**Updated:** Session 914.3 (February 2, 2026)
-**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | TRACKING COMPLETE
+**Updated:** Session 914.4 (February 2, 2026)
+**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | RATE LIMITS | TRACKING COMPLETE
 
 ---
 
@@ -422,11 +422,69 @@ print(f"Overall alignment: {result['overall_alignment']:.0%}")
 
 ---
 
+### Rate Limits (Session 914.4)
+
+Controls LLM spend by limiting how many stage progressions can happen per day.
+
+**Default Limit:** 40 progressions/day
+
+**How It Works:**
+1. Each progression check first verifies rate limit
+2. If limit reached, returns `rate_limited: True` error
+3. Count resets at midnight (UTC)
+4. Admin can reset count or adjust limit
+
+**Management Commands:**
+```bash
+# View current rate limit status
+python manage.py initiative_rate_limit --status
+
+# Reset daily count (admin override)
+python manage.py initiative_rate_limit --reset
+
+# Set custom limit for today
+python manage.py initiative_rate_limit --set-limit=60
+
+# View recent progression history
+python manage.py initiative_rate_limit --history
+```
+
+**Configuration:**
+```python
+# settings.py - Override default limit
+INITIATIVE_DAILY_PROGRESSION_LIMIT = 60  # Default is 40
+```
+
+**Code Reference:**
+```python
+from core.services.initiative_auto_progression import (
+    get_daily_progression_stats,
+    reset_daily_progression_count,
+    check_rate_limit
+)
+
+# Check current status
+stats = get_daily_progression_stats()
+print(f"Used: {stats['count']}/{stats['limit']}")
+print(f"Remaining: {stats['remaining']}")
+
+# Check if rate limited
+can_progress, stats = check_rate_limit()
+if not can_progress:
+    print("Rate limit reached!")
+
+# Reset count (admin)
+reset_daily_progression_count()
+```
+
+---
+
 ### Auto-Progression (Session 906)
 
 The system automatically advances initiatives through stages based on document quality. Runs every 10 minutes via Celery Beat.
 
-**Prerequisites (Session 914, 914.2 & 914.3):**
+**Prerequisites (Session 914, 914.2, 914.3 & 914.4):**
+- Daily rate limit not exceeded (default: 40/day)
 - Founder intent must be set (for Stage 2+)
 - Execution track limits respected (Fast Track stops at Stage 2)
 - Institutional track requires stage approvals (Stages 2-4)
@@ -693,6 +751,7 @@ python manage.py fix_stuck_initiatives --fix
 | **914** | **Founder Intent** - execution_speed, risk_tolerance, stop_rule, budget controls |
 | **914.2** | **Execution Tracks** - Fast Track (Stage 1-2) vs Institutional (Full 5-stage), content flag auto-detection, stage approvals |
 | **914.3** | **Semantic Quality Gates** - Drift detection using embeddings, blocks progression if document diverges from initiative intent |
+| **914.4** | **Rate Limits** - Daily progression limit (40/day default), controls LLM spend, admin reset/override |
 
 ---
 

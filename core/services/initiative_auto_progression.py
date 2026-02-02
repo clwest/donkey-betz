@@ -13,11 +13,18 @@ Solution: Auto-progression based on quality signals:
 2. Stage 2 → Stage 3 when plan is concrete
 3. etc.
 
+Session 914.4: Rate Limits
+- Added daily rate limits to control LLM spend
+- Default: 40 stage progressions per day
+- Configurable via Django settings or cache
+
 Usage:
     from core.services.initiative_auto_progression import (
         check_stage_for_progression,
         progress_initiative_stage,
-        trigger_next_stage_generation
+        trigger_next_stage_generation,
+        get_daily_progression_stats,  # Session 914.4
+        reset_daily_progression_count  # Session 914.4
     )
 
     # Check and progress a single initiative
@@ -26,13 +33,130 @@ Usage:
     # Or use the Celery task
     from core.tasks import process_initiative_auto_progression
     process_initiative_auto_progression.delay()
+
+    # Check rate limit status (Session 914.4)
+    stats = get_daily_progression_stats()
+    print(f"Used: {stats['count']}/{stats['limit']}")
 """
 
 import logging
+from datetime import date
 from typing import Dict, Any, Optional, Tuple
 from django.utils import timezone
+from django.core.cache import cache
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+# Session 914.4: Rate Limit Configuration
+DEFAULT_DAILY_PROGRESSION_LIMIT = 40  # Max stage progressions per day
+RATE_LIMIT_CACHE_KEY = "initiative_progression_daily_count"
+RATE_LIMIT_DATE_KEY = "initiative_progression_date"
+
+
+def get_daily_progression_limit() -> int:
+    """Get the daily progression limit from settings or default."""
+    return getattr(settings, 'INITIATIVE_DAILY_PROGRESSION_LIMIT', DEFAULT_DAILY_PROGRESSION_LIMIT)
+
+
+def get_daily_progression_stats() -> Dict[str, Any]:
+    """
+    Session 914.4: Get current daily progression statistics.
+
+    Returns:
+        Dict with count, limit, remaining, date, and is_limited status
+    """
+    today = date.today().isoformat()
+    cached_date = cache.get(RATE_LIMIT_DATE_KEY)
+
+    # Reset if new day
+    if cached_date != today:
+        cache.set(RATE_LIMIT_DATE_KEY, today, 86400)  # 24 hours
+        cache.set(RATE_LIMIT_CACHE_KEY, 0, 86400)
+        count = 0
+    else:
+        count = cache.get(RATE_LIMIT_CACHE_KEY, 0)
+
+    limit = get_daily_progression_limit()
+    remaining = max(0, limit - count)
+
+    return {
+        'count': count,
+        'limit': limit,
+        'remaining': remaining,
+        'date': today,
+        'is_limited': count >= limit,
+        'percentage_used': (count / limit * 100) if limit > 0 else 0
+    }
+
+
+def increment_progression_count() -> int:
+    """
+    Session 914.4: Increment the daily progression count.
+
+    Returns:
+        New count after increment
+    """
+    today = date.today().isoformat()
+    cached_date = cache.get(RATE_LIMIT_DATE_KEY)
+
+    # Reset if new day
+    if cached_date != today:
+        cache.set(RATE_LIMIT_DATE_KEY, today, 86400)
+        cache.set(RATE_LIMIT_CACHE_KEY, 1, 86400)
+        return 1
+
+    # Increment existing count
+    try:
+        new_count = cache.incr(RATE_LIMIT_CACHE_KEY)
+    except ValueError:
+        # Key doesn't exist, set it
+        cache.set(RATE_LIMIT_CACHE_KEY, 1, 86400)
+        new_count = 1
+
+    return new_count
+
+
+def reset_daily_progression_count() -> Dict[str, Any]:
+    """
+    Session 914.4: Reset the daily progression count (admin override).
+
+    Returns:
+        Dict with reset confirmation
+    """
+    today = date.today().isoformat()
+    old_count = cache.get(RATE_LIMIT_CACHE_KEY, 0)
+
+    cache.set(RATE_LIMIT_DATE_KEY, today, 86400)
+    cache.set(RATE_LIMIT_CACHE_KEY, 0, 86400)
+
+    logger.info(f"[Session 914.4] Daily progression count reset (was {old_count})")
+
+    return {
+        'success': True,
+        'previous_count': old_count,
+        'new_count': 0,
+        'date': today,
+        'reset_at': timezone.now().isoformat()
+    }
+
+
+def check_rate_limit() -> Tuple[bool, Dict[str, Any]]:
+    """
+    Session 914.4: Check if rate limit allows progression.
+
+    Returns:
+        Tuple of (can_progress, stats_dict)
+    """
+    stats = get_daily_progression_stats()
+    can_progress = not stats['is_limited']
+
+    if not can_progress:
+        logger.warning(
+            f"[Session 914.4] Rate limit reached: {stats['count']}/{stats['limit']} progressions today"
+        )
+
+    return can_progress, stats
 
 # Quality thresholds for auto-progression
 # Session 906: Made section names more flexible - any of the alternatives count
@@ -165,6 +289,18 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
         Dict with progression status and details
     """
     from core.models_document_registry import Initiative, InitiativeStage
+
+    # Session 914.4: Check Rate Limit first (fail fast)
+    can_progress_rate, rate_stats = check_rate_limit()
+    if not can_progress_rate:
+        logger.info(f"[Session 914.4] Rate limit blocking progression check")
+        return {
+            'success': False,
+            'error': f"Daily rate limit reached ({rate_stats['count']}/{rate_stats['limit']} progressions)",
+            'can_progress': False,
+            'rate_limited': True,
+            'rate_stats': rate_stats
+        }
 
     try:
         initiative = Initiative.objects.get(id=initiative_id)
@@ -366,6 +502,14 @@ def progress_initiative_stage(
         notes=approval_notes
     )
 
+    # Session 914.4: Increment daily progression count
+    new_count = increment_progression_count()
+    rate_stats = get_daily_progression_stats()
+    logger.info(
+        f"[Session 914.4] Progression count: {new_count}/{rate_stats['limit']} "
+        f"({rate_stats['remaining']} remaining today)"
+    )
+
     result = {
         'success': True,
         'previous_stage': current_stage.stage,
@@ -373,7 +517,8 @@ def progress_initiative_stage(
         'confidence': confidence,
         'initiative_id': str(initiative_id),
         'initiative_name': initiative.name,
-        'approved_at': timezone.now().isoformat()
+        'approved_at': timezone.now().isoformat(),
+        'rate_stats': rate_stats  # Session 914.4
     }
 
     if deliverable:
