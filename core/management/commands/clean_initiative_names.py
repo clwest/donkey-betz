@@ -59,37 +59,65 @@ def extract_clean_title(initiative) -> str:
     description = initiative.description or ''
     parent_topic = initiative.parent_topic or ''
 
-    # Option 1: Use parent_topic if it's cleaner
-    if parent_topic and len(parent_topic) < 100 and not is_bad_name(parent_topic):
-        return parent_topic[:100]
+    # Option 1: Use parent_topic if it's cleaner and short
+    if parent_topic and len(parent_topic) < 60 and not is_bad_name(parent_topic):
+        return _title_case(parent_topic)
 
-    # Option 2: Extract first sentence/clause from description
+    # Option 2: Extract from description
     if description:
         # Look for "Auto-created for: X" pattern
         match = re.search(r'Auto-created (?:initiative )?for[: ]+(.*?)(?:\.|$)', description, re.IGNORECASE)
         if match:
             topic = match.group(1).strip()
-            if topic and len(topic) < 100:
-                return topic[:100]
+            if topic and len(topic) < 60:
+                return _title_case(topic)
 
-    # Option 3: Take first part before special characters
-    for delimiter in [';', ' -> ', ' → ', ':', ',']:
+    # Option 3: Extract first meaningful phrase (before special chars)
+    # Be aggressive - stop at first special character
+    for delimiter in [';', ' -> ', ' → ', ':', ',', '/', '=']:
         if delimiter in name:
             first_part = name.split(delimiter)[0].strip()
-            if first_part and len(first_part) > 5:
-                # Capitalize first letter
-                cleaned = first_part[0].upper() + first_part[1:] if first_part else first_part
-                return cleaned[:100]
+            # Clean up technical prefixes
+            first_part = re.sub(r'^[>\-\s]+', '', first_part)
+            if first_part and len(first_part) >= 5:
+                # Truncate to max 50 chars, title case it
+                return _title_case(first_part[:50])
 
-    # Option 4: Just truncate and clean up
-    # Remove special characters and truncate
-    cleaned = re.sub(r'[<>→;]', '', name)
-    cleaned = cleaned.strip()
-    if cleaned:
-        cleaned = cleaned[0].upper() + cleaned[1:] if cleaned else cleaned
-        return cleaned[:80] + '...' if len(cleaned) > 80 else cleaned
+    # Option 4: Take first 3-4 words only
+    words = name.split()[:4]
+    if words:
+        cleaned = ' '.join(words)
+        cleaned = re.sub(r'^[>\-\s]+', '', cleaned)  # Remove leading special chars
+        return _title_case(cleaned[:50])
 
-    return name[:80] + '...' if len(name) > 80 else name
+    return name[:50]
+
+
+def _title_case(text: str) -> str:
+    """Convert text to title case, handling edge cases."""
+    if not text:
+        return text
+
+    # Remove leading special characters
+    text = re.sub(r'^[>\-\s]+', '', text)
+
+    # If it's already title-cased or uppercase, return as-is
+    if text[0].isupper():
+        # Just ensure reasonable length
+        return text[:50] if len(text) > 50 else text
+
+    # Title case it
+    words = text.split()
+    titled = []
+    small_words = {'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with'}
+    for i, word in enumerate(words):
+        if i == 0 or word.lower() not in small_words:
+            titled.append(word.capitalize())
+        else:
+            titled.append(word.lower())
+
+    result = ' '.join(titled)
+    return result[:50] if len(result) > 50 else result
 
 
 class Command(BaseCommand):
