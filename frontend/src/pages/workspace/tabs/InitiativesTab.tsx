@@ -1016,17 +1016,17 @@ function ComprehensiveInitiativeModal({
               </div>
               <p className="text-gray-400 text-sm mb-4">{trace.initiative.description}</p>
 
-              {/* Completeness Score + Priority/Purpose badges */}
+              {/* Session 907: Stage Completion + Priority/Purpose badges */}
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-dark-border rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-green-500 to-emerald-400"
-                      style={{ width: `${trace.trace_completeness.completeness_score}%` }}
+                      style={{ width: `${(trace.stages.filter(s => s.status === 'APPROVED').length / 5) * 100}%` }}
                     />
                   </div>
                   <span className="text-sm text-green-400 font-medium">
-                    {trace.trace_completeness.completeness_score.toFixed(0)}% Complete
+                    {trace.stages.filter(s => s.status === 'APPROVED').length}/5 Stages
                   </span>
                 </div>
                 <span className={cn(
@@ -1082,7 +1082,11 @@ function ComprehensiveInitiativeModal({
             </div>
             <div className="text-center p-2 bg-dark-bg/50 rounded-lg">
               <div className="text-lg font-bold text-purple-400">
-                {trace.deliverable ? Math.round(trace.deliverable.content_length / 1000) + 'k' : '—'}
+                {/* Session 907: Sum all stage document content lengths */}
+                {(() => {
+                  const totalChars = trace.stages.reduce((sum, s) => sum + (s.content_length || 0), 0);
+                  return totalChars > 0 ? Math.round(totalChars / 1000) + 'k' : '—';
+                })()}
               </div>
               <div className="text-xs text-gray-400">Content (chars)</div>
             </div>
