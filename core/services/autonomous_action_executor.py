@@ -610,7 +610,9 @@ class AutonomousActionExecutor:
         logger.info(f"Research result - hasattr success: {hasattr(result, 'success')}, success value: {result.success if hasattr(result, 'success') else 'N/A'}, research_successful: {research_successful}")
 
         # Session 866: Self-unblocking pattern - if research failed or data insufficient, try to unblock
+        # Session 905: Enhanced to create ResearchResult record and schedule retry task
         unblock_result = None
+        research_result_record = None
         data_insufficient = not findings or len(findings) < 50
         if not research_successful or data_insufficient:
             logger.warning(f"[Session 866] Research may need unblocking - success: {research_successful}, findings length: {len(findings) if findings else 0}")
@@ -620,6 +622,19 @@ class AutonomousActionExecutor:
                     missing_data_type='spider' if data_insufficient else 'general'
                 )
                 logger.info(f"[Session 866] Self-unblock triggered: {unblock_result.get('unblock_type')}")
+
+                # Session 905: Create ResearchResult record to track blocked state
+                research_result_record = self._create_blocked_research_result(
+                    topic=topic,
+                    reasoning=reasoning,
+                    findings=findings,
+                    findings_detailed=findings_detailed,
+                    owner_agent=owner_agent,
+                    unblock_result=unblock_result
+                )
+                if research_result_record:
+                    logger.info(f"[Session 905] Created blocked ResearchResult: {research_result_record.id}")
+
             except Exception as unblock_error:
                 logger.warning(f"[Session 866] Self-unblock failed: {unblock_error}")
 
@@ -1011,6 +1026,130 @@ class AutonomousActionExecutor:
                 'error': str(e),
                 'message': f"Could not auto-unblock: {topic}"
             }
+
+    def _create_blocked_research_result(
+        self,
+        topic: str,
+        reasoning: str,
+        findings: str,
+        findings_detailed: List[Dict],
+        owner_agent: str,
+        unblock_result: Dict[str, Any]
+    ) -> Any:
+        """
+        Session 905: Create a ResearchResult record when research is blocked.
+
+        This enables the self-unblock loop by:
+        1. Creating a persistent record of blocked research
+        2. Linking to the Initiative and Stage
+        3. Scheduling a retry task
+
+        Args:
+            topic: Research topic
+            reasoning: Why research was requested
+            findings: Partial findings collected
+            findings_detailed: Detailed findings list
+            owner_agent: Agent responsible
+            unblock_result: Result from _trigger_self_unblock
+
+        Returns:
+            ResearchResult or None
+        """
+        try:
+            from core.models_research import ResearchResult
+            from core.models_document_registry import Initiative, InitiativeStage
+            from core.tasks import retry_blocked_research
+            from datetime import timedelta
+            import uuid
+
+            # Find or create the Initiative for this topic
+            initiative = None
+            initiative_stage = None
+
+            # First try to find existing initiative by topic
+            try:
+                initiative = Initiative.objects.filter(
+                    name__icontains=topic[:100]
+                ).order_by('-created_at').first()
+            except Exception:
+                pass
+
+            if not initiative:
+                # Create new initiative
+                try:
+                    initiative = Initiative.objects.create(
+                        name=topic[:200],
+                        description=f"Auto-created from blocked research. {reasoning[:500]}",
+                        status='ACTIVE',
+                        purpose='learning',
+                        current_stage=1,
+                        created_by='ResearchAgent'
+                    )
+                    logger.info(f"[Session 905] Created new Initiative: {initiative.id}")
+
+                    # Create all 5 stages
+                    for stage_num in range(1, 6):
+                        InitiativeStage.objects.create(
+                            initiative=initiative,
+                            stage=stage_num,
+                            status='PENDING' if stage_num > 1 else 'BLOCKED'
+                        )
+                except Exception as init_error:
+                    logger.warning(f"[Session 905] Could not create Initiative: {init_error}")
+
+            # Get Stage 1 if initiative exists
+            if initiative:
+                try:
+                    initiative_stage = InitiativeStage.objects.get(
+                        initiative=initiative,
+                        stage=1
+                    )
+                    # Mark stage as BLOCKED
+                    initiative_stage.status = 'BLOCKED'
+                    initiative_stage.notes = f"Blocked: Insufficient data. Spider spawned: {unblock_result.get('unblock_type')}"
+                    initiative_stage.save(update_fields=['status', 'notes', 'updated_at'])
+                except InitiativeStage.DoesNotExist:
+                    pass
+
+            # Create the ResearchResult record
+            research_result = ResearchResult.objects.create(
+                id=uuid.uuid4(),
+                initiative=initiative,
+                initiative_stage=initiative_stage,
+                topic=topic[:500],
+                research_type='data_analysis',
+                status='blocked',
+                data_sufficient=False,
+                blocked_reason=f"Insufficient data. Triggered: {unblock_result.get('unblock_type')}",
+                retry_count=0,
+                max_retries=3,
+                retry_after=timezone.now() + timedelta(minutes=30),
+                unblock_trigger='spider_data_arrival',
+                queries=[topic],
+                external_sources=findings_detailed[:10] if findings_detailed else [],
+                findings={'partial': findings[:2000] if findings else 'No findings yet'},
+                summary=f"Research blocked on: {topic}. Awaiting spider data.",
+                conducted_by=owner_agent,
+                confidence_score=0.2,
+            )
+
+            logger.info(f"[Session 905] Created blocked ResearchResult: {research_result.id}")
+
+            # Schedule the retry task
+            try:
+                task = retry_blocked_research.apply_async(
+                    args=[str(research_result.id)],
+                    eta=research_result.retry_after
+                )
+                logger.info(f"[Session 905] Scheduled retry task: {task.id} for {research_result.retry_after}")
+            except Exception as task_error:
+                logger.warning(f"[Session 905] Could not schedule retry task: {task_error}")
+
+            return research_result
+
+        except Exception as e:
+            logger.error(f"[Session 905] Failed to create blocked ResearchResult: {e}")
+            return None
 
     def _synthesize_single_deliverable(
         self,

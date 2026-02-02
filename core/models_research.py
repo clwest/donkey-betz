@@ -134,11 +134,40 @@ class ResearchResult(models.Model):
         ('in_progress', 'In Progress'),
         ('complete', 'Complete'),
         ('failed', 'Failed'),
+        ('blocked', 'Blocked - Awaiting Data'),  # Session 905: Insufficient data
     ]
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending'
+    )
+
+    # Session 905: Data sufficiency tracking for self-unblock loop
+    data_sufficient = models.BooleanField(
+        default=True,
+        help_text='Whether research has sufficient data to proceed'
+    )
+    blocked_reason = models.TextField(
+        blank=True,
+        help_text='Reason research is blocked (e.g., "Insufficient spider data")'
+    )
+    retry_count = models.IntegerField(
+        default=0,
+        help_text='Number of times research has been retried'
+    )
+    max_retries = models.IntegerField(
+        default=3,
+        help_text='Maximum retry attempts before escalation'
+    )
+    retry_after = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When to retry blocked research'
+    )
+    unblock_trigger = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='What should trigger unblocking (e.g., "spider_data_arrival")'
     )
 
     # Timestamps
@@ -185,6 +214,66 @@ class ResearchResult(models.Model):
         self.status = 'failed'
         self.findings = {'error': error_message}
         self.save(update_fields=['status', 'findings'])
+
+    def mark_blocked(self, reason='Insufficient data', retry_minutes=30):
+        """
+        Session 905: Mark research as blocked awaiting data.
+
+        Args:
+            reason: Why research is blocked
+            retry_minutes: How long to wait before retry (default 30)
+        """
+        from datetime import timedelta
+
+        self.status = 'blocked'
+        self.data_sufficient = False
+        self.blocked_reason = reason
+        self.retry_after = timezone.now() + timedelta(minutes=retry_minutes)
+        self.unblock_trigger = 'spider_data_arrival'
+        self.save(update_fields=[
+            'status', 'data_sufficient', 'blocked_reason',
+            'retry_after', 'unblock_trigger', 'updated_at'
+        ])
+
+        # Update the associated InitiativeStage to BLOCKED
+        if self.initiative_stage:
+            self.initiative_stage.status = 'BLOCKED'
+            self.initiative_stage.notes = f"Blocked: {reason}. Retry scheduled."
+            self.initiative_stage.save(update_fields=['status', 'notes', 'updated_at'])
+
+    def can_retry(self):
+        """Check if research can be retried."""
+        if self.status != 'blocked':
+            return False
+        if self.retry_count >= self.max_retries:
+            return False
+        if self.retry_after and timezone.now() < self.retry_after:
+            return False
+        return True
+
+    def schedule_retry(self):
+        """
+        Session 905: Schedule a Celery task to retry this blocked research.
+
+        Returns:
+            task_id or None
+        """
+        if not self.can_retry():
+            return None
+
+        from core.tasks import retry_blocked_research
+        from django.conf import settings
+
+        # Calculate eta for retry
+        eta = self.retry_after or timezone.now()
+
+        # Schedule the retry task
+        task = retry_blocked_research.apply_async(
+            args=[str(self.id)],
+            eta=eta
+        )
+
+        return task.id if task else None
 
     def create_research_brief(self):
         """
