@@ -1329,6 +1329,91 @@ function ComprehensiveInitiativeModal({
             </div>
           )}
 
+          {/* SESSION 904: LIVE ACTIVITY SECTION */}
+          {trace.active_work && trace.active_work.length > 0 && (
+            <div className="border border-cyan-500/30 rounded-lg overflow-hidden bg-cyan-500/5">
+              <div className="flex items-center gap-3 p-4 border-b border-cyan-500/20">
+                <div className="relative">
+                  <Loader2 size={18} className="text-cyan-400 animate-spin" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+                </div>
+                <span className="font-medium text-cyan-400">Live Activity</span>
+                <span className="text-sm text-gray-400">{trace.active_work.filter(w => w.status !== 'completed').length} active</span>
+              </div>
+              <div className="p-4 space-y-3">
+                {trace.active_work.map((work) => (
+                  <div
+                    key={work.id}
+                    className={cn(
+                      'flex items-center gap-4 p-3 rounded-lg border',
+                      work.status === 'running' && 'bg-cyan-500/10 border-cyan-500/30',
+                      work.status === 'completed' && 'bg-green-500/5 border-green-500/20',
+                      work.status === 'pending' && 'bg-yellow-500/5 border-yellow-500/20',
+                    )}
+                  >
+                    {/* Agent icon */}
+                    <div className={cn(
+                      'w-10 h-10 rounded-full flex items-center justify-center',
+                      work.status === 'running' && 'bg-cyan-500/20',
+                      work.status === 'completed' && 'bg-green-500/20',
+                      work.status === 'pending' && 'bg-yellow-500/20',
+                    )}>
+                      {work.status === 'running' ? (
+                        <Loader2 size={18} className="text-cyan-400 animate-spin" />
+                      ) : work.status === 'completed' ? (
+                        <CheckCircle2 size={18} className="text-green-400" />
+                      ) : (
+                        <Clock size={18} className="text-yellow-400" />
+                      )}
+                    </div>
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{work.agent_name}</span>
+                        {work.stage_num && (
+                          <span className="px-1.5 py-0.5 rounded text-xs bg-dark-border text-gray-400">
+                            Stage {work.stage_num}
+                          </span>
+                        )}
+                        <span className={cn(
+                          'px-1.5 py-0.5 rounded text-xs',
+                          work.status === 'running' && 'bg-cyan-500/20 text-cyan-400',
+                          work.status === 'completed' && 'bg-green-500/20 text-green-400',
+                          work.status === 'pending' && 'bg-yellow-500/20 text-yellow-400',
+                        )}>
+                          {work.status}
+                        </span>
+                      </div>
+                      {work.current_step && (
+                        <div className="text-sm text-gray-400 truncate">{work.current_step}</div>
+                      )}
+                      {work.task_description && !work.current_step && (
+                        <div className="text-sm text-gray-500 truncate">{work.task_description}</div>
+                      )}
+                    </div>
+                    {/* Progress */}
+                    {work.status === 'running' && work.progress_percentage > 0 && (
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-cyan-400">{work.progress_percentage}%</div>
+                        <div className="w-16 h-1.5 bg-dark-border rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-cyan-400 transition-all"
+                            style={{ width: `${work.progress_percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {work.status === 'completed' && work.execution_time_seconds && (
+                      <div className="text-xs text-gray-500">
+                        {work.execution_time_seconds}s
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* STAGES SECTION */}
           <div className="border border-dark-border rounded-lg overflow-hidden">
             <button
