@@ -438,15 +438,29 @@ class HiveMindExecutionPipeline:
         5. Pilot Execution
         """
         from core.models_document_registry import Initiative, InitiativeStage
+        from core.services.initiative_title_generator import generate_initiative_title
 
         # Session 884: Circuit breaker check
         from core.services.initiative_circuit_breaker import can_create_initiative
         if not can_create_initiative(bypass_check=bypass_circuit_breaker):
             raise ValueError("Initiative creation paused by circuit breaker - backlog too high")
 
+        # Session 905: Generate clean title from proposed feature
+        # Use the extracted name if valid, otherwise generate from content
+        raw_name = proposed_feature.get('name')
+        raw_text = proposed_feature.get('raw_text', '')
+        question = session.question if session.question else ''
+
+        initiative_name = generate_initiative_title(
+            content=raw_text or raw_name or '',
+            topic_hint=raw_name or question,
+            max_length=80,
+            use_llm=True
+        )
+
         # Create the initiative
         initiative = Initiative.objects.create(
-            name=proposed_feature['name'],
+            name=initiative_name,
             description=f"""
 Initiative created from HiveMind brainstorm session.
 
@@ -487,7 +501,7 @@ Initiative created from HiveMind brainstorm session.
                 initiative=initiative,
                 stage=stage_num,
                 status='PENDING',
-                notes=f"Auto-created for {proposed_feature['name']} from HiveMind session",
+                notes=f"Auto-created for {initiative_name} from HiveMind session",
             )
 
         logger.info(
