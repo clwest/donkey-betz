@@ -1617,6 +1617,56 @@ def initiative_origin_trace_api(request, initiative_id):
             }
 
         # Calculate trace completeness
+        # Session 904: Get active agent work on this initiative
+        trace['active_work'] = []
+        try:
+            from core.models.agents_registry.models import AgentExecution
+            # Find any running or recent executions for this initiative
+            active_executions = AgentExecution.objects.filter(
+                status__in=['running', 'initializing', 'pending'],
+            ).order_by('-started_at')[:20]
+
+            for exec in active_executions:
+                ctx = exec.context or {}
+                # Check if this execution is for our initiative
+                if ctx.get('initiative_id') == str(initiative_id) or ctx.get('initiative_id') == initiative_id:
+                    trace['active_work'].append({
+                        'id': str(exec.id),
+                        'agent_name': exec.template.name if exec.template else 'Unknown Agent',
+                        'status': exec.status,
+                        'stage_num': ctx.get('stage_num'),
+                        'progress_percentage': exec.progress_percentage or 0,
+                        'current_step': exec.current_step or '',
+                        'started_at': exec.started_at.isoformat() if exec.started_at else None,
+                        'task_description': (exec.input_data or {}).get('task', '')[:200] if exec.input_data else '',
+                    })
+
+            # Also check for recent completed work (last hour) to show what just finished
+            from django.utils import timezone
+            from datetime import timedelta
+            recent_completed = AgentExecution.objects.filter(
+                status='completed',
+                completed_at__gte=timezone.now() - timedelta(hours=1),
+            ).order_by('-completed_at')[:10]
+
+            for exec in recent_completed:
+                ctx = exec.context or {}
+                if ctx.get('initiative_id') == str(initiative_id) or ctx.get('initiative_id') == initiative_id:
+                    trace['active_work'].append({
+                        'id': str(exec.id),
+                        'agent_name': exec.template.name if exec.template else 'Unknown Agent',
+                        'status': 'completed',
+                        'stage_num': ctx.get('stage_num'),
+                        'progress_percentage': 100,
+                        'current_step': 'Completed',
+                        'started_at': exec.started_at.isoformat() if exec.started_at else None,
+                        'completed_at': exec.completed_at.isoformat() if exec.completed_at else None,
+                        'execution_time_seconds': exec.execution_time_seconds,
+                        'task_description': (exec.input_data or {}).get('task', '')[:200] if exec.input_data else '',
+                    })
+        except Exception as e:
+            logger.warning(f"Could not fetch active work: {e}")
+
         # Session 900: Added origin_signals to completeness
         has_origin_signals = trace.get('origin_signals') is not None
         trace['trace_completeness'] = {
