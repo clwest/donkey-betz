@@ -32069,7 +32069,8 @@ def generate_initiative_stage_document(self, initiative_id: str, stage_num: int)
     - Stage 4: FullStackDeveloperAgent (Technical Design)
     - Stage 5: ThinkingAgent (Pilot Execution Plan)
     """
-    from core.models_document_registry import Initiative, InitiativeStage, Document
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.models_unified_system import SelfBlog
     from core.models import Agent, UserMessage, Conversation
 
     logger.info(f"📝 [STAGE-GEN] Generating Stage {stage_num} document for initiative {initiative_id}")
@@ -32167,13 +32168,24 @@ Stage {stage_num} ({config['template']}) should include:
 
         document_content = result.get('response', '')
 
-        # Create the document
-        document = Document.objects.create(
+        # Create the document (Session 906: Use SelfBlog, not Document)
+        # Map stage to category
+        stage_category = {
+            1: 'research_brief',
+            2: 'prototype_plan',
+            3: 'technical_document',  # Evaluation Protocol
+            4: 'technical_document',  # Technical Design
+            5: 'technical_document',  # Pilot Execution
+        }
+        document = SelfBlog.objects.create(
             title=f"{initiative.name} - Stage {stage_num}: {config['template']}",
-            content=document_content[:1000],  # Preview
+            intro=document_content[:500],  # First 500 chars as intro
             full_text=document_content,
-            document_type='initiative_stage',
+            category=stage_category.get(stage_num, 'technical_document'),
+            content_type='internal',  # Initiative stage docs are internal
+            status='draft',
             initiative=initiative,
+            initiative_stage=stage,
         )
 
         # Link document to stage
