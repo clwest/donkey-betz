@@ -28622,7 +28622,10 @@ def workspace_autopilot_tick(
                     if not agent_class:
                         raise ValueError(f'Agent class not found: {agent_name}')
 
-                    system_user = User.objects.filter(username='system').first()
+                    # Session 908: Use system_autonomous for workspace operations
+                    system_user = User.objects.filter(username='system_autonomous').first()
+                    if not system_user:
+                        system_user = User.objects.filter(username='system').first()
                     if not system_user:
                         system_user = User.objects.first()
 
