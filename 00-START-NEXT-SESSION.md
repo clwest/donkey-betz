@@ -1,49 +1,59 @@
 # Session 908 - Start Here
 
-**Previous Session:** 907 (Initiative Modal UI Fix + Name Cleanup)
+**Previous Session:** 907 (Initiative UI + Operations Workspace Fix)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **130 INITIATIVES** | **UI METRICS FIXED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **130 INITIATIVES** | **WORKSPACE FIXED**
 
 ---
 
 ## What Was Accomplished in Session 907
 
-### Initiative Modal UI Fixes
+### 1. Initiative Modal UI Fixes
 
 Fixed misleading metrics in the Initiative modal:
 
 | Metric | Before | After |
 |--------|--------|-------|
-| **Progress Bar** | "71% Complete" (trace data completeness) | "0/5 Stages" (actual stage progress) |
+| **Progress Bar** | "71% Complete" (trace data completeness) | "X/5 Stages" (actual stage progress) |
 | **Content (chars)** | Only showed if deliverable exists | Shows total from all stage documents |
 | **Initiative Names** | 150-char truncated descriptions | Extracted meaningful titles |
 
-### Code Changes
+**58 initiative names cleaned in production** via improved `clean_initiative_names` command.
 
-1. **API Enhancement** (`views_research_demo.py`)
-   - Added `content_length` to each stage in origin-trace response
-   - Enables proper Content (chars) calculation from stage documents
+### 2. Action Items API Authentication Fix
 
-2. **Frontend Fix** (`InitiativesTab.tsx`)
-   - Progress bar now shows actual stages completed (X/5 APPROVED)
-   - Content (chars) sums all stage document lengths instead of only deliverable
+Fixed 401 Unauthorized errors in production logs. The action-items fetch calls were missing `credentials: 'include'`:
+- Fetch action items (GET)
+- Update action item (POST)
+- Create action item (POST)
+- Extract action items (POST)
 
-3. **Name Cleanup Command** (`clean_initiative_names.py`)
-   - Improved extraction strategies:
-     - Extract quoted text at start
-     - Use text before colon if meaningful
-     - First sentence extraction
-     - Word-boundary truncation fallback
-   - **58 initiative names cleaned in production**
+### 3. Operations Tab Workspace Fix
 
-### What the UI Metrics Now Mean
+**Problem:** Operations were going to wrong workspace. Recent Celery tasks created a new "donkey-betz-codebase" workspace (47 ops) while users viewed "Donkey Betz" (6,780 ops).
 
-| Stat | Source | Description |
-|------|--------|-------------|
-| **Agents** | `trace.agents.length` | Agents that participated in creating this initiative |
-| **Messages** | `conversation.message_count` | Messages in the source conversation |
-| **Stages Done** | Count of `APPROVED` stages | Stages that passed quality review |
-| **Content (chars)** | Sum of `stage.content_length` | Total characters in all stage documents |
+**Root Cause:** `get_active_workspace()` used `.first()` without ordering, picking arbitrary workspace when multiple were active.
+
+**Fix:** Order by `-total_operations, -created_at` to prefer established workspace.
+
+**Production Data Updated:**
+| Workspace | Before | After |
+|-----------|--------|-------|
+| **Donkey Betz** | 3,736 | **6,780** (primary) |
+| donkey-betz-codebase | 32 | 47 |
+| System Autonomous | 0 | 45 |
+
+---
+
+## PRs Merged (Session 907)
+
+| PR | Description |
+|----|-------------|
+| #717 | Session 906 full pipeline cleanup results |
+| #718 | Initiative modal UI metrics + name cleanup |
+| #719 | Session 907 handoff documentation |
+| #720 | Fix action-items API authentication (credentials: include) |
+| #721 | Consistent workspace selection for Celery tasks |
 
 ---
 
@@ -61,14 +71,8 @@ Fixed misleading metrics in the Initiative modal:
 - 19 initiatives at Pilot Execution stage
 - Review for final deliverable creation
 
----
-
-## PRs Merged (Session 907)
-
-| PR | Description |
-|----|-------------|
-| #717 | Session 906 full pipeline cleanup results |
-| #718 | Initiative modal UI metrics + name cleanup |
+### 4. Verify Operations Tab
+- Confirm new operations appear in "Donkey Betz" workspace after fix deployment
 
 ---
 
@@ -92,6 +96,13 @@ python manage.py shell -c "
 from core.models_document_registry import Initiative
 from collections import Counter
 print(Counter(Initiative.objects.values_list('current_stage', flat=True)))
+"
+
+# Check workspace operation counts
+python manage.py shell -c "
+from core.models_skin_layer import ProjectWorkspace, WorkspaceOperation
+for ws in ProjectWorkspace.objects.filter(is_active=True).order_by('-total_operations'):
+    print(f'{ws.name}: {ws.total_operations} ops')
 "
 ```
 
@@ -117,6 +128,9 @@ TOTAL:                       130 initiatives
 |------|----------|---------|
 | `process_initiative_auto_progression` | Every 10 min | Progress stages at 60%+ quality |
 | `detect_duplicate_initiatives` | Daily 2 AM | Alert on new duplicate clusters |
+| `agent-conversation-cycle` | Every 5 min | Run agent conversations |
+| `agent-dream-cycle` | Every 15 min | Generate agent dreams |
+| `agent-learning-cycle` | Every 10 min | Run learning cycles |
 
 ---
 
@@ -124,7 +138,7 @@ TOTAL:                       130 initiatives
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **907** | Initiative Modal UI Fix - Stages progress + Content chars + 58 names cleaned | This file |
+| **907** | Initiative UI Fix + Action Items Auth + Workspace Selection | This file |
 | **906** | Major Database Cleanup - 178 initiatives deleted, 306 orphan docs removed | `SESSION_906_FULL_CLEANUP.md` |
 | **905** | Initiative Auto-Progression - Quality-based stage advancement | `SESSION_905_AUTO_PROGRESSION.md` |
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
@@ -143,9 +157,21 @@ TOTAL:                       130 initiatives
 | Celery Tasks | 262 |
 | Services | 129 |
 | **Initiatives** | **130** |
+| **Workspaces** | **4** (1 primary) |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
 ---
 
-**Session 907 Complete - Initiative modal now shows accurate stage progress and content metrics!**
+## Key Files Modified (Session 907)
+
+| File | Change |
+|------|--------|
+| `core/views_research_demo.py` | Added `content_length` to stage API response |
+| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Fixed progress bar, content chars, action-items auth |
+| `core/management/commands/clean_initiative_names.py` | Improved title extraction strategies |
+| `core/services/workspace_manager.py` | Fixed workspace selection ordering |
+
+---
+
+**Session 907 Complete - Initiative modal fixed, action-items authenticated, workspace selection consistent!**
