@@ -911,21 +911,26 @@ function ComprehensiveInitiativeModal({
   })
 
   // Session 902: Fetch action items
+  // Session 907: Added credentials: 'include' to fix 401 errors
   const { data: actionItemsData, isLoading: actionItemsLoading } = useQuery({
     queryKey: ['initiative-action-items', initiativeId],
     queryFn: async () => {
-      const res = await fetch(`/api/initiatives/${initiativeId}/action-items/`)
+      const res = await fetch(`/api/initiatives/${initiativeId}/action-items/`, {
+        credentials: 'include',
+      })
       if (!res.ok) throw new Error('Failed to fetch action items')
       return res.json() as Promise<ActionItemsResponse>
     },
   })
 
   // Session 902: Update action item status
+  // Session 907: Added credentials: 'include' to fix 401 errors
   const updateActionItem = useMutation({
     mutationFn: async ({ itemId, updates }: { itemId: string; updates: Record<string, unknown> }) => {
       const res = await fetch(`/api/action-items/${itemId}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(updates),
       })
       if (!res.ok) throw new Error('Failed to update action item')
@@ -937,11 +942,13 @@ function ComprehensiveInitiativeModal({
   })
 
   // Session 902: Create action item
+  // Session 907: Added credentials: 'include' to fix 401 errors
   const createActionItem = useMutation({
     mutationFn: async (title: string) => {
       const res = await fetch(`/api/initiatives/${initiativeId}/action-items/create/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ title, priority: 'medium' }),
       })
       if (!res.ok) throw new Error('Failed to create action item')
@@ -954,10 +961,12 @@ function ComprehensiveInitiativeModal({
   })
 
   // Session 902: Extract action items from conversations
+  // Session 907: Added credentials: 'include' to fix 401 errors
   const extractActionItems = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/initiatives/${initiativeId}/action-items/extract/`, {
         method: 'POST',
+        credentials: 'include',
       })
       if (!res.ok) throw new Error('Failed to extract action items')
       return res.json()
