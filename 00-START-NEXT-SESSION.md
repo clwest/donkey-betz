@@ -25,6 +25,28 @@
 
 **PR:** #750 - merged and deployed to production
 
+### 2. Removed Fictional Stories from Content Voice System
+
+**Problem:** SelfBlog posts were including fictional "struggle stories" presented as real events:
+- "The Great Agent Rebellion of 2025"
+- "The 3am Debug Sessions"
+- "When Dreams Became Real"
+- "Learning From 6,000+ Conversations"
+
+These were hardcoded in `core/services/content_voice_system.py` and randomly injected into all blog content.
+
+**Root Cause:** The `VoiceProfile` class had a `struggles` list with fictional stories that were:
+1. Injected via `get_voice_injection()` method
+2. Included in the `STRUGGLE STORY` section of the flagship prompt template
+
+**Solution:** Removed all fictional story injection:
+- Deleted `struggles` field from `VoiceProfile` dataclass
+- Removed struggle story from `get_voice_injection()`
+- Removed `STRUGGLE STORY` section from flagship prompt
+- System now uses only real incidents from `NarrativeInjectionService` (agent recoveries, dream executions, learning moments, etc.)
+
+**PR:** #752 - merged and deployed to production
+
 ---
 
 ## What Was Accomplished in Session 912
@@ -119,6 +141,8 @@ ContentWriterAgent generates generic blog posts instead of structured Prototype 
 | PR | Description |
 |----|-------------|
 | #750 | Fix 401 Unauthorized on action-items API endpoints |
+| #751 | Session 913 handoff update |
+| #752 | Remove fictional stories from content voice system |
 
 ---
 
