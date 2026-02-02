@@ -1,8 +1,56 @@
-# Session 911 - Start Here
+# Session 912 - Start Here
 
-**Previous Session:** 910 (Workspace Context Tracking Fix)
+**Previous Session:** 911 (Zombie Task Cleanup + Spider Connector Fix)
 **Date:** February 2, 2026
 **Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **136 INITIATIVES** | **ALL CONNECTED TO DONKEY BETZ**
+
+---
+
+## What Was Accomplished in Session 911
+
+### 1. Fixed Zombie Task Accumulation (Critical)
+
+**Problem:** 52 agent tasks were stuck in "running" status for up to 13 hours. The cleanup task wasn't catching them.
+
+**Root Cause:** Cleanup only checked `status='in_progress'` but tasks use `status='running'`
+
+**Solution:**
+```python
+# Before - missed zombies
+stale_tasks = AgentExecution.objects.filter(status='in_progress', ...)
+
+# After - catches all zombies
+stale_tasks = AgentExecution.objects.filter(status__in=['running', 'in_progress'], ...)
+```
+
+**Additional Changes:**
+- Reduced threshold from 2 hours to 30 minutes
+- Cleaned 52 zombie tasks manually on production
+- Verified cleanup now works correctly
+
+### 2. Fixed Spider Agent Connector Crash
+
+**Problem:** Production celery-worker crashing with `'SpiderData' object has no attribute 'processed_data'`
+
+**Root Cause:** Two SpiderData models with different fields:
+- `core.models_unified_system.SpiderData` → `processed_data` / `raw_data`
+- `persistence.models.SpiderData` → `structured_data` / `content`
+
+**Solution:** Use `getattr` with fallbacks to handle both models gracefully in `intelligence/spider_agent_connector.py`
+
+### 3. Verified Workspace Context Tracking
+
+Confirmed the Session 910 fix is working - `workspace: true` now shows in Agent Tasks UI.
+
+---
+
+## PRs Merged (Session 911)
+
+| PR | Description |
+|----|-------------|
+| #737 | Update handoff document with data display fix |
+| #738 | Fix spider_agent_connector to handle both SpiderData models |
+| #739 | Fix zombie task cleanup - check both 'running' and 'in_progress' |
 
 ---
 
