@@ -346,6 +346,27 @@ class Initiative(models.Model):
         help_text='Session 914.3: When drift was last checked'
     )
 
+    # Session 914.5: Daily Priorities
+    is_daily_focus = models.BooleanField(
+        default=False,
+        help_text='Session 914.5: Is this initiative in today\'s daily focus?'
+    )
+
+    daily_focus_date = models.DateField(
+        null=True, blank=True,
+        help_text='Session 914.5: Date when marked as daily focus'
+    )
+
+    manual_priority_rank = models.IntegerField(
+        null=True, blank=True,
+        help_text='Session 914.5: Manual priority rank (1-5, lower = higher priority)'
+    )
+
+    manual_priority_reason = models.TextField(
+        blank=True, default='',
+        help_text='Session 914.5: Reason for manual priority override'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
