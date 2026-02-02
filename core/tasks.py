@@ -26167,10 +26167,12 @@ def promote_to_shared_knowledge(min_confidence: float = 0.7):
 
 def _get_workspace_for_skin_layer():
     """
-    Session 885/909: Helper to get an active workspace for SKIN layer tasks.
+    Session 885/909/910: Helper to get an active workspace for SKIN layer tasks.
+
+    Session 910: Now uses centralized platform_config for configurable workspace selection.
 
     Looks for workspaces in this order:
-    1. "Donkey Betz" workspace (the primary production workspace)
+    1. Primary workspace from platform_config (configurable, default: "Donkey Betz")
     2. Codebase workspace (type='codebase')
     3. Any active workspace with allow_file_write=True, ordered by total_operations
     4. System user's workspace
@@ -26183,14 +26185,14 @@ def _get_workspace_for_skin_layer():
 
     User = get_user_model()
 
-    # Session 909: Prefer "Donkey Betz" workspace explicitly
-    workspace = ProjectWorkspace.objects.filter(
-        name__icontains='donkey betz',
-        is_active=True
-    ).order_by('-total_operations').first()
-
-    if workspace:
-        return workspace.user, workspace
+    # Session 910: Use centralized platform config for primary workspace
+    try:
+        from core.services.platform_config import get_primary_workspace
+        workspace = get_primary_workspace()
+        if workspace:
+            return workspace.user, workspace
+    except Exception as e:
+        logger.debug(f"Platform config unavailable, using fallback: {e}")
 
     # 2. Try codebase workspace
     workspace = ProjectWorkspace.objects.filter(

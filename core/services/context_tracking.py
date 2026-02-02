@@ -112,23 +112,10 @@ def build_context_tracking(
     except Exception as e:
         logger.debug(f"Feedback context unavailable: {e}")
 
-    # Session 910: Check for workspace context
+    # Session 910: Check for workspace context using centralized config
     try:
-        from core.models_skin_layer import ProjectWorkspace
-
-        # Match the logic in AgentRouter._get_workspace_context()
-        # Session 909: Prefer "Donkey Betz" workspace explicitly
-        workspace = ProjectWorkspace.objects.filter(
-            name__icontains='donkey betz',
-            is_active=True
-        ).order_by('-total_operations').first()
-
-        if not workspace:
-            # Fallback to any active workspace
-            workspace = ProjectWorkspace.objects.filter(
-                is_active=True
-            ).order_by('-total_operations').first()
-
+        from core.services.platform_config import get_primary_workspace
+        workspace = get_primary_workspace()
         tracking['workspace'] = bool(workspace)
 
     except Exception as e:
