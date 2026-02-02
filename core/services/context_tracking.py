@@ -1,6 +1,7 @@
 """
 Context Tracking Helper for Agent Executions
 Session 758: Centralized context injection tracking for Integration Health observability.
+Session 910: Added workspace and docs tracking to match AgentRouter context_summary.
 
 This module provides a helper function to build context tracking data that can be
 added to AgentExecution.input_data from any execution entry point.
@@ -20,7 +21,7 @@ Usage:
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,18 +29,19 @@ logger = logging.getLogger(__name__)
 def build_context_tracking(
     agent_name: str,
     task: str,
-    include_full_context: bool = False
+    _include_full_context: bool = False  # Reserved for future use
 ) -> Dict[str, Any]:
     """
     Build context tracking data for an agent execution.
 
     Session 758: This enables Integration Health to track context injection
     rates across all execution entry points.
+    Session 910: Added workspace and docs context tracking.
 
     Args:
         agent_name: Name of the agent being executed
         task: The task being executed
-        include_full_context: If True, also builds and returns the full context
+        _include_full_context: Reserved for future use (builds full context)
 
     Returns:
         Dict with context injection summary for tracking
@@ -52,6 +54,11 @@ def build_context_tracking(
         'advisor_insights': False,
         'performance_feedback': False,
         'scifi_context': False,
+        # Session 910: Added workspace and docs tracking
+        'workspace': False,
+        'docs': False,
+        'knowledge_state': False,
+        'user_context': False,
         'tracking_source': 'context_tracking_helper',
     }
 
@@ -105,22 +112,54 @@ def build_context_tracking(
     except Exception as e:
         logger.debug(f"Feedback context unavailable: {e}")
 
+    # Session 910: Check for workspace context
+    try:
+        from core.models_skin_layer import ProjectWorkspace
+
+        # Match the logic in AgentRouter._get_workspace_context()
+        # Session 909: Prefer "Donkey Betz" workspace explicitly
+        workspace = ProjectWorkspace.objects.filter(
+            name__icontains='donkey betz',
+            is_active=True
+        ).order_by('-total_operations').first()
+
+        if not workspace:
+            # Fallback to any active workspace
+            workspace = ProjectWorkspace.objects.filter(
+                is_active=True
+            ).order_by('-total_operations').first()
+
+        tracking['workspace'] = bool(workspace)
+
+    except Exception as e:
+        logger.debug(f"Workspace context unavailable: {e}")
+
+    # Session 910: Check for docs context
+    try:
+        from pathlib import Path
+        docs_dir = Path(__file__).parent.parent.parent / 'docs'
+        tracking['docs'] = docs_dir.exists() and any(docs_dir.glob('*.md'))
+
+    except Exception as e:
+        logger.debug(f"Docs context unavailable: {e}")
+
     logger.debug(
-        f"[Session 758] Context tracking for {agent_name}: "
+        f"[Session 758/910] Context tracking for {agent_name}: "
         f"spider={tracking['spider_data']}, learning={tracking['learning_patterns']}, "
-        f"advisor={tracking['advisor_insights']}, feedback={tracking['performance_feedback']}"
+        f"advisor={tracking['advisor_insights']}, feedback={tracking['performance_feedback']}, "
+        f"workspace={tracking['workspace']}, docs={tracking['docs']}"
     )
 
     return tracking
 
 
-def build_context_tracking_quick(agent_name: str) -> Dict[str, Any]:
+def build_context_tracking_quick(agent_name: str) -> Dict[str, Any]:  # noqa: ARG001
     """
     Quick version that just marks tracking is enabled without full context lookup.
     Use this for health checks or when full context isn't needed.
 
     Args:
-        agent_name: Name of the agent
+        agent_name: Name of the agent (unused but kept for consistent signature)
 
     Returns:
         Minimal tracking dict
@@ -133,6 +172,11 @@ def build_context_tracking_quick(agent_name: str) -> Dict[str, Any]:
         'advisor_insights': False,
         'performance_feedback': False,
         'scifi_context': False,
+        # Session 910: Added workspace and docs tracking
+        'workspace': False,
+        'docs': False,
+        'knowledge_state': False,
+        'user_context': False,
         'tracking_source': 'quick_tracking',
         'is_health_check': True,
     }
