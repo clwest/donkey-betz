@@ -1594,14 +1594,21 @@ def initiative_origin_trace_api(request, initiative_id):
                         'triggered_at': topic.triggered_at.isoformat() if topic.triggered_at else None,
                     }
 
-        # Get stages
-        stages = InitiativeStage.objects.filter(initiative=initiative).order_by('stage')
+        # Get stages with document content info
+        # Session 907: Include content_length for each stage
+        stages = InitiativeStage.objects.filter(initiative=initiative).select_related('document').order_by('stage')
         for stage in stages:
+            # Get document content length if document exists
+            content_length = 0
+            if stage.document:
+                content_length = len(stage.document.full_text or '') if hasattr(stage.document, 'full_text') else 0
+
             trace['stages'].append({
                 'stage': stage.stage,
                 'name': STAGE_NAMES.get(stage.stage, f'Stage {stage.stage}'),
                 'status': stage.status,
                 'document_id': str(stage.document_id) if stage.document_id else None,
+                'content_length': content_length,  # Session 907: Add for Content (chars) metric
                 'approved_at': stage.approved_at.isoformat() if stage.approved_at else None,
                 'approved_by': stage.approved_by,
             })
