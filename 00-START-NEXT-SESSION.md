@@ -1,95 +1,101 @@
-# Session 906 - Start Here
+# Session 907 - Start Here
 
-**Previous Session:** 905/906 (Initiative Auto-Progression + Title Cleanup)
+**Previous Session:** 906 (Initiative Tracking + Duplicate Detection + Docs Update)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE AUTO-PROGRESSION** | **TITLE CLEANUP COMPLETE** | **3 STAGE 2 DOCS GENERATED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE AUTO-PROGRESSION** | **TRACKING COMPLETE** | **DOCS UPDATED**
 
 ---
 
-## What Was Accomplished in Session 905/906
+## What Was Accomplished in Session 906
 
-### Initiative Auto-Progression Pipeline - 7 PRs Merged
+### Initiative Tracking & Quality - 6 New Features
 
-| PR | Feature |
-|----|---------|
-| #703 | **Auto-Progression Service** - Quality-based stage advancement (60%+ confidence) |
-| #704 | **Import Fix** - Fixed `Document` → `SelfBlog` import in Celery task |
-| #705 | **trigger_stage2_generation command** - Management command for Stage 2 docs |
-| #706 | **Sync Mode** - `--sync` flag for railway run without Celery |
-| #707 | **clean_initiative_names command** - Detect/fix technical description titles |
-| #709 | **Aggressive Title Extraction** - Stop at first special character |
-| #710 | **2-Word Titles** - Replace all delimiters, take first 2 words only |
+| Feature | Description |
+|---------|-------------|
+| **Orphan Initiative Tracking Fix** | Auto-creates HiveMindSession + AgentExecution for initiatives missing Origin & Trigger |
+| **Duplicate Initiative Detection** | Jaccard similarity clustering to find/merge similar initiatives |
+| **`fix_orphan_initiative_tracking` command** | Backfill tracking records for pre-Session 906 initiatives |
+| **`consolidate_duplicate_initiatives` command** | Detect and merge duplicate initiatives |
+| **`autonomous` session mode** | New HiveMindSession mode for system-triggered sessions |
+| **Documentation Update** | Updated DREAM_INITIATIVE_WORKFLOW.md and SERVICES.md |
 
 ### Key Changes:
 
-**1. Initiative Auto-Progression**
-- Quality-based stage advancement when criteria met (60%+ confidence)
-- Stage 1→2→3→4→5 automatic progression
-- Flexible section name matching (alternatives for each required section)
-- `check_stage_for_progression()`, `progress_initiative_stage()`, `trigger_next_stage_generation()`
+**1. Origin & Trigger Tracking**
+- Auto-created initiatives now get full tracking records:
+  - `HiveMindSession` with `session_mode='autonomous'`
+  - `HiveMindContribution` linking agent to session
+  - `AgentExecution` with `metadata.initiative_id`
+- Source: `autonomous_action_executor.py:_create_blocked_research_result`
+- 99 orphan initiatives fixed via backfill script
 
-**2. Stage 2 Document Generation**
-- Fixed import error blocking generation
-- Management command: `python manage.py trigger_stage2_generation --run --sync --limit=5`
-- **3 Prototype Plan documents generated** in production
+**2. Duplicate Initiative Detection**
+- Jaccard keyword similarity (threshold: 0.7)
+- Merges duplicates into oldest (primary) initiative
+- Preserves all stage documents during merge
+- 41 duplicates merged into 17 primaries
 
-**3. Initiative Title Cleanup**
-- Replaced all special characters (→, >, :, ;, ,, /, =) with spaces
-- Takes only first 2 words for clean titles
-- **4 initiatives cleaned**: "Derived Expertise", "Normalization Analysis", "Flagging Redaction", "Format Headline"
-
----
-
-## Database Changes (Session 905/906)
-
-**3 New Stage 2 Documents Created:**
-- Research briefs progressed from Stage 1 → Stage 2
-- Prototype Plan documents generated via ThinkingAgent
-
-**4 Initiative Titles Cleaned:**
-| Before | After |
-|--------|-------|
-| `derived expertise as inputs, outputs ranked...` | `Derived Expertise` |
-| `> normalization -> analysis (top-perform...` | `Normalization Analysis` |
-| `flagging/redaction at ingest, Persona AP...` | `Flagging Redaction` |
-| `format/headline/frequency/engagement ext...` | `Format Headline` |
+**3. Management Commands Verified in Production**
+```bash
+# All commands tested with railway run:
+railway run python manage.py clean_initiative_names --limit=10           # 4 would fix
+railway run python manage.py consolidate_duplicate_initiatives --limit=50  # No new dupes
+railway run python manage.py fix_orphan_initiative_tracking --limit=10    # 1 would fix
+railway run python manage.py backfill_research_brief_links --limit=10     # 10 would link
+```
 
 ---
 
 ## NEXT PRIORITIES for Session 907
 
-### 1. Run Full Auto-Progression Batch
-- Run `process_initiative_auto_progression` Celery task
-- Progress more Stage 1 → Stage 2 initiatives
+### 1. Backfill Research Brief Links (High Priority)
+- 269+ research briefs still unlinked to InitiativeStages
+- Run: `railway run python manage.py backfill_research_brief_links --fix --limit=100`
 
-### 2. Backfill Research Brief Links
-- 269/288 research briefs still unlinked to InitiativeStages
-- Run `python manage.py backfill_research_brief_links --fix`
+### 2. Clean Remaining Initiative Names
+- 4 initiatives still have technical description titles
+- Run: `railway run python manage.py clean_initiative_names --fix --limit=50`
 
-### 3. UI Verification
-- Verify clean initiative titles display in UI
-- Check Stage 2 documents appear in modal
+### 3. Fix Last Orphan Initiative
+- 1 initiative still missing tracking records
+- Run: `railway run python manage.py fix_orphan_initiative_tracking --fix`
+
+### 4. UI Verification
+- Verify Origin & Trigger shows in Initiative modal
+- Check that Agents/Messages counts are populated
 
 ---
 
-## New Management Commands
+## New Management Commands (Session 906)
 
 ```bash
-# Clean initiative names (dry run)
-python manage.py clean_initiative_names
+# Fix orphan initiatives (create tracking records)
+python manage.py fix_orphan_initiative_tracking              # Dry run
+python manage.py fix_orphan_initiative_tracking --fix        # Apply fixes
+python manage.py fix_orphan_initiative_tracking --initiative-id=<uuid>  # Single
 
-# Clean initiative names (fix)
-python manage.py clean_initiative_names --fix --limit=50
+# Consolidate duplicate initiatives
+python manage.py consolidate_duplicate_initiatives            # Dry run
+python manage.py consolidate_duplicate_initiatives --fix      # Merge duplicates
+python manage.py consolidate_duplicate_initiatives --threshold=0.8  # Higher similarity
 
-# Trigger Stage 2 document generation (sync mode for railway)
-python manage.py trigger_stage2_generation --run --sync --limit=5
+# Clean initiative names (from Session 905)
+python manage.py clean_initiative_names                       # Dry run
+python manage.py clean_initiative_names --fix --limit=50      # Apply fixes
 
-# Backfill research brief links (dry run)
-python manage.py backfill_research_brief_links
-
-# Backfill research brief links (fix)
-python manage.py backfill_research_brief_links --fix --limit=50
+# Backfill research brief links
+python manage.py backfill_research_brief_links                # Dry run
+python manage.py backfill_research_brief_links --fix --limit=100
 ```
+
+---
+
+## Celery Beat Schedules (Auto-Running)
+
+| Task | Schedule | Purpose |
+|------|----------|---------|
+| `process_initiative_auto_progression` | Every 10 min | Progress stages at 60%+ quality |
+| `detect_duplicate_initiatives` | Daily 2 AM | Alert on new duplicate clusters |
 
 ---
 
@@ -125,27 +131,13 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 ---
 
-## Recent PRs
-
-| PR | Description |
-|----|-------------|
-| #710 | fix(Session 906): Simplify title extraction to 2 clean words |
-| #709 | fix(Session 906): Make initiative title extraction more aggressive |
-| #707 | feat(Session 906): Add clean_initiative_names management command |
-| #706 | fix(Session 906): Add sync mode for trigger_stage2_generation |
-| #705 | feat(Session 906): Add trigger_stage2_generation management command |
-| #704 | fix(Session 906): Fix SelfBlog import in generate_initiative_stage_document |
-| #703 | feat(Session 905): Add auto-progression service with flexible section matching |
-
----
-
 ## Recent Session History
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **906** | Initiative Title Cleanup - clean_initiative_names command, 4 titles fixed | This file |
-| **905** | Initiative Auto-Progression - Quality-based stage advancement, Stage 2 doc generation | `SESSION_905_AUTO_PROGRESSION.md` |
-| **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
+| **906** | Initiative Tracking + Duplicate Detection + Docs Update | This file |
+| **905** | Initiative Auto-Progression - Quality-based stage advancement | `SESSION_905_AUTO_PROGRESSION.md` |
+| **904** | Initiative UI Overhaul - Stages view, comprehensive modal | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
 | **903** | Celery OOM Fix + Signal Intelligence Wired | `SESSION_903_SIGNAL_CELERY_FIX.md` |
 | **902** | Action Item Tracking | `SESSION_902_ACTION_ITEM_TRACKING.md` |
 
@@ -160,8 +152,8 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 | Advisors | 25 |
 | Personas | 139 |
 | Database Models | 386+ |
-| Celery Tasks | 261 |
-| Services | 130 |
+| Celery Tasks | 262 |
+| Services | 129 |
 | Experiments (Success) | 820 |
 | Learnings | 1,152,295 |
 | Initiatives | 200+ |
@@ -182,12 +174,11 @@ Stage 4: Technical Design
 Stage 5: Pilot Execution    → Final Deliverable
 ```
 
-**Auto-Progression Service:**
-- `core/services/initiative_auto_progression.py`
-- Evaluates quality: content length, required sections, no "insufficient data" markers
-- Confidence threshold: 60%
-- Triggers next stage document generation via Celery
+**Session 906 Tracking:**
+- Auto-created initiatives now get HiveMindSession + AgentExecution records
+- Origin & Trigger UI can display provenance chain
+- `session_mode='autonomous'` identifies system-triggered sessions
 
 ---
 
-**Initiative Auto-Progression Complete - UI should show clean titles!**
+**Session 906 Complete - Origin & Trigger tracking now works for all initiatives!**
