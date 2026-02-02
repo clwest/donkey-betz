@@ -537,14 +537,12 @@ def _get_recent_activity() -> List[Dict[str, Any]]:
                     tool_results = ex.output_data.get('tools_used', [])[:5]
 
         # Session 832: Extract input_data summary
-        input_summary = None
+        # Session 910: Send full input_data - let frontend handle display truncation
+        input_data_full = None
         if ex.input_data and isinstance(ex.input_data, dict):
-            # Get a summary of input parameters (keys and truncated values)
-            input_keys = list(ex.input_data.keys())[:5]
-            input_summary = {
-                k: (str(ex.input_data[k])[:100] + '...' if len(str(ex.input_data[k])) > 100 else str(ex.input_data[k]))
-                for k in input_keys
-            }
+            # Send full input_data as proper dict (not str converted)
+            # Frontend will handle display with expandable views
+            input_data_full = ex.input_data
 
         # Session 832: Get agent category name (it's a ForeignKey)
         agent_category_name = None
@@ -555,8 +553,9 @@ def _get_recent_activity() -> List[Dict[str, Any]]:
             'id': str(ex.id),
             'agent_name': ex.agent.name if ex.agent else 'Unknown',
             'agent_category': agent_category_name,
-            'task': ex.task[:100] if ex.task else 'Task in progress',
-            'task_full': ex.task if ex.task else 'Task in progress',
+            # Session 910: Send full task, use task_preview for list display
+            'task': ex.task if ex.task else 'Task in progress',
+            'task_preview': ex.task[:100] + '...' if ex.task and len(ex.task) > 100 else ex.task or 'Task in progress',
             # Session 832: Add created_at for when task started
             'created_at': ex.created_at.isoformat() if ex.created_at else None,
             'completed_at': ex.completed_at.isoformat() if ex.completed_at else None,
@@ -568,8 +567,8 @@ def _get_recent_activity() -> List[Dict[str, Any]]:
             'error_message': ex.error_message if ex.status == 'failed' else None,
             'output_summary': output_summary[:500] if output_summary else None,
             'tool_results': tool_results,
-            # Session 832: Add input data and user
-            'input_data': input_summary,
+            # Session 832/910: Full input_data as proper dict (not truncated string)
+            'input_data': input_data_full,
             'triggered_by': ex.user.username if ex.user else 'system',
         })
 

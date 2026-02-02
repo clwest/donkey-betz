@@ -326,7 +326,12 @@ export function CommandTab({
 
 // Session 851: Helper component for rendering input parameter values cleanly
 // Avoids raw JSON display by formatting objects into readable key-value pairs
+// Session 910: Expandable InputParamRow with full data display
 function InputParamRow({ name, value }: { name: string; value: unknown }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const MAX_STRING_LENGTH = 200
+  const MAX_INITIAL_FIELDS = 5
+
   // Handle null/undefined
   if (value === null || value === undefined) {
     return (
@@ -349,24 +354,46 @@ function InputParamRow({ name, value }: { name: string; value: unknown }) {
     }
     // Simple array of primitives
     if (value.every(v => typeof v !== 'object' || v === null)) {
+      const displayItems = isExpanded ? value : value.slice(0, 10)
       return (
         <div className="flex flex-col gap-1">
           <span className="text-primary-400 font-medium font-mono">{name}:</span>
           <div className="pl-3 flex flex-wrap gap-1">
-            {value.map((item, idx) => (
+            {displayItems.map((item, idx) => (
               <span key={idx} className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-300">
                 {String(item)}
               </span>
             ))}
+            {value.length > 10 && !isExpanded && (
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="px-1.5 py-0.5 text-primary-400 hover:text-primary-300 text-xs"
+              >
+                +{value.length - 10} more
+              </button>
+            )}
           </div>
         </div>
       )
     }
-    // Array of objects - show count with summary
+    // Array of objects - show count with expandable detail
     return (
       <div className="flex flex-col gap-1">
-        <span className="text-primary-400 font-medium font-mono">{name}:</span>
-        <span className="pl-3 text-gray-400">{value.length} item{value.length !== 1 ? 's' : ''}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-primary-400 font-medium font-mono">{name}:</span>
+          <span className="text-gray-400">{value.length} item{value.length !== 1 ? 's' : ''}</span>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-primary-400 hover:text-primary-300 text-xs"
+          >
+            {isExpanded ? 'collapse' : 'expand'}
+          </button>
+        </div>
+        {isExpanded && (
+          <pre className="pl-3 text-xs text-gray-300 bg-gray-900 rounded p-2 overflow-auto max-h-48">
+            {JSON.stringify(value, null, 2)}
+          </pre>
+        )}
       </div>
     )
   }
@@ -382,25 +409,44 @@ function InputParamRow({ name, value }: { name: string; value: unknown }) {
         </div>
       )
     }
-    // Show nested key-value pairs (max 5, then truncate)
+    // Session 910: Show all fields with expand/collapse for large objects
+    const displayEntries = isExpanded ? entries : entries.slice(0, MAX_INITIAL_FIELDS)
+    const hasMore = entries.length > MAX_INITIAL_FIELDS
     return (
       <div className="flex flex-col gap-1">
-        <span className="text-primary-400 font-medium font-mono">{name}:</span>
+        <div className="flex items-center gap-2">
+          <span className="text-primary-400 font-medium font-mono">{name}:</span>
+          {hasMore && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-primary-400 hover:text-primary-300 text-xs"
+            >
+              {isExpanded ? `collapse (${entries.length} fields)` : `expand all (${entries.length} fields)`}
+            </button>
+          )}
+        </div>
         <div className="pl-3 space-y-1">
-          {entries.slice(0, 5).map(([k, v]) => (
+          {displayEntries.map(([k, v]) => (
             <div key={k} className="flex items-start gap-2 text-gray-300">
-              <span className="text-gray-500">{k}:</span>
-              <span className="break-words">
+              <span className="text-gray-500 shrink-0">{k}:</span>
+              <span className={typeof v === 'boolean' ? (v ? 'text-accent-green' : 'text-accent-red') : 'break-words'}>
                 {typeof v === 'object' && v !== null
                   ? Array.isArray(v)
                     ? `[${v.length} items]`
                     : `{${Object.keys(v).length} fields}`
-                  : String(v)}
+                  : typeof v === 'boolean'
+                    ? v ? 'true' : 'false'
+                    : String(v)}
               </span>
             </div>
           ))}
-          {entries.length > 5 && (
-            <span className="text-gray-500 text-[10px]">+{entries.length - 5} more fields</span>
+          {hasMore && !isExpanded && (
+            <button
+              onClick={() => setIsExpanded(true)}
+              className="text-gray-500 hover:text-gray-300 text-[10px]"
+            >
+              +{entries.length - MAX_INITIAL_FIELDS} more fields
+            </button>
           )}
         </div>
       </div>
@@ -420,12 +466,48 @@ function InputParamRow({ name, value }: { name: string; value: unknown }) {
   }
 
   // Handle primitives (string, number)
+  // Session 910: Make long strings expandable
+  const stringValue = String(value)
+  const isLongString = stringValue.length > MAX_STRING_LENGTH
+
+  if (isLongString && !isExpanded) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-primary-400 font-medium font-mono">{name}:</span>
+        <div className="pl-3">
+          <span className="text-gray-300 break-words whitespace-pre-wrap">
+            {stringValue.slice(0, MAX_STRING_LENGTH)}...
+          </span>
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="ml-2 text-primary-400 hover:text-primary-300 text-xs"
+          >
+            show more ({stringValue.length} chars)
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex items-start gap-2">
-      <span className="text-primary-400 font-medium font-mono">{name}:</span>
-      <span className="text-gray-300 break-words whitespace-pre-wrap">
-        {String(value)}
-      </span>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span className="text-primary-400 font-medium font-mono">{name}:</span>
+        {isLongString && (
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="text-primary-400 hover:text-primary-300 text-xs"
+          >
+            collapse
+          </button>
+        )}
+      </div>
+      <pre className={cn(
+        "text-gray-300 whitespace-pre-wrap break-words",
+        isLongString ? "pl-3 bg-gray-900 rounded p-2 text-xs max-h-96 overflow-auto" : ""
+      )}>
+        {stringValue}
+      </pre>
     </div>
   )
 }
