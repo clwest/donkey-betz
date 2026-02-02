@@ -5,11 +5,11 @@ Usage:
     # Dry run - show what would be triggered
     python manage.py trigger_stage2_generation
 
-    # Actually trigger generation (limit 5)
+    # Trigger async via Celery (limit 5)
     python manage.py trigger_stage2_generation --run --limit=5
 
-    # Generate for all initiatives at Stage 2
-    python manage.py trigger_stage2_generation --run --limit=100
+    # Run synchronously (no Celery, for Railway run)
+    python manage.py trigger_stage2_generation --run --sync --limit=5
 """
 
 from django.core.management.base import BaseCommand
@@ -28,6 +28,11 @@ class Command(BaseCommand):
             help='Actually trigger generation (default is dry run)',
         )
         parser.add_argument(
+            '--sync',
+            action='store_true',
+            help='Run synchronously instead of via Celery (use with railway run)',
+        )
+        parser.add_argument(
             '--limit',
             type=int,
             default=5,
@@ -36,13 +41,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from core.models_document_registry import Initiative, InitiativeStage
-        from core.tasks import generate_initiative_stage_document
 
         run = options['run']
+        sync = options['sync']
         limit = options['limit']
 
+        mode = 'SYNC' if sync else 'ASYNC (Celery)'
         self.stdout.write(self.style.NOTICE(
-            f"{'TRIGGERING' if run else 'DRY RUN'}: Stage 2 document generation (limit: {limit})"
+            f"{'RUNNING' if run else 'DRY RUN'} [{mode}]: Stage 2 generation (limit: {limit})"
         ))
 
         # Get initiatives at Stage 2
@@ -64,28 +70,149 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Found {len(needing_docs)} initiatives needing Stage 2 documents")
 
-        triggered_count = 0
+        success_count = 0
         error_count = 0
 
         for init in needing_docs:
             if run:
-                try:
-                    task = generate_initiative_stage_document.delay(str(init.id), 2)
-                    triggered_count += 1
-                    self.stdout.write(self.style.SUCCESS(
-                        f"TRIGGERED: {init.name[:50]} | Task: {task.id}"
-                    ))
-                except Exception as e:
-                    error_count += 1
-                    self.stdout.write(self.style.ERROR(
-                        f"ERROR: {init.name[:50]} - {e}"
-                    ))
+                if sync:
+                    # Run synchronously (no Celery)
+                    result = self._generate_stage_document_sync(init)
+                    if result.get('success'):
+                        success_count += 1
+                        self.stdout.write(self.style.SUCCESS(
+                            f"✅ GENERATED: {init.name[:50]} | Doc: {result.get('document_id', 'N/A')[:8]}"
+                        ))
+                    else:
+                        error_count += 1
+                        self.stdout.write(self.style.ERROR(
+                            f"❌ ERROR: {init.name[:50]} - {result.get('error', 'Unknown')}"
+                        ))
+                else:
+                    # Run async via Celery
+                    try:
+                        from core.tasks import generate_initiative_stage_document
+                        task = generate_initiative_stage_document.delay(str(init.id), 2)
+                        success_count += 1
+                        self.stdout.write(self.style.SUCCESS(
+                            f"📤 QUEUED: {init.name[:50]} | Task: {task.id}"
+                        ))
+                    except Exception as e:
+                        error_count += 1
+                        self.stdout.write(self.style.ERROR(
+                            f"❌ ERROR: {init.name[:50]} - {e}"
+                        ))
             else:
-                self.stdout.write(
-                    f"WOULD TRIGGER: {init.name[:50]}"
-                )
-                triggered_count += 1
+                self.stdout.write(f"WOULD PROCESS: {init.name[:50]}")
+                success_count += 1
 
-        self.stdout.write(self.style.SUCCESS(f"\n{'TRIGGERED' if run else 'WOULD TRIGGER'}: {triggered_count}"))
+        action = 'GENERATED' if sync else 'QUEUED'
+        self.stdout.write(self.style.SUCCESS(f"\n{action if run else 'WOULD PROCESS'}: {success_count}"))
         if error_count:
             self.stdout.write(self.style.ERROR(f"ERRORS: {error_count}"))
+
+    def _generate_stage_document_sync(self, initiative):
+        """
+        Generate a Stage 2 document synchronously (no Celery).
+        This is a simplified version of the Celery task for use with railway run.
+        """
+        from core.models_document_registry import InitiativeStage
+        from core.models_unified_system import SelfBlog
+        from core.models import Agent
+        from core.agent_router import AgentRouter
+
+        stage_num = 2
+
+        # Get or create stage record
+        stage, created = InitiativeStage.objects.get_or_create(
+            initiative=initiative,
+            stage=stage_num,
+            defaults={'status': 'PENDING'}
+        )
+
+        if stage.document:
+            return {
+                'success': False,
+                'error': f'Stage {stage_num} already has document',
+                'document_id': str(stage.document.id)
+            }
+
+        # Build context from Stage 1
+        previous_context = []
+        try:
+            stage1 = InitiativeStage.objects.get(initiative=initiative, stage=1)
+            if stage1.document:
+                doc_content = stage1.document.full_text or ''
+                previous_context.append(f"## Stage 1: Research Brief\n{doc_content[:2000]}")
+        except InitiativeStage.DoesNotExist:
+            pass
+
+        context_text = "\n\n".join(previous_context) if previous_context else "No previous stage documents."
+
+        # Build the generation prompt
+        prompt = f"""Generate a Prototype Plan document for this initiative.
+
+## Initiative
+**Name:** {initiative.name}
+**Description:** {initiative.description or 'No description provided'}
+
+## Previous Stage Context
+{context_text}
+
+## Your Task
+Create a comprehensive Prototype Plan document that builds on the research brief.
+Include:
+- Architecture Overview
+- Implementation Approach
+- Key Components
+- Risk Assessment
+- Timeline/Milestones
+"""
+
+        try:
+            # Get the agent
+            agent_model = Agent.objects.filter(name='ThinkingAgent').first()
+            if not agent_model:
+                return {'success': False, 'error': 'ThinkingAgent not found'}
+
+            # Execute the agent
+            router = AgentRouter()
+            result = router.route(
+                agent_name=agent_model.name,
+                task=prompt,
+                context={'initiative_id': str(initiative.id), 'stage': stage_num}
+            )
+
+            if not result or not result.message:
+                return {'success': False, 'error': 'Agent returned empty response'}
+
+            document_content = result.message
+
+            # Create the document
+            document = SelfBlog.objects.create(
+                title=f"{initiative.name} - Stage 2: Prototype Plan",
+                intro=document_content[:500],
+                full_text=document_content,
+                category='prototype_plan',
+                content_type='internal',
+                status='draft',
+                initiative=initiative,
+                initiative_stage=stage,
+            )
+
+            # Link document to stage
+            stage.document = document
+            stage.status = 'DRAFT'
+            stage.save()
+
+            return {
+                'success': True,
+                'document_id': str(document.id),
+                'stage': stage_num,
+                'initiative_id': str(initiative.id),
+                'initiative_name': initiative.name
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating Stage {stage_num}: {e}")
+            return {'success': False, 'error': str(e)}
