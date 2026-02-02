@@ -1,8 +1,73 @@
 # Session 915 - Start Here
 
-**Previous Session:** 914.2 (Execution Tracks)
+**Previous Session:** 914.3 (Semantic Quality Gates)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **FOUNDER INTENT + EXECUTION TRACKS** | **PIPELINE GOVERNED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **FOUNDER INTENT + EXECUTION TRACKS + SEMANTIC DRIFT** | **PIPELINE GOVERNED**
+
+---
+
+## What Was Accomplished in Session 914.3
+
+### Semantic Quality Gates (ChatGPT-Suggested Governance #3)
+
+**Problem:** Stage documents could drift from the original initiative intent, producing "beautiful docs for the wrong thing." The system only checked structural quality, not semantic alignment.
+
+**Solution:** Added semantic drift detection using embeddings:
+
+**How It Works:**
+1. Compare initiative description + dream content against stage document
+2. Generate embeddings using OpenAI text-embedding-3-small
+3. Calculate cosine similarity
+4. Block progression if similarity < threshold
+
+**New Fields (Initiative):**
+| Field | Type | Purpose |
+|-------|------|---------|
+| `drift_threshold` | Choice | `strict`/`balanced`/`relaxed`/`disabled` |
+| `drift_check_enabled` | Boolean | Whether to check drift |
+| `last_drift_score` | Float | Last recorded drift (0=aligned, 1=drifted) |
+| `last_drift_check_at` | DateTime | When drift was last checked |
+
+**New Fields (InitiativeStage):**
+| Field | Type | Purpose |
+|-------|------|---------|
+| `drift_score` | Float | Drift score for this stage |
+| `similarity_score` | Float | Similarity to initiative intent |
+| `drift_flagged` | Boolean | Whether flagged for drift |
+| `drift_override` | Boolean | Human override to allow progression |
+| `drift_override_by` | String | Who approved the override |
+| `drift_override_reason` | Text | Reason for override |
+
+**New Service:** `core/services/semantic_drift_detector.py`
+- `SemanticDriftDetector` class
+- `check_semantic_drift()` function
+- Stage-specific threshold adjustments (Stage 4-5 get +10% tolerance)
+
+**New Management Command:**
+```bash
+# Check drift for an initiative
+python manage.py check_initiative_drift --initiative-id=<uuid>
+
+# Check all initiatives
+python manage.py check_initiative_drift --all
+
+# List flagged initiatives
+python manage.py check_initiative_drift --list-flagged
+
+# Override drift
+python manage.py check_initiative_drift --initiative-id=<uuid> --stage=2 --override --reason="Intentional pivot"
+
+# Set threshold
+python manage.py check_initiative_drift --initiative-id=<uuid> --set-threshold=relaxed
+```
+
+**Files Changed:**
+- `core/models_document_registry.py` - Added drift fields
+- `core/migrations/0220_session_914_3_semantic_drift.py` - New migration
+- `core/services/semantic_drift_detector.py` - NEW: Drift detection service
+- `core/services/initiative_auto_progression.py` - Integrated drift checks
+- `core/management/commands/check_initiative_drift.py` - NEW: Management command
+- `docs/DREAM_INITIATIVE_WORKFLOW.md` - Updated documentation
 
 ---
 
