@@ -269,9 +269,17 @@ class ConversationInitiativePipeline:
             # Import models
             from core.models_document_registry import Initiative, InitiativeStage
             from core.models_deliverables import Deliverable
+            from core.services.initiative_title_generator import generate_initiative_title
 
-            # 1. Create Initiative
-            initiative_name = f"{topic[:100]}" if topic else f"Initiative-{conversation_id[:8]}"
+            # 1. Create Initiative with smart title generation (Session 905)
+            # Use content and topic to generate a clean, concise title
+            content_preview = extracted['content'][:2000] if extracted else ""
+            initiative_name = generate_initiative_title(
+                content=content_preview,
+                topic_hint=topic,
+                max_length=80,
+                use_llm=True
+            )
 
             # Ensure unique name
             base_name = initiative_name
