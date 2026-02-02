@@ -1577,7 +1577,26 @@ def scan_spider_opportunities(self):
 
     Session 880: Fixed async bug - use asyncio.run() instead of new_event_loop()
     to ensure aiohttp's ClientTimeout has proper task context.
+
+    Session 902: Added task lock to prevent concurrent execution (OOM fix).
+    Multiple simultaneous scans cause memory issues from unclosed aiohttp sessions.
     """
+    from django.core.cache import cache
+
+    # Session 902: Task lock to prevent concurrent execution
+    lock_key = 'scan_spider_opportunities_lock'
+    lock_timeout = 600  # 10 minutes max lock time
+
+    # Try to acquire lock
+    if not cache.add(lock_key, self.request.id, lock_timeout):
+        existing_task = cache.get(lock_key)
+        logger.warning(f"🕷️ Spider scan already running (task: {existing_task}), skipping...")
+        return {
+            'status': 'skipped',
+            'reason': 'Another scan is already in progress',
+            'existing_task': existing_task
+        }
+
     try:
         logger.info("🕷️ Starting scheduled spider opportunity scan...")
 
@@ -1611,6 +1630,9 @@ def scan_spider_opportunities(self):
             'status': 'error',
             'message': str(e)
         }
+    finally:
+        # Session 902: Always release the lock
+        cache.delete(lock_key)
 
 
 @shared_task(bind=True)

@@ -81,14 +81,20 @@ class WebRequestLayer:
             current_loop = None
 
         # Session 884: If session exists but was created in a different loop, close it
+        # Session 902: Fixed memory leak - must close connector before discarding session
         if self.session and self._session_loop and current_loop and self._session_loop != current_loop:
             logger.debug("Session created in different event loop, recreating...")
             try:
-                # Don't await close in a different loop - just discard
+                # connector.close() is synchronous and safe to call from any context
+                # This properly closes TCP connections to prevent memory leaks
+                if self.session.connector and not self.session.connector.closed:
+                    self.session.connector.close()
                 self.session = None
                 self._session_loop = None
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Error closing old session connector: {e}")
+                self.session = None
+                self._session_loop = None
 
         if not self.session:
             connector = aiohttp.TCPConnector(
@@ -112,9 +118,30 @@ class WebRequestLayer:
             self._session_loop = current_loop
 
     async def close(self):
-        """Clean up session"""
+        """Clean up session and connector properly"""
         if self.session:
-            await self.session.close()
+            try:
+                # Session 902: Close connector first to release TCP connections
+                if self.session.connector and not self.session.connector.closed:
+                    self.session.connector.close()
+                await self.session.close()
+            except Exception as e:
+                logger.warning(f"Error closing aiohttp session: {e}")
+            finally:
+                self.session = None
+                self._session_loop = None
+
+    def close_sync(self):
+        """Synchronous close for use outside async context (e.g., cleanup)"""
+        if self.session:
+            try:
+                if self.session.connector and not self.session.connector.closed:
+                    self.session.connector.close()
+            except Exception as e:
+                logger.warning(f"Error in sync close: {e}")
+            finally:
+                self.session = None
+                self._session_loop = None
 
     def _get_cache_key(self, url: str, params: Dict = None) -> str:
         """Generate cache key for URL and params"""
