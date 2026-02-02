@@ -31818,3 +31818,182 @@ def extract_action_items_from_session(self, session_id: str):
             'session_id': session_id,
             'error': str(e)
         }
+
+
+# =============================================================================
+# Session 905: Research Self-Unblock Loop
+# =============================================================================
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+def retry_blocked_research(self, research_result_id: str):
+    """
+    Session 905: Retry blocked research after spider data collection.
+
+    This task closes the self-unblock loop:
+    1. When research is blocked due to insufficient data, a spider is spawned
+    2. This task is scheduled to retry after the spider collects data
+    3. If data is now sufficient, research continues; otherwise retry or escalate
+
+    Args:
+        research_result_id: UUID of the blocked ResearchResult
+
+    Returns:
+        dict with retry status and next steps
+    """
+    from core.models_research import ResearchResult
+    from core.models_document_registry import InitiativeStage
+    from core.agents.research_agent import ResearchAgent
+    from django.utils import timezone
+
+    logger.info(f"🔄 [RESEARCH-RETRY] Attempting retry for ResearchResult {research_result_id}")
+
+    try:
+        research = ResearchResult.objects.get(id=research_result_id)
+    except ResearchResult.DoesNotExist:
+        logger.error(f"🔄 [RESEARCH-RETRY] ResearchResult {research_result_id} not found")
+        return {'status': 'failed', 'error': 'ResearchResult not found'}
+
+    # Check if already complete or failed
+    if research.status in ['complete', 'failed']:
+        logger.info(f"🔄 [RESEARCH-RETRY] Research already {research.status}, skipping")
+        return {'status': 'skipped', 'reason': f'Research already {research.status}'}
+
+    # Check retry limits
+    if research.retry_count >= research.max_retries:
+        logger.warning(f"🔄 [RESEARCH-RETRY] Max retries ({research.max_retries}) exceeded for {research_result_id}")
+        research.status = 'failed'
+        research.blocked_reason = f"Max retries exceeded. Last reason: {research.blocked_reason}"
+        research.save(update_fields=['status', 'blocked_reason', 'updated_at'])
+
+        # Update stage status
+        if research.initiative_stage:
+            research.initiative_stage.status = 'REJECTED'
+            research.initiative_stage.rejection_reason = 'Research failed after max retries'
+            research.initiative_stage.save(update_fields=['status', 'rejection_reason', 'updated_at'])
+
+        return {
+            'status': 'failed',
+            'error': 'Max retries exceeded',
+            'retry_count': research.retry_count
+        }
+
+    # Increment retry count
+    research.retry_count += 1
+    research.save(update_fields=['retry_count', 'updated_at'])
+
+    # Check for new spider data
+    from core.models_unified_system import SpiderData
+    recent_spider_data = SpiderData.objects.filter(
+        created_at__gte=research.created_at,
+        category__in=['tech', 'news', 'content', 'research']
+    ).count()
+
+    logger.info(f"🔄 [RESEARCH-RETRY] Found {recent_spider_data} spider data records since research started")
+
+    # Re-run research with updated data
+    try:
+        agent = ResearchAgent()
+        result = agent.execute(
+            task=f"Research topic (retry #{research.retry_count}): {research.topic}",
+            context={
+                'topic': research.topic,
+                'depth': 'comprehensive',
+                'autonomous': True,
+                'retry_attempt': research.retry_count,
+                'initiative_id': str(research.initiative_id),
+            },
+            scifi_context={},
+            spider_context={}
+        )
+
+        # Check if research succeeded
+        research_successful = result.success if hasattr(result, 'success') else False
+        findings = ""
+        if hasattr(result, 'data') and result.data:
+            if isinstance(result.data, dict):
+                results_list = result.data.get('results', [])
+                if results_list:
+                    findings = str(results_list)[:500]
+
+        data_sufficient = research_successful and len(findings) >= 50
+
+        if data_sufficient:
+            # Research succeeded!
+            research.status = 'complete'
+            research.data_sufficient = True
+            research.completed_at = timezone.now()
+            research.findings = {'retry_findings': findings[:2000]}
+            research.summary = f"Research completed on retry #{research.retry_count}"
+            research.save()
+
+            # Update stage to DRAFT (ready for review)
+            if research.initiative_stage:
+                research.initiative_stage.status = 'DRAFT'
+                research.initiative_stage.notes = f"Research completed after {research.retry_count} retry(ies)"
+                research.initiative_stage.save(update_fields=['status', 'notes', 'updated_at'])
+
+            logger.info(f"🔄 [RESEARCH-RETRY] SUCCESS! Research completed on retry #{research.retry_count}")
+            return {
+                'status': 'success',
+                'retry_count': research.retry_count,
+                'data_sufficient': True,
+                'message': 'Research completed successfully'
+            }
+        else:
+            # Still insufficient, schedule another retry
+            from datetime import timedelta
+            research.retry_after = timezone.now() + timedelta(minutes=30)
+            research.save(update_fields=['retry_after', 'updated_at'])
+
+            # Schedule next retry
+            self.apply_async(
+                args=[research_result_id],
+                eta=research.retry_after
+            )
+
+            logger.info(f"🔄 [RESEARCH-RETRY] Still insufficient data, scheduled retry #{research.retry_count + 1}")
+            return {
+                'status': 'retry_scheduled',
+                'retry_count': research.retry_count,
+                'next_retry': research.retry_after.isoformat(),
+                'message': 'Data still insufficient, scheduled another retry'
+            }
+
+    except Exception as e:
+        logger.error(f"🔄 [RESEARCH-RETRY] Research execution failed: {e}")
+        # Retry the task itself
+        raise self.retry(exc=e, countdown=300)
+
+
+@shared_task(bind=True, queue='default')
+def check_blocked_research_for_unblock(self):
+    """
+    Session 905: Periodic task to check all blocked research and trigger retries.
+
+    Runs every 15 minutes to find research that's ready to retry.
+    """
+    from core.models_research import ResearchResult
+    from django.utils import timezone
+
+    logger.info("🔍 [RESEARCH-UNBLOCK] Checking for blocked research ready to retry")
+
+    blocked_research = ResearchResult.objects.filter(
+        status='blocked',
+        retry_after__lte=timezone.now(),
+        retry_count__lt=models.F('max_retries')
+    )
+
+    triggered_count = 0
+    for research in blocked_research:
+        try:
+            retry_blocked_research.delay(str(research.id))
+            triggered_count += 1
+            logger.info(f"🔍 [RESEARCH-UNBLOCK] Triggered retry for {research.id}")
+        except Exception as e:
+            logger.error(f"🔍 [RESEARCH-UNBLOCK] Failed to trigger retry for {research.id}: {e}")
+
+    logger.info(f"🔍 [RESEARCH-UNBLOCK] Triggered {triggered_count} research retries")
+    return {
+        'status': 'success',
+        'triggered_count': triggered_count
+    }

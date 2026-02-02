@@ -2327,6 +2327,16 @@ app.conf.beat_schedule = {
             'expires': 3600,
         }
     },
+
+    # Session 905: Research Self-Unblock Loop
+    # Checks for blocked research that's ready to retry
+    'check-blocked-research': {
+        'task': 'core.tasks.check_blocked_research_for_unblock',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,
+        }
+    },
 }
 
 # Task routing configuration

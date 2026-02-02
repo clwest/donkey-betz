@@ -363,6 +363,7 @@ class InitiativeStage(models.Model):
         APPROVED = 'APPROVED', 'Approved'
         REJECTED = 'REJECTED', 'Rejected'
         SUPERSEDED = 'SUPERSEDED', 'Superseded'
+        BLOCKED = 'BLOCKED', 'Blocked - Awaiting Data'  # Session 905: For insufficient data
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     initiative = models.ForeignKey(
