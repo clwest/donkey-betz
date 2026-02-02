@@ -139,6 +139,13 @@ from ..models_ats_optimization import (
     ResumeRewriteOrder,
 )
 
+# Import signal intelligence models (Session 900 - Signal Provenance)
+from ..models_signal_intelligence import (
+    SignalCluster,
+    AutoTopic,
+    TopicSuggestion,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -307,4 +314,9 @@ __all__ = [
     'ATSKeywordMapping',
     'ResumeOptimizationLog',
     'ResumeRewriteOrder',
+
+    # Signal Intelligence - Signal Provenance (Session 900)
+    'SignalCluster',
+    'AutoTopic',
+    'TopicSuggestion',
 ]
