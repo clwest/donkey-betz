@@ -205,6 +205,34 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
             'founder_intent_summary': initiative.founder_intent_summary
         }
 
+    # Session 914.2: Check Execution Track constraints
+    # Fast Track stops at Stage 2
+    if initiative.is_fast_track and current_stage_num >= initiative.max_stage:
+        logger.info(f"[Session 914.2] Fast Track initiative {initiative.name} at max stage {initiative.max_stage}")
+        return {
+            'success': False,
+            'error': f'Fast Track initiative complete at Stage {initiative.max_stage}',
+            'stage': current_stage_num,
+            'can_progress': False,
+            'execution_track': 'fast_track',
+            'max_stage': initiative.max_stage,
+            'track_complete': True
+        }
+
+    # Institutional track requires stage approval for stages 2-4
+    if initiative.is_institutional and initiative.requires_stage_approval(current_stage_num):
+        if not initiative.is_stage_approved(current_stage_num):
+            logger.info(f"[Session 914.2] Institutional initiative {initiative.name} awaiting Stage {current_stage_num} approval")
+            return {
+                'success': False,
+                'error': f'Institutional track: Stage {current_stage_num} requires explicit approval',
+                'stage': current_stage_num,
+                'can_progress': False,
+                'execution_track': 'institutional',
+                'requires_stage_approval': True,
+                'compliance_reviewed': initiative.compliance_reviewed
+            }
+
     # Evaluate quality
     passes_quality, confidence, reason = evaluate_stage_quality(current_stage)
 
@@ -287,11 +315,21 @@ def progress_initiative_stage(
         logger.info(f"[Session 905] Initiative {initiative.name} completed! Final deliverable: {deliverable.id}")
         return result
 
+    # Session 914.2: Check if Fast Track has reached max stage
+    if initiative.is_fast_track and initiative.current_stage > initiative.max_stage:
+        result['fast_track_complete'] = True
+        result['execution_track'] = 'fast_track'
+        result['max_stage'] = initiative.max_stage
+        logger.info(f"[Session 914.2] Fast Track initiative {initiative.name} complete at Stage {initiative.max_stage}")
+        return result
+
     # Trigger next stage generation if requested
     if auto_generate_next and initiative.current_stage <= 5:
-        next_stage_result = trigger_next_stage_generation(initiative_id)
-        result['next_stage_triggered'] = next_stage_result.get('success', False)
-        result['next_stage_details'] = next_stage_result
+        # Session 914.2: Don't generate beyond max stage
+        if initiative.current_stage <= initiative.max_stage:
+            next_stage_result = trigger_next_stage_generation(initiative_id)
+            result['next_stage_triggered'] = next_stage_result.get('success', False)
+            result['next_stage_details'] = next_stage_result
 
     return result
 
@@ -318,6 +356,15 @@ def trigger_next_stage_generation(initiative_id: str) -> Dict[str, Any]:
 
     if current_stage > 5:
         return {'success': False, 'error': 'Initiative already complete'}
+
+    # Session 914.2: Check execution track max stage
+    if current_stage > initiative.max_stage:
+        return {
+            'success': False,
+            'error': f'Initiative max stage is {initiative.max_stage} ({initiative.execution_track})',
+            'execution_track': initiative.execution_track,
+            'max_stage': initiative.max_stage
+        }
 
     # Get or create the stage record
     stage, created = InitiativeStage.objects.get_or_create(
@@ -379,15 +426,29 @@ def get_initiatives_ready_for_progression() -> list:
         if not stage.initiative.can_auto_progress:
             continue
 
+        # Session 914.2: Check Execution Track constraints
+        initiative = stage.initiative
+
+        # Fast Track: skip if already at max stage
+        if initiative.is_fast_track and stage.stage >= initiative.max_stage:
+            continue
+
+        # Institutional: skip if stage requires approval and not approved
+        if initiative.is_institutional:
+            if initiative.requires_stage_approval(stage.stage) and not initiative.is_stage_approved(stage.stage):
+                continue
+
         passes_quality, confidence, reason = evaluate_stage_quality(stage)
         if passes_quality and confidence >= 0.6:  # Minimum 60% confidence to auto-progress
             ready_initiatives.append({
-                'initiative_id': str(stage.initiative.id),
-                'initiative_name': stage.initiative.name,
+                'initiative_id': str(initiative.id),
+                'initiative_name': initiative.name,
                 'stage': stage.stage,
                 'confidence': confidence,
                 'reason': reason,
-                'founder_intent_set': stage.initiative.founder_intent_set,  # Session 914
+                'founder_intent_set': initiative.founder_intent_set,  # Session 914
+                'execution_track': initiative.execution_track,  # Session 914.2
+                'max_stage': initiative.max_stage,  # Session 914.2
             })
 
     return ready_initiatives

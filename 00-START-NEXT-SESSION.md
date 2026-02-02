@@ -1,8 +1,63 @@
 # Session 915 - Start Here
 
-**Previous Session:** 914 (Founder Intent Fields)
+**Previous Session:** 914.2 (Execution Tracks)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **FOUNDER INTENT REQUIRED** | **PIPELINE GOVERNED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **FOUNDER INTENT + EXECUTION TRACKS** | **PIPELINE GOVERNED**
+
+---
+
+## What Was Accomplished in Session 914.2
+
+### Execution Tracks (ChatGPT-Suggested Governance #2)
+
+**Problem:** All initiatives followed the same 5-stage pipeline, even when a quick 2-stage experiment was sufficient. This created unnecessary overhead for low-risk features.
+
+**Solution:** Added Execution Track system with Fast Track vs Institutional Track:
+
+**New Fields:**
+| Field | Type | Purpose |
+|-------|------|---------|
+| `execution_track` | Choice | `fast_track` (Stage 1-2) or `institutional` (Full 5-stage) |
+| `content_flags` | String | Comma-separated flags that triggered institutional track |
+| `track_auto_detected` | Boolean | Whether track was auto-detected from content |
+| `compliance_reviewed` | Boolean | Whether compliance review completed (institutional) |
+| `stage_2_approved` | Boolean | Stage 2 explicit approval (institutional) |
+| `stage_3_approved` | Boolean | Stage 3 explicit approval (institutional) |
+| `stage_4_approved` | Boolean | Stage 4 explicit approval (institutional) |
+
+**Content Flags (Auto-Detection):**
+- `external_data` - Uses external data/APIs
+- `user_data` - Handles user PII
+- `public_publishing` - Public-facing content
+- `legal_compliance` - Legal/regulatory requirements
+- `financial` - Financial transactions
+- `irreversible` - Irreversible actions
+
+**Track Behavior:**
+- **Fast Track:** Stage 1-2 only, quick experiments, auto-completes at Stage 2
+- **Institutional:** Full 5-stage pipeline, requires stage approvals for 2-4, compliance review required
+
+**Management Commands:**
+```bash
+# Auto-detect track based on content
+python manage.py set_founder_intent --initiative-id=<uuid> --auto-detect-track
+
+# Explicitly set track
+python manage.py set_founder_intent --initiative-id=<uuid> --track=institutional
+
+# Approve a stage (institutional only)
+python manage.py set_founder_intent --initiative-id=<uuid> --approve-stage=2
+
+# Complete compliance review
+python manage.py set_founder_intent --initiative-id=<uuid> --complete-compliance
+```
+
+**Files Changed:**
+- `core/models_document_registry.py` - Added ExecutionTrack, ContentFlags, stage approval fields
+- `core/migrations/0219_session_914_2_execution_track.py` - New migration
+- `core/services/initiative_auto_progression.py` - Respect track limits and stage approvals
+- `core/management/commands/set_founder_intent.py` - Extended with track options
+- `docs/DREAM_INITIATIVE_WORKFLOW.md` - Updated documentation
 
 ---
 
