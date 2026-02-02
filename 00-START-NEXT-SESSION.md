@@ -1,62 +1,69 @@
-# Session 902 - Start Here
+# Session 903 - Start Here
 
-**Previous Session:** 901 (Initiative Priority & Portfolio Management - COMPLETE)
+**Previous Session:** 902 (Action Item Tracking - COMPLETE)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE PRIORITY: COMPLETE** | **820 SUCCESSFUL EXPERIMENTS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **ACTION ITEM TRACKING: COMPLETE** | **820 SUCCESSFUL EXPERIMENTS**
 
 ---
 
-## What Was Accomplished in Session 901 (COMPLETE)
+## What Was Accomplished in Session 902 (COMPLETE)
 
-### Initiative Priority & Portfolio Management
+### Action Item Tracking - Next Steps from Conversations
 
-**Problem Solved:** Initiative UI was a "firehose" - 223 initiatives with no way to distinguish importance
+**Problem Solved:** Conversation conclusions contained "Next Steps" as plain text - not trackable, not assignable
 
-**Solution Deployed:** Strategic project management with priority scoring:
-
-### Priority Model Implemented:
-```python
-priority_score = impact * 0.4 + urgency * 0.2 + confidence * 0.2 + revenue_potential * 0.2
-# Levels: critical (>=0.8), high (>=0.6), medium (>=0.4), low (<0.4)
-```
+**Solution Deployed:** Full action item tracking system:
 
 ### Backend Complete:
-1. **New Fields** - purpose, program, impact_score, urgency, confidence, revenue_potential
-2. **Computed Properties** - priority_score, priority_level on Initiative model
-3. **API Extended** - Priority sorting, stats breakdown by purpose/program/priority
-4. **Migration** - 0212_session_901_initiative_priority applied
+1. **InitiativeActionItem Model** - Status, priority, timeline, assignments, dependencies
+2. **Parser Service** - Extracts items from `=== DecisionSummary ===` sections
+3. **API Endpoints** - CRUD + bulk extraction (6 endpoints)
+4. **Migration** - 0213_session_902_action_items applied
 
 ### Frontend Complete:
-- **4-Tab Navigation:** Active | Portfolio | Archive | Stats
+- **Stats Bar:** X pending | Y in progress | Z completed (completion %)
+- **Status Checkboxes:** Click to cycle pending → in_progress → completed
 - **Priority Badges:** Critical (red), High (orange), Medium (yellow), Low (gray)
-- **Purpose Icons:** Revenue ($), Stability (shield), Learning (beaker), Expansion (rocket), Maintenance (wrench)
-- **Program Grouping:** Collapsible sections in Portfolio view
-- **Stats Tab:** Comprehensive breakdown by status, purpose, program, priority
+- **Timeline Indicators:** "Week 0-1", overdue warning
+- **Extract Button:** Pull action items from linked conversations
+- **Manual Creation:** Input field to add new items
 
 ### Files Changed
 | File | Change |
 |------|--------|
-| `core/models_document_registry.py` | Purpose, Program, priority fields + computed properties |
-| `core/migrations/0212_session_901_initiative_priority.py` | NEW - Migration |
-| `core/views_research_demo.py` | Priority sorting, stats breakdown |
-| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | 4-tab UI, badges, icons, grouping |
+| `core/models_document_registry.py` | InitiativeActionItem model |
+| `core/migrations/0213_session_902_action_items.py` | NEW - Migration |
+| `core/services/action_item_parser.py` | NEW - Parser service |
+| `core/views_research_demo.py` | 6 API endpoints |
+| `core/urls.py` | URL routes |
+| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Action Items UI section |
 
 ---
 
-## TOP PRIORITY for Session 902
+## Session 901 Recap: Initiative Priority & Portfolio
 
-### 1. Test Initiative Priority UI End-to-End
-- Verify 4-tab navigation works (Active, Portfolio, Archive, Stats)
-- Test priority sorting (Critical first)
-- Verify program grouping in Portfolio view
+Also completed:
+- **Priority Scoring:** impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2
+- **4-Tab UI:** Active | Portfolio | Archive | Stats
+- **Purpose Categories:** revenue, stability, learning, expansion, maintenance
+- **Program Groupings:** 10 programs for portfolio organization
 
-### 2. Bulk Edit Initiatives
-- UI to update multiple initiatives' purpose/program at once
-- "Move to Program" action on selection
+---
 
-### 3. Priority Recommendations
-- AI-suggested priority scores based on initiative content
-- Auto-categorize by program based on name/description
+## TOP PRIORITY for Session 903
+
+### 1. Test Action Items End-to-End
+- Trigger a conversation that generates synthesis with Next Steps
+- Verify "Extract from Conversations" button works
+- Test status toggle (pending → in_progress → completed)
+
+### 2. Auto-Extraction on Conversation Complete
+- Add Celery task to extract action items when conversation finishes
+- Hook into HiveMindSession post_save signal
+
+### 3. Action Item Kanban View (Optional)
+- Drag-and-drop board: Pending | In Progress | Completed | Blocked
+- Filter by priority/agent
 
 ---
 
@@ -79,7 +86,13 @@ celery-broadcast: -Q broadcast (2 concurrency)
 make start && make celery
 
 # Apply migrations
-python manage.py migrate core 0212_session_901_initiative_priority
+python manage.py migrate core 0213_session_902_action_items
+
+# Test action item extraction
+python manage.py shell -c "
+from core.services.action_item_parser import bulk_extract_action_items
+print(bulk_extract_action_items(limit=20))
+"
 
 # Production experiment status
 railway run -s donkey-betz-platform python manage.py check_experiment_status
@@ -91,11 +104,11 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | PR | Description |
 |----|-------------|
-| #679 | Initiative Priority & Portfolio Tabs (Session 901) |
-| #676 | Signal Intelligence UI - Origin Signals in Initiative modal (Session 900) |
-| #675 | Signal Intelligence Models (Session 900) |
-| #671 | Comprehensive Initiative View - Completed filter + origin trace modal |
-| #670 | Initiative origin-trace API endpoint |
+| #682 | fix(Session 902): Use correct HiveMindSession field names |
+| #681 | feat(Session 902): Initiative Action Items |
+| #680 | docs(Session 901): Initiative Priority documentation |
+| #679 | feat(Session 901): Initiative Priority & Portfolio Tabs |
+| #676 | Signal Intelligence UI - Origin Signals in Initiative modal |
 
 ---
 
@@ -103,12 +116,12 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **901** | Initiative Priority & Portfolio Management - 4 tabs, priority scoring, purpose/program | `SESSION_901_INITIATIVE_PRIORITY.md` |
+| **902** | Action Item Tracking - Extract & track next steps from conversations | `SESSION_902_ACTION_ITEM_TRACKING.md` |
+| **901** | Initiative Priority & Portfolio - 4 tabs, priority scoring, purpose/program | `SESSION_901_INITIATIVE_PRIORITY.md` |
 | **900** | Signal Intelligence - SignalCluster, AutoTopic models for Origin & Trigger UI | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
 | **899** | Comprehensive Initiative View | `SESSION_899_COMPREHENSIVE_INITIATIVE_VIEW.md` |
 | **898** | Mythology Lab Agent Name Fix | `SESSION_898_MYTHOLOGY_LAB_FIX.md` |
 | **897** | Experiment Pipeline Fix + Initiatives Performance | `SESSION_897_COMPLETE.md` |
-| **896** | Codebase Workspace Fix + PDF Export | `SESSION_896_CODEBASE_WORKSPACE_FIX.md` |
 
 ---
 
@@ -120,12 +133,12 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 | Spiders | 77 |
 | Advisors | 25 |
 | Personas | 139 |
-| Database Models | 385+ |
+| Database Models | 386+ |
 | Celery Tasks | 260 |
-| Services | 129 |
+| Services | 130 |
 | Experiments (Success) | 820 |
 | Learnings | 1,152,295 |
-| Initiatives | 223 |
+| Initiatives | 199 |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
@@ -141,4 +154,4 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 ---
 
-**Initiative Priority COMPLETE - Test the 4-tab UI and consider bulk editing features!**
+**Action Item Tracking COMPLETE - Test extraction and consider auto-extraction on conversation complete!**
