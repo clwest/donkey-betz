@@ -2337,6 +2337,16 @@ app.conf.beat_schedule = {
             'expires': 900,
         }
     },
+
+    # Session 905: Initiative Auto-Progression
+    # Automatically progresses initiatives when quality criteria met
+    'process-initiative-auto-progression': {
+        'task': 'core.tasks.process_initiative_auto_progression',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+        'options': {
+            'expires': 600,
+        }
+    },
 }
 
 # Task routing configuration
