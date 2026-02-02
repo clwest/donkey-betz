@@ -49,6 +49,8 @@ import {
   AlertCircle,
   Play,
   Pause,
+  List,
+  LayoutGrid,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
@@ -358,6 +360,84 @@ function InitiativeCard({ initiative, onViewDetails }: { initiative: Initiative;
           <ChevronRight size={14} />
         </div>
       </div>
+    </div>
+  )
+}
+
+// Session 904: Compact list row for cleaner initiative display
+function InitiativeRow({ initiative, onViewDetails }: { initiative: Initiative; onViewDetails: () => void }) {
+  const health = getHealth(initiative)
+  const isCompleted = initiative.status === 'COMPLETED'
+  const currentStage = initiative.current_stage || 1
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-4 px-4 py-3 border-b border-dark-border hover:bg-dark-card/50 transition-colors cursor-pointer group',
+        isCompleted && 'bg-emerald-500/5',
+        !isCompleted && health === 'blocked' && 'bg-red-500/5',
+        !isCompleted && initiative.priority_level === 'critical' && 'border-l-2 border-l-red-500'
+      )}
+      onClick={onViewDetails}
+    >
+      {/* Stage indicator - compact colored bar */}
+      <div className="flex gap-0.5 w-16 flex-shrink-0">
+        {[1, 2, 3, 4, 5].map((stage) => (
+          <div
+            key={stage}
+            className={cn(
+              'h-1.5 flex-1 rounded-full',
+              stage < currentStage && 'bg-green-500',
+              stage === currentStage && 'bg-primary-500',
+              stage > currentStage && 'bg-dark-border'
+            )}
+          />
+        ))}
+      </div>
+
+      {/* Title - takes up available space */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            'font-medium truncate',
+            isCompleted && 'text-emerald-400'
+          )}>
+            {initiative.name}
+          </span>
+          {/* Only show badges for non-default states */}
+          {!isCompleted && initiative.priority_level === 'critical' && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/20 text-red-400 flex-shrink-0">
+              Critical
+            </span>
+          )}
+          {!isCompleted && initiative.priority_level === 'high' && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-500/20 text-orange-400 flex-shrink-0">
+              High
+            </span>
+          )}
+          {!isCompleted && health === 'blocked' && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/20 text-red-400 flex-shrink-0">
+              Blocked
+            </span>
+          )}
+          {!isCompleted && health === 'stale' && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-500/20 text-yellow-400 flex-shrink-0">
+              Stale
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Progress - compact */}
+      <div className="text-xs text-gray-400 w-20 text-right flex-shrink-0">
+        {initiative.completion_percentage}%
+        {initiative.approved_percentage > 0 && (
+          <span className="text-green-400 ml-1">({initiative.approved_percentage}%)</span>
+        )}
+      </div>
+
+      {/* Arrow - visible on hover */}
+      <ChevronRight size={14} className="text-gray-500 group-hover:text-white transition-colors flex-shrink-0" />
     </div>
   )
 }
@@ -1651,6 +1731,8 @@ export function InitiativesTab() {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'stale' | 'blocked'>('all')
   // Session 901: Expanded program groups
   const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({})
+  // Session 904: View mode toggle - list is default for cleaner display
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
 
   const {
     data,
@@ -1818,65 +1900,118 @@ export function InitiativesTab() {
       {/* Active Tab: Execution Layer */}
       {activeTab === 'active' && (
         <>
-          {/* Health Filters */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500">Filter:</span>
-            <button
-              onClick={() => setFilter('all')}
-              className={cn(
-                'px-3 py-1 rounded-full transition-colors',
-                filter === 'all' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
+          {/* Session 904: Filter bar with view toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">Filter:</span>
+              <button
+                onClick={() => setFilter('all')}
+                className={cn(
+                  'px-3 py-1 rounded-full transition-colors',
+                  filter === 'all' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                All
+              </button>
+              {healthStats.stale > 0 && (
+                <button
+                  onClick={() => setFilter('stale')}
+                  className={cn(
+                    'px-3 py-1 rounded-full transition-colors',
+                    filter === 'stale' ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-white'
+                  )}
+                >
+                  Stale ({healthStats.stale})
+                </button>
               )}
-            >
-              All
-            </button>
-            {healthStats.stale > 0 && (
+              {healthStats.blocked > 0 && (
+                <button
+                  onClick={() => setFilter('blocked')}
+                  className={cn(
+                    'px-3 py-1 rounded-full transition-colors',
+                    filter === 'blocked' ? 'bg-red-500/20 text-red-400' : 'text-gray-400 hover:text-white'
+                  )}
+                >
+                  Blocked ({healthStats.blocked})
+                </button>
+              )}
+              {/* Priority quick filters */}
+              {stats.by_priority.critical > 0 && (
+                <span className="ml-4 px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs flex items-center gap-1">
+                  <Flame size={10} />
+                  {stats.by_priority.critical} Critical
+                </span>
+              )}
+            </div>
+
+            {/* Session 904: View mode toggle */}
+            <div className="flex items-center gap-1 bg-dark-bg rounded-lg p-1">
               <button
-                onClick={() => setFilter('stale')}
+                onClick={() => setViewMode('list')}
                 className={cn(
-                  'px-3 py-1 rounded-full transition-colors',
-                  filter === 'stale' ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-white'
+                  'p-1.5 rounded transition-colors',
+                  viewMode === 'list' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
                 )}
+                title="List view"
               >
-                Stale ({healthStats.stale})
+                <List size={16} />
               </button>
-            )}
-            {healthStats.blocked > 0 && (
               <button
-                onClick={() => setFilter('blocked')}
+                onClick={() => setViewMode('cards')}
                 className={cn(
-                  'px-3 py-1 rounded-full transition-colors',
-                  filter === 'blocked' ? 'bg-red-500/20 text-red-400' : 'text-gray-400 hover:text-white'
+                  'p-1.5 rounded transition-colors',
+                  viewMode === 'cards' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
                 )}
+                title="Card view"
               >
-                Blocked ({healthStats.blocked})
+                <LayoutGrid size={16} />
               </button>
-            )}
-            {/* Priority quick filters */}
-            {stats.by_priority.critical > 0 && (
-              <span className="ml-4 px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs flex items-center gap-1">
-                <Flame size={10} />
-                {stats.by_priority.critical} Critical
-              </span>
-            )}
+            </div>
           </div>
 
-          {/* Initiative grid sorted by priority */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {filteredInitiatives.map((initiative) => (
-              <InitiativeCard
-                key={initiative.id}
-                initiative={initiative}
-                onViewDetails={() => {
-                  if (initiative.status === 'COMPLETED') {
-                    setComprehensiveInitiativeId(initiative.id)
-                  } else {
-                    setSelectedInitiative(initiative)
-                  }
-                }}
-              />
-            ))}
-          </div>
+          {/* Session 904: Conditional rendering based on view mode */}
+          {viewMode === 'list' ? (
+            /* List view - cleaner, more scannable */
+            <div className="border border-dark-border rounded-lg overflow-hidden bg-dark-card">
+              {/* Header row */}
+              <div className="flex items-center gap-4 px-4 py-2 bg-dark-bg text-xs text-gray-500 border-b border-dark-border">
+                <span className="w-16">Stage</span>
+                <span className="flex-1">Initiative</span>
+                <span className="w-20 text-right">Progress</span>
+                <span className="w-4"></span>
+              </div>
+              {filteredInitiatives.map((initiative) => (
+                <InitiativeRow
+                  key={initiative.id}
+                  initiative={initiative}
+                  onViewDetails={() => {
+                    if (initiative.status === 'COMPLETED') {
+                      setComprehensiveInitiativeId(initiative.id)
+                    } else {
+                      setSelectedInitiative(initiative)
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            /* Card view - original grid layout */
+            <div className="grid gap-4 md:grid-cols-2">
+              {filteredInitiatives.map((initiative) => (
+                <InitiativeCard
+                  key={initiative.id}
+                  initiative={initiative}
+                  onViewDetails={() => {
+                    if (initiative.status === 'COMPLETED') {
+                      setComprehensiveInitiativeId(initiative.id)
+                    } else {
+                      setSelectedInitiative(initiative)
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -1930,20 +2065,70 @@ export function InitiativesTab() {
 
       {/* Archive Tab: Memory Layer */}
       {activeTab === 'archive' && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredInitiatives.map((initiative) => (
-            <InitiativeCard
-              key={initiative.id}
-              initiative={initiative}
-              onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
-            />
-          ))}
-          {filteredInitiatives.length === 0 && (
-            <div className="col-span-2 text-center py-8 text-gray-400">
-              No archived initiatives yet
+        <>
+          {/* Session 904: View toggle for Archive */}
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center gap-1 bg-dark-bg rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'p-1.5 rounded transition-colors',
+                  viewMode === 'list' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
+                )}
+                title="List view"
+              >
+                <List size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className={cn(
+                  'p-1.5 rounded transition-colors',
+                  viewMode === 'cards' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
+                )}
+                title="Card view"
+              >
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+          </div>
+          {viewMode === 'list' ? (
+            <div className="border border-dark-border rounded-lg overflow-hidden bg-dark-card">
+              <div className="flex items-center gap-4 px-4 py-2 bg-dark-bg text-xs text-gray-500 border-b border-dark-border">
+                <span className="w-16">Stage</span>
+                <span className="flex-1">Initiative</span>
+                <span className="w-20 text-right">Progress</span>
+                <span className="w-4"></span>
+              </div>
+              {filteredInitiatives.map((initiative) => (
+                <InitiativeRow
+                  key={initiative.id}
+                  initiative={initiative}
+                  onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
+                />
+              ))}
+              {filteredInitiatives.length === 0 && (
+                <div className="text-center py-8 text-gray-400">
+                  No archived initiatives yet
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {filteredInitiatives.map((initiative) => (
+                <InitiativeCard
+                  key={initiative.id}
+                  initiative={initiative}
+                  onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
+                />
+              ))}
+              {filteredInitiatives.length === 0 && (
+                <div className="col-span-2 text-center py-8 text-gray-400">
+                  No archived initiatives yet
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Stats Tab */}
