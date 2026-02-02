@@ -1,78 +1,64 @@
-# Session 908 - Start Here
+# Session 909 - Start Here
 
-**Previous Session:** 907 (Initiative UI + Operations Workspace Fix)
+**Previous Session:** 908 (Initiative-Workspace Connection)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **130 INITIATIVES** | **WORKSPACE FIXED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **130 INITIATIVES** | **INITIATIVES NOW TRACK TO WORKSPACES**
 
 ---
 
-## What Was Accomplished in Session 907
+## What Was Accomplished in Session 908
 
-### 1. Initiative Modal UI Fixes
+### Initiative-Workspace Connection Complete
 
-Fixed misleading metrics in the Initiative modal:
+**Problem:** Initiative work (stage task execution) created SelfBlog documents but never appeared in the Workspace Operations tab. The two systems were completely disconnected.
 
-| Metric | Before | After |
-|--------|--------|-------|
-| **Progress Bar** | "71% Complete" (trace data completeness) | "X/5 Stages" (actual stage progress) |
-| **Content (chars)** | Only showed if deliverable exists | Shows total from all stage documents |
-| **Initiative Names** | 150-char truncated descriptions | Extracted meaningful titles |
+**Solution:** Three-part fix to bridge Initiatives and Workspaces:
 
-**58 initiative names cleaned in production** via improved `clean_initiative_names` command.
+| Fix | File | Change |
+|-----|------|--------|
+| **1. target_workspace FK** | `core/models_document_registry.py` | New FK on Initiative linking to target ProjectWorkspace |
+| **2. Pipeline workspace assignment** | `core/services/conversation_initiative_pipeline.py` | Assigns workspace when creating new initiatives |
+| **3. Operation tracking** | `core/tasks.py` | Creates WorkspaceOperation when stage tasks complete |
 
-### 2. Action Items API Authentication Fix
+**Data Flow (Before):**
+```
+Conversation → Initiative → Stage Task → SelfBlog (orphaned from workspace)
+```
 
-Fixed 401 Unauthorized errors in production logs. The action-items fetch calls were missing `credentials: 'include'`:
-- Fetch action items (GET)
-- Update action item (POST)
-- Create action item (POST)
-- Extract action items (POST)
-
-### 3. Operations Tab Workspace Fix
-
-**Problem:** Operations were going to wrong workspace. Recent Celery tasks created a new "donkey-betz-codebase" workspace (47 ops) while users viewed "Donkey Betz" (6,780 ops).
-
-**Root Cause:** `get_active_workspace()` used `.first()` without ordering, picking arbitrary workspace when multiple were active.
-
-**Fix:** Order by `-total_operations, -created_at` to prefer established workspace.
-
-**Production Data Updated:**
-| Workspace | Before | After |
-|-----------|--------|-------|
-| **Donkey Betz** | 3,736 | **6,780** (primary) |
-| donkey-betz-codebase | 32 | 47 |
-| System Autonomous | 0 | 45 |
+**Data Flow (After):**
+```
+Conversation → Initiative (with target_workspace) → Stage Task → SelfBlog + WorkspaceOperation
+                    ↓
+              Operations Tab shows work
+```
 
 ---
 
-## PRs Merged (Session 907)
+## PRs Merged (Session 908)
 
 | PR | Description |
 |----|-------------|
-| #717 | Session 906 full pipeline cleanup results |
-| #718 | Initiative modal UI metrics + name cleanup |
-| #719 | Session 907 handoff documentation |
-| #720 | Fix action-items API authentication (credentials: include) |
-| #721 | Consistent workspace selection for Celery tasks |
+| #723 | Connect Initiatives to Workspaces - target_workspace FK, pipeline assignment, operation tracking |
 
 ---
 
-## NEXT PRIORITIES for Session 908
+## NEXT PRIORITIES for Session 909
 
-### 1. Generate Stage 2 Documents
+### 1. Backfill Existing Initiatives
+- 130 existing initiatives have no target_workspace
+- Need management command to assign workspaces to existing initiatives
+
+### 2. Generate Stage 2 Documents
 - 11 Stage 2 initiatives are PENDING (need Prototype Plan docs)
 - These have quality Stage 1 docs (500+ words) ready for progression
 
-### 2. Review Stage 3 → Stage 4 Progression
+### 3. Review Stage 3 → Stage 4 Progression
 - 72 initiatives at Stage 3 with quality Stage 2 docs
 - Check for initiatives ready to progress to Technical Design
 
-### 3. Complete Stage 5 Initiatives
-- 19 initiatives at Pilot Execution stage
-- Review for final deliverable creation
-
 ### 4. Verify Operations Tab
-- Confirm new operations appear in "Donkey Betz" workspace after fix deployment
+- Trigger a new stage task and confirm operation appears in workspace
+- Watch for new WorkspaceOperation records from initiative work
 
 ---
 
@@ -103,6 +89,15 @@ python manage.py shell -c "
 from core.models_skin_layer import ProjectWorkspace, WorkspaceOperation
 for ws in ProjectWorkspace.objects.filter(is_active=True).order_by('-total_operations'):
     print(f'{ws.name}: {ws.total_operations} ops')
+"
+
+# Check initiatives with/without workspaces (Session 908)
+python manage.py shell -c "
+from core.models_document_registry import Initiative
+with_ws = Initiative.objects.filter(target_workspace__isnull=False).count()
+without_ws = Initiative.objects.filter(target_workspace__isnull=True).count()
+print(f'With workspace: {with_ws}')
+print(f'Without workspace: {without_ws}')
 "
 ```
 
@@ -138,7 +133,8 @@ TOTAL:                       130 initiatives
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **907** | Initiative UI Fix + Action Items Auth + Workspace Selection | This file |
+| **908** | Initiative-Workspace Connection - target_workspace FK, pipeline assignment, operation tracking | This file |
+| **907** | Initiative UI Fix + Action Items Auth + Workspace Selection | `docs/handoffs/SESSION_907_HANDOFF.md` |
 | **906** | Major Database Cleanup - 178 initiatives deleted, 306 orphan docs removed | `SESSION_906_FULL_CLEANUP.md` |
 | **905** | Initiative Auto-Progression - Quality-based stage advancement | `SESSION_905_AUTO_PROGRESSION.md` |
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
@@ -163,15 +159,15 @@ TOTAL:                       130 initiatives
 
 ---
 
-## Key Files Modified (Session 907)
+## Key Files Modified (Session 908)
 
 | File | Change |
 |------|--------|
-| `core/views_research_demo.py` | Added `content_length` to stage API response |
-| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Fixed progress bar, content chars, action-items auth |
-| `core/management/commands/clean_initiative_names.py` | Improved title extraction strategies |
-| `core/services/workspace_manager.py` | Fixed workspace selection ordering |
+| `core/models_document_registry.py` | Added `target_workspace` FK to Initiative |
+| `core/services/conversation_initiative_pipeline.py` | Added workspace assignment on Initiative creation |
+| `core/tasks.py` | Added WorkspaceOperation creation in `execute_initiative_stage_task` |
+| `core/migrations/0216_add_initiative_target_workspace.py` | New migration |
 
 ---
 
-**Session 907 Complete - Initiative modal fixed, action-items authenticated, workspace selection consistent!**
+**Session 908 Complete - Initiatives now properly track to Workspaces!**
