@@ -275,7 +275,7 @@ Currently 0 sessions have synthesis_summary populated, so extraction returns emp
 ## Next Steps for Session 903
 
 1. **Populate Test Data**: Run conversations to generate synthesis with action items
-2. **Auto-Extraction**: Celery task to extract on conversation completion
+2. ~~**Auto-Extraction**: Celery task to extract on conversation completion~~ ✅ **DONE in PR #684**
 3. **Kanban View**: Drag-and-drop board for action items
 4. **Assignment UI**: Dropdown to assign to users
 5. **Due Date Calendar**: Visual calendar of upcoming action items
