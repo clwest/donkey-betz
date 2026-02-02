@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
 **Last Updated:** February 1, 2026 - Session 900
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: MODELS CREATED**
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: COMPLETE**
 
 ## System Stats
 | Component | Count | Details |
@@ -11,16 +11,16 @@
 | **PA Tools** | 86 | +body tools for all 9 systems |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **LLM Models** | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
-| **Database Models** | 382+ | Including Deliverable, AuditReport, SignalCluster, AutoTopic, ToolCallRecord, DecisionRecord, ResearchResult |
-| **Celery Tasks** | 256 | ALL body systems active, autonomous remediation, async conversations, ConceptForge, health monitoring |
-| **Services** | 128 | Including AutoSpawnerService, DomainContentContextBuilder (9 domains) |
+| **Database Models** | 385+ | Including Deliverable, AuditReport, SignalCluster, AutoTopic, TopicSuggestion, ToolCallRecord, DecisionRecord, ResearchResult |
+| **Celery Tasks** | 260 | ALL body systems active, autonomous remediation, async conversations, ConceptForge, health monitoring, signal aggregation |
+| **Services** | 129 | Including AutoSpawnerService, SignalAggregationService, DomainContentContextBuilder (9 domains) |
 | **Contracts** | 3 | ResearchContract, ExecutionMandate, SynthesisContract |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
-- **Signal Intelligence (900):** New provenance chain tracks WHY conversations happen. SignalCluster groups spider signals into patterns (source_breakdown, strength, confidence). AutoTopic records why topics are chosen with rationale. HiveMindSession now links to signal_cluster and auto_topic FKs. Transforms "scheduled conversation" into actionable intelligence showing origin signals.
+- **Signal Intelligence (900):** Full provenance chain tracks WHY conversations happen, not just WHEN. SignalCluster groups spider signals into patterns (source_breakdown, strength, confidence, novelty, keywords). AutoTopic records why topics are chosen with rationale. Signal Aggregation Service clusters SpiderData every 30 min via Celery. API returns origin_signals with full chain. UI displays Origin Signals section in Initiative modal showing source breakdown, pattern metrics, sample signals, and auto topic rationale. Signal-Driven badge in headers. 22 clusters + 10 auto-topics in production.
 - **Domain Content Context (891):** Unified system injects domain-specific platform data into ALL content. 9 domains: finance, crypto, sports, betting, ai_tech, legal, career, health, education. Auto-detects topic domain, supports cross-domain content (up to 2 domains). Gives every content type the "builder voice."
 - **Podcast Quality System (890):** Anti-cliché detection (50+ phrases), PodcastStyleProfile model, host POV upgrade (takes stances), system war stories tool.
 - **Content Feedback Loop (886):** BlogPerformanceContextBuilder injects past performance data into ContentWriterAgent prompts. Agent now "knows" quality scores, top topics, strengths/weaknesses, and active learning rules. Experiment audit: cleaned 81 junk experiments, raised error threshold 25%→35%, 87.5% real success rate.
@@ -79,6 +79,7 @@ open http://localhost:8000/ai-studio/
 | `core/tasks.py` | Celery background tasks |
 | `core/conversation_orchestrator.py` | Multi-agent conversations |
 | `core/services/autonomous_remediation_orchestrator.py` | Self-healing system |
+| `core/services/signal_aggregation_service.py` | Signal clustering & auto-topic generation |
 | `frontend/src/pages/WorkspacePageNew.tsx` | Modular command center |
 
 ---
