@@ -126,6 +126,16 @@ class Initiative(models.Model):
     parent_topic = models.CharField(max_length=200, blank=True)
     source_decision_id = models.UUIDField(null=True, blank=True)
 
+    # Session 908: Link to target workspace for file operations
+    target_workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='initiatives',
+        help_text='Target workspace for this initiative\'s outputs'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
