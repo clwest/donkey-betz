@@ -1349,6 +1349,7 @@ def initiative_origin_trace_api(request, initiative_id):
             'decision': None,
             'conversation': None,
             'trigger': None,
+            'origin_signals': None,  # Session 900: Signal provenance
             'agents': [],
             'stages': [],
             'deliverable': None,
@@ -1435,10 +1436,57 @@ def initiative_origin_trace_api(request, initiative_id):
                         'message_type': contrib.perspective_type or 'contribution',
                         'sequence_number': idx,
                     })
+
+                # Session 900: Signal Intelligence - WHY this conversation happened
                 trace['trigger'] = {
                     'type': 'scheduled' if hive.auto_selected_agents else 'manual',
                     'description': 'Scheduled autonomous discussion' if hive.auto_selected_agents else 'Manual conversation',
                 }
+
+                # Session 900: Add signal provenance if available
+                trace['origin_signals'] = None
+                if hasattr(hive, 'signal_cluster') and hive.signal_cluster:
+                    cluster = hive.signal_cluster
+                    trace['origin_signals'] = {
+                        'signal_cluster': {
+                            'id': str(cluster.id),
+                            'name': cluster.name,
+                            'pattern_type': cluster.pattern_type,
+                            'source_breakdown': cluster.source_breakdown,
+                            'strength': cluster.strength,
+                            'confidence': cluster.confidence,
+                            'novelty': cluster.novelty,
+                            'keywords': cluster.keywords,
+                            'sample_signals': cluster.sample_signals[:3] if cluster.sample_signals else [],
+                            'total_signals': cluster.total_signals,
+                            'detected_at': cluster.detected_at.isoformat() if cluster.detected_at else None,
+                        },
+                        'auto_topic': None,
+                    }
+                    # Update trigger to be signal-driven
+                    trace['trigger'] = {
+                        'type': 'signal_driven',
+                        'description': f'Signal-driven: {cluster.name}',
+                        'confidence': hive.trigger_confidence,
+                    }
+
+                if hasattr(hive, 'auto_topic') and hive.auto_topic:
+                    topic = hive.auto_topic
+                    if trace['origin_signals'] is None:
+                        trace['origin_signals'] = {'signal_cluster': None, 'auto_topic': None}
+                    trace['origin_signals']['auto_topic'] = {
+                        'id': str(topic.id),
+                        'name': topic.name,
+                        'description': topic.description,
+                        'derived_from_pattern': topic.derived_from_pattern,
+                        'rationale': topic.rationale,
+                        'confidence': topic.confidence,
+                        'urgency': topic.urgency,
+                        'suggested_agents': topic.suggested_agent_names,
+                        'suggested_conversation_type': topic.suggested_conversation_type,
+                        'created_at': topic.created_at.isoformat() if topic.created_at else None,
+                        'triggered_at': topic.triggered_at.isoformat() if topic.triggered_at else None,
+                    }
 
         # Get stages
         stages = InitiativeStage.objects.filter(initiative=initiative).order_by('stage')
@@ -1466,6 +1514,8 @@ def initiative_origin_trace_api(request, initiative_id):
             }
 
         # Calculate trace completeness
+        # Session 900: Added origin_signals to completeness
+        has_origin_signals = trace.get('origin_signals') is not None
         trace['trace_completeness'] = {
             'has_decision': trace['decision'] is not None,
             'has_conversation': trace['conversation'] is not None,
@@ -1473,6 +1523,7 @@ def initiative_origin_trace_api(request, initiative_id):
             'has_agents': len(trace['agents']) > 0,
             'has_stages': len(trace['stages']) > 0,
             'has_deliverable': trace['deliverable'] is not None,
+            'has_origin_signals': has_origin_signals,  # Session 900
             'completeness_score': sum([
                 1 if trace['decision'] else 0,
                 1 if trace['conversation'] else 0,
@@ -1480,7 +1531,8 @@ def initiative_origin_trace_api(request, initiative_id):
                 1 if trace['agents'] else 0,
                 1 if trace['stages'] else 0,
                 1 if trace['deliverable'] else 0,
-            ]) / 6 * 100,
+                1 if has_origin_signals else 0,  # Session 900: Bonus for signal provenance
+            ]) / 7 * 100,
         }
 
         return JsonResponse({

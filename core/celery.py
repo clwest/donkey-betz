@@ -2296,6 +2296,37 @@ app.conf.beat_schedule = {
             'expires': 1800,  # 30 minutes
         }
     },
+
+    # ==================== SESSION 900: SIGNAL INTELLIGENCE ====================
+    # Aggregate spider signals into SignalClusters and generate AutoTopics
+    # This powers the Origin & Trigger UI showing WHY conversations happen
+
+    'aggregate-spider-signals': {
+        'task': 'aggregate_spider_signals',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'kwargs': {'lookback_hours': 6},
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
+
+    'process-pending-auto-topics': {
+        'task': 'process_pending_auto_topics',
+        'schedule': crontab(minute=45),  # Every hour at :45
+        'kwargs': {'max_topics': 3},
+        'options': {
+            'expires': 3500,
+            'queue': 'long_running',
+        }
+    },
+
+    'cleanup-expired-signals': {
+        'task': 'cleanup_expired_signals',
+        'schedule': crontab(hour=4, minute=30),  # Daily at 4:30 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
 }
 
 # Task routing configuration
