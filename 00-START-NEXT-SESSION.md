@@ -1,8 +1,29 @@
-# Session 913 - Start Here
+# Session 914 - Start Here
 
-**Previous Session:** 912 (Initiative Pipeline Unblocked)
+**Previous Session:** 913 (Action Items Auth Fix)
 **Date:** February 2, 2026
 **Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **173 INITIATIVES** | **PIPELINE FLOWING**
+
+---
+
+## What Was Accomplished in Session 913
+
+### 1. Fixed 401 Unauthorized Errors on Action Items API
+
+**Problem:** Console showing 401 Unauthorized errors when the UI tried to access action-items endpoints:
+- `GET /api/initiatives/<uuid>/action-items/`
+- `POST /api/initiatives/<uuid>/action-items/extract/`
+
+**Root Cause:** The `UnifiedTokenAuthenticationMiddleware` has a `PUBLIC_PATHS` list for endpoints that don't require authentication. The action-items endpoints were not included in this list, so the middleware was returning 401 for unauthenticated requests.
+
+**Solution:** Added the action-items paths to `PUBLIC_PATHS` in `core/auth_middleware.py`:
+```python
+# Session 912: Initiative Action Items API (non-versioned)
+'/api/initiatives/',  # Action items endpoints (/api/initiatives/<uuid>/action-items/*)
+'/api/action-items/',  # Bulk action item operations
+```
+
+**PR:** #750 - merged and deployed to production
 
 ---
 
@@ -78,7 +99,7 @@ Added `is_valid_topic()` function that rejects garbage topics (action items mist
 
 ---
 
-## NEXT PRIORITIES for Session 913
+## NEXT PRIORITIES for Session 914
 
 ### 1. Improve Stage Document Quality
 ContentWriterAgent generates generic blog posts instead of structured Prototype Plans. Consider:
@@ -90,6 +111,14 @@ ContentWriterAgent generates generic blog posts instead of structured Prototype 
 - Check that regenerated documents pass quality gates
 - Verify initiatives continue progressing through stages
 - Review Stage 3/4/5 document quality
+
+---
+
+## PRs Merged (Session 913)
+
+| PR | Description |
+|----|-------------|
+| #750 | Fix 401 Unauthorized on action-items API endpoints |
 
 ---
 
