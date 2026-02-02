@@ -1,8 +1,48 @@
-# Session 912 - Start Here
+# Session 913 - Start Here
 
-**Previous Session:** 911 (Zombie Task Cleanup + Spider Connector Fix)
+**Previous Session:** 912 (Topic Validation + Cleanup Schedule)
 **Date:** February 2, 2026
 **Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **136 INITIATIVES** | **ALL CONNECTED TO DONKEY BETZ**
+
+---
+
+## What Was Accomplished in Session 912
+
+### 1. Topic Validation (Critical - Merged Session 911)
+
+**Problem:** ResearchAgent tasks failing with "Research returned no results" because garbage action-item topics were being passed as research topics (e.g., "Validate item confidence scores; export structured persona profiles...")
+
+**Root Cause:** `conversation_initiative_pipeline.py` was dispatching tasks without validating if the topic was actually researchable.
+
+**Solution:** Added `is_valid_topic()` function that rejects:
+- Topics starting with action verbs (validate, export, create, build, etc.)
+- Topics containing task-like patterns ("; export", "you must", etc.)
+
+### 2. Increased Zombie Cleanup Frequency
+
+**Problem:** Zombie cleanup ran every hour but threshold was 30 minutes, meaning tasks could sit in "running" state for up to 90 minutes.
+
+**Solution:** Changed cleanup schedule from every hour to every 15 minutes.
+
+| Before | After |
+|--------|-------|
+| 3600s (1 hour) | 900s (15 minutes) |
+| Max zombie lifetime: 90 min | Max zombie lifetime: 45 min |
+
+### 3. Verified Session 910/911 Fixes Working
+
+- ✅ `workspace: true` showing correctly in Agent Tasks UI
+- ✅ Spider connector no longer crashes on persistence.models.SpiderData
+- ✅ Zombie cleanup now catches both 'running' and 'in_progress' statuses
+
+---
+
+## PRs Merged (Session 912)
+
+| PR | Description |
+|----|-------------|
+| #741 | Add topic validation to prevent garbage research tasks |
+| #742 | Increase zombie task cleanup frequency (1 hour → 15 min) |
 
 ---
 
