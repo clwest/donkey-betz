@@ -1750,8 +1750,10 @@ export function InitiativesTab() {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'stale' | 'blocked'>('all')
   // Session 901: Expanded program groups
   const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({})
-  // Session 904: View mode toggle - list is default for cleaner display
-  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
+  // Session 904: View mode toggle - stages groups by pipeline progress
+  const [viewMode, setViewMode] = useState<'list' | 'cards' | 'stages'>('stages')
+  // Session 904: Expanded stages for stage view
+  const [expandedStages, setExpandedStages] = useState<Record<number, boolean>>({1: true, 2: true, 3: true, 4: true, 5: true})
 
   const {
     data,
@@ -1963,8 +1965,18 @@ export function InitiativesTab() {
               )}
             </div>
 
-            {/* Session 904: View mode toggle */}
+            {/* Session 904: View mode toggle - stages/list/cards */}
             <div className="flex items-center gap-1 bg-dark-bg rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('stages')}
+                className={cn(
+                  'p-1.5 rounded transition-colors',
+                  viewMode === 'stages' ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white'
+                )}
+                title="Group by stage"
+              >
+                <Layers size={16} />
+              </button>
               <button
                 onClick={() => setViewMode('list')}
                 className={cn(
@@ -1989,7 +2001,66 @@ export function InitiativesTab() {
           </div>
 
           {/* Session 904: Conditional rendering based on view mode */}
-          {viewMode === 'list' ? (
+          {viewMode === 'stages' ? (
+            /* Stages view - grouped by pipeline stage */
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((stageNum) => {
+                const stageInitiatives = filteredInitiatives.filter(i => i.current_stage === stageNum)
+                if (stageInitiatives.length === 0) return null
+
+                return (
+                  <div key={stageNum} className="border border-dark-border rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setExpandedStages(prev => ({ ...prev, [stageNum]: !prev[stageNum] }))}
+                      className={cn(
+                        'w-full flex items-center justify-between p-4 transition-colors',
+                        stageNum === 1 && 'bg-blue-500/10 hover:bg-blue-500/15',
+                        stageNum === 2 && 'bg-purple-500/10 hover:bg-purple-500/15',
+                        stageNum === 3 && 'bg-yellow-500/10 hover:bg-yellow-500/15',
+                        stageNum === 4 && 'bg-orange-500/10 hover:bg-orange-500/15',
+                        stageNum === 5 && 'bg-green-500/10 hover:bg-green-500/15',
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          'w-8 h-8 rounded-full flex items-center justify-center font-bold',
+                          stageNum === 1 && 'bg-blue-500/20 text-blue-400',
+                          stageNum === 2 && 'bg-purple-500/20 text-purple-400',
+                          stageNum === 3 && 'bg-yellow-500/20 text-yellow-400',
+                          stageNum === 4 && 'bg-orange-500/20 text-orange-400',
+                          stageNum === 5 && 'bg-green-500/20 text-green-400',
+                        )}>
+                          {stageNum}
+                        </div>
+                        <div className="text-left">
+                          <span className="font-medium">{STAGE_NAMES[stageNum]}</span>
+                          <span className="ml-2 px-2 py-0.5 rounded bg-dark-border text-xs text-gray-400">
+                            {stageInitiatives.length}
+                          </span>
+                        </div>
+                      </div>
+                      {expandedStages[stageNum] ? (
+                        <ChevronUp size={18} className="text-gray-400" />
+                      ) : (
+                        <ChevronDown size={18} className="text-gray-400" />
+                      )}
+                    </button>
+                    {expandedStages[stageNum] && (
+                      <div className="border-t border-dark-border bg-dark-card">
+                        {stageInitiatives.map((initiative) => (
+                          <InitiativeRow
+                            key={initiative.id}
+                            initiative={initiative}
+                            onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : viewMode === 'list' ? (
             /* List view - cleaner, more scannable */
             <div className="border border-dark-border rounded-lg overflow-hidden bg-dark-card">
               {/* Header row */}
@@ -2003,7 +2074,6 @@ export function InitiativesTab() {
                 <InitiativeRow
                   key={initiative.id}
                   initiative={initiative}
-                  // Session 904: Always use comprehensive modal for all initiatives
                   onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
                 />
               ))}
@@ -2015,7 +2085,6 @@ export function InitiativesTab() {
                 <InitiativeCard
                   key={initiative.id}
                   initiative={initiative}
-                  // Session 904: Always use comprehensive modal for all initiatives
                   onViewDetails={() => setComprehensiveInitiativeId(initiative.id)}
                 />
               ))}
