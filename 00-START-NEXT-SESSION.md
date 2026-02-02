@@ -1,22 +1,29 @@
-# Session 903 - Start Here
+# Session 904 - Start Here
 
-**Previous Session:** 902 (Action Item Tracking - COMPLETE)
+**Previous Session:** 903 (Auto-Extraction + Celery OOM Fix)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **ACTION ITEM AUTO-EXTRACTION: COMPLETE** | **820 SUCCESSFUL EXPERIMENTS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **CELERY OOM FIXED** | **SIGNAL INTELLIGENCE WIRED** | **820 SUCCESSFUL EXPERIMENTS**
 
 ---
 
-## What Was Accomplished in Session 903 (IN PROGRESS)
+## What Was Accomplished in Session 902/903
 
-### Auto-Extraction on Conversation Complete ✅
+### Signal Intelligence Wired ✅ (PR #686)
+- `process_pending_auto_topics` task now creates HiveMindSessions with `signal_cluster` and `auto_topic` FK links
+- `trigger_signal_driven_conversation` dispatches conversations with full provenance chain
+- `run_triggered_conversation` accepts `hive_session_id` parameter and updates session status on completion
+- Fixed missing `django.db.models` import that broke AutoTopic processing
 
-**PR #684 Merged:** `extract_action_items_from_session` Celery task
+### Celery OOM Fix ✅ (PR #687)
+- Added task lock to `scan_spider_opportunities` using Django cache (prevents concurrent execution)
+- Reduced spider scan frequency from 15 to 30 minutes
+- Fixed aiohttp session cleanup - properly closes connector before discarding session
+- Added `close_sync()` method for cleanup outside async context
 
-How it works:
-1. HiveMind session completes with synthesis containing `=== DecisionSummary === ... Next Steps:`
-2. `run_hive_mind_session` task calls `extract_action_items_from_session.delay(session_id)`
-3. Extraction task runs asynchronously on `default` queue
-4. Parser service extracts action items and creates `InitiativeActionItem` records
+Root cause: 5 simultaneous spider scans with unclosed aiohttp ClientSessions exhausted worker memory.
+
+### Auto-Extraction on Conversation Complete ✅ (PR #684)
+`extract_action_items_from_session` Celery task auto-runs when HiveMind sessions complete.
 
 ---
 
@@ -101,11 +108,11 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | PR | Description |
 |----|-------------|
+| #687 | fix(Session 902): Celery worker OOM fixes for spider scan task |
+| #686 | fix(Session 902): Wire Signal Intelligence to trigger HiveMindSessions |
 | #684 | feat(Session 903): Auto-extract action items on conversation complete |
 | #683 | docs(Session 902): Add Action Item Tracking documentation |
-| #682 | fix(Session 902): Use correct HiveMindSession field names |
 | #681 | feat(Session 902): Initiative Action Items |
-| #680 | docs(Session 901): Initiative Priority documentation |
 
 ---
 
@@ -113,12 +120,12 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **903** | Auto-Extraction + Celery OOM Fix - Signal Intelligence wired, spider task memory fix | This session |
 | **902** | Action Item Tracking - Extract & track next steps from conversations | `SESSION_902_ACTION_ITEM_TRACKING.md` |
 | **901** | Initiative Priority & Portfolio - 4 tabs, priority scoring, purpose/program | `SESSION_901_INITIATIVE_PRIORITY.md` |
 | **900** | Signal Intelligence - SignalCluster, AutoTopic models for Origin & Trigger UI | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
 | **899** | Comprehensive Initiative View | `SESSION_899_COMPREHENSIVE_INITIATIVE_VIEW.md` |
 | **898** | Mythology Lab Agent Name Fix | `SESSION_898_MYTHOLOGY_LAB_FIX.md` |
-| **897** | Experiment Pipeline Fix + Initiatives Performance | `SESSION_897_COMPLETE.md` |
 
 ---
 
