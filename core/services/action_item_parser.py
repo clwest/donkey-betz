@@ -272,10 +272,10 @@ def extract_action_items_from_conversation(session_id: str) -> List:
         logger.error(f"Session {session_id} not found")
         return []
 
-    # Get the conclusion text
-    conclusion = session.conclusion or ''
+    # Get the conclusion text (HiveMindSession uses synthesis_summary)
+    conclusion = session.synthesis_summary or session.synthesis or ''
     if not conclusion:
-        logger.info(f"Session {session_id} has no conclusion")
+        logger.info(f"Session {session_id} has no synthesis")
         return []
 
     # Find linked initiative
@@ -290,7 +290,7 @@ def extract_action_items_from_conversation(session_id: str) -> List:
 
     # If no initiative found, try to find by topic matching
     if not initiative:
-        topic = session.topic or session.title or ''
+        topic = session.conversation_topic or ''
         if topic:
             initiative = Initiative.objects.filter(name__icontains=topic[:50]).first()
 
@@ -352,9 +352,9 @@ def bulk_extract_action_items(limit: int = 100) -> Dict:
     ).distinct()
 
     sessions = HiveMindSession.objects.filter(
-        conclusion__isnull=False
+        synthesis_summary__isnull=False
     ).exclude(
-        conclusion=''
+        synthesis_summary=''
     ).exclude(
         id__in=processed_session_ids
     ).order_by('-created_at')[:limit]
