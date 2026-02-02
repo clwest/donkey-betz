@@ -74,21 +74,21 @@ def extract_clean_title(initiative) -> str:
 
     # Option 3: Extract first meaningful phrase (before special chars)
     # Be aggressive - stop at first special character
-    for delimiter in [';', ' -> ', ' → ', ':', ',', '/', '=']:
-        if delimiter in name:
-            first_part = name.split(delimiter)[0].strip()
-            # Clean up technical prefixes
-            first_part = re.sub(r'^[>\-\s]+', '', first_part)
-            if first_part and len(first_part) >= 5:
-                # Truncate to max 50 chars, title case it
-                return _title_case(first_part[:50])
+    # Clean up leading special chars first
+    clean_name = re.sub(r'^[>\-\s]+', '', name)
 
-    # Option 4: Take first 3-4 words only
-    words = name.split()[:4]
+    for delimiter in [';', ' -> ', ' → ', ':', ',', '/', '=', ' - ']:
+        if delimiter in clean_name:
+            first_part = clean_name.split(delimiter)[0].strip()
+            if first_part and len(first_part) >= 5:
+                # Limit to 3 words max from this part
+                words = first_part.split()[:3]
+                return _title_case(' '.join(words))
+
+    # Option 4: Take first 3 words only
+    words = clean_name.split()[:3]
     if words:
-        cleaned = ' '.join(words)
-        cleaned = re.sub(r'^[>\-\s]+', '', cleaned)  # Remove leading special chars
-        return _title_case(cleaned[:50])
+        return _title_case(' '.join(words))
 
     return name[:50]
 
