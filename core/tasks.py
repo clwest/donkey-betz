@@ -31997,3 +31997,202 @@ def check_blocked_research_for_unblock(self):
         'status': 'success',
         'triggered_count': triggered_count
     }
+
+
+# ==================== SESSION 905: INITIATIVE AUTO-PROGRESSION ====================
+
+
+@shared_task(bind=True, queue='default')
+def process_initiative_auto_progression(self):
+    """
+    Session 905: Periodic task to auto-progress initiatives through stages.
+
+    Runs every 10 minutes to find DRAFT stages ready for progression and
+    automatically approves them, triggering next stage generation.
+    """
+    from core.services.initiative_auto_progression import (
+        get_initiatives_ready_for_progression,
+        progress_initiative_stage
+    )
+
+    logger.info("📊 [AUTO-PROGRESSION] Checking initiatives for auto-progression")
+
+    ready_initiatives = get_initiatives_ready_for_progression()
+    logger.info(f"📊 [AUTO-PROGRESSION] Found {len(ready_initiatives)} initiatives ready")
+
+    progressed_count = 0
+    failed_count = 0
+    results = []
+
+    for item in ready_initiatives:
+        initiative_id = item['initiative_id']
+        try:
+            result = progress_initiative_stage(initiative_id, auto_generate_next=True)
+            if result.get('success'):
+                progressed_count += 1
+                logger.info(
+                    f"📊 [AUTO-PROGRESSION] ✅ Progressed {item['initiative_name']} "
+                    f"from Stage {result.get('previous_stage')} to Stage {result.get('new_stage')}"
+                )
+            else:
+                failed_count += 1
+                logger.warning(
+                    f"📊 [AUTO-PROGRESSION] ⚠️ Failed to progress {item['initiative_name']}: "
+                    f"{result.get('error')}"
+                )
+            results.append(result)
+        except Exception as e:
+            failed_count += 1
+            logger.error(f"📊 [AUTO-PROGRESSION] ❌ Error progressing {initiative_id}: {e}")
+            results.append({'initiative_id': initiative_id, 'error': str(e)})
+
+    logger.info(
+        f"📊 [AUTO-PROGRESSION] Complete: {progressed_count} progressed, {failed_count} failed"
+    )
+    return {
+        'status': 'success',
+        'progressed_count': progressed_count,
+        'failed_count': failed_count,
+        'results': results
+    }
+
+
+@shared_task(bind=True, queue='default', max_retries=2)
+def generate_initiative_stage_document(self, initiative_id: str, stage_num: int):
+    """
+    Session 905: Generate a document for a specific initiative stage.
+
+    Uses the appropriate agent based on the stage:
+    - Stage 1: ResearchAgent (Research Brief)
+    - Stage 2: ThinkingAgent (Prototype Plan)
+    - Stage 3: ThinkingAgent (Evaluation Protocol)
+    - Stage 4: FullStackDeveloperAgent (Technical Design)
+    - Stage 5: ThinkingAgent (Pilot Execution Plan)
+    """
+    from core.models_document_registry import Initiative, InitiativeStage, Document
+    from core.models import Agent, UserMessage, Conversation
+
+    logger.info(f"📝 [STAGE-GEN] Generating Stage {stage_num} document for initiative {initiative_id}")
+
+    try:
+        initiative = Initiative.objects.get(id=initiative_id)
+    except Initiative.DoesNotExist:
+        logger.error(f"📝 [STAGE-GEN] Initiative {initiative_id} not found")
+        return {'success': False, 'error': 'Initiative not found'}
+
+    # Get or create stage record
+    stage, created = InitiativeStage.objects.get_or_create(
+        initiative=initiative,
+        stage=stage_num,
+        defaults={'status': 'PENDING'}
+    )
+
+    if stage.document:
+        logger.info(f"📝 [STAGE-GEN] Stage {stage_num} already has document {stage.document.id}")
+        return {'success': False, 'error': 'Stage already has document', 'document_id': str(stage.document.id)}
+
+    # Stage-specific configuration
+    stage_config = {
+        1: {'agent': 'ResearchAgent', 'template': 'Research Brief'},
+        2: {'agent': 'ThinkingAgent', 'template': 'Prototype Plan'},
+        3: {'agent': 'ThinkingAgent', 'template': 'Evaluation Protocol'},
+        4: {'agent': 'FullStackDeveloperAgent', 'template': 'Technical Design'},
+        5: {'agent': 'ThinkingAgent', 'template': 'Pilot Execution Plan'},
+    }
+
+    config = stage_config.get(stage_num, {'agent': 'ThinkingAgent', 'template': 'Stage Document'})
+
+    # Build context from previous stages
+    previous_context = []
+    for prev_stage_num in range(1, stage_num):
+        try:
+            prev_stage = InitiativeStage.objects.get(initiative=initiative, stage=prev_stage_num)
+            if prev_stage.document:
+                doc_content = prev_stage.document.full_text or prev_stage.document.content or ''
+                previous_context.append(f"## Stage {prev_stage_num}: {prev_stage.get_stage_display()}\n{doc_content[:2000]}")
+        except InitiativeStage.DoesNotExist:
+            pass
+
+    context_text = "\n\n".join(previous_context) if previous_context else "No previous stage documents."
+
+    # Build the generation prompt
+    prompt = f"""Generate a {config['template']} document for this initiative.
+
+## Initiative
+**Name:** {initiative.name}
+**Description:** {initiative.description or 'No description provided'}
+
+## Previous Stage Context
+{context_text}
+
+## Your Task
+Create a comprehensive {config['template']} document that builds on the previous stages.
+Include relevant sections based on the stage type:
+
+Stage {stage_num} ({config['template']}) should include:
+"""
+
+    # Add stage-specific instructions
+    stage_instructions = {
+        1: "- Research Findings\n- Data Sources\n- Key Insights\n- Decision Gate (proceed/wait criteria)",
+        2: "- Architecture Overview\n- Implementation Approach\n- Key Components\n- Risk Assessment",
+        3: "- Success Criteria\n- Metrics to Track\n- Evaluation Timeline\n- Go/No-Go Decision Criteria",
+        4: "- Technical Specification\n- Dependencies\n- Integration Points\n- Testing Strategy",
+        5: "- Pilot Results\n- Learnings\n- Recommendations\n- Scale Plan",
+    }
+    prompt += stage_instructions.get(stage_num, "- Relevant sections for this stage")
+
+    try:
+        # Get the agent
+        agent_model = Agent.objects.filter(name=config['agent']).first()
+        if not agent_model:
+            logger.warning(f"📝 [STAGE-GEN] Agent {config['agent']} not found, using ThinkingAgent")
+            agent_model = Agent.objects.filter(name='ThinkingAgent').first()
+
+        if not agent_model:
+            raise ValueError("No suitable agent found")
+
+        # Execute the agent
+        from core.agent_router import AgentRouter
+        router = AgentRouter()
+
+        result = router.execute_agent(
+            agent_name=agent_model.name,
+            query=prompt,
+            context={'initiative_id': str(initiative_id), 'stage': stage_num}
+        )
+
+        if not result or not result.get('response'):
+            raise ValueError("Agent returned empty response")
+
+        document_content = result.get('response', '')
+
+        # Create the document
+        document = Document.objects.create(
+            title=f"{initiative.name} - Stage {stage_num}: {config['template']}",
+            content=document_content[:1000],  # Preview
+            full_text=document_content,
+            document_type='initiative_stage',
+            initiative=initiative,
+        )
+
+        # Link document to stage
+        stage.document = document
+        stage.status = 'DRAFT'
+        stage.save()
+
+        logger.info(f"📝 [STAGE-GEN] ✅ Created document {document.id} for Stage {stage_num}")
+
+        return {
+            'success': True,
+            'document_id': str(document.id),
+            'stage': stage_num,
+            'initiative_id': str(initiative_id),
+            'initiative_name': initiative.name
+        }
+
+    except Exception as e:
+        logger.error(f"📝 [STAGE-GEN] ❌ Error generating Stage {stage_num}: {e}")
+        stage.status = 'PENDING'  # Reset to pending for retry
+        stage.save()
+        raise self.retry(exc=e, countdown=300)

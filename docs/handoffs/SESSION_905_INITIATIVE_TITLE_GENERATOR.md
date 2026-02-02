@@ -373,13 +373,202 @@ research_result_record = self._create_blocked_research_result(
 
 ---
 
-## Next Steps
+---
 
-1. **Monitor New Initiatives** - Verify titles are clean going forward
-2. **Tune LLM Prompt** - Adjust if titles become too generic
-3. **Add Title Edit UI** - Allow manual title override in modal
-4. **Monitor Research Retries** - Check Celery logs for retry_blocked_research
+# Part 3: Initiative Auto-Progression (PR #698)
+
+## Problem
+
+Initiatives with sufficient data were getting stuck at DRAFT status indefinitely:
+
+```
+Research Brief created with sufficient data ✅
+    ↓
+Stage 1: DRAFT (good content)
+    ↓
+❌ STOPS HERE - Nobody approves and triggers Stage 2
+```
+
+Despite having quality content that met progression criteria, initiatives required manual intervention to move forward.
+
+## Solution: Auto-Progression Service
+
+```
+Stage with DRAFT status + Quality criteria met →
+Celery task (every 10 min) → Auto-approve → Trigger next stage generation
+```
+
+### New Service: `core/services/initiative_auto_progression.py`
+
+```python
+from core.services.initiative_auto_progression import (
+    check_stage_for_progression,
+    progress_initiative_stage,
+    trigger_next_stage_generation,
+    get_initiatives_ready_for_progression
+)
+
+# Check single initiative
+result = check_stage_for_progression(initiative_id)
+
+# Auto-progress with next stage generation
+result = progress_initiative_stage(initiative_id, auto_generate_next=True)
+```
+
+### Quality Thresholds (per stage)
+
+| Stage | Min Length | Required Sections |
+|-------|------------|-------------------|
+| 1 (Research Brief) | 100 chars | Research Findings, Data Sources |
+| 2 (Prototype Plan) | 200 chars | Architecture, Implementation |
+| 3 (Evaluation) | 150 chars | Success Criteria, Metrics |
+| 4 (Technical Design) | 300 chars | Specification, Dependencies |
+| 5 (Pilot Execution) | 100 chars | Results, Learnings |
+
+### Quality Evaluation Logic
+
+1. **Length Check** - Content meets minimum char threshold
+2. **Section Check** - Required sections present (case-insensitive)
+3. **Blocker Detection** - Rejects if contains "insufficient data", "awaiting data", "blocked"
+4. **Completion Markers** - Bonus confidence for "research completed", "data available", "findings"
+5. **Confidence Score** - 60%+ required for auto-progression
+
+### Celery Tasks
+
+**`process_initiative_auto_progression`** - Runs every 10 minutes:
+1. Finds all DRAFT stages with documents
+2. Evaluates quality criteria
+3. Auto-approves passing stages
+4. Triggers next stage document generation
+
+**`generate_initiative_stage_document`** - Generates stage documents:
+1. Uses stage-appropriate agent (ResearchAgent, ThinkingAgent, FullStackDeveloperAgent)
+2. Includes context from all previous stages
+3. Creates Document and links to InitiativeStage
+4. Sets stage status to DRAFT
+
+### Agent Mapping
+
+| Stage | Agent | Document Type |
+|-------|-------|---------------|
+| 1 | ResearchAgent | Research Brief |
+| 2 | ThinkingAgent | Prototype Plan |
+| 3 | ThinkingAgent | Evaluation Protocol |
+| 4 | FullStackDeveloperAgent | Technical Design |
+| 5 | ThinkingAgent | Pilot Execution Plan |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    INITIATIVE AUTO-PROGRESSION                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Celery Beat (every 10 min)                                         │
+│       ↓                                                              │
+│  process_initiative_auto_progression                                 │
+│       ↓                                                              │
+│  Find DRAFT stages with documents                                    │
+│       ↓                                                              │
+│  ┌─────────────────────────────────────────┐                        │
+│  │     evaluate_stage_quality()            │                        │
+│  │     - Check content length              │                        │
+│  │     - Check required sections           │                        │
+│  │     - Check for blockers                │                        │
+│  │     - Calculate confidence (0-100%)     │                        │
+│  └────────────────────┬────────────────────┘                        │
+│                       ↓                                              │
+│        ┌──────────────┴──────────────┐                              │
+│        ↓                             ↓                              │
+│   Quality < 60%               Quality >= 60%                        │
+│   → Stay DRAFT                → Auto-approve                        │
+│                                      ↓                              │
+│                           progress_initiative_stage()                │
+│                                      ↓                              │
+│                           Stage → APPROVED                          │
+│                           Initiative.current_stage += 1             │
+│                                      ↓                              │
+│                           trigger_next_stage_generation()           │
+│                                      ↓                              │
+│                           generate_initiative_stage_document.delay() │
+│                                      ↓                              │
+│                           New stage document created                │
+│                           New stage → DRAFT                         │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+## Files Changed (PR #698)
+
+| File | Changes |
+|------|---------|
+| `core/services/initiative_auto_progression.py` | NEW - Auto-progression service |
+| `core/tasks.py` | Added process_initiative_auto_progression, generate_initiative_stage_document |
+| `core/celery.py` | Added periodic schedule (every 10 min) |
 
 ---
 
-**Session 905: Initiative titles clean + Research self-unblock loop complete!**
+## Complete Session 905 Summary
+
+### Three Parts Completed
+
+1. **Initiative Title Generator** (PR #694, #695)
+   - Smart LLM + heuristic title generation
+   - Fixed 30 messy production titles
+
+2. **Research Self-Unblock Loop** (PR #697)
+   - Blocked research tracking
+   - Auto-retry with spider data
+   - Celery retry mechanism
+
+3. **Initiative Auto-Progression** (PR #698)
+   - Quality-based stage progression
+   - Auto-approval when criteria met
+   - Next stage document generation
+
+### The Complete Initiative Lifecycle
+
+```
+HiveMind/Conversation → Initiative Created
+        ↓
+Stage 1: Research Brief (PENDING)
+        ↓
+ResearchAgent executes
+        ↓
+┌───────────────────────────────────────┐
+│  Insufficient Data?                   │
+│  → BLOCKED + Spider spawn + Retry     │
+│                                       │
+│  Sufficient Data?                     │
+│  → DRAFT                              │
+└───────────────────────────────────────┘
+        ↓
+Auto-Progression (every 10 min)
+Quality check: length + sections + no blockers
+        ↓
+┌───────────────────────────────────────┐
+│  Quality < 60%? → Stay DRAFT          │
+│  Quality >= 60%? → APPROVED           │
+└───────────────────────────────────────┘
+        ↓
+current_stage = 2
+        ↓
+generate_initiative_stage_document → Stage 2 DRAFT
+        ↓
+... repeat for Stages 2-5 ...
+        ↓
+Stage 5 APPROVED → FinalDeliverable created!
+```
+
+---
+
+## Next Steps
+
+1. **Monitor Auto-Progression** - Check Celery logs for `[AUTO-PROGRESSION]` entries
+2. **Monitor Research Retries** - Check Celery logs for `[RESEARCH-RETRY]` entries
+3. **Tune Quality Thresholds** - Adjust min_length or required_sections if too strict/lenient
+4. **Add Manual Override** - UI to force-progress or block auto-progression
+
+---
+
+**Session 905: Complete! Initiative titles + Research self-unblock + Auto-progression!**
