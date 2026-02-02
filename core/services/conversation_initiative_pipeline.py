@@ -288,6 +288,29 @@ class ConversationInitiativePipeline:
                 initiative_name = f"{base_name} ({counter})"
                 counter += 1
 
+            # Session 908: Get workspace for initiative
+            workspace = None
+            try:
+                from core.models_skin_layer import ProjectWorkspace
+                from core.services.workspace_manager import WorkspaceManager
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                if user_id:
+                    user = User.objects.filter(id=user_id).first()
+                    if user:
+                        manager = WorkspaceManager(user)
+                        workspace = manager.get_active_workspace()
+
+                if not workspace:
+                    # Fall back to system user's workspace
+                    system_user = User.objects.filter(username='system_autonomous').first()
+                    if system_user:
+                        manager = WorkspaceManager(system_user)
+                        workspace = manager.get_active_workspace()
+            except Exception as ws_error:
+                logger.warning(f"Could not get workspace for initiative: {ws_error}")
+
             initiative = Initiative.objects.create(
                 name=initiative_name,
                 description=f"Auto-created from conversation about: {topic}",
@@ -295,6 +318,7 @@ class ConversationInitiativePipeline:
                 current_stage=1,
                 created_by='ConversationInitiativePipeline',
                 parent_topic=topic[:200] if topic else '',
+                target_workspace=workspace,  # Session 908: Link to workspace
             )
 
             result.initiative_id = str(initiative.id)
