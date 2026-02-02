@@ -30423,7 +30423,8 @@ def run_triggered_conversation(
     objective: str = None,
     success_criteria: list = None,
     auto_select_agents: bool = False,
-    participant_ids: list = None
+    participant_ids: list = None,
+    hive_session_id: str = None  # Session 902: Link to HiveMindSession for signal provenance
 ):
     """
     Session 827: Run a triggered agent conversation asynchronously.
@@ -30438,6 +30439,7 @@ def run_triggered_conversation(
         success_criteria: List of measurable outcomes
         auto_select_agents: Whether to auto-select agents for topic
         participant_ids: Specific agent IDs to participate (ignored if auto_select_agents)
+        hive_session_id: Session 902 - UUID of HiveMindSession to update status on
 
     Returns:
         Dict with conversation result including conversation_id, participants, quality_score
@@ -30479,6 +30481,18 @@ def run_triggered_conversation(
             f"participants={result.get('participants', [])}"
         )
 
+        # Session 902: Update HiveMindSession status if linked
+        if hive_session_id:
+            try:
+                from core.models import HiveMindSession
+                session = HiveMindSession.objects.filter(id=hive_session_id).first()
+                if session:
+                    session.status = 'completed'
+                    session.save(update_fields=['status'])
+                    logger.info(f"✅ [TRIGGERED-CONVO] Updated HiveMindSession {hive_session_id} to completed")
+            except Exception as e:
+                logger.warning(f"Could not update HiveMindSession: {e}")
+
         return {
             'success': True,
             'topic': topic,
@@ -30488,11 +30502,23 @@ def run_triggered_conversation(
             'participants': result.get('participants', []),
             'quality_score': result.get('quality_score', 0),
             'messages': result.get('messages', []),
-            'result': result
+            'result': result,
+            'hive_session_id': hive_session_id,  # Session 902
         }
 
     except Exception as e:
         logger.error(f"❌ [TRIGGERED-CONVO] Failed: {e}")
+
+        # Session 902: Mark HiveMindSession as failed if linked
+        if hive_session_id:
+            try:
+                from core.models import HiveMindSession
+                session = HiveMindSession.objects.filter(id=hive_session_id).first()
+                if session:
+                    session.status = 'failed'
+                    session.save(update_fields=['status'])
+            except Exception:
+                pass
 
         # Retry on transient failures
         if self.request.retries < self.max_retries:
@@ -31600,15 +31626,16 @@ def trigger_signal_driven_conversation(self, auto_topic_id: str):
         )
 
         # Trigger the actual conversation execution
+        # Session 902: Pass hive_session_id for status updates
         try:
             run_triggered_conversation.delay(
-                session_id=str(session.id),
                 topic=auto_topic.name,
                 conversation_type=auto_topic.suggested_conversation_type,
                 objective=session.objective,
                 success_criteria=session.success_criteria,
                 auto_select_agents=False,  # Already selected
                 participant_ids=agent_ids,
+                hive_session_id=str(session.id),  # Session 902: Link to session
             )
         except Exception as e:
             logger.warning(f"Could not dispatch conversation task: {e}")

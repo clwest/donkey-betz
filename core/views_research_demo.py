@@ -1182,7 +1182,8 @@ def initiatives_api(request):
 
         # Session 884: Support limit and status filter query params
         # Session 897: Reduced default from 200 to 50 for performance
-        limit = int(request.GET.get('limit', 50))
+        # Session 902: Increased to 500 - frontend does tab filtering, needs all initiatives
+        limit = int(request.GET.get('limit', 500))
         status_filter = request.GET.get('status')  # Optional: ACTIVE, COMPLETED, etc.
         # Session 901: New filters
         program_filter = request.GET.get('program')  # Optional: growth_intelligence, etc.
