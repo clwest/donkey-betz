@@ -35,27 +35,44 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 # Quality thresholds for auto-progression
+# Session 906: Made section names more flexible - any of the alternatives count
 STAGE_QUALITY_THRESHOLDS = {
     1: {  # Research Brief
         'min_findings_length': 100,  # At least 100 chars of findings
         'min_sources': 1,  # At least 1 data source
-        'required_sections': ['Research Findings', 'Data Sources'],
+        # Session 906: Accept alternative section names (any match counts)
+        'required_sections': [
+            ['Research Findings', 'Market Signal', 'Problem Statement', 'Executive Summary', 'Findings'],
+            ['Data Sources', 'Source', 'Sources Consulted', 'Data', 'Evidence'],
+        ],
     },
     2: {  # Prototype Plan
         'min_content_length': 200,
-        'required_sections': ['Architecture', 'Implementation'],
+        'required_sections': [
+            ['Architecture', 'Design', 'Approach', 'Overview'],
+            ['Implementation', 'Plan', 'Steps', 'Timeline'],
+        ],
     },
     3: {  # Evaluation Protocol
         'min_content_length': 150,
-        'required_sections': ['Success Criteria', 'Metrics'],
+        'required_sections': [
+            ['Success Criteria', 'Criteria', 'Goals', 'Objectives'],
+            ['Metrics', 'KPIs', 'Measurements', 'Indicators'],
+        ],
     },
     4: {  # Technical Design
         'min_content_length': 300,
-        'required_sections': ['Specification', 'Dependencies'],
+        'required_sections': [
+            ['Specification', 'Spec', 'Requirements', 'Design'],
+            ['Dependencies', 'Requirements', 'Integration', 'Components'],
+        ],
     },
     5: {  # Pilot Execution
         'min_content_length': 100,
-        'required_sections': ['Results', 'Learnings'],
+        'required_sections': [
+            ['Results', 'Outcomes', 'Findings', 'Data'],
+            ['Learnings', 'Lessons', 'Insights', 'Takeaways'],
+        ],
     },
 }
 
@@ -89,10 +106,20 @@ def evaluate_stage_quality(initiative_stage) -> Tuple[bool, float, str]:
         return False, 0.3, f"Content too short ({content_length} < {min_length} chars)"
 
     # Check for required sections
+    # Session 906: Support alternative section names (list of lists)
     missing_sections = []
-    for section in required_sections:
-        if section.lower() not in content.lower():
-            missing_sections.append(section)
+    content_lower = content.lower()
+    for section_alternatives in required_sections:
+        # Each item can be a list of alternatives or a single string
+        if isinstance(section_alternatives, list):
+            # Check if ANY of the alternatives are present
+            found = any(alt.lower() in content_lower for alt in section_alternatives)
+            if not found:
+                missing_sections.append(section_alternatives[0])  # Report first alternative
+        else:
+            # Single string (backwards compatibility)
+            if section_alternatives.lower() not in content_lower:
+                missing_sections.append(section_alternatives)
 
     if missing_sections:
         return False, 0.5, f"Missing sections: {', '.join(missing_sections)}"
