@@ -50,6 +50,27 @@ class Initiative(models.Model):
         ARCHIVED = 'ARCHIVED', 'Archived'
         ON_HOLD = 'ON_HOLD', 'On Hold'
 
+    # Session 901: Purpose categories for strategic grouping
+    class Purpose(models.TextChoices):
+        REVENUE = 'revenue', 'Revenue & Growth'
+        STABILITY = 'stability', 'Platform Health'
+        LEARNING = 'learning', 'Research & Learning'
+        EXPANSION = 'expansion', 'New Capabilities'
+        MAINTENANCE = 'maintenance', 'Maintenance'
+
+    # Session 901: Program groupings for portfolio view
+    class Program(models.TextChoices):
+        GROWTH_INTELLIGENCE = 'growth_intelligence', 'Growth Intelligence'
+        PLATFORM_HEALTH = 'platform_health', 'Platform Health'
+        MONETIZATION = 'monetization', 'Monetization'
+        CONTENT_PIPELINE = 'content_pipeline', 'Content Pipeline'
+        AI_CAPABILITIES = 'ai_capabilities', 'AI Capabilities'
+        USER_EXPERIENCE = 'user_experience', 'User Experience'
+        INFRASTRUCTURE = 'infrastructure', 'Infrastructure'
+        RESEARCH = 'research', 'Research'
+        EXPERIMENTS = 'experiments', 'Experiments'
+        UNCATEGORIZED = 'uncategorized', 'Uncategorized'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
@@ -58,6 +79,39 @@ class Initiative(models.Model):
         max_length=20,
         choices=Status.choices,
         default=Status.ACTIVE
+    )
+
+    # Session 901: Strategic categorization
+    purpose = models.CharField(
+        max_length=20,
+        choices=Purpose.choices,
+        default=Purpose.LEARNING,
+        help_text='Primary purpose of this initiative'
+    )
+
+    program = models.CharField(
+        max_length=30,
+        choices=Program.choices,
+        default=Program.UNCATEGORIZED,
+        help_text='Portfolio program this initiative belongs to'
+    )
+
+    # Session 901: Priority scoring inputs (0-1 scale)
+    impact_score = models.FloatField(
+        default=0.5,
+        help_text='Expected impact of this initiative (0-1)'
+    )
+    urgency = models.FloatField(
+        default=0.5,
+        help_text='Time-sensitivity of this initiative (0-1)'
+    )
+    confidence = models.FloatField(
+        default=0.5,
+        help_text='Confidence in success (0-1)'
+    )
+    revenue_potential = models.FloatField(
+        default=0.0,
+        help_text='Potential revenue impact (0-1)'
     )
 
     # Track current stage (1-5, or 0 if not started)
@@ -79,6 +133,50 @@ class Initiative(models.Model):
 
     def __str__(self):
         return f"{self.name} (Stage {self.current_stage}/5)"
+
+    @property
+    def priority_score(self):
+        """
+        Session 901: Computed priority score for sorting.
+
+        Formula:
+        priority = impact_score * 0.4 + urgency * 0.2 + confidence * 0.2 + revenue_potential * 0.2
+
+        Returns value 0-1, higher = more important.
+        """
+        return (
+            (self.impact_score or 0.5) * 0.4 +
+            (self.urgency or 0.5) * 0.2 +
+            (self.confidence or 0.5) * 0.2 +
+            (self.revenue_potential or 0.0) * 0.2
+        )
+
+    @property
+    def priority_level(self):
+        """
+        Session 901: Human-readable priority level.
+
+        Returns: 'critical', 'high', 'medium', or 'low'
+        """
+        score = self.priority_score
+        if score >= 0.8:
+            return 'critical'
+        elif score >= 0.6:
+            return 'high'
+        elif score >= 0.4:
+            return 'medium'
+        else:
+            return 'low'
+
+    @property
+    def purpose_display(self):
+        """Session 901: Human-readable purpose label."""
+        return self.get_purpose_display()
+
+    @property
+    def program_display(self):
+        """Session 901: Human-readable program label."""
+        return self.get_program_display()
 
     @property
     def stage_summary(self):
