@@ -42,6 +42,13 @@ import {
   Beaker,
   Rocket,
   Wrench,
+  ListTodo,
+  Plus,
+  Check,
+  Square,
+  AlertCircle,
+  Play,
+  Pause,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
@@ -117,6 +124,48 @@ interface InitiativeStats {
     medium: number
     low: number
   }
+}
+
+// Session 902: Action Item interface
+interface ActionItem {
+  id: string
+  title: string
+  description: string
+  assigned_agent: string
+  assigned_user_id: number | null
+  timeline_text: string
+  due_date: string | null
+  estimated_hours: number | null
+  status: 'pending' | 'in_progress' | 'completed' | 'blocked' | 'cancelled'
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  started_at: string | null
+  completed_at: string | null
+  completed_by: string
+  completion_notes: string
+  blocked_reason: string
+  is_overdue: boolean
+  days_until_due: number | null
+  source_conversation_id: string | null
+  source_text: string
+  order: number
+  created_at: string
+  updated_at: string
+}
+
+interface ActionItemsResponse {
+  success: boolean
+  initiative_id: string
+  initiative_name: string
+  count: number
+  stats: {
+    total: number
+    pending: number
+    in_progress: number
+    completed: number
+    blocked: number
+    completion_rate: number
+  }
+  action_items: ActionItem[]
 }
 
 // Session 901: Priority indicator component
@@ -683,19 +732,79 @@ function ComprehensiveInitiativeModal({
   initiativeId: string
   onClose: () => void
 }) {
+  const queryClient = useQueryClient()
   const [viewingDocument, setViewingDocument] = useState<{ id: string; stageName: string } | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     origin: true,
     conversation: false,
     stages: true,
+    actionItems: true,
     deliverable: true,
   })
+  const [newActionTitle, setNewActionTitle] = useState('')
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['initiative-trace', initiativeId],
     queryFn: async () => {
       const res = await platformApi.originTrace(initiativeId)
       return res.data
+    },
+  })
+
+  // Session 902: Fetch action items
+  const { data: actionItemsData, isLoading: actionItemsLoading } = useQuery({
+    queryKey: ['initiative-action-items', initiativeId],
+    queryFn: async () => {
+      const res = await fetch(`/api/initiatives/${initiativeId}/action-items/`)
+      if (!res.ok) throw new Error('Failed to fetch action items')
+      return res.json() as Promise<ActionItemsResponse>
+    },
+  })
+
+  // Session 902: Update action item status
+  const updateActionItem = useMutation({
+    mutationFn: async ({ itemId, updates }: { itemId: string; updates: Record<string, unknown> }) => {
+      const res = await fetch(`/api/action-items/${itemId}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) throw new Error('Failed to update action item')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiative-action-items', initiativeId] })
+    },
+  })
+
+  // Session 902: Create action item
+  const createActionItem = useMutation({
+    mutationFn: async (title: string) => {
+      const res = await fetch(`/api/initiatives/${initiativeId}/action-items/create/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, priority: 'medium' }),
+      })
+      if (!res.ok) throw new Error('Failed to create action item')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiative-action-items', initiativeId] })
+      setNewActionTitle('')
+    },
+  })
+
+  // Session 902: Extract action items from conversations
+  const extractActionItems = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/initiatives/${initiativeId}/action-items/extract/`, {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error('Failed to extract action items')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiative-action-items', initiativeId] })
     },
   })
 
@@ -1176,6 +1285,203 @@ function ComprehensiveInitiativeModal({
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* SESSION 902: ACTION ITEMS SECTION */}
+          <div className="border border-dark-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleSection('actionItems')}
+              className="w-full flex items-center justify-between p-4 bg-dark-bg hover:bg-dark-bg/80 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <ListTodo size={18} className="text-purple-400" />
+                <span className="font-medium">Action Items</span>
+                {actionItemsData?.stats && (
+                  <span className="text-sm text-gray-400">
+                    {actionItemsData.stats.completed}/{actionItemsData.stats.total} completed
+                    {actionItemsData.stats.completion_rate > 0 && (
+                      <span className="ml-1 text-green-400">({actionItemsData.stats.completion_rate}%)</span>
+                    )}
+                  </span>
+                )}
+              </div>
+              {expandedSections.actionItems ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+
+            {expandedSections.actionItems && (
+              <div className="p-4 border-t border-dark-border space-y-4">
+                {/* Stats bar */}
+                {actionItemsData?.stats && actionItemsData.stats.total > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="flex items-center gap-1 px-2 py-1 bg-gray-500/10 rounded text-gray-400">
+                      <Circle size={8} /> {actionItemsData.stats.pending} pending
+                    </span>
+                    <span className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 rounded text-blue-400">
+                      <Play size={8} /> {actionItemsData.stats.in_progress} in progress
+                    </span>
+                    <span className="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded text-green-400">
+                      <Check size={8} /> {actionItemsData.stats.completed} completed
+                    </span>
+                    {actionItemsData.stats.blocked > 0 && (
+                      <span className="flex items-center gap-1 px-2 py-1 bg-red-500/10 rounded text-red-400">
+                        <Pause size={8} /> {actionItemsData.stats.blocked} blocked
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => extractActionItems.mutate()}
+                    disabled={extractActionItems.isPending}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 rounded text-purple-400 text-sm transition-colors disabled:opacity-50"
+                  >
+                    {extractActionItems.isPending ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={14} />
+                    )}
+                    Extract from Conversations
+                  </button>
+                </div>
+
+                {/* Add new action item */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newActionTitle}
+                    onChange={(e) => setNewActionTitle(e.target.value)}
+                    placeholder="Add new action item..."
+                    className="flex-1 px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newActionTitle.trim()) {
+                        createActionItem.mutate(newActionTitle.trim())
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => newActionTitle.trim() && createActionItem.mutate(newActionTitle.trim())}
+                    disabled={!newActionTitle.trim() || createActionItem.isPending}
+                    className="p-2 bg-primary-500/10 hover:bg-primary-500/20 rounded-lg text-primary-400 disabled:opacity-50 transition-colors"
+                  >
+                    {createActionItem.isPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Plus size={16} />
+                    )}
+                  </button>
+                </div>
+
+                {/* Action items list */}
+                {actionItemsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 size={20} className="animate-spin text-gray-400" />
+                  </div>
+                ) : actionItemsData?.action_items && actionItemsData.action_items.length > 0 ? (
+                  <div className="space-y-2">
+                    {actionItemsData.action_items.map((item) => (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          'flex items-start gap-3 p-3 rounded-lg border transition-colors',
+                          item.status === 'completed' && 'bg-green-500/5 border-green-500/30 opacity-60',
+                          item.status === 'in_progress' && 'bg-blue-500/5 border-blue-500/30',
+                          item.status === 'blocked' && 'bg-red-500/5 border-red-500/30',
+                          item.status === 'pending' && 'bg-dark-bg border-dark-border',
+                        )}
+                      >
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => {
+                            const newStatus = item.status === 'completed' ? 'pending' :
+                                            item.status === 'pending' ? 'in_progress' :
+                                            item.status === 'in_progress' ? 'completed' : item.status
+                            updateActionItem.mutate({ itemId: item.id, updates: { status: newStatus } })
+                          }}
+                          className={cn(
+                            'mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors shrink-0',
+                            item.status === 'completed' && 'bg-green-500 border-green-500 text-white',
+                            item.status === 'in_progress' && 'bg-blue-500/20 border-blue-500',
+                            item.status === 'blocked' && 'bg-red-500/20 border-red-500',
+                            item.status === 'pending' && 'border-gray-500 hover:border-gray-400',
+                          )}
+                        >
+                          {item.status === 'completed' && <Check size={12} />}
+                          {item.status === 'in_progress' && <Play size={10} />}
+                          {item.status === 'blocked' && <Pause size={10} />}
+                        </button>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className={cn(
+                            'font-medium text-sm',
+                            item.status === 'completed' && 'line-through text-gray-500'
+                          )}>
+                            {item.title}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {item.assigned_agent && (
+                              <span className="text-xs px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded">
+                                {item.assigned_agent}
+                              </span>
+                            )}
+                            {item.timeline_text && (
+                              <span className="text-xs px-1.5 py-0.5 bg-gray-500/10 text-gray-400 rounded flex items-center gap-1">
+                                <Clock size={10} />
+                                {item.timeline_text}
+                              </span>
+                            )}
+                            {item.is_overdue && (
+                              <span className="text-xs px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded flex items-center gap-1">
+                                <AlertCircle size={10} />
+                                Overdue
+                              </span>
+                            )}
+                            <span className={cn(
+                              'text-xs px-1.5 py-0.5 rounded',
+                              item.priority === 'critical' && 'bg-red-500/10 text-red-400',
+                              item.priority === 'high' && 'bg-orange-500/10 text-orange-400',
+                              item.priority === 'medium' && 'bg-yellow-500/10 text-yellow-400',
+                              item.priority === 'low' && 'bg-gray-500/10 text-gray-400',
+                            )}>
+                              {item.priority}
+                            </span>
+                          </div>
+                          {item.blocked_reason && (
+                            <div className="mt-2 text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded">
+                              Blocked: {item.blocked_reason}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Priority toggle */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              const priorities = ['low', 'medium', 'high', 'critical']
+                              const currentIdx = priorities.indexOf(item.priority)
+                              const nextPriority = priorities[(currentIdx + 1) % priorities.length]
+                              updateActionItem.mutate({ itemId: item.id, updates: { priority: nextPriority } })
+                            }}
+                            className="p-1 hover:bg-dark-border rounded text-gray-400 hover:text-white transition-colors"
+                            title="Change priority"
+                          >
+                            <Flame size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <ListTodo size={24} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No action items yet</p>
+                    <p className="text-xs mt-1">Click "Extract from Conversations" to find action items</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

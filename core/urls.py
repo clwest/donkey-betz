@@ -2855,6 +2855,13 @@ urlpatterns = [
     path('api/initiatives/circuit-breaker/', views_initiative_kickstart.initiative_circuit_breaker, name='initiatives-circuit-breaker'),  # Session 884: Pause/resume initiative creation
     path('api/initiatives/cleanup/', views_initiative_kickstart.cleanup_initiatives, name='initiatives-cleanup'),  # Session 884: Archive/delete stuck initiatives
     path('api/initiatives/<uuid:initiative_id>/origin-trace/', views_research_demo.initiative_origin_trace_api, name='initiatives-origin-trace'),  # Session 898: Full origin chain trace
+    # Session 902: Action Items API
+    path('api/initiatives/<uuid:initiative_id>/action-items/', views_research_demo.initiative_action_items_api, name='initiative-action-items'),
+    path('api/initiatives/<uuid:initiative_id>/action-items/create/', views_research_demo.action_item_create_api, name='action-item-create'),
+    path('api/initiatives/<uuid:initiative_id>/action-items/extract/', views_research_demo.extract_action_items_api, name='action-items-extract'),
+    path('api/action-items/<uuid:item_id>/', views_research_demo.action_item_update_api, name='action-item-update'),
+    path('api/action-items/<uuid:item_id>/delete/', views_research_demo.action_item_delete_api, name='action-item-delete'),
+    path('api/action-items/extract/', views_research_demo.extract_action_items_api, name='action-items-bulk-extract'),  # Bulk extract without initiative
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
