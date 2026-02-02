@@ -51,7 +51,31 @@ workspace = get_primary_workspace()  # Returns ProjectWorkspace instance
 user = get_primary_user()  # Returns User instance
 ```
 
-### 3. Session 909 Fixes Verified
+### 3. Fixed Agent Task Data Display (UI)
+
+**Problem:** Agent tasks in the Command Tab showed truncated data - users could not view full task descriptions or context_injected details. The backend was truncating data before sending it.
+
+**Root Cause:**
+1. Backend `core/views_platform_command.py` was converting input_data to a truncated string
+2. Frontend had no expand/collapse functionality for long content
+
+**Solution:**
+1. Backend now sends full `input_data` dict - frontend handles display
+2. Frontend `CommandTab.tsx` has new `InputParamRow` component with:
+   - Expandable objects (shows first 5 fields, "expand all" button for more)
+   - Expandable strings (truncates at 200 chars, "show more" button)
+   - Proper nested rendering for context_injected
+
+**Verification (Production):**
+```
+Task length: 500 chars (vs 100 char limit before)
+context_injected: dict with 11 keys (not truncated string)
+Keys: docs, workspace, spider_data, user_context, scifi_context,
+      spider_trends, knowledge_state, advisor_insights,
+      learning_patterns, spider_discussions, performance_feedback
+```
+
+### 4. Session 909 Fixes Verified
 
 Confirmed all Session 909 fixes are working in production:
 - Donkey Betz workspace: **6783 operations** (increased from 6780)
@@ -224,6 +248,8 @@ TOTAL:                       136 initiatives (all connected to Donkey Betz)
 | `core/tasks.py` | Uses platform_config in `_get_workspace_for_skin_layer()` |
 | `core/agent_router.py` | Uses platform_config in `_get_workspace_context()` |
 | `core/services/conversation_initiative_pipeline.py` | Uses platform_config for workspace selection |
+| `core/views_platform_command.py` | Fixed data truncation - sends full input_data dict |
+| `frontend/src/pages/workspace/tabs/CommandTab.tsx` | New expandable InputParamRow component |
 
 ---
 
@@ -252,6 +278,10 @@ status = get_config_status()  # Returns debug info
 # PRIMARY_WORKSPACE_NAME = "new workspace name"
 ```
 
+### 3. Bug Fixed: Data Truncation in Agent Tasks UI
+**Issue:** Users couldn't view full task descriptions or context_injected data
+**Fix:** Backend sends full data, frontend has expandable views with "expand all" / "show more" buttons
+
 ---
 
-**Session 910 Complete - Configurable workspace/user via platform_config!**
+**Session 910 Complete - Configurable workspace/user + Full data display in UI!**
