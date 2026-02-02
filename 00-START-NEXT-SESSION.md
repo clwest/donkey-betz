@@ -29,7 +29,26 @@
 | 3600s (1 hour) | 900s (15 minutes) |
 | Max zombie lifetime: 90 min | Max zombie lifetime: 45 min |
 
-### 3. Verified Session 910/911 Fixes Working
+### 3. Fixed Stuck Initiative Documents (Critical)
+
+**Problem:** Initiatives showing "Awaiting Data Collection" for 9+ hours even though research completed. Documents were stuck and wouldn't progress.
+
+**Root Cause:** When research completed on retry, the document content wasn't updated to remove the "⚠️ Insufficient Data" marker. The UI shows a warning banner whenever document content contains that text, and auto-progression blocks on it.
+
+**Solution:**
+1. Updated `retry_blocked_research` task to replace "Insufficient Data" with "Data Available" in document content when research completes
+2. Created `fix_stuck_initiatives` management command to repair existing stuck documents
+
+**Usage:**
+```bash
+# Preview what would be fixed
+python manage.py fix_stuck_initiatives --dry-run
+
+# Apply fixes to stuck documents
+python manage.py fix_stuck_initiatives --fix
+```
+
+### 4. Verified Session 910/911 Fixes Working
 
 - ✅ `workspace: true` showing correctly in Agent Tasks UI
 - ✅ Spider connector no longer crashes on persistence.models.SpiderData
@@ -43,6 +62,8 @@
 |----|-------------|
 | #741 | Add topic validation to prevent garbage research tasks |
 | #742 | Increase zombie task cleanup frequency (1 hour → 15 min) |
+| #743 | Update handoff document |
+| #744 | Fix stuck initiative documents + management command |
 
 ---
 
