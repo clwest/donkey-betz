@@ -125,6 +125,9 @@ class ConversationState:
     objective: str = ""
     success_criteria: List[str] = field(default_factory=list)
     criteria_met: List[bool] = field(default_factory=list)  # Track which criteria are satisfied
+    # Session 909: Track question vs substantive statement ratio
+    question_count: int = 0  # Messages that are primarily questions
+    substantive_count: int = 0  # Messages with actual analysis/proposals/decisions
 
 
 # Session 781: Disallowed opener patterns - these are banned globally
@@ -892,6 +895,12 @@ class ConversationOrchestrator:
             # Determine message type
             msg_type = self._classify_message(response, turn, num_turns)
 
+            # Session 909: Track question vs substantive content ratio
+            if msg_type == 'question':
+                state.question_count += 1
+            elif msg_type in ('proposal', 'challenge', 'framework', 'statement', 'conclusion'):
+                state.substantive_count += 1
+
             # Store message
             msg_data = {
                 'agent': current_agent['name'],
@@ -902,7 +911,8 @@ class ConversationOrchestrator:
                 'contains_tension': msg_has_tension,
                 'has_grounding': msg_has_grounding,
                 'has_empty_agreement': msg_has_empty_agreement,
-                'grounding_refs': get_grounding_refs(response)
+                'grounding_refs': get_grounding_refs(response),
+                'is_question_only': msg_type == 'question'  # Session 909: Flag question-only messages
             }
             messages.append(msg_data)
             conversation_context.append(msg_data)
@@ -1275,12 +1285,20 @@ The DecisionSummary MUST appear at the end of your message. This is required."""
         # Agents now ground in their ACTUAL knowledge/experiences, not generic platform stats
 
         # Anti-agreement reminder (Session 781: Updated with explicit bans)
+        # Session 909: Added anti-question-only rules
         turn_instructions.append("""
 VOICE RULES:
 - NEVER say: "Absolutely!", "Great point!", "I love that!", "Exactly right!"
 - NEVER use: "I'd push back slightly", "That's a fair point", "I agree, but..."
 - If you agree, add value from YOUR expertise - don't just validate
-- Speak in YOUR distinct voice, not corporate AI hedging""")
+- Speak in YOUR distinct voice, not corporate AI hedging
+
+SUBSTANCE REQUIREMENT (Session 909 - CRITICAL):
+- NEVER respond with only questions - you MUST provide substantive analysis
+- Every message MUST include at least one: proposal, framework, critique, or concrete insight
+- If you need clarification, ASK while ALSO providing your current analysis
+- Questions like "What metric should we optimize?" are INVALID unless paired with "Based on X, I recommend Y because Z"
+- Ending with a question is fine, but your message must contain actionable content FIRST""")
 
         # Session 781: De-duplication - prevent reusing openers from this conversation
         if state.used_openers:
@@ -1457,25 +1475,24 @@ Next Steps:
 Write a brief concluding paragraph (2-3 sentences) summarizing the discussion, then include the DecisionSummary block above. This is REQUIRED."""
                             continue
                         else:
-                            # Session 786: Force append DecisionSummary if still missing after all retries
-                            logger.warning(f"DecisionSummary still missing after {max_retries} retries, appending placeholder")
+                            # Session 909: FAIL instead of appending garbage placeholder
+                            # Generic placeholders pollute the system with non-actionable output
+                            logger.error(f"DecisionSummary still missing after {max_retries} retries - CONVERSATION FAILED")
                             content += """
 
-=== DecisionSummary ===
-Insights:
-1. Discussion explored multiple strategic perspectives
-2. Trade-offs were identified between approaches
-3. Further analysis recommended before implementation
+=== CONVERSATION FAILED ===
+Status: NO VALID DECISION PRODUCED
 
-Proposed Feature:
-- Name: Discussion Outcome Tracker
-- Inputs: Conversation insights and action items
-- Outputs: Prioritized recommendations
-- Where it plugs into the system: Knowledge base and planning workflows
+This conversation failed to produce actionable output after multiple attempts.
+The agents did not reach a concrete decision with:
+- Specific actionable insights (not generic phrases)
+- Clear next steps with owners
+- Measurable success criteria
 
-Next Steps:
-1. ResearchAgent: Synthesize key findings from this discussion
-2. ContentStrategyAgent: Develop implementation roadmap"""
+This conversation should be retried with different agents or clearer objectives.
+
+Failure Reason: Agents failed to synthesize discussion into DecisionSummary format.
+"""
 
                 return content
 
@@ -1529,11 +1546,21 @@ Next Steps:
         # Decision summary validation
         summary_validation = validate_decision_summary(decision_summary)
 
-        # Overall validity
+        # Session 909: Question ratio validation - conversations must be substantive
+        total_classified = state.question_count + state.substantive_count
+        question_ratio = state.question_count / total_classified if total_classified > 0 else 0
+        question_ratio_ok = question_ratio <= 0.5  # Max 50% questions allowed
+
+        # Session 909: Empty agreement is now a FAILURE, not a warning
+        empty_agreement_ok = state.empty_agreement_count < 2  # Allow 1, fail at 2+
+
+        # Overall validity - Session 909: Added question ratio and empty agreement checks
         is_valid = all([
             tension_met,
             grounding_met,
-            summary_validation['is_valid']
+            summary_validation['is_valid'],
+            question_ratio_ok,  # Session 909: Reject question-heavy conversations
+            empty_agreement_ok,  # Session 909: Reject empty agreement conversations
         ])
 
         # Compile issues
@@ -1548,8 +1575,15 @@ Next Steps:
             issues.append("Missing proposed feature in DecisionSummary")
         if not summary_validation['has_next_steps']:
             issues.append(f"Insufficient next steps: {summary_validation['next_steps_count']}/2 required")
-        if state.empty_agreement_count > 0:
-            issues.append(f"Warning: {state.empty_agreement_count} instances of empty agreement detected")
+        # Session 909: Generic summary rejection
+        if summary_validation.get('is_generic'):
+            issues.append(f"Generic summary rejected: {summary_validation.get('rejection_reason', 'contains vague phrases')}")
+        # Session 909: Question ratio failure
+        if not question_ratio_ok:
+            issues.append(f"Too many questions: {state.question_count}/{total_classified} ({question_ratio:.0%}) - max 50% allowed")
+        # Session 909: Empty agreement is now a failure
+        if not empty_agreement_ok:
+            issues.append(f"Too much empty agreement: {state.empty_agreement_count} instances - agents must challenge ideas")
 
         return {
             'is_valid': is_valid,
@@ -1562,6 +1596,12 @@ Next Steps:
             'has_decision_summary': decision_summary is not None,
             'summary_validation': summary_validation,
             'empty_agreement_count': state.empty_agreement_count,
+            # Session 909: New tracking fields
+            'question_count': state.question_count,
+            'substantive_count': state.substantive_count,
+            'question_ratio': question_ratio,
+            'question_ratio_ok': question_ratio_ok,
+            'empty_agreement_ok': empty_agreement_ok,
             'issues': issues,
             'score': self._calculate_quality_score(state, summary_validation)
         }
@@ -1602,9 +1642,6 @@ Next Steps:
         # Cap at 40 points
         score += min(high_value_score, 40)
 
-        # Penalty for empty agreement
-        score -= state.empty_agreement_count * 5
-
         # Session 840: Penalty for generic summaries
         generic_penalty = summary_validation.get('generic_penalty', 0)
         score -= generic_penalty
@@ -1612,6 +1649,20 @@ Next Steps:
         # Session 840: Extra penalty if summary is flagged as generic
         if summary_validation.get('is_generic', False):
             score -= 15  # Additional penalty for overall generic tone
+
+        # Session 909: Penalty for question-heavy conversations
+        total_classified = state.question_count + state.substantive_count
+        if total_classified > 0:
+            question_ratio = state.question_count / total_classified
+            if question_ratio > 0.5:
+                # Heavy penalty for conversations that are mostly questions
+                score -= int((question_ratio - 0.5) * 40)  # Up to -20 points for 100% questions
+            elif question_ratio > 0.3:
+                # Light penalty for question-leaning conversations
+                score -= int((question_ratio - 0.3) * 20)  # Up to -4 points
+
+        # Session 909: Increased penalty for empty agreement
+        score -= state.empty_agreement_count * 10  # Was 5, now 10
 
         return max(0, min(100, score))
 
