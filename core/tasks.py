@@ -26167,12 +26167,13 @@ def promote_to_shared_knowledge(min_confidence: float = 0.7):
 
 def _get_workspace_for_skin_layer():
     """
-    Session 885: Helper to get an active workspace for SKIN layer tasks.
+    Session 885/909: Helper to get an active workspace for SKIN layer tasks.
 
     Looks for workspaces in this order:
-    1. Codebase workspace (type='codebase')
-    2. Any active workspace with allow_file_write=True
-    3. System user's workspace
+    1. "Donkey Betz" workspace (the primary production workspace)
+    2. Codebase workspace (type='codebase')
+    3. Any active workspace with allow_file_write=True, ordered by total_operations
+    4. System user's workspace
 
     Returns:
         Tuple of (user, workspace) or (None, None) if not found
@@ -26182,7 +26183,16 @@ def _get_workspace_for_skin_layer():
 
     User = get_user_model()
 
-    # 1. Try codebase workspace first
+    # Session 909: Prefer "Donkey Betz" workspace explicitly
+    workspace = ProjectWorkspace.objects.filter(
+        name__icontains='donkey betz',
+        is_active=True
+    ).order_by('-total_operations').first()
+
+    if workspace:
+        return workspace.user, workspace
+
+    # 2. Try codebase workspace
     workspace = ProjectWorkspace.objects.filter(
         workspace_type='codebase',
         is_active=True,
@@ -26192,16 +26202,16 @@ def _get_workspace_for_skin_layer():
     if workspace:
         return workspace.user, workspace
 
-    # 2. Try any active workspace that allows writes
+    # 3. Try any active workspace that allows writes (order by most established)
     workspace = ProjectWorkspace.objects.filter(
         is_active=True,
         allow_file_write=True
-    ).first()
+    ).order_by('-total_operations').first()
 
     if workspace:
         return workspace.user, workspace
 
-    # 3. Try superuser's workspace as last resort
+    # 4. Try superuser's workspace as last resort
     user = User.objects.filter(is_superuser=True).first()
     if user:
         workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
