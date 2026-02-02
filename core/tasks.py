@@ -10787,6 +10787,13 @@ Include this DecisionSummary block NOW."""
         # Broadcast completion
         broadcast_hive_mind_status(session, 'completed')
 
+        # Session 903: Auto-extract action items from synthesis
+        try:
+            extract_action_items_from_session.delay(str(session.id))
+            logger.info(f"📋 [ACTION-ITEMS] Queued extraction for session {session_id}")
+        except Exception as extract_err:
+            logger.warning(f"📋 [ACTION-ITEMS] Failed to queue extraction: {extract_err}")
+
         # Session 420: Send to Discord #boardroom when consensus is reached
         try:
             from core.services.discord_notifications import discord_notify
@@ -31642,12 +31649,14 @@ def process_pending_auto_topics(self, max_topics: int = 3):
         Dict with processing results
     """
     from core.models_signal_intelligence import AutoTopic
+    from django.db import models
     from django.utils import timezone
 
     logger.info(f"📋 [PROCESS-TOPICS] Processing up to {max_topics} pending topics")
 
     try:
         # Get pending topics ordered by confidence and urgency
+        # Session 902: Fixed missing models import for Q object
         pending_topics = AutoTopic.objects.filter(
             status='pending',
             confidence__gte=0.5,
@@ -31738,3 +31747,47 @@ def cleanup_expired_signals(self):
         'topics_expired': topic_count,
         'clusters_decayed': stale_count,
     }
+
+
+# =============================================================================
+# Session 903: Action Item Auto-Extraction
+# =============================================================================
+
+@shared_task(bind=True, queue='default')
+def extract_action_items_from_session(self, session_id: str):
+    """
+    Session 903: Auto-extract action items when a HiveMind session completes.
+
+    Parses the synthesis_summary for Next Steps and creates InitiativeActionItem records.
+    """
+    logger.info(f"📋 [ACTION-ITEMS] Extracting from session {session_id}")
+
+    try:
+        from core.services.action_item_parser import extract_action_items_from_conversation
+
+        items = extract_action_items_from_conversation(session_id)
+
+        if items:
+            logger.info(f"📋 [ACTION-ITEMS] Created {len(items)} action items from session {session_id}")
+            return {
+                'status': 'success',
+                'session_id': session_id,
+                'items_created': len(items),
+                'items': [{'id': str(item.id), 'title': item.title} for item in items]
+            }
+        else:
+            logger.info(f"📋 [ACTION-ITEMS] No action items found in session {session_id}")
+            return {
+                'status': 'success',
+                'session_id': session_id,
+                'items_created': 0,
+                'message': 'No action items found in synthesis'
+            }
+
+    except Exception as e:
+        logger.error(f"📋 [ACTION-ITEMS] Extraction failed for session {session_id}: {e}")
+        return {
+            'status': 'failed',
+            'session_id': session_id,
+            'error': str(e)
+        }
