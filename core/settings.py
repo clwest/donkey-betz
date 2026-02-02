@@ -1018,10 +1018,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'content.tasks.cleanup_stale_trainings',
         'schedule': 3600.0,  # Every hour
     },
-    # Session 835: Clean up stale agent executions every hour
+    # Session 835: Clean up stale agent executions
+    # Session 912: Changed from every hour to every 15 minutes to match 30-minute threshold
     'cleanup-stale-agent-executions': {
         'task': 'core.tasks.cleanup_stale_agent_executions',
-        'schedule': 3600.0,  # Every hour
+        'schedule': 900.0,  # Every 15 minutes
     },
     # Session 213: Workflow Scheduling Tasks
     # Sync workflow schedules with Celery Beat every 5 minutes
