@@ -1423,6 +1423,19 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
         'args': ['financial'],
     },
+    # =========================================================================
+    # Session 905-906: Initiative Pipeline Automation
+    # =========================================================================
+    # Auto-progress initiatives through stages when quality criteria met
+    'initiative-auto-progression': {
+        'task': 'core.tasks.process_initiative_auto_progression',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+    },
+    # Detect and flag duplicate initiatives for investigation
+    'detect-duplicate-initiatives': {
+        'task': 'core.tasks.detect_duplicate_initiatives',
+        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
