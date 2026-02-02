@@ -104,53 +104,57 @@ def validate_agent_output(agent_name: str, output: str) -> str:
 
 
 @shared_task(bind=True)
-def cleanup_stale_agent_executions(self, hours_threshold: int = 2):
+def cleanup_stale_agent_executions(self, minutes_threshold: int = 30):
     """
-    Session 835: Clean up agent executions stuck in 'in_progress' status.
+    Session 835: Clean up agent executions stuck in 'running'/'in_progress' status.
     Session 842: Added detailed logging for debugging.
+    Session 911: Fixed to check both 'running' and 'in_progress' statuses.
+                 Changed default from 2 hours to 30 minutes.
 
-    Tasks that have been 'in_progress' for more than the threshold are
+    Tasks that have been running for more than the threshold are
     marked as 'failed' since they clearly didn't complete properly.
 
     Args:
-        hours_threshold: Mark tasks as failed after this many hours (default 2)
+        minutes_threshold: Mark tasks as failed after this many minutes (default 30)
     """
     from django.utils import timezone
     from datetime import timedelta
     from core.models_unified_system import AgentExecution
 
     task_id = self.request.id if self.request else 'unknown'
-    logger.info(f"🧹 [CLEANUP] Task {task_id} STARTED - threshold: {hours_threshold} hours")
+    logger.info(f"🧹 [CLEANUP] Task {task_id} STARTED - threshold: {minutes_threshold} minutes")
 
     try:
         now = timezone.now()
-        cutoff_time = now - timedelta(hours=hours_threshold)
+        cutoff_time = now - timedelta(minutes=minutes_threshold)
         logger.info(f"🧹 [CLEANUP] Current time: {now.isoformat()}, cutoff: {cutoff_time.isoformat()}")
 
-        # First, count all in_progress tasks for debugging
-        all_in_progress = AgentExecution.objects.filter(status='in_progress').count()
-        logger.info(f"🧹 [CLEANUP] Total in_progress executions: {all_in_progress}")
+        # Session 911: Check both 'running' and 'in_progress' statuses
+        # Tasks can be stuck in either state depending on how they were created
+        running_statuses = ['running', 'in_progress']
+        all_running = AgentExecution.objects.filter(status__in=running_statuses).count()
+        logger.info(f"🧹 [CLEANUP] Total running/in_progress executions: {all_running}")
 
-        # Find stale tasks
+        # Find stale tasks (either running or in_progress)
         stale_tasks = AgentExecution.objects.filter(
-            status='in_progress',
+            status__in=running_statuses,
             created_at__lt=cutoff_time
         )
 
         count = stale_tasks.count()
-        logger.info(f"🧹 [CLEANUP] Stale executions (>{hours_threshold}h old): {count}")
+        logger.info(f"🧹 [CLEANUP] Stale executions (>{minutes_threshold}min old): {count}")
 
         if count > 0:
             # Log details of what we're cleaning up
             sample_tasks = list(stale_tasks.values('id', 'agent__name', 'created_at')[:5])
             for task in sample_tasks:
-                age_hours = (now - task['created_at']).total_seconds() / 3600
-                logger.info(f"🧹 [CLEANUP] Marking stale: {task['agent__name']} - {age_hours:.1f}h old - ID: {task['id']}")
+                age_min = (now - task['created_at']).total_seconds() / 60
+                logger.info(f"🧹 [CLEANUP] Marking stale: {task['agent__name']} - {age_min:.0f}min old - ID: {task['id']}")
 
             # Perform the cleanup
             updated = stale_tasks.update(
                 status='failed',
-                error_message=f'Task timed out after {hours_threshold} hours - marked as failed by cleanup',
+                error_message=f'Task timed out after {minutes_threshold} minutes - marked as failed by cleanup',
                 completed_at=now
             )
             logger.info(f"🧹 [CLEANUP] SUCCESS - Cleaned up {updated} stale agent executions")
@@ -158,7 +162,7 @@ def cleanup_stale_agent_executions(self, hours_threshold: int = 2):
             logger.info(f"🧹 [CLEANUP] No stale executions found - nothing to clean")
 
         logger.info(f"🧹 [CLEANUP] Task {task_id} COMPLETED - cleaned: {count}")
-        return {'cleaned': count, 'total_in_progress': all_in_progress, 'task_id': task_id}
+        return {'cleaned': count, 'total_running': all_running, 'task_id': task_id}
 
     except Exception as e:
         logger.error(f"🧹 [CLEANUP] Task {task_id} FAILED with error: {e}", exc_info=True)
