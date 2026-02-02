@@ -1,8 +1,8 @@
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
-**Updated:** Session 914.2 (February 2, 2026)
-**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | TRACKING COMPLETE
+**Updated:** Session 914.3 (February 2, 2026)
+**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | TRACKING COMPLETE
 
 ---
 
@@ -355,14 +355,82 @@ if initiative.is_institutional:
 
 ---
 
+### Semantic Quality Gates (Session 914.3)
+
+Ensures stage documents stay aligned with the original initiative intent. Uses embeddings to measure semantic similarity and blocks progression if drift is detected.
+
+**Drift Thresholds:**
+| Threshold | Similarity Required | Use Case |
+|-----------|---------------------|----------|
+| `strict` | 75%+ | Critical initiatives, precise alignment needed |
+| `balanced` | 65%+ | Default - reasonable flexibility |
+| `relaxed` | 55%+ | Exploratory initiatives, more flexibility |
+| `disabled` | N/A | Skip drift checking entirely |
+
+**How It Works:**
+1. Compare initiative description + dream content → stage document content
+2. Generate embeddings using OpenAI text-embedding-3-small
+3. Calculate cosine similarity
+4. If similarity < threshold, flag as "drifted"
+5. Block auto-progression until human review or override
+
+**Stage-Specific Adjustments:**
+| Stage | Threshold Adjustment | Reason |
+|-------|---------------------|--------|
+| Stage 1 | No adjustment | Research should match intent |
+| Stage 2 | +5% tolerance | Prototype may refine approach |
+| Stage 3 | +5% tolerance | Evaluation may add metrics |
+| Stage 4 | +10% tolerance | Technical details diverge naturally |
+| Stage 5 | +10% tolerance | Execution may adapt to reality |
+
+**Management Commands:**
+```bash
+# Check drift for an initiative
+python manage.py check_initiative_drift --initiative-id=<uuid>
+
+# Check all initiatives
+python manage.py check_initiative_drift --all
+
+# List flagged initiatives
+python manage.py check_initiative_drift --list-flagged
+
+# Override drift (allow progression)
+python manage.py check_initiative_drift --initiative-id=<uuid> --stage=2 --override --reason="Intentional pivot"
+
+# Set drift threshold
+python manage.py check_initiative_drift --initiative-id=<uuid> --set-threshold=relaxed
+
+# Disable drift checking
+python manage.py check_initiative_drift --initiative-id=<uuid> --disable-drift
+```
+
+**Code Reference:**
+```python
+from core.services.semantic_drift_detector import check_semantic_drift, get_drift_detector
+
+# Check a single stage
+result = check_semantic_drift(initiative_stage)
+if result['has_drift']:
+    print(f"Drift: {result['drift_score']:.0%}")
+    print(f"Similarity: {result['similarity_score']:.0%}")
+
+# Check entire initiative
+detector = get_drift_detector()
+result = detector.check_initiative_drift(str(initiative.id))
+print(f"Overall alignment: {result['overall_alignment']:.0%}")
+```
+
+---
+
 ### Auto-Progression (Session 906)
 
 The system automatically advances initiatives through stages based on document quality. Runs every 10 minutes via Celery Beat.
 
-**Prerequisites (Session 914 & 914.2):**
+**Prerequisites (Session 914, 914.2 & 914.3):**
 - Founder intent must be set (for Stage 2+)
 - Execution track limits respected (Fast Track stops at Stage 2)
 - Institutional track requires stage approvals (Stages 2-4)
+- Semantic drift check passed (document aligns with initiative intent)
 - Boardroom approval requirements must be satisfied
 
 **Quality Criteria:**
@@ -624,6 +692,7 @@ python manage.py fix_stuck_initiatives --fix
 | 913 | Signal Intelligence linking - Initiative FK to SignalCluster/AutoTopic |
 | **914** | **Founder Intent** - execution_speed, risk_tolerance, stop_rule, budget controls |
 | **914.2** | **Execution Tracks** - Fast Track (Stage 1-2) vs Institutional (Full 5-stage), content flag auto-detection, stage approvals |
+| **914.3** | **Semantic Quality Gates** - Drift detection using embeddings, blocks progression if document diverges from initiative intent |
 
 ---
 
@@ -639,15 +708,14 @@ python manage.py fix_stuck_initiatives --fix
 2. Verify origin is `serious` or `speculative`
 3. Check `promote_threshold` setting
 
-### Stages Not Advancing (Session 914 & 914.2)
+### Stages Not Advancing (Session 914, 914.2 & 914.3)
 1. **Check founder intent** - `python manage.py set_founder_intent --list`
 2. **Check execution track** - Fast Track stops at Stage 2
 3. **Check stage approvals** - Institutional requires approvals for Stages 2-4
-2. If Stage 2+, founder intent must be set: `initiative.founder_intent_set`
-3. If Fast Track mode, stops at Stage 2 by design
-4. Verify stage status is `APPROVED`
-2. Check `advance_initiative_pipeline` task is scheduled
-3. Verify `TechnicalDocumentAgent` is available
+4. **Check semantic drift** - `python manage.py check_initiative_drift --initiative-id=<uuid>`
+5. If drift detected, override with: `--override --reason="Explanation"`
+6. Verify stage status is `APPROVED`
+7. Check `advance_initiative_pipeline` task is scheduled
 
 ### Deliverable Not Created
 1. Verify all 5 stages are `APPROVED`

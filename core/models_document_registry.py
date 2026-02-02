@@ -317,6 +317,35 @@ class Initiative(models.Model):
         help_text='Session 914.2: Has Stage 4 (Technical Design) been explicitly approved?'
     )
 
+    # Session 914.3: Semantic Quality Gates
+    class DriftThreshold(models.TextChoices):
+        STRICT = 'strict', 'Strict (75%+ similarity required)'
+        BALANCED = 'balanced', 'Balanced (65%+ similarity required)'
+        RELAXED = 'relaxed', 'Relaxed (55%+ similarity required)'
+        DISABLED = 'disabled', 'Disabled (no drift check)'
+
+    drift_threshold = models.CharField(
+        max_length=20,
+        choices=DriftThreshold.choices,
+        default=DriftThreshold.BALANCED,
+        help_text='Session 914.3: How strictly to enforce semantic alignment'
+    )
+
+    drift_check_enabled = models.BooleanField(
+        default=True,
+        help_text='Session 914.3: Whether to perform semantic drift checks'
+    )
+
+    last_drift_score = models.FloatField(
+        null=True, blank=True,
+        help_text='Session 914.3: Last recorded drift score (0=aligned, 1=drifted)'
+    )
+
+    last_drift_check_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Session 914.3: When drift was last checked'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
@@ -943,6 +972,42 @@ class InitiativeStage(models.Model):
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Session 914.3: Semantic Drift Tracking
+    drift_score = models.FloatField(
+        null=True, blank=True,
+        help_text='Session 914.3: Semantic drift score (0=aligned, 1=drifted)'
+    )
+
+    similarity_score = models.FloatField(
+        null=True, blank=True,
+        help_text='Session 914.3: Semantic similarity to initiative intent (0-1)'
+    )
+
+    drift_checked_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Session 914.3: When drift was last checked'
+    )
+
+    drift_flagged = models.BooleanField(
+        default=False,
+        help_text='Session 914.3: Whether this stage was flagged for drift'
+    )
+
+    drift_override = models.BooleanField(
+        default=False,
+        help_text='Session 914.3: Human override to allow progression despite drift'
+    )
+
+    drift_override_by = models.CharField(
+        max_length=100, blank=True,
+        help_text='Session 914.3: Who approved the drift override'
+    )
+
+    drift_override_reason = models.TextField(
+        blank=True,
+        help_text='Session 914.3: Reason for allowing drift override'
+    )
 
     class Meta:
         ordering = ['initiative', 'stage']

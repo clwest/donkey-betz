@@ -245,6 +245,72 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
             'can_progress': False
         }
 
+    # Session 914.3: Semantic Drift Check
+    # Ensure stage document aligns with original initiative intent
+    drift_result = None
+    try:
+        # Check if drift checking is enabled
+        drift_enabled = getattr(initiative, 'drift_check_enabled', True)
+        drift_threshold = getattr(initiative, 'drift_threshold', 'balanced')
+
+        # Skip if disabled
+        if not drift_enabled or drift_threshold == 'disabled':
+            logger.info(f"[Session 914.3] Drift check disabled for {initiative.name}")
+        else:
+            from core.services.semantic_drift_detector import check_semantic_drift
+            drift_result = check_semantic_drift(current_stage, threshold_mode=drift_threshold)
+
+            # Record drift scores to stage model
+            current_stage.drift_score = drift_result.get('drift_score')
+            current_stage.similarity_score = drift_result.get('similarity_score')
+            current_stage.drift_checked_at = timezone.now()
+            current_stage.drift_flagged = drift_result.get('has_drift', False)
+            current_stage.save(update_fields=[
+                'drift_score', 'similarity_score', 'drift_checked_at', 'drift_flagged'
+            ])
+
+            # Update initiative's last drift score
+            initiative.last_drift_score = drift_result.get('drift_score')
+            initiative.last_drift_check_at = timezone.now()
+            initiative.save(update_fields=['last_drift_score', 'last_drift_check_at'])
+
+            if drift_result.get('has_drift'):
+                drift_score = drift_result.get('drift_score', 0)
+                similarity = drift_result.get('similarity_score', 0)
+
+                # Check for drift override
+                if getattr(current_stage, 'drift_override', False):
+                    logger.info(
+                        f"[Session 914.3] Drift detected but overridden for {initiative.name}: "
+                        f"override_by={current_stage.drift_override_by}"
+                    )
+                else:
+                    logger.warning(
+                        f"[Session 914.3] Semantic drift detected for {initiative.name}: "
+                        f"drift={drift_score:.0%}, similarity={similarity:.0%}"
+                    )
+                    return {
+                        'success': False,
+                        'error': f"Semantic drift detected: document has drifted from initiative intent",
+                        'stage': current_stage_num,
+                        'confidence': confidence,
+                        'can_progress': False,
+                        'semantic_drift': True,
+                        'drift_score': drift_score,
+                        'similarity_score': similarity,
+                        'drift_reason': drift_result.get('drift_reason', ''),
+                        'requires_human_review': True
+                    }
+            else:
+                # Add drift info to successful result
+                logger.info(
+                    f"[Session 914.3] Semantic alignment verified for {initiative.name}: "
+                    f"similarity={drift_result.get('similarity_score', 0):.0%}"
+                )
+    except Exception as e:
+        # Don't block on drift check failures - log and continue
+        logger.warning(f"[Session 914.3] Drift check failed, continuing: {e}")
+
     # Quality check passed - ready for progression
     return {
         'success': True,
@@ -253,7 +319,8 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
         'reason': reason,
         'can_progress': True,
         'initiative_id': str(initiative_id),
-        'initiative_name': initiative.name
+        'initiative_name': initiative.name,
+        'semantic_alignment': drift_result.get('similarity_score', None) if 'drift_result' in dir() else None
     }
 
 
