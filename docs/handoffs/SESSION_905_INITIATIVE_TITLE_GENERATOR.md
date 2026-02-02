@@ -1,8 +1,8 @@
-# Session 905: Initiative Title Generator
+# Session 905: Initiative Title Generator + Research Self-Unblock Loop
 
 **Date:** February 1, 2026
 **Status:** COMPLETE
-**PRs:** #694, #695
+**PRs:** #694, #695, #697
 
 ---
 
@@ -241,12 +241,145 @@ return f"{phrase} ({unique_suffix})"
 
 ---
 
+---
+
+# Part 2: Research Self-Unblock Loop (PR #697)
+
+## Problem
+
+When research showed "Insufficient Data", the system was incomplete:
+
+```
+ThinkingAgent → request_research → ResearchAgent
+    ↓
+Insufficient Data detected → Spider spawned ✅
+    ↓
+Research Brief created with "Insufficient Data" text ✅
+    ↓
+❌ STOPS HERE - Nobody watches for spider data to continue
+```
+
+The "Decision Gate" in the Research Brief said "DataExportAgent may be needed" but nothing actually followed up.
+
+## Solution: Complete Self-Unblock Loop
+
+```
+Research insufficient → Spider spawned → ResearchResult(blocked) →
+Celery task (30 min) → Re-run research → Complete or retry (max 3x)
+```
+
+### New Model Fields: `ResearchResult`
+
+```python
+# Session 905: Data sufficiency tracking
+data_sufficient = models.BooleanField(default=True)
+blocked_reason = models.TextField(blank=True)
+retry_count = models.IntegerField(default=0)
+max_retries = models.IntegerField(default=3)
+retry_after = models.DateTimeField(null=True, blank=True)
+unblock_trigger = models.CharField(max_length=100, blank=True)
+```
+
+### New Stage Status: `InitiativeStage`
+
+```python
+class StageStatus(models.TextChoices):
+    # ... existing statuses ...
+    BLOCKED = 'BLOCKED', 'Blocked - Awaiting Data'  # NEW
+```
+
+### Celery Tasks
+
+**`retry_blocked_research`** - Retries blocked research:
+1. Checks if spider data has arrived
+2. Re-runs ResearchAgent
+3. If sufficient: marks complete, updates stage to DRAFT
+4. If still insufficient: schedules another retry (up to 3x)
+5. After max retries: marks failed, updates stage to REJECTED
+
+**`check_blocked_research_for_unblock`** - Periodic task (every 15 min):
+- Finds all blocked research ready to retry
+- Triggers retry_blocked_research for each
+
+### Modified: `autonomous_action_executor.py`
+
+When research is blocked, now creates:
+1. `ResearchResult` record with `status='blocked'`
+2. `InitiativeStage` with `status='BLOCKED'`
+3. Schedules `retry_blocked_research` task for 30 minutes later
+
+```python
+# Session 905: Create blocked ResearchResult and schedule retry
+research_result_record = self._create_blocked_research_result(
+    topic=topic,
+    reasoning=reasoning,
+    findings=findings,
+    findings_detailed=findings_detailed,
+    owner_agent=owner_agent,
+    unblock_result=unblock_result
+)
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    RESEARCH SELF-UNBLOCK LOOP                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Research Request                                                    │
+│       ↓                                                              │
+│  ResearchAgent.execute()                                             │
+│       ↓                                                              │
+│  [Check] data_insufficient = findings < 50 chars?                    │
+│       ↓                                                              │
+│  ┌─────────────────┐         ┌─────────────────┐                    │
+│  │ Sufficient      │         │ Insufficient    │                    │
+│  │ Data            │         │ Data            │                    │
+│  └────────┬────────┘         └────────┬────────┘                    │
+│           ↓                           ↓                              │
+│  Stage 1: DRAFT              1. Spawn Spider                        │
+│  Research Complete           2. Create ResearchResult(blocked)       │
+│                              3. Stage 1: BLOCKED                     │
+│                              4. Schedule retry (30 min)              │
+│                                       ↓                              │
+│                              ┌────────────────────┐                  │
+│                              │ Celery: retry_     │                  │
+│                              │ blocked_research   │                  │
+│                              └────────┬───────────┘                  │
+│                                       ↓                              │
+│                              [Re-run Research]                       │
+│                                       ↓                              │
+│                     ┌─────────────────┴─────────────────┐           │
+│                     ↓                                   ↓           │
+│              Still Insufficient               Now Sufficient         │
+│              (retry < 3)                      → Complete!            │
+│                     ↓                                               │
+│              Schedule retry +30 min                                 │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+## Files Changed (PR #697)
+
+| File | Changes |
+|------|---------|
+| `core/models_document_registry.py` | Added BLOCKED status to InitiativeStage |
+| `core/models_research.py` | Added data_sufficient, retry tracking fields |
+| `core/services/autonomous_action_executor.py` | _create_blocked_research_result method |
+| `core/tasks.py` | retry_blocked_research, check_blocked_research_for_unblock |
+| `core/celery.py` | Added periodic check task |
+| `core/migrations/0214_*` | New migration for model changes |
+
+---
+
 ## Next Steps
 
 1. **Monitor New Initiatives** - Verify titles are clean going forward
 2. **Tune LLM Prompt** - Adjust if titles become too generic
 3. **Add Title Edit UI** - Allow manual title override in modal
+4. **Monitor Research Retries** - Check Celery logs for retry_blocked_research
 
 ---
 
-**Initiative titles are now clean and action-oriented!**
+**Session 905: Initiative titles clean + Research self-unblock loop complete!**
