@@ -55,6 +55,24 @@ import {
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
 import { generateDocumentPDF } from '@/lib/pdfExport'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+
+// Session 906: Time duration helper for "time in stage" display
+function formatTimeDuration(dateString: string): string {
+  const created = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - created.getTime()
+
+  const minutes = Math.floor(diffMs / (1000 * 60))
+  const hours = Math.floor(diffMs / (1000 * 60 * 60))
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (days > 0) return `${days}d ${hours % 24}h in stage`
+  if (hours > 0) return `${hours}h ${minutes % 60}m in stage`
+  if (minutes > 0) return `${minutes}m in stage`
+  return 'Just created'
+}
 
 // Stage names for display
 const STAGE_NAMES: Record<number, string> = {
@@ -507,22 +525,83 @@ function DocumentViewerModal({
 
           {data && !isLoading && (
             <div className="prose prose-invert max-w-none">
-              {/* Document metadata */}
-              <div className="flex items-center gap-4 text-xs text-gray-400 mb-4 pb-4 border-b border-dark-border">
-                {data.word_count && <span>{data.word_count} words</span>}
+              {/* Session 906: Enhanced document metadata with time tracking */}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 mb-4 pb-4 border-b border-dark-border">
+                {data.word_count && (
+                  <span className="flex items-center gap-1">
+                    <FileText size={12} />
+                    {data.word_count} words
+                  </span>
+                )}
                 {data.created_at && (
-                  <span>Created: {new Date(data.created_at).toLocaleDateString()}</span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={12} />
+                    {new Date(data.created_at).toLocaleDateString()} {new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+                {data.created_at && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                    <Clock size={12} />
+                    {formatTimeDuration(data.created_at)}
+                  </span>
                 )}
                 {data.status && (
-                  <span className="px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                  <span className={cn(
+                    "px-2 py-0.5 rounded",
+                    data.status === 'draft' && "bg-blue-500/20 text-blue-400",
+                    data.status === 'published' && "bg-green-500/20 text-green-400",
+                    data.status === 'blocked' && "bg-red-500/20 text-red-400",
+                  )}>
                     {data.status}
                   </span>
                 )}
               </div>
 
-              {/* Document content */}
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {data.full_text || data.content || 'No content available'}
+              {/* Session 906: Check for Decision Gate status and show alert banner */}
+              {(data.full_text || data.content || '').includes('Insufficient Data') && (
+                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <div className="flex items-center gap-2 text-amber-400 font-medium text-sm">
+                    <AlertTriangle size={16} />
+                    Awaiting Data Collection
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Research is blocked on insufficient data. A spider has been spawned to collect more information.
+                    The system will automatically retry when data arrives.
+                  </p>
+                </div>
+              )}
+
+              {(data.full_text || data.content || '').includes('✅ Data Available') && (
+                <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <div className="flex items-center gap-2 text-green-400 font-medium text-sm">
+                    <CheckCircle2 size={16} />
+                    Data Available - Ready for Progression
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    This stage has sufficient data and will be auto-progressed to the next stage.
+                  </p>
+                </div>
+              )}
+
+              {/* Session 906: Proper markdown rendering */}
+              <div className="text-sm leading-relaxed markdown-content">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-6 mb-3 pb-2 border-b border-dark-border">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg font-semibold text-gray-200 mt-5 mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base font-medium text-gray-300 mt-4 mb-2">{children}</h3>,
+                    p: ({ children }) => <p className="text-gray-300 mb-3">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc list-inside text-gray-300 mb-3 space-y-1">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside text-gray-300 mb-3 space-y-1">{children}</ol>,
+                    li: ({ children }) => <li className="text-gray-300">{children}</li>,
+                    code: ({ children }) => <code className="px-1.5 py-0.5 rounded bg-dark-bg text-primary-400 text-xs font-mono">{children}</code>,
+                    strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                    hr: () => <hr className="border-dark-border my-4" />,
+                  }}
+                >
+                  {data.full_text || data.content || 'No content available'}
+                </ReactMarkdown>
               </div>
             </div>
           )}
