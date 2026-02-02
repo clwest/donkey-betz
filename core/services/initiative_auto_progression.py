@@ -191,6 +191,20 @@ def check_stage_for_progression(initiative_id: str) -> Dict[str, Any]:
             'status': current_stage.status
         }
 
+    # Session 914: Check Founder Intent - pause if not set
+    if not initiative.can_auto_progress:
+        blocked_reason = initiative.progression_blocked_reason or 'Founder intent not set'
+        logger.info(f"[Session 914] Auto-progression blocked for {initiative.name}: {blocked_reason}")
+        return {
+            'success': False,
+            'error': blocked_reason,
+            'stage': current_stage_num,
+            'can_progress': False,
+            'founder_intent_set': initiative.founder_intent_set,
+            'requires_founder_action': True,
+            'founder_intent_summary': initiative.founder_intent_summary
+        }
+
     # Evaluate quality
     passes_quality, confidence, reason = evaluate_stage_quality(current_stage)
 
@@ -361,6 +375,10 @@ def get_initiatives_ready_for_progression() -> list:
         if stage.stage != stage.initiative.current_stage:
             continue
 
+        # Session 914: Check Founder Intent
+        if not stage.initiative.can_auto_progress:
+            continue
+
         passes_quality, confidence, reason = evaluate_stage_quality(stage)
         if passes_quality and confidence >= 0.6:  # Minimum 60% confidence to auto-progress
             ready_initiatives.append({
@@ -368,7 +386,8 @@ def get_initiatives_ready_for_progression() -> list:
                 'initiative_name': stage.initiative.name,
                 'stage': stage.stage,
                 'confidence': confidence,
-                'reason': reason
+                'reason': reason,
+                'founder_intent_set': stage.initiative.founder_intent_set,  # Session 914
             })
 
     return ready_initiatives

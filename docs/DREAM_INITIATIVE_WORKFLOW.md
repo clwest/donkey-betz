@@ -1,8 +1,8 @@
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
-**Updated:** Session 906 (February 1, 2026)
-**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | TRACKING COMPLETE
+**Updated:** Session 914 (February 2, 2026)
+**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | TRACKING COMPLETE
 
 ---
 
@@ -231,9 +231,71 @@ def advance_stage(self):
         )
 ```
 
+### Founder Intent (Session 914)
+
+Before an initiative can progress beyond Stage 1, the founder must set explicit intent. This prevents the system from generating "beautiful docs for the wrong thing."
+
+**Founder Intent Fields:**
+| Field | Purpose |
+|-------|---------|
+| `execution_speed` | `fast` (stop at Stage 2), `balanced` (normal), `thorough` (extended) |
+| `risk_tolerance` | `low`, `medium`, `high` |
+| `budget_engineering_hours` | Max engineering time |
+| `budget_llm_spend` | Max LLM API spend ($) |
+| `stop_rule` | What outcome kills this initiative |
+| `requires_boardroom_approval` | Whether explicit approval needed |
+
+**Progression Control:**
+- Stage 1 → Stage 2: **Can progress without intent** (to generate initial research)
+- Stage 2+: **Requires founder intent** - system pauses and awaits human input
+- Fast Track: Stops at Stage 2, awaits founder decision
+- Thorough: Extended validation, Boardroom approval required
+
+**Setting Intent:**
+```bash
+# List initiatives awaiting intent
+python manage.py set_founder_intent --list
+
+# Set intent for specific initiative
+python manage.py set_founder_intent --initiative-id=<uuid> --speed=balanced
+
+# Set intent for all pending initiatives
+python manage.py set_founder_intent --all-pending --speed=fast
+
+# Interactive mode
+python manage.py set_founder_intent --interactive
+```
+
+**Code Reference:**
+```python
+# Set intent programmatically
+initiative.set_founder_intent(
+    execution_speed='balanced',
+    risk_tolerance='medium',
+    budget_engineering_hours=40,
+    budget_llm_spend=50.00,
+    stop_rule='If user adoption <10% after 30 days, kill it',
+    set_by='founder'
+)
+
+# Check if can progress
+if initiative.can_auto_progress:
+    # Proceed with auto-progression
+else:
+    reason = initiative.progression_blocked_reason
+    # "Awaiting founder intent - set execution_speed, risk_tolerance, and stop_rule"
+```
+
+---
+
 ### Auto-Progression (Session 906)
 
 The system automatically advances initiatives through stages based on document quality. Runs every 10 minutes via Celery Beat.
+
+**Prerequisites (Session 914):**
+- Founder intent must be set (for Stage 2+)
+- Initiative must not be in Fast Track mode at Stage 2+
+- Boardroom approval requirements must be satisfied
 
 **Quality Criteria:**
 - Content length ≥ 500 characters
@@ -380,9 +442,28 @@ def create_final_deliverable(self):
 | `process_initiative_auto_progression` | `core/tasks.py` | Every 10 min |
 | `detect_duplicate_initiatives` | `core/tasks.py` | Daily at 2 AM |
 
-### Management Commands (Session 906)
+### Management Commands
 
 ```bash
+# ===== Session 914: Founder Intent =====
+# List initiatives awaiting founder intent
+python manage.py set_founder_intent --list
+
+# Set intent for specific initiative
+python manage.py set_founder_intent --initiative-id=<uuid> --speed=balanced --risk=medium
+
+# Set intent for all pending initiatives at Stage 2+
+python manage.py set_founder_intent --all-pending --speed=fast
+
+# Interactive mode - review each initiative
+python manage.py set_founder_intent --interactive
+
+# ===== Session 913: Signal Intelligence =====
+# Backfill initiative signal links
+python manage.py backfill_initiative_signals --dry-run
+python manage.py backfill_initiative_signals --fix --limit=200
+
+# ===== Session 906: Title & Duplicate Cleanup =====
 # Title Cleanup - fix technical description titles
 python manage.py clean_initiative_names              # Dry run
 python manage.py clean_initiative_names --fix        # Apply fixes
@@ -403,6 +484,10 @@ python manage.py trigger_stage2_generation --run --sync --limit=5
 # Research Brief Backfill
 python manage.py backfill_research_brief_links              # Dry run
 python manage.py backfill_research_brief_links --fix        # Link briefs to stages
+
+# Fix stuck initiative documents
+python manage.py fix_stuck_initiatives --dry-run
+python manage.py fix_stuck_initiatives --fix
 ```
 
 ### Services
@@ -468,6 +553,8 @@ python manage.py backfill_research_brief_links --fix        # Link briefs to sta
 | 866 | Pipeline advancement - auto-generate stage documents |
 | 905 | Auto-Progression Service - quality-based stage advancement (60%+ confidence) |
 | 906 | Title Cleanup + Duplicate Detection + Orphan Tracking Fix |
+| 913 | Signal Intelligence linking - Initiative FK to SignalCluster/AutoTopic |
+| **914** | **Founder Intent** - execution_speed, risk_tolerance, stop_rule, budget controls |
 
 ---
 
@@ -483,8 +570,11 @@ python manage.py backfill_research_brief_links --fix        # Link briefs to sta
 2. Verify origin is `serious` or `speculative`
 3. Check `promote_threshold` setting
 
-### Stages Not Advancing
-1. Verify stage status is `APPROVED`
+### Stages Not Advancing (Session 914)
+1. **Check founder intent** - `python manage.py set_founder_intent --list`
+2. If Stage 2+, founder intent must be set: `initiative.founder_intent_set`
+3. If Fast Track mode, stops at Stage 2 by design
+4. Verify stage status is `APPROVED`
 2. Check `advance_initiative_pipeline` task is scheduled
 3. Verify `TechnicalDocumentAgent` is available
 

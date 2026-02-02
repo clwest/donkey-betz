@@ -1,8 +1,59 @@
-# Session 914 - Start Here
+# Session 915 - Start Here
 
-**Previous Session:** 913 (Signal Intelligence + Initiative Backfill)
+**Previous Session:** 914 (Founder Intent Fields)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **20 LINKED TO SIGNALS** | **PIPELINE FLOWING**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **FOUNDER INTENT REQUIRED** | **PIPELINE GOVERNED**
+
+---
+
+## What Was Accomplished in Session 914
+
+### 1. Founder Intent Fields (ChatGPT-Suggested Governance)
+
+**Problem:** The auto-progression system was optimized for **continuity** (keep progressing) rather than **truth** (be correct) or **alignment** (be what the founder wants). The system could generate "beautiful docs for the wrong thing."
+
+**Solution:** Added Founder Intent fields to Initiative model that must be explicitly set before progression beyond Stage 1.
+
+**New Fields:**
+| Field | Type | Purpose |
+|-------|------|---------|
+| `founder_intent_set` | Boolean | Has intent been explicitly set? |
+| `execution_speed` | Choice | `fast` (stop at Stage 2), `balanced`, `thorough` |
+| `risk_tolerance` | Choice | `low`, `medium`, `high` |
+| `budget_engineering_hours` | Integer | Max engineering hours budget |
+| `budget_llm_spend` | Decimal | Max LLM API spend in dollars |
+| `stop_rule` | Text | What outcome kills this initiative |
+| `requires_boardroom_approval` | Boolean | Needs explicit Boardroom approval |
+| `founder_intent_set_at` | DateTime | When intent was set |
+| `founder_intent_set_by` | String | Who set the intent |
+
+**Progression Control:**
+- Stage 1 → Stage 2: Can progress without intent (to generate initial research)
+- Stage 2+: **Requires founder intent** - system pauses and awaits human input
+- Fast Track mode: Stops at Stage 2, awaits decision
+- `initiative.can_auto_progress` property controls progression
+
+**New Management Command:**
+```bash
+# List initiatives awaiting founder intent
+python manage.py set_founder_intent --list
+
+# Set intent for specific initiative
+python manage.py set_founder_intent --initiative-id=<uuid> --speed=balanced
+
+# Set intent for all pending
+python manage.py set_founder_intent --all-pending --speed=fast
+
+# Interactive mode
+python manage.py set_founder_intent --interactive
+```
+
+**Files Changed:**
+- `core/models_document_registry.py` - Added Founder Intent fields and methods
+- `core/migrations/0218_session_914_founder_intent.py` - New migration
+- `core/services/initiative_auto_progression.py` - Check `can_auto_progress` before progression
+- `core/management/commands/set_founder_intent.py` - New management command
+- `docs/DREAM_INITIATIVE_WORKFLOW.md` - Updated documentation
 
 ---
 
