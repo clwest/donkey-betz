@@ -64,10 +64,7 @@ class VoiceProfile:
     # Things we explicitly DON'T do
     anti_patterns: List[str] = None
 
-    # Struggles and lessons - the human element
-    struggles: List[Dict[str, str]] = None
-
-    # Hard-won wisdom
+    # Hard-won wisdom (real lessons, not fictional stories)
     lessons_learned: List[str] = None
 
     def __post_init__(self):
@@ -106,29 +103,8 @@ class VoiceProfile:
                 "Don't sound like every other AI startup",
             ]
 
-        if self.struggles is None:
-            self.struggles = [
-                {
-                    "title": "The 3am Debug Sessions",
-                    "story": "There's a special kind of clarity at 3am when an agent keeps failing and you've been staring at logs for hours. That's when the real insights happen.",
-                    "lesson": "The hard problems reveal themselves in the quiet hours.",
-                },
-                {
-                    "title": "The Great Agent Rebellion of 2025",
-                    "story": "Had 50 agents all trying to execute at once. Complete chaos. Learned why orchestration matters the hard way.",
-                    "lesson": "Coordination is harder than intelligence.",
-                },
-                {
-                    "title": "When Dreams Became Real",
-                    "story": "The first time an agent had a 'dream' about improving itself and then actually did it - that was the moment everything clicked.",
-                    "lesson": "Self-improvement isn't just a feature, it's the whole point.",
-                },
-                {
-                    "title": "Learning From 6,000+ Conversations",
-                    "story": "Every conversation teaches the system something. Some lessons are obvious. Some only emerge after thousands of interactions.",
-                    "lesson": "Scale reveals patterns invisible at small numbers.",
-                },
-            ]
+        # Session 913: Removed fictional struggles (e.g., "The Great Agent Rebellion of 2025")
+        # Real incidents are now pulled from NarrativeInjectionService instead
 
         if self.lessons_learned is None:
             self.lessons_learned = [
@@ -148,9 +124,8 @@ class VoiceProfile:
         # Add a signature phrase
         elements.append(f"Signature phrase to work in naturally: \"{random.choice(self.signature_phrases)}\"")
 
-        # Add a struggle/story
-        struggle = random.choice(self.struggles)
-        elements.append(f"Real story to reference: {struggle['title']} - {struggle['story'][:100]}...")
+        # Session 913: Removed fictional struggle stories
+        # Real incidents are now injected via NarrativeInjectionService in FlagshipBlogTemplate
 
         # Add a lesson
         elements.append(f"Hard-won lesson: {random.choice(self.lessons_learned)}")
@@ -699,8 +674,7 @@ class FlagshipBlogTemplate:
         # Get CTA
         cta = self.cta_library.get_cta(cta_type=cta_type, audience=audience)
 
-        # Pick a struggle story to potentially reference
-        struggle = random.choice(self.voice.struggles)
+        # Session 913: Removed fictional struggle stories - now using only real incidents
 
         prompt = f"""
 ## SESSION 854: FLAGSHIP CONTENT REQUIREMENTS
@@ -716,12 +690,8 @@ Tone: {', '.join(self.voice.tone_attributes[:3])}
 ### VOICE ELEMENTS TO INCLUDE
 {voice_injection}
 
-### REAL INCIDENT TO REFERENCE (Pick one and work it in naturally)
-{chr(10).join(incident_stories) if incident_stories else "- Use a hypothetical but realistic scenario"}
-
-### STRUGGLE STORY (Optional - for deeper pieces)
-"{struggle['title']}": {struggle['story']}
-Lesson: {struggle['lesson']}
+### REAL INCIDENTS TO REFERENCE (Pick one and work it in naturally)
+{chr(10).join(incident_stories) if incident_stories else "- Focus on general system capabilities if no specific incidents available"}
 
 ### FLAGSHIP STRUCTURE REQUIREMENTS
 Your content MUST follow this pattern:
