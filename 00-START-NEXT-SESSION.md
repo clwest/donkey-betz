@@ -1,64 +1,62 @@
-# Session 901 - Start Here
+# Session 902 - Start Here
 
-**Previous Session:** 900 (Signal Intelligence & Provenance - COMPLETE)
+**Previous Session:** 901 (Initiative Priority & Portfolio Management - COMPLETE)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **SIGNAL INTELLIGENCE: COMPLETE** | **820 SUCCESSFUL EXPERIMENTS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **INITIATIVE PRIORITY: COMPLETE** | **820 SUCCESSFUL EXPERIMENTS**
 
 ---
 
-## What Was Accomplished in Session 900 (COMPLETE)
+## What Was Accomplished in Session 901 (COMPLETE)
 
-### Signal Intelligence - Full Implementation
+### Initiative Priority & Portfolio Management
 
-**Problem Solved:** UI showed "Trigger: scheduled triggered conversation" - tells WHEN, not WHY
+**Problem Solved:** Initiative UI was a "firehose" - 223 initiatives with no way to distinguish importance
 
-**Solution Deployed:** Full provenance chain from spider signals to UI:
-```
-SpiderData[] → SignalCluster → AutoTopic → HiveMindSession → Decision → Initiative
+**Solution Deployed:** Strategic project management with priority scoring:
+
+### Priority Model Implemented:
+```python
+priority_score = impact * 0.4 + urgency * 0.2 + confidence * 0.2 + revenue_potential * 0.2
+# Levels: critical (>=0.8), high (>=0.6), medium (>=0.4), low (<0.4)
 ```
 
 ### Backend Complete:
-1. **Models** - SignalCluster, AutoTopic, TopicSuggestion
-2. **Signal Aggregation Service** - Clusters spider data into patterns
-3. **Celery Tasks** - Scheduled signal aggregation every 30 min
-4. **API Extended** - `origin-trace` endpoint now returns `origin_signals`
-5. **Railway Deployed** - Migration applied, 22 clusters + 10 auto-topics created
+1. **New Fields** - purpose, program, impact_score, urgency, confidence, revenue_potential
+2. **Computed Properties** - priority_score, priority_level on Initiative model
+3. **API Extended** - Priority sorting, stats breakdown by purpose/program/priority
+4. **Migration** - 0212_session_901_initiative_priority applied
 
 ### Frontend Complete:
-- **Origin Signals section** in Initiative modal with source breakdown
-- **Pattern metrics** (strength, confidence, novelty percentages)
-- **Keywords** and **Sample Signals** display
-- **Auto Topic** with rationale and triggered timestamp
-- **Signal-Driven badge** in section headers
-- **Complete Journey** visualization shows signal chain
+- **4-Tab Navigation:** Active | Portfolio | Archive | Stats
+- **Priority Badges:** Critical (red), High (orange), Medium (yellow), Low (gray)
+- **Purpose Icons:** Revenue ($), Stability (shield), Learning (beaker), Expansion (rocket), Maintenance (wrench)
+- **Program Grouping:** Collapsible sections in Portfolio view
+- **Stats Tab:** Comprehensive breakdown by status, purpose, program, priority
 
 ### Files Changed
 | File | Change |
 |------|--------|
-| `core/models_signal_intelligence.py` | NEW - Models |
-| `core/services/signal_aggregation_service.py` | NEW - Signal clustering |
-| `core/tasks.py` | Signal aggregation Celery tasks |
-| `core/celery.py` | Celery Beat schedules |
-| `core/views_research_demo.py` | Extended origin-trace API |
-| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Signal Intelligence UI |
+| `core/models_document_registry.py` | Purpose, Program, priority fields + computed properties |
+| `core/migrations/0212_session_901_initiative_priority.py` | NEW - Migration |
+| `core/views_research_demo.py` | Priority sorting, stats breakdown |
+| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | 4-tab UI, badges, icons, grouping |
 
 ---
 
-## TOP PRIORITY for Session 901
+## TOP PRIORITY for Session 902
 
-### 1. Test Signal-Driven Conversations End-to-End
-- Verify Celery Beat triggers `aggregate_spider_signals` every 30 min
-- Verify `process_pending_auto_topics` triggers conversations
-- Check Initiative modal shows real origin signals
+### 1. Test Initiative Priority UI End-to-End
+- Verify 4-tab navigation works (Active, Portfolio, Archive, Stats)
+- Test priority sorting (Critical first)
+- Verify program grouping in Portfolio view
 
-### 2. Link New Initiatives to Signals
-- When ThinkingAgent creates initiatives, link to source AutoTopic
-- Ensure provenance chain is maintained
+### 2. Bulk Edit Initiatives
+- UI to update multiple initiatives' purpose/program at once
+- "Move to Program" action on selection
 
-### 3. Optional Enhancements
-- Add SignalCluster admin interface for monitoring
-- Dashboard widget showing signal activity
-- Filter initiatives by origin type (signal-driven vs manual)
+### 3. Priority Recommendations
+- AI-suggested priority scores based on initiative content
+- Auto-categorize by program based on name/description
 
 ---
 
@@ -80,11 +78,11 @@ celery-broadcast: -Q broadcast (2 concurrency)
 # Start platform
 make start && make celery
 
-# Apply new migration
-python manage.py migrate core 0211_session_900_signal_intelligence
+# Apply migrations
+python manage.py migrate core 0212_session_901_initiative_priority
 
 # Production experiment status
-railway ssh -s donkey-betz-platform python manage.py check_experiment_status
+railway run -s donkey-betz-platform python manage.py check_experiment_status
 ```
 
 ---
@@ -93,11 +91,11 @@ railway ssh -s donkey-betz-platform python manage.py check_experiment_status
 
 | PR | Description |
 |----|-------------|
+| #679 | Initiative Priority & Portfolio Tabs (Session 901) |
 | #676 | Signal Intelligence UI - Origin Signals in Initiative modal (Session 900) |
 | #675 | Signal Intelligence Models (Session 900) |
 | #671 | Comprehensive Initiative View - Completed filter + origin trace modal |
 | #670 | Initiative origin-trace API endpoint |
-| #668 | Mythology Lab - Add agent name to Recent Events |
 
 ---
 
@@ -105,6 +103,7 @@ railway ssh -s donkey-betz-platform python manage.py check_experiment_status
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **901** | Initiative Priority & Portfolio Management - 4 tabs, priority scoring, purpose/program | `SESSION_901_INITIATIVE_PRIORITY.md` |
 | **900** | Signal Intelligence - SignalCluster, AutoTopic models for Origin & Trigger UI | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
 | **899** | Comprehensive Initiative View | `SESSION_899_COMPREHENSIVE_INITIATIVE_VIEW.md` |
 | **898** | Mythology Lab Agent Name Fix | `SESSION_898_MYTHOLOGY_LAB_FIX.md` |
@@ -142,4 +141,4 @@ railway ssh -s donkey-betz-platform python manage.py check_experiment_status
 
 ---
 
-**Signal Intelligence COMPLETE - Test signal-driven conversations and link new initiatives to signals!**
+**Initiative Priority COMPLETE - Test the 4-tab UI and consider bulk editing features!**
