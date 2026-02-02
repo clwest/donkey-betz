@@ -32000,7 +32000,7 @@ def retry_blocked_research(self, research_result_id: str):
                             '⚠️ Insufficient Data - DataExportAgent may be needed',
                             '✅ Data Available - Research completed on retry'
                         )
-                        doc.save(update_fields=['full_text', 'updated_at'])
+                        doc.save(update_fields=['full_text'])
                         logger.info(f"🔄 [RESEARCH-RETRY] Updated document {doc.id} - marked data as available")
 
             logger.info(f"🔄 [RESEARCH-RETRY] SUCCESS! Research completed on retry #{research.retry_count}")

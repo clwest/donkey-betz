@@ -120,7 +120,7 @@ class Command(BaseCommand):
                     '⚠️ Insufficient Data',
                     '✅ Data Available'
                 )
-                doc.save(update_fields=['full_text', 'updated_at'])
+                doc.save(update_fields=['full_text'])
 
                 fixed_count += 1
                 self.stdout.write(self.style.SUCCESS(f"   ✅ FIXED"))
@@ -143,7 +143,7 @@ class Command(BaseCommand):
                     if content_length > 500 and not has_insufficient_marker:
                         stage.status = 'DRAFT'
                         stage.notes = f"[Session 912] Unblocked - document has {content_length} chars of content"
-                        stage.save(update_fields=['status', 'notes', 'updated_at'])
+                        stage.save(update_fields=['status', 'notes'])
                         stages_unblocked += 1
                         self.stdout.write(self.style.SUCCESS(
                             f"   ✅ Unblocked stage {stage.stage} for initiative {stage.initiative.id if stage.initiative else 'unknown'}"
