@@ -1,70 +1,53 @@
-# Session 907 - Start Here
+# Session 908 - Start Here
 
-**Previous Session:** 906 (Major Database Cleanup - Full Pipeline)
+**Previous Session:** 907 (Initiative Modal UI Fix + Name Cleanup)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **128 QUALITY INITIATIVES** | **DATABASE CLEAN**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **130 INITIATIVES** | **UI METRICS FIXED**
 
 ---
 
-## What Was Accomplished in Session 906
+## What Was Accomplished in Session 907
 
-### Major Database Cleanup - Full Pipeline
+### Initiative Modal UI Fixes
 
-| Stage | Name | Before | After | Deleted |
-|-------|------|--------|-------|---------|
-| Stage 1 | Research Brief | 86 | **5** | 81 |
-| Stage 2 | Prototype Plan | 109 | **12** | 97 |
-| Stage 3 | Evaluation Protocol | 77 | **72** | 5 |
-| Stage 4 | Technical Design | 20 | **20** | 0 |
-| Stage 5 | Pilot Execution | 19 | **19** | 0 |
-| **TOTAL** | | **306** | **128** | **178** |
+Fixed misleading metrics in the Initiative modal:
 
-### Cleanup Actions Performed
+| Metric | Before | After |
+|--------|--------|-------|
+| **Progress Bar** | "71% Complete" (trace data completeness) | "0/5 Stages" (actual stage progress) |
+| **Content (chars)** | Only showed if deliverable exists | Shows total from all stage documents |
+| **Initiative Names** | 150-char truncated descriptions | Extracted meaningful titles |
 
-1. **Stage 1 Cleanup (81 deleted)**
-   - Consolidated 70 "experiment_failures" duplicates → kept 1 best (2193 words)
-   - Deleted 11 empty/stub initiatives (<100 words)
+### Code Changes
 
-2. **Stage 2 Cleanup (97 deleted)**
-   - 90 initiatives had NO Stage 1 document (invalid - shouldn't be at Stage 2)
-   - 7 initiatives had weak Stage 1 docs (<300 words)
-   - 12 quality initiatives remain (all have 380+ word Stage 1 docs)
+1. **API Enhancement** (`views_research_demo.py`)
+   - Added `content_length` to each stage in origin-trace response
+   - Enables proper Content (chars) calculation from stage documents
 
-3. **Stage 3 Cleanup (5 deleted)**
-   - 5 initiatives had NO Stage 2 document
-   - 72 quality initiatives remain
+2. **Frontend Fix** (`InitiativesTab.tsx`)
+   - Progress bar now shows actual stages completed (X/5 APPROVED)
+   - Content (chars) sums all stage document lengths instead of only deliverable
 
-4. **Orphan Document Cleanup (306 deleted)**
-   - 236 orphan research documents (not linked to any stage)
-   - 70 additional orphans from initiative deletion
+3. **Name Cleanup Command** (`clean_initiative_names.py`)
+   - Improved extraction strategies:
+     - Extract quoted text at start
+     - Use text before colon if meaningful
+     - First sentence extraction
+     - Word-boundary truncation fallback
+   - **58 initiative names cleaned in production**
 
-### Total Records Cleaned
-| Type | Count |
-|------|-------|
-| Initiatives deleted | 178 |
-| Orphan documents deleted | 306 |
-| Duplicate initiatives consolidated | 69 |
-| **Total records cleaned** | **553** |
+### What the UI Metrics Now Mean
 
----
-
-## Current Initiative Pipeline State
-
-```
-Stage 1 (Research Brief):      5 initiatives
-Stage 2 (Prototype Plan):     12 initiatives
-Stage 3 (Evaluation):         72 initiatives
-Stage 4 (Technical Design):   20 initiatives
-Stage 5 (Pilot Execution):    19 initiatives
-─────────────────────────────────────────────────
-TOTAL:                       128 initiatives
-```
-
-All remaining initiatives have proper documentation at each stage.
+| Stat | Source | Description |
+|------|--------|-------------|
+| **Agents** | `trace.agents.length` | Agents that participated in creating this initiative |
+| **Messages** | `conversation.message_count` | Messages in the source conversation |
+| **Stages Done** | Count of `APPROVED` stages | Stages that passed quality review |
+| **Content (chars)** | Sum of `stage.content_length` | Total characters in all stage documents |
 
 ---
 
-## NEXT PRIORITIES for Session 907
+## NEXT PRIORITIES for Session 908
 
 ### 1. Generate Stage 2 Documents
 - 11 Stage 2 initiatives are PENDING (need Prototype Plan docs)
@@ -80,6 +63,15 @@ All remaining initiatives have proper documentation at each stage.
 
 ---
 
+## PRs Merged (Session 907)
+
+| PR | Description |
+|----|-------------|
+| #717 | Session 906 full pipeline cleanup results |
+| #718 | Initiative modal UI metrics + name cleanup |
+
+---
+
 ## Management Commands Reference
 
 ```bash
@@ -89,7 +81,7 @@ python manage.py cleanup_orphan_documents --delete
 # Consolidate duplicate initiatives
 python manage.py consolidate_duplicate_initiatives --fix
 
-# Fix initiative names
+# Fix initiative names (improved Session 907)
 python manage.py clean_initiative_names --fix
 
 # Trigger stage document generation
@@ -105,13 +97,17 @@ print(Counter(Initiative.objects.values_list('current_stage', flat=True)))
 
 ---
 
-## PRs Merged (Session 906)
+## Current Initiative Pipeline State
 
-| PR | Description |
-|----|-------------|
-| #714 | Documentation update (DREAM_INITIATIVE_WORKFLOW.md, SERVICES.md) |
-| #715 | cleanup_orphan_documents management command |
-| #716 | Session handoff update |
+```
+Stage 1 (Research Brief):      5 initiatives
+Stage 2 (Prototype Plan):     12 initiatives
+Stage 3 (Evaluation):         72 initiatives
+Stage 4 (Technical Design):   20 initiatives
+Stage 5 (Pilot Execution):    19 initiatives
+─────────────────────────────────────────────────
+TOTAL:                       130 initiatives
+```
 
 ---
 
@@ -128,10 +124,10 @@ print(Counter(Initiative.objects.values_list('current_stage', flat=True)))
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **906** | Major Database Cleanup - 178 initiatives deleted, 306 orphan docs removed, full pipeline clean | This file |
+| **907** | Initiative Modal UI Fix - Stages progress + Content chars + 58 names cleaned | This file |
+| **906** | Major Database Cleanup - 178 initiatives deleted, 306 orphan docs removed | `SESSION_906_FULL_CLEANUP.md` |
 | **905** | Initiative Auto-Progression - Quality-based stage advancement | `SESSION_905_AUTO_PROGRESSION.md` |
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
-| **903** | Celery OOM Fix + Signal Intelligence Wired | `SESSION_903_SIGNAL_CELERY_FIX.md` |
 
 ---
 
@@ -146,10 +142,10 @@ print(Counter(Initiative.objects.values_list('current_stage', flat=True)))
 | Database Models | 386+ |
 | Celery Tasks | 262 |
 | Services | 129 |
-| **Initiatives** | **128** |
+| **Initiatives** | **130** |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
 ---
 
-**Session 906 Complete - Database is clean with 128 quality initiatives across all 5 stages!**
+**Session 907 Complete - Initiative modal now shows accurate stage progress and content metrics!**
