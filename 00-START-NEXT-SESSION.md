@@ -22,7 +22,36 @@
 | `docs` field missing | `docs: True` when docs/*.md exists |
 | No knowledge_state or user_context | Added for completeness |
 
-### 2. Session 909 Fixes Verified
+### 2. Centralized Platform Configuration (Major)
+
+**Problem:** Workspace/user selection was hardcoded in 4 different files, making it impossible to change without code modifications.
+
+**Solution:** Created `core/services/platform_config.py` - a single source of truth for:
+- Primary workspace (configurable, default: "Donkey Betz")
+- Primary user (configurable, default: "Donkeyking")
+
+**Configuration Options:**
+| Method | Workspace Setting | User Setting |
+|--------|------------------|--------------|
+| Django settings | `PRIMARY_WORKSPACE_NAME` | `PRIMARY_USERNAME` |
+| Environment | `DONKEY_BETZ_PRIMARY_WORKSPACE` | `DONKEY_BETZ_PRIMARY_USER` |
+| Default | "donkey betz" | "Donkeyking" |
+
+**Files Updated to Use platform_config:**
+- `core/tasks.py` - `_get_workspace_for_skin_layer()`
+- `core/agent_router.py` - `_get_workspace_context()`
+- `core/services/context_tracking.py` - `build_context_tracking()`
+- `core/services/conversation_initiative_pipeline.py` - workspace selection
+
+**Usage:**
+```python
+from core.services.platform_config import get_primary_workspace, get_primary_user
+
+workspace = get_primary_workspace()  # Returns ProjectWorkspace instance
+user = get_primary_user()  # Returns User instance
+```
+
+### 3. Session 909 Fixes Verified
 
 Confirmed all Session 909 fixes are working in production:
 - Donkey Betz workspace: **6783 operations** (increased from 6780)
@@ -36,6 +65,8 @@ Confirmed all Session 909 fixes are working in production:
 | PR | Description |
 |----|-------------|
 | #732 | Add workspace and docs tracking to context_tracking helper |
+| #733 | Update handoff document |
+| #734 | Centralized platform configuration for workspace/user |
 
 ---
 
@@ -115,6 +146,14 @@ tracking = build_context_tracking('ResearchAgent', 'test task')
 print(f'Workspace: {tracking.get(\"workspace\")}')
 print(f'Docs: {tracking.get(\"docs\")}')
 "
+
+# Check platform configuration (Session 910)
+python manage.py shell -c "
+from core.services.platform_config import get_config_status
+status = get_config_status()
+for key, value in status.items():
+    print(f'{key}: {value}')
+"
 ```
 
 ---
@@ -180,31 +219,39 @@ TOTAL:                       136 initiatives (all connected to Donkey Betz)
 
 | File | Change |
 |------|--------|
-| `core/services/context_tracking.py` | Added workspace and docs tracking to match AgentRouter context_summary |
+| `core/services/platform_config.py` | **NEW** - Centralized configuration for primary workspace/user |
+| `core/services/context_tracking.py` | Uses platform_config for workspace tracking |
+| `core/tasks.py` | Uses platform_config in `_get_workspace_for_skin_layer()` |
+| `core/agent_router.py` | Uses platform_config in `_get_workspace_context()` |
+| `core/services/conversation_initiative_pipeline.py` | Uses platform_config for workspace selection |
 
 ---
 
-## Key Bug Fixed (Session 910)
+## Key Changes (Session 910)
 
+### 1. Bug Fixed: workspace: False in UI
 **Issue:** `workspace: False` in UI despite workspace being configured
-**Location:** `core/services/context_tracking.py:build_context_tracking()`
-**Fix:** Added workspace lookup matching AgentRouter._get_workspace_context()
+**Fix:** Added workspace tracking to context_tracking.py using platform_config
+
+### 2. Architecture Improvement: Centralized Configuration
+**Issue:** Hardcoded workspace/user values in 4 different files
+**Fix:** Created `platform_config.py` as single source of truth
 
 ```python
-# Session 910: Check for workspace context
-workspace = ProjectWorkspace.objects.filter(
-    name__icontains='donkey betz',
-    is_active=True
-).order_by('-total_operations').first()
+# Usage example
+from core.services.platform_config import get_primary_workspace, get_config_status
 
-if not workspace:
-    workspace = ProjectWorkspace.objects.filter(
-        is_active=True
-    ).order_by('-total_operations').first()
+workspace = get_primary_workspace()  # Returns "Donkey Betz" workspace
+status = get_config_status()  # Returns debug info
 
-tracking['workspace'] = bool(workspace)
+# To change primary workspace (without code changes):
+# Option 1: Set environment variable
+# export DONKEY_BETZ_PRIMARY_WORKSPACE="new workspace name"
+
+# Option 2: Add to Django settings
+# PRIMARY_WORKSPACE_NAME = "new workspace name"
 ```
 
 ---
 
-**Session 910 Complete - Workspace context tracking now working correctly!**
+**Session 910 Complete - Configurable workspace/user via platform_config!**
