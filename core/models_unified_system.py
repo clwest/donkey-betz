@@ -9861,15 +9861,17 @@ class HiveMindSession(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Session 284: Mode selector to support different interaction patterns
+    # Session 906: Added 'autonomous' for auto-created initiatives
     SESSION_MODE_CHOICES = [
         ('hive_mind', 'Hive Mind'),       # Original mode - collective problem solving
         ('conversation', 'Conversation'),  # Agent-to-agent conversation (merged from AgentConversation)
+        ('autonomous', 'Autonomous'),      # Session 906: Auto-triggered by system (blocked research, etc.)
     ]
     session_mode = models.CharField(
         max_length=20,
         choices=SESSION_MODE_CHOICES,
         default='hive_mind',
-        help_text="Session 284: Mode of interaction (hive_mind or conversation)"
+        help_text="Session 284: Mode of interaction (hive_mind, conversation, or autonomous)"
     )
 
     # The question/task posed to the hive
