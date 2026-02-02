@@ -1,8 +1,8 @@
 # Services Reference
 
-**Last Updated:** Session 858 (January 28, 2026)
+**Last Updated:** Session 906 (February 1, 2026)
 **Location:** `core/services/`
-**Total Services:** 124 service classes across 95 files
+**Total Services:** 129 service classes across 98 files
 
 ---
 
@@ -31,6 +31,7 @@ The services layer contains business logic separated from views and models. Serv
 | Chief of Staff | 5 | Reviews, decisions, concerns |
 | **System Health** | **2** | **HEART + LUNGS services (Sessions 701-702)** |
 | **Workspace & User Context** | **3** | **Workspace management, user context injection (Session 858)** |
+| **Initiative Pipeline** | **3** | **Auto-progression, signal aggregation, domain context (Sessions 891, 900, 905-906)** |
 | Utility Services | 16 | Various specialized services |
 
 ---
@@ -629,6 +630,76 @@ velocity = lungs.get_spending_velocity(hours=24)
 - Time-series database storage (HeartBeat model)
 - Component status caching (ComponentStatus model)
 - CLI management command: `python manage.py heart_check`
+
+---
+
+## Initiative Pipeline (3 Services)
+
+### InitiativeAutoProgressionService
+**File:** `initiative_auto_progression.py`
+**Purpose:** Quality-based automatic stage advancement for initiatives (Session 905-906)
+
+```python
+from core.services.initiative_auto_progression import InitiativeAutoProgressionService
+
+service = InitiativeAutoProgressionService()
+
+# Check if a stage qualifies for progression
+result = service.check_stage_for_progression(initiative_stage)
+# Returns: {'qualifies': True, 'confidence': 0.75, 'criteria_met': [...], 'criteria_missing': [...]}
+
+# Progress initiative to next stage
+service.progress_initiative_stage(initiative)
+
+# Trigger async document generation for next stage
+service.trigger_next_stage_generation(initiative)
+```
+
+**Quality Criteria:**
+- Content length ≥ 500 characters
+- Required sections present (with flexible alternatives)
+- No "insufficient data" markers
+- Confidence threshold: 60%
+
+### SignalAggregationService
+**File:** `signal_aggregation_service.py`
+**Purpose:** Clusters spider signals into patterns for Origin & Trigger UI (Session 900)
+
+```python
+from core.services.signal_aggregation_service import SignalAggregationService
+
+service = SignalAggregationService()
+
+# Aggregate recent spider data into signal clusters
+clusters = service.aggregate_signals(hours=24, min_signals=3)
+
+# Generate auto-topics from clusters
+topics = service.generate_auto_topics(clusters)
+```
+
+**Signal Clustering:**
+- Groups SpiderData by keyword/topic overlap
+- Calculates strength, confidence, novelty scores
+- Creates SignalCluster and AutoTopic records
+
+### DomainContentContextBuilder
+**File:** `domain_content_context.py`
+**Purpose:** Injects domain-specific platform data into content generation (Session 891)
+
+```python
+from core.services.domain_content_context import DomainContentContextBuilder
+
+builder = DomainContentContextBuilder()
+
+# Build context for a specific domain
+context = builder.build_context(topic="AI trading strategies", user=user)
+# Returns: Domain-specific data (finance, crypto, sports, etc.)
+
+# Detect domain from topic
+domains = builder.detect_domains(topic)  # Returns up to 2 domains
+```
+
+**Supported Domains:** finance, crypto, sports, betting, ai_tech, legal, career, health, education
 
 ---
 
