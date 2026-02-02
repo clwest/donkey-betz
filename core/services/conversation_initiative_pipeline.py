@@ -169,6 +169,61 @@ class PipelineResult:
         }
 
 
+def is_valid_topic(topic: str) -> bool:
+    """
+    Session 911: Validate that a topic is suitable for research tasks.
+
+    Rejects topics that look like action items or task descriptions rather than
+    actual topics that can be researched.
+
+    Args:
+        topic: The topic string to validate
+
+    Returns:
+        True if topic is valid for research, False otherwise
+    """
+    if not topic or len(topic) < 5:
+        return False
+
+    topic_lower = topic.lower()
+
+    # Action verbs that indicate this is a task, not a topic
+    action_verbs = [
+        'validate', 'export', 'create', 'build', 'implement', 'deploy',
+        'configure', 'setup', 'set up', 'install', 'update', 'fix',
+        'run', 'execute', 'trigger', 'call', 'invoke', 'process',
+        'generate', 'compute', 'calculate', 'extract', 'transform',
+        'must call', 'should call', 'need to', 'must use',
+    ]
+
+    # Check if topic starts with an action verb (strong signal it's a task)
+    for verb in action_verbs:
+        if topic_lower.startswith(verb):
+            logger.debug(f"[Session 911] Topic rejected - starts with action verb '{verb}': {topic[:50]}")
+            return False
+
+    # Check for task-like patterns
+    task_patterns = [
+        'with 5 customer',  # Template artifact
+        'knowledge base',  # Internal system reference
+        'confidence scores',  # Internal metric
+        'persona profiles',  # Internal data structure
+        '; export',  # Chained actions
+        '; create',
+        '; build',
+        'you must',
+        'important:',
+    ]
+
+    for pattern in task_patterns:
+        if pattern in topic_lower:
+            logger.debug(f"[Session 911] Topic rejected - contains task pattern '{pattern}': {topic[:50]}")
+            return False
+
+    # Topic looks valid
+    return True
+
+
 class ConversationInitiativePipeline:
     """
     Transforms conversations into trackable Initiatives with connected outputs.
@@ -402,6 +457,14 @@ class ConversationInitiativePipeline:
     ) -> List[str]:
         """Dispatch tasks for a specific stage."""
         from core.tasks import execute_initiative_stage_task
+
+        # Session 911: Validate topic before dispatching tasks
+        if not is_valid_topic(topic):
+            logger.warning(
+                f"[Session 911] Skipping task dispatch - invalid topic: {topic[:80]}... "
+                f"(initiative={initiative.id}, stage={stage_num})"
+            )
+            return []
 
         task_ids = []
 
