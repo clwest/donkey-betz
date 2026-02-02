@@ -93,6 +93,7 @@ railway ssh -s donkey-betz-platform python manage.py check_experiment_status
 
 | PR | Description |
 |----|-------------|
+| #676 | Signal Intelligence UI - Origin Signals in Initiative modal (Session 900) |
 | #675 | Signal Intelligence Models (Session 900) |
 | #671 | Comprehensive Initiative View - Completed filter + origin trace modal |
 | #670 | Initiative origin-trace API endpoint |
@@ -120,12 +121,14 @@ railway ssh -s donkey-betz-platform python manage.py check_experiment_status
 | Spiders | 77 |
 | Advisors | 25 |
 | Personas | 139 |
-| Database Models | 382+ |
-| Celery Tasks | 281 |
-| Services | 128 |
+| Database Models | 385+ |
+| Celery Tasks | 260 |
+| Services | 129 |
 | Experiments (Success) | 820 |
 | Learnings | 1,152,295 |
 | Initiatives | 223 |
+| SignalClusters | 22 |
+| AutoTopics | 10 |
 
 ---
 
@@ -139,4 +142,4 @@ railway ssh -s donkey-betz-platform python manage.py check_experiment_status
 
 ---
 
-**Next: Implement signal aggregation to wire up the Origin & Trigger UI!**
+**Signal Intelligence COMPLETE - Test signal-driven conversations and link new initiatives to signals!**
