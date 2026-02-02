@@ -1175,8 +1175,72 @@ function ComprehensiveInitiativeModal({
                 {/* Trigger */}
                 {trace.trigger && (
                   <div className="p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
-                    <div className="text-xs text-yellow-400 mb-1">Trigger</div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-yellow-400">Trigger</div>
+                      {trace.trigger.confidence && (
+                        <span className="text-xs text-yellow-400">
+                          {(trace.trigger.confidence * 100).toFixed(0)}% confidence
+                        </span>
+                      )}
+                    </div>
                     <div className="font-medium">{trace.trigger.description}</div>
+                  </div>
+                )}
+
+                {/* Session 904: Conversation Summary - shows synthesis and stats */}
+                {trace.conversation && (
+                  <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-blue-400">Conversation Summary</div>
+                      <div className="flex items-center gap-3 text-xs text-gray-400">
+                        {trace.conversation.contribution_count > 0 && (
+                          <span>{trace.conversation.contribution_count} contributions</span>
+                        )}
+                        {trace.conversation.total_thinking_time > 0 && (
+                          <span>{Math.round(trace.conversation.total_thinking_time / 1000)}s thinking</span>
+                        )}
+                      </div>
+                    </div>
+                    {trace.conversation.topic && (
+                      <div className="text-sm">
+                        <span className="text-gray-500">Topic:</span>{' '}
+                        <span className="text-gray-300">{trace.conversation.topic}</span>
+                      </div>
+                    )}
+                    {/* Session 904: Show objective if available */}
+                    {trace.conversation.objective && (
+                      <div className="text-sm">
+                        <span className="text-gray-500">Objective:</span>{' '}
+                        <span className="text-gray-300">{trace.conversation.objective}</span>
+                      </div>
+                    )}
+                    {/* Session 904: Show success criteria if available */}
+                    {trace.conversation.success_criteria && trace.conversation.success_criteria.length > 0 && (
+                      <div className="text-sm">
+                        <div className="text-gray-500 mb-1">Success Criteria:</div>
+                        <ul className="list-disc list-inside text-gray-400 text-xs space-y-0.5">
+                          {trace.conversation.success_criteria.slice(0, 5).map((criteria: string, idx: number) => (
+                            <li key={idx}>{criteria}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {trace.conversation.synthesis_summary && (
+                      <div className="text-sm text-gray-400 bg-dark-bg/50 p-2 rounded border-l-2 border-blue-500/30">
+                        <div className="text-xs text-blue-400 mb-1">Synthesis</div>
+                        {trace.conversation.synthesis_summary}
+                      </div>
+                    )}
+                    {(trace.conversation.started_at || trace.conversation.completed_at) && (
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        {trace.conversation.started_at && (
+                          <span>Started: {new Date(trace.conversation.started_at).toLocaleString()}</span>
+                        )}
+                        {trace.conversation.completed_at && (
+                          <span>Completed: {new Date(trace.conversation.completed_at).toLocaleString()}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

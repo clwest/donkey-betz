@@ -1526,6 +1526,9 @@ def initiative_origin_trace_api(request, initiative_id):
                     'synthesis_summary': hive.synthesis_summary[:500] if hive.synthesis_summary else None,
                     'started_at': hive.started_at.isoformat() if hive.started_at else None,
                     'completed_at': hive.completed_at.isoformat() if hive.completed_at else None,
+                    # Session 904: Include objective and success criteria
+                    'objective': hive.objective if hasattr(hive, 'objective') else None,
+                    'success_criteria': hive.success_criteria if hasattr(hive, 'success_criteria') else None,
                     # Session 899: Include actual contributions as messages
                     'messages': [],
                 }
