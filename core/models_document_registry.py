@@ -155,6 +155,89 @@ class Initiative(models.Model):
         help_text='Session 913: Auto-generated topic that created this initiative'
     )
 
+    # =========================================================================
+    # Session 914: Founder Intent Fields
+    # =========================================================================
+    # These fields capture the founder's explicit intent for each initiative.
+    # Auto-progression pauses if founder_intent_set=False, requiring human input.
+    # =========================================================================
+
+    class ExecutionSpeed(models.TextChoices):
+        FAST = 'fast', 'Fast (MVP, stop at Stage 2)'
+        BALANCED = 'balanced', 'Balanced (normal 5-stage flow)'
+        THOROUGH = 'thorough', 'Thorough (extended validation)'
+
+    class RiskTolerance(models.TextChoices):
+        LOW = 'low', 'Low (require all approvals)'
+        MEDIUM = 'medium', 'Medium (standard gates)'
+        HIGH = 'high', 'High (move fast, minimal gates)'
+
+    # Whether founder has explicitly set intent for this initiative
+    founder_intent_set = models.BooleanField(
+        default=False,
+        help_text='Session 914: Has the founder explicitly set intent for this initiative?'
+    )
+
+    # Execution speed preference
+    execution_speed = models.CharField(
+        max_length=20,
+        choices=ExecutionSpeed.choices,
+        default=ExecutionSpeed.BALANCED,
+        help_text='Session 914: How fast should this initiative move?'
+    )
+
+    # Risk tolerance level
+    risk_tolerance = models.CharField(
+        max_length=20,
+        choices=RiskTolerance.choices,
+        default=RiskTolerance.MEDIUM,
+        help_text='Session 914: How much risk is acceptable?'
+    )
+
+    # Budget constraints
+    budget_engineering_hours = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Session 914: Maximum engineering hours to spend'
+    )
+
+    budget_llm_spend = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Session 914: Maximum LLM API spend in dollars'
+    )
+
+    # Stop rule - what outcome kills this initiative
+    stop_rule = models.TextField(
+        blank=True,
+        default='',
+        help_text='Session 914: What outcome or condition should kill this initiative?'
+    )
+
+    # Whether this initiative requires explicit Boardroom approval
+    # (external data, compliance, published deliverables)
+    requires_boardroom_approval = models.BooleanField(
+        default=False,
+        help_text='Session 914: Does this initiative require explicit Boardroom approval?'
+    )
+
+    # When founder intent was set
+    founder_intent_set_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Session 914: When was founder intent explicitly set?'
+    )
+
+    # Who set the founder intent
+    founder_intent_set_by = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Session 914: Who set the founder intent?'
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
@@ -352,6 +435,126 @@ class Initiative(models.Model):
         self.save(update_fields=['status'])
 
         return deliverable
+
+    # =========================================================================
+    # Session 914: Founder Intent Methods
+    # =========================================================================
+
+    def set_founder_intent(
+        self,
+        execution_speed: str = None,
+        risk_tolerance: str = None,
+        budget_engineering_hours: int = None,
+        budget_llm_spend: float = None,
+        stop_rule: str = None,
+        requires_boardroom_approval: bool = None,
+        set_by: str = 'founder'
+    ):
+        """
+        Session 914: Set explicit founder intent for this initiative.
+
+        This marks the initiative as having explicit human guidance, allowing
+        auto-progression to continue. Without this, auto-progression will pause
+        at Stage 1 and await human input.
+
+        Args:
+            execution_speed: 'fast', 'balanced', or 'thorough'
+            risk_tolerance: 'low', 'medium', or 'high'
+            budget_engineering_hours: Max engineering hours (optional)
+            budget_llm_spend: Max LLM API spend in dollars (optional)
+            stop_rule: What outcome kills this initiative (optional)
+            requires_boardroom_approval: Whether explicit approval needed
+            set_by: Who is setting the intent (default: 'founder')
+
+        Returns:
+            self for chaining
+        """
+        if execution_speed:
+            self.execution_speed = execution_speed
+        if risk_tolerance:
+            self.risk_tolerance = risk_tolerance
+        if budget_engineering_hours is not None:
+            self.budget_engineering_hours = budget_engineering_hours
+        if budget_llm_spend is not None:
+            self.budget_llm_spend = budget_llm_spend
+        if stop_rule:
+            self.stop_rule = stop_rule
+        if requires_boardroom_approval is not None:
+            self.requires_boardroom_approval = requires_boardroom_approval
+
+        self.founder_intent_set = True
+        self.founder_intent_set_at = timezone.now()
+        self.founder_intent_set_by = set_by
+
+        self.save()
+        return self
+
+    @property
+    def can_auto_progress(self):
+        """
+        Session 914: Check if this initiative can auto-progress.
+
+        Returns False if:
+        - founder_intent_set is False AND current_stage > 1
+        - requires_boardroom_approval is True AND not explicitly approved
+        - execution_speed is 'fast' AND current_stage >= 2
+
+        This ensures the system pauses for human input when needed.
+        """
+        # Fast track stops at Stage 2
+        if self.execution_speed == 'fast' and self.current_stage >= 2:
+            return False
+
+        # If boardroom approval required, check if we have it
+        # (For now, founder_intent_set acts as the approval)
+        if self.requires_boardroom_approval and not self.founder_intent_set:
+            return False
+
+        # Allow Stage 1 to progress without intent (to generate initial research)
+        # But pause at Stage 2+ if no intent is set
+        if self.current_stage > 1 and not self.founder_intent_set:
+            return False
+
+        return True
+
+    @property
+    def progression_blocked_reason(self):
+        """
+        Session 914: Return the reason why auto-progression is blocked.
+
+        Returns None if not blocked, otherwise returns a descriptive string.
+        """
+        if self.execution_speed == 'fast' and self.current_stage >= 2:
+            return 'Fast Track mode - stopped at Stage 2 awaiting founder decision'
+
+        if self.requires_boardroom_approval and not self.founder_intent_set:
+            return 'Requires Boardroom approval - founder intent not set'
+
+        if self.current_stage > 1 and not self.founder_intent_set:
+            return 'Awaiting founder intent - set execution_speed, risk_tolerance, and stop_rule'
+
+        return None
+
+    @property
+    def founder_intent_summary(self):
+        """
+        Session 914: Return a summary of founder intent settings.
+        """
+        return {
+            'set': self.founder_intent_set,
+            'set_at': self.founder_intent_set_at.isoformat() if self.founder_intent_set_at else None,
+            'set_by': self.founder_intent_set_by,
+            'execution_speed': self.execution_speed,
+            'execution_speed_display': self.get_execution_speed_display() if self.execution_speed else None,
+            'risk_tolerance': self.risk_tolerance,
+            'risk_tolerance_display': self.get_risk_tolerance_display() if self.risk_tolerance else None,
+            'budget_engineering_hours': self.budget_engineering_hours,
+            'budget_llm_spend': float(self.budget_llm_spend) if self.budget_llm_spend else None,
+            'stop_rule': self.stop_rule,
+            'requires_boardroom_approval': self.requires_boardroom_approval,
+            'can_auto_progress': self.can_auto_progress,
+            'blocked_reason': self.progression_blocked_reason,
+        }
 
 
 # Stage definitions (must be outside class for field definition)
