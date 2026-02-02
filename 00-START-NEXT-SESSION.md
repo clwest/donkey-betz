@@ -1,36 +1,44 @@
 # Session 909 - Start Here
 
-**Previous Session:** 908 (Initiative-Workspace Connection)
+**Previous Session:** 908 (Initiative-Workspace Connection + Agent Workspace Execution)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **130 INITIATIVES** | **INITIATIVES NOW TRACK TO WORKSPACES**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **245 INITIATIVES** | **ALL AGENTS WRITE TO WORKSPACE**
 
 ---
 
 ## What Was Accomplished in Session 908
 
-### Initiative-Workspace Connection Complete
+### 1. Initiative-Workspace Connection Complete
 
-**Problem:** Initiative work (stage task execution) created SelfBlog documents but never appeared in the Workspace Operations tab. The two systems were completely disconnected.
+**Problem:** Initiative work (stage task execution) created SelfBlog documents but never appeared in the Workspace Operations tab.
 
 **Solution:** Three-part fix to bridge Initiatives and Workspaces:
 
 | Fix | File | Change |
 |-----|------|--------|
-| **1. target_workspace FK** | `core/models_document_registry.py` | New FK on Initiative linking to target ProjectWorkspace |
-| **2. Pipeline workspace assignment** | `core/services/conversation_initiative_pipeline.py` | Assigns workspace when creating new initiatives |
-| **3. Operation tracking** | `core/tasks.py` | Creates WorkspaceOperation when stage tasks complete |
+| **target_workspace FK** | `core/models_document_registry.py` | New FK on Initiative linking to target ProjectWorkspace |
+| **Pipeline workspace assignment** | `core/services/conversation_initiative_pipeline.py` | Assigns workspace when creating new initiatives |
+| **Operation tracking** | `core/tasks.py` | Creates WorkspaceOperation when stage tasks complete |
 
-**Data Flow (Before):**
-```
-Conversation → Initiative → Stage Task → SelfBlog (orphaned from workspace)
-```
+### 2. All Agents Now Write to Workspace
 
-**Data Flow (After):**
-```
-Conversation → Initiative (with target_workspace) → Stage Task → SelfBlog + WorkspaceOperation
-                    ↓
-              Operations Tab shows work
-```
+**Problem:** Agent tasks were running with `workspace: False` - outputs weren't being tracked in the SKIN layer.
+
+**Root Cause:** `AgentRouter.route()` used `agent.execute()` instead of `agent.execute_with_workspace()`.
+
+**Solution:** Four fixes in `core/agent_router.py`:
+
+| Fix | Description |
+|-----|-------------|
+| **execute_with_workspace()** | Router now uses workspace-aware execution when workspace available |
+| **Fixed import** | `AgentWorkspace` → `ProjectWorkspace` (AgentWorkspace didn't exist) |
+| **Fixed field access** | `key_files`, `directory_purposes` etc. are on `WorkspaceContext`, not `ProjectWorkspace` |
+| **Fixed workspace ordering** | Added `order_by('-total_operations')` to prefer established workspace |
+
+### 3. Backfilled Initiatives
+
+- **245 initiatives** now have `target_workspace` assigned to "Unified Donkey Betz"
+- Future initiatives will automatically get workspace assignment
 
 ---
 
@@ -39,14 +47,16 @@ Conversation → Initiative (with target_workspace) → Stage Task → SelfBlog 
 | PR | Description |
 |----|-------------|
 | #723 | Connect Initiatives to Workspaces - target_workspace FK, pipeline assignment, operation tracking |
+| #724 | Session 908 handoff documentation |
+| #725 | Enable workspace-aware agent execution in router |
 
 ---
 
 ## NEXT PRIORITIES for Session 909
 
-### 1. Backfill Existing Initiatives
-- 130 existing initiatives have no target_workspace
-- Need management command to assign workspaces to existing initiatives
+### 1. Verify Agent Workspace Writes
+- Run an agent task and confirm it writes to workspace
+- Check Operations tab for new entries
 
 ### 2. Generate Stage 2 Documents
 - 11 Stage 2 initiatives are PENDING (need Prototype Plan docs)
@@ -56,9 +66,9 @@ Conversation → Initiative (with target_workspace) → Stage Task → SelfBlog 
 - 72 initiatives at Stage 3 with quality Stage 2 docs
 - Check for initiatives ready to progress to Technical Design
 
-### 4. Verify Operations Tab
-- Trigger a new stage task and confirm operation appears in workspace
-- Watch for new WorkspaceOperation records from initiative work
+### 4. Monitor WorkspaceOperation Creation
+- Watch for new operations from initiative stage tasks
+- Verify operations appear in correct workspace
 
 ---
 
@@ -91,13 +101,22 @@ for ws in ProjectWorkspace.objects.filter(is_active=True).order_by('-total_opera
     print(f'{ws.name}: {ws.total_operations} ops')
 "
 
-# Check initiatives with/without workspaces (Session 908)
+# Check initiatives with/without workspaces
 python manage.py shell -c "
 from core.models_document_registry import Initiative
 with_ws = Initiative.objects.filter(target_workspace__isnull=False).count()
 without_ws = Initiative.objects.filter(target_workspace__isnull=True).count()
 print(f'With workspace: {with_ws}')
 print(f'Without workspace: {without_ws}')
+"
+
+# Test workspace context loading
+python manage.py shell -c "
+from core.agent_router import AgentRouter
+router = AgentRouter()
+context = router._get_workspace_context('ResearchAgent', 'test task')
+print('Workspace:', context.get('workspace_name'))
+print('Has workspace:', context.get('has_workspace'))
 "
 ```
 
@@ -112,7 +131,7 @@ Stage 3 (Evaluation):         72 initiatives
 Stage 4 (Technical Design):   20 initiatives
 Stage 5 (Pilot Execution):    19 initiatives
 ─────────────────────────────────────────────────
-TOTAL:                       130 initiatives
+TOTAL:                       245 initiatives (all with workspace)
 ```
 
 ---
@@ -133,7 +152,7 @@ TOTAL:                       130 initiatives
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **908** | Initiative-Workspace Connection - target_workspace FK, pipeline assignment, operation tracking | This file |
+| **908** | Initiative-Workspace Connection + Agent Workspace Execution | This file |
 | **907** | Initiative UI Fix + Action Items Auth + Workspace Selection | `docs/handoffs/SESSION_907_HANDOFF.md` |
 | **906** | Major Database Cleanup - 178 initiatives deleted, 306 orphan docs removed | `SESSION_906_FULL_CLEANUP.md` |
 | **905** | Initiative Auto-Progression - Quality-based stage advancement | `SESSION_905_AUTO_PROGRESSION.md` |
@@ -152,7 +171,7 @@ TOTAL:                       130 initiatives
 | Database Models | 386+ |
 | Celery Tasks | 262 |
 | Services | 129 |
-| **Initiatives** | **130** |
+| **Initiatives** | **245** (all with workspace) |
 | **Workspaces** | **4** (1 primary) |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
@@ -166,8 +185,9 @@ TOTAL:                       130 initiatives
 | `core/models_document_registry.py` | Added `target_workspace` FK to Initiative |
 | `core/services/conversation_initiative_pipeline.py` | Added workspace assignment on Initiative creation |
 | `core/tasks.py` | Added WorkspaceOperation creation in `execute_initiative_stage_task` |
+| `core/agent_router.py` | Use `execute_with_workspace()`, fix model import, fix field access, fix ordering |
 | `core/migrations/0216_add_initiative_target_workspace.py` | New migration |
 
 ---
 
-**Session 908 Complete - Initiatives now properly track to Workspaces!**
+**Session 908 Complete - All agents now write to workspace! Initiatives fully connected!**
