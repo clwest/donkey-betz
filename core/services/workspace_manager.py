@@ -1014,11 +1014,14 @@ class WorkspaceManager:
 
         Session 858: For ANY user without a workspace, creates a personal workspace.
         This ensures agents can always write files without "No active workspace" errors.
+
+        Session 907: Order by total_operations DESC to prefer the established/primary
+        workspace when multiple are active. This ensures consistent workspace selection.
         """
         workspace = ProjectWorkspace.objects.filter(
             user=self.user,
             is_active=True
-        ).first()
+        ).order_by('-total_operations', '-created_at').first()
 
         # Session 855: Create default workspace for system user if needed
         if not workspace and self.user.username == 'system_autonomous':
