@@ -957,12 +957,37 @@ class AgentRouter:
                 agent_name, task, context_summary=context_summary, experiment_id=experiment_id
             )
 
-            result = agent.execute(
-                task=task,
-                context=context,
-                scifi_context=scifi_context,
-                spider_context=spider_context
-            )
+            # Session 908: Use execute_with_workspace when workspace is available
+            # This ensures all agent outputs are written to the SKIN layer workspace
+            has_workspace = workspace_context and workspace_context.get('has_workspace')
+            write_to_workspace = context.get('write_to_workspace', True)  # Default to True
+
+            if has_workspace and write_to_workspace and hasattr(agent, 'execute_with_workspace'):
+                # Execute with workspace - outputs will be written to SKIN layer
+                logger.info(f"📁 [Session 908] Using execute_with_workspace for {agent_name}")
+                # Inject scifi_context and spider_context into context for execute_with_workspace
+                enriched_context = {
+                    **context,
+                    'scifi_context': scifi_context,
+                    'spider_context': spider_context,
+                }
+                result = agent.execute_with_workspace(
+                    task=task,
+                    context=enriched_context,
+                    user=self.user,
+                    write_to_workspace=True,
+                    base_path=context.get('workspace_base_path', '')
+                )
+            else:
+                # Standard execution without workspace write
+                if not has_workspace:
+                    logger.debug(f"[Session 908] No workspace for {agent_name}, using standard execute")
+                result = agent.execute(
+                    task=task,
+                    context=context,
+                    scifi_context=scifi_context,
+                    spider_context=spider_context
+                )
 
             # Session 735: Inject accumulated cost/tokens from agent into result
             # This captures cost even if agent doesn't use _make_result() helper
@@ -1282,19 +1307,20 @@ class AgentRouter:
         """
         try:
             from core.services.workspace_manager import get_workspace_manager, WorkspaceManager
-            from core.models_skin_layer import AgentWorkspace
+            from core.models_skin_layer import ProjectWorkspace
 
             # Session 893: Get workspace for ALL agents, including system tasks
             # Previously skipped workspace for system tasks (no user) - now fall back to default workspace
             # Session 895: Fixed workspace lookup - search for "donkey" (primary project) first
+            # Session 908: Order by total_operations to prefer established workspace
             manager = None
             if self.user is None:
                 # Fall back to the primary "Donkey Betz" workspace for system tasks
-                # Priority: 1) donkey-betz, 2) any active workspace with operations, 3) any active workspace
+                # Priority: 1) donkey-betz (most operations), 2) any active workspace with operations, 3) any active workspace
                 workspace = (
-                    AgentWorkspace.objects.filter(name__icontains='donkey', is_active=True).first()
-                    or AgentWorkspace.objects.filter(is_active=True, total_operations__gt=0).first()
-                    or AgentWorkspace.objects.filter(is_active=True).first()
+                    ProjectWorkspace.objects.filter(name__icontains='donkey', is_active=True).order_by('-total_operations').first()
+                    or ProjectWorkspace.objects.filter(is_active=True, total_operations__gt=0).order_by('-total_operations').first()
+                    or ProjectWorkspace.objects.filter(is_active=True).first()
                 )
 
                 if not workspace:
@@ -1319,16 +1345,18 @@ class AgentRouter:
                 )
             else:
                 # Session 893: Build basic context directly from workspace for system tasks
+                # Session 908: Get WorkspaceContext if it exists (fields are on context, not workspace)
+                ws_context = getattr(workspace, 'context', None)
                 context = {
                     'workspace_name': workspace.name,
                     'root_path': workspace.root_path,
                     'tech_stack': workspace.tech_stack or {},
-                    'key_files': workspace.key_files or {},
-                    'directory_purposes': workspace.directory_purposes or {},
-                    'coding_patterns': workspace.coding_patterns or {},
-                    'import_aliases': workspace.import_aliases or {},
+                    'key_files': getattr(ws_context, 'key_files', {}) if ws_context else {},
+                    'directory_purposes': getattr(ws_context, 'directory_purposes', {}) if ws_context else {},
+                    'coding_patterns': getattr(ws_context, 'coding_patterns', {}) if ws_context else {},
+                    'import_aliases': getattr(ws_context, 'import_aliases', {}) if ws_context else {},
                     'protected_paths': workspace.protected_paths or [],
-                    'total_files': workspace.total_files or 0,
+                    'total_files': getattr(ws_context, 'total_files', 0) if ws_context else 0,
                 }
 
             workspace_context = {
