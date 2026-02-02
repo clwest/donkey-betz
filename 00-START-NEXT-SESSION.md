@@ -1,8 +1,8 @@
 # Session 914 - Start Here
 
-**Previous Session:** 913 (Action Items Auth Fix)
+**Previous Session:** 913 (Signal Intelligence + Initiative Backfill)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **173 INITIATIVES** | **PIPELINE FLOWING**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **186 INITIATIVES** | **20 LINKED TO SIGNALS** | **PIPELINE FLOWING**
 
 ---
 
@@ -54,6 +54,71 @@ Cleaned up existing blogs that contained the fictional stories:
   - 6 with "The Great Agent Rebellion of 2025"
   - 1 with "The 3am Debug Sessions"
 - **0 blogs remaining** with fictional content
+
+### 4. Cleaned Up Zombie/Failed Agent Tasks
+
+**Problem:** Production had accumulated zombie tasks (running > 1 hour) and failed tasks.
+
+**Solution:**
+- **10 zombie tasks** marked as failed (running > 1 hour)
+- **76 failed tasks** deleted from production
+- **86 total tasks cleaned**
+
+### 5. Fixed Empty Origin & Trigger in Initiative Modals
+
+**Problem:** Initiative modals showed empty "Origin & Trigger" section even though Signal Intelligence (SignalCluster, AutoTopic) was implemented in Session 900.
+
+**Root Cause:** Session 900 linked HiveMindSession to signals, but Initiative model had no FK fields for signal_cluster or auto_topic.
+
+**Solution:** Added FK fields to Initiative model and updated creation code:
+
+```python
+# core/models_document_registry.py - Initiative model
+signal_cluster = models.ForeignKey(
+    'core.SignalCluster',
+    on_delete=models.SET_NULL,
+    null=True, blank=True,
+    related_name='initiatives',
+    help_text='Session 913: Signal cluster that triggered this initiative'
+)
+
+auto_topic = models.ForeignKey(
+    'core.AutoTopic',
+    on_delete=models.SET_NULL,
+    null=True, blank=True,
+    related_name='initiatives',
+    help_text='Session 913: Auto-generated topic that created this initiative'
+)
+```
+
+**Files Changed:**
+- `core/models_document_registry.py` - Added FK fields
+- `core/migrations/0217_session_913_initiative_signal_intelligence.py` - New migration
+- `core/services/hivemind_execution_pipeline.py` - Pass signal data during initiative creation
+
+### 6. Backfilled Existing Initiatives with Signal Links
+
+**Problem:** 186 existing initiatives had no signal_cluster or auto_topic links.
+
+**Solution:** Created `backfill_initiative_signals` management command with 3 matching strategies:
+1. **HiveMind session linkage** - If initiative has source_decision_id, inherit signals from session
+2. **Timing proximity** - Match clusters detected within 1 hour of initiative creation
+3. **Keyword overlap** - Match AutoTopics with significant word overlap in names
+
+**Results (Production):**
+- **20 initiatives linked** to Signal Intelligence
+  - 1 linked to SignalCluster ("Compliance opportunity window")
+  - 19 linked to AutoTopics
+- New initiatives will automatically inherit signals from HiveMindSession
+
+**Usage:**
+```bash
+# Preview what would be linked
+python manage.py backfill_initiative_signals --dry-run
+
+# Apply signal links
+python manage.py backfill_initiative_signals --fix --limit=200
+```
 
 ---
 
@@ -151,6 +216,10 @@ ContentWriterAgent generates generic blog posts instead of structured Prototype 
 | #750 | Fix 401 Unauthorized on action-items API endpoints |
 | #751 | Session 913 handoff update |
 | #752 | Remove fictional stories from content voice system |
+| #753 | Handoff documentation update |
+| #754 | Production cleanup documentation |
+| #755 | Add signal_cluster and auto_topic FKs to Initiative |
+| #756 | Link initiatives to Signal Intelligence + backfill command |
 
 ---
 
@@ -339,6 +408,10 @@ python manage.py consolidate_duplicate_initiatives --fix
 # Fix initiative names (improved Session 907)
 python manage.py clean_initiative_names --fix
 
+# Backfill initiative signal links (Session 913)
+python manage.py backfill_initiative_signals --dry-run  # Preview
+python manage.py backfill_initiative_signals --fix --limit=200  # Apply
+
 # Trigger stage document generation
 python manage.py trigger_stage2_generation --run --sync --limit=5
 
@@ -443,9 +516,10 @@ TOTAL:                       136 initiatives (all connected to Donkey Betz)
 | Database Models | 386+ |
 | Celery Tasks | 262 |
 | Services | 129 |
-| **Initiatives** | **136** (all connected to Donkey Betz) |
+| **Initiatives** | **186** (all connected to Donkey Betz) |
+| **Initiatives with Signal Links** | **20** (1 SignalCluster, 19 AutoTopics) |
 | **Active Workspaces** | **1** (Donkey Betz - owned by DonkeyKing) |
-| SignalClusters | 22 |
+| SignalClusters | 18 |
 | AutoTopics | 10 |
 
 ---
