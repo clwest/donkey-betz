@@ -510,3 +510,161 @@ def create_initiative_from_deliverables(parent_topic: str) -> Initiative:
     initiative.save()
 
     return initiative
+
+
+class InitiativeActionItem(models.Model):
+    """
+    Session 902: Trackable action items extracted from conversation conclusions.
+
+    Transforms text like "ResearchAgent: Define persona schema (Week 0-1)"
+    into assignable, trackable items with completion status.
+
+    Extracted from === DecisionSummary === sections in HiveMindSession conclusions.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        IN_PROGRESS = 'in_progress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+        BLOCKED = 'blocked', 'Blocked'
+        CANCELLED = 'cancelled', 'Cancelled'
+
+    class Priority(models.TextChoices):
+        CRITICAL = 'critical', 'Critical'
+        HIGH = 'high', 'High'
+        MEDIUM = 'medium', 'Medium'
+        LOW = 'low', 'Low'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to initiative
+    initiative = models.ForeignKey(
+        Initiative,
+        on_delete=models.CASCADE,
+        related_name='action_items'
+    )
+
+    # Source tracking - where did this action item come from?
+    source_conversation = models.ForeignKey(
+        'core.HiveMindSession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='extracted_action_items',
+        help_text='The conversation that generated this action item'
+    )
+    source_text = models.TextField(
+        blank=True,
+        help_text='Original text from conclusion that was parsed'
+    )
+
+    # Action item details
+    title = models.CharField(max_length=300)
+    description = models.TextField(blank=True)
+
+    # Assignment
+    assigned_agent = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Agent name responsible (e.g., "ResearchAgent")'
+    )
+    assigned_user = models.ForeignKey(
+        'core.UnifiedUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_action_items'
+    )
+
+    # Timeline
+    timeline_text = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text='Original timeline text (e.g., "Week 0-1")'
+    )
+    due_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Calculated or manually set due date'
+    )
+    estimated_hours = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='Estimated effort in hours'
+    )
+
+    # Status tracking
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=Priority.choices,
+        default=Priority.MEDIUM
+    )
+
+    # Completion tracking
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_by = models.CharField(max_length=100, blank=True)
+    completion_notes = models.TextField(blank=True)
+
+    # Blocking/dependencies
+    blocked_reason = models.TextField(blank=True)
+    depends_on = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        blank=True,
+        related_name='blocks'
+    )
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.CharField(max_length=100, default='system')
+    order = models.IntegerField(default=0, help_text='Display order within initiative')
+
+    class Meta:
+        ordering = ['initiative', 'order', '-priority', 'created_at']
+        verbose_name = 'Initiative Action Item'
+        verbose_name_plural = 'Initiative Action Items'
+
+    def __str__(self):
+        return f"{self.title} ({self.status})"
+
+    def start(self, by='system'):
+        """Mark as in progress."""
+        self.status = self.Status.IN_PROGRESS
+        self.started_at = timezone.now()
+        self.save(update_fields=['status', 'started_at', 'updated_at'])
+
+    def complete(self, by='system', notes=''):
+        """Mark as completed."""
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.completed_by = by
+        if notes:
+            self.completion_notes = notes
+        self.save(update_fields=['status', 'completed_at', 'completed_by', 'completion_notes', 'updated_at'])
+
+    def block(self, reason=''):
+        """Mark as blocked."""
+        self.status = self.Status.BLOCKED
+        self.blocked_reason = reason
+        self.save(update_fields=['status', 'blocked_reason', 'updated_at'])
+
+    @property
+    def is_overdue(self):
+        """Check if action item is past due date."""
+        if self.due_date and self.status not in [self.Status.COMPLETED, self.Status.CANCELLED]:
+            return timezone.now().date() > self.due_date
+        return False
+
+    @property
+    def days_until_due(self):
+        """Days until due (negative if overdue)."""
+        if self.due_date:
+            return (self.due_date - timezone.now().date()).days
+        return None
