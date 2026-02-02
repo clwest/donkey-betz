@@ -2,25 +2,37 @@
 
 **Previous Session:** 902 (Action Item Tracking - COMPLETE)
 **Date:** February 1, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **ACTION ITEM TRACKING: COMPLETE** | **820 SUCCESSFUL EXPERIMENTS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **ACTION ITEM AUTO-EXTRACTION: COMPLETE** | **820 SUCCESSFUL EXPERIMENTS**
 
 ---
 
-## What Was Accomplished in Session 902 (COMPLETE)
+## What Was Accomplished in Session 903 (IN PROGRESS)
 
-### Action Item Tracking - Next Steps from Conversations
+### Auto-Extraction on Conversation Complete ✅
+
+**PR #684 Merged:** `extract_action_items_from_session` Celery task
+
+How it works:
+1. HiveMind session completes with synthesis containing `=== DecisionSummary === ... Next Steps:`
+2. `run_hive_mind_session` task calls `extract_action_items_from_session.delay(session_id)`
+3. Extraction task runs asynchronously on `default` queue
+4. Parser service extracts action items and creates `InitiativeActionItem` records
+
+---
+
+## Session 902 Recap: Action Item Tracking
 
 **Problem Solved:** Conversation conclusions contained "Next Steps" as plain text - not trackable, not assignable
 
 **Solution Deployed:** Full action item tracking system:
 
-### Backend Complete:
+### Backend:
 1. **InitiativeActionItem Model** - Status, priority, timeline, assignments, dependencies
 2. **Parser Service** - Extracts items from `=== DecisionSummary ===` sections
 3. **API Endpoints** - CRUD + bulk extraction (6 endpoints)
 4. **Migration** - 0213_session_902_action_items applied
 
-### Frontend Complete:
+### Frontend:
 - **Stats Bar:** X pending | Y in progress | Z completed (completion %)
 - **Status Checkboxes:** Click to cycle pending → in_progress → completed
 - **Priority Badges:** Critical (red), High (orange), Medium (yellow), Low (gray)
@@ -28,21 +40,10 @@
 - **Extract Button:** Pull action items from linked conversations
 - **Manual Creation:** Input field to add new items
 
-### Files Changed
-| File | Change |
-|------|--------|
-| `core/models_document_registry.py` | InitiativeActionItem model |
-| `core/migrations/0213_session_902_action_items.py` | NEW - Migration |
-| `core/services/action_item_parser.py` | NEW - Parser service |
-| `core/views_research_demo.py` | 6 API endpoints |
-| `core/urls.py` | URL routes |
-| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Action Items UI section |
-
 ---
 
 ## Session 901 Recap: Initiative Priority & Portfolio
 
-Also completed:
 - **Priority Scoring:** impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2
 - **4-Tab UI:** Active | Portfolio | Archive | Stats
 - **Purpose Categories:** revenue, stability, learning, expansion, maintenance
@@ -50,18 +51,14 @@ Also completed:
 
 ---
 
-## TOP PRIORITY for Session 903
+## NEXT PRIORITIES for Session 903
 
 ### 1. Test Action Items End-to-End
 - Trigger a conversation that generates synthesis with Next Steps
-- Verify "Extract from Conversations" button works
-- Test status toggle (pending → in_progress → completed)
+- Verify auto-extraction creates InitiativeActionItem records
+- Test status toggle in UI (pending → in_progress → completed)
 
-### 2. Auto-Extraction on Conversation Complete
-- Add Celery task to extract action items when conversation finishes
-- Hook into HiveMindSession post_save signal
-
-### 3. Action Item Kanban View (Optional)
+### 2. Action Item Kanban View (Optional)
 - Drag-and-drop board: Pending | In Progress | Completed | Blocked
 - Filter by priority/agent
 
@@ -104,11 +101,11 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 | PR | Description |
 |----|-------------|
+| #684 | feat(Session 903): Auto-extract action items on conversation complete |
+| #683 | docs(Session 902): Add Action Item Tracking documentation |
 | #682 | fix(Session 902): Use correct HiveMindSession field names |
 | #681 | feat(Session 902): Initiative Action Items |
 | #680 | docs(Session 901): Initiative Priority documentation |
-| #679 | feat(Session 901): Initiative Priority & Portfolio Tabs |
-| #676 | Signal Intelligence UI - Origin Signals in Initiative modal |
 
 ---
 
@@ -134,7 +131,7 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 | Advisors | 25 |
 | Personas | 139 |
 | Database Models | 386+ |
-| Celery Tasks | 260 |
+| Celery Tasks | 261 |
 | Services | 130 |
 | Experiments (Success) | 820 |
 | Learnings | 1,152,295 |
@@ -154,4 +151,4 @@ railway run -s donkey-betz-platform python manage.py check_experiment_status
 
 ---
 
-**Action Item Tracking COMPLETE - Test extraction and consider auto-extraction on conversation complete!**
+**Auto-Extraction COMPLETE - Test end-to-end by triggering a HiveMind conversation!**
