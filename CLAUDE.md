@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 31, 2026 - Session 891
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE**
+**Last Updated:** February 1, 2026 - Session 900
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 95% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: MODELS CREATED**
 
 ## System Stats
 | Component | Count | Details |
@@ -11,7 +11,7 @@
 | **PA Tools** | 86 | +body tools for all 9 systems |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **LLM Models** | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
-| **Database Models** | 378+ | Including Deliverable, AuditReport, AgentMemory, ToolCallRecord, DecisionRecord, ResearchResult |
+| **Database Models** | 382+ | Including Deliverable, AuditReport, SignalCluster, AutoTopic, ToolCallRecord, DecisionRecord, ResearchResult |
 | **Celery Tasks** | 256 | ALL body systems active, autonomous remediation, async conversations, ConceptForge, health monitoring |
 | **Services** | 128 | Including AutoSpawnerService, DomainContentContextBuilder (9 domains) |
 | **Contracts** | 3 | ResearchContract, ExecutionMandate, SynthesisContract |
@@ -20,6 +20,7 @@
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Signal Intelligence (900):** New provenance chain tracks WHY conversations happen. SignalCluster groups spider signals into patterns (source_breakdown, strength, confidence). AutoTopic records why topics are chosen with rationale. HiveMindSession now links to signal_cluster and auto_topic FKs. Transforms "scheduled conversation" into actionable intelligence showing origin signals.
 - **Domain Content Context (891):** Unified system injects domain-specific platform data into ALL content. 9 domains: finance, crypto, sports, betting, ai_tech, legal, career, health, education. Auto-detects topic domain, supports cross-domain content (up to 2 domains). Gives every content type the "builder voice."
 - **Podcast Quality System (890):** Anti-cliché detection (50+ phrases), PodcastStyleProfile model, host POV upgrade (takes stances), system war stories tool.
 - **Content Feedback Loop (886):** BlogPerformanceContextBuilder injects past performance data into ContentWriterAgent prompts. Agent now "knows" quality scores, top topics, strengths/weaknesses, and active learning rules. Experiment audit: cleaned 81 junk experiments, raised error threshold 25%→35%, 87.5% real success rate.
@@ -145,6 +146,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **900** | Signal Intelligence - SignalCluster, AutoTopic models for Origin & Trigger UI provenance | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
 | **891** | Domain Content Context - 9 domains (finance, sports, crypto, etc.), unified router, cross-domain support | `SESSION_891_DOMAIN_CONTENT_CONTEXT.md` |
 | **890** | Podcast Quality Improvements - Anti-cliché, PodcastStyleProfile, host POV upgrade | `SESSION_890_PODCAST_QUALITY.md` |
 | **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
@@ -159,14 +161,8 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **862** | Content Flow Unification - Dream → Initiative → Stages → Deliverable with full FK traceability | `SESSION_862_CONTENT_FLOW_UNIFICATION.md` |
 | **861** | Data Persistence Gaps - 6 fixes (ToolCall, Decision, Spider, Learning, Feedback) + Content Tab UI | `SESSION_861_DATA_PERSISTENCE.md` |
 | **860** | Initiative Pipeline + API Error Handling - 25 docs linked, console errors fixed | `SESSION_860_API_ERROR_HANDLING.md` |
-| **856** | Diagnostic Pipeline + Agent Content Review Fixes (12 agents) | `SESSION_856_DIAGNOSTIC_PIPELINE.md` |
-| **847** | Initiative Pipeline - ThinkingAgent → Initiative → Stages → Documents | `SESSION_847_INITIATIVE_PIPELINE.md` |
-| **846** | Citation Gate + Serper News API + Stuck Conversations Fix + Dream Cleanup | `SESSION_846_CITATION_GATE.md` |
-| **842** | Agent Learning Tab + Production Cleanup (242 stuck) + Celery Beat Investigation | `SESSION_842_AGENT_LEARNING_TAB_FIXES.md` |
-| **841** | Experiment Monitoring Fixes - Stop global halts, provider health tracking | `SESSION_841_EXPERIMENT_MONITORING_FIXES.md` |
-| **836** | Experiment System Diagnosis - Celery Beat fix, 251 learnings created | `SESSION_836_EXPERIMENT_SYSTEM_DIAGNOSIS.md` |
 
-**Older sessions:** See `docs/handoffs/` directory (Sessions 197-865)
+**Older sessions:** See `docs/handoffs/` directory (Sessions 197-899)
 
 ---
 

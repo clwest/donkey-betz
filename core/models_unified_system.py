@@ -9966,6 +9966,29 @@ class HiveMindSession(models.Model):
         help_text='Session 327: Optional project context for this session'
     )
 
+    # Session 900: Signal provenance - WHY this conversation happened
+    signal_cluster = models.ForeignKey(
+        'SignalCluster',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='triggered_sessions',
+        help_text='Session 900: The signal cluster that triggered this conversation'
+    )
+    auto_topic = models.ForeignKey(
+        'AutoTopic',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='triggered_sessions',
+        help_text='Session 900: The auto-generated topic that triggered this conversation'
+    )
+    trigger_confidence = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='Session 900: Confidence score of the trigger (0-1)'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)

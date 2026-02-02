@@ -31462,3 +31462,279 @@ def _detect_initiative_content_type(topic: str) -> str:
         return 'document'
     else:
         return 'strategy'  # Default
+
+
+# =============================================================================
+# SESSION 900: SIGNAL INTELLIGENCE - Signal Aggregation Tasks
+# =============================================================================
+
+@shared_task(bind=True, name='aggregate_spider_signals')
+def aggregate_spider_signals(self, lookback_hours: int = 6):
+    """
+    Session 900: Aggregate recent spider data into SignalClusters.
+
+    This task runs periodically to:
+    1. Fetch recent SpiderData
+    2. Cluster signals by topic/keyword similarity
+    3. Create/update SignalCluster records
+    4. Generate AutoTopic suggestions from actionable clusters
+
+    Args:
+        lookback_hours: How far back to look for signals (default 6 hours)
+
+    Returns:
+        Dict with aggregation results
+    """
+    from core.services.signal_aggregation_service import SignalAggregationService
+
+    logger.info(f"🔮 [SIGNAL-AGGREGATION] Starting (lookback: {lookback_hours}h)")
+
+    try:
+        service = SignalAggregationService(lookback_hours=lookback_hours)
+
+        # Aggregate signals into clusters
+        clusters = service.aggregate_signals()
+
+        # Generate auto topics from actionable clusters
+        auto_topics = service.generate_auto_topics(min_confidence=0.5)
+
+        results = {
+            'status': 'success',
+            'clusters_created': len(clusters),
+            'auto_topics_created': len(auto_topics),
+            'cluster_names': [c.name for c in clusters],
+            'topic_names': [t.name for t in auto_topics],
+        }
+
+        logger.info(
+            f"🔮 [SIGNAL-AGGREGATION] Complete: "
+            f"{len(clusters)} clusters, {len(auto_topics)} auto-topics"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"🔮 [SIGNAL-AGGREGATION] Error: {e}")
+        return {
+            'status': 'error',
+            'error': str(e),
+        }
+
+
+@shared_task(bind=True, name='trigger_signal_driven_conversation')
+def trigger_signal_driven_conversation(self, auto_topic_id: str):
+    """
+    Session 900: Trigger a conversation from an AutoTopic.
+
+    This creates a HiveMindSession linked to the AutoTopic and its
+    SignalCluster, providing full provenance for the Origin & Trigger UI.
+
+    Args:
+        auto_topic_id: UUID of the AutoTopic to trigger
+
+    Returns:
+        Dict with conversation details
+    """
+    from core.models_signal_intelligence import AutoTopic, SignalCluster
+    from core.models import HiveMindSession, Agent
+
+    logger.info(f"🎯 [SIGNAL-CONVERSATION] Triggering from AutoTopic: {auto_topic_id}")
+
+    try:
+        auto_topic = AutoTopic.objects.get(id=auto_topic_id)
+
+        if auto_topic.status != 'pending':
+            return {
+                'status': 'skipped',
+                'reason': f'AutoTopic status is {auto_topic.status}, not pending',
+            }
+
+        # Get suggested agents
+        agent_ids = []
+        for agent_name in auto_topic.suggested_agent_names:
+            agent = Agent.objects.filter(name=agent_name).first()
+            if agent:
+                agent_ids.append(str(agent.id))
+
+        # Fallback to default agents if none found
+        if len(agent_ids) < 2:
+            default_agents = Agent.objects.filter(
+                name__in=['ContentStrategyAgent', 'ResearchAgent', 'TrendAnalysisAgent']
+            )[:3]
+            agent_ids = [str(a.id) for a in default_agents]
+
+        # Create HiveMindSession with signal provenance
+        session = HiveMindSession.objects.create(
+            session_mode='conversation',
+            question=auto_topic.name,
+            context=auto_topic.description,
+            conversation_type=auto_topic.suggested_conversation_type,
+            objective=f"Discuss and provide actionable insights on: {auto_topic.name}",
+            success_criteria=[
+                "Identify key opportunities or risks",
+                "Propose concrete next steps",
+                "Reach consensus on recommendations",
+            ],
+            auto_selected_agents=True,
+            participant_ids=agent_ids,
+            status='initializing',
+            # Session 900: Signal provenance
+            signal_cluster=auto_topic.signal_cluster,
+            auto_topic=auto_topic,
+            trigger_confidence=auto_topic.confidence,
+        )
+
+        # Mark AutoTopic as triggered
+        auto_topic.mark_triggered(session.id)
+
+        logger.info(
+            f"🎯 [SIGNAL-CONVERSATION] Created session {session.id} "
+            f"from AutoTopic '{auto_topic.name}'"
+        )
+
+        # Trigger the actual conversation execution
+        try:
+            run_triggered_conversation.delay(
+                session_id=str(session.id),
+                topic=auto_topic.name,
+                conversation_type=auto_topic.suggested_conversation_type,
+                objective=session.objective,
+                success_criteria=session.success_criteria,
+                auto_select_agents=False,  # Already selected
+                participant_ids=agent_ids,
+            )
+        except Exception as e:
+            logger.warning(f"Could not dispatch conversation task: {e}")
+
+        return {
+            'status': 'success',
+            'session_id': str(session.id),
+            'topic': auto_topic.name,
+            'agents': auto_topic.suggested_agent_names,
+            'signal_cluster_id': str(auto_topic.signal_cluster.id) if auto_topic.signal_cluster else None,
+        }
+
+    except AutoTopic.DoesNotExist:
+        return {
+            'status': 'error',
+            'error': f'AutoTopic {auto_topic_id} not found',
+        }
+    except Exception as e:
+        logger.error(f"🎯 [SIGNAL-CONVERSATION] Error: {e}")
+        return {
+            'status': 'error',
+            'error': str(e),
+        }
+
+
+@shared_task(bind=True, name='process_pending_auto_topics')
+def process_pending_auto_topics(self, max_topics: int = 3):
+    """
+    Session 900: Process pending AutoTopics and trigger conversations.
+
+    This task runs periodically to find actionable AutoTopics and
+    trigger conversations from them.
+
+    Args:
+        max_topics: Maximum topics to process per run (default 3)
+
+    Returns:
+        Dict with processing results
+    """
+    from core.models_signal_intelligence import AutoTopic
+    from django.utils import timezone
+
+    logger.info(f"📋 [PROCESS-TOPICS] Processing up to {max_topics} pending topics")
+
+    try:
+        # Get pending topics ordered by confidence and urgency
+        pending_topics = AutoTopic.objects.filter(
+            status='pending',
+            confidence__gte=0.5,
+        ).filter(
+            models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
+        ).order_by('-urgency', '-confidence')[:max_topics]
+
+        results = {
+            'status': 'success',
+            'topics_found': pending_topics.count(),
+            'topics_triggered': 0,
+            'triggered_sessions': [],
+        }
+
+        for topic in pending_topics:
+            try:
+                # Trigger conversation synchronously to track results
+                result = trigger_signal_driven_conversation(str(topic.id))
+
+                if result.get('status') == 'success':
+                    results['topics_triggered'] += 1
+                    results['triggered_sessions'].append({
+                        'topic': topic.name,
+                        'session_id': result.get('session_id'),
+                    })
+
+            except Exception as e:
+                logger.error(f"📋 [PROCESS-TOPICS] Error triggering {topic.name}: {e}")
+
+        logger.info(
+            f"📋 [PROCESS-TOPICS] Complete: "
+            f"{results['topics_triggered']}/{results['topics_found']} topics triggered"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📋 [PROCESS-TOPICS] Error: {e}")
+        return {
+            'status': 'error',
+            'error': str(e),
+        }
+
+
+@shared_task(bind=True, name='cleanup_expired_signals')
+def cleanup_expired_signals(self):
+    """
+    Session 900: Clean up expired SignalClusters and AutoTopics.
+
+    Marks expired clusters as 'archived' and expired topics as 'expired'.
+    """
+    from core.models_signal_intelligence import SignalCluster, AutoTopic
+    from django.utils import timezone
+
+    logger.info("🧹 [SIGNAL-CLEANUP] Cleaning up expired signals")
+
+    now = timezone.now()
+
+    # Archive expired clusters
+    expired_clusters = SignalCluster.objects.filter(
+        expires_at__lt=now,
+        status__in=['detecting', 'active']
+    )
+    cluster_count = expired_clusters.update(status='archived')
+
+    # Expire old topics
+    expired_topics = AutoTopic.objects.filter(
+        expires_at__lt=now,
+        status='pending'
+    )
+    topic_count = expired_topics.update(status='expired')
+
+    # Also decay old 'detecting' clusters that never became active
+    stale_clusters = SignalCluster.objects.filter(
+        status='detecting',
+        detected_at__lt=now - timezone.timedelta(days=2)
+    )
+    stale_count = stale_clusters.update(status='decayed')
+
+    logger.info(
+        f"🧹 [SIGNAL-CLEANUP] Complete: "
+        f"{cluster_count} clusters archived, {topic_count} topics expired, "
+        f"{stale_count} stale clusters decayed"
+    )
+
+    return {
+        'clusters_archived': cluster_count,
+        'topics_expired': topic_count,
+        'clusters_decayed': stale_count,
+    }
