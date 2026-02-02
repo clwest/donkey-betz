@@ -246,9 +246,9 @@ app.conf.beat_schedule = {
     },
     'scan-spider-opportunities': {
         'task': 'intelligence.tasks.scan_spider_opportunities',
-        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'schedule': crontab(minute='*/30'),  # Session 902: Reduced from 15 to 30 min (OOM fix)
         'options': {
-            'expires': 900,  # 15 minutes
+            'expires': 1800,  # 30 minutes
         }
     },
     # Session 6: Automated Spider Data Processing (legacy persistence.models.SpiderData)
