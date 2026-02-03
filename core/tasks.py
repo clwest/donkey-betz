@@ -32341,3 +32341,116 @@ Stage {stage_num} ({config['template']}) should include:
         stage.status = 'PENDING'  # Reset to pending for retry
         stage.save()
         raise self.retry(exc=e, countdown=300)
+
+
+# =============================================================================
+# Session 914.7: Operating Rhythm Tasks (Daily & Weekly Automation)
+# =============================================================================
+
+@shared_task
+def run_daily_priority_scan():
+    """
+    Session 914.7: Run the daily priority scan to identify top 5 focus initiatives.
+
+    Scheduled: Every day at 6:00 AM
+    """
+    from core.services.daily_priorities import run_daily_priority_scan
+
+    logger.info("[Session 914.7] 🌅 Running daily priority scan...")
+
+    try:
+        result = run_daily_priority_scan(focus_count=5)
+
+        logger.info(
+            f"[Session 914.7] ✅ Daily priority scan complete: "
+            f"{result['focus_count']} focus initiatives, "
+            f"{result['total_scored']} total scored"
+        )
+
+        return {
+            'success': True,
+            'focus_count': result['focus_count'],
+            'total_scored': result['total_scored'],
+            'scan_date': result['scan_date']
+        }
+    except Exception as e:
+        logger.error(f"[Session 914.7] ❌ Daily priority scan failed: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task
+def run_weekly_rhythm_report():
+    """
+    Session 914.7: Generate the weekly Ship/Learn/Kill report.
+
+    Scheduled: Every Monday at 7:00 AM
+    """
+    from core.services.operating_rhythm import generate_weekly_report
+
+    logger.info("[Session 914.7] 📊 Generating weekly Ship/Learn/Kill report...")
+
+    try:
+        report = generate_weekly_report()
+
+        summary = report['summary']
+        logger.info(
+            f"[Session 914.7] ✅ Weekly report generated: "
+            f"Shipped={summary['shipped_count']}, "
+            f"Learned={summary['learned_count']}, "
+            f"Blocked={summary['blocked_count']}, "
+            f"Kill Candidates={summary['kill_candidates_count']}, "
+            f"Needs Decision={summary['needs_decision_count']}"
+        )
+
+        # TODO: Send to Discord/Slack webhook for founder notification
+
+        return {
+            'success': True,
+            'week_start': report['week_start'],
+            'week_end': report['week_end'],
+            'summary': summary
+        }
+    except Exception as e:
+        logger.error(f"[Session 914.7] ❌ Weekly report generation failed: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task
+def check_operating_rhythm_status():
+    """
+    Session 914.7: Check operating rhythm status and generate recommendations.
+
+    Scheduled: Every day at 9:00 AM (reminder to set priorities if not set)
+    """
+    from core.services.operating_rhythm import get_rhythm_status
+
+    logger.info("[Session 914.7] 🔍 Checking operating rhythm status...")
+
+    try:
+        status = get_rhythm_status()
+
+        daily = status['daily_priorities']
+        recommendations = status['recommendations']
+
+        if recommendations:
+            logger.warning(
+                f"[Session 914.7] ⚠️ Operating rhythm recommendations: "
+                f"{len(recommendations)} items"
+            )
+            for rec in recommendations:
+                logger.warning(f"[Session 914.7]   • {rec}")
+        else:
+            logger.info("[Session 914.7] ✅ Operating rhythm is healthy")
+
+        # TODO: Send recommendations to Discord/Slack if priorities not set
+
+        return {
+            'success': True,
+            'priorities_set': len(daily.get('priorities', [])) > 0,
+            'is_current': daily.get('is_current', False),
+            'recommendations_count': len(recommendations),
+            'recommendations': recommendations
+        }
+    except Exception as e:
+        logger.error(f"[Session 914.7] ❌ Rhythm status check failed: {e}")
+        return {'success': False, 'error': str(e)}

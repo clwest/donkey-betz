@@ -1437,6 +1437,24 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.detect_duplicate_initiatives',
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
     },
+    # =========================================================================
+    # Session 914.7: Operating Rhythm (Daily & Weekly Automation)
+    # =========================================================================
+    # Daily priority scan - identify top 5 focus initiatives each morning
+    'run-daily-priority-scan': {
+        'task': 'core.tasks.run_daily_priority_scan',
+        'schedule': crontab(hour=6, minute=0),  # Daily at 6:00 AM
+    },
+    # Weekly Ship/Learn/Kill report - generate summary every Monday
+    'run-weekly-rhythm-report': {
+        'task': 'core.tasks.run_weekly_rhythm_report',
+        'schedule': crontab(day_of_week='monday', hour=7, minute=0),  # Monday at 7:00 AM
+    },
+    # Operating rhythm status check - remind founder to set priorities
+    'check-operating-rhythm-status': {
+        'task': 'core.tasks.check_operating_rhythm_status',
+        'schedule': crontab(hour=9, minute=0),  # Daily at 9:00 AM
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
