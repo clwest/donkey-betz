@@ -1518,7 +1518,7 @@ app.conf.beat_schedule = {
 
     # Unified Intelligence Pipeline - Aggregates all intelligence sources
     'run-unified-intelligence-pipeline': {
-        'task': 'core.tasks.run_unified_intelligence_pipeline',
+        'task': 'unified_pipeline.run_complete_cycle',  # Session 919: Fixed task name mismatch
         'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
         'options': {
             'expires': 21600,  # 6 hours
@@ -1538,7 +1538,7 @@ app.conf.beat_schedule = {
 
     # Blockchain Security Monitor - On-chain security analysis
     'run-blockchain-security-monitor': {
-        'task': 'core.tasks.run_blockchain_security_monitor',
+        'task': 'autonomous.blockchain_security_monitor',  # Session 919: Fixed task name mismatch
         'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
         'options': {
             'expires': 14400,  # 4 hours
@@ -1559,7 +1559,7 @@ app.conf.beat_schedule = {
 
     # Narrative Drift Cycle - Trend and narrative analysis
     'run-narrative-drift-cycle': {
-        'task': 'core.tasks.run_narrative_drift_cycle',
+        'task': 'narrative_drift.run_detector_cycle',  # Session 919: Fixed task name mismatch
         'schedule': crontab(minute=45, hour='*/6'),  # Every 6 hours at :45
         'options': {
             'expires': 21600,  # 6 hours
@@ -1579,7 +1579,7 @@ app.conf.beat_schedule = {
 
     # Unified Pipeline Health Check - System health monitoring
     'unified-pipeline-health-check': {
-        'task': 'core.tasks.unified_pipeline_health_check',
+        'task': 'unified_pipeline.health_check',  # Session 919: Fixed task name mismatch
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {
             'expires': 1800,  # 30 minutes
@@ -1597,7 +1597,7 @@ app.conf.beat_schedule = {
 
     # Narrative Daily Digest - Daily narrative summary
     'send-narrative-daily-digest': {
-        'task': 'core.tasks.send_narrative_daily_digest',
+        'task': 'narrative_drift.send_daily_digest',  # Session 919: Fixed task name mismatch
         'schedule': crontab(minute=0, hour=8),  # Daily 8 AM
         'options': {
             'expires': 3600,  # 1 hour
@@ -2270,7 +2270,7 @@ app.conf.beat_schedule = {
     # Improves structure, hooks, headers, engagement, and conclusions
 
     'enhance-content-daily': {
-        'task': 'core.tasks.enhance_all_blogs_task',
+        'task': 'core.tasks.enhance_all_blogs_needing_enhancement',  # Session 919: Fixed task name mismatch
         'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
         'kwargs': {'limit': 20, 'save': True},
         'options': {
