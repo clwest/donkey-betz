@@ -31340,13 +31340,31 @@ Previous stage context:
             logger.info(f"✅ [INITIATIVE PIPELINE] Created document for: {init.name[:30]}... Stage {stage_num}")
 
             # Session 880: Auto-approve the stage and advance to next
+            # Session 916: Updated to use approve() method with audit logging
             if auto_approve:
                 try:
                     from django.utils import timezone
+                    from core.models_document_registry import StageTransitionLog
+
+                    old_status = stage.status
                     stage.status = 'APPROVED'
                     stage.approved_by = 'auto_pipeline'
                     stage.approved_at = timezone.now()
                     stage.save()
+
+                    # Session 916: Log the transition for audit trail
+                    StageTransitionLog.log_transition(
+                        stage=stage,
+                        from_status=old_status,
+                        to_status='APPROVED',
+                        triggered_by='auto_pipeline',
+                        trigger_type='celery',
+                        checks_passed={
+                            'has_document': stage.document is not None,
+                            'auto_approve_enabled': True,
+                        },
+                        notes=f"Auto-approved via generate_initiative_stage_document task"
+                    )
 
                     results['stages_approved'] += 1
                     logger.info(f"✅ [INITIATIVE PIPELINE] Auto-approved: {init.name[:30]}... Stage {stage_num}")
