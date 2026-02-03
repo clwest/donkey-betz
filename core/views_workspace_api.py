@@ -380,9 +380,9 @@ class OperationReviewSerializer(serializers.Serializer):
 
 class OperationPagination(PageNumberPagination):
     """Pagination for operations list"""
-    page_size = 20
+    page_size = 100  # Session 918: Increased from 20 to show more operations
     page_size_query_param = 'page_size'
-    max_page_size = 100
+    max_page_size = 500
 
 
 # =============================================================================
