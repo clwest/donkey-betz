@@ -203,6 +203,9 @@ from core.agents.resolve_agent import ResolveAgent
 # Session 496: Content Writer Agent
 from core.agents.content_writer_agent import ContentWriterAgent
 
+# Session 864: Editor Agent for content enhancement
+from core.agents.editor_agent import EditorAgent
+
 # Session 496: Podcast Studio Agents
 from core.agents.podcast import (
     PodcastCoordinatorAgent,
@@ -279,6 +282,9 @@ class AgentRouter:
 
         # Writing Agents (Session 496)
         "ContentWriterAgent": ContentWriterAgent,
+
+        # Content Enhancement (Session 864)
+        "EditorAgent": EditorAgent,
 
         # Strategy Agents (Session 280)
         "ContentStrategyAgent": ContentStrategyAgent,
