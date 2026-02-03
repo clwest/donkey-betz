@@ -309,6 +309,16 @@ app.conf.beat_schedule = {
             'expires': 1800,  # Expire after 30 minutes
         }
     },
+    # Session 915: Stage Document Backfill - Generate missing stage documents
+    'backfill-stage-documents': {
+        'task': 'core.tasks.backfill_stage_documents',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'kwargs': {'stage_num': 1, 'limit': 50},
+        'options': {
+            'expires': 1800,  # Expire after 30 minutes
+            'queue': 'default',
+        }
+    },
     # Session 210: Style Evolution Tracking
     'record-style-evolution': {
         'task': 'core.tasks.record_all_user_style_evolution',
