@@ -20490,3 +20490,69 @@ class BadContextEvent(models.Model):
             count=Count('id')
         ).order_by('-count')
 
+
+# =============================================================================
+# Session 914.7: Operating Rhythm - Founder Feedback Model
+# =============================================================================
+
+class FounderFeedback(models.Model):
+    """
+    Session 914.7: Store founder feedback for operating rhythm.
+
+    Captures:
+    - Daily priorities (Top 3)
+    - Weekly feedback (Ship/Learn/Kill response)
+    - Becomes training signal for agents
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    FEEDBACK_TYPE_CHOICES = [
+        ('daily_priorities', 'Daily Priorities'),
+        ('weekly_feedback', 'Weekly Feedback'),
+        ('initiative_feedback', 'Initiative-Specific Feedback'),
+        ('agent_feedback', 'Agent Performance Feedback'),
+    ]
+
+    feedback_type = models.CharField(
+        max_length=32,
+        choices=FEEDBACK_TYPE_CHOICES,
+        db_index=True,
+        help_text='Session 914.7: Type of feedback'
+    )
+
+    content = models.JSONField(
+        default=dict,
+        help_text='Session 914.7: Feedback content (priorities, text, etc.)'
+    )
+
+    created_by = models.CharField(
+        max_length=100,
+        default='founder',
+        help_text='Session 914.7: Who submitted this feedback'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Track if this feedback has been processed as a learning signal
+    processed_as_learning = models.BooleanField(
+        default=False,
+        help_text='Session 914.7: Has this been converted to agent learning?'
+    )
+
+    processed_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Session 914.7: When was this processed?'
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Founder Feedback"
+        verbose_name_plural = "Founder Feedback"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['feedback_type', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"FounderFeedback[{self.feedback_type}] {self.created_at.date()}"
+
