@@ -3789,6 +3789,7 @@ from core.views_workspace_triggers import (
     WorkspaceTriggerConfigViewSet,
     autopilot_status,
     trigger_operations_task,  # Session 886: Manual trigger for Operations Tab
+    trigger_category_rotation,  # Session 917: Manual trigger for category rotations
 )
 
 # Create dedicated router for workspace triggers
@@ -3801,6 +3802,8 @@ urlpatterns += [
     path('api/workspace-triggers/autopilot-status/', autopilot_status, name='workspace-autopilot-status'),
     # Session 886: Manual trigger for Operations Tab tasks
     path('api/workspace-triggers/trigger-operations/', trigger_operations_task, name='workspace-trigger-operations'),
+    # Session 917: Manual trigger for category rotations (financial, predictions, etc.)
+    path('api/workspace-triggers/trigger-category/', trigger_category_rotation, name='workspace-trigger-category'),
 
     # Trigger Router URLs
     path('api/', include(trigger_router.urls)),
