@@ -19,6 +19,7 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install system dependencies
+# Session 918: Added WeasyPrint dependencies (cairo, pango, gdk-pixbuf)
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -27,6 +28,13 @@ RUN apt-get update && apt-get install -y \
     redis-tools \
     git \
     vim \
+    # WeasyPrint dependencies
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
@@ -126,12 +134,19 @@ FROM python:3.11-slim as production
 
 # Install only runtime dependencies
 # Session 798: Added git for workspace cloning feature
+# Session 918: Added WeasyPrint dependencies for PDF export
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     postgresql-client \
     redis-tools \
     curl \
     git \
+    # WeasyPrint runtime dependencies
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Railway/Production environment variables
