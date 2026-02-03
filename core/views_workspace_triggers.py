@@ -611,6 +611,76 @@ def trigger_operations_task(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_category_rotation(request):
+    """
+    Session 917: Manually trigger agent category rotations for Operations Tab.
+
+    POST /api/workspace-triggers/trigger-category/
+
+    Body:
+        category: One of 'financial', 'predictions', 'blockchain', 'narrative',
+                  'strategy', 'sports', 'research', 'content', 'all'
+
+    This triggers agent_category_rotation() which uses universal_agent_workspace_output()
+    to create WorkspaceOperation entries visible in the Operations Tab.
+
+    Use this to:
+    - Test category rotations
+    - Generate market reports on-demand
+    - Debug why a category isn't producing operations
+    """
+    from core.tasks import agent_category_rotation
+
+    category = request.data.get('category', 'financial')
+
+    # Valid categories from AGENT_WORKSPACE_REGISTRY
+    # Note: 'predictions' doesn't exist - those agents are in 'financial' and 'sports'
+    valid_categories = [
+        'financial', 'blockchain', 'narrative', 'strategy', 'sports',
+        'research', 'content', 'development', 'executive',
+        'media', 'podcast', 'coordination', 'security', 'system', 'assistant'
+    ]
+
+    if category == 'all':
+        # Trigger the most important categories for Operations Tab
+        priority_categories = ['financial', 'sports', 'blockchain', 'strategy', 'narrative']
+        results = {}
+        for cat in priority_categories:
+            try:
+                result = agent_category_rotation.delay(cat)
+                results[cat] = {'task_id': str(result.id), 'status': 'queued'}
+            except Exception as e:
+                results[cat] = {'error': str(e)}
+        return Response({
+            'success': True,
+            'message': f'Triggered {len(priority_categories)} category rotations',
+            'categories': priority_categories,
+            'results': results,
+        })
+
+    if category not in valid_categories:
+        return Response({
+            'success': False,
+            'error': f"Unknown category: {category}. Valid options: {valid_categories} or 'all'",
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = agent_category_rotation.delay(category)
+        return Response({
+            'success': True,
+            'message': f'Category rotation triggered for: {category}',
+            'task_id': str(result.id),
+            'category': category,
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e),
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def autopilot_status(request):
