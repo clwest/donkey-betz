@@ -587,10 +587,26 @@ def handle_stage_task_completion(
         # Check if we should auto-advance (simplified: advance after first successful task)
         # In production, you'd want more sophisticated logic (all tasks complete, human approval, etc.)
         if result['stage_updated'] and stage_num < 5:
-            # Auto-approve current stage
+            # Session 916: Import audit logging
+            from core.models_document_registry import StageTransitionLog
+
+            # Auto-approve current stage with audit logging
+            old_status = stage.status
             stage.status = 'APPROVED'
             stage.approved_at = timezone.now()
+            stage.approved_by = 'conversation_pipeline'
             stage.save()
+
+            # Session 916: Log the transition
+            StageTransitionLog.log_transition(
+                stage=stage,
+                from_status=old_status,
+                to_status='APPROVED',
+                triggered_by='conversation_pipeline',
+                trigger_type='system',
+                checks_passed={'has_document': stage.document is not None},
+                notes='Auto-approved via conversation initiative pipeline'
+            )
 
             # Session 884: Ensure all PRIOR stages are also APPROVED (backfill fix)
             # This fixes the issue where initiatives jump ahead without completing earlier stages
@@ -601,14 +617,36 @@ def handle_stage_task_completion(
                     defaults={
                         'status': 'APPROVED',
                         'approved_at': timezone.now(),
+                        'approved_by': 'backfill_pipeline',
                         'notes': f'Auto-backfilled when Stage {stage_num} completed',
                     }
                 )
-                if not created and prior_stage.status != 'APPROVED':
+                if created:
+                    # Session 916: Log creation
+                    StageTransitionLog.log_transition(
+                        stage=prior_stage,
+                        from_status='CREATED',
+                        to_status='APPROVED',
+                        triggered_by='backfill_pipeline',
+                        trigger_type='system',
+                        notes=f'Created and approved via backfill when Stage {stage_num} completed'
+                    )
+                elif prior_stage.status != 'APPROVED':
+                    prior_old_status = prior_stage.status
                     prior_stage.status = 'APPROVED'
                     prior_stage.approved_at = timezone.now()
+                    prior_stage.approved_by = 'backfill_pipeline'
                     prior_stage.notes = f"{prior_stage.notes}\n\n[Backfilled: approved when Stage {stage_num} completed]"
                     prior_stage.save()
+                    # Session 916: Log the transition
+                    StageTransitionLog.log_transition(
+                        stage=prior_stage,
+                        from_status=prior_old_status,
+                        to_status='APPROVED',
+                        triggered_by='backfill_pipeline',
+                        trigger_type='system',
+                        notes=f'Backfilled when Stage {stage_num} completed'
+                    )
                     logger.info(f"📋 Backfilled Stage {prior_stage_num} as APPROVED")
 
             # Advance initiative to next stage
