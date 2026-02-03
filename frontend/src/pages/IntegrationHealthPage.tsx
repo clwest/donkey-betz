@@ -323,7 +323,7 @@ export default function IntegrationHealthPage() {
                           <span>{component.total_systems} healthy</span>
                         </div>
                         {component.health_score !== undefined && (
-                          <span className="text-cyan-400 font-medium">{component.health_score}%</span>
+                          <span className="text-cyan-400 font-medium">{(component.health_score ?? 0).toFixed(1)}%</span>
                         )}
                       </div>
                       {(component.degraded ?? 0) > 0 && (

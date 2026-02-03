@@ -1673,7 +1673,7 @@ function SkinDetailView() {
               (skin?.health_score || 0) >= 80 ? 'text-green-400' :
               (skin?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
             )}>
-              {skin?.health_score || 0}%
+              {(skin?.health_score ?? 0).toFixed(1)}%
             </div>
             <div className="text-xs text-zinc-500">Health</div>
           </div>
