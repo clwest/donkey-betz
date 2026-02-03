@@ -8,15 +8,25 @@ Session 558: Analyzes sports betting odds from The Odds API to identify:
 - Arbitrage opportunities (bookmaker discrepancies)
 - Toss-up games (close matchups for research)
 
+Session 918: Added provenance tracking and structured JSON output.
+- ReportProvenance block tracks data sources, timestamps, freshness
+- SportsReportSchema provides structured output for downstream agents
+- Publishing gates based on data freshness validation
+
 Uses The Odds spider for real-time odds from 40+ bookmakers.
 """
 
 import logging
 from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+from core.agents.report_schemas import (
+    ReportProvenance, SportsReportSchema, GameAnalysis,
+    Claim, Recommendation, RiskFlag, SourceInfo,
+    build_provenance, format_disclaimer
+)
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -195,8 +205,8 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                 logger.info(f"🕷️ {self.name} using spider intelligence")
 
             try:
-                # Fetch odds data from The Odds API spider
-                events = self._get_sports_odds(context)
+                # Session 918: Fetch odds data with source tracking
+                events, source_info = self._get_sports_odds(context)
 
                 if not events:
                     return AgentResult(
@@ -208,14 +218,30 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                         execution_time_ms=self._elapsed_ms(start_time)
                     )
 
+                # Session 918: Build provenance block
+                provenance = build_provenance(
+                    report_type='sports_odds',
+                    agent_name=self.name,
+                    sources=[source_info],
+                    stale_threshold_hours=2.0,  # Sports odds go stale fast
+                )
+                provenance.disclaimer = format_disclaimer('sports_odds')
+
                 # Analyze odds
                 analysis = self._analyze_odds(events, task, context)
 
                 # Generate betting signals
                 signals = self._generate_signals(events, analysis)
 
-                # Build response using LLM
-                response = self._generate_analysis_report(task, events, analysis, signals, context)
+                # Session 918: Build structured report schema
+                structured_report = self._build_structured_report(
+                    events, analysis, signals, provenance
+                )
+
+                # Build response using LLM (includes provenance header)
+                response = self._generate_analysis_report(
+                    task, events, analysis, signals, context, provenance
+                )
 
                 # Record learning outcome
                 try:
@@ -237,6 +263,11 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                         'analysis': analysis,
                         'sports': self._count_sports(events),
                         'upcoming_24h': len([e for e in events if self._is_upcoming_24h(e)]),
+                        # Session 918: Include structured output
+                        'structured_report': structured_report.to_dict(),
+                        'provenance': provenance.to_dict(),
+                        'publishable': provenance.publishable,
+                        'validation_status': provenance.validation_status,
                     },
                     agent_name=self.name,
                     execution_time_ms=self._elapsed_ms(start_time)
@@ -258,8 +289,22 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
 
-    def _get_sports_odds(self, context: Dict) -> List[Dict]:
-        """Fetch odds from The Odds API spider."""
+    def _get_sports_odds(self, context: Dict) -> tuple:
+        """
+        Fetch odds from The Odds API spider.
+
+        Session 918: Returns tuple of (events, source_info) for provenance tracking.
+
+        Returns:
+            Tuple of (List[Dict], Dict) - events and source metadata
+        """
+        source_info = {
+            'name': 'TheOddsSpider',
+            'endpoint': 'the-odds-api.com/v4/sports',
+            'retrieved_at': datetime.now(timezone.utc).isoformat(),
+            'record_count': 0,
+        }
+
         try:
             from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
 
@@ -285,11 +330,16 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                 events = spider.fetch_data(max_results=100)
 
             # Filter to sports odds only
-            return [e for e in events if e.get('data_type') == 'sports_odds']
+            filtered_events = [e for e in events if e.get('data_type') == 'sports_odds']
+
+            # Session 918: Update source info with actual record count
+            source_info['record_count'] = len(filtered_events)
+
+            return filtered_events, source_info
 
         except Exception as e:
             logger.error(f"Error fetching sports odds: {e}")
-            return []
+            return [], source_info
 
     def _analyze_odds(self, events: List[Dict], task: str, context: Dict) -> Dict:
         """Analyze odds for patterns and opportunities."""
@@ -424,10 +474,124 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
 
         return signals
 
-    def _generate_analysis_report(self, task: str, events: List[Dict],
-                                   analysis: Dict, signals: List[Dict],
-                                   context: Dict) -> str:
-        """Generate natural language analysis report using LLM."""
+    def _build_structured_report(
+        self,
+        events: List[Dict],
+        analysis: Dict,
+        signals: List[Dict],
+        provenance: ReportProvenance
+    ) -> SportsReportSchema:
+        """
+        Session 918: Build structured report schema from analysis data.
+
+        Creates a JSON-serializable schema that can be used by downstream
+        agents, stored for auditing, or rendered in UIs.
+        """
+        report = SportsReportSchema(provenance=provenance)
+
+        report.total_games_analyzed = len(events)
+        report.sports_covered = list(analysis.get('sport_breakdown', {}).keys())
+        report.games_in_next_24h = len(analysis.get('upcoming_games', []))
+
+        # Build game analyses by sport
+        for event in events:
+            sport_name = event.get('sport_name', 'Other').lower()
+            game = GameAnalysis(
+                game_id=event.get('id', ''),
+                sport=event.get('sport_name', ''),
+                matchup=event.get('title', ''),
+                home_team=event.get('home_team', ''),
+                away_team=event.get('away_team', ''),
+                home_moneyline=event.get('home_odds'),
+                away_moneyline=event.get('away_odds'),
+                home_implied_prob=event.get('home_implied_prob'),
+                away_implied_prob=event.get('away_implied_prob'),
+                spread=event.get('home_spread'),
+                total=event.get('total_line'),
+                bookmaker_count=event.get('bookmaker_count', 0),
+                start_time_utc=event.get('commence_time', ''),
+                start_time_local=event.get('commence_time_formatted', ''),
+            )
+
+            # Calculate hours until start
+            if event.get('commence_time'):
+                try:
+                    dt = datetime.fromisoformat(
+                        event['commence_time'].replace('Z', '+00:00')
+                    )
+                    now = datetime.now(timezone.utc)
+                    game.hours_until_start = max(0, (dt - now).total_seconds() / 3600)
+                except (ValueError, TypeError):
+                    pass
+
+            # Route to sport-specific list
+            if 'nfl' in sport_name or 'football' in sport_name:
+                report.nfl_games.append(game)
+            elif 'nba' in sport_name or 'basketball' in sport_name:
+                report.nba_games.append(game)
+            elif 'mlb' in sport_name or 'baseball' in sport_name:
+                report.mlb_games.append(game)
+            elif 'nhl' in sport_name or 'hockey' in sport_name:
+                report.nhl_games.append(game)
+            else:
+                report.other_games.append(game)
+
+        # Track signal types
+        for item in analysis.get('toss_ups', []):
+            if 'event' in item and 'id' in item['event']:
+                report.toss_up_games.append(item['event']['id'])
+
+        for item in analysis.get('sharp_indicators', []):
+            if 'event' in item and 'id' in item['event']:
+                report.sharp_market_games.append(item['event']['id'])
+
+        for item in analysis.get('heavy_favorites', []):
+            if 'event' in item and 'id' in item['event']:
+                report.heavy_favorites.append(item['event']['id'])
+
+        # Add risk flags
+        if not provenance.publishable:
+            for blocker in provenance.publish_blockers:
+                report.risk_flags.append(RiskFlag(
+                    severity='high',
+                    description=blocker,
+                    mitigation='Verify data freshness before acting'
+                ))
+
+        # Add standard risk flag about injury data
+        report.risk_flags.append(RiskFlag(
+            severity='medium',
+            description='Injury/lineup data not verified in this report',
+            mitigation='Check injury reports before placing any bets'
+        ))
+
+        # Confidence based on data quality
+        if provenance.validation_status == 'verified':
+            report.overall_confidence = 0.7
+            report.confidence_rationale = 'Data sources verified and fresh'
+        elif provenance.validation_status == 'partially_verified':
+            report.overall_confidence = 0.5
+            report.confidence_rationale = 'Some data approaching staleness threshold'
+        else:
+            report.overall_confidence = 0.3
+            report.confidence_rationale = 'Data freshness cannot be confirmed'
+
+        return report
+
+    def _generate_analysis_report(
+        self,
+        task: str,
+        events: List[Dict],
+        analysis: Dict,
+        signals: List[Dict],
+        context: Dict,
+        provenance: ReportProvenance = None
+    ) -> str:
+        """
+        Generate natural language analysis report using LLM.
+
+        Session 918: Now includes provenance header in the report.
+        """
         try:
             from openai import OpenAI
             import os
@@ -481,20 +645,37 @@ Keep it actionable and under 400 words. All times are MST."""
                 temperature=0.7
             )
 
-            return response.choices[0].message.content
+            llm_analysis = response.choices[0].message.content or ""
+
+            # Session 918: Prepend provenance block to report
+            if provenance:
+                return provenance.to_markdown_block() + "\n" + llm_analysis
+            return llm_analysis
 
         except Exception as e:
             logger.error(f"Error generating analysis report: {e}")
-            return self._basic_report(events, signals)
+            return self._basic_report(events, signals, provenance)
 
-    def _basic_report(self, events: List[Dict], signals: List[Dict]) -> str:
+    def _basic_report(
+        self,
+        events: List[Dict],
+        signals: List[Dict],
+        provenance: ReportProvenance = None
+    ) -> str:
         """Generate basic report without LLM."""
-        lines = [
+        lines = []
+
+        # Session 918: Include provenance if available
+        if provenance:
+            lines.append(provenance.to_markdown_block())
+            lines.append("")
+
+        lines.extend([
             f"**Sports Odds Analysis**",
             f"Analyzed {len(events)} events, generated {len(signals)} signals.",
             "",
             "**Top Signals:**"
-        ]
+        ])
 
         for signal in signals[:5]:
             lines.append(f"- [{signal['type']}] {signal['matchup'][:40]}... ({signal.get('game_time', 'TBD')})")
