@@ -166,6 +166,8 @@ class InitiativeIntegrationService:
         Initialize all 5 stages for a new Initiative.
 
         Creates placeholder InitiativeStage records in PENDING status.
+
+        Session 915: Also triggers Stage 1 document generation automatically.
         """
         from core.models_document_registry import InitiativeStage
 
@@ -179,6 +181,16 @@ class InitiativeIntegrationService:
             )
 
         self.logger.info(f"[Session 847] Initialized 5 stages for Initiative: {initiative.name}")
+
+        # Session 915: Trigger Stage 1 document generation
+        # This ensures all new initiatives get their Research Brief created automatically
+        try:
+            from core.tasks import generate_initiative_stage_document
+            task = generate_initiative_stage_document.delay(str(initiative.id), 1)
+            self.logger.info(f"[Session 915] Triggered Stage 1 document generation for {initiative.name}: task {task.id}")
+        except Exception as e:
+            # Don't fail initiative creation if task scheduling fails
+            self.logger.warning(f"[Session 915] Could not trigger Stage 1 generation for {initiative.name}: {e}")
 
     def link_document_to_stage(
         self,
