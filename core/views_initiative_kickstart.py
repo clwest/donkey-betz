@@ -720,3 +720,110 @@ def cleanup_initiatives(request):
     )
 
     return Response(result)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def backfill_stage_documents(request):
+    """
+    Session 915: Trigger backfill of missing stage documents.
+
+    Since `railway run` executes locally (can't reach Redis internal network),
+    this API endpoint triggers the Celery task from within Railway's container.
+
+    POST/GET params:
+        stage: int - Stage number to backfill (default: 1)
+        limit: int - Max initiatives to process (default: 50)
+        dry_run: bool - Preview without triggering (default: False)
+
+    Example:
+        # Dry run
+        curl -X POST https://your-app.railway.app/api/initiatives/backfill-documents/ \
+             -H "Authorization: Token YOUR_TOKEN" \
+             -d '{"dry_run": true}'
+
+        # Backfill Stage 1 documents
+        curl -X POST https://your-app.railway.app/api/initiatives/backfill-documents/ \
+             -H "Authorization: Token YOUR_TOKEN" \
+             -d '{"stage": 1, "limit": 50}'
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.tasks import backfill_stage_documents as backfill_task
+
+    # Parse params
+    if request.method == 'POST':
+        data = request.data
+    else:
+        data = request.query_params
+
+    stage_num = int(data.get('stage', 1))
+    limit = int(data.get('limit', 50))
+
+    dry_run = data.get('dry_run', False)
+    if isinstance(dry_run, str):
+        dry_run = dry_run.lower() in ('true', '1', 'yes')
+
+    result = {
+        'stage': stage_num,
+        'limit': limit,
+        'dry_run': dry_run,
+        'initiatives_found': 0,
+        'task_id': None,
+        'preview': [],
+    }
+
+    # Find initiatives missing documents for this stage
+    all_initiatives = Initiative.objects.filter(
+        current_stage__gte=stage_num
+    ).order_by('-created_at')[:limit * 2]
+
+    initiatives_needing_docs = []
+    for initiative in all_initiatives:
+        stage = InitiativeStage.objects.filter(
+            initiative=initiative,
+            stage=stage_num
+        ).first()
+
+        if stage and not stage.document:
+            initiatives_needing_docs.append(initiative)
+
+        if len(initiatives_needing_docs) >= limit:
+            break
+
+    result['initiatives_found'] = len(initiatives_needing_docs)
+
+    if dry_run:
+        result['message'] = f"[DRY RUN] Would backfill Stage {stage_num} documents for {len(initiatives_needing_docs)} initiatives"
+        result['preview'] = [
+            {
+                'id': str(i.id),
+                'name': i.name[:80],
+                'stage': i.current_stage,
+            }
+            for i in initiatives_needing_docs[:20]
+        ]
+        if len(initiatives_needing_docs) > 20:
+            result['preview_note'] = f"Showing 20 of {len(initiatives_needing_docs)} initiatives"
+        return Response(result)
+
+    if not initiatives_needing_docs:
+        result['message'] = f"No initiatives need Stage {stage_num} document backfill"
+        return Response(result)
+
+    # Trigger the Celery task
+    try:
+        async_result = backfill_task.delay(stage_num=stage_num, limit=limit)
+        result['task_id'] = async_result.id
+        result['message'] = (
+            f"Triggered backfill task for {len(initiatives_needing_docs)} initiatives "
+            f"(task_id: {async_result.id})"
+        )
+        logger.info(
+            f"[backfill_api] {result['message']}"
+        )
+    except Exception as e:
+        result['error'] = str(e)
+        result['message'] = f"Failed to trigger backfill task: {e}"
+        logger.error(f"[backfill_api] {result['message']}")
+
+    return Response(result)
