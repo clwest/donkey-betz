@@ -2867,6 +2867,8 @@ urlpatterns = [
     # Session 914.7: Operating Rhythm API
     path('api/operating-rhythm/', views_research_demo.operating_rhythm_api, name='operating-rhythm'),
     path('api/initiatives/<uuid:initiative_id>/rhythm/', views_research_demo.initiative_rhythm_api, name='initiative-rhythm'),
+    # Session 919: Set Founder Intent API
+    path('api/initiatives/<uuid:initiative_id>/founder-intent/', views_research_demo.set_founder_intent_api, name='initiative-set-founder-intent'),
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
