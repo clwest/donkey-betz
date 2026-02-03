@@ -1,8 +1,8 @@
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
-**Updated:** Session 914.6 (February 2, 2026)
-**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | RATE LIMITS | DAILY PRIORITIES | BOARDROOM APPROVAL | TRACKING COMPLETE
+**Updated:** Session 914.7 (February 2, 2026)
+**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | RATE LIMITS | DAILY PRIORITIES | BOARDROOM APPROVAL | OPERATING RHYTHM | TRACKING COMPLETE
 
 ---
 
@@ -621,11 +621,94 @@ else:
 
 ---
 
+### Operating Rhythm (Session 914.7)
+
+With 180+ initiatives, agents treat all equally. The Operating Rhythm provides a simple daily/weekly cadence for founder control:
+
+**Daily:**
+- Founder sets Top 3 priorities
+- Agents must map initiatives to one of those priorities
+- Unmapped initiatives = auto-defer
+
+**Weekly:**
+- System produces "Ship / Learn / Kill" report
+- Founder gives one paragraph of feedback
+- Feedback becomes training signal
+
+**Management Commands:**
+```bash
+# Set today's top 3 priorities
+python manage.py operating_rhythm --set-priorities "Priority 1" "Priority 2" "Priority 3"
+
+# View current rhythm status
+python manage.py operating_rhythm --status
+
+# Generate weekly Ship/Learn/Kill report
+python manage.py operating_rhythm --weekly-report
+
+# Submit weekly feedback (becomes training signal)
+python manage.py operating_rhythm --feedback "Focus on user-facing features, fewer infrastructure changes"
+
+# Map an initiative to a priority
+python manage.py operating_rhythm --map-initiative <uuid> --priority=1
+
+# View feedback history
+python manage.py operating_rhythm --history
+```
+
+**Code Reference:**
+```python
+from core.services.operating_rhythm import (
+    set_daily_priorities,
+    get_daily_priorities,
+    generate_weekly_report,
+    submit_weekly_feedback,
+    map_initiative_to_priority,
+    get_rhythm_status
+)
+
+# Set today's priorities
+set_daily_priorities([
+    "Launch podcast feature",
+    "Fix authentication bugs",
+    "Improve content quality"
+])
+
+# Get weekly report
+report = generate_weekly_report()
+print(report['shipped'], report['learned'], report['kill_candidates'])
+
+# Submit feedback
+submit_weekly_feedback("Focus on user-facing features this week")
+
+# Map initiative to priority #1
+map_initiative_to_priority(initiative_id, priority_index=0)
+```
+
+**Weekly Report Sections:**
+| Section | Description |
+|---------|-------------|
+| `shipped` | Initiatives that progressed stages this week |
+| `learned` | Experiment learnings from this week |
+| `blocked` | Initiatives stuck at same stage for >3 days |
+| `kill_candidates` | Low-priority initiatives with no progress in 14+ days |
+| `needs_decision` | Initiatives awaiting founder input |
+
+**Model: FounderFeedback** (`core/models_unified_system.py`)
+| Field | Type | Description |
+|-------|------|-------------|
+| `feedback_type` | String | `daily_priorities`, `weekly_feedback`, `initiative_feedback`, `agent_feedback` |
+| `content` | JSON | Feedback content (priorities, text, etc.) |
+| `created_by` | String | Who submitted the feedback |
+| `processed_as_learning` | Boolean | Has this been converted to agent learning? |
+
+---
+
 ### Auto-Progression (Session 906)
 
 The system automatically advances initiatives through stages based on document quality. Runs every 10 minutes via Celery Beat.
 
-**Prerequisites (Session 914, 914.2, 914.3, 914.4, 914.5 & 914.6):**
+**Prerequisites (Session 914 - 914.7):**
 - Daily rate limit not exceeded (default: 40/day)
 - Founder intent must be set (for Stage 2+)
 - Execution track limits respected (Fast Track stops at Stage 2)
@@ -633,6 +716,7 @@ The system automatically advances initiatives through stages based on document q
 - Semantic drift check passed (document aligns with initiative intent)
 - Boardroom approval granted (if required for institutional track)
 - Daily focus initiatives can be prioritized for progression
+- Initiative mapped to daily priority (or auto-deferred via operating rhythm)
 
 **Quality Criteria:**
 - Content length ≥ 500 characters
@@ -897,6 +981,7 @@ python manage.py fix_stuck_initiatives --fix
 | **914.4** | **Rate Limits** - Daily progression limit (40/day default), controls LLM spend, admin reset/override |
 | **914.5** | **Daily Priorities** - Daily priority scan identifies top 5 focus initiatives, scoring by stage/freshness/speed/track/intent |
 | **914.6** | **Boardroom Approval** - Proper tracking of boardroom approval separate from founder intent, fixes bypass issue |
+| **914.7** | **Operating Rhythm** - Daily Top 3 priorities + Weekly Ship/Learn/Kill reports, founder feedback becomes training signal |
 
 ---
 
@@ -912,7 +997,7 @@ python manage.py fix_stuck_initiatives --fix
 2. Verify origin is `serious` or `speculative`
 3. Check `promote_threshold` setting
 
-### Stages Not Advancing (Session 914, 914.2, 914.3, 914.4, 914.5 & 914.6)
+### Stages Not Advancing (Session 914 - 914.7)
 1. **Check founder intent** - `python manage.py set_founder_intent --list`
 2. **Check execution track** - Fast Track stops at Stage 2
 3. **Check stage approvals** - Institutional requires approvals for Stages 2-4
@@ -922,8 +1007,10 @@ python manage.py fix_stuck_initiatives --fix
 7. **Check daily focus** - `python manage.py daily_priorities --list` to see focused initiatives
 8. **Check boardroom approval** - `python manage.py boardroom_approval --status <uuid>`
 9. If pending, approve with: `python manage.py boardroom_approval --approve <uuid>`
-10. Verify stage status is `APPROVED`
-11. Check `advance_initiative_pipeline` task is scheduled
+10. **Check operating rhythm** - `python manage.py operating_rhythm --status` to see daily priorities
+11. Map initiative to priority: `python manage.py operating_rhythm --map-initiative <uuid> --priority=1`
+12. Verify stage status is `APPROVED`
+13. Check `advance_initiative_pipeline` task is scheduled
 
 ### Deliverable Not Created
 1. Verify all 5 stages are `APPROVED`
