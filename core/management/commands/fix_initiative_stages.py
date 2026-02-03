@@ -101,26 +101,36 @@ class Command(BaseCommand):
                 continue
 
             # Apply fixes
+            # Session 916: Respect invariants - only approve stages with documents
             for fix in fixes_needed:
                 if fix[0] == 'create':
                     stage_num = fix[1]
+                    # Session 916: Create in DRAFT, not APPROVED (no document = no approval)
                     InitiativeStage.objects.create(
                         initiative=initiative,
                         stage=stage_num,
-                        status='APPROVED',
-                        approved_at=timezone.now(),
-                        notes=f'Backfilled by fix_initiative_stages command at {timezone.now().isoformat()}',
+                        status='DRAFT',  # Changed from APPROVED - needs document first
+                        notes=f'Created in DRAFT by fix_initiative_stages at {timezone.now().isoformat()}',
                     )
-                    self.stdout.write(self.style.SUCCESS(f"    ✓ Created Stage {stage_num} as APPROVED"))
+                    self.stdout.write(self.style.WARNING(f"    ⚠ Created Stage {stage_num} as DRAFT (needs document)"))
                     stages_backfilled += 1
 
                 elif fix[0] == 'approve':
                     stage_num, stage = fix[1], fix[2]
-                    stage.status = 'APPROVED'
-                    stage.approved_at = timezone.now()
-                    stage.notes = f"{stage.notes}\n\n[Backfilled to APPROVED by fix command at {timezone.now().isoformat()}]"
-                    stage.save()
-                    self.stdout.write(self.style.SUCCESS(f"    ✓ Updated Stage {stage_num} to APPROVED"))
+                    # Session 916: Use approve() method which enforces document requirement
+                    if stage.document:
+                        stage.approve(
+                            approved_by='fix_command',
+                            notes=f'Approved by fix_initiative_stages command at {timezone.now().isoformat()}',
+                            checks_passed={'has_document': True, 'fix_command': True}
+                        )
+                        self.stdout.write(self.style.SUCCESS(f"    ✓ Approved Stage {stage_num}"))
+                    else:
+                        # Cannot approve without document - set to DRAFT instead
+                        stage.status = 'DRAFT'
+                        stage.notes = f"{stage.notes}\n\n[Set to DRAFT by fix command - needs document]"
+                        stage.save()
+                        self.stdout.write(self.style.WARNING(f"    ⚠ Stage {stage_num} set to DRAFT (no document)"))
                     stages_backfilled += 1
 
             fixed_count += 1
