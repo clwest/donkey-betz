@@ -403,6 +403,23 @@ class ConversationInitiativePipeline:
             # 3. Create InitiativeStages
             stage_config = CONTENT_TYPE_STAGES.get(content_type, CONTENT_TYPE_STAGES['document'])
 
+            # Session 915: Create Stage 1 document from deliverable content
+            stage_1_doc = None
+            try:
+                from core.models_unified_system import SelfBlog
+                stage_1_doc = SelfBlog.objects.create(
+                    title=f"{initiative.name} - Stage 1: Research Brief",
+                    intro=extracted['content'][:500] if extracted.get('content') else '',
+                    full_text=extracted.get('content', ''),
+                    category='research_brief',
+                    content_type='internal',
+                    status='draft',
+                    initiative=initiative,
+                )
+                logger.info(f"[Session 915] Created Stage 1 document: {stage_1_doc.id}")
+            except Exception as doc_err:
+                logger.warning(f"[Session 915] Could not create Stage 1 document: {doc_err}")
+
             for stage_num in range(1, 6):
                 stage_info = stage_config.get(stage_num, {'name': f'Stage {stage_num}', 'tasks': []})
 
@@ -413,9 +430,15 @@ class ConversationInitiativePipeline:
                     initiative=initiative,
                     stage=stage_num,
                     status=status,
-                    # Note: document is FK to SelfBlog, we store deliverable link in notes
+                    # Session 915: Attach document to Stage 1
+                    document=stage_1_doc if stage_num == 1 else None,
                     notes=f"Auto-created: {stage_info['name']}\nDeliverable: {deliverable.id}" if stage_num == 1 else f"Auto-created: {stage_info['name']}",
                 )
+
+                # Session 915: Link Stage 1 back to the document
+                if stage_num == 1 and stage_1_doc:
+                    stage_1_doc.initiative_stage = stage
+                    stage_1_doc.save(update_fields=['initiative_stage'])
 
                 result.stages_created += 1
 

@@ -513,6 +513,14 @@ Initiative created from HiveMind brainstorm session.
             f"from HiveMind session {session.id}"
         )
 
+        # Session 915: Trigger Stage 1 document generation
+        try:
+            from core.tasks import generate_initiative_stage_document
+            task = generate_initiative_stage_document.delay(str(initiative.id), 1)
+            logger.info(f"[Session 915] Triggered Stage 1 document generation: task {task.id}")
+        except Exception as e:
+            logger.warning(f"[Session 915] Could not trigger Stage 1 generation: {e}")
+
         return initiative
 
     def _create_workflow_from_next_steps(
