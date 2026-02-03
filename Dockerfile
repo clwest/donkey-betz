@@ -1,12 +1,16 @@
 # =============================================================================
 # UNIFIED DONKEY BETZ PLATFORM - DJANGO BACKEND DOCKERFILE
 # Multi-stage build for production optimization
+# Build trigger: Session 919 - 2026-02-03T14:52:00-0700
 # =============================================================================
 
 # =============================================================================
 # STAGE 1: Python Base Image with System Dependencies
 # =============================================================================
 FROM python:3.11-slim as python-base
+
+# Cache bust for Railway deployment - Session 919
+ARG CACHE_BUST=2026020314520000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
