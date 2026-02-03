@@ -236,4 +236,39 @@ Added a "Download PDF" button to the Operations Panel for markdown reports.
 
 ---
 
+## Part 4: Operations Pagination Fix (PR #779)
+
+### Problem
+
+Operations tab only showed 20 operations by default, making it appear that older operations were being deleted.
+
+### Solution
+
+Increased default pagination from 20 to 100 operations.
+
+| Setting | Before | After |
+|---------|--------|-------|
+| `page_size` | 20 | 100 |
+| `max_page_size` | 100 | 500 |
+
+### File Changed
+
+| File | Changes |
+|------|---------|
+| `core/views_workspace_api.py` | Updated `OperationPagination` class defaults |
+
+---
+
+## Summary of All PRs
+
+| PR | Feature |
+|----|---------|
+| #772 | Report provenance tracking and structured output |
+| #774 | PDF export service with WeasyPrint |
+| #775 | Handoff documentation for PDF export |
+| #777 | Frontend PDF download button in Operations Panel |
+| #779 | Operations pagination increased to 100 |
+
+---
+
 **Session 918 establishes the foundation for trustworthy, auditable, and shareable agent reports.**
