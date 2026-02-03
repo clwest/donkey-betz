@@ -2246,3 +2246,124 @@ def extract_action_items_api(request, initiative_id=None):
     except Exception as e:
         logger.error(f"Error in extract_action_items_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
+# Session 914.7: Operating Rhythm API
+# =============================================================================
+
+@require_http_methods(["GET"])
+def operating_rhythm_api(request):
+    """
+    Session 914.7: Get operating rhythm status including daily priorities,
+    weekly report summary, and rhythm recommendations.
+    """
+    try:
+        from core.services.operating_rhythm import (
+            get_rhythm_status,
+            get_daily_priorities,
+            generate_weekly_report,
+        )
+
+        status = get_rhythm_status()
+        daily = get_daily_priorities()
+
+        # Get compact weekly report summary
+        report = generate_weekly_report()
+        weekly_summary = report.get('summary', {})
+
+        return JsonResponse({
+            'success': True,
+            'daily_priorities': {
+                'priorities': daily.get('priorities', []),
+                'date': daily.get('date'),
+                'is_current': daily.get('is_current', False),
+                'needs_update': daily.get('needs_update', True),
+            },
+            'weekly_summary': {
+                'week_start': report.get('week_start'),
+                'week_end': report.get('week_end'),
+                'shipped_count': weekly_summary.get('shipped_count', 0),
+                'deliverables_created': weekly_summary.get('deliverables_created', 0),
+                'learned_count': weekly_summary.get('learned_count', 0),
+                'blocked_count': weekly_summary.get('blocked_count', 0),
+                'kill_candidates_count': weekly_summary.get('kill_candidates_count', 0),
+                'needs_decision_count': weekly_summary.get('needs_decision_count', 0),
+            },
+            'initiative_summary': status.get('initiative_summary', {}),
+            'recommendations': status.get('recommendations', []),
+            'last_weekly_feedback': status.get('last_weekly_feedback'),
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 914.7] Error in operating_rhythm_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def initiative_rhythm_api(request, initiative_id):
+    """
+    Session 914.7: Get operating rhythm data for a specific initiative.
+    Shows if it's in daily focus, mapped to a priority, etc.
+    """
+    try:
+        from core.models_document_registry import Initiative
+        from core.services.operating_rhythm import (
+            get_daily_priorities,
+            check_initiative_priority_mapping,
+        )
+        import uuid as uuid_module
+
+        if isinstance(initiative_id, str):
+            try:
+                initiative_id = uuid_module.UUID(initiative_id)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
+
+        try:
+            initiative = Initiative.objects.get(id=initiative_id)
+        except Initiative.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
+
+        # Get daily priorities
+        daily = get_daily_priorities()
+        priority_mapping = check_initiative_priority_mapping(initiative)
+
+        # Get founder intent status
+        founder_intent = {
+            'set': initiative.founder_intent_set,
+            'execution_speed': initiative.execution_speed if initiative.founder_intent_set else None,
+            'risk_tolerance': initiative.risk_tolerance if initiative.founder_intent_set else None,
+            'stop_rule': initiative.stop_rule if initiative.founder_intent_set else None,
+        }
+
+        # Get boardroom approval status
+        boardroom = {
+            'required': initiative.requires_boardroom_approval,
+            'approved': initiative.boardroom_approved,
+            'approved_by': initiative.boardroom_approved_by if initiative.boardroom_approved else None,
+            'approved_at': initiative.boardroom_approved_at.isoformat() if initiative.boardroom_approved_at else None,
+        }
+
+        return JsonResponse({
+            'success': True,
+            'initiative_id': str(initiative_id),
+            'is_daily_focus': initiative.is_daily_focus,
+            'daily_focus_date': initiative.daily_focus_date.isoformat() if initiative.daily_focus_date else None,
+            'manual_priority_rank': initiative.manual_priority_rank,
+            'manual_priority_reason': initiative.manual_priority_reason or '',
+            'priority_mapping': priority_mapping,
+            'daily_priorities': {
+                'priorities': daily.get('priorities', []),
+                'is_current': daily.get('is_current', False),
+            },
+            'founder_intent': founder_intent,
+            'boardroom': boardroom,
+            'can_auto_progress': initiative.can_auto_progress,
+            'progression_blocked_reason': initiative.progression_blocked_reason or '',
+            'execution_track': initiative.execution_track or 'not_set',
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 914.7] Error in initiative_rhythm_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
