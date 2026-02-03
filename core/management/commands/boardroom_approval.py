@@ -130,7 +130,7 @@ class Command(BaseCommand):
             requires_boardroom_approval=True,
             boardroom_approved=False,
             current_stage__lte=5
-        ).order_by('-priority_score')
+        ).order_by('-impact_score')
 
         self.stdout.write(f"\n📋 Initiatives Pending Boardroom Approval ({pending.count()}):\n")
 
@@ -147,7 +147,7 @@ class Command(BaseCommand):
                 f"   {i}. [{track.upper()}] {init.name[:45]}..."
             )
             self.stdout.write(
-                f"      Stage {stage}/5 | Intent: {intent} | Priority: {init.priority_score:.2f}"
+                f"      Stage {stage}/5 | Intent: {intent} | Priority: {init.impact_score:.2f}"
             )
             self.stdout.write(f"      ID: {init.id}")
             self.stdout.write("")
