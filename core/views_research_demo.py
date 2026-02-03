@@ -2367,3 +2367,86 @@ def initiative_rhythm_api(request, initiative_id):
     except Exception as e:
         logger.error(f"[Session 914.7] Error in initiative_rhythm_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def set_founder_intent_api(request, initiative_id):
+    """
+    Session 919: Set founder intent for an initiative via API.
+
+    POST body:
+    {
+        "execution_speed": "fast" | "balanced" | "thorough",
+        "risk_tolerance": "low" | "medium" | "high",
+        "stop_rule": "optional stop rule text"
+    }
+    """
+    try:
+        import json
+        from core.models_document_registry import Initiative
+        import uuid as uuid_module
+
+        if isinstance(initiative_id, str):
+            try:
+                initiative_id = uuid_module.UUID(initiative_id)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
+
+        try:
+            initiative = Initiative.objects.get(id=initiative_id)
+        except Initiative.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
+
+        body = {}
+        if request.body:
+            try:
+                body = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        # Get values with defaults
+        execution_speed = body.get('execution_speed', 'balanced')
+        risk_tolerance = body.get('risk_tolerance', 'medium')
+        stop_rule = body.get('stop_rule', '')
+
+        # Validate choices
+        valid_speeds = ['fast', 'balanced', 'thorough']
+        valid_risks = ['low', 'medium', 'high']
+
+        if execution_speed not in valid_speeds:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid execution_speed. Must be one of: {valid_speeds}'
+            }, status=400)
+
+        if risk_tolerance not in valid_risks:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid risk_tolerance. Must be one of: {valid_risks}'
+            }, status=400)
+
+        # Set founder intent using the model method
+        initiative.set_founder_intent(
+            execution_speed=execution_speed,
+            risk_tolerance=risk_tolerance,
+            stop_rule=stop_rule,
+            set_by='api'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Founder intent set successfully',
+            'initiative_id': str(initiative_id),
+            'founder_intent': {
+                'execution_speed': initiative.execution_speed,
+                'risk_tolerance': initiative.risk_tolerance,
+                'stop_rule': initiative.stop_rule,
+                'set': initiative.founder_intent_set,
+                'can_auto_progress': initiative.can_auto_progress,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"[Session 919] Error in set_founder_intent_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
