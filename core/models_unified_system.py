@@ -9056,6 +9056,7 @@ class AgentDream(models.Model):
             ValueError: If circuit breaker blocks creation due to backlog
         """
         from core.models_document_registry import Initiative, InitiativeStage
+        from core.services.initiative_title_generator import generate_initiative_title
 
         # Already promoted - return existing Initiative
         if self.initiative:
@@ -9066,14 +9067,22 @@ class AgentDream(models.Model):
         if not can_create_initiative(bypass_check=bypass_circuit_breaker):
             raise ValueError("Initiative creation paused by circuit breaker - backlog too high")
 
+        # Session 916: Use title generator for clean initiative names
+        initiative_name = generate_initiative_title(
+            content=self.content or '',
+            topic_hint=self.title,
+            max_length=80,
+            use_llm=True
+        )
+
         # Create the Initiative from Dream
         initiative = Initiative.objects.create(
-            name=self.title,
+            name=initiative_name,
             description=self.content,
             status='active',
             current_stage=1,
             created_by=self.agent.name if self.agent else 'system',
-            parent_topic=self.title,
+            parent_topic=self.title[:200] if self.title else '',  # Original dream title for reference
         )
 
         # Create Stage 1 (Research Brief) as DRAFT

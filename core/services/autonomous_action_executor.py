@@ -1083,8 +1083,17 @@ class AutonomousActionExecutor:
             if not initiative:
                 # Create new initiative
                 try:
+                    # Session 916: Use title generator for clean initiative names
+                    from core.services.initiative_title_generator import generate_initiative_title
+                    initiative_name = generate_initiative_title(
+                        content=reasoning[:1000] if reasoning else '',
+                        topic_hint=topic,
+                        max_length=80,
+                        use_llm=True
+                    )
+
                     initiative = Initiative.objects.create(
-                        name=topic[:200],
+                        name=initiative_name,
                         description=f"Auto-created from blocked research. {reasoning[:500]}",
                         status='ACTIVE',
                         purpose='learning',
