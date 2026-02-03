@@ -32201,8 +32201,7 @@ def generate_initiative_stage_document(self, initiative_id: str, stage_num: int)
     - Stage 5: ThinkingAgent (Pilot Execution Plan)
     """
     from core.models_document_registry import Initiative, InitiativeStage
-    from core.models_unified_system import SelfBlog
-    from core.models import Agent, UserMessage, Conversation
+    from core.models_unified_system import SelfBlog, Agent
 
     logger.info(f"📝 [STAGE-GEN] Generating Stage {stage_num} document for initiative {initiative_id}")
 
