@@ -1,50 +1,45 @@
-# Session 915 - Start Here
+# Session 917 - Start Here
 
-**Previous Session:** 914.7 (Operating Rhythm - Governance Complete)
+**Previous Session:** 916 (Hard Invariants for Initiative Stage Approval)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **196 INITIATIVES** | **GOVERNANCE PIPELINE COMPLETE** | **OPERATING RHYTHM ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **225 INITIATIVES** | **HARD INVARIANTS ACTIVE** | **506 AUDIT LOGS**
 
 ---
 
-## Governance Pipeline Complete (Sessions 914-914.7)
+## Session 916 Complete: Hard Invariants
 
-The Initiative Pipeline now has full founder control. All governance features are deployed and verified:
+Data integrity is now enforced at the model level. All 225 initiatives have been audited and fixed.
 
-| Session | Feature | Status |
-|---------|---------|--------|
-| 914 | Founder Intent | ✅ Complete |
-| 914.2 | Execution Tracks | ✅ Complete |
-| 914.3 | Semantic Drift Gates | ✅ Complete |
-| 914.4 | Rate Limits | ✅ Complete |
-| 914.5 | Daily Priorities | ✅ Complete |
-| 914.6 | Boardroom Approval Fix | ✅ Complete |
-| **914.7** | **Operating Rhythm** | ✅ **Complete** |
+### What Was Fixed
 
-### Governance Pipeline Flow
+| Issue | Count | Resolution |
+|-------|-------|------------|
+| Stage APPROVED without document | 150 | Set to DRAFT |
+| Stage 2 approved before Stage 1 | 38 | Sequence corrected |
+| Wrong document types attached | 2 | Reassigned |
+| Deep sequence violations | 98 | Fixed via unsafe_update |
+| **Total Issues Fixed** | **315** | **All resolved** |
 
+### Hard Invariants Now Active
+
+```python
+# INVARIANT 1: Cannot approve without document
+if stage.status == 'APPROVED' and not stage.document:
+    raise ValidationError("INVARIANT VIOLATION: Cannot save as APPROVED without document")
+
+# INVARIANT 2: Cannot approve out of sequence
+if stage.stage > 1 and prev_stage.status != 'APPROVED':
+    raise ValidationError("INVARIANT VIOLATION: Cannot approve before prior stage")
 ```
-Initiative Created
-    ↓
-Stage 1 (Research Brief) - Can auto-progress
-    ↓
-[GATE] Founder Intent Required (185 blocked here)
-    ↓
-Stage 2 (Prototype Plan)
-    ↓
-[GATE] Fast Track stops here / Institutional continues
-    ↓
-[GATE] Boardroom Approval (if institutional)
-    ↓
-[GATE] Semantic Drift Check
-    ↓
-[GATE] Daily Rate Limit (40/day)
-    ↓
-[GATE] Daily Priority Mapping
-    ↓
-Stages 3-5 (with stage approvals for institutional)
-    ↓
-Deliverable Published
-```
+
+### Audit Trail: StageTransitionLog
+
+Every stage transition is now logged with:
+- `from_status` / `to_status`
+- `triggered_by` (user, system, Celery task)
+- `quality_score` / `confidence_score`
+- `checks_passed` (JSON dict)
+- 506 transition logs created
 
 ---
 
@@ -52,135 +47,104 @@ Deliverable Published
 
 | Metric | Value |
 |--------|-------|
-| Total Active Initiatives | 196 |
+| Total Initiatives | 225 |
+| Structurally Consistent | 225 (100%) |
+| StageTransitionLog entries | 506 |
 | With Founder Intent | 8 |
-| In Daily Focus | 5 |
-| **Awaiting Founder Intent** | **185** |
-| Pending Boardroom Approval | 0 |
-| Shipped This Week | 20 |
+| Awaiting Founder Intent | 185 |
 | Deliverables Created | 1,782 |
-| Needs Founder Decision | 10 |
 
 ---
 
-## Daily Operating Rhythm
-
-### Morning Routine
-```bash
-# Set today's Top 3 priorities
-python manage.py operating_rhythm --set-priorities "Priority 1" "Priority 2" "Priority 3"
-
-# Check current status
-python manage.py operating_rhythm --status
-```
-
-### Weekly Routine
-```bash
-# Generate Ship/Learn/Kill report
-python manage.py operating_rhythm --weekly-report
-
-# Submit feedback (becomes training signal)
-python manage.py operating_rhythm --feedback "Focus on user-facing features this week"
-```
-
----
-
-## Quick Reference: Governance Commands
+## Quick Reference: Initiative Commands
 
 ```bash
-# ===== OPERATING RHYTHM (914.7) =====
-python manage.py operating_rhythm --status
-python manage.py operating_rhythm --set-priorities "P1" "P2" "P3"
-python manage.py operating_rhythm --weekly-report
-python manage.py operating_rhythm --feedback "Your feedback"
-python manage.py operating_rhythm --map-initiative <uuid> --priority=1
-python manage.py operating_rhythm --history
+# ===== INVARIANT VERIFICATION =====
+# Test that invariants are enforced
+python manage.py shell -c "
+from core.models_document_registry import InitiativeStage
+stage = InitiativeStage.objects.filter(document__isnull=True).first()
+stage.status = 'APPROVED'
+stage.save()  # Should raise ValidationError
+"
 
-# ===== BOARDROOM APPROVAL (914.6) =====
-python manage.py boardroom_approval --list-pending
-python manage.py boardroom_approval --approve <uuid> --by="founder"
-python manage.py boardroom_approval --auto-approve-with-intent
+# ===== AUDIT TRAIL =====
+# Check transition logs
+python manage.py shell -c "
+from core.models_document_registry import StageTransitionLog
+print(f'Total logs: {StageTransitionLog.objects.count()}')
+print(f'By trigger type:')
+for tt in ['auto', 'manual', 'api']:
+    print(f'  {tt}: {StageTransitionLog.objects.filter(trigger_type=tt).count()}')
+"
 
-# ===== DAILY PRIORITIES (914.5) =====
-python manage.py daily_priorities --scan
-python manage.py daily_priorities --list
-python manage.py daily_priorities --set-priority <uuid> --rank=1
+# ===== ESCAPE HATCH (for migrations only) =====
+# InitiativeStage.unsafe_update_status(stage_id, 'APPROVED', reason='data_migration')
 
-# ===== RATE LIMITS (914.4) =====
-python manage.py initiative_rate_limit --status
-python manage.py initiative_rate_limit --reset
-
-# ===== SEMANTIC DRIFT (914.3) =====
-python manage.py check_initiative_drift --initiative-id=<uuid>
-python manage.py check_initiative_drift --list-flagged
-python manage.py check_initiative_drift --override --reason="Intentional pivot"
-
-# ===== FOUNDER INTENT (914) =====
-python manage.py set_founder_intent --list
-python manage.py set_founder_intent --initiative-id=<uuid> --speed=balanced
-python manage.py set_founder_intent --all-pending --speed=fast
-python manage.py set_founder_intent --interactive
+# ===== STAGE DOCUMENT BACKFILL =====
+python manage.py fix_initiative_stages --dry-run
+python manage.py fix_initiative_stages
 ```
 
 ---
 
-## NEXT PRIORITIES for Session 915
+## Governance Pipeline (Sessions 914-914.7)
+
+All governance gates remain active:
+
+```
+Initiative Created
+    ↓
+Stage 1 (Research Brief) - Can auto-progress
+    ↓
+[GATE] Founder Intent Required
+    ↓
+[INVARIANT] Must have document to approve ← NEW
+    ↓
+Stage 2 (Prototype Plan)
+    ↓
+[INVARIANT] Stage 1 must be APPROVED first ← NEW
+    ↓
+[GATE] Boardroom Approval (if institutional)
+    ↓
+[GATE] Semantic Drift Check
+    ↓
+Stages 3-5
+    ↓
+Deliverable Published
+```
+
+---
+
+## NEXT PRIORITIES for Session 917+
 
 ### 1. Unblock Initiative Pipeline
-185 initiatives are waiting for founder intent. Options:
+185 initiatives still awaiting founder intent:
 ```bash
-# Option A: Bulk set all to fast track
 python manage.py set_founder_intent --all-pending --speed=fast
-
-# Option B: Interactive review (recommended for important ones)
+# Or interactive review:
 python manage.py set_founder_intent --interactive
-
-# Option C: Set specific high-priority initiatives
-python manage.py set_founder_intent --initiative-id=<uuid> --speed=balanced --risk=medium
 ```
 
-### 2. Improve Stage Document Quality
-ContentWriterAgent generates generic blog posts instead of structured Prototype Plans. Consider:
-- Customizing the prompt to enforce structure
-- Creating a dedicated `TechnicalDocumentAgent` for stage documents
-- Adding post-processing to validate document structure
-
-### 3. Monitor Pipeline Progression
-After setting founder intent, verify initiatives progress:
+### 2. Generate Missing Stage Documents
+Many stages are now DRAFT awaiting documents:
 ```bash
-# Check pipeline status
+# Check how many need documents
 python manage.py shell -c "
-from core.models_document_registry import Initiative
-from collections import Counter
-print(Counter(Initiative.objects.values_list('current_stage', flat=True)))
+from core.models_document_registry import InitiativeStage
+print(f'DRAFT stages needing docs: {InitiativeStage.objects.filter(status=\"DRAFT\", document__isnull=True).count()}')
 "
+
+# Backfill runs automatically via Celery Beat every 30 min
+# Or trigger manually:
+curl -X POST "https://donkey-betz-production.up.railway.app/api/initiatives/backfill-documents/"
 ```
 
----
-
-## What Was Accomplished in Session 914.7
-
-### Operating Rhythm
-- **Daily Top 3 Priorities** - Founder sets focus, agents map initiatives to priorities
-- **Weekly Ship/Learn/Kill Report** - Summary of shipped, learned, blocked, kill candidates
-- **Founder Feedback Loop** - Weekly feedback becomes training signal for agents
-- **New Model:** `FounderFeedback` for tracking priorities and feedback history
-
-### Files Created
-```
-core/services/operating_rhythm.py           # Operating rhythm service
-core/management/commands/operating_rhythm.py # CLI management command
-core/migrations/0223_session_914_7_operating_rhythm.py  # FounderFeedback model
-```
-
-### Verification Test Results
-All governance gates verified working:
-- Daily priorities set and retrieved correctly
-- 5 initiatives marked as daily focus
-- 185 initiatives blocked awaiting founder intent (as designed)
-- Boardroom approval tracked separately from founder intent
-- Auto-progression gates working correctly
-- Fast Track initiatives correctly flagged at Stage 2
+### 3. Optional: Implement Soft Invariants
+ChatGPT suggested quality gates:
+- Minimum `quality_score` threshold for approval
+- Weekly integrity report as Celery task
+- Regression tests for CI
 
 ---
 
@@ -188,15 +152,11 @@ All governance gates verified working:
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **914.7** | Operating Rhythm - Daily/Weekly cadence complete | `docs/handoffs/SESSION_914_7_OPERATING_RHYTHM.md` |
-| 914.6 | Boardroom Approval Fix - Separate from founder intent | (in 914.7 handoff) |
-| 914.5 | Daily Priorities - Top 5 focus initiatives | (in 914.7 handoff) |
-| 914.4 | Rate Limits - 40 progressions/day max | (in 914.7 handoff) |
-| 914.3 | Semantic Drift Gates - Block if document diverges | (in 914.7 handoff) |
-| 914.2 | Execution Tracks - Fast Track vs Institutional | (in 914.7 handoff) |
-| 914 | Founder Intent - execution_speed, risk, stop_rule | (in 914.7 handoff) |
-| 913 | Signal Intelligence linking + Action Items auth | `docs/handoffs/SESSION_913_HANDOFF.md` |
-| 912 | Fix stuck initiatives + Stage document generation | `docs/handoffs/SESSION_912_HANDOFF.md` |
+| **916** | Hard Invariants - StageTransitionLog, save() enforcement | `docs/handoffs/SESSION_916_HARD_INVARIANTS.md` |
+| 916 | Initiative Title Generator Integration | `docs/handoffs/SESSION_916_INITIATIVE_TITLE_GENERATOR.md` |
+| 915 | Stage Document Backfill Pipeline | `docs/handoffs/SESSION_915_STAGE_DOCUMENT_BACKFILL.md` |
+| 914.7 | Operating Rhythm - Daily/Weekly cadence | `docs/handoffs/SESSION_914_7_OPERATING_RHYTHM.md` |
+| 914-914.6 | Governance Pipeline (Intent, Tracks, Drift, Limits) | (in 914.7 handoff) |
 
 ---
 
@@ -208,12 +168,11 @@ All governance gates verified working:
 | Spiders | 77 |
 | Advisors | 25 |
 | Personas | 139 |
-| Database Models | 386+ |
+| Database Models | 387+ |
 | Celery Tasks | 262 |
 | Services | 129 |
-| **Initiatives** | **196** |
-| **With Founder Intent** | **8** |
-| **Awaiting Intent** | **185** |
+| **Initiatives** | **225** |
+| **StageTransitionLogs** | **506** |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
@@ -223,11 +182,10 @@ All governance gates verified working:
 
 | Task | Schedule | Purpose |
 |------|----------|---------|
+| `backfill_stage_documents` | Every 30 min | Generate missing stage documents |
 | `process_initiative_auto_progression` | Every 10 min | Progress stages at 60%+ quality |
 | `detect_duplicate_initiatives` | Daily 2 AM | Alert on new duplicate clusters |
 | `cleanup_zombie_agent_tasks` | Every 15 min | Clean stuck tasks |
-| `agent-conversation-cycle` | Every 5 min | Run agent conversations |
-| `agent-dream-cycle` | Every 15 min | Generate agent dreams |
 
 ---
 
@@ -235,10 +193,10 @@ All governance gates verified working:
 
 | Document | Purpose |
 |----------|---------|
+| `docs/handoffs/SESSION_916_HARD_INVARIANTS.md` | Hard invariants implementation |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
-| `docs/handoffs/SESSION_914_7_OPERATING_RHYTHM.md` | Session 914.7 handoff |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 914.7 Complete - Governance Pipeline Fully Operational!**
+**Session 916 Complete - Data Integrity Enforced!**
