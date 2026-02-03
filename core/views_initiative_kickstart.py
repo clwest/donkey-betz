@@ -336,22 +336,25 @@ def fix_initiative_stages(request):
                         notes='Created via kickstart backfill API'
                     )
                 elif fix['action'] == 'approve':
-                    # Session 916: Approve stage with audit logging
-                    from core.models_document_registry import StageTransitionLog
+                    # Session 916: Use approve() method with invariant enforcement
                     stage = existing_stages[stage_num]
-                    old_status = stage.status
-                    stage.status = 'APPROVED'
-                    stage.approved_at = timezone.now()
-                    stage.approved_by = 'backfill_api'
-                    stage.notes = f"{stage.notes}\n\n[Backfilled via API at {timezone.now().isoformat()}]"
-                    stage.save()
-                    StageTransitionLog.log_transition(
-                        stage=stage,
-                        from_status=old_status,
-                        to_status='APPROVED',
-                        triggered_by='backfill_api',
-                        trigger_type='api',
-                        notes='Approved via kickstart backfill API'
+
+                    # Only approve if stage has a document (invariant enforcement)
+                    if not stage.document:
+                        fix_record['stages_fixed'].append({
+                            'stage': stage_num,
+                            'action': 'skipped',
+                            'reason': 'Cannot approve without document'
+                        })
+                        continue
+
+                    stage.approve(
+                        approved_by='backfill_api',
+                        notes=f'Approved via kickstart backfill API at {timezone.now().isoformat()}',
+                        checks_passed={
+                            'has_document': True,
+                            'backfill_action': True,
+                        }
                     )
 
                 fix_record['stages_fixed'].append(fix)

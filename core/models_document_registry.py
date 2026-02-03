@@ -1139,6 +1139,129 @@ class InitiativeStage(models.Model):
         verbose_name = 'Initiative Stage'
         verbose_name_plural = 'Initiative Stages'
 
+    # Session 916: Hard invariant - APPROVED requires document
+    _skip_document_check = False  # Escape hatch for data migrations only
+
+    def clean(self):
+        """
+        Session 916: Django validation - enforces business rules.
+        Called by forms, admin, and full_clean().
+        """
+        from django.core.exceptions import ValidationError
+        super().clean()
+
+        # INVARIANT: Cannot be APPROVED without a document
+        if self.status == self.StageStatus.APPROVED and not self.document:
+            raise ValidationError({
+                'status': f"Cannot set status to APPROVED without a document. "
+                          f"Stage {self.stage} requires a document before approval."
+            })
+
+        # INVARIANT: Cannot be APPROVED if previous stage is not APPROVED
+        if self.status == self.StageStatus.APPROVED and self.stage > 1:
+            try:
+                prev_stage = InitiativeStage.objects.get(
+                    initiative=self.initiative,
+                    stage=self.stage - 1
+                )
+                if prev_stage.status != self.StageStatus.APPROVED:
+                    raise ValidationError({
+                        'status': f"Cannot approve Stage {self.stage} before Stage {self.stage - 1} is approved. "
+                                  f"Current Stage {self.stage - 1} status: {prev_stage.status}"
+                    })
+            except InitiativeStage.DoesNotExist:
+                pass  # Previous stage doesn't exist, allow (edge case)
+
+    def save(self, *args, **kwargs):
+        """
+        Session 916: Hard invariant enforcement on every save.
+
+        This catches ANY code path that tries to set status=APPROVED without a document,
+        not just code that uses the approve() method.
+
+        Use _skip_document_check=True ONLY for data migrations/fixes.
+
+        Uses ValidationError (Django best practice) for proper admin/form integration.
+        """
+        from django.core.exceptions import ValidationError
+        from django.db import transaction
+
+        # Get initiative ID safely (works for both saved and unsaved instances)
+        init_id = getattr(self, 'initiative_id', None) or (self.initiative.id if self.initiative else None)
+        init_name = self.initiative.name if self.initiative else 'Unknown'
+
+        # Check if we're trying to set APPROVED status
+        if self.status == self.StageStatus.APPROVED and not self._skip_document_check:
+            # INVARIANT 1: Must have a document
+            if not self.document:
+                raise ValidationError(
+                    f"INVARIANT VIOLATION: Cannot save Stage {self.stage} as APPROVED without a document. "
+                    f"Initiative: {init_name}. "
+                    f"Use stage.approve() method or set _skip_document_check=True for data migrations."
+                )
+
+            # INVARIANT 2: Previous stage must be approved (unless Stage 1)
+            # Use select_for_update() to prevent race conditions in concurrent approvals
+            if self.stage > 1 and init_id:
+                try:
+                    with transaction.atomic():
+                        prev_stage = InitiativeStage.objects.select_for_update().get(
+                            initiative_id=init_id,
+                            stage=self.stage - 1
+                        )
+                        if prev_stage.status != self.StageStatus.APPROVED:
+                            raise ValidationError(
+                                f"INVARIANT VIOLATION: Cannot approve Stage {self.stage} before Stage {self.stage - 1}. "
+                                f"Stage {self.stage - 1} status: {prev_stage.status}. "
+                                f"Initiative: {init_name}"
+                            )
+                except InitiativeStage.DoesNotExist:
+                    pass  # Previous stage doesn't exist, allow
+
+        # Reset the skip flag after use (one-time bypass only)
+        self._skip_document_check = False
+
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def unsafe_update_status(cls, stage_id, new_status, reason='data_migration'):
+        """
+        Session 916: DANGER - Bypasses invariant checks for data migrations only.
+
+        Use this ONLY for:
+        - Data migrations
+        - Audit fixes
+        - Emergency repairs
+
+        This method logs the bypass to the audit trail.
+
+        Args:
+            stage_id: UUID of the stage to update
+            new_status: New status to set
+            reason: Reason for bypassing checks (logged to audit)
+
+        Returns:
+            The updated stage instance
+        """
+        stage = cls.objects.get(id=stage_id)
+        old_status = stage.status
+        stage._skip_document_check = True
+        stage.status = new_status
+        stage.save()
+
+        # Log the bypass
+        StageTransitionLog.log_transition(
+            stage=stage,
+            from_status=old_status,
+            to_status=new_status,
+            triggered_by=f'unsafe_update:{reason}',
+            trigger_type='manual',
+            checks_passed={'invariant_bypassed': True, 'reason': reason},
+            notes=f'INVARIANT BYPASS: {reason}'
+        )
+
+        return stage
+
     def __str__(self):
         return f"{self.initiative.name} - Stage {self.stage}: {self.stage_name}"
 
@@ -1161,9 +1284,12 @@ class InitiativeStage(models.Model):
     ):
         """
         Session 862: Mark this stage as approved and advance initiative.
-        Session 916: Added audit logging and document enforcement.
+        Session 916: Added audit logging, document enforcement, and transaction safety.
 
         If all 5 stages are now approved, creates final Deliverable.
+
+        This is the ONLY approved way to change status to APPROVED.
+        Direct status assignment will be blocked by save() invariants.
 
         Args:
             approved_by: Who approved (user or 'system')
@@ -1177,41 +1303,57 @@ class InitiativeStage(models.Model):
             Deliverable or None: Final deliverable if all stages complete
 
         Raises:
-            ValueError: If enforce_document=True and no document attached
+            ValidationError: If document required but not attached, or sequence violated
         """
+        from django.core.exceptions import ValidationError
+        from django.db import transaction
+
         # Session 916: Enforce document existence
         if enforce_document and not self.document:
-            raise ValueError(
+            raise ValidationError(
                 f"Cannot approve Stage {self.stage} without a document. "
-                f"Initiative: {self.initiative.name}"
+                f"Initiative: {self.initiative.name}. "
+                f"Use stage.approve() only after attaching a document."
             )
 
-        old_status = self.status
-        self.status = self.StageStatus.APPROVED
-        self.approved_by = approved_by
-        self.approved_at = timezone.now()
-        if notes:
-            self.notes = (self.notes or '') + f"\n\nApproval notes: {notes}"
-        self.save()
+        # Session 916: Use transaction.atomic() with select_for_update() for concurrency safety
+        # This prevents race conditions when multiple Celery tasks try to approve stages
+        with transaction.atomic():
+            # Re-fetch with lock to ensure we have latest state
+            locked_self = InitiativeStage.objects.select_for_update().get(id=self.id)
 
-        # Session 916: Log the transition
-        StageTransitionLog.log_transition(
-            stage=self,
-            from_status=old_status,
-            to_status=self.StageStatus.APPROVED,
-            triggered_by=approved_by,
-            quality_score=quality_score,
-            confidence_score=confidence_score,
-            checks_passed=checks_passed or {},
-            notes=notes
-        )
+            old_status = locked_self.status
+            locked_self.status = self.StageStatus.APPROVED
+            locked_self.approved_by = approved_by
+            locked_self.approved_at = timezone.now()
+            if notes:
+                locked_self.notes = (locked_self.notes or '') + f"\n\nApproval notes: {notes}"
+            locked_self.save()
 
-        # Try to advance the initiative
-        self.initiative.advance_stage()
+            # Update self to match locked version
+            self.status = locked_self.status
+            self.approved_by = locked_self.approved_by
+            self.approved_at = locked_self.approved_at
+            self.notes = locked_self.notes
 
-        # Check if all stages are now complete
-        if self.initiative.is_complete():
-            return self.initiative.create_final_deliverable()
+            # Session 916: Log the transition (inside transaction)
+            StageTransitionLog.log_transition(
+                stage=locked_self,
+                from_status=old_status,
+                to_status=self.StageStatus.APPROVED,
+                triggered_by=approved_by,
+                quality_score=quality_score,
+                confidence_score=confidence_score,
+                checks_passed=checks_passed or {},
+                notes=notes
+            )
+
+            # Try to advance the initiative (inside transaction for consistency)
+            self.initiative.advance_stage()
+
+            # Check if all stages are now complete
+            if self.initiative.is_complete():
+                return self.initiative.create_final_deliverable()
 
         return None
 

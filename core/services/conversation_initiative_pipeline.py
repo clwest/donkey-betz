@@ -587,67 +587,47 @@ def handle_stage_task_completion(
         # Check if we should auto-advance (simplified: advance after first successful task)
         # In production, you'd want more sophisticated logic (all tasks complete, human approval, etc.)
         if result['stage_updated'] and stage_num < 5:
-            # Session 916: Import audit logging
-            from core.models_document_registry import StageTransitionLog
+            # Session 916: Use approve() method which enforces document requirement
+            # Only approve if stage has a document (hard invariant)
+            if stage.document:
+                stage.approve(
+                    approved_by='conversation_pipeline',
+                    notes='Auto-approved via conversation initiative pipeline',
+                    checks_passed={
+                        'has_document': True,
+                        'stage_updated': True,
+                    }
+                )
+            else:
+                # Cannot approve without document - log warning
+                logger.warning(
+                    f"⚠️ Cannot auto-approve Stage {stage_num} for {initiative.name[:30]} - no document attached"
+                )
 
-            # Auto-approve current stage with audit logging
-            old_status = stage.status
-            stage.status = 'APPROVED'
-            stage.approved_at = timezone.now()
-            stage.approved_by = 'conversation_pipeline'
-            stage.save()
-
-            # Session 916: Log the transition
-            StageTransitionLog.log_transition(
-                stage=stage,
-                from_status=old_status,
-                to_status='APPROVED',
-                triggered_by='conversation_pipeline',
-                trigger_type='system',
-                checks_passed={'has_document': stage.document is not None},
-                notes='Auto-approved via conversation initiative pipeline'
-            )
-
-            # Session 884: Ensure all PRIOR stages are also APPROVED (backfill fix)
-            # This fixes the issue where initiatives jump ahead without completing earlier stages
+            # Session 916: DON'T auto-backfill prior stages without documents
+            # This was the root cause of data corruption! Instead, ensure prior stages
+            # exist but leave them in DRAFT status for proper document generation.
             for prior_stage_num in range(1, stage_num):
                 prior_stage, created = InitiativeStage.objects.get_or_create(
                     initiative=initiative,
                     stage=prior_stage_num,
                     defaults={
-                        'status': 'APPROVED',
-                        'approved_at': timezone.now(),
-                        'approved_by': 'backfill_pipeline',
-                        'notes': f'Auto-backfilled when Stage {stage_num} completed',
+                        'status': 'DRAFT',  # Session 916: DRAFT not APPROVED - needs document
+                        'notes': f'Created when Stage {stage_num} was processed',
                     }
                 )
                 if created:
-                    # Session 916: Log creation
+                    # Session 916: Log creation in DRAFT status
+                    from core.models_document_registry import StageTransitionLog
                     StageTransitionLog.log_transition(
                         stage=prior_stage,
                         from_status='CREATED',
-                        to_status='APPROVED',
-                        triggered_by='backfill_pipeline',
+                        to_status='DRAFT',
+                        triggered_by='conversation_pipeline',
                         trigger_type='system',
-                        notes=f'Created and approved via backfill when Stage {stage_num} completed'
+                        notes=f'Created in DRAFT when Stage {stage_num} processed - needs document before approval'
                     )
-                elif prior_stage.status != 'APPROVED':
-                    prior_old_status = prior_stage.status
-                    prior_stage.status = 'APPROVED'
-                    prior_stage.approved_at = timezone.now()
-                    prior_stage.approved_by = 'backfill_pipeline'
-                    prior_stage.notes = f"{prior_stage.notes}\n\n[Backfilled: approved when Stage {stage_num} completed]"
-                    prior_stage.save()
-                    # Session 916: Log the transition
-                    StageTransitionLog.log_transition(
-                        stage=prior_stage,
-                        from_status=prior_old_status,
-                        to_status='APPROVED',
-                        triggered_by='backfill_pipeline',
-                        trigger_type='system',
-                        notes=f'Backfilled when Stage {stage_num} completed'
-                    )
-                    logger.info(f"📋 Backfilled Stage {prior_stage_num} as APPROVED")
+                    logger.info(f"📋 Created Stage {prior_stage_num} in DRAFT (needs document)")
 
             # Advance initiative to next stage
             initiative.current_stage = stage_num + 1
