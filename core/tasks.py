@@ -16201,7 +16201,6 @@ def unified_pipeline_health_check():
 # =============================================================================
 
 @shared_task(
-    name='roi_metrics.aggregate_daily',
     bind=True,
     max_retries=3,
     default_retry_delay=300
@@ -16293,7 +16292,6 @@ def aggregate_roi_metrics_daily(self):
 
 
 @shared_task(
-    name='roi_metrics.generate_weekly_brief',
     bind=True,
     max_retries=3,
     default_retry_delay=300
