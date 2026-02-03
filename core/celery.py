@@ -2374,10 +2374,15 @@ app.conf.task_default_routing_key = 'default'
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 
-# Session 919: Explicitly import tasks_agents which uses a non-standard name
-# and won't be auto-discovered. This is required for agent execution tasks
-# like execute_agent, execute_orchestration, etc.
-import core.tasks_agents  # noqa: F401, E402
+
+# Session 919: Register tasks_agents which uses a non-standard module name.
+# This is required for agent execution tasks like execute_agent, execute_orchestration.
+# We use Celery's on_after_finalize signal to import after Django apps are ready.
+@app.on_after_finalize.connect
+def setup_additional_tasks(sender, **kwargs):
+    """Import task modules that aren't auto-discovered due to non-standard names."""
+    import core.tasks_agents  # noqa: F401
+
 
 @app.task(bind=True)
 def debug_task(self):
