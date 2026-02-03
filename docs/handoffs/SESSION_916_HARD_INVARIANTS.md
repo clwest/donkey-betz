@@ -142,6 +142,43 @@ python manage.py shell
 - Tests pass on production
 - Celery worker processing with new code
 
+## Production Reset: Broken Stage Sequences
+
+After deploying invariants, discovered initiatives at Stage 2+ that had incomplete Stage 1 (Research Brief). These were "grandfathered" corruption from before invariants existed.
+
+**Problem:** Initiatives showed as Stage 2, 3, 4, or 5 but Stage 1 was PENDING/DRAFT/MISSING with no document. This violates the rule: "You cannot have a Prototype Plan without completing Research Brief first."
+
+**Fix:** Reset `current_stage` to 1 for all affected initiatives, forcing them to complete Research Brief before advancing.
+
+### Production Reset Results
+
+| Metric | Value |
+|--------|-------|
+| Initiatives reset | 38 |
+| From Stage 2 | 29 |
+| From Stage 3 | 1 |
+| From Stage 4 | 7 |
+| From Stage 5 | 1 |
+
+### Post-Reset Stage Distribution
+
+| Stage | Count |
+|-------|-------|
+| Stage 1 | 171 |
+| Stage 2 | 19 |
+| Stage 3 | 12 |
+| Stage 4 | 1 |
+| Stage 5 | 1 |
+
+### Verification
+
+- Initiatives at Stage 2+: 33
+- With incomplete Stage 1: **0**
+- Total StageTransitionLogs: 552
+- Reset transitions logged: 38
+
+All 33 initiatives at Stage 2+ now have properly completed Research Briefs (Stage 1 APPROVED with document). The 38 reset initiatives will generate Research Briefs via Celery backfill before they can advance again.
+
 ## Next Steps (Optional)
 
 1. **Soft invariants** for content quality gates (e.g., minimum quality_score)
