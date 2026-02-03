@@ -6,6 +6,8 @@
  * - Enhanced filtering (type, date range, status)
  * - Timeline view with grouping options
  * - Full data display in OperationRow
+ *
+ * Session 918: Added PDF download button for report operations
  */
 
 import { useState, useMemo } from 'react'
@@ -16,7 +18,7 @@ import {
   CheckCircle, XCircle, Clock, RotateCcw, Eye, FileText, Code, Plus,
   Trash2, GitCommit, GitBranch, File, Terminal, Play, TestTube, Paintbrush,
   Rocket, AlertTriangle, Activity, Users, BarChart3,
-  ChevronUp, Copy, Check
+  ChevronUp, Copy, Check, Download
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import EntityLink from '@/components/EntityLink'
@@ -408,6 +410,39 @@ function EnhancedOperationRow({ operation, onRollback, onViewContent, isRollingB
   const [expanded, setExpanded] = useState(false)
   const [showDiff, setShowDiff] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
+
+  // Session 918: PDF download handler
+  const handleDownloadPdf = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsDownloadingPdf(true)
+    try {
+      const response = await fetch(`/api/reports/pdf/${operation.id}/`, {
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || error.error || 'PDF generation failed')
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition')
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/)
+      a.download = filenameMatch?.[1] || `report_${operation.id.slice(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('PDF download failed:', error)
+      alert(error instanceof Error ? error.message : 'PDF download failed')
+    } finally {
+      setIsDownloadingPdf(false)
+    }
+  }
 
   const opType = getOperationType(operation.operation_type)
   const Icon = opType.icon
@@ -683,6 +718,17 @@ function EnhancedOperationRow({ operation, onRollback, onViewContent, isRollingB
               >
                 <FileText className="w-3 h-3" />
                 View Content
+              </button>
+            )}
+            {/* Session 918: PDF download button for markdown reports */}
+            {operation.success && displayInfo.isMarkdown && !operation.rolled_back && (
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 disabled:opacity-50"
+              >
+                <Download className={cn("w-3 h-3", isDownloadingPdf && "animate-pulse")} />
+                {isDownloadingPdf ? 'Generating...' : 'Download PDF'}
               </button>
             )}
             {onRollback && operation.success && operation.can_rollback && !operation.rolled_back && (
