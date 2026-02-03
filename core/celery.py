@@ -2374,6 +2374,11 @@ app.conf.task_default_routing_key = 'default'
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 
+# Session 919: Explicitly import tasks_agents which uses a non-standard name
+# and won't be auto-discovered. This is required for agent execution tasks
+# like execute_agent, execute_orchestration, etc.
+import core.tasks_agents  # noqa: F401, E402
+
 @app.task(bind=True)
 def debug_task(self):
     """Debug task to test Celery configuration."""
