@@ -208,4 +208,32 @@ GET /api/reports/pdf/list/?category=sports&limit=20
 
 ---
 
+## Part 3: Frontend PDF Download Button (PR #777)
+
+### Operations Panel Enhancement
+
+Added a "Download PDF" button to the Operations Panel for markdown reports.
+
+### Implementation
+
+| File | Changes |
+|------|---------|
+| `frontend/src/components/workspace/OperationsPanel.tsx` | Added Download icon, PDF download handler, Download PDF button |
+
+### How It Works
+
+1. Button only appears for successful markdown file operations (`.md` files)
+2. Clicking "Download PDF" calls `GET /api/reports/pdf/<operation_id>/`
+3. Shows "Generating..." loading state while PDF is created
+4. Downloads file with server-provided filename
+
+### User Flow
+
+1. Go to Operations tab in Workspace
+2. Expand a markdown report operation
+3. Click "Download PDF" button (purple, next to "View Content")
+4. PDF downloads with agent name and operation ID in filename
+
+---
+
 **Session 918 establishes the foundation for trustworthy, auditable, and shareable agent reports.**
