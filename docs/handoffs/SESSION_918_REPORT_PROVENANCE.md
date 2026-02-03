@@ -150,4 +150,62 @@ Once we have sufficient historical data:
 
 ---
 
-**Session 918 establishes the foundation for trustworthy, auditable agent reports.**
+---
+
+## Part 2: PDF Export (PR #774)
+
+### PDF Export Service
+
+Implemented downloadable PDF reports using WeasyPrint for all agent categories.
+
+### Supported Categories
+
+| Category | Icon | Color | Example Agents |
+|----------|------|-------|----------------|
+| Sports | 🏈 | Green | SportsOddsAnalyst, ArbitrageDetector |
+| Financial | 📈 | Blue | StockAnalystAgent, BullCaseAgent |
+| Blockchain | ⛓️ | Purple | SmartContractAuditorAgent, WhaleWatcherAgent |
+| Narrative | 📖 | Orange | NarrativeHistorianAgent, CulturalImpactAgent |
+| Strategy | 🎯 | Cyan | BrandStrategyAgent, ContentStrategyAgent |
+| Research | 🔬 | Indigo | ResearchAgent, TrendAnalysisAgent |
+
+### API Endpoints
+
+```bash
+# Download a specific operation as PDF
+GET /api/reports/pdf/<operation_id>/
+
+# Generate PDF from content
+POST /api/reports/pdf/generate/
+{
+    "title": "Report Title",
+    "content": "Markdown content...",
+    "category": "sports",
+    "agent_name": "SportsOddsAnalyst",
+    "provenance": {...}
+}
+
+# List exportable operations
+GET /api/reports/pdf/list/?category=sports&limit=20
+```
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `core/services/pdf_export_service.py` | Core PDF generation with WeasyPrint |
+| `core/views_pdf_export.py` | API endpoints for PDF download |
+| `requirements.txt` | Added `weasyprint>=60.0` |
+
+### PDF Features
+
+- Category-specific header colors and icons
+- Professional formatting with tables and code blocks
+- Provenance block rendering
+- Risk flags with severity colors
+- Legal disclaimers
+- Page numbers
+
+---
+
+**Session 918 establishes the foundation for trustworthy, auditable, and shareable agent reports.**
