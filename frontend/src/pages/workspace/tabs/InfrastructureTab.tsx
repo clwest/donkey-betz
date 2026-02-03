@@ -178,7 +178,7 @@ function BodyHealthSubTab() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{vitals?.health_score || 0}%</span>
+              <span className="text-2xl font-bold">{(vitals?.health_score ?? 0).toFixed(1)}%</span>
               <span className={cn(
                 'text-sm px-2 py-0.5 rounded capitalize',
                 vitals?.overall_health === 'healthy' ? 'bg-accent-green/20 text-accent-green' :

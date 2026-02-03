@@ -569,7 +569,7 @@ function BodySystemModal({ system, onClose }: BodySystemModalProps) {
             </div>
             {system.health_score !== undefined && (
               <div className="text-sm text-gray-400">
-                Health Score: <span className="text-white font-medium">{system.health_score}%</span>
+                Health Score: <span className="text-white font-medium">{(system.health_score ?? 0).toFixed(1)}%</span>
               </div>
             )}
           </div>
