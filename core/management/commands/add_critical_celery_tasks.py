@@ -409,6 +409,13 @@ CRITICAL_TASKS = {
         'crontab': {'minute': '*/30'},
         'queue': 'default',
     },
+    # Session 915: Backfill missing stage documents for initiatives
+    'backfill-stage-documents': {
+        'task': 'core.tasks.backfill_stage_documents',
+        'crontab': {'minute': '*/30'},
+        'kwargs': {'stage_num': 1, 'limit': 50},
+        'queue': 'default',
+    },
 
     # ==========================================================================
     # AUTONOMOUS INTELLIGENCE
