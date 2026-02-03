@@ -200,10 +200,11 @@ class SpiderAgentConnector:
         """Load available agents from the system"""
         try:
             # Import concrete executor to get agent list
-            from ai_core.agents.concrete_executor import concrete_executor
+            from ai_core.agents.concrete_executor import get_concrete_executor
+            executor = get_concrete_executor()
 
-            if hasattr(concrete_executor, 'agent_registry'):
-                for agent_name, agent_class in concrete_executor.agent_registry.items():
+            if hasattr(executor, 'agent_registry'):
+                for agent_name, agent_class in executor.agent_registry.items():
                     self.active_agents[agent_name] = {
                         'class': agent_class,
                         'instance': None,

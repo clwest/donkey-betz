@@ -313,7 +313,8 @@ class FreelancePipeline:
 
     async def _execute_task(self, task: str, agents: List[str], project: Dict) -> Dict:
         """Execute a single task using specified agents"""
-        from ai_core.agents.concrete_executor import concrete_executor
+        from ai_core.agents.concrete_executor import get_concrete_executor
+        executor = get_concrete_executor()
 
         deliverable = {
             'task': task,
@@ -325,7 +326,7 @@ class FreelancePipeline:
         try:
             # Execute with first available agent
             if agents and agents[0]:
-                result = await concrete_executor.execute_agent(
+                result = await executor.execute_agent(
                     agent_name=agents[0],
                     task={
                         'input': {
