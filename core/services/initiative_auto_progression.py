@@ -501,10 +501,38 @@ def progress_initiative_stage(
 
     logger.info(f"[Session 905] Auto-approving Stage {current_stage.stage} for initiative {initiative.name}")
 
+    # Session 916: Build checks_passed dict for audit trail
+    checks_passed = {
+        'quality_check': True,
+        'has_document': current_stage.document is not None,
+        'min_content_length': True,  # Passed if we got here
+        'required_sections': True,
+        'no_insufficient_markers': True,
+        'founder_intent_set': initiative.founder_intent_set,
+        'rate_limit_ok': True,
+    }
+    if check_result.get('semantic_alignment'):
+        checks_passed['semantic_alignment'] = check_result['semantic_alignment']
+
+    # Session 916: Enforce document existence before approval
+    if not current_stage.document:
+        logger.error(f"[Session 916] Cannot approve stage without document: {initiative.name} Stage {current_stage.stage}")
+        return {
+            'success': False,
+            'error': 'Cannot approve stage without document',
+            'stage': current_stage.stage,
+            'initiative_id': str(initiative_id)
+        }
+
     # Use the approve method which also advances the initiative
+    # Session 916: Pass quality metrics for audit trail
     deliverable = current_stage.approve(
         approved_by='AutoProgressionService',
-        notes=approval_notes
+        notes=approval_notes,
+        quality_score=confidence,
+        confidence_score=confidence,
+        checks_passed=checks_passed,
+        enforce_document=True  # Session 916: Explicit enforcement
     )
 
     # Session 914.4: Increment daily progression count
