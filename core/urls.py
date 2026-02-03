@@ -4251,6 +4251,21 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 918: PDF Export API
+# =========================================================================
+from core.views_pdf_export import (
+    download_operation_pdf,
+    generate_pdf as pdf_generate_view,
+    list_exportable_operations,
+)
+
+urlpatterns += [
+    path('api/reports/pdf/<uuid:operation_id>/', download_operation_pdf, name='pdf-download'),
+    path('api/reports/pdf/generate/', pdf_generate_view, name='pdf-generate'),
+    path('api/reports/pdf/list/', list_exportable_operations, name='pdf-list'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
