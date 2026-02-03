@@ -1,8 +1,8 @@
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
-**Updated:** Session 914.4 (February 2, 2026)
-**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | RATE LIMITS | TRACKING COMPLETE
+**Updated:** Session 914.5 (February 2, 2026)
+**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | RATE LIMITS | DAILY PRIORITIES | TRACKING COMPLETE
 
 ---
 
@@ -479,17 +479,95 @@ reset_daily_progression_count()
 
 ---
 
+### Daily Priorities (Session 914.5)
+
+With 180+ initiatives, the system treats all equally. The Daily Priority Scan identifies the top 5 initiatives to focus resources on.
+
+**How It Works:**
+1. Run daily scan (morning) to compute priority scores for all active initiatives
+2. Mark top 5 as "daily focus" initiatives
+3. Auto-progression can prioritize daily focus initiatives
+4. Dashboard shows daily focus clearly
+
+**Priority Scoring Factors:**
+| Factor | Boost | Description |
+|--------|-------|-------------|
+| Stage | +10% (Stage 1), +5% (Stage 2) | Earlier stages need to unblock pipeline |
+| Freshness | +10% (updated today), +5% (this week), -10% (stale >14 days) | Active initiatives get priority |
+| Speed | +10% (fast track), -5% (thorough) | Fast track initiatives move faster |
+| Track | +5% (institutional) | Institutional track typically more important |
+| Intent | +10% (set), -10% (not set) | Ready-to-go initiatives prioritized |
+
+**Management Commands:**
+```bash
+# Run the daily priority scan
+python manage.py daily_priorities --scan
+
+# View current daily focus initiatives (with boost details)
+python manage.py daily_priorities --list
+
+# View priority summary
+python manage.py daily_priorities --summary
+
+# Manually set an initiative as top priority
+python manage.py daily_priorities --set-priority <uuid> --rank=1 --reason="Critical for launch"
+
+# Clear manual priority
+python manage.py daily_priorities --clear-priority <uuid>
+
+# Scan with different focus count
+python manage.py daily_priorities --scan --focus-count=10
+```
+
+**Code Reference:**
+```python
+from core.services.daily_priorities import (
+    run_daily_priority_scan,
+    get_daily_focus_initiatives,
+    set_manual_priority,
+    is_daily_focus
+)
+
+# Run daily scan (marks top 5 as focus)
+result = run_daily_priority_scan(focus_count=5)
+print(f"Top {result['focus_count']} focus initiatives identified")
+
+# Get current focus list
+focus = get_daily_focus_initiatives()
+for init in focus:
+    print(f"{init['name']}: {init['final_score']:.2f}")
+    print(f"  Boosts: {init['factors']}")
+
+# Check if specific initiative is in focus
+if is_daily_focus(initiative_id):
+    print("This initiative is in today's focus")
+
+# Manual priority override
+set_manual_priority(initiative_id, priority_rank=1, reason="Customer deadline")
+```
+
+**Model Fields (Initiative):**
+| Field | Type | Description |
+|-------|------|-------------|
+| `is_daily_focus` | Boolean | Is this in today's daily focus? |
+| `daily_focus_date` | Date | When marked as daily focus |
+| `manual_priority_rank` | Integer | Manual rank override (1-5) |
+| `manual_priority_reason` | Text | Reason for manual override |
+
+---
+
 ### Auto-Progression (Session 906)
 
 The system automatically advances initiatives through stages based on document quality. Runs every 10 minutes via Celery Beat.
 
-**Prerequisites (Session 914, 914.2, 914.3 & 914.4):**
+**Prerequisites (Session 914, 914.2, 914.3, 914.4 & 914.5):**
 - Daily rate limit not exceeded (default: 40/day)
 - Founder intent must be set (for Stage 2+)
 - Execution track limits respected (Fast Track stops at Stage 2)
 - Institutional track requires stage approvals (Stages 2-4)
 - Semantic drift check passed (document aligns with initiative intent)
 - Boardroom approval requirements must be satisfied
+- Daily focus initiatives can be prioritized for progression
 
 **Quality Criteria:**
 - Content length ≥ 500 characters
@@ -752,6 +830,7 @@ python manage.py fix_stuck_initiatives --fix
 | **914.2** | **Execution Tracks** - Fast Track (Stage 1-2) vs Institutional (Full 5-stage), content flag auto-detection, stage approvals |
 | **914.3** | **Semantic Quality Gates** - Drift detection using embeddings, blocks progression if document diverges from initiative intent |
 | **914.4** | **Rate Limits** - Daily progression limit (40/day default), controls LLM spend, admin reset/override |
+| **914.5** | **Daily Priorities** - Daily priority scan identifies top 5 focus initiatives, scoring by stage/freshness/speed/track/intent |
 
 ---
 
@@ -767,14 +846,16 @@ python manage.py fix_stuck_initiatives --fix
 2. Verify origin is `serious` or `speculative`
 3. Check `promote_threshold` setting
 
-### Stages Not Advancing (Session 914, 914.2 & 914.3)
+### Stages Not Advancing (Session 914, 914.2, 914.3, 914.4 & 914.5)
 1. **Check founder intent** - `python manage.py set_founder_intent --list`
 2. **Check execution track** - Fast Track stops at Stage 2
 3. **Check stage approvals** - Institutional requires approvals for Stages 2-4
 4. **Check semantic drift** - `python manage.py check_initiative_drift --initiative-id=<uuid>`
 5. If drift detected, override with: `--override --reason="Explanation"`
-6. Verify stage status is `APPROVED`
-7. Check `advance_initiative_pipeline` task is scheduled
+6. **Check rate limit** - `python manage.py initiative_rate_limit --status`
+7. **Check daily focus** - `python manage.py daily_priorities --list` to see focused initiatives
+8. Verify stage status is `APPROVED`
+9. Check `advance_initiative_pipeline` task is scheduled
 
 ### Deliverable Not Created
 1. Verify all 5 stages are `APPROVED`
