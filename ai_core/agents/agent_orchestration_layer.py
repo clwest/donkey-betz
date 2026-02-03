@@ -68,8 +68,8 @@ class AgentOrchestrationLayer:
     def _initialize_executor(self):
         """Initialize the concrete executor"""
         try:
-            from ai_core.agents.concrete_executor import concrete_executor
-            self.executor = concrete_executor
+            from ai_core.agents.concrete_executor import get_concrete_executor
+            self.executor = get_concrete_executor()
             logger.info("Connected to concrete executor")
         except Exception as e:
             logger.error(f"Failed to initialize executor: {e}")

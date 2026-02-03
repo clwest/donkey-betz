@@ -184,7 +184,8 @@ class AgentExecutionQueue:
             logger.info(f"🏃 Executing {task.agent_name} - Priority: {Priority(task.priority).name}")
 
             # Import executor
-            from ai_core.agents.concrete_executor import concrete_executor
+            from ai_core.agents.concrete_executor import get_concrete_executor
+            executor = get_concrete_executor()
 
             # Prepare execution context
             execution_params = {
@@ -196,7 +197,7 @@ class AgentExecutionQueue:
             }
 
             # Execute agent
-            result = await concrete_executor.execute_agent(**execution_params)
+            result = await executor.execute_agent(**execution_params)
 
             # Calculate execution time
             execution_time = (datetime.now() - start_time).total_seconds()

@@ -16,14 +16,16 @@ from .tools import ToolRegistry
 
 # Import project builder agents
 try:
-    from ai_core.agents.concrete_executor import concrete_executor
+    from ai_core.agents.concrete_executor import get_concrete_executor
     from ai_core.agents.project_builder_base import ProjectBuilderAgent, FullStackBuilderAgent
+    _has_concrete_executor = True
 except ImportError as e:
     logger = logging.getLogger(__name__)
     logger.warning(f"Could not import project builder agents: {e}")
-    concrete_executor = None
+    get_concrete_executor = None  # type: ignore
     ProjectBuilderAgent = None
     FullStackBuilderAgent = None
+    _has_concrete_executor = False
 
 logger = logging.getLogger(__name__)
 
@@ -347,7 +349,7 @@ class ProjectBuilderOrchestrator:
         project_spec = await self.create_project_from_idea(idea, requirements)
 
         # Use real project building agents if available
-        if use_real_agents and concrete_executor and FullStackBuilderAgent:
+        if use_real_agents and _has_concrete_executor and FullStackBuilderAgent:
             logger.info("🚀 Using REAL project building agents")
             return await self._build_project_with_real_agents(project_spec)
 
@@ -373,7 +375,8 @@ class ProjectBuilderOrchestrator:
 
             # Execute with the concrete executor
             logger.info(f"🏗️ Deploying real agent to build: {project_spec.name}")
-            result = await concrete_executor.execute_agent('fullstack_builder', build_task)
+            executor = get_concrete_executor()
+            result = await executor.execute_agent('fullstack_builder', build_task)
 
             if result['success']:
                 logger.info(f"✅ Real agent successfully built project: {project_spec.name}")
