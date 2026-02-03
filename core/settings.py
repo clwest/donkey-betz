@@ -1421,8 +1421,40 @@ CELERY_BEAT_SCHEDULE = {
     # Session 885: Financial agent rotation for stock reviews in Operations tab
     'financial-agent-category-rotation': {
         'task': 'core.tasks.agent_category_rotation',
-        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'schedule': crontab(minute=5, hour='*/4'),  # Every 4 hours at :05 (15 agents)
         'args': ['financial'],
+    },
+    # =========================================================================
+    # Session 917: Additional Category Rotations for Operations Tab
+    # These call agent_category_rotation() which uses universal_agent_workspace_output()
+    # to create WorkspaceOperation entries visible in the Operations Tab
+    #
+    # Agent counts per category:
+    # - financial: 10 agents (StockAnalyst, BullCase, BearCase, MarketIntelligence, PredictionMarket, etc.)
+    # - sports: 2 agents (SportsOddsAnalyst, ArbitrageDetector)
+    # - blockchain: 5 agents (SmartContractAuditor, WhaleWatcher, ExploitDetector, etc.)
+    # - narrative: 4 agents (NarrativeDrift, NarrativeHistorian, TrendBreakDetector, CulturalImpact)
+    # - strategy: 6 agents (BrandStrategy, ContentStrategy, MarketingStrategy, SEO, SocialMedia, etc.)
+    # =========================================================================
+    'blockchain-agent-category-rotation': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15 (5 agents)
+        'args': ['blockchain'],
+    },
+    'narrative-agent-category-rotation': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=25, hour='*/6'),  # Every 6 hours at :25 (4 agents)
+        'args': ['narrative'],
+    },
+    'strategy-agent-category-rotation': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=35, hour='*/5'),  # Every 5 hours at :35 (6 agents)
+        'args': ['strategy'],
+    },
+    'sports-agent-category-rotation': {
+        'task': 'core.tasks.agent_category_rotation',
+        'schedule': crontab(minute=45, hour='*/2'),  # Every 2 hours at :45 (2 agents - high frequency for betting)
+        'args': ['sports'],
     },
     # =========================================================================
     # Session 905-906: Initiative Pipeline Automation
