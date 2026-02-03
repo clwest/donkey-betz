@@ -257,6 +257,38 @@ class Initiative(models.Model):
     )
 
     # =========================================================================
+    # Session 914.6: Boardroom Approval Fields
+    # =========================================================================
+
+    # Whether this initiative has been explicitly approved by the Boardroom
+    boardroom_approved = models.BooleanField(
+        default=False,
+        help_text='Session 914.6: Has this initiative been approved by the Boardroom?'
+    )
+
+    # When boardroom approval was granted
+    boardroom_approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Session 914.6: When was boardroom approval granted?'
+    )
+
+    # Who approved in the boardroom
+    boardroom_approved_by = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Session 914.6: Who approved this initiative in the Boardroom?'
+    )
+
+    # Optional notes from the boardroom approval
+    boardroom_approval_notes = models.TextField(
+        blank=True,
+        default='',
+        help_text='Session 914.6: Notes or conditions from boardroom approval'
+    )
+
+    # =========================================================================
     # Session 914.2: Execution Track Fields
     # =========================================================================
 
@@ -618,6 +650,59 @@ class Initiative(models.Model):
         self.save()
         return self
 
+    def approve_in_boardroom(
+        self,
+        approved_by: str = 'boardroom',
+        notes: str = ''
+    ):
+        """
+        Session 914.6: Approve this initiative in the Boardroom.
+
+        This grants boardroom approval for institutional-track initiatives
+        that require explicit governance sign-off.
+
+        Args:
+            approved_by: Who is approving (default: 'boardroom')
+            notes: Optional notes or conditions for the approval
+
+        Returns:
+            self for chaining
+        """
+        self.boardroom_approved = True
+        self.boardroom_approved_at = timezone.now()
+        self.boardroom_approved_by = approved_by
+        if notes:
+            self.boardroom_approval_notes = notes
+
+        self.save(update_fields=[
+            'boardroom_approved', 'boardroom_approved_at',
+            'boardroom_approved_by', 'boardroom_approval_notes'
+        ])
+        return self
+
+    def revoke_boardroom_approval(self, reason: str = ''):
+        """
+        Session 914.6: Revoke boardroom approval.
+
+        Used when an initiative needs to be re-reviewed or was approved in error.
+
+        Args:
+            reason: Reason for revoking approval
+
+        Returns:
+            self for chaining
+        """
+        self.boardroom_approved = False
+        self.boardroom_approved_at = None
+        self.boardroom_approved_by = ''
+        self.boardroom_approval_notes = f"REVOKED: {reason}" if reason else ''
+
+        self.save(update_fields=[
+            'boardroom_approved', 'boardroom_approved_at',
+            'boardroom_approved_by', 'boardroom_approval_notes'
+        ])
+        return self
+
     @property
     def can_auto_progress(self):
         """
@@ -634,9 +719,9 @@ class Initiative(models.Model):
         if self.execution_speed == 'fast' and self.current_stage >= 2:
             return False
 
-        # If boardroom approval required, check if we have it
-        # (For now, founder_intent_set acts as the approval)
-        if self.requires_boardroom_approval and not self.founder_intent_set:
+        # Session 914.6: If boardroom approval required, check if we have it
+        # This is now separate from founder_intent_set
+        if self.requires_boardroom_approval and not self.boardroom_approved:
             return False
 
         # Allow Stage 1 to progress without intent (to generate initial research)
@@ -656,8 +741,9 @@ class Initiative(models.Model):
         if self.execution_speed == 'fast' and self.current_stage >= 2:
             return 'Fast Track mode - stopped at Stage 2 awaiting founder decision'
 
-        if self.requires_boardroom_approval and not self.founder_intent_set:
-            return 'Requires Boardroom approval - founder intent not set'
+        # Session 914.6: Check boardroom approval separately
+        if self.requires_boardroom_approval and not self.boardroom_approved:
+            return 'Requires Boardroom approval - not yet approved'
 
         if self.current_stage > 1 and not self.founder_intent_set:
             return 'Awaiting founder intent - set execution_speed, risk_tolerance, and stop_rule'
@@ -681,8 +767,25 @@ class Initiative(models.Model):
             'budget_llm_spend': float(self.budget_llm_spend) if self.budget_llm_spend else None,
             'stop_rule': self.stop_rule,
             'requires_boardroom_approval': self.requires_boardroom_approval,
+            'boardroom_approved': self.boardroom_approved,
             'can_auto_progress': self.can_auto_progress,
             'blocked_reason': self.progression_blocked_reason,
+        }
+
+    @property
+    def boardroom_approval_summary(self):
+        """
+        Session 914.6: Return a summary of boardroom approval status.
+        """
+        return {
+            'required': self.requires_boardroom_approval,
+            'approved': self.boardroom_approved,
+            'approved_at': self.boardroom_approved_at.isoformat() if self.boardroom_approved_at else None,
+            'approved_by': self.boardroom_approved_by,
+            'notes': self.boardroom_approval_notes,
+            'status': 'approved' if self.boardroom_approved else (
+                'pending' if self.requires_boardroom_approval else 'not_required'
+            )
         }
 
     # =========================================================================
