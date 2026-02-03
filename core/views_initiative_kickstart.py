@@ -827,3 +827,103 @@ def backfill_stage_documents(request):
         logger.error(f"[backfill_api] {result['message']}")
 
     return Response(result)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def fix_initiative_titles(request):
+    """
+    Session 916: Fix messy initiative titles using smart title generation.
+
+    POST/GET params:
+        limit: int - Max initiatives to process (default: 50)
+        dry_run: bool - Preview without making changes (default: True)
+
+    Example:
+        # Dry run
+        curl -X GET "https://your-app.railway.app/api/initiatives/fix-titles/?limit=20"
+
+        # Actually fix titles
+        curl -X POST "https://your-app.railway.app/api/initiatives/fix-titles/" \\
+             -H "Authorization: Token YOUR_TOKEN" \\
+             -d '{"dry_run": false, "limit": 50}'
+    """
+    from core.models_document_registry import Initiative
+    from core.services.initiative_title_generator import generate_initiative_title, _is_valid_title
+    from django.db import transaction
+
+    # Parse params
+    if request.method == 'POST':
+        data = request.data
+    else:
+        data = request.query_params
+
+    limit = int(data.get('limit', 50))
+    dry_run = data.get('dry_run', True)
+    if isinstance(dry_run, str):
+        dry_run = dry_run.lower() not in ('false', '0', 'no')
+
+    result = {
+        'limit': limit,
+        'dry_run': dry_run,
+        'total_analyzed': 0,
+        'bad_titles_found': 0,
+        'fixed': 0,
+        'errors': 0,
+        'preview': [],
+    }
+
+    try:
+        # Find initiatives with bad titles
+        initiatives = Initiative.objects.all().order_by('-created_at')[:limit]
+
+        bad_titles = []
+        for init in initiatives:
+            result['total_analyzed'] += 1
+            if not _is_valid_title(init.name, max_length=80):
+                bad_titles.append(init)
+
+        result['bad_titles_found'] = len(bad_titles)
+
+        # Generate new titles
+        for init in bad_titles[:20]:  # Preview max 20
+            content = init.description or ""
+            topic_hint = init.parent_topic or ""
+
+            new_title = generate_initiative_title(
+                content=content,
+                topic_hint=topic_hint,
+                max_length=80,
+                use_llm=True
+            )
+
+            preview_item = {
+                'id': str(init.id),
+                'old_title': init.name[:60] + '...' if len(init.name) > 60 else init.name,
+                'new_title': new_title,
+            }
+            result['preview'].append(preview_item)
+
+            if not dry_run:
+                try:
+                    with transaction.atomic():
+                        init.name = new_title
+                        init.save(update_fields=['name'])
+                        result['fixed'] += 1
+                except Exception as e:
+                    result['errors'] += 1
+                    logger.error(f"[fix_titles_api] Error fixing {init.id}: {e}")
+
+        if dry_run:
+            result['message'] = f"[DRY RUN] Would fix {result['bad_titles_found']} titles"
+        else:
+            result['message'] = f"Fixed {result['fixed']} titles ({result['errors']} errors)"
+
+        logger.info(f"[fix_titles_api] {result['message']}")
+
+    except Exception as e:
+        result['error'] = str(e)
+        result['message'] = f"Failed to fix titles: {e}"
+        logger.error(f"[fix_titles_api] {result['message']}")
+
+    return Response(result)
