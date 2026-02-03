@@ -32344,6 +32344,80 @@ Stage {stage_num} ({config['template']}) should include:
 
 
 # =============================================================================
+# Session 915: Backfill Stage Documents Task
+# =============================================================================
+
+@shared_task(bind=True)
+def backfill_stage_documents(self, stage_num: int = 1, limit: int = 50):
+    """
+    Session 915: Backfill missing stage documents for existing initiatives.
+
+    This task runs within the Celery worker context and triggers document
+    generation for initiatives that have stages without documents.
+
+    Args:
+        stage_num: Which stage to backfill (default: 1)
+        limit: Maximum number of initiatives to process (default: 50)
+
+    Returns:
+        Dict with triggered count and any errors
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+
+    logger.info(f"[Session 915] 📚 Starting Stage {stage_num} document backfill (limit: {limit})")
+
+    try:
+        # Find initiatives where the stage exists but has no document
+        all_initiatives = Initiative.objects.filter(
+            current_stage__gte=stage_num
+        ).order_by('-created_at')[:limit * 2]
+
+        initiatives_to_backfill = []
+        for initiative in all_initiatives:
+            stage = InitiativeStage.objects.filter(
+                initiative=initiative,
+                stage=stage_num
+            ).first()
+
+            if stage and not stage.document:
+                initiatives_to_backfill.append(initiative)
+
+            if len(initiatives_to_backfill) >= limit:
+                break
+
+        logger.info(f"[Session 915] Found {len(initiatives_to_backfill)} initiatives missing Stage {stage_num} documents")
+
+        triggered = 0
+        errors = 0
+
+        for initiative in initiatives_to_backfill:
+            try:
+                # Trigger document generation for this initiative
+                generate_initiative_stage_document.delay(str(initiative.id), stage_num)
+                triggered += 1
+                logger.info(f"[Session 915] 🚀 Triggered: {initiative.name[:50]}...")
+            except Exception as e:
+                errors += 1
+                logger.error(f"[Session 915] ❌ Error triggering for {initiative.name[:50]}: {e}")
+
+        result = {
+            'success': True,
+            'stage': stage_num,
+            'found': len(initiatives_to_backfill),
+            'triggered': triggered,
+            'errors': errors
+        }
+
+        logger.info(f"[Session 915] ✅ Backfill complete: {triggered} triggered, {errors} errors")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"[Session 915] ❌ Backfill failed: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
 # Session 914.7: Operating Rhythm Tasks (Daily & Weekly Automation)
 # =============================================================================
 
