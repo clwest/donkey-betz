@@ -1,6 +1,7 @@
 # =============================================================================
 # RAILWAY DEPLOYMENT CONFIGURATION
 # Unified Donkey Betz Platform
+# Last rebuild trigger: Session 919 - 2026-02-03 14:45 MST
 # =============================================================================
 # This file configures the BUILD settings shared by all services.
 # Deploy settings are configured per-service in Railway dashboard.
