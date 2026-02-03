@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 1, 2026 - Session 904
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE**
+**Last Updated:** February 3, 2026 - Session 918
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
@@ -20,6 +20,7 @@
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Report Provenance + PDF Export (918):** Reports now track data sources, timestamps, and validation status via ReportProvenance dataclass. Publishing gates prevent stale data from being published. PDF export service using WeasyPrint with category-specific styling (sports=green, financial=blue, blockchain=purple, etc.). Frontend "Download PDF" button in Operations Panel. Operations pagination increased from 20 to 100. PRs #772, #774, #777, #779.
 - **Initiative UI Overhaul (904):** Complete redesign of initiative display. Three view modes: Stages (grouped by pipeline phase 1-5, color-coded), List (compact rows), Cards (original grid). Comprehensive modal for ALL initiatives (not just completed) showing action items, signal intelligence, full trace. Live Activity section shows agents currently working with progress percentage and current step. Enhanced Origin & Trigger with Conversation Summary (topic, objective, success criteria, synthesis, timestamps). PRs #688-692.
 - **Signal Intelligence Wired + Celery OOM Fix (903):** process_pending_auto_topics creates HiveMindSessions with signal_cluster/auto_topic FK links. trigger_signal_driven_conversation dispatches with full provenance chain. run_triggered_conversation accepts hive_session_id and updates status. Celery OOM fixed: task lock on scan_spider_opportunities (Django cache), reduced frequency 15→30 min, proper aiohttp connector cleanup.
 - **Action Item Tracking (902):** Extract and track "Next Steps" from conversation conclusions. InitiativeActionItem model with status (pending/in_progress/completed/blocked), priority (critical/high/medium/low), timeline parsing ("Week 0-1" → due date), agent assignments. Parser service extracts items from `=== DecisionSummary ===` sections. 6 API endpoints for CRUD + bulk extraction. UI section in Initiative modal with stats bar, status checkboxes, priority badges, timeline indicators, manual creation input.
@@ -151,6 +152,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **918** | Report Provenance + PDF Export - Data source tracking, publishing gates, WeasyPrint PDF service, download button, pagination fix | `SESSION_918_REPORT_PROVENANCE.md` |
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity, conversation details | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
 | **903** | Signal Intelligence Wired + Celery OOM Fix - HiveMind provenance chain, spider task memory fix | `SESSION_903_SIGNAL_CELERY_FIX.md` |
 | **902** | Action Item Tracking - Extract & track next steps from conversation conclusions | `SESSION_902_ACTION_ITEM_TRACKING.md` |
