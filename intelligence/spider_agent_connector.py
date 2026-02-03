@@ -218,6 +218,8 @@ class SpiderAgentConnector:
             # Generate solution title and description
             # Check for title field on persistence model, or get from data dict
             title = getattr(spider_data, 'title', None) or data.get('title') or f"Opportunity from {spider_data.spider_name}"
+            # Session 915: Truncate title to 200 chars to avoid varchar(200) error
+            title = title[:200] if title else f"Opportunity from {spider_data.spider_name}"
             description = data.get('description', f"Data collected by {spider_data.spider_name}")
 
             # Create code snippet if relevant data exists
