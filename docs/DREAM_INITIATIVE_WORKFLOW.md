@@ -1,8 +1,8 @@
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
-**Updated:** Session 914.5 (February 2, 2026)
-**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | RATE LIMITS | DAILY PRIORITIES | TRACKING COMPLETE
+**Updated:** Session 914.6 (February 2, 2026)
+**Status:** ACTIVE | AUTO-PROGRESSION ENABLED | FOUNDER INTENT REQUIRED | EXECUTION TRACKS | SEMANTIC DRIFT GATES | RATE LIMITS | DAILY PRIORITIES | BOARDROOM APPROVAL | TRACKING COMPLETE
 
 ---
 
@@ -556,17 +556,82 @@ set_manual_priority(initiative_id, priority_rank=1, reason="Customer deadline")
 
 ---
 
+### Boardroom Approval (Session 914.6)
+
+Institutional-track initiatives require explicit Boardroom approval before auto-progression can continue. This is now tracked separately from founder intent.
+
+**Previous Behavior (Bug):** `founder_intent_set` was incorrectly used as a proxy for boardroom approval.
+
+**New Behavior:** Boardroom approval is tracked independently with its own fields and approval workflow.
+
+**When Required:**
+- Initiatives on the `institutional` execution track
+- Initiatives with content flags (external_data, user_data, public_publishing, etc.)
+- Initiatives explicitly marked as `requires_boardroom_approval=True`
+
+**Management Commands:**
+```bash
+# List initiatives pending boardroom approval
+python manage.py boardroom_approval --list-pending
+
+# Show approval status for an initiative
+python manage.py boardroom_approval --status <uuid>
+
+# Approve an initiative
+python manage.py boardroom_approval --approve <uuid> --by="founder" --notes="Reviewed and approved"
+
+# Revoke approval
+python manage.py boardroom_approval --revoke <uuid> --reason="Needs re-review"
+
+# Bulk approve all initiatives with founder intent set
+python manage.py boardroom_approval --auto-approve-with-intent
+
+# Dry run (show what would be approved)
+python manage.py boardroom_approval --auto-approve-with-intent --dry-run
+```
+
+**Code Reference:**
+```python
+from core.models_document_registry import Initiative
+
+# Approve an initiative
+initiative.approve_in_boardroom(approved_by='founder', notes='Reviewed')
+
+# Check approval status
+status = initiative.boardroom_approval_summary
+# Returns: {'required': True, 'approved': True, 'approved_at': ..., 'status': 'approved'}
+
+# Revoke if needed
+initiative.revoke_boardroom_approval(reason='Needs re-review')
+
+# Check if can progress
+if initiative.can_auto_progress:
+    print("Ready for auto-progression")
+else:
+    print(f"Blocked: {initiative.progression_blocked_reason}")
+```
+
+**Model Fields (Initiative):**
+| Field | Type | Description |
+|-------|------|-------------|
+| `boardroom_approved` | Boolean | Has this been approved by the Boardroom? |
+| `boardroom_approved_at` | DateTime | When approval was granted |
+| `boardroom_approved_by` | String | Who approved in the Boardroom |
+| `boardroom_approval_notes` | Text | Notes or conditions from approval |
+
+---
+
 ### Auto-Progression (Session 906)
 
 The system automatically advances initiatives through stages based on document quality. Runs every 10 minutes via Celery Beat.
 
-**Prerequisites (Session 914, 914.2, 914.3, 914.4 & 914.5):**
+**Prerequisites (Session 914, 914.2, 914.3, 914.4, 914.5 & 914.6):**
 - Daily rate limit not exceeded (default: 40/day)
 - Founder intent must be set (for Stage 2+)
 - Execution track limits respected (Fast Track stops at Stage 2)
 - Institutional track requires stage approvals (Stages 2-4)
 - Semantic drift check passed (document aligns with initiative intent)
-- Boardroom approval requirements must be satisfied
+- Boardroom approval granted (if required for institutional track)
 - Daily focus initiatives can be prioritized for progression
 
 **Quality Criteria:**
@@ -831,6 +896,7 @@ python manage.py fix_stuck_initiatives --fix
 | **914.3** | **Semantic Quality Gates** - Drift detection using embeddings, blocks progression if document diverges from initiative intent |
 | **914.4** | **Rate Limits** - Daily progression limit (40/day default), controls LLM spend, admin reset/override |
 | **914.5** | **Daily Priorities** - Daily priority scan identifies top 5 focus initiatives, scoring by stage/freshness/speed/track/intent |
+| **914.6** | **Boardroom Approval** - Proper tracking of boardroom approval separate from founder intent, fixes bypass issue |
 
 ---
 
@@ -846,7 +912,7 @@ python manage.py fix_stuck_initiatives --fix
 2. Verify origin is `serious` or `speculative`
 3. Check `promote_threshold` setting
 
-### Stages Not Advancing (Session 914, 914.2, 914.3, 914.4 & 914.5)
+### Stages Not Advancing (Session 914, 914.2, 914.3, 914.4, 914.5 & 914.6)
 1. **Check founder intent** - `python manage.py set_founder_intent --list`
 2. **Check execution track** - Fast Track stops at Stage 2
 3. **Check stage approvals** - Institutional requires approvals for Stages 2-4
@@ -854,8 +920,10 @@ python manage.py fix_stuck_initiatives --fix
 5. If drift detected, override with: `--override --reason="Explanation"`
 6. **Check rate limit** - `python manage.py initiative_rate_limit --status`
 7. **Check daily focus** - `python manage.py daily_priorities --list` to see focused initiatives
-8. Verify stage status is `APPROVED`
-9. Check `advance_initiative_pipeline` task is scheduled
+8. **Check boardroom approval** - `python manage.py boardroom_approval --status <uuid>`
+9. If pending, approve with: `python manage.py boardroom_approval --approve <uuid>`
+10. Verify stage status is `APPROVED`
+11. Check `advance_initiative_pipeline` task is scheduled
 
 ### Deliverable Not Created
 1. Verify all 5 stages are `APPROVED`
