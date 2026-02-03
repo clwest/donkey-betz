@@ -40,6 +40,61 @@ class FileWriter:
     All file operations are logged for audit trail.
     """
 
+    def _sanitize_file_path(self, file_path: str) -> str:
+        """
+        Session 918: Sanitize file paths to prevent absolute path issues.
+
+        Ensures file_path is always relative, not absolute.
+        Strips leading slashes and any /Users/, /home/, /app/ prefixes.
+        """
+        if not file_path:
+            return file_path
+
+        # Convert to Path for easier manipulation
+        path = Path(file_path)
+
+        # If it's an absolute path, make it relative
+        if path.is_absolute():
+            # Get just the parts after common root prefixes
+            parts = path.parts
+
+            # Find where the actual relative path starts
+            # Skip: /, Users, username, development, project-name, etc.
+            skip_prefixes = {'/', 'Users', 'home', 'app', 'var', 'tmp'}
+            start_idx = 0
+            for i, part in enumerate(parts):
+                if part in skip_prefixes or part.startswith('.'):
+                    start_idx = i + 1
+                elif i > 0 and parts[i-1] == 'Users':
+                    # Skip the username after /Users/
+                    start_idx = i + 1
+                elif i > 0 and parts[i-1] == 'home':
+                    # Skip the username after /home/
+                    start_idx = i + 1
+                elif i > 2 and parts[i-1] == 'development':
+                    # Skip project name after /Users/x/development/
+                    start_idx = i + 1
+                    break
+                else:
+                    break
+
+            # Reconstruct the relative path
+            if start_idx < len(parts):
+                file_path = str(Path(*parts[start_idx:]))
+            else:
+                # Fallback: just use the filename
+                file_path = path.name
+
+            logger.warning(
+                f"⚠️ Session 918: Converted absolute path to relative: "
+                f"{path} -> {file_path}"
+            )
+
+        # Remove any leading slashes
+        file_path = file_path.lstrip('/')
+
+        return file_path
+
     def write_file(
         self,
         workspace: ProjectWorkspace,
@@ -62,6 +117,10 @@ class FileWriter:
             WorkspaceOperation record
         """
         start_time = time.time()
+
+        # Session 918: Sanitize file path to prevent absolute path issues
+        file_path = self._sanitize_file_path(file_path)
+
         full_path = Path(workspace.root_path) / file_path
 
         # Capture before state for rollback
@@ -1336,6 +1395,8 @@ class WorkspaceManager:
 
     def read_file(self, workspace: ProjectWorkspace, file_path: str) -> Optional[str]:
         """Read a file from the workspace."""
+        # Session 918: Sanitize file path to prevent absolute path issues
+        file_path = self.file_writer._sanitize_file_path(file_path)
         full_path = Path(workspace.root_path) / file_path
         if full_path.exists():
             try:
