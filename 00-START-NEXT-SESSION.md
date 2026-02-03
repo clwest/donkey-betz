@@ -2,7 +2,7 @@
 
 **Previous Session:** 916 (Hard Invariants for Initiative Stage Approval)
 **Date:** February 2, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **225 INITIATIVES** | **HARD INVARIANTS ACTIVE** | **506 AUDIT LOGS**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **204 INITIATIVES** | **HARD INVARIANTS ACTIVE** | **552 AUDIT LOGS**
 
 ---
 
@@ -39,7 +39,11 @@ Every stage transition is now logged with:
 - `triggered_by` (user, system, Celery task)
 - `quality_score` / `confidence_score`
 - `checks_passed` (JSON dict)
-- 506 transition logs created
+- 552 transition logs created (including 38 production resets)
+
+### Production Reset: Broken Stage Sequences
+
+38 initiatives were at Stage 2+ but had incomplete Stage 1 (Research Brief). These were reset to Stage 1 to enforce proper sequencing.
 
 ---
 
@@ -47,12 +51,14 @@ Every stage transition is now logged with:
 
 | Metric | Value |
 |--------|-------|
-| Total Initiatives | 225 |
-| Structurally Consistent | 225 (100%) |
-| StageTransitionLog entries | 506 |
-| With Founder Intent | 8 |
-| Awaiting Founder Intent | 185 |
-| Deliverables Created | 1,782 |
+| Total Initiatives | 204 |
+| At Stage 1 | 171 |
+| At Stage 2 | 19 |
+| At Stage 3 | 12 |
+| At Stage 4-5 | 2 |
+| With incomplete S1 at Stage 2+ | **0** |
+| StageTransitionLog entries | 552 |
+| Production resets | 38 |
 
 ---
 
@@ -171,8 +177,8 @@ ChatGPT suggested quality gates:
 | Database Models | 387+ |
 | Celery Tasks | 262 |
 | Services | 129 |
-| **Initiatives** | **225** |
-| **StageTransitionLogs** | **506** |
+| **Initiatives** | **204** |
+| **StageTransitionLogs** | **552** |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
