@@ -51,6 +51,10 @@ import {
   Pause,
   List,
   LayoutGrid,
+  Calendar,
+  Settings,
+  FastForward,
+  ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
@@ -897,6 +901,7 @@ function ComprehensiveInitiativeModal({
     origin: true,
     conversation: false,
     stages: true,
+    rhythm: true,  // Session 914.7: Operating Rhythm section
     actionItems: true,
     deliverable: true,
   })
@@ -907,6 +912,18 @@ function ComprehensiveInitiativeModal({
     queryFn: async () => {
       const res = await platformApi.originTrace(initiativeId)
       return res.data
+    },
+  })
+
+  // Session 914.7: Fetch operating rhythm data for this initiative
+  const { data: rhythmData } = useQuery({
+    queryKey: ['initiative-rhythm', initiativeId],
+    queryFn: async () => {
+      const res = await fetch(`/api/initiatives/${initiativeId}/rhythm/`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed to fetch rhythm data')
+      return res.json()
     },
   })
 
@@ -1625,6 +1642,183 @@ function ComprehensiveInitiativeModal({
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* SESSION 914.7: OPERATING RHYTHM SECTION */}
+          <div className="border border-dark-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleSection('rhythm')}
+              className="w-full flex items-center justify-between p-4 bg-dark-bg hover:bg-dark-bg/80 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Calendar size={18} className="text-emerald-400" />
+                <span className="font-medium">Operating Rhythm</span>
+                {rhythmData?.is_daily_focus && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 flex items-center gap-1">
+                    <Sparkles size={10} />
+                    Daily Focus
+                  </span>
+                )}
+                {rhythmData?.founder_intent?.set && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400">
+                    Intent Set
+                  </span>
+                )}
+                {!rhythmData?.can_auto_progress && rhythmData?.progression_blocked_reason && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+                    <AlertCircle size={10} />
+                    Blocked
+                  </span>
+                )}
+              </div>
+              {expandedSections.rhythm ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+
+            {expandedSections.rhythm && rhythmData?.success && (
+              <div className="p-4 border-t border-dark-border space-y-4">
+                {/* Progression Status */}
+                <div className={cn(
+                  "p-3 rounded-lg flex items-center gap-3",
+                  rhythmData.can_auto_progress
+                    ? "bg-green-500/10 border border-green-500/20"
+                    : "bg-yellow-500/10 border border-yellow-500/20"
+                )}>
+                  {rhythmData.can_auto_progress ? (
+                    <>
+                      <CheckCircle2 size={18} className="text-green-400" />
+                      <span className="text-green-400 font-medium">Ready to Progress</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={18} className="text-yellow-400" />
+                      <div>
+                        <span className="text-yellow-400 font-medium">Progression Blocked</span>
+                        <p className="text-sm text-gray-400 mt-0.5">{rhythmData.progression_blocked_reason}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Daily Focus Status */}
+                {rhythmData.is_daily_focus && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center gap-3">
+                    <Sparkles size={18} className="text-emerald-400" />
+                    <div>
+                      <span className="text-emerald-400 font-medium">In Today's Daily Focus</span>
+                      {rhythmData.daily_focus_date && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          Since {new Date(rhythmData.daily_focus_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Daily Priorities */}
+                {rhythmData.daily_priorities?.priorities?.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Target size={12} />
+                      Today's Priorities
+                      {!rhythmData.daily_priorities.is_current && (
+                        <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Stale</span>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      {rhythmData.daily_priorities.priorities.map((priority: string, idx: number) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm">
+                          <span className="w-5 h-5 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-xs font-bold">
+                            {idx + 1}
+                          </span>
+                          <span className={cn(
+                            rhythmData.priority_mapping?.is_mapped && rhythmData.priority_mapping?.priority_index === idx
+                              ? "text-primary-400 font-medium"
+                              : "text-gray-400"
+                          )}>
+                            {priority}
+                          </span>
+                          {rhythmData.priority_mapping?.is_mapped && rhythmData.priority_mapping?.priority_index === idx && (
+                            <span className="text-xs text-primary-400">← Mapped</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Founder Intent */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-dark-bg/50 rounded-lg">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                      <Settings size={12} />
+                      Founder Intent
+                    </div>
+                    {rhythmData.founder_intent?.set ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <FastForward size={12} className="text-blue-400" />
+                          <span className="text-sm capitalize">{rhythmData.founder_intent.execution_speed || 'balanced'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Shield size={12} className="text-purple-400" />
+                          <span className="text-sm capitalize">{rhythmData.founder_intent.risk_tolerance || 'medium'} risk</span>
+                        </div>
+                        {rhythmData.founder_intent.stop_rule && (
+                          <div className="text-xs text-gray-400 mt-1 italic">
+                            Stop: {rhythmData.founder_intent.stop_rule.slice(0, 50)}...
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-yellow-400">Not Set</span>
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-dark-bg/50 rounded-lg">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                      <ShieldCheck size={12} />
+                      Boardroom
+                    </div>
+                    {rhythmData.boardroom?.required ? (
+                      <div className="space-y-1">
+                        {rhythmData.boardroom.approved ? (
+                          <>
+                            <span className="text-sm text-green-400 flex items-center gap-1">
+                              <CheckCircle2 size={12} />
+                              Approved
+                            </span>
+                            {rhythmData.boardroom.approved_by && (
+                              <div className="text-xs text-gray-400">
+                                by {rhythmData.boardroom.approved_by}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-sm text-yellow-400">Pending Approval</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">Not Required</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Execution Track */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-400">Track:</span>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded text-xs font-medium",
+                    rhythmData.execution_track === 'fast_track' && "bg-blue-500/20 text-blue-400",
+                    rhythmData.execution_track === 'institutional' && "bg-purple-500/20 text-purple-400",
+                    rhythmData.execution_track === 'not_set' && "bg-gray-500/20 text-gray-400"
+                  )}>
+                    {rhythmData.execution_track === 'fast_track' ? 'Fast Track (Stage 1-2)' :
+                     rhythmData.execution_track === 'institutional' ? 'Institutional (Full 5-Stage)' :
+                     'Not Set'}
+                  </span>
+                </div>
               </div>
             )}
           </div>

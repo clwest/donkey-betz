@@ -2862,6 +2862,9 @@ urlpatterns = [
     path('api/action-items/<uuid:item_id>/', views_research_demo.action_item_update_api, name='action-item-update'),
     path('api/action-items/<uuid:item_id>/delete/', views_research_demo.action_item_delete_api, name='action-item-delete'),
     path('api/action-items/extract/', views_research_demo.extract_action_items_api, name='action-items-bulk-extract'),  # Bulk extract without initiative
+    # Session 914.7: Operating Rhythm API
+    path('api/operating-rhythm/', views_research_demo.operating_rhythm_api, name='operating-rhythm'),
+    path('api/initiatives/<uuid:initiative_id>/rhythm/', views_research_demo.initiative_rhythm_api, name='initiative-rhythm'),
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
