@@ -2855,6 +2855,7 @@ urlpatterns = [
     path('api/initiatives/circuit-breaker/', views_initiative_kickstart.initiative_circuit_breaker, name='initiatives-circuit-breaker'),  # Session 884: Pause/resume initiative creation
     path('api/initiatives/cleanup/', views_initiative_kickstart.cleanup_initiatives, name='initiatives-cleanup'),  # Session 884: Archive/delete stuck initiatives
     path('api/initiatives/backfill-documents/', views_initiative_kickstart.backfill_stage_documents, name='initiatives-backfill-documents'),  # Session 915: Backfill missing stage documents
+    path('api/initiatives/fix-titles/', views_initiative_kickstart.fix_initiative_titles, name='initiatives-fix-titles'),  # Session 916: Fix messy initiative titles
     path('api/initiatives/<uuid:initiative_id>/origin-trace/', views_research_demo.initiative_origin_trace_api, name='initiatives-origin-trace'),  # Session 898: Full origin chain trace
     # Session 902: Action Items API
     path('api/initiatives/<uuid:initiative_id>/action-items/', views_research_demo.initiative_action_items_api, name='initiative-action-items'),
