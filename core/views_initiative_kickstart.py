@@ -317,19 +317,42 @@ def fix_initiative_stages(request):
                 stage_num = fix['stage']
 
                 if fix['action'] == 'create':
-                    InitiativeStage.objects.create(
+                    # Session 916: Create stage with audit logging
+                    from core.models_document_registry import StageTransitionLog
+                    new_stage = InitiativeStage.objects.create(
                         initiative=initiative,
                         stage=stage_num,
                         status='APPROVED',
                         approved_at=timezone.now(),
+                        approved_by='backfill_api',
                         notes=f'Backfilled via API at {timezone.now().isoformat()}',
                     )
+                    StageTransitionLog.log_transition(
+                        stage=new_stage,
+                        from_status='CREATED',
+                        to_status='APPROVED',
+                        triggered_by='backfill_api',
+                        trigger_type='api',
+                        notes='Created via kickstart backfill API'
+                    )
                 elif fix['action'] == 'approve':
+                    # Session 916: Approve stage with audit logging
+                    from core.models_document_registry import StageTransitionLog
                     stage = existing_stages[stage_num]
+                    old_status = stage.status
                     stage.status = 'APPROVED'
                     stage.approved_at = timezone.now()
+                    stage.approved_by = 'backfill_api'
                     stage.notes = f"{stage.notes}\n\n[Backfilled via API at {timezone.now().isoformat()}]"
                     stage.save()
+                    StageTransitionLog.log_transition(
+                        stage=stage,
+                        from_status=old_status,
+                        to_status='APPROVED',
+                        triggered_by='backfill_api',
+                        trigger_type='api',
+                        notes='Approved via kickstart backfill API'
+                    )
 
                 fix_record['stages_fixed'].append(fix)
                 result['stages_backfilled'] += 1

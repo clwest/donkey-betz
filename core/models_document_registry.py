@@ -1150,25 +1150,61 @@ class InitiativeStage(models.Model):
     def stage_purpose(self):
         return STAGE_PURPOSES.get(self.stage, '')
 
-    def approve(self, approved_by='system', notes=''):
+    def approve(
+        self,
+        approved_by='system',
+        notes='',
+        quality_score=None,
+        confidence_score=None,
+        checks_passed=None,
+        enforce_document=True
+    ):
         """
         Session 862: Mark this stage as approved and advance initiative.
+        Session 916: Added audit logging and document enforcement.
 
         If all 5 stages are now approved, creates final Deliverable.
 
         Args:
             approved_by: Who approved (user or 'system')
             notes: Optional approval notes
+            quality_score: Quality score at approval (Session 916)
+            confidence_score: Confidence in quality assessment (Session 916)
+            checks_passed: Dict of validation checks passed (Session 916)
+            enforce_document: If True, requires document to exist (Session 916)
 
         Returns:
             Deliverable or None: Final deliverable if all stages complete
+
+        Raises:
+            ValueError: If enforce_document=True and no document attached
         """
+        # Session 916: Enforce document existence
+        if enforce_document and not self.document:
+            raise ValueError(
+                f"Cannot approve Stage {self.stage} without a document. "
+                f"Initiative: {self.initiative.name}"
+            )
+
+        old_status = self.status
         self.status = self.StageStatus.APPROVED
         self.approved_by = approved_by
         self.approved_at = timezone.now()
         if notes:
             self.notes = (self.notes or '') + f"\n\nApproval notes: {notes}"
         self.save()
+
+        # Session 916: Log the transition
+        StageTransitionLog.log_transition(
+            stage=self,
+            from_status=old_status,
+            to_status=self.StageStatus.APPROVED,
+            triggered_by=approved_by,
+            quality_score=quality_score,
+            confidence_score=confidence_score,
+            checks_passed=checks_passed or {},
+            notes=notes
+        )
 
         # Try to advance the initiative
         self.initiative.advance_stage()
@@ -1179,11 +1215,202 @@ class InitiativeStage(models.Model):
 
         return None
 
-    def reject(self, reason=''):
+    def reject(self, reason='', rejected_by='system'):
         """Mark this stage as rejected."""
+        old_status = self.status
         self.status = self.StageStatus.REJECTED
         self.rejection_reason = reason
         self.save()
+
+        # Session 916: Log transition
+        StageTransitionLog.log_transition(
+            stage=self,
+            from_status=old_status,
+            to_status=self.StageStatus.REJECTED,
+            triggered_by=rejected_by,
+            notes=f"Rejection reason: {reason}" if reason else None
+        )
+
+
+class StageTransitionLog(models.Model):
+    """
+    Session 916: Audit trail for initiative stage transitions.
+
+    Logs every state change with full context for traceability:
+    - What changed (from_status -> to_status)
+    - When it changed (timestamp)
+    - Who/what triggered it (agent, system, user)
+    - Quality metrics at time of transition
+    - What validation checks passed
+    - Document state at transition
+
+    This provides complete auditability of the initiative pipeline,
+    ensuring no stage can be approved without proper verification.
+    """
+
+    class TriggerType(models.TextChoices):
+        SYSTEM = 'system', 'System (Auto-progression)'
+        AGENT = 'agent', 'Agent'
+        USER = 'user', 'User'
+        API = 'api', 'API Call'
+        CELERY = 'celery', 'Celery Task'
+        MANUAL = 'manual', 'Manual Override'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to the stage
+    stage = models.ForeignKey(
+        InitiativeStage,
+        on_delete=models.CASCADE,
+        related_name='transition_logs'
+    )
+
+    # State change
+    from_status = models.CharField(max_length=20)
+    to_status = models.CharField(max_length=20)
+
+    # When
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Who/what triggered it
+    trigger_type = models.CharField(
+        max_length=20,
+        choices=TriggerType.choices,
+        default=TriggerType.SYSTEM
+    )
+    triggered_by = models.CharField(
+        max_length=200,
+        help_text='Agent name, user ID, task name, or system component'
+    )
+
+    # Quality state at transition
+    quality_score = models.FloatField(
+        null=True, blank=True,
+        help_text='Quality score at time of transition (0-1)'
+    )
+    confidence_score = models.FloatField(
+        null=True, blank=True,
+        help_text='Confidence in the quality assessment (0-1)'
+    )
+
+    # Document state
+    document_id = models.UUIDField(
+        null=True, blank=True,
+        help_text='Document ID at time of transition'
+    )
+    document_word_count = models.IntegerField(
+        null=True, blank=True,
+        help_text='Document word count at transition'
+    )
+
+    # Validation checks
+    checks_passed = models.JSONField(
+        default=dict,
+        help_text='Dict of validation checks and their results'
+    )
+
+    # Additional context
+    notes = models.TextField(
+        blank=True,
+        help_text='Additional context or notes about this transition'
+    )
+
+    # Error tracking
+    had_error = models.BooleanField(default=False)
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = 'Stage Transition Log'
+        verbose_name_plural = 'Stage Transition Logs'
+        indexes = [
+            models.Index(fields=['stage', '-timestamp']),
+            models.Index(fields=['triggered_by', '-timestamp']),
+            models.Index(fields=['to_status', '-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.stage} | {self.from_status} → {self.to_status} | {self.timestamp}"
+
+    @classmethod
+    def log_transition(
+        cls,
+        stage: 'InitiativeStage',
+        from_status: str,
+        to_status: str,
+        triggered_by: str,
+        trigger_type=None,  # Optional[str]
+        quality_score=None,  # Optional[float]
+        confidence_score=None,  # Optional[float]
+        checks_passed=None,  # Optional[dict]
+        notes=None,  # Optional[str]
+        had_error: bool = False,
+        error_message=None  # Optional[str]
+    ) -> 'StageTransitionLog':
+        """
+        Create a transition log entry.
+
+        Args:
+            stage: The InitiativeStage being transitioned
+            from_status: Previous status
+            to_status: New status
+            triggered_by: Who/what triggered (agent name, user, system)
+            trigger_type: Type of trigger (system, agent, user, api, celery)
+            quality_score: Quality score at transition
+            confidence_score: Confidence in quality assessment
+            checks_passed: Dict of validation checks and results
+            notes: Additional context
+            had_error: Whether an error occurred
+            error_message: Error details if any
+
+        Returns:
+            The created StageTransitionLog instance
+        """
+        # Auto-detect trigger type if not provided
+        if trigger_type is None:
+            if 'Agent' in triggered_by:
+                trigger_type = cls.TriggerType.AGENT
+            elif triggered_by in ('system', 'auto_pipeline', 'auto_quality_check'):
+                trigger_type = cls.TriggerType.SYSTEM
+            elif 'celery' in triggered_by.lower() or 'task' in triggered_by.lower():
+                trigger_type = cls.TriggerType.CELERY
+            elif 'api' in triggered_by.lower():
+                trigger_type = cls.TriggerType.API
+            else:
+                trigger_type = cls.TriggerType.SYSTEM
+
+        # Get document info if available
+        document_id = None
+        document_word_count = None
+        if stage.document:
+            document_id = stage.document.id
+            document_word_count = stage.document.word_count
+
+        return cls.objects.create(
+            stage=stage,
+            from_status=from_status,
+            to_status=to_status,
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            quality_score=quality_score,
+            confidence_score=confidence_score,
+            document_id=document_id,
+            document_word_count=document_word_count,
+            checks_passed=checks_passed or {},
+            notes=notes or '',
+            had_error=had_error,
+            error_message=error_message or ''
+        )
+
+    @classmethod
+    def get_stage_history(cls, stage: 'InitiativeStage') -> models.QuerySet:
+        """Get all transitions for a stage in chronological order."""
+        return cls.objects.filter(stage=stage).order_by('timestamp')
+
+    @classmethod
+    def get_initiative_history(cls, initiative: 'Initiative') -> models.QuerySet:
+        """Get all transitions for an initiative across all stages."""
+        return cls.objects.filter(stage__initiative=initiative).order_by('timestamp')
 
 
 def create_initiative_from_deliverables(parent_topic: str) -> Initiative:
