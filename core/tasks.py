@@ -32347,7 +32347,7 @@ Stage {stage_num} ({config['template']}) should include:
 # Session 915: Backfill Stage Documents Task
 # =============================================================================
 
-@shared_task(bind=True)
+@shared_task(bind=True, queue='default')
 def backfill_stage_documents(self, stage_num: int = 1, limit: int = 50):
     """
     Session 915: Backfill missing stage documents for existing initiatives.
