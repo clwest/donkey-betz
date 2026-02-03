@@ -4,6 +4,7 @@ Stock Analyst Agent
 
 Session 461: Analyzes SEC filings, fundamentals, and valuations.
 Session 683: Added ML Integration (LSTM for price trend forecasting)
+Session 918: Added provenance tracking and structured JSON output.
 
 Equivalent to SmartContractAuditorAgent in the blockchain audit system.
 
@@ -13,14 +14,20 @@ Key capabilities:
 - Peer comparison
 - Risk assessment
 - ML-powered price trend forecasting (LSTM/Prophet) - Session 683
+- Provenance tracking with validation gates - Session 918
 """
 
 import json
 import logging
-from typing import Dict, Any
-from datetime import datetime, timedelta
+from typing import Dict, Any, List
+from datetime import datetime, timedelta, timezone
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+from core.agents.report_schemas import (
+    ReportProvenance, FinanceReportSchema, ScenarioAnalysis,
+    Claim, Recommendation, RiskFlag, SourceInfo,
+    build_provenance, format_disclaimer
+)
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -260,6 +267,9 @@ Alert on:
             logger.info(f"StockAnalystAgent executing with tools: {task[:100]}...")
 
         try:
+            # Session 918: Reset collected sources for provenance tracking
+            self._collected_sources = []
+
             # Session 736: Extract spider intelligence for real-time market data
             spider_intel = self._extract_spider_intelligence(spider_context)
             if spider_intel['has_data']:
@@ -356,11 +366,34 @@ Alert on:
                     ml_summary += f"- Trend Forecast: {ml_insights['ml_insights']}\n"
                 analysis += ml_summary
 
+            # Session 918: Build provenance from collected sources
+            collected_sources = getattr(self, '_collected_sources', [])
+            provenance = build_provenance(
+                report_type='stock_analysis',
+                agent_name=self.name,
+                sources=collected_sources,
+                stale_threshold_hours=24.0,  # Financial data can be a bit older
+            )
+            provenance.disclaimer = format_disclaimer('stock_analysis')
+
+            # Session 918: Build structured report
+            structured_report = self._build_structured_report(
+                ticker=ticker,
+                severity=severity,
+                analysis=analysis,
+                tool_calls_made=tool_calls_made,
+                ml_insights=ml_insights,
+                provenance=provenance,
+            )
+
+            # Session 918: Prepend provenance to analysis
+            analysis_with_provenance = provenance.to_markdown_block() + "\n" + analysis
+
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
             result = AgentResult(
                 success=True,
-                message=analysis,
+                message=analysis_with_provenance,
                 data={
                     'analysis': analysis,
                     'severity': severity,
@@ -368,11 +401,19 @@ Alert on:
                     'tool_calls': tool_calls_made,  # Session 761: Include tool calls
                     'collected_data': collected_data,
                     'ml_analysis': ml_insights,
+                    # Session 918: Include structured output
+                    'structured_report': structured_report.to_dict(),
+                    'provenance': provenance.to_dict(),
+                    'publishable': provenance.publishable,
+                    'validation_status': provenance.validation_status,
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time,
                 tool_calls=tool_calls_made  # Session 761: Add to result
             )
+
+            # Session 918: Clear collected sources for next run
+            self._collected_sources = []
 
             # Record learning outcome for collective intelligence
             try:
@@ -438,19 +479,32 @@ Alert on:
 
             return result
 
-    def _get_sec_filing_data(self, ticker: str) -> Dict[str, Any]:
-        """Fetch SEC filing data from spider network."""
+    def _get_sec_filing_data(self, ticker: str) -> tuple:
+        """
+        Fetch SEC filing data from spider network.
+
+        Session 918: Returns tuple of (data, source_info) for provenance.
+        """
+        source_info = {
+            'name': 'SECEdgarSpider',
+            'endpoint': 'sec.gov/edgar',
+            'retrieved_at': None,
+            'record_count': 0,
+        }
+
         try:
             from core.models_unified_system import SpiderData
-            from django.utils import timezone
+            from django.utils import timezone as dj_timezone
 
-            cutoff = timezone.now() - timedelta(days=7)
+            cutoff = dj_timezone.now() - timedelta(days=7)
             filings = SpiderData.objects.filter(
                 spider_name='sec_edgar',
                 created_at__gte=cutoff
             ).order_by('-created_at')[:10]
 
             results = []
+            latest_timestamp = None
+
             for filing in filings:
                 raw = filing.raw_data or {}
                 if ticker and ticker.upper() in str(raw).upper():
@@ -460,32 +514,54 @@ Alert on:
                         'filed_at': raw.get('filed_at', ''),
                         'url': raw.get('url', ''),
                     })
+                # Track latest data timestamp
+                if latest_timestamp is None or filing.created_at > latest_timestamp:
+                    latest_timestamp = filing.created_at
 
-            return {'filings': results, 'count': len(results)}
+            # Session 918: Update source info
+            if latest_timestamp:
+                source_info['retrieved_at'] = latest_timestamp.isoformat()
+            source_info['record_count'] = len(results)
+
+            return {'filings': results, 'count': len(results)}, source_info
 
         except Exception as e:
             logger.error(f"Error fetching SEC data: {e}")
-            return {'filings': [], 'count': 0, 'error': str(e)}
+            return {'filings': [], 'count': 0, 'error': str(e)}, source_info
 
-    def _get_fundamental_data(self, ticker: str) -> Dict[str, Any]:
-        """Fetch fundamental data from spider network."""
+    def _get_fundamental_data(self, ticker: str) -> tuple:
+        """
+        Fetch fundamental data from spider network.
+
+        Session 918: Returns tuple of (data, source_info) for provenance.
+        """
+        source_info = {
+            'name': 'YahooFinanceSpider',
+            'endpoint': 'yahoo.com/finance',
+            'retrieved_at': None,
+            'record_count': 0,
+        }
+
         try:
             from core.models_unified_system import SpiderData
-            from django.utils import timezone
+            from django.utils import timezone as dj_timezone
 
-            cutoff = timezone.now() - timedelta(days=1)
+            cutoff = dj_timezone.now() - timedelta(days=1)
             data = SpiderData.objects.filter(
                 spider_name='yahoo_finance',
                 created_at__gte=cutoff
             ).order_by('-created_at').first()
 
             if data and data.raw_data:
-                return data.raw_data
-            return {}
+                source_info['retrieved_at'] = data.created_at.isoformat()
+                source_info['record_count'] = 1
+                return data.raw_data, source_info
+
+            return {}, source_info
 
         except Exception as e:
             logger.error(f"Error fetching fundamental data: {e}")
-            return {'error': str(e)}
+            return {'error': str(e)}, source_info
 
     def _build_analysis_prompt(self, task: str, filing_data: Dict,
                                 fundamental_data: Dict, context: Dict,
@@ -558,6 +634,136 @@ Provide:
             return 'MEDIUM'
         else:
             return 'LOW'
+
+    # =========================================================================
+    # SESSION 918: STRUCTURED REPORT BUILDING
+    # =========================================================================
+
+    def _build_structured_report(
+        self,
+        ticker: str,
+        severity: str,
+        analysis: str,
+        tool_calls_made: List[Dict[str, Any]],
+        ml_insights: Dict[str, Any],
+        provenance: ReportProvenance,
+    ) -> FinanceReportSchema:
+        """
+        Session 918: Build structured report schema from analysis data.
+
+        Creates a JSON-serializable schema that can be used by downstream
+        agents, stored for auditing, or rendered in UIs.
+        """
+        report = FinanceReportSchema(provenance=provenance)
+
+        report.ticker = ticker
+        report.severity = severity
+        report.analysis_type = 'fundamental'
+
+        # Track tools executed
+        report.tools_executed = [tc.get('tool', '') for tc in tool_calls_made]
+
+        # Add ML analysis if available
+        if ml_insights.get('ml_used'):
+            report.ml_analysis = ml_insights
+
+        # Build qualitative scenarios (NOT fake probabilities)
+        report.scenarios = [
+            ScenarioAnalysis(
+                scenario_name='Bull',
+                description='Positive outcome assuming favorable conditions',
+                key_assumptions=[
+                    'Market conditions remain stable or improve',
+                    'No major negative catalysts emerge',
+                    'Company execution meets or exceeds expectations',
+                ],
+                potential_impact='Stock could outperform sector benchmarks',
+                risk_triggers=['Competitor disruption', 'Regulatory changes'],
+            ),
+            ScenarioAnalysis(
+                scenario_name='Base',
+                description='Most likely outcome given current information',
+                key_assumptions=[
+                    'Current trends continue',
+                    'No significant surprises',
+                    'Industry dynamics remain consistent',
+                ],
+                potential_impact='Performance in line with sector',
+                risk_triggers=['Macro economic shifts', 'Management changes'],
+            ),
+            ScenarioAnalysis(
+                scenario_name='Bear',
+                description='Negative outcome if risks materialize',
+                key_assumptions=[
+                    'Key risks identified in analysis materialize',
+                    'Market sentiment turns negative',
+                    'Execution challenges emerge',
+                ],
+                potential_impact='Stock could underperform significantly',
+                risk_triggers=['Already identified in analysis'],
+            ),
+        ]
+
+        # Time horizons considered
+        report.horizons = ['3M', '12M', '36M']
+
+        # Add blockers from analysis (if any tools couldn't get data)
+        for tc in tool_calls_made:
+            result = tc.get('result', {})
+            if isinstance(result, dict) and result.get('error'):
+                report.blockers.append({
+                    'blocker': f"Failed to execute {tc.get('tool', 'unknown')}",
+                    'owner': 'ResearchAgent',
+                    'data_needed': tc.get('tool', 'unknown'),
+                    'error': result.get('error'),
+                })
+
+        # Add risk flags based on severity
+        if severity == 'CRITICAL':
+            report.risk_flags.append(RiskFlag(
+                severity='critical',
+                description='Critical issues identified - immediate review required',
+                mitigation='Conduct deep-dive analysis before any action',
+            ))
+        elif severity == 'HIGH':
+            report.risk_flags.append(RiskFlag(
+                severity='high',
+                description='Significant concerns identified',
+                mitigation='Monitor closely and review quarterly',
+            ))
+
+        # Always add data freshness warning if not fully verified
+        if provenance.validation_status != 'verified':
+            report.risk_flags.append(RiskFlag(
+                severity='medium',
+                description=f'Data validation status: {provenance.validation_status}',
+                mitigation='Verify with current market data before acting',
+            ))
+
+        # Confidence based on data quality and tool success
+        successful_tools = sum(1 for tc in tool_calls_made if tc.get('result', {}).get('success', False))
+        total_tools = len(tool_calls_made) if tool_calls_made else 1
+
+        if provenance.validation_status == 'verified' and successful_tools == total_tools:
+            report.overall_confidence = 0.7
+            report.confidence_rationale = 'All data sources verified and tools executed successfully'
+        elif provenance.validation_status == 'partially_verified':
+            report.overall_confidence = 0.5
+            report.confidence_rationale = 'Some data approaching staleness threshold'
+        else:
+            report.overall_confidence = 0.4
+            report.confidence_rationale = 'Data freshness or tool execution issues detected'
+
+        # Decision drivers (what mainly influenced the conclusion)
+        report.decision_drivers = [
+            'SEC filing analysis',
+            'Fundamental metrics comparison',
+            'Risk factor assessment',
+        ]
+        if ml_insights.get('ml_used'):
+            report.decision_drivers.append('ML price trend forecasting')
+
+        return report
 
     # =========================================================================
     # SESSION 683: ML INTEGRATION - LSTM FOR PRICE TREND FORECASTING
@@ -669,6 +875,7 @@ Provide:
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Session 761: Execute tool calls for stock analysis.
+        Session 918: Updated to track source info for provenance.
 
         Tools: analyze_filing, check_valuation, compare_peers, assess_risk
         """
@@ -680,28 +887,36 @@ Provide:
 
         ticker = arguments.get('ticker', '')
 
+        # Session 918: Track sources for provenance
+        if not hasattr(self, '_collected_sources'):
+            self._collected_sources = []
+
         if tool_name == 'analyze_filing':
             filing_type = arguments.get('filing_type', '10-K')
             focus_areas = arguments.get('focus_areas', [])
-            filing_data = self._get_sec_filing_data(ticker)
+            filing_data, source_info = self._get_sec_filing_data(ticker)
+            self._collected_sources.append(source_info)
             return {
                 'success': True,
                 'ticker': ticker,
                 'filing_type': filing_type,
                 'focus_areas': focus_areas,
                 'filing_data': filing_data,
-                'analysis': f"SEC {filing_type} analysis for {ticker}"
+                'analysis': f"SEC {filing_type} analysis for {ticker}",
+                'source_info': source_info,  # Session 918
             }
 
         elif tool_name == 'check_valuation':
             metrics = arguments.get('metrics', ['P/E', 'P/B', 'EV/EBITDA'])
-            fundamental_data = self._get_fundamental_data(ticker)
+            fundamental_data, source_info = self._get_fundamental_data(ticker)
+            self._collected_sources.append(source_info)
             return {
                 'success': True,
                 'ticker': ticker,
                 'metrics': metrics,
                 'valuation_data': fundamental_data,
-                'analysis': f"Valuation analysis for {ticker} using {', '.join(metrics)}"
+                'analysis': f"Valuation analysis for {ticker} using {', '.join(metrics)}",
+                'source_info': source_info,  # Session 918
             }
 
         elif tool_name == 'compare_peers':
