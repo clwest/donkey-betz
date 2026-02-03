@@ -747,12 +747,14 @@ async def execute_agent_directly(agent_name: str, task: Dict[str, Any], user=Non
     Returns:
         Execution result
     """
-    return await concrete_executor.execute_agent(agent_name, task, user)
+    executor = get_concrete_executor()
+    return await executor.execute_agent(agent_name, task, user)
 
 
 def get_available_agents() -> List[Dict[str, Any]]:
     """Get list of available agents"""
-    return concrete_executor.list_available_agents()
+    executor = get_concrete_executor()
+    return executor.list_available_agents()
 
 
 # Import asyncio for async execution

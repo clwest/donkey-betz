@@ -23,19 +23,19 @@ from core.models.agents_registry import UnifiedAgentTemplate
 logger = logging.getLogger(__name__)
 
 # Lazy import concrete_executor to avoid circular dependency
-concrete_executor = None
+_executor_instance = None
 
-def get_concrete_executor():
+def get_executor():
     """Lazy import concrete_executor to avoid circular dependency"""
-    global concrete_executor
-    if concrete_executor is None:
+    global _executor_instance
+    if _executor_instance is None:
         try:
-            from ai_core.agents.concrete_executor import concrete_executor as ce
-            concrete_executor = ce
+            from ai_core.agents.concrete_executor import get_concrete_executor
+            _executor_instance = get_concrete_executor()
         except ImportError as e:
             logger.warning(f"Could not import concrete_executor: {e}")
-            concrete_executor = None
-    return concrete_executor
+            _executor_instance = None
+    return _executor_instance
 
 
 class ContentStudioAgentIntegration:
@@ -44,7 +44,7 @@ class ContentStudioAgentIntegration:
     """
 
     def __init__(self):
-        self.concrete_executor = get_concrete_executor()
+        self.concrete_executor = get_executor()
         self.content_agents = self._identify_content_agents() if self.concrete_executor else []
         self.active_bridges = {}
         logger.info(f"🎨 Initialized Content Studio Integration with {len(self.content_agents)} content-capable agents")

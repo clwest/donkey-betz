@@ -16,7 +16,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ai_core.agents.concrete_executor import concrete_executor, execute_agent_directly
+from ai_core.agents.concrete_executor import get_concrete_executor, execute_agent_directly
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def execute_agent_sync(request):
             return Response({
                 'success': False,
                 'error': 'agent_name is required',
-                'available_agents': concrete_executor.list_available_agents()
+                'available_agents': get_concrete_executor().list_available_agents()
             }, status=400)
 
         # Prepare task configuration
@@ -106,7 +106,7 @@ def list_executable_agents(request):
     Returns information about available agents and their capabilities.
     """
     try:
-        agents = concrete_executor.list_available_agents()
+        agents = get_concrete_executor().list_available_agents()
 
         return Response({
             'success': True,
@@ -138,7 +138,7 @@ def agent_execution_history(request):
     """
     try:
         limit = int(request.GET.get('limit', 10))
-        history = concrete_executor.get_execution_history(limit)
+        history = get_concrete_executor().get_execution_history(limit)
 
         return Response({
             'success': True,
