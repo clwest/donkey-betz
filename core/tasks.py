@@ -14183,7 +14183,7 @@ def calculate_agent_accuracy():
 # ==================== SESSION 466: AUTONOMOUS CONTENT STUDIO ====================
 
 
-@shared_task(name='autonomous_studio.run_main_loop')
+@shared_task
 def run_autonomous_content_studio():
     """
     Session 466: Main autonomous loop for the Content Studio.
@@ -14596,7 +14596,7 @@ Make it conversational and engaging. Use natural speech patterns."""
         return results
 
 
-@shared_task(name='autonomous_studio.track_performance')
+@shared_task
 def track_content_performance():
     """
     Session 466: Track performance of published content.
@@ -16698,7 +16698,7 @@ def run_blockchain_security_monitor():
         return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='autonomous.stock_market_intelligence')
+@shared_task
 def run_stock_market_intelligence():
     """
     [SESSION 477] Tier 1 Autonomous Situation: Stock Market Intelligence
