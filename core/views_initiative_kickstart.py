@@ -1283,3 +1283,116 @@ def _format_time_ago(timestamp, now):
     else:
         days = int(seconds / 86400)
         return f'{days}d ago'
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def diagnose_stuck_initiatives(request):
+    """
+    Session 921: Diagnose why initiatives are stuck and not auto-progressing.
+
+    Checks each DRAFT stage to identify exactly what's blocking progression:
+    - Missing document
+    - Document too short
+    - Missing required sections
+    - Founder intent not set
+    - Quality check failure
+
+    GET params:
+        limit: int - Max initiatives to check (default: 50)
+        stage: int - Only check specific stage (default: all)
+
+    Returns:
+        JSON with diagnostic breakdown
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.services.initiative_auto_progression import (
+        evaluate_stage_quality,
+        STAGE_QUALITY_THRESHOLDS,
+        get_daily_progression_stats
+    )
+
+    limit = int(request.GET.get('limit', 50))
+    stage_filter = request.GET.get('stage')
+
+    result = {
+        'generated_at': timezone.now().isoformat(),
+        'rate_limit_stats': get_daily_progression_stats(),
+        'summary': {
+            'total_checked': 0,
+            'no_document': 0,
+            'quality_failed': 0,
+            'founder_intent_missing': 0,
+            'ready_to_progress': 0,
+        },
+        'blocking_reasons': {},
+        'initiatives': [],
+    }
+
+    try:
+        # Get DRAFT stages
+        draft_filter = {'status': 'DRAFT', 'initiative__status': 'ACTIVE'}
+        if stage_filter:
+            draft_filter['stage'] = int(stage_filter)
+
+        draft_stages = InitiativeStage.objects.filter(
+            **draft_filter
+        ).select_related('initiative', 'document').order_by('initiative__name')[:limit]
+
+        for stage in draft_stages:
+            result['summary']['total_checked'] += 1
+            initiative = stage.initiative
+
+            diagnosis = {
+                'id': str(initiative.id),
+                'name': initiative.name[:60] + ('...' if len(initiative.name) > 60 else ''),
+                'stage': stage.stage,
+                'blockers': [],
+                'can_progress': True,
+            }
+
+            # Check 1: Founder intent
+            if not initiative.founder_intent_set:
+                diagnosis['blockers'].append('founder_intent_not_set')
+                diagnosis['can_progress'] = False
+                result['summary']['founder_intent_missing'] += 1
+
+            # Check 2: Document exists
+            if not stage.document:
+                diagnosis['blockers'].append('no_document')
+                diagnosis['can_progress'] = False
+                result['summary']['no_document'] += 1
+            else:
+                # Check 3: Quality evaluation
+                passes, confidence, reason = evaluate_stage_quality(stage)
+                diagnosis['quality_check'] = {
+                    'passes': passes,
+                    'confidence': f'{confidence:.0%}',
+                    'reason': reason,
+                }
+
+                if not passes or confidence < 0.6:
+                    diagnosis['blockers'].append(f'quality_check: {reason}')
+                    diagnosis['can_progress'] = False
+                    result['summary']['quality_failed'] += 1
+
+            # Track blocking reasons
+            for blocker in diagnosis['blockers']:
+                key = blocker.split(':')[0].strip()
+                result['blocking_reasons'][key] = result['blocking_reasons'].get(key, 0) + 1
+
+            if diagnosis['can_progress']:
+                result['summary']['ready_to_progress'] += 1
+
+            result['initiatives'].append(diagnosis)
+
+        # Sort by most common blocker
+        result['blocking_reasons'] = dict(
+            sorted(result['blocking_reasons'].items(), key=lambda x: x[1], reverse=True)
+        )
+
+    except Exception as e:
+        result['error'] = str(e)
+        logger.error(f"[diagnose_stuck] Error: {e}")
+
+    return Response(result)
