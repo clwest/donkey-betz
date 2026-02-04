@@ -953,3 +953,118 @@ def fix_initiative_titles(request):
         logger.error(f"[fix_titles_api] {result['message']}")
 
     return Response(result)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def reset_premature_completed(request):
+    """
+    Session 920: Reset prematurely-completed initiatives back to ACTIVE.
+
+    Finds initiatives marked as COMPLETED but with < 100% approved stages
+    and resets them to ACTIVE status.
+
+    Usage:
+        # Preview (GET or dry_run=true)
+        curl -X GET "https://donkey-betz-platform-production.up.railway.app/api/initiatives/reset-premature-completed/"
+
+        # Execute reset
+        curl -X POST "https://donkey-betz-platform-production.up.railway.app/api/initiatives/reset-premature-completed/" \\
+             -H "Content-Type: application/json" \\
+             -d '{"dry_run": false}'
+
+        # Reset with minimum threshold (only reset if < 60% approved)
+        curl -X POST "https://donkey-betz-platform-production.up.railway.app/api/initiatives/reset-premature-completed/" \\
+             -H "Content-Type: application/json" \\
+             -d '{"dry_run": false, "threshold": 60}'
+
+    POST/GET params:
+        dry_run: bool - Preview without resetting (default: True for safety)
+        threshold: int - Only reset if approved_percentage < threshold (default: 100)
+
+    Returns:
+        JSON with reset results
+    """
+    from core.models_document_registry import Initiative
+    from django.db import transaction
+
+    # Parse parameters
+    if request.method == 'GET':
+        dry_run = True
+        threshold = int(request.GET.get('threshold', 100))
+    else:
+        data = request.data if hasattr(request, 'data') else {}
+        dry_run = data.get('dry_run', True)
+        threshold = int(data.get('threshold', 100))
+
+    result = {
+        'dry_run': dry_run,
+        'threshold': threshold,
+        'premature_completed_found': 0,
+        'reset_count': 0,
+        'errors': 0,
+        'initiatives': [],
+        'message': '',
+    }
+
+    try:
+        # Find COMPLETED initiatives
+        completed_initiatives = Initiative.objects.filter(status='COMPLETED')
+        result['total_completed'] = completed_initiatives.count()
+
+        # Check each one for premature completion
+        premature = []
+        for init in completed_initiatives:
+            # Calculate approved percentage
+            stages = list(init.stages.all())
+            approved_count = sum(1 for s in stages if s.status == 'APPROVED')
+            approved_pct = int((approved_count / 5) * 100) if stages else 0
+
+            if approved_pct < threshold:
+                premature.append({
+                    'initiative': init,
+                    'approved_pct': approved_pct,
+                    'approved_count': approved_count,
+                    'stages_with_work': sum(1 for s in stages if s.status != 'PENDING'),
+                })
+
+        result['premature_completed_found'] = len(premature)
+
+        # Reset them
+        for item in premature:
+            init = item['initiative']
+            preview = {
+                'id': str(init.id),
+                'name': init.name[:60] + '...' if len(init.name) > 60 else init.name,
+                'approved_pct': item['approved_pct'],
+                'stages_with_work': item['stages_with_work'],
+                'status': 'will_reset' if not dry_run else 'would_reset',
+            }
+
+            if not dry_run:
+                try:
+                    with transaction.atomic():
+                        init.status = 'ACTIVE'
+                        init.save(update_fields=['status', 'updated_at'])
+                        result['reset_count'] += 1
+                        preview['status'] = 'reset_to_active'
+                except Exception as e:
+                    result['errors'] += 1
+                    preview['status'] = f'error: {str(e)}'
+                    logger.error(f"[reset_premature] Error resetting {init.id}: {e}")
+
+            result['initiatives'].append(preview)
+
+        if dry_run:
+            result['message'] = f"[DRY RUN] Found {len(premature)} prematurely-completed initiatives (< {threshold}% approved). POST with dry_run=false to reset."
+        else:
+            result['message'] = f"Reset {result['reset_count']} initiatives to ACTIVE ({result['errors']} errors)"
+
+        logger.info(f"[reset_premature] {result['message']}")
+
+    except Exception as e:
+        result['error'] = str(e)
+        result['message'] = f"Failed to reset initiatives: {e}"
+        logger.error(f"[reset_premature] {result['message']}")
+
+    return Response(result)
