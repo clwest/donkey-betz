@@ -1,7 +1,7 @@
 # Session 924: UI Enhancements & Pipeline Fixes
 
 **Date:** February 3, 2026
-**PRs:** #818, #819, #820
+**PRs:** #818, #819, #820, #821, #822
 
 ## Summary
 
@@ -70,6 +70,33 @@ Added TypeScript interfaces:
 - `RemediationStatus`, `RemediationTask`
 
 **File:** `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` (lines 645-855)
+
+### 5. HiveMind Tab Enhancement (PR #822)
+
+Enhanced `HiveMindSubTab` to display rich data from existing APIs:
+
+| Section | Before | After |
+|---------|--------|-------|
+| **System Status** | Not shown | Health banner with active agents, queue status |
+| **Agent Network** | Simple list | Category filters, top performers, execution counts |
+| **Advisors** | Simple list | Domain grouping, consultation counts, influence scores |
+| **Activity** | Not shown | Recent Activity preview (3 latest executions) |
+
+New features:
+- Category filter buttons for agent browsing
+- Top performers display (sorted by success rate)
+- Scrollable lists with pagination
+- Domain grouping for advisors
+
+Added TypeScript interfaces:
+- `AgentData`, `AdvisorData`
+
+APIs used:
+- `agentsApi.comprehensive()` - Full agent data with categories
+- `agentsApi.health()` - System status
+- `agentsApi.executionHistory(5)` - Recent executions
+
+**File:** `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` (lines 1116-1500)
 
 ## Test Results
 
