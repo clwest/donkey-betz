@@ -1,11 +1,11 @@
-# Session 925: Auto-Cleanup Stuck Executions + UI Enhancements
+# Session 925: Auto-Cleanup Stuck Executions + UI Enhancements + Experiment Fix
 
-**Date:** February 3, 2026
-**PRs:** #821, #822, #824
+**Date:** February 3-4, 2026
+**PRs:** #821, #822, #824, #825
 
 ## Summary
 
-Continued from Session 924. Enhanced HiveMind tab with rich data display, cleaned up 13 stuck agent executions in production, and implemented automatic cleanup task via Celery Beat.
+Continued from Session 924. Enhanced HiveMind tab with rich data display, cleaned up 13 stuck agent executions in production, implemented automatic cleanup task via Celery Beat, and fixed 211 experiments incorrectly marked as halted.
 
 ## Changes Made
 
@@ -104,6 +104,43 @@ The task (`core/tasks.py`) already existed since Session 835 but wasn't schedule
 - Marks executions stuck > 2 hours as `failed`
 - Logs cleanup activity with `🧹 [CLEANUP]` prefix
 
+### 4. Halted Experiments Data Fix (Production)
+
+**Problem:** Research report showed "Integrity anomaly causing auto-halts" with 442 experiments halted.
+
+**Investigation Results:**
+| Halt Reason | Count |
+|-------------|-------|
+| "Integrity anomaly detected in output logs" | 293 |
+| "Error rate 28.57% exceeded threshold 25.0%" | 149 |
+
+**Root Cause:** Mass halt events occurred at specific timestamps (Jan 23, Jan 25, Feb 4) where the monitoring system halted experiments that actually completed successfully afterward. The `is_halted` flag was never reset, creating data inconsistency.
+
+**Breakdown of 442 Halted Experiments:**
+| Status | Outcome | Count | Issue |
+|--------|---------|-------|-------|
+| success | pass | 211 | **DATA INCONSISTENCY** - should not be halted |
+| failure | fail | 209 | Legitimately failed |
+| partial | learn | 22 | Failed but learning extracted |
+
+**Fix Applied:**
+```python
+# Ran on production via railway run
+Experiment.objects.filter(
+    is_halted=True,
+    status='success',
+    outcome_classification='pass'
+).update(
+    is_halted=False,
+    halt_reason='Cleared by Session 925 - experiment actually succeeded'
+)
+# Result: 211 experiments unhalted
+```
+
+**After Fix:**
+- 211 successful experiments correctly marked as not halted
+- 231 legitimately failed experiments remain halted (209 fail + 22 learn)
+
 ## Files Modified
 
 | File | Changes |
@@ -131,5 +168,6 @@ print(f'Coverage: {with_docs}/{with_docs+without_docs} ({100*with_docs//(with_do
 ## Next Steps
 
 1. Monitor cleanup task logs after deployment
-2. Continue Stage 1 backfill if needed
+2. Continue Stage 1 backfill if needed (50/50 batch completed at 100% success)
 3. Start Stage 2-5 generation for initiatives with Stage 1 docs
+4. Consider adding logic to auto-unhalt experiments that succeed after being halted
