@@ -311,9 +311,23 @@ class ConceptForgeOrchestrator:
             # Update stage
             stage.agent_used = stage_config.agent_name
             stage.advisors_used = stage_config.persona_advisors
+
+            # Session 920: Add provenance header to stage output metadata
+            output_metadata = output.get('metadata', {})
+            quality_score = run.quality_score or 0.0
+            provenance_header = {
+                'generated_at': timezone.now().isoformat(),
+                'generated_at_local': timezone.localtime().strftime('%Y-%m-%d %H:%M %Z'),
+                'inputs_used': list(previous_outputs.keys()) + [f"source:{run.source_id}"],
+                'freshness_window': '72h',
+                'validation_status': 'validated' if output_metadata.get('is_valid') else 'unvalidated',
+                'publishable': quality_score >= 0.80,
+            }
+            output_metadata['provenance'] = provenance_header
+
             stage.complete(
                 output_text=output.get('text', ''),
-                output_metadata=output.get('metadata', {}),
+                output_metadata=output_metadata,
             )
 
             return True
@@ -322,6 +336,9 @@ class ConceptForgeOrchestrator:
             logger.exception(f"Stage {stage.stage_name} failed: {e}")
             stage.fail(str(e))
             return False
+
+    # Session 920: Invalid topic placeholders that indicate data quality issues
+    INVALID_TOPICS = {'target', 'unknown', 'none', 'untitled', '[learned]', 'n/a', ''}
 
     def _build_stage_inputs(
         self,
@@ -334,8 +351,23 @@ class ConceptForgeOrchestrator:
         # Get source content
         source_content = self._get_source_content(run)
 
+        # Session 920: Validate source_title is not a placeholder
+        source_title = run.source_title or ''
+        if source_title.lower().strip() in self.INVALID_TOPICS:
+            logger.warning(f"Invalid panel_topic detected: '{source_title}'")
+            # Attempt to auto-generate from source content if available
+            if source_content and len(source_content) > 20:
+                # Extract first line or first 50 chars as fallback title
+                first_line = source_content.split('\n')[0].strip()
+                source_title = first_line[:50] if len(first_line) > 50 else first_line
+                logger.info(f"Auto-generated topic from content: '{source_title}'")
+            else:
+                # Last resort: use domain + timestamp
+                source_title = f"{run.domain} Analysis - {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+                logger.info(f"Generated fallback topic: '{source_title}'")
+
         inputs = {
-            'source_title': run.source_title,
+            'source_title': source_title,
             'source_content': source_content,
             'domain': run.domain,
             'stage_name': stage.stage_name,

@@ -6601,9 +6601,10 @@ Guidelines:
 
             # Conclude the conversation
             if messages:
-                # Generate a conclusion with DecisionSummary (Session 786)
+                # Generate a conclusion with DecisionSummary (Session 786, 920)
                 try:
                     # Session 786: Require DecisionSummary format in conclusion
+                    # Session 920: Added Decision, Risk Assessment, Operating Constraints sections
                     conclusion_prompt = f"""Synthesize the discussion and produce a structured conclusion.
 
 Discussion between {initiator.name} and {responder.name} about {topic}:
@@ -6629,6 +6630,22 @@ Proposed Feature:
 Next Steps:
 1. [{initiator.name}: specific action]
 2. [{responder.name}: specific action]
+
+Decision:
+- Chosen Direction: [The recommended approach/path forward]
+- Rejected Options: [Alternatives considered but not chosen]
+
+Why Now: [Why this should be prioritized now vs later]
+
+Risk Assessment:
+- Biggest Risk: [Primary risk or concern]
+- Mitigation: [How to address the risk]
+
+Operating Constraints:
+- Delivery Cost: [Estimate: hours/days or "N/A" if unknown]
+- CAC Ceiling: [Max customer acquisition cost or "N/A"]
+- Legal Gating: [Any compliance requirements or "None"]
+- Staffing: [Required skills or "Current team sufficient"]
 
 OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
 
@@ -6688,7 +6705,7 @@ OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
                     # Session 359: Validate conclusion for mythology violations
                     conclusion = validate_agent_output("ConversationSynthesizer", conclusion)
 
-                    # Session 786: Ensure DecisionSummary is present, add placeholder if not
+                    # Session 786 + 920: Ensure DecisionSummary is present, add placeholder if not
                     if "=== DecisionSummary ===" not in conclusion:
                         logger.warning(f"💬 [CONVERSATIONS] Conclusion missing DecisionSummary, appending placeholder")
                         conclusion += f"""
@@ -6707,7 +6724,23 @@ Proposed Feature:
 
 Next Steps:
 1. {initiator.name}: Document key insights from this discussion
-2. {responder.name}: Validate recommendations against existing system capabilities"""
+2. {responder.name}: Validate recommendations against existing system capabilities
+
+Decision:
+- Chosen Direction: Continue research and validation before commitment
+- Rejected Options: Immediate implementation without further analysis
+
+Why Now: Topic emerged from recent agent conversation requiring attention
+
+Risk Assessment:
+- Biggest Risk: Incomplete understanding of requirements
+- Mitigation: Gather additional data and validate assumptions
+
+Operating Constraints:
+- Delivery Cost: Estimate: 2-4 hours for initial validation
+- CAC Ceiling: N/A
+- Legal Gating: None
+- Staffing: Current team sufficient"""
                 except Exception as e:
                     logger.warning(f"💬 [CONVERSATIONS] Conclusion generation failed: {e}")
                     conclusion = f"""Productive discussion about {topic}
@@ -6726,7 +6759,23 @@ Proposed Feature:
 
 Next Steps:
 1. {initiator.name}: Continue monitoring topic area
-2. {responder.name}: Apply insights to future tasks"""
+2. {responder.name}: Apply insights to future tasks
+
+Decision:
+- Chosen Direction: Continue monitoring and learning
+- Rejected Options: Premature action without sufficient context
+
+Why Now: Conversation triggered by system priority
+
+Risk Assessment:
+- Biggest Risk: Loss of insights without proper capture
+- Mitigation: Store in knowledge base for future reference
+
+Operating Constraints:
+- Delivery Cost: Estimate: minimal overhead
+- CAC Ceiling: N/A
+- Legal Gating: None
+- Staffing: Current team sufficient"""
 
                 # Session 786: Store conclusion as final message so API can extract DecisionSummary
                 # The API looks at ConversationMessage.content, not AgentConversation.conclusion
