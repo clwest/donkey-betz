@@ -32342,19 +32342,21 @@ Stage {stage_num} ({config['template']}) should include:
             raise ValueError("No suitable agent found")
 
         # Execute the agent
+        # Session 922: Fix - use router.route() not execute_agent() (which doesn't exist)
         from core.agent_router import AgentRouter
         router = AgentRouter()
 
-        result = router.execute_agent(
+        result = router.route(
             agent_name=agent_model.name,
-            query=prompt,
+            task=prompt,
             context={'initiative_id': str(initiative_id), 'stage': stage_num}
         )
 
-        if not result or not result.get('response'):
-            raise ValueError("Agent returned empty response")
+        # AgentResult has .success, .message, .data - not .get('response')
+        if not result or not result.success or not result.message:
+            raise ValueError(f"Agent returned empty response: {result.error if result else 'No result'}")
 
-        document_content = result.get('response', '')
+        document_content = result.message
 
         # Create the document (Session 906: Use SelfBlog, not Document)
         # Map stage to category
