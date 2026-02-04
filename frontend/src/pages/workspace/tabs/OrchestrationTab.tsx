@@ -67,12 +67,15 @@ interface ExecutionItem {
   id: string
   workflow_name?: string | null
   workflow_id?: string | null
+  name?: string | null  // Session 923: Task name/description
   status: string
   started_at?: string | null
   completed_at?: string | null
   current_step?: number | null
   total_steps?: number | null
   error_message?: string | null
+  task?: string | null  // Session 923: Full task for context
+  agent_name?: string | null  // Session 923: Agent name
 }
 
 export function OrchestrationTab() {
@@ -149,6 +152,7 @@ function MonitorSubTab() {
           const executionsData = await executionsRes.json()
           const rawExecutions = executionsData.data?.executions || []
           // Map to expected format
+          // Session 923: Added error_message and task to show in execution details modal
           executions = rawExecutions.map((e: any) => ({
             id: e.id,
             workflow_name: e.agent_name,
@@ -159,6 +163,8 @@ function MonitorSubTab() {
             current_step: 1,
             total_steps: 1,
             agent_name: e.agent_name,
+            error_message: e.error_message,  // Session 923: Wire up error message
+            task: e.task,  // Session 923: Full task for context
           }))
         }
 
@@ -1115,8 +1121,16 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
             <span className={cn('px-3 py-1 rounded-full text-sm capitalize', statusStyle.bg, statusStyle.color)}>
               {execution.status}
             </span>
-            <span className="text-gray-400">{execution.workflow_name || 'Workflow Execution'}</span>
+            <span className="text-gray-400">{execution.workflow_name || execution.agent_name || 'Workflow Execution'}</span>
           </div>
+
+          {/* Session 923: Show task context for debugging failures */}
+          {execution.task && (
+            <div className="bg-gray-800/50 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Task</p>
+              <p className="text-sm text-gray-300 line-clamp-4">{execution.task}</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
