@@ -1,26 +1,24 @@
-# Session 925 - Start Here
+# Session 926 - Start Here
 
-**Previous Session:** 924 (UI Enhancements & Pipeline Fixes)
+**Previous Session:** 925 (Auto-Cleanup Stuck Executions + UI Enhancements)
 **Date:** February 3, 2026
 **Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **329 INITIATIVES** | **PIPELINE: BACKFILLING** | **90%+ Success Rate**
 
 ---
 
-## Session 924 Summary: UI Enhancements Complete
+## Session 925 Summary: Auto-Cleanup + HiveMind Enhancement
 
 ### PRs Merged
 | PR | Description |
 |----|-------------|
-| #817 | ResearchAgent fix (Session 923) - explicit web_search prompt |
-| #818 | EditorAgent pipeline fix - replaced with ThinkingAgent/ContentWriterAgent |
-| #819 | Workflow modal enhancement - steps, executions, execute button |
-| #820 | Automation tab enhancement - workers, tasks, remediation details |
+| #821 | HiveMind tab enhancement - system health, category filters, top performers |
+| #822 | Workflow modal enhancement - steps, executions, execute button |
+| #824 | Auto-cleanup stuck executions - Celery Beat task every 30 min |
 
 ### Key Fixes
-1. **ResearchAgent:** 90%+ success rate (up from ~55%)
-2. **EditorAgent:** No more "No content provided" errors
-3. **Founder Intent:** 94 initiatives unblocked
-4. **UI:** Workflow modal and Automation tab now show rich data
+1. **HiveMind Tab:** Rich data display with agent categories, top performers, advisor domains
+2. **Stuck Executions:** Cleaned 13 stuck tasks in production, added automatic cleanup task
+3. **Celery Beat:** `cleanup-stuck-agent-executions` task now runs every 30 min (2hr threshold)
 
 ---
 
@@ -30,12 +28,12 @@
 |--------|-------|
 | Total Initiatives | 329 |
 | Stage 1 success rate | **90%+** |
-| Founder intent set | All active initiatives |
-| UI enhancements | Workflow modal + Automation tab |
+| Stuck execution cleanup | **Automated** (every 30 min) |
+| UI enhancements | HiveMind + Automation + Workflow tabs |
 
 ---
 
-## PRIORITY for Session 925
+## PRIORITY for Session 926
 
 ### 1. Check Backfill Status
 ```bash
@@ -61,14 +59,20 @@ stages = InitiativeStage.objects.filter(
 for stage in stages:
     try:
         result = generate_initiative_stage_document(str(stage.initiative.id), 1)
-        print('✅' if result.get('success') else '❌', stage.initiative.name[:40])
+        print('OK' if result.get('success') else 'XX', stage.initiative.name[:40])
     except Exception as e:
-        print('❌', stage.initiative.name[:40])
+        print('XX', stage.initiative.name[:40])
 "
 ```
 
 ### 3. Start Stage 2-5 Generation
 Once Stage 1 coverage is high, trigger remaining stages for initiatives with Stage 1 docs.
+
+### 4. Monitor Cleanup Task
+Verify auto-cleanup is working after deployment:
+```bash
+railway logs | grep "CLEANUP"
+```
 
 ---
 
@@ -76,7 +80,8 @@ Once Stage 1 coverage is high, trigger remaining stages for initiatives with Sta
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **924** | UI Enhancements + Pipeline Fixes | `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` |
+| **925** | Auto-Cleanup Stuck Executions + HiveMind Enhancement | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
+| 924 | UI Enhancements + Pipeline Fixes | `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` |
 | 923 | ResearchAgent Failure Investigation | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` |
 | 922 | Stage Generation Bug Fix + Backfill | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
 | 921 | Pipeline Health Monitoring | `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` |
@@ -89,6 +94,7 @@ Once Stage 1 coverage is high, trigger remaining stages for initiatives with Sta
 
 | Document | Purpose |
 |----------|---------|
+| `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` | Auto-cleanup + HiveMind enhancement |
 | `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` | UI + pipeline fixes |
 | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` | ResearchAgent root cause + fix |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
@@ -96,4 +102,4 @@ Once Stage 1 coverage is high, trigger remaining stages for initiatives with Sta
 
 ---
 
-**Session 924 Complete - ResearchAgent working at 90%+, UI enhanced with rich data display.**
+**Session 925 Complete - Automatic cleanup for stuck executions, HiveMind tab enhanced with rich data display.**
