@@ -1068,3 +1068,218 @@ def reset_premature_completed(request):
         logger.error(f"[reset_premature] {result['message']}")
 
     return Response(result)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pipeline_health(request):
+    """
+    Session 921: Real-time pipeline health monitoring.
+
+    Shows whether initiatives are actually making progress through the pipeline,
+    with recent activity, stale detection, and stage distribution.
+
+    GET params:
+        stale_hours: int - Hours without activity to consider stale (default: 48)
+        transition_limit: int - Max recent transitions to return (default: 50)
+
+    Returns:
+        JSON with pipeline health metrics
+    """
+    from core.models_document_registry import Initiative, InitiativeStage, StageTransitionLog
+    from django.db.models import Count, Max, Q, F
+    from django.db.models.functions import Now
+    from datetime import timedelta
+
+    stale_hours = int(request.GET.get('stale_hours', 48))
+    transition_limit = int(request.GET.get('transition_limit', 50))
+
+    now = timezone.now()
+    stale_threshold = now - timedelta(hours=stale_hours)
+    last_24h = now - timedelta(hours=24)
+    last_1h = now - timedelta(hours=1)
+
+    result = {
+        'generated_at': now.isoformat(),
+        'stale_threshold_hours': stale_hours,
+        'summary': {},
+        'recent_transitions': [],
+        'stale_initiatives': [],
+        'stage_distribution': {},
+        'hourly_activity': [],
+        'health_status': 'unknown',
+    }
+
+    try:
+        # === SUMMARY STATS ===
+        active_initiatives = Initiative.objects.filter(status='ACTIVE')
+        active_count = active_initiatives.count()
+
+        # Count initiatives that had transitions in last 24h
+        initiatives_with_recent_activity = StageTransitionLog.objects.filter(
+            timestamp__gte=last_24h,
+            stage__initiative__status='ACTIVE'
+        ).values('stage__initiative').distinct().count()
+
+        # Count transitions in last 24h and 1h
+        transitions_24h = StageTransitionLog.objects.filter(timestamp__gte=last_24h).count()
+        transitions_1h = StageTransitionLog.objects.filter(timestamp__gte=last_1h).count()
+
+        # Count approvals (actual progress) in last 24h
+        approvals_24h = StageTransitionLog.objects.filter(
+            timestamp__gte=last_24h,
+            to_status='APPROVED'
+        ).count()
+
+        result['summary'] = {
+            'active_count': active_count,
+            'moved_last_24h': initiatives_with_recent_activity,
+            'transitions_last_24h': transitions_24h,
+            'transitions_last_1h': transitions_1h,
+            'approvals_last_24h': approvals_24h,
+            'stale_count': 0,  # Will be calculated below
+            'blocked_count': InitiativeStage.objects.filter(
+                initiative__status='ACTIVE',
+                status='BLOCKED'
+            ).values('initiative').distinct().count(),
+        }
+
+        # === RECENT TRANSITIONS (the activity feed) ===
+        recent_logs = StageTransitionLog.objects.select_related(
+            'stage', 'stage__initiative'
+        ).order_by('-timestamp')[:transition_limit]
+
+        for log in recent_logs:
+            result['recent_transitions'].append({
+                'id': str(log.id),
+                'initiative_id': str(log.stage.initiative.id),
+                'initiative_name': log.stage.initiative.name[:60] + ('...' if len(log.stage.initiative.name) > 60 else ''),
+                'stage_number': log.stage.stage_number,
+                'from_status': log.from_status,
+                'to_status': log.to_status,
+                'timestamp': log.timestamp.isoformat(),
+                'time_ago': _format_time_ago(log.timestamp, now),
+                'triggered_by': log.triggered_by,
+                'trigger_type': log.trigger_type,
+                'quality_score': log.quality_score,
+                'had_error': log.had_error,
+            })
+
+        # === STALE INITIATIVES ===
+        # Find active initiatives with no recent transitions
+        # Get last activity time for each active initiative
+        initiative_last_activity = {}
+
+        # First, get all transition timestamps for active initiatives
+        active_ids = list(active_initiatives.values_list('id', flat=True)[:500])
+
+        for init_id in active_ids:
+            last_log = StageTransitionLog.objects.filter(
+                stage__initiative_id=init_id
+            ).order_by('-timestamp').first()
+
+            if last_log:
+                initiative_last_activity[init_id] = last_log.timestamp
+            else:
+                # No transitions logged - use initiative updated_at
+                init = Initiative.objects.get(id=init_id)
+                initiative_last_activity[init_id] = init.updated_at
+
+        # Find stale ones
+        stale_initiatives = []
+        for init_id, last_activity in initiative_last_activity.items():
+            if last_activity < stale_threshold:
+                init = Initiative.objects.get(id=init_id)
+                days_stale = (now - last_activity).total_seconds() / 86400
+                stale_initiatives.append({
+                    'id': str(init_id),
+                    'name': init.name[:60] + ('...' if len(init.name) > 60 else ''),
+                    'current_stage': init.current_stage,
+                    'last_activity': last_activity.isoformat(),
+                    'days_stale': round(days_stale, 1),
+                    'completion_pct': init.completion_percentage,
+                })
+
+        # Sort by most stale first
+        stale_initiatives.sort(key=lambda x: x['days_stale'], reverse=True)
+        result['stale_initiatives'] = stale_initiatives[:100]
+        result['summary']['stale_count'] = len(stale_initiatives)
+
+        # === STAGE DISTRIBUTION ===
+        # Count stages by status for each stage number
+        stage_dist = {}
+        for stage_num in range(1, 6):
+            stage_counts = InitiativeStage.objects.filter(
+                initiative__status='ACTIVE',
+                stage_number=stage_num
+            ).values('status').annotate(count=Count('id'))
+
+            stage_dist[f'stage_{stage_num}'] = {
+                item['status'].lower(): item['count']
+                for item in stage_counts
+            }
+
+        result['stage_distribution'] = stage_dist
+
+        # === HOURLY ACTIVITY (last 24 hours) ===
+        hourly = []
+        for hours_ago in range(24):
+            start = now - timedelta(hours=hours_ago + 1)
+            end = now - timedelta(hours=hours_ago)
+            count = StageTransitionLog.objects.filter(
+                timestamp__gte=start,
+                timestamp__lt=end
+            ).count()
+            hourly.append({
+                'hour': hours_ago,
+                'label': f'{hours_ago}h ago',
+                'transitions': count,
+            })
+        result['hourly_activity'] = hourly
+
+        # === HEALTH STATUS ===
+        # Determine overall pipeline health
+        if transitions_1h >= 3:
+            result['health_status'] = 'healthy'
+            result['health_message'] = f'Pipeline is active: {transitions_1h} transitions in last hour'
+        elif transitions_24h >= 10:
+            result['health_status'] = 'moderate'
+            result['health_message'] = f'Pipeline is moving: {transitions_24h} transitions in last 24h'
+        elif transitions_24h > 0:
+            result['health_status'] = 'slow'
+            result['health_message'] = f'Pipeline is slow: only {transitions_24h} transitions in last 24h'
+        else:
+            result['health_status'] = 'stalled'
+            result['health_message'] = 'Pipeline appears stalled: no transitions in 24h'
+
+        # Add stale warning
+        stale_pct = (len(stale_initiatives) / active_count * 100) if active_count > 0 else 0
+        if stale_pct > 50:
+            result['health_status'] = 'critical'
+            result['health_message'] = f'CRITICAL: {len(stale_initiatives)} initiatives ({stale_pct:.0f}%) have no activity in {stale_hours}+ hours'
+
+    except Exception as e:
+        result['error'] = str(e)
+        result['health_status'] = 'error'
+        result['health_message'] = f'Error fetching pipeline health: {e}'
+        logger.error(f"[pipeline_health] Error: {e}")
+
+    return Response(result)
+
+
+def _format_time_ago(timestamp, now):
+    """Format a timestamp as human-readable time ago."""
+    delta = now - timestamp
+    seconds = delta.total_seconds()
+
+    if seconds < 60:
+        return 'just now'
+    elif seconds < 3600:
+        mins = int(seconds / 60)
+        return f'{mins}m ago'
+    elif seconds < 86400:
+        hours = int(seconds / 3600)
+        return f'{hours}h ago'
+    else:
+        days = int(seconds / 86400)
+        return f'{days}d ago'

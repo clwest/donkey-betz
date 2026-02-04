@@ -2181,7 +2181,8 @@ export function InitiativesTab() {
   // Session 898: Track comprehensive modal separately for completed initiatives
   const [comprehensiveInitiativeId, setComprehensiveInitiativeId] = useState<string | null>(null)
   // Session 901: Tab-based navigation
-  const [activeTab, setActiveTab] = useState<'active' | 'portfolio' | 'archive' | 'stats'>('active')
+  // Session 921: Added 'health' tab for pipeline health monitoring
+  const [activeTab, setActiveTab] = useState<'active' | 'portfolio' | 'archive' | 'stats' | 'health'>('active')
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'stale' | 'blocked'>('all')
   // Session 901: Expanded program groups
   const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({})
@@ -2202,6 +2203,22 @@ export function InitiativesTab() {
       return res.data
     },
     refetchInterval: 30000, // Refresh every 30 seconds
+  })
+
+  // Session 921: Pipeline health monitoring - real-time progress visibility
+  const {
+    data: pipelineHealth,
+    isLoading: healthLoading,
+    refetch: refetchHealth,
+  } = useQuery({
+    queryKey: ['pipeline-health'],
+    queryFn: async () => {
+      const res = await fetch('/api/initiatives/pipeline-health/')
+      if (!res.ok) throw new Error('Failed to fetch pipeline health')
+      return res.json()
+    },
+    refetchInterval: 15000, // Refresh every 15 seconds for real-time feel
+    enabled: activeTab === 'health', // Only fetch when on health tab
   })
 
   const populateMutation = useMutation({
@@ -2343,9 +2360,33 @@ export function InitiativesTab() {
             <BarChart3 size={16} />
             Stats
           </button>
+          {/* Session 921: Pipeline Health tab */}
+          <button
+            onClick={() => setActiveTab('health')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+              activeTab === 'health'
+                ? 'bg-cyan-500/20 text-cyan-400'
+                : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
+            )}
+          >
+            <Radio size={16} className={pipelineHealth?.health_status === 'healthy' ? 'animate-pulse' : ''} />
+            Health
+            {pipelineHealth?.health_status && (
+              <span className={cn(
+                'w-2 h-2 rounded-full',
+                pipelineHealth.health_status === 'healthy' ? 'bg-green-400' :
+                pipelineHealth.health_status === 'moderate' ? 'bg-yellow-400' :
+                pipelineHealth.health_status === 'slow' ? 'bg-orange-400' :
+                pipelineHealth.health_status === 'stalled' ? 'bg-red-400' :
+                pipelineHealth.health_status === 'critical' ? 'bg-red-500 animate-pulse' :
+                'bg-gray-400'
+              )} />
+            )}
+          </button>
         </div>
         <button
-          onClick={() => refetch()}
+          onClick={() => activeTab === 'health' ? refetchHealth() : refetch()}
           className="btn btn-ghost p-2"
           title="Refresh"
         >
@@ -2733,7 +2774,254 @@ export function InitiativesTab() {
         </div>
       )}
 
-      {filteredInitiatives.length === 0 && activeTab !== 'stats' && activeTab !== 'archive' && (
+      {/* Session 921: Pipeline Health Tab - Real-time progress monitoring */}
+      {activeTab === 'health' && (
+        <div className="space-y-6">
+          {healthLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary-400" />
+            </div>
+          ) : pipelineHealth ? (
+            <>
+              {/* Health Status Banner */}
+              <div className={cn(
+                'p-4 rounded-lg border flex items-center justify-between',
+                pipelineHealth.health_status === 'healthy' ? 'bg-green-500/10 border-green-500/30' :
+                pipelineHealth.health_status === 'moderate' ? 'bg-yellow-500/10 border-yellow-500/30' :
+                pipelineHealth.health_status === 'slow' ? 'bg-orange-500/10 border-orange-500/30' :
+                pipelineHealth.health_status === 'stalled' ? 'bg-red-500/10 border-red-500/30' :
+                pipelineHealth.health_status === 'critical' ? 'bg-red-500/20 border-red-500/50' :
+                'bg-dark-card border-dark-border'
+              )}>
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    'w-3 h-3 rounded-full',
+                    pipelineHealth.health_status === 'healthy' ? 'bg-green-400 animate-pulse' :
+                    pipelineHealth.health_status === 'moderate' ? 'bg-yellow-400' :
+                    pipelineHealth.health_status === 'slow' ? 'bg-orange-400' :
+                    pipelineHealth.health_status === 'stalled' ? 'bg-red-400' :
+                    pipelineHealth.health_status === 'critical' ? 'bg-red-500 animate-pulse' :
+                    'bg-gray-400'
+                  )} />
+                  <div>
+                    <div className="font-medium capitalize">{pipelineHealth.health_status}</div>
+                    <div className="text-sm text-gray-400">{pipelineHealth.health_message}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => refetchHealth()}
+                  className="btn btn-ghost p-2"
+                  title="Refresh"
+                >
+                  <RefreshCw size={16} />
+                </button>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <div className="text-gray-400 text-sm mb-1">Active Initiatives</div>
+                  <div className="text-2xl font-bold text-primary-400">{pipelineHealth.summary?.active_count || 0}</div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <div className="text-gray-400 text-sm mb-1">Moved (24h)</div>
+                  <div className="text-2xl font-bold text-green-400">{pipelineHealth.summary?.moved_last_24h || 0}</div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <div className="text-gray-400 text-sm mb-1">Transitions (1h)</div>
+                  <div className="text-2xl font-bold text-blue-400">{pipelineHealth.summary?.transitions_last_1h || 0}</div>
+                </div>
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <div className="text-gray-400 text-sm mb-1">Stale ({pipelineHealth.stale_threshold_hours}h+)</div>
+                  <div className={cn(
+                    'text-2xl font-bold',
+                    (pipelineHealth.summary?.stale_count || 0) > 0 ? 'text-yellow-400' : 'text-gray-500'
+                  )}>{pipelineHealth.summary?.stale_count || 0}</div>
+                </div>
+              </div>
+
+              {/* Hourly Activity Chart */}
+              {pipelineHealth.hourly_activity && pipelineHealth.hourly_activity.length > 0 && (
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-400 mb-4">Activity (Last 24 Hours)</h3>
+                  <div className="flex items-end gap-1 h-24">
+                    {pipelineHealth.hourly_activity.slice(0, 24).reverse().map((hour: { hour: number; transitions: number }, idx: number) => {
+                      const maxTransitions = Math.max(...pipelineHealth.hourly_activity.map((h: { transitions: number }) => h.transitions), 1)
+                      const height = (hour.transitions / maxTransitions) * 100
+                      return (
+                        <div
+                          key={idx}
+                          className="flex-1 bg-primary-500/30 hover:bg-primary-500/50 rounded-t transition-colors cursor-pointer group relative"
+                          style={{ height: `${Math.max(height, 4)}%` }}
+                          title={`${24 - idx}h ago: ${hour.transitions} transitions`}
+                        >
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs whitespace-nowrap z-10">
+                            {24 - idx}h ago: {hour.transitions}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>24h ago</span>
+                    <span>Now</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Stage Distribution */}
+              {pipelineHealth.stage_distribution && (
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-400 mb-4">Stage Distribution</h3>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    {[1, 2, 3, 4, 5].map((stageNum) => {
+                      const stageDist = pipelineHealth.stage_distribution[`stage_${stageNum}`] || {}
+                      const total = Object.values(stageDist).reduce((sum: number, n) => sum + (n as number), 0) as number
+                      return (
+                        <div key={stageNum} className="bg-dark-bg rounded-lg p-3">
+                          <div className="text-xs text-gray-500 mb-2">Stage {stageNum}</div>
+                          <div className="text-lg font-bold text-white mb-2">{total}</div>
+                          <div className="space-y-1 text-xs">
+                            {stageDist.approved && (
+                              <div className="flex justify-between">
+                                <span className="text-green-400">Approved</span>
+                                <span>{stageDist.approved}</span>
+                              </div>
+                            )}
+                            {stageDist.in_review && (
+                              <div className="flex justify-between">
+                                <span className="text-blue-400">In Review</span>
+                                <span>{stageDist.in_review}</span>
+                              </div>
+                            )}
+                            {stageDist.draft && (
+                              <div className="flex justify-between">
+                                <span className="text-yellow-400">Draft</span>
+                                <span>{stageDist.draft}</span>
+                              </div>
+                            )}
+                            {stageDist.pending && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Pending</span>
+                                <span>{stageDist.pending}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Activity Feed */}
+              <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
+                  <Radio size={14} className="text-green-400 animate-pulse" />
+                  Live Activity Feed
+                </h3>
+                {pipelineHealth.recent_transitions && pipelineHealth.recent_transitions.length > 0 ? (
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {pipelineHealth.recent_transitions.map((transition: {
+                      id: string
+                      initiative_name: string
+                      stage_number: number
+                      from_status: string
+                      to_status: string
+                      time_ago: string
+                      triggered_by: string
+                      quality_score?: number
+                      had_error: boolean
+                    }) => (
+                      <div
+                        key={transition.id}
+                        className={cn(
+                          'flex items-center gap-3 p-2 rounded-lg transition-colors',
+                          transition.had_error ? 'bg-red-500/10' : 'bg-dark-bg hover:bg-dark-border/50'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium',
+                          transition.to_status === 'APPROVED' ? 'bg-green-500/20 text-green-400' :
+                          transition.to_status === 'IN_REVIEW' ? 'bg-blue-500/20 text-blue-400' :
+                          transition.to_status === 'DRAFT' ? 'bg-yellow-500/20 text-yellow-400' :
+                          transition.to_status === 'REJECTED' ? 'bg-red-500/20 text-red-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        )}>
+                          S{transition.stage_number}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-white truncate">{transition.initiative_name}</div>
+                          <div className="text-xs text-gray-400">
+                            <span className="text-gray-500">{transition.from_status}</span>
+                            <span className="mx-1">→</span>
+                            <span className={cn(
+                              transition.to_status === 'APPROVED' ? 'text-green-400' :
+                              transition.to_status === 'IN_REVIEW' ? 'text-blue-400' :
+                              transition.to_status === 'DRAFT' ? 'text-yellow-400' :
+                              transition.to_status === 'REJECTED' ? 'text-red-400' :
+                              'text-gray-400'
+                            )}>{transition.to_status}</span>
+                            {transition.quality_score && (
+                              <span className="ml-2 text-primary-400">Q: {(transition.quality_score * 100).toFixed(0)}%</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">{transition.time_ago}</div>
+                          <div className="text-xs text-gray-600 truncate max-w-[100px]">{transition.triggered_by}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No recent transitions recorded
+                  </div>
+                )}
+              </div>
+
+              {/* Stale Initiatives Warning */}
+              {pipelineHealth.stale_initiatives && pipelineHealth.stale_initiatives.length > 0 && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-yellow-400 mb-4 flex items-center gap-2">
+                    <AlertTriangle size={14} />
+                    Stale Initiatives ({pipelineHealth.stale_initiatives.length})
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {pipelineHealth.stale_initiatives.slice(0, 20).map((init: {
+                      id: string
+                      name: string
+                      current_stage: number
+                      days_stale: number
+                      completion_pct: number
+                    }) => (
+                      <div key={init.id} className="flex items-center justify-between p-2 bg-dark-bg rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-xs">
+                            S{init.current_stage}
+                          </div>
+                          <span className="text-sm text-white truncate max-w-[300px]">{init.name}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-gray-400">{init.completion_pct}%</span>
+                          <span className="text-yellow-400">{init.days_stale}d stale</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12 text-gray-400">
+              Failed to load pipeline health data
+            </div>
+          )}
+        </div>
+      )}
+
+      {filteredInitiatives.length === 0 && activeTab !== 'stats' && activeTab !== 'archive' && activeTab !== 'health' && (
         <div className="text-center py-8 text-gray-400">
           No initiatives match the selected filter
         </div>
