@@ -1,66 +1,53 @@
-# Session 921 - Start Here
+# Session 922 - Start Here
 
-**Previous Session:** 920 (Panel/Advisor System Improvements)
+**Previous Session:** 921 (Pipeline Health Monitoring)
 **Date:** February 3, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **204 INITIATIVES** | **PANEL OUTPUT QUALITY: ENHANCED** | **EXPERIMENT COLLISION CONTROL: ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **305 INITIATIVES** | **PIPELINE HEALTH: ACTIVE** | **564 Transition Logs**
 
 ---
 
-## Session 920 Complete: Panel/Advisor System Improvements
+## Session 921 Complete: Pipeline Health Monitoring
 
-Implemented 7 improvements to panel/advisor output quality based on ChatGPT feedback analysis.
+Implemented real-time Pipeline Health monitoring to prove initiatives are actually moving through the ConceptForge pipeline.
 
 ### What Was Implemented
 
 | Feature | File | Description |
 |---------|------|-------------|
-| Dedupe Post-Processor | `deduplication_service.py` | Hash-based removal of repeated DecisionSummary blocks |
-| Provenance Headers | `orchestrator.py` | Track generated_at, inputs_used, freshness_window, publishable |
-| Placeholder Validation | `orchestrator.py` | Detect invalid topics ("target", "[learned]") and auto-generate valid ones |
-| Extended DecisionSummary | `conversation_roles.py` | New Decision, Why Now, Risk Assessment, Operating Constraints sections |
-| Enhanced Validation | `conversation_roles.py` | Require has_decision and has_risk for validity |
-| Estimate Labeling | `conversation_roles.py` | Validate numeric estimates are cited or labeled |
-| Experiment Collision | `experiment_collision_service.py` | **NEW** - Prevent A/B test collisions |
+| Reset Premature Completed | `views_initiative_kickstart.py` | Reset 29 initiatives stuck at COMPLETED with 0% approved |
+| Pipeline Health API | `views_initiative_kickstart.py` | Real-time health endpoint with transitions, stale detection |
+| Health Tab UI | `InitiativesTab.tsx` | New tab with live feed, activity chart, stale warnings |
 
-**PR:** #804
+**PRs:** #807 (Reset), #808 (Health Monitoring)
 
-### DecisionSummary New Required Fields
-
-```
-Decision:
-- Chosen Direction: [The recommended approach]
-- Rejected Options: [Alternatives not chosen]
-
-Why Now: [Priority reasoning]
-
-Risk Assessment:
-- Biggest Risk: [Primary risk]
-- Mitigation: [How to address]
-
-Operating Constraints:
-- Delivery Cost: [Estimate or "N/A"]
-- CAC Ceiling: [Max cost or "N/A"]
-- Legal Gating: [Requirements or "None"]
-- Staffing: [Skills or "Current team sufficient"]
-```
-
-### New Services
+### Pipeline Health API
 
 ```python
-# Dedupe repeated DecisionSummary blocks
-from core.services.deduplication_service import get_deduplication_service
-service = get_deduplication_service()
-deduped_text, was_deduped = service.dedupe_decision_summary_blocks(raw_text)
-
-# Check experiment collisions
-from core.services.experiment_collision_service import get_experiment_collision_service
-service = get_experiment_collision_service()
-result = service.check_collision('a/b_test', 'pricing_page', planned_duration_days=14)
-
-# Validate estimates are cited or labeled
-from core.conversation_roles import validate_estimates
-result = validate_estimates(summary_text)
+# GET /api/initiatives/pipeline-health/
+# Returns:
+{
+    "health_status": "healthy",  # healthy/moderate/slow/stalled/critical
+    "health_message": "Pipeline is active: 3 transitions in last hour",
+    "summary": {
+        "active_count": 305,
+        "moved_last_24h": 12,
+        "transitions_last_24h": 564,
+        "stale_count": 47
+    },
+    "recent_transitions": [...],  # Last 50 stage transitions
+    "stage_distribution": {...},   # Count by status per stage
+    "hourly_activity": [...]       # Transitions per hour (24h)
+}
 ```
+
+### Production Data Verified
+
+| Metric | Value |
+|--------|-------|
+| StageTransitionLog entries | 564 |
+| Transitions in last 24h | 564 |
+| Most recent transition | 2h ago (DRAFT → APPROVED) |
+| Pipeline Status | **HEALTHY** |
 
 ---
 
@@ -68,51 +55,39 @@ result = validate_estimates(summary_text)
 
 | Metric | Value |
 |--------|-------|
-| Total Initiatives | 204 |
-| Services | 131 (+1 ExperimentCollisionService) |
-| DecisionSummary Fields | 8 (was 5) |
-| Estimate Validation | Active |
-| Experiment Collision Control | Active |
+| Total Initiatives | 305 (was 204, reset 29 + new) |
+| Active Initiatives | 305 |
+| Completed | 0 (reset to ACTIVE) |
+| Services | 131 |
+| Transition Logs | 564 |
 
 ---
 
-## NEXT PRIORITIES for Session 921+
+## NEXT PRIORITIES for Session 922+
 
-### 1. Integrate Dedupe into Pipeline
-Call `dedupe_decision_summary_blocks()` before `extract_decision_summary()` in production:
+### 1. Investigate Stale Initiatives
+~47 initiatives have no activity in 48+ hours. Check why:
 ```python
-# In core/conversation_roles.py or where summaries are processed
+# Use the Health tab to view stale initiatives
+# Or query directly:
+from core.models_document_registry import Initiative, StageTransitionLog
+# See which stages are stuck
+```
+
+### 2. Integrate Dedupe into Pipeline (from 920)
+```python
 from core.services.deduplication_service import get_deduplication_service
 dedup = get_deduplication_service()
 clean_text, _ = dedup.dedupe_decision_summary_blocks(raw_output)
-summary = extract_decision_summary(clean_text)
 ```
 
-### 2. Integrate Estimate Validation into Content Pipeline
-Add estimate validation warnings to content generation:
-```python
-from core.conversation_roles import validate_estimates
-result = validate_estimates(content)
-if not result['all_valid']:
-    logger.warning(f"Unlabeled estimates found: {result['invalid_estimates']}")
-```
+### 3. Add Pipeline Health Alerts
+Notify when health_status goes to stalled/critical:
+- Slack/Discord webhook
+- Or daily health report
 
-### 3. Add Collision Check to ConceptForge
-Before starting A/B test experiments:
-```python
-from core.services.experiment_collision_service import get_experiment_collision_service
-service = get_experiment_collision_service()
-check = service.check_collision('a/b_test', target_page)
-if check['has_collision']:
-    logger.warning(check['recommendation'])
-```
-
-### 4. Monitor DecisionSummary Validation Rates
-Track how many summaries pass the new stricter validation:
-```python
-from core.conversation_roles import extract_decision_summary, validate_decision_summary
-# Check rejection reasons in validate_decision_summary() output
-```
+### 4. Track Stage Time Metrics
+Add average time per stage to understand bottlenecks.
 
 ---
 
@@ -120,10 +95,10 @@ from core.conversation_roles import extract_decision_summary, validate_decision_
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **920** | Panel/Advisor System Improvements | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
+| **921** | Pipeline Health Monitoring | `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` |
+| 920 | Panel/Advisor System Improvements | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
 | 918 | Report Provenance + PDF Export | `docs/handoffs/SESSION_918_REPORT_PROVENANCE.md` |
 | 916 | Hard Invariants - StageTransitionLog | `docs/handoffs/SESSION_916_HARD_INVARIANTS.md` |
-| 915 | Stage Document Backfill Pipeline | `docs/handoffs/SESSION_915_STAGE_DOCUMENT_BACKFILL.md` |
 | 904 | Initiative UI Overhaul | `docs/handoffs/SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
 
 ---
@@ -139,7 +114,8 @@ from core.conversation_roles import extract_decision_summary, validate_decision_
 | Database Models | 387+ |
 | Celery Tasks | 262 |
 | Services | 131 |
-| **Initiatives** | **204** |
+| **Initiatives** | **305** |
+| **Transition Logs** | **564** |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
@@ -149,11 +125,11 @@ from core.conversation_roles import extract_decision_summary, validate_decision_
 
 | Document | Purpose |
 |----------|---------|
+| `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` | Health monitoring implementation |
 | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` | Panel quality improvements |
-| `docs/handoffs/SESSION_918_REPORT_PROVENANCE.md` | Provenance + PDF implementation |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 920 Complete - Panel Outputs Are Now Higher Quality and Validated!**
+**Session 921 Complete - Pipeline Health is Now Visible! Check the Health tab to see real activity.**
