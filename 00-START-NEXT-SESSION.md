@@ -1,33 +1,36 @@
-# Session 923 - Start Here
+# Session 924 - Start Here
 
-**Previous Session:** 922 (Stage Generation Bug Fix + Backfill)
+**Previous Session:** 923 (ResearchAgent Failure Investigation)
 **Date:** February 3, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **322 INITIATIVES** | **106 Stage 1 Docs (32%)** | **PIPELINE: RECOVERING**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **329 INITIATIVES** | **115+ Stage 1 Docs (34%+)** | **PIPELINE: BACKFILLING**
 
 ---
 
-## Session 922 Complete: Stage Generation Fixed + 98 Documents Created
+## Session 924 In Progress: Fix Verified, Backfill Running
 
-Found and fixed the ROOT CAUSE of stuck initiatives, then ran backfill to create 98 new Stage 1 documents.
+PR #817 merged and tested. Success rate improved from ~55% to **90%**.
 
-### What Was Fixed
+### Test Results
 
-| Fix | PR | Description |
-|-----|-----|-------------|
-| Stage Gen Method | #812 | `router.execute_agent()` → `router.route()` (method didn't exist!) |
-| Backfill Endpoint | #811 | Added `/api/initiatives/trigger-backfill/` |
-| Name Detection | #814 | Detect incomplete names and enhance prompts with description context |
+| Metric | Before Fix | After Fix |
+|--------|------------|-----------|
+| Success Rate | ~55% | **90%** |
+| Stage 1 Coverage | 106/322 (32%) | 115+/329 (34%+) |
+| Test Batch | N/A | 9/10 success |
 
-### Backfill Results
+### Session 923 Fixes (PR #817 - MERGED)
 
-| Metric | Start | End | Change |
-|--------|-------|-----|--------|
-| Stage 1 WITH documents | 8 | **106** | **+98** |
-| Document coverage | 4% | **32%** | +28% |
+| Fix | Description |
+|-----|-------------|
+| Stage 1 Prompt | Explicit "use web_search, NOT query_internal_data" instructions |
+| Initiative Filter | Fixed `blocked` → `status='BLOCKED'` (field didn't exist) |
+| Research Topic Logging | Added logging to track what topics are being researched |
 
-### Remaining Issue: ResearchAgent Failures
+### Root Cause (Session 923)
 
-~45% of backfill attempts still fail with "Research returned no results". This happens even with good initiative names. **There's a UI section for failed agents that isn't connected yet.**
+1. **Prompt Mismatch**: ResearchAgent says "do NOT create content" but old prompt said "Generate a document"
+2. **Keyword Trigger**: Word "initiative" triggered `query_internal_data` instead of `web_search`
+3. **Model Field Error**: `Initiative.filter(blocked=True)` failed - field doesn't exist
 
 ---
 
@@ -35,53 +38,37 @@ Found and fixed the ROOT CAUSE of stuck initiatives, then ran backfill to create
 
 | Metric | Value |
 |--------|-------|
-| Total Initiatives | 322 |
-| Stage 1 with documents | 106 (32%) |
-| Stage 1 without docs | 216 (need investigation) |
-| Backfill success rate | ~55% |
+| Total Initiatives | 329 |
+| Stage 1 with documents | 115+ (34%+) |
+| Stage 1 without docs | ~214 (backfill running) |
+| New success rate | **90%** |
 
 ---
 
-## PRIORITY for Session 923: Investigate ResearchAgent Failures
+## PRIORITY for Session 924: Complete Backfill
 
-### 1. Connect Failed Agents UI
-There's an existing UI section for showing agent failures that isn't wired up. Connect it to show:
-- Which agents are failing
-- Error messages
-- Initiative context
-
-### 2. Debug ResearchAgent "No Results"
-The error `"Research returned no results"` comes from ResearchAgent. Investigate:
-```python
-# Check the error source in ResearchAgent
-# Look at core/agents/research_agent.py
-# The agent's internal data query is failing
-```
-
-### 3. Continue Backfill (after fixing)
-Once failure rate drops, continue backfilling the remaining 216 initiatives.
-
----
-
-## How to Run Backfill
+### Backfill Status: RUNNING
+50-initiative batch currently processing. Check progress:
 
 ```bash
-# Check current state
+# Check coverage
 railway run python manage.py shell -c "
 from core.models_document_registry import InitiativeStage
 with_docs = InitiativeStage.objects.filter(stage=1, document__isnull=False, initiative__status='ACTIVE').count()
 without_docs = InitiativeStage.objects.filter(stage=1, document__isnull=True, initiative__status='ACTIVE').count()
 print(f'Coverage: {with_docs}/{with_docs+without_docs} ({100*with_docs//(with_docs+without_docs)}%)')
 "
+```
 
-# Run batch (currently ~55% success rate)
+### Continue Backfill (if needed)
+```bash
 railway run python manage.py shell -c "
 from core.models_document_registry import InitiativeStage
 from core.tasks import generate_initiative_stage_document
 
 stages = InitiativeStage.objects.filter(
     status='DRAFT', stage=1, initiative__status='ACTIVE', document__isnull=True
-).select_related('initiative')[:20]
+).select_related('initiative')[:50]
 
 for stage in stages:
     try:
@@ -98,41 +85,23 @@ for stage in stages:
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **922** | Stage Generation Bug Fix + Backfill | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
+| **923** | ResearchAgent Failure Investigation | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` |
+| 922 | Stage Generation Bug Fix + Backfill | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
 | 921 | Pipeline Health Monitoring | `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` |
 | 920 | Panel/Advisor System Improvements | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
 | 918 | Report Provenance + PDF Export | `docs/handoffs/SESSION_918_REPORT_PROVENANCE.md` |
-| 916 | Hard Invariants - StageTransitionLog | `docs/handoffs/SESSION_916_HARD_INVARIANTS.md` |
-
----
-
-## System Stats
-
-| Component | Count |
-|-----------|-------|
-| Agents | 76 |
-| Spiders | 77 |
-| Advisors | 25 |
-| Personas | 139 |
-| Database Models | 387+ |
-| Celery Tasks | 262 |
-| Services | 131 |
-| **Initiatives** | **322** |
-| **Stage 1 Docs** | **106 (32%)** |
-| SignalClusters | 22 |
-| AutoTopics | 10 |
 
 ---
 
 ## Key Documentation
 
 | Document | Purpose |
-|----------|---------|
+|----------|------------|
+| `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` | ResearchAgent root cause + fix |
 | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` | Stage generation bug fix + backfill |
-| `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` | Health monitoring implementation |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 922 Complete - 98 new documents created! Next: Investigate ResearchAgent failures and connect the Failed Agents UI.**
+**Session 923 Complete - Root cause found! PR #817 fixes the prompt mismatch and Initiative filter error. Next: Merge and test.**
