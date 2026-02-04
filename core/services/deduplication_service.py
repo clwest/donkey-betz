@@ -370,6 +370,69 @@ class DeduplicationService:
 
         return result
 
+    # ==================== DECISION SUMMARY DEDUPLICATION ====================
+
+    def dedupe_decision_summary_blocks(self, text: str) -> Tuple[str, bool]:
+        """
+        Hash-based deduplication of repeated DecisionSummary blocks.
+
+        Session 920: Prevents the same DecisionSummary from appearing multiple
+        times in panel output due to agent message repeating.
+
+        Args:
+            text: The text potentially containing multiple DecisionSummary blocks
+
+        Returns:
+            Tuple of (deduped_text: str, dedupe_applied: bool)
+        """
+        if not text or "=== DecisionSummary ===" not in text:
+            return text, False
+
+        # Split by section markers (=== SectionName ===)
+        section_pattern = r'(===\s*\w+(?:\s+\w+)*\s*===)'
+        parts = re.split(section_pattern, text)
+
+        seen_hashes = set()
+        unique_parts = []
+        dedupe_applied = False
+        current_section = None
+
+        i = 0
+        while i < len(parts):
+            part = parts[i]
+
+            # Check if this is a section header
+            if re.match(section_pattern, part.strip()):
+                current_section = part.strip()
+                # Get the content that follows this header
+                content = parts[i + 1] if i + 1 < len(parts) else ''
+
+                # Create hash of section + content
+                section_with_content = part + content
+                content_hash = self._generate_content_hash(section_with_content.strip())
+
+                # Only dedupe if content is substantial (> 50 chars)
+                if len(section_with_content.strip()) < 50 or content_hash not in seen_hashes:
+                    seen_hashes.add(content_hash)
+                    unique_parts.append(part)
+                    if i + 1 < len(parts):
+                        unique_parts.append(parts[i + 1])
+                        i += 1
+                else:
+                    dedupe_applied = True
+                    # Skip both the header and its content
+                    i += 1
+            else:
+                # Not a section header, keep as-is
+                unique_parts.append(part)
+
+            i += 1
+
+        if dedupe_applied:
+            logger.info(f"Deduplication removed repeated DecisionSummary block(s)")
+
+        return ''.join(unique_parts), dedupe_applied
+
     # ==================== COMPREHENSIVE CLEANUP ====================
 
     def run_full_deduplication(self, dry_run: bool = True) -> Dict[str, Any]:
