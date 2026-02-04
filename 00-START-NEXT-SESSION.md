@@ -1,53 +1,33 @@
 # Session 923 - Start Here
 
-**Previous Session:** 922 (Stage Generation Bug Fix)
+**Previous Session:** 922 (Stage Generation Bug Fix + Backfill)
 **Date:** February 3, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **315 INITIATIVES** | **PIPELINE HEALTH: RECOVERING** | **565 Transition Logs**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **322 INITIATIVES** | **106 Stage 1 Docs (32%)** | **PIPELINE: RECOVERING**
 
 ---
 
-## Session 922 Complete: Fixed Critical Stage Generation Bug
+## Session 922 Complete: Stage Generation Fixed + 98 Documents Created
 
-Found and fixed the ROOT CAUSE of why 192 initiatives were stuck at Stage 1 DRAFT with no documents.
-
-### Root Cause Discovered
-
-The `generate_initiative_stage_document` Celery task was calling `router.execute_agent()` which **doesn't exist** on `AgentRouter`. This caused all Stage 1 document generations to fail silently.
+Found and fixed the ROOT CAUSE of stuck initiatives, then ran backfill to create 98 new Stage 1 documents.
 
 ### What Was Fixed
 
-| Fix | File | Description |
-|-----|------|-------------|
-| Stage Gen Method | `core/tasks.py` | Changed `router.execute_agent()` to `router.route()` |
-| Parameter Name | `core/tasks.py` | Changed `query=prompt` to `task=prompt` |
-| Result Access | `core/tasks.py` | Changed `result.get('response')` to `result.message` |
-| Backfill Endpoint | `views_initiative_kickstart.py` | Added `/api/initiatives/trigger-backfill/` endpoint |
-
-**PRs:** #811 (Backfill Endpoint), #812 (Stage Gen Fix)
+| Fix | PR | Description |
+|-----|-----|-------------|
+| Stage Gen Method | #812 | `router.execute_agent()` → `router.route()` (method didn't exist!) |
+| Backfill Endpoint | #811 | Added `/api/initiatives/trigger-backfill/` |
+| Name Detection | #814 | Detect incomplete names and enhance prompts with description context |
 
 ### Backfill Results
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Stage 1 WITH documents | 8 | 58 |
-| Stage 1 WITHOUT docs | 192 | 257 |
-| Document coverage | 4% | 18% |
+| Metric | Start | End | Change |
+|--------|-------|-----|--------|
+| Stage 1 WITH documents | 8 | **106** | **+98** |
+| Document coverage | 4% | **32%** | +28% |
 
-### How to Continue Backfill
+### Remaining Issue: ResearchAgent Failures
 
-```bash
-# Dry run - see what would be triggered
-railway run python manage.py shell -c "
-from core.models_document_registry import InitiativeStage
-count = InitiativeStage.objects.filter(
-    stage=1, document__isnull=True, initiative__status='ACTIVE'
-).count()
-print(f'{count} initiatives need Stage 1 documents')
-"
-
-# Run backfill batch (processes ~50% success rate due to malformed names)
-railway run python manage.py backfill_stage_documents --stage=1 --limit=30
-```
+~45% of backfill attempts still fail with "Research returned no results". This happens even with good initiative names. **There's a UI section for failed agents that isn't connected yet.**
 
 ---
 
@@ -55,36 +35,62 @@ railway run python manage.py backfill_stage_documents --stage=1 --limit=30
 
 | Metric | Value |
 |--------|-------|
-| Total Initiatives | 315 |
-| Stage 1 with documents | 58 (18%) |
-| Stage 1 without docs | 257 (need backfill) |
-| Transition Logs | 565+ |
+| Total Initiatives | 322 |
+| Stage 1 with documents | 106 (32%) |
+| Stage 1 without docs | 216 (need investigation) |
+| Backfill success rate | ~55% |
 
 ---
 
-## NEXT PRIORITIES for Session 923+
+## PRIORITY for Session 923: Investigate ResearchAgent Failures
 
-### 1. Continue Stage 1 Backfill
-~257 initiatives still need Stage 1 documents. Run more batches:
-```bash
-railway run python manage.py backfill_stage_documents --stage=1 --limit=50
-```
+### 1. Connect Failed Agents UI
+There's an existing UI section for showing agent failures that isn't wired up. Connect it to show:
+- Which agents are failing
+- Error messages
+- Initiative context
 
-### 2. Fix Malformed Initiative Names
-Many initiatives have truncated/garbage names that cause agent failures:
-- "Back Engine:"
-- "Agent Discussion Outputs and Generates Priori..."
-- Names ending in "..."
-
-### 3. Integrate Dedupe into Pipeline (from 920)
+### 2. Debug ResearchAgent "No Results"
+The error `"Research returned no results"` comes from ResearchAgent. Investigate:
 ```python
-from core.services.deduplication_service import get_deduplication_service
-dedup = get_deduplication_service()
-clean_text, _ = dedup.dedupe_decision_summary_blocks(raw_output)
+# Check the error source in ResearchAgent
+# Look at core/agents/research_agent.py
+# The agent's internal data query is failing
 ```
 
-### 4. Monitor Pipeline Health
-Check the Health tab to verify transitions are increasing as documents are generated.
+### 3. Continue Backfill (after fixing)
+Once failure rate drops, continue backfilling the remaining 216 initiatives.
+
+---
+
+## How to Run Backfill
+
+```bash
+# Check current state
+railway run python manage.py shell -c "
+from core.models_document_registry import InitiativeStage
+with_docs = InitiativeStage.objects.filter(stage=1, document__isnull=False, initiative__status='ACTIVE').count()
+without_docs = InitiativeStage.objects.filter(stage=1, document__isnull=True, initiative__status='ACTIVE').count()
+print(f'Coverage: {with_docs}/{with_docs+without_docs} ({100*with_docs//(with_docs+without_docs)}%)')
+"
+
+# Run batch (currently ~55% success rate)
+railway run python manage.py shell -c "
+from core.models_document_registry import InitiativeStage
+from core.tasks import generate_initiative_stage_document
+
+stages = InitiativeStage.objects.filter(
+    status='DRAFT', stage=1, initiative__status='ACTIVE', document__isnull=True
+).select_related('initiative')[:20]
+
+for stage in stages:
+    try:
+        result = generate_initiative_stage_document(str(stage.initiative.id), 1)
+        print('✅' if result.get('success') else '❌', stage.initiative.name[:40])
+    except Exception as e:
+        print('❌', stage.initiative.name[:40])
+"
+```
 
 ---
 
@@ -92,7 +98,7 @@ Check the Health tab to verify transitions are increasing as documents are gener
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **922** | Stage Generation Bug Fix | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
+| **922** | Stage Generation Bug Fix + Backfill | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
 | 921 | Pipeline Health Monitoring | `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` |
 | 920 | Panel/Advisor System Improvements | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
 | 918 | Report Provenance + PDF Export | `docs/handoffs/SESSION_918_REPORT_PROVENANCE.md` |
@@ -111,8 +117,8 @@ Check the Health tab to verify transitions are increasing as documents are gener
 | Database Models | 387+ |
 | Celery Tasks | 262 |
 | Services | 131 |
-| **Initiatives** | **315** |
-| **Transition Logs** | **565+** |
+| **Initiatives** | **322** |
+| **Stage 1 Docs** | **106 (32%)** |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
 
@@ -122,11 +128,11 @@ Check the Health tab to verify transitions are increasing as documents are gener
 
 | Document | Purpose |
 |----------|---------|
-| `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` | Stage generation bug fix |
+| `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` | Stage generation bug fix + backfill |
 | `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` | Health monitoring implementation |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 922 Complete - Stage Generation Bug Fixed! 50 new documents created, pipeline is recovering.**
+**Session 922 Complete - 98 new documents created! Next: Investigate ResearchAgent failures and connect the Failed Agents UI.**
