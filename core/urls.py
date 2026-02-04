@@ -2859,6 +2859,7 @@ urlpatterns = [
     path('api/initiatives/reset-premature-completed/', views_initiative_kickstart.reset_premature_completed, name='initiatives-reset-premature-completed'),  # Session 920: Reset prematurely-completed initiatives
     path('api/initiatives/pipeline-health/', views_initiative_kickstart.pipeline_health, name='initiatives-pipeline-health'),  # Session 921: Real-time pipeline health monitoring
     path('api/initiatives/diagnose-stuck/', views_initiative_kickstart.diagnose_stuck_initiatives, name='initiatives-diagnose-stuck'),  # Session 921: Diagnose why initiatives aren't progressing
+    path('api/initiatives/trigger-backfill/', views_initiative_kickstart.trigger_stage_backfill, name='initiatives-trigger-backfill'),  # Session 921: Trigger Stage 1 document generation
     path('api/initiatives/<uuid:initiative_id>/origin-trace/', views_research_demo.initiative_origin_trace_api, name='initiatives-origin-trace'),  # Session 898: Full origin chain trace
     # Session 902: Action Items API
     path('api/initiatives/<uuid:initiative_id>/action-items/', views_research_demo.initiative_action_items_api, name='initiative-action-items'),
