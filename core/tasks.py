@@ -110,6 +110,7 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 30):
     Session 842: Added detailed logging for debugging.
     Session 911: Fixed to check both 'running' and 'in_progress' statuses.
                  Changed default from 2 hours to 30 minutes.
+    Session 925: Added to Celery Beat schedule - runs every 30 min with 2hr threshold.
 
     Tasks that have been running for more than the threshold are
     marked as 'failed' since they clearly didn't complete properly.

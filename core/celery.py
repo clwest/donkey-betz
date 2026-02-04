@@ -2357,6 +2357,17 @@ app.conf.beat_schedule = {
             'expires': 600,
         }
     },
+
+    # Session 925: Cleanup Stuck Agent Executions
+    # Marks executions stuck in running/in_progress > 2 hours as failed
+    'cleanup-stuck-agent-executions': {
+        'task': 'core.tasks.cleanup_stale_agent_executions',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'kwargs': {'minutes_threshold': 120},  # 2 hours - conservative to avoid false positives
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
 }
 
 # Task routing configuration
