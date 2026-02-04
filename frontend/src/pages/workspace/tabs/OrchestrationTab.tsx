@@ -25,6 +25,7 @@ import {
   ChevronUp,
   ChevronDown,
   List,
+  Server, // Session 924: For Celery workers display
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { orchestrationApi, adminApi, agentsApi, advisorsApi } from '@/lib/api'
@@ -644,34 +645,109 @@ function WorkflowsSubTab() {
 
 // ============ Automation Sub-Tab ============
 
+// Session 924: TypeScript interfaces for API responses
+interface CeleryWorker {
+  name: string
+  status: 'online' | 'offline' | 'error'
+  response?: { ok?: string } | string
+}
+
+interface CeleryActiveTask {
+  worker: string
+  task_id: string
+  task_name: string
+  args: string
+  started: number
+}
+
+interface CeleryScheduledTask {
+  name: string
+  task: string
+  schedule: string
+}
+
+interface CeleryQueue {
+  name: string
+  routing_key?: string
+  pending?: number
+}
+
+interface CeleryStatus {
+  timestamp: string
+  overall_status: 'healthy' | 'degraded' | 'error'
+  workers: CeleryWorker[]
+  queues: CeleryQueue[]
+  scheduled_tasks: CeleryScheduledTask[]
+  active_tasks: CeleryActiveTask[]
+  stats: {
+    total_workers: number
+    total_queues: number
+    total_scheduled: number
+    total_active: number
+  }
+}
+
+interface RemediationTask {
+  id: string
+  finding_title: string
+  agent: string
+  status: string
+  created_at: string | null
+  completed_at: string | null
+}
+
+interface RemediationStatus {
+  success: boolean
+  findings?: {
+    total: number
+    by_status: Record<string, number>
+    by_priority: Record<string, number>
+    open: number
+    fixed: number
+  }
+  tasks?: {
+    total: number
+    by_status: Record<string, number>
+    by_agent: Array<{ agent: string; count: number }>
+  }
+  recent_tasks?: RemediationTask[]
+  progress?: {
+    completed: number
+    total: number
+    percentage: number
+  }
+}
+
 function AutomationSubTab() {
   const [expandedSection, setExpandedSection] = useState<'triggers' | 'active' | 'scheduled' | 'remediation' | null>(null)
+  const [scheduledVisibleCount, setScheduledVisibleCount] = useState(10)
 
   const toggleSection = (section: typeof expandedSection) => {
     setExpandedSection(expandedSection === section ? null : section)
+    if (section === 'scheduled') setScheduledVisibleCount(10)
   }
 
-  // Session 840: Fetch real stats from celery status
+  // Session 924: Fetch full celery status with rich data
   const { data: celeryState, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['automation-celery-state'],
     queryFn: async () => {
       const res = await adminApi.celeryStatus()
-      return res.data as { active_tasks?: number; scheduled_tasks?: number; workers?: number }
+      return res.data as CeleryStatus
     },
   })
 
-  // Session 860: Added error handling for API responses
+  // Session 924: Fetch full remediation status with rich data
   const { data: remediationStatus } = useQuery({
     queryKey: ['automation-remediation-status'],
     queryFn: async () => {
       try {
         const response = await fetch('/api/platform/remediation/status/')
         if (!response.ok) {
-          return { tasks: { total: 0 } }
+          return { success: false, tasks: { total: 0 } } as RemediationStatus
         }
-        return response.json()
+        return response.json() as Promise<RemediationStatus>
       } catch {
-        return { tasks: { total: 0 } }
+        return { success: false, tasks: { total: 0 } } as RemediationStatus
       }
     },
   })
@@ -684,15 +760,33 @@ function AutomationSubTab() {
     )
   }
 
-  // Build stats from real data
+  // Session 924: Build stats from rich API data
   const remediationData = remediationStatus || {}
+  const activeTasks = celeryState?.active_tasks || []
+  const scheduledTasks = celeryState?.scheduled_tasks || []
+  const workers = celeryState?.workers || []
+  const queues = celeryState?.queues || []
 
-  // Session 843: Fix React Error #31 - active_tasks and scheduled_tasks are arrays, need .length
   const stats = {
     triggers: 10, // Default count for trigger rules
-    runningPilots: Array.isArray(celeryState?.active_tasks) ? celeryState.active_tasks.length : 0,
-    celeryTasks: Array.isArray(celeryState?.scheduled_tasks) ? celeryState.scheduled_tasks.length : 235,
+    runningPilots: activeTasks.length,
+    celeryTasks: celeryState?.stats?.total_scheduled || scheduledTasks.length || 235,
     remediationTasks: remediationData?.tasks?.total || 0,
+    workers: workers.length,
+    onlineWorkers: workers.filter(w => w.status === 'online').length,
+  }
+
+  // Session 924: Format task name for display
+  const formatTaskName = (taskName: string) => {
+    const parts = taskName.split('.')
+    return parts[parts.length - 1] || taskName
+  }
+
+  // Session 924: Format timestamp
+  const formatTime = (timestamp: number | string | null) => {
+    if (!timestamp) return 'Unknown'
+    const date = typeof timestamp === 'number' ? new Date(timestamp * 1000) : new Date(timestamp)
+    return date.toLocaleTimeString()
   }
 
   return (
@@ -703,6 +797,29 @@ function AutomationSubTab() {
         onRefresh={refetch}
         isFetching={isFetching}
       />
+
+      {/* Session 924: Workers Status Banner */}
+      {workers.length > 0 && (
+        <div className="card bg-dark-800/50 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Server size={16} className="text-gray-400" />
+              <span className="text-sm text-gray-400">Celery Workers</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {workers.map((worker, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${worker.status === 'online' ? 'bg-accent-green' : 'bg-red-500'}`} />
+                  <span className="text-xs text-gray-300">{worker.name.split('@')[1] || worker.name}</span>
+                </div>
+              ))}
+              <span className={`text-xs px-2 py-0.5 rounded ${celeryState?.overall_status === 'healthy' ? 'bg-accent-green/20 text-accent-green' : 'bg-red-500/20 text-red-400'}`}>
+                {celeryState?.overall_status || 'unknown'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid - Session 857: Inline expandable sections */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -768,57 +885,199 @@ function AutomationSubTab() {
         </ExpandedListCard>
       )}
 
+      {/* Session 924: Enhanced Active Tasks with real task details */}
       {expandedSection === 'active' && (
         <ExpandedListCard
           title="Active Tasks"
           count={stats.runningPilots}
           onClose={() => setExpandedSection(null)}
         >
-          {stats.runningPilots === 0 ? (
+          {activeTasks.length === 0 ? (
             <div className="text-center py-4 text-gray-500">
               <Play className="mx-auto mb-2" size={20} />
               <p className="text-sm">No active tasks running</p>
             </div>
           ) : (
-            <div className="text-sm text-gray-400">
-              {stats.runningPilots} Celery task(s) currently executing
+            <div className="space-y-2">
+              {activeTasks.map((task, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-200 truncate">{formatTaskName(task.task_name)}</div>
+                    <div className="text-xs text-gray-500 truncate">{task.args || 'No args'}</div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span>{task.worker?.split('@')[1] || task.worker}</span>
+                    <span className="text-accent-green">Running</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Session 924: Show queues with pending counts */}
+          {queues.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-dark-600">
+              <div className="text-xs text-gray-500 mb-2">Queue Status</div>
+              <div className="flex flex-wrap gap-2">
+                {queues.map((queue, idx) => (
+                  <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-dark-600 rounded text-xs">
+                    <span className="text-gray-300">{queue.name}</span>
+                    {queue.pending !== undefined && queue.pending > 0 && (
+                      <span className="text-accent-amber">({queue.pending} pending)</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </ExpandedListCard>
       )}
 
+      {/* Session 924: Enhanced Scheduled Tasks with real task list */}
       {expandedSection === 'scheduled' && (
         <ExpandedListCard
           title="Scheduled Tasks"
           count={stats.celeryTasks}
           onClose={() => setExpandedSection(null)}
         >
-          <div className="text-sm text-gray-400 mb-2">
+          <div className="text-sm text-gray-400 mb-3">
             {stats.celeryTasks} tasks registered in Celery Beat for periodic execution.
           </div>
-          <div className="space-y-1 text-xs text-gray-500">
-            <p>• Spider data fetching</p>
-            <p>• Health monitoring</p>
-            <p>• Learning aggregation</p>
-            <p>• Remediation cycles</p>
-          </div>
+          {scheduledTasks.length > 0 ? (
+            <>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {scheduledTasks.slice(0, scheduledVisibleCount).map((task, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-xs">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-300 truncate">{task.name}</div>
+                      <div className="text-gray-500 truncate">{formatTaskName(task.task)}</div>
+                    </div>
+                    <div className="text-gray-400 text-right ml-2 whitespace-nowrap">
+                      {task.schedule}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {scheduledTasks.length > scheduledVisibleCount && (
+                <button
+                  onClick={() => setScheduledVisibleCount(prev => prev + 20)}
+                  className="mt-2 text-xs text-primary-400 hover:text-primary-300"
+                >
+                  Show more ({scheduledTasks.length - scheduledVisibleCount} remaining)
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="space-y-1 text-xs text-gray-500">
+              <p>• Spider data fetching</p>
+              <p>• Health monitoring</p>
+              <p>• Learning aggregation</p>
+              <p>• Remediation cycles</p>
+            </div>
+          )}
         </ExpandedListCard>
       )}
 
+      {/* Session 924: Enhanced Remediation with findings, progress, recent tasks */}
       {expandedSection === 'remediation' && (
         <ExpandedListCard
           title="Remediation Tasks"
           count={stats.remediationTasks}
           onClose={() => setExpandedSection(null)}
         >
-          {stats.remediationTasks === 0 ? (
+          {stats.remediationTasks === 0 && !remediationData?.findings?.total ? (
             <div className="text-center py-4 text-gray-500">
               <RefreshCw className="mx-auto mb-2" size={20} />
               <p className="text-sm">No remediation tasks pending</p>
             </div>
           ) : (
-            <div className="text-sm text-gray-400">
-              {stats.remediationTasks} self-healing task(s) in the remediation pipeline.
+            <div className="space-y-4">
+              {/* Progress Bar */}
+              {remediationData?.progress && remediationData.progress.total > 0 && (
+                <div>
+                  <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <span>Progress</span>
+                    <span>{remediationData.progress.completed}/{remediationData.progress.total} ({remediationData.progress.percentage}%)</span>
+                  </div>
+                  <div className="w-full h-2 bg-dark-600 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent-cyan transition-all duration-300"
+                      style={{ width: `${remediationData.progress.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Findings Summary */}
+              {remediationData?.findings && (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 bg-dark-700/50 rounded">
+                    <span className="text-gray-400">Open Findings</span>
+                    <div className="text-lg font-medium text-accent-amber">{remediationData.findings.open || 0}</div>
+                  </div>
+                  <div className="p-2 bg-dark-700/50 rounded">
+                    <span className="text-gray-400">Fixed</span>
+                    <div className="text-lg font-medium text-accent-green">{remediationData.findings.fixed || 0}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Task Status Breakdown */}
+              {remediationData?.tasks?.by_status && Object.keys(remediationData.tasks.by_status).length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">Tasks by Status</div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(remediationData.tasks.by_status).map(([status, count]) => (
+                      <div key={status} className="flex items-center gap-1 px-2 py-1 bg-dark-600 rounded text-xs">
+                        <span className={
+                          status === 'completed' ? 'text-accent-green' :
+                          status === 'in_progress' ? 'text-primary-400' :
+                          status === 'failed' ? 'text-red-400' : 'text-gray-300'
+                        }>{status}</span>
+                        <span className="text-gray-500">({count})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Tasks */}
+              {remediationData?.recent_tasks && remediationData.recent_tasks.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">Recent Tasks</div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {remediationData.recent_tasks.slice(0, 5).map((task, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-xs">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-gray-300 truncate">{task.finding_title}</div>
+                          <div className="text-gray-500">{task.agent}</div>
+                        </div>
+                        <div className={`text-xs px-1.5 py-0.5 rounded ${
+                          task.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                          task.status === 'in_progress' ? 'bg-primary-400/20 text-primary-400' :
+                          task.status === 'failed' ? 'bg-red-500/20 text-red-400' : 'bg-gray-600 text-gray-300'
+                        }`}>
+                          {task.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Agents with Tasks */}
+              {remediationData?.tasks?.by_agent && remediationData.tasks.by_agent.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">Top Agents by Task Count</div>
+                  <div className="flex flex-wrap gap-2">
+                    {remediationData.tasks.by_agent.slice(0, 5).map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-dark-600 rounded text-xs">
+                        <span className="text-gray-300">{item.agent}</span>
+                        <span className="text-primary-400">({item.count})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </ExpandedListCard>
