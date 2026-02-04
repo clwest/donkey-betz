@@ -1115,25 +1115,82 @@ function AutomationSubTab() {
 
 // ============ HiveMind Sub-Tab ============
 
+// Session 924: TypeScript interfaces for HiveMind data
+interface AgentData {
+  id?: string
+  name?: string
+  agent_name?: string
+  specialization?: string
+  description?: string
+  category?: string
+  is_active?: boolean
+  success_rate?: number
+  totalExecutions?: number
+  lastActive?: string
+}
+
+interface AdvisorData {
+  id?: string
+  name: string
+  title?: string
+  expertise?: string
+  category?: string
+  total_consultations?: number
+  influence_score?: number
+}
+
 function HiveMindSubTab() {
   const [expandedSection, setExpandedSection] = useState<'agents' | 'advisors' | 'coordinators' | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   const toggleSection = (section: typeof expandedSection) => {
     setExpandedSection(expandedSection === section ? null : section)
     setVisibleCount(10)
+    setSelectedCategory(null)
   }
 
-  // Session 840: Fetch real agent/advisor counts
-  // Session 860: Use API methods instead of hardcoded fetch
+  // Session 924: Fetch comprehensive agent data with categories
   const { data: agentsData, isLoading: loadingAgents, refetch: refetchAgents, isFetching: fetchingAgents } = useQuery({
-    queryKey: ['hivemind-agents-tab'],
+    queryKey: ['hivemind-agents-comprehensive'],
     queryFn: async () => {
       try {
-        const response = await agentsApi.list()
-        return response.data
+        const response = await agentsApi.comprehensive()
+        return response.data as { agents: AgentData[]; count: number; categories?: Record<string, AgentData[]> }
       } catch {
-        return { agents: [], count: 74 }
+        // Fallback to list
+        try {
+          const listResponse = await agentsApi.list()
+          return listResponse.data as { agents: AgentData[]; count: number }
+        } catch {
+          return { agents: [], count: 74 }
+        }
+      }
+    },
+  })
+
+  // Session 924: Fetch agent health for system status
+  const { data: healthData } = useQuery({
+    queryKey: ['hivemind-health'],
+    queryFn: async () => {
+      try {
+        const response = await agentsApi.health()
+        return response.data as { status: string; active_agents: number; queue_length: number }
+      } catch {
+        return null
+      }
+    },
+  })
+
+  // Session 924: Fetch recent executions for activity preview
+  const { data: executionsData } = useQuery({
+    queryKey: ['hivemind-recent-executions'],
+    queryFn: async () => {
+      try {
+        const response = await agentsApi.executionHistory(5)
+        return response.data as { executions?: Array<{ agent_name: string; status: string; started_at: string }> }
+      } catch {
+        return { executions: [] }
       }
     },
   })
@@ -1143,7 +1200,7 @@ function HiveMindSubTab() {
     queryFn: async () => {
       try {
         const response = await advisorsApi.list()
-        return response.data
+        return response.data as { advisors: AdvisorData[]; count: number }
       } catch {
         return { advisors: [], count: 25 }
       }
@@ -1155,13 +1212,13 @@ function HiveMindSubTab() {
     queryFn: async () => {
       try {
         const response = await agentsApi.list()
-        const data = response.data
-        const coordinators = (data.agents || []).filter((a: any) =>
+        const data = response.data as { agents: AgentData[] }
+        const coordinators = (data.agents || []).filter((a) =>
           a.name?.includes('Coordinator') || a.agent_name?.includes('Coordinator')
         )
         return { coordinators, count: coordinators.length || 5 }
       } catch {
-        return { coordinators: [], count: 5 }
+        return { coordinators: [] as AgentData[], count: 5 }
       }
     },
   })
@@ -1182,6 +1239,34 @@ function HiveMindSubTab() {
   const advisorCount = advisors.length || advisorsData?.count || 25
   const coordinators = coordinatorsData?.coordinators || []
   const coordinatorCount = coordinators.length || 5
+  const recentExecutions = executionsData?.executions || []
+
+  // Session 924: Group agents by category
+  const agentsByCategory = agents.reduce((acc: Record<string, AgentData[]>, agent) => {
+    const cat = agent.category || 'general'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(agent)
+    return acc
+  }, {})
+
+  // Session 924: Group advisors by category
+  const advisorsByCategory = advisors.reduce((acc: Record<string, AdvisorData[]>, advisor) => {
+    const cat = advisor.category || 'general'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(advisor)
+    return acc
+  }, {})
+
+  // Session 924: Get top performers (sorted by success_rate or totalExecutions)
+  const topPerformers = [...agents]
+    .filter(a => a.success_rate !== undefined || a.totalExecutions !== undefined)
+    .sort((a, b) => (b.success_rate || 0) - (a.success_rate || 0))
+    .slice(0, 5)
+
+  // Session 924: Filter agents by selected category
+  const filteredAgents = selectedCategory
+    ? agents.filter(a => (a.category || 'general') === selectedCategory)
+    : agents
 
   // Default coordinators if API returns empty
   const defaultCoordinators = [
@@ -1200,6 +1285,30 @@ function HiveMindSubTab() {
         onRefresh={refetchAgents}
         isFetching={fetchingAgents}
       />
+
+      {/* Session 924: System Health Banner */}
+      {healthData && (
+        <div className="card bg-dark-800/50 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity size={16} className="text-gray-400" />
+              <span className="text-sm text-gray-400">System Status</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${healthData.status === 'healthy' ? 'bg-accent-green' : 'bg-accent-amber'}`} />
+                <span className="text-xs text-gray-300">{healthData.active_agents || 0} active</span>
+              </div>
+              {healthData.queue_length > 0 && (
+                <span className="text-xs text-accent-amber">{healthData.queue_length} queued</span>
+              )}
+              <span className={`text-xs px-2 py-0.5 rounded ${healthData.status === 'healthy' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-amber/20 text-accent-amber'}`}>
+                {healthData.status}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* HiveMind Overview - Session 857: Inline expandable sections */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1229,7 +1338,7 @@ function HiveMindSubTab() {
         />
       </div>
 
-      {/* Expanded Sections */}
+      {/* Session 924: Enhanced Agents Section with categories and top performers */}
       {expandedSection === 'agents' && (
         <ExpandedListCard
           title="Agent Network"
@@ -1242,27 +1351,76 @@ function HiveMindSubTab() {
               <p className="text-sm">{agentCount} agents registered</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {agents.slice(0, visibleCount).map((agent: any) => (
-                <div key={agent.id || agent.name} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                  <div>
-                    <span className="text-sm font-medium">{agent.name || agent.agent_name}</span>
-                    <p className="text-xs text-gray-500">{agent.specialization || agent.description || 'AI Agent'}</p>
+            <div className="space-y-4">
+              {/* Category Filter */}
+              {Object.keys(agentsByCategory).length > 1 && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">Filter by Category</div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className={`text-xs px-2 py-1 rounded ${!selectedCategory ? 'bg-primary-400/20 text-primary-400' : 'bg-dark-600 text-gray-300 hover:bg-dark-500'}`}
+                    >
+                      All ({agents.length})
+                    </button>
+                    {Object.entries(agentsByCategory).map(([cat, catAgents]) => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`text-xs px-2 py-1 rounded capitalize ${selectedCategory === cat ? 'bg-primary-400/20 text-primary-400' : 'bg-dark-600 text-gray-300 hover:bg-dark-500'}`}
+                      >
+                        {cat} ({catAgents.length})
+                      </button>
+                    ))}
                   </div>
-                  <span className={cn(
-                    'text-xs px-2 py-0.5 rounded',
-                    agent.is_active !== false ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
-                  )}>
-                    {agent.is_active !== false ? 'Active' : 'Inactive'}
-                  </span>
                 </div>
-              ))}
-              {agents.length > visibleCount && (
+              )}
+
+              {/* Top Performers */}
+              {!selectedCategory && topPerformers.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">Top Performers</div>
+                  <div className="flex flex-wrap gap-2">
+                    {topPerformers.map((agent, idx) => (
+                      <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-dark-600 rounded text-xs">
+                        <span className="text-gray-300">{(agent.name || agent.agent_name || '').replace('Agent', '')}</span>
+                        {agent.success_rate !== undefined && (
+                          <span className="text-accent-green">{Math.round(agent.success_rate * 100)}%</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Agent List */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {filteredAgents.slice(0, visibleCount).map((agent, idx) => (
+                  <div key={agent.id || agent.name || idx} className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-200 truncate">{agent.name || agent.agent_name}</div>
+                      <div className="text-xs text-gray-500 truncate">{agent.specialization || agent.description || agent.category || 'AI Agent'}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {agent.totalExecutions !== undefined && agent.totalExecutions > 0 && (
+                        <span className="text-xs text-gray-400">{agent.totalExecutions} runs</span>
+                      )}
+                      <span className={cn(
+                        'text-xs px-1.5 py-0.5 rounded',
+                        agent.is_active !== false ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+                      )}>
+                        {agent.is_active !== false ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {filteredAgents.length > visibleCount && (
                 <button
                   onClick={() => setVisibleCount(prev => prev + 10)}
                   className="w-full py-2 text-sm text-primary-400 hover:text-primary-300"
                 >
-                  Load more ({agents.length - visibleCount} remaining)
+                  Load more ({filteredAgents.length - visibleCount} remaining)
                 </button>
               )}
             </div>
@@ -1270,6 +1428,7 @@ function HiveMindSubTab() {
         </ExpandedListCard>
       )}
 
+      {/* Session 924: Enhanced Advisors Section with categories and consultation stats */}
       {expandedSection === 'advisors' && (
         <ExpandedListCard
           title="Expert Advisors"
@@ -1282,18 +1441,44 @@ function HiveMindSubTab() {
               <p className="text-sm">{advisorCount} advisors registered</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {advisors.slice(0, visibleCount).map((advisor: any) => (
-                <div key={advisor.id || advisor.name} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                  <div>
-                    <span className="text-sm font-medium">{advisor.name}</span>
-                    <p className="text-xs text-gray-500">{advisor.expertise || advisor.domain || 'Expert Advisor'}</p>
+            <div className="space-y-4">
+              {/* Category Summary */}
+              {Object.keys(advisorsByCategory).length > 1 && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">By Domain</div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(advisorsByCategory).map(([cat, catAdvisors]) => (
+                      <div key={cat} className="flex items-center gap-1 px-2 py-1 bg-dark-600 rounded text-xs">
+                        <span className="text-gray-300 capitalize">{cat}</span>
+                        <span className="text-primary-400">({catAdvisors.length})</span>
+                      </div>
+                    ))}
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
-                    Active
-                  </span>
                 </div>
-              ))}
+              )}
+
+              {/* Advisor List */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {advisors.slice(0, visibleCount).map((advisor, idx) => (
+                  <div key={advisor.id || advisor.name || idx} className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-200 truncate">{advisor.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{advisor.title || advisor.expertise || 'Expert Advisor'}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {advisor.total_consultations !== undefined && advisor.total_consultations > 0 && (
+                        <span className="text-xs text-gray-400">{advisor.total_consultations} consultations</span>
+                      )}
+                      {advisor.influence_score !== undefined && advisor.influence_score > 0 && (
+                        <span className="text-xs text-accent-amber">{Math.round(advisor.influence_score * 100)}% influence</span>
+                      )}
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                        Active
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
               {advisors.length > visibleCount && (
                 <button
                   onClick={() => setVisibleCount(prev => prev + 10)}
@@ -1314,9 +1499,9 @@ function HiveMindSubTab() {
           onClose={() => setExpandedSection(null)}
         >
           <div className="space-y-2">
-            {(coordinators.length > 0 ? coordinators : defaultCoordinators).map((coord: any) => (
+            {(coordinators.length > 0 ? coordinators : defaultCoordinators).map((coord: any, idx) => (
               <TeamRow
-                key={coord.name || coord.agent_name}
+                key={coord.name || coord.agent_name || idx}
                 name={coord.name || coord.agent_name}
                 agents={coord.sub_agent_count || coord.agents || 3}
                 specialty={coord.specialization || coord.description || coord.specialty || 'Multi-agent coordination'}
@@ -1324,6 +1509,30 @@ function HiveMindSubTab() {
             ))}
           </div>
         </ExpandedListCard>
+      )}
+
+      {/* Session 924: Recent Activity Preview (when no section expanded) */}
+      {!expandedSection && recentExecutions.length > 0 && (
+        <div className="card">
+          <h4 className="text-sm font-medium text-gray-400 mb-3">Recent Activity</h4>
+          <div className="space-y-2">
+            {recentExecutions.slice(0, 3).map((exec, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-xs">
+                <span className="text-gray-300">{exec.agent_name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">{new Date(exec.started_at).toLocaleTimeString()}</span>
+                  <span className={`px-1.5 py-0.5 rounded ${
+                    exec.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                    exec.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
+                    exec.status === 'failed' ? 'bg-red-500/20 text-red-400' : 'bg-gray-600 text-gray-300'
+                  }`}>
+                    {exec.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Coordinator Teams Preview (when no section expanded) */}
@@ -1337,9 +1546,9 @@ function HiveMindSubTab() {
             <ChevronDown size={14} className="text-gray-400" />
           </div>
           <div className="space-y-2 mt-3">
-            {(coordinators.length > 0 ? coordinators.slice(0, 3) : defaultCoordinators.slice(0, 3)).map((coord: any) => (
+            {(coordinators.length > 0 ? coordinators.slice(0, 3) : defaultCoordinators.slice(0, 3)).map((coord: any, idx) => (
               <TeamRow
-                key={coord.name || coord.agent_name}
+                key={coord.name || coord.agent_name || idx}
                 name={coord.name || coord.agent_name}
                 agents={coord.sub_agent_count || coord.agents || 3}
                 specialty={coord.specialization || coord.description || coord.specialty || 'Multi-agent coordination'}
