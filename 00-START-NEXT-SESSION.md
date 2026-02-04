@@ -1,75 +1,66 @@
-# Session 919 - Start Here
+# Session 921 - Start Here
 
-**Previous Session:** 918 (Report Provenance + PDF Export)
+**Previous Session:** 920 (Panel/Advisor System Improvements)
 **Date:** February 3, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **204 INITIATIVES** | **REPORT PROVENANCE ACTIVE** | **PDF EXPORT ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **204 INITIATIVES** | **PANEL OUTPUT QUALITY: ENHANCED** | **EXPERIMENT COLLISION CONTROL: ACTIVE**
 
 ---
 
-## Session 918 Complete: Report Provenance + PDF Export
+## Session 920 Complete: Panel/Advisor System Improvements
 
-Reports now track their data sources with full provenance, and can be downloaded as professional PDFs.
+Implemented 7 improvements to panel/advisor output quality based on ChatGPT feedback analysis.
 
 ### What Was Implemented
 
-| Feature | PR | Description |
-|---------|-----|-------------|
-| Report Provenance | #772 | ReportProvenance dataclass tracks sources, timestamps, freshness, validation |
-| PDF Export Service | #774 | WeasyPrint-based PDF generation with category-specific styling |
-| Frontend Download | #777 | "Download PDF" button in Operations Panel for markdown reports |
-| Pagination Fix | #779 | Operations default from 20 → 100 items |
+| Feature | File | Description |
+|---------|------|-------------|
+| Dedupe Post-Processor | `deduplication_service.py` | Hash-based removal of repeated DecisionSummary blocks |
+| Provenance Headers | `orchestrator.py` | Track generated_at, inputs_used, freshness_window, publishable |
+| Placeholder Validation | `orchestrator.py` | Detect invalid topics ("target", "[learned]") and auto-generate valid ones |
+| Extended DecisionSummary | `conversation_roles.py` | New Decision, Why Now, Risk Assessment, Operating Constraints sections |
+| Enhanced Validation | `conversation_roles.py` | Require has_decision and has_risk for validity |
+| Estimate Labeling | `conversation_roles.py` | Validate numeric estimates are cited or labeled |
+| Experiment Collision | `experiment_collision_service.py` | **NEW** - Prevent A/B test collisions |
 
-### Report Provenance
+**PR:** #804
 
-Every report now includes:
-- **Data sources** with timestamps and record counts
-- **Freshness tracking** (max data age in hours)
-- **Validation status**: verified / partially_verified / unverified / stale
-- **Publishing gate**: `publishable: true/false` based on freshness
+### DecisionSummary New Required Fields
+
+```
+Decision:
+- Chosen Direction: [The recommended approach]
+- Rejected Options: [Alternatives not chosen]
+
+Why Now: [Priority reasoning]
+
+Risk Assessment:
+- Biggest Risk: [Primary risk]
+- Mitigation: [How to address]
+
+Operating Constraints:
+- Delivery Cost: [Estimate or "N/A"]
+- CAC Ceiling: [Max cost or "N/A"]
+- Legal Gating: [Requirements or "None"]
+- Staffing: [Skills or "Current team sufficient"]
+```
+
+### New Services
 
 ```python
-@dataclass
-class ReportProvenance:
-    report_type: str
-    generated_at_utc: str
-    agent_name: str
-    sources: List[SourceInfo]
-    max_data_age_hours: float
-    validation_status: str  # verified/partially_verified/unverified/stale
-    publishable: bool
-    disclaimer: str
+# Dedupe repeated DecisionSummary blocks
+from core.services.deduplication_service import get_deduplication_service
+service = get_deduplication_service()
+deduped_text, was_deduped = service.dedupe_decision_summary_blocks(raw_text)
+
+# Check experiment collisions
+from core.services.experiment_collision_service import get_experiment_collision_service
+service = get_experiment_collision_service()
+result = service.check_collision('a/b_test', 'pricing_page', planned_duration_days=14)
+
+# Validate estimates are cited or labeled
+from core.conversation_roles import validate_estimates
+result = validate_estimates(summary_text)
 ```
-
-### PDF Export
-
-| Category | Color | Icon | Example Agents |
-|----------|-------|------|----------------|
-| Sports | Green | 🏈 | SportsOddsAnalyst, ArbitrageDetector |
-| Financial | Blue | 📈 | StockAnalystAgent, BullCaseAgent |
-| Blockchain | Purple | ⛓️ | SmartContractAuditorAgent |
-| Narrative | Orange | 📖 | NarrativeHistorianAgent |
-| Strategy | Cyan | 🎯 | BrandStrategyAgent |
-| Research | Indigo | 🔬 | ResearchAgent |
-
-### API Endpoints
-
-```bash
-# Download operation as PDF
-GET /api/reports/pdf/<operation_id>/
-
-# Generate PDF from content
-POST /api/reports/pdf/generate/
-
-# List exportable operations
-GET /api/reports/pdf/list/?category=sports&limit=20
-```
-
-### Frontend Usage
-
-1. Go to Workspace → Operations tab
-2. Expand a markdown report operation
-3. Click purple "Download PDF" button
-4. PDF downloads with professional formatting
 
 ---
 
@@ -78,36 +69,49 @@ GET /api/reports/pdf/list/?category=sports&limit=20
 | Metric | Value |
 |--------|-------|
 | Total Initiatives | 204 |
-| Operations Page Size | 100 (was 20) |
-| PDF Export | Active |
-| Report Provenance | Active |
+| Services | 131 (+1 ExperimentCollisionService) |
+| DecisionSummary Fields | 8 (was 5) |
+| Estimate Validation | Active |
+| Experiment Collision Control | Active |
 
 ---
 
-## NEXT PRIORITIES for Session 919+
+## NEXT PRIORITIES for Session 921+
 
-### 1. Unblock Initiative Pipeline
-185 initiatives still awaiting founder intent:
-```bash
-python manage.py set_founder_intent --all-pending --speed=fast
-```
-
-### 2. Test PDF Export in Production
-```bash
-# List exportable operations
-curl "https://donkey-betz-platform-production.up.railway.app/api/reports/pdf/list/"
-
-# Download a PDF (requires auth)
-# Or use the UI: Operations tab → expand operation → Download PDF
-```
-
-### 3. Monitor Provenance Quality
-Check that reports are properly tracking their sources:
+### 1. Integrate Dedupe into Pipeline
+Call `dedupe_decision_summary_blocks()` before `extract_decision_summary()` in production:
 ```python
-from core.models_skin_layer import WorkspaceOperation
-ops = WorkspaceOperation.objects.filter(agent_name__in=['SportsOddsAnalyst', 'StockAnalystAgent'])
-for op in ops[:5]:
-    print(f"{op.agent_name}: {len(op.file_content_after)} chars")
+# In core/conversation_roles.py or where summaries are processed
+from core.services.deduplication_service import get_deduplication_service
+dedup = get_deduplication_service()
+clean_text, _ = dedup.dedupe_decision_summary_blocks(raw_output)
+summary = extract_decision_summary(clean_text)
+```
+
+### 2. Integrate Estimate Validation into Content Pipeline
+Add estimate validation warnings to content generation:
+```python
+from core.conversation_roles import validate_estimates
+result = validate_estimates(content)
+if not result['all_valid']:
+    logger.warning(f"Unlabeled estimates found: {result['invalid_estimates']}")
+```
+
+### 3. Add Collision Check to ConceptForge
+Before starting A/B test experiments:
+```python
+from core.services.experiment_collision_service import get_experiment_collision_service
+service = get_experiment_collision_service()
+check = service.check_collision('a/b_test', target_page)
+if check['has_collision']:
+    logger.warning(check['recommendation'])
+```
+
+### 4. Monitor DecisionSummary Validation Rates
+Track how many summaries pass the new stricter validation:
+```python
+from core.conversation_roles import extract_decision_summary, validate_decision_summary
+# Check rejection reasons in validate_decision_summary() output
 ```
 
 ---
@@ -116,10 +120,10 @@ for op in ops[:5]:
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **918** | Report Provenance + PDF Export | `docs/handoffs/SESSION_918_REPORT_PROVENANCE.md` |
-| 916 | Hard Invariants - StageTransitionLog, save() enforcement | `docs/handoffs/SESSION_916_HARD_INVARIANTS.md` |
+| **920** | Panel/Advisor System Improvements | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
+| 918 | Report Provenance + PDF Export | `docs/handoffs/SESSION_918_REPORT_PROVENANCE.md` |
+| 916 | Hard Invariants - StageTransitionLog | `docs/handoffs/SESSION_916_HARD_INVARIANTS.md` |
 | 915 | Stage Document Backfill Pipeline | `docs/handoffs/SESSION_915_STAGE_DOCUMENT_BACKFILL.md` |
-| 914.7 | Operating Rhythm - Daily/Weekly cadence | `docs/handoffs/SESSION_914_7_OPERATING_RHYTHM.md` |
 | 904 | Initiative UI Overhaul | `docs/handoffs/SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
 
 ---
@@ -134,7 +138,7 @@ for op in ops[:5]:
 | Personas | 139 |
 | Database Models | 387+ |
 | Celery Tasks | 262 |
-| Services | 130 |
+| Services | 131 |
 | **Initiatives** | **204** |
 | SignalClusters | 22 |
 | AutoTopics | 10 |
@@ -145,10 +149,11 @@ for op in ops[:5]:
 
 | Document | Purpose |
 |----------|---------|
+| `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` | Panel quality improvements |
 | `docs/handoffs/SESSION_918_REPORT_PROVENANCE.md` | Provenance + PDF implementation |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 918 Complete - Reports Are Now Trustworthy and Shareable!**
+**Session 920 Complete - Panel Outputs Are Now Higher Quality and Validated!**
