@@ -32304,18 +32304,50 @@ def generate_initiative_stage_document(self, initiative_id: str, stage_num: int)
 
     context_text = "\n\n".join(previous_context) if previous_context else "No previous stage documents."
 
+    # Session 922: Detect incomplete/malformed initiative names and enhance prompt
+    def is_name_incomplete(name: str) -> bool:
+        """Check if initiative name appears truncated or incomplete."""
+        if not name or len(name) < 15:
+            return True
+        # Ends with punctuation suggesting truncation
+        if name.rstrip().endswith(('—', ':', '–', '→', ',')):
+            return True
+        # Starts with lowercase (likely mid-sentence fragment)
+        if name[0].islower():
+            return True
+        # Contains "..." suggesting truncation
+        if '...' in name:
+            return True
+        return False
+
+    name_incomplete = is_name_incomplete(initiative.name)
+    description = initiative.description or ''
+
+    # Extract useful context from description if name is incomplete
+    enhanced_context = ""
+    if name_incomplete and description:
+        # Try to extract the "Suggested Feature:" section which often has the full idea
+        if 'Suggested Feature:' in description:
+            feature_text = description.split('Suggested Feature:')[1][:500].strip()
+            enhanced_context = f"\n\n**Additional Context (from conversation):**\n{feature_text}"
+        elif len(description) > 50:
+            enhanced_context = f"\n\n**Additional Context:**\n{description[:500]}"
+
+        logger.info(f"📝 [STAGE-GEN] Name appears incomplete, using enhanced context")
+
     # Build the generation prompt
     prompt = f"""Generate a {config['template']} document for this initiative.
 
 ## Initiative
 **Name:** {initiative.name}
-**Description:** {initiative.description or 'No description provided'}
+**Description:** {initiative.description or 'No description provided'}{enhanced_context}
 
 ## Previous Stage Context
 {context_text}
 
 ## Your Task
 Create a comprehensive {config['template']} document that builds on the previous stages.
+{"Note: The initiative name may be incomplete - use the description and additional context to understand the full scope." if name_incomplete else ""}
 Include relevant sections based on the stage type:
 
 Stage {stage_num} ({config['template']}) should include:
