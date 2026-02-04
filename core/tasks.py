@@ -32335,8 +32335,52 @@ def generate_initiative_stage_document(self, initiative_id: str, stage_num: int)
 
         logger.info(f"📝 [STAGE-GEN] Name appears incomplete, using enhanced context")
 
-    # Build the generation prompt
-    prompt = f"""Generate a {config['template']} document for this initiative.
+    # Session 923: Build stage-appropriate prompts
+    # Stage 1 uses ResearchAgent - must ask it to RESEARCH, not write documents
+    if stage_num == 1:
+        # Extract research topic from name and description
+        # Prefer description if name appears incomplete
+        research_topic = initiative.name
+        if name_incomplete and description:
+            # Try to extract the "Suggested Feature:" section
+            if 'Suggested Feature:' in description:
+                research_topic = description.split('Suggested Feature:')[1][:300].strip()
+            elif len(description) > 30:
+                research_topic = description[:300]
+
+        # Clean up the topic for search
+        research_topic = research_topic.replace('—', '').replace('...', '').strip()
+        if not research_topic or len(research_topic) < 10:
+            research_topic = f"{initiative.name} {description[:200] if description else ''}"
+
+        logger.info(f"📝 [STAGE-GEN] Stage 1 research topic: {research_topic[:100]}...")
+
+        # Session 923: Be explicit about using EXTERNAL research, not internal data queries
+        prompt = f"""Research this topic using EXTERNAL sources (web_search, spider_query).
+DO NOT use query_internal_data - this is NOT about internal system analysis.
+
+## Research Topic
+{research_topic}
+
+## Background Context
+{initiative.description or 'Research this topic thoroughly.'}{enhanced_context}
+
+## Instructions
+1. Use web_search to find current information about this topic from the internet
+2. Use spider_query to check recent news and trends from our spider network
+3. Synthesize the findings into actionable insights
+
+## Required Output
+Provide a research brief with:
+1. **Research Findings** - Specific facts, statistics, and data points you discovered
+2. **Data Sources** - Which web sources and spider data you used
+3. **Key Insights** - 3-5 most important takeaways
+4. **Recommendation** - Should this project proceed? Why or why not?
+
+IMPORTANT: Use web_search as your PRIMARY tool. This is external market/topic research, NOT internal system analysis."""
+    else:
+        # Stages 2-5 use content-generating agents
+        prompt = f"""Generate a {config['template']} document for this initiative.
 
 ## Initiative
 **Name:** {initiative.name}
@@ -32353,15 +32397,14 @@ Include relevant sections based on the stage type:
 Stage {stage_num} ({config['template']}) should include:
 """
 
-    # Add stage-specific instructions
-    stage_instructions = {
-        1: "- Research Findings\n- Data Sources\n- Key Insights\n- Decision Gate (proceed/wait criteria)",
-        2: "- Architecture Overview\n- Implementation Approach\n- Key Components\n- Risk Assessment",
-        3: "- Success Criteria\n- Metrics to Track\n- Evaluation Timeline\n- Go/No-Go Decision Criteria",
-        4: "- Technical Specification\n- Dependencies\n- Integration Points\n- Testing Strategy",
-        5: "- Pilot Results\n- Learnings\n- Recommendations\n- Scale Plan",
-    }
-    prompt += stage_instructions.get(stage_num, "- Relevant sections for this stage")
+        # Add stage-specific instructions for stages 2-5
+        stage_instructions = {
+            2: "- Architecture Overview\n- Implementation Approach\n- Key Components\n- Risk Assessment",
+            3: "- Success Criteria\n- Metrics to Track\n- Evaluation Timeline\n- Go/No-Go Decision Criteria",
+            4: "- Technical Specification\n- Dependencies\n- Integration Points\n- Testing Strategy",
+            5: "- Pilot Results\n- Learnings\n- Recommendations\n- Scale Plan",
+        }
+        prompt += stage_instructions.get(stage_num, "- Relevant sections for this stage")
 
     try:
         # Get the agent
