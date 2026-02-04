@@ -234,21 +234,25 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                 client = OpenAI()
 
                 tool_calls_made = []
+                # Session 919: Increase max_completion_tokens for GPT-5-mini
+                # Reasoning models need more headroom for reasoning_tokens
                 response = client.chat.completions.create(
                     model="gpt-5-mini",
                     messages=messages,
                     tools=self.tools,
                     tool_choice="auto",
-                    max_completion_tokens=2000
+                    max_completion_tokens=4000
                 )
 
                 assistant_message = response.choices[0].message
 
                 # Session 761: Handle tool calls if LLM requests them
                 if assistant_message.tool_calls:
-                    messages.append({
+                    # Session 919: Build assistant message for tool calls
+                    # When tool_calls are present, content is typically None
+                    # Some models require content to be omitted or empty string
+                    assistant_msg = {
                         "role": "assistant",
-                        "content": assistant_message.content,
                         "tool_calls": [
                             {
                                 "id": tc.id,
@@ -257,7 +261,11 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                             }
                             for tc in assistant_message.tool_calls
                         ]
-                    })
+                    }
+                    # Only include content if it's not None (per OpenAI API spec)
+                    if assistant_message.content is not None:
+                        assistant_msg["content"] = assistant_message.content
+                    messages.append(assistant_msg)
 
                     for tool_call in assistant_message.tool_calls:
                         tool_name = tool_call.function.name
@@ -284,12 +292,23 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                         })
 
                     # Get final synthesis from LLM after tool execution
+                    # Session 919: Increase max_completion_tokens for GPT-5-mini reasoning model
+                    # Reasoning tokens consume part of the budget, so we need more headroom
                     final_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=messages,
-                        max_completion_tokens=2000
+                        max_completion_tokens=4000
                     )
                     result_text = final_response.choices[0].message.content
+
+                    # Session 919: Log if content is empty for debugging
+                    if not result_text:
+                        logger.warning(
+                            f"GPT-5-mini returned empty content after tool calls. "
+                            f"Usage: {final_response.usage}"
+                        )
+                        # Fallback: Generate report from tool results directly
+                        result_text = self._generate_fallback_report(items, tool_calls_made)
                 else:
                     result_text = assistant_message.content
                 execution_time_ms = int((time.time() - start_time) * 1000)
@@ -415,6 +434,53 @@ and only important ones should be promoted. Don't treat this as a crisis."""
             for item in info:
                 parts.append(item.to_rich_context())
                 parts.append("")
+
+        return "\n".join(parts)
+
+    def _generate_fallback_report(self, items: List, tool_calls_made: List[Dict]) -> str:
+        """
+        Session 919: Generate a fallback report when GPT-5-mini returns empty content.
+        This ensures we always return useful information even if the LLM fails.
+        """
+        # Count by severity
+        critical = [i for i in items if i.severity == 'critical']
+        warnings = [i for i in items if i.severity == 'warning']
+        info = [i for i in items if i.severity == 'info']
+
+        parts = ["## System Status Report\n"]
+
+        # Summary
+        parts.append(f"**Overview:** {len(critical)} critical, {len(warnings)} warnings, {len(info)} informational items\n")
+
+        if critical:
+            parts.append("### Critical Items (Immediate Attention)")
+            for item in critical:
+                parts.append(f"- **{item.title}**: {item.summary}")
+                if item.recommended_action:
+                    parts.append(f"  - Action: {item.recommended_action}")
+            parts.append("")
+
+        if warnings:
+            parts.append("### Warnings (Should Address)")
+            for item in warnings:
+                parts.append(f"- **{item.title}**: {item.summary}")
+            parts.append("")
+
+        if info:
+            parts.append("### Informational")
+            for item in info[:5]:  # Limit info items
+                parts.append(f"- **{item.title}**: {item.summary}")
+            if len(info) > 5:
+                parts.append(f"- ...and {len(info) - 5} more informational items")
+            parts.append("")
+
+        # Health assessment
+        if not critical and not warnings:
+            parts.append("**Overall Health:** The system is healthy with no critical issues or warnings.")
+        elif not critical:
+            parts.append("**Overall Health:** No critical issues. Address warnings when convenient.")
+        else:
+            parts.append("**Overall Health:** Critical issues detected. Please address them promptly.")
 
         return "\n".join(parts)
 
