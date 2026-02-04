@@ -1396,3 +1396,81 @@ def diagnose_stuck_initiatives(request):
         logger.error(f"[diagnose_stuck] Error: {e}")
 
     return Response(result)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def trigger_stage_backfill(request):
+    """
+    Session 921: Trigger Stage 1 document generation for initiatives missing them.
+
+    POST params:
+        limit: int - Max initiatives to process (default: 20)
+        dry_run: bool - Preview without triggering (default: True)
+
+    Returns:
+        JSON with triggered tasks
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.tasks import generate_initiative_stage_document
+
+    if request.method == 'GET':
+        dry_run = True
+        limit = int(request.GET.get('limit', 20))
+    else:
+        data = request.data if hasattr(request, 'data') else {}
+        dry_run = data.get('dry_run', True)
+        limit = int(data.get('limit', 20))
+
+    result = {
+        'dry_run': dry_run,
+        'limit': limit,
+        'triggered': 0,
+        'errors': 0,
+        'initiatives': [],
+    }
+
+    try:
+        # Find DRAFT Stage 1 initiatives without documents
+        stages_without_docs = InitiativeStage.objects.filter(
+            status='DRAFT',
+            stage=1,
+            initiative__status='ACTIVE',
+            document__isnull=True
+        ).select_related('initiative')[:limit]
+
+        result['found'] = stages_without_docs.count()
+
+        for stage in stages_without_docs:
+            init = stage.initiative
+            item = {
+                'id': str(init.id),
+                'name': init.name[:50] + ('...' if len(init.name) > 50 else ''),
+            }
+
+            if dry_run:
+                item['status'] = 'would_trigger'
+                result['triggered'] += 1
+            else:
+                try:
+                    task = generate_initiative_stage_document.delay(str(init.id), 1)
+                    item['status'] = 'triggered'
+                    item['task_id'] = str(task.id)
+                    result['triggered'] += 1
+                except Exception as e:
+                    item['status'] = f'error: {str(e)}'
+                    result['errors'] += 1
+
+            result['initiatives'].append(item)
+
+        if dry_run:
+            result['message'] = f"[DRY RUN] Would trigger {result['triggered']} Stage 1 document generations. POST with dry_run=false to execute."
+        else:
+            result['message'] = f"Triggered {result['triggered']} Stage 1 document generations ({result['errors']} errors)"
+
+    except Exception as e:
+        result['error'] = str(e)
+        result['message'] = f"Error: {e}"
+        logger.error(f"[trigger_backfill] Error: {e}")
+
+    return Response(result)
