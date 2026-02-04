@@ -1,36 +1,26 @@
-# Session 924 - Start Here
+# Session 925 - Start Here
 
-**Previous Session:** 923 (ResearchAgent Failure Investigation)
+**Previous Session:** 924 (UI Enhancements & Pipeline Fixes)
 **Date:** February 3, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **329 INITIATIVES** | **115+ Stage 1 Docs (34%+)** | **PIPELINE: BACKFILLING**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **329 INITIATIVES** | **PIPELINE: BACKFILLING** | **90%+ Success Rate**
 
 ---
 
-## Session 924 In Progress: Fix Verified, Backfill Running
+## Session 924 Summary: UI Enhancements Complete
 
-PR #817 merged and tested. Success rate improved from ~55% to **90%**.
+### PRs Merged
+| PR | Description |
+|----|-------------|
+| #817 | ResearchAgent fix (Session 923) - explicit web_search prompt |
+| #818 | EditorAgent pipeline fix - replaced with ThinkingAgent/ContentWriterAgent |
+| #819 | Workflow modal enhancement - steps, executions, execute button |
+| #820 | Automation tab enhancement - workers, tasks, remediation details |
 
-### Test Results
-
-| Metric | Before Fix | After Fix |
-|--------|------------|-----------|
-| Success Rate | ~55% | **90%** |
-| Stage 1 Coverage | 106/322 (32%) | 115+/329 (34%+) |
-| Test Batch | N/A | 9/10 success |
-
-### Session 923 Fixes (PR #817 - MERGED)
-
-| Fix | Description |
-|-----|-------------|
-| Stage 1 Prompt | Explicit "use web_search, NOT query_internal_data" instructions |
-| Initiative Filter | Fixed `blocked` → `status='BLOCKED'` (field didn't exist) |
-| Research Topic Logging | Added logging to track what topics are being researched |
-
-### Root Cause (Session 923)
-
-1. **Prompt Mismatch**: ResearchAgent says "do NOT create content" but old prompt said "Generate a document"
-2. **Keyword Trigger**: Word "initiative" triggered `query_internal_data` instead of `web_search`
-3. **Model Field Error**: `Initiative.filter(blocked=True)` failed - field doesn't exist
+### Key Fixes
+1. **ResearchAgent:** 90%+ success rate (up from ~55%)
+2. **EditorAgent:** No more "No content provided" errors
+3. **Founder Intent:** 94 initiatives unblocked
+4. **UI:** Workflow modal and Automation tab now show rich data
 
 ---
 
@@ -39,19 +29,17 @@ PR #817 merged and tested. Success rate improved from ~55% to **90%**.
 | Metric | Value |
 |--------|-------|
 | Total Initiatives | 329 |
-| Stage 1 with documents | 115+ (34%+) |
-| Stage 1 without docs | ~214 (backfill running) |
-| New success rate | **90%** |
+| Stage 1 success rate | **90%+** |
+| Founder intent set | All active initiatives |
+| UI enhancements | Workflow modal + Automation tab |
 
 ---
 
-## PRIORITY for Session 924: Complete Backfill
+## PRIORITY for Session 925
 
-### Backfill Status: RUNNING
-50-initiative batch currently processing. Check progress:
-
+### 1. Check Backfill Status
 ```bash
-# Check coverage
+# Check Stage 1 coverage
 railway run python manage.py shell -c "
 from core.models_document_registry import InitiativeStage
 with_docs = InitiativeStage.objects.filter(stage=1, document__isnull=False, initiative__status='ACTIVE').count()
@@ -60,7 +48,7 @@ print(f'Coverage: {with_docs}/{with_docs+without_docs} ({100*with_docs//(with_do
 "
 ```
 
-### Continue Backfill (if needed)
+### 2. Continue Backfill (if needed)
 ```bash
 railway run python manage.py shell -c "
 from core.models_document_registry import InitiativeStage
@@ -79,13 +67,17 @@ for stage in stages:
 "
 ```
 
+### 3. Start Stage 2-5 Generation
+Once Stage 1 coverage is high, trigger remaining stages for initiatives with Stage 1 docs.
+
 ---
 
 ## Recent Session History
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **923** | ResearchAgent Failure Investigation | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` |
+| **924** | UI Enhancements + Pipeline Fixes | `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` |
+| 923 | ResearchAgent Failure Investigation | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` |
 | 922 | Stage Generation Bug Fix + Backfill | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
 | 921 | Pipeline Health Monitoring | `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` |
 | 920 | Panel/Advisor System Improvements | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
@@ -96,12 +88,12 @@ for stage in stages:
 ## Key Documentation
 
 | Document | Purpose |
-|----------|------------|
+|----------|---------|
+| `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` | UI + pipeline fixes |
 | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` | ResearchAgent root cause + fix |
-| `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` | Stage generation bug fix + backfill |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 923 Complete - Root cause found! PR #817 fixes the prompt mismatch and Initiative filter error. Next: Merge and test.**
+**Session 924 Complete - ResearchAgent working at 90%+, UI enhanced with rich data display.**
