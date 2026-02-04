@@ -1,0 +1,135 @@
+# Session 925: Auto-Cleanup Stuck Executions + UI Enhancements
+
+**Date:** February 3, 2026
+**PRs:** #821, #822, #824
+
+## Summary
+
+Continued from Session 924. Enhanced HiveMind tab with rich data display, cleaned up 13 stuck agent executions in production, and implemented automatic cleanup task via Celery Beat.
+
+## Changes Made
+
+### 1. HiveMind Tab Enhancement (PR #822)
+
+Enhanced `HiveMindSubTab` in `OrchestrationTab.tsx` to display rich data from existing APIs:
+
+| Section | Before | After |
+|---------|--------|-------|
+| **System Status** | Not shown | Health banner with active agents, queue status |
+| **Agent Network** | Simple list | Category filters, top performers, execution counts |
+| **Advisors** | Simple list | Domain grouping, consultation counts, influence scores |
+| **Activity** | Not shown | Recent Activity preview (3 latest executions) |
+
+New features:
+- Category filter buttons for agent browsing
+- Top performers display (sorted by success rate)
+- Scrollable lists with pagination
+- Domain grouping for advisors
+
+TypeScript interfaces added:
+```typescript
+interface AgentData {
+  id?: string
+  name?: string
+  agent_name?: string
+  specialization?: string
+  description?: string
+  category?: string
+  is_active?: boolean
+  success_rate?: number
+  totalExecutions?: number
+  lastActive?: string
+}
+
+interface AdvisorData {
+  id?: string
+  name: string
+  title?: string
+  expertise?: string
+  category?: string
+  total_consultations?: number
+  influence_score?: number
+}
+```
+
+**File:** `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx`
+
+### 2. Stuck Executions Cleanup (Manual)
+
+**Problem:** 13 agent executions stuck in `in_progress` status for 12-30+ hours showing as "Running" in UI.
+
+**Root Cause:** Tasks failed silently without proper error handling, leaving status as `in_progress`.
+
+**Manual Fix:**
+```python
+# Ran on production via railway run
+from django.utils import timezone
+from datetime import timedelta
+from core.models_unified_system import AgentExecution
+
+now = timezone.now()
+cutoff = now - timedelta(hours=2)
+
+stuck = AgentExecution.objects.filter(
+    status='in_progress',
+    created_at__lt=cutoff
+)
+
+stuck.update(
+    status='failed',
+    error_message='Execution timed out - marked as failed during cleanup (Session 924)',
+    completed_at=now
+)
+# Result: 13 executions cleaned up
+```
+
+### 3. Automatic Cleanup Task (PR #824)
+
+Added scheduled Celery Beat task to prevent future stuck execution accumulation:
+
+**File:** `core/celery.py`
+```python
+'cleanup-stuck-agent-executions': {
+    'task': 'core.tasks.cleanup_stale_agent_executions',
+    'schedule': crontab(minute='*/30'),  # Every 30 minutes
+    'kwargs': {'minutes_threshold': 120},  # 2 hours - conservative
+    'options': {
+        'expires': 1800,
+    }
+},
+```
+
+The task (`core/tasks.py`) already existed since Session 835 but wasn't scheduled. It:
+- Runs every 30 minutes
+- Marks executions stuck > 2 hours as `failed`
+- Logs cleanup activity with `🧹 [CLEANUP]` prefix
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | HiveMind tab enhancement |
+| `core/celery.py` | Added cleanup task to beat schedule |
+| `core/tasks.py` | Updated docstring with Session 925 note |
+
+## Backfill Status
+
+Stage 1 backfill running via `generate_initiative_stage_document()`:
+- ResearchAgent using web_search (90%+ success rate)
+- Documents being created successfully
+
+Check progress:
+```bash
+railway run python manage.py shell -c "
+from core.models_document_registry import InitiativeStage
+with_docs = InitiativeStage.objects.filter(stage=1, document__isnull=False, initiative__status='ACTIVE').count()
+without_docs = InitiativeStage.objects.filter(stage=1, document__isnull=True, initiative__status='ACTIVE').count()
+print(f'Coverage: {with_docs}/{with_docs+without_docs} ({100*with_docs//(with_docs+without_docs)}%)')
+"
+```
+
+## Next Steps
+
+1. Monitor cleanup task logs after deployment
+2. Continue Stage 1 backfill if needed
+3. Start Stage 2-5 generation for initiatives with Stage 1 docs
