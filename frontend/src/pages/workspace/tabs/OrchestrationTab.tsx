@@ -1187,10 +1187,44 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
 }
 
 function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; onClose: () => void }) {
+  const [isExecuting, setIsExecuting] = useState(false)
+  const [executeMessage, setExecuteMessage] = useState<string | null>(null)
+
+  // Session 924: Fetch workflow detail with steps
+  const { data: detailData, isLoading: detailLoading } = useQuery({
+    queryKey: ['workflow-detail', workflow.id],
+    queryFn: () => orchestrationApi.getWorkflowDetail(workflow.id),
+    staleTime: 30000,
+  })
+
+  // Session 924: Fetch recent executions for this workflow
+  const { data: executionsData } = useQuery({
+    queryKey: ['workflow-executions', workflow.id],
+    queryFn: () => orchestrationApi.listExecutions({ workflow_id: workflow.id, limit: 5 }),
+    staleTime: 30000,
+  })
+
+  const steps = detailData?.steps || []
+  const detail = detailData?.workflow
+  const recentExecutions = executionsData?.executions || []
+
+  const handleExecute = async () => {
+    setIsExecuting(true)
+    setExecuteMessage(null)
+    try {
+      const result = await orchestrationApi.execute(workflow.id, {}, true)
+      setExecuteMessage(result.message || 'Workflow started successfully')
+    } catch (error) {
+      setExecuteMessage('Failed to start workflow')
+    } finally {
+      setIsExecuting(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-lg w-full max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[85vh] overflow-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
           <div className="flex items-center gap-2">
             <Workflow className="text-primary-400" size={20} />
             <h3 className="text-lg font-semibold">{workflow.name}</h3>
@@ -1205,27 +1239,129 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
             <p className="text-sm text-gray-300">{workflow.description}</p>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="bg-gray-800 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Execution Mode</p>
-              <p className="text-sm capitalize">{workflow.execution_mode || 'sequential'}</p>
+              <p className="text-sm capitalize font-medium">{workflow.execution_mode || 'sequential'}</p>
             </div>
             <div className="bg-gray-800 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Steps</p>
-              <p className="text-sm">{workflow.step_count || workflow.steps?.length || 0}</p>
+              <p className="text-sm font-medium">{steps.length || workflow.step_count || 0}</p>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Timeout</p>
+              <p className="text-sm font-medium">{detail?.timeout_seconds ? `${detail.timeout_seconds}s` : 'None'}</p>
             </div>
           </div>
 
-          {workflow.created_at && (
-            <div className="text-xs text-gray-500">
-              Created: {new Date(workflow.created_at).toLocaleDateString()}
+          {/* Workflow Steps */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+              <List size={14} />
+              Workflow Steps
+            </h4>
+            {detailLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="animate-spin text-primary-400" size={20} />
+              </div>
+            ) : steps.length > 0 ? (
+              <div className="space-y-2">
+                {steps.map((step: any, index: number) => (
+                  <div key={step.id || index} className="bg-gray-800 rounded-lg p-3 border-l-2 border-primary-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded">
+                          Step {step.order || index + 1}
+                        </span>
+                        <span className="text-sm font-medium">{step.name}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">{step.agent}</span>
+                    </div>
+                    {step.description && (
+                      <p className="text-xs text-gray-400 mt-1">{step.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {step.requires_approval && (
+                        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">
+                          Requires Approval
+                        </span>
+                      )}
+                      {step.timeout_seconds && (
+                        <span className="text-xs bg-gray-700 text-gray-400 px-2 py-0.5 rounded">
+                          {step.timeout_seconds}s timeout
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic">No steps defined</p>
+            )}
+          </div>
+
+          {/* Recent Executions */}
+          {recentExecutions.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                <Clock size={14} />
+                Recent Executions
+              </h4>
+              <div className="space-y-1">
+                {recentExecutions.map((exec: any) => (
+                  <div key={exec.id} className="flex items-center justify-between bg-gray-800 rounded px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      {exec.status === 'completed' && <CheckCircle size={12} className="text-green-400" />}
+                      {exec.status === 'failed' && <XCircle size={12} className="text-red-400" />}
+                      {exec.status === 'running' && <Loader2 size={12} className="text-blue-400 animate-spin" />}
+                      {!['completed', 'failed', 'running'].includes(exec.status) && <Clock size={12} className="text-gray-400" />}
+                      <span className="text-xs capitalize">{exec.status}</span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {exec.started_at ? new Date(exec.started_at).toLocaleString() : 'Pending'}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
+          {/* Metadata */}
+          <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-700">
+            <span>ID: {workflow.id.slice(0, 8)}...</span>
+            {workflow.created_at && (
+              <span>Created: {new Date(workflow.created_at).toLocaleDateString()}</span>
+            )}
+          </div>
+
+          {/* Execute Message */}
+          {executeMessage && (
+            <div className={cn(
+              "text-sm p-2 rounded",
+              executeMessage.includes('Failed') ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+            )}>
+              {executeMessage}
+            </div>
+          )}
+
+          {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
             <button
+              onClick={handleExecute}
+              disabled={isExecuting}
+              className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              {isExecuting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Play size={16} />
+              )}
+              {isExecuting ? 'Starting...' : 'Execute Workflow'}
+            </button>
+            <button
               onClick={onClose}
-              className="btn btn-secondary flex-1"
+              className="btn btn-secondary"
             >
               Close
             </button>
