@@ -1710,10 +1710,14 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                 queryset = Initiative.objects.all()
 
+                # Session 923: Fix - Initiative model has status field, not blocked field
                 if filter_type == 'blocked':
-                    queryset = queryset.filter(Q(blocked=True) | Q(status='BLOCKED'))
+                    queryset = queryset.filter(status='BLOCKED')
                 elif filter_type == 'active':
                     queryset = queryset.filter(status='ACTIVE')
+                elif filter_type == 'stalled':
+                    # Stalled = active but no updates in 7+ days
+                    queryset = queryset.filter(status='ACTIVE', updated_at__lte=recent_cutoff)
                 elif filter_type == 'recent':
                     queryset = queryset.filter(created_at__gte=recent_cutoff)
 
@@ -1723,8 +1727,9 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 summary = {
                     'total_initiatives': all_initiatives.count(),
                     'active_count': all_initiatives.filter(status='ACTIVE').count(),
-                    'blocked_count': all_initiatives.filter(Q(blocked=True) | Q(status='BLOCKED')).count(),
+                    'blocked_count': all_initiatives.filter(status='BLOCKED').count(),
                     'completed_count': all_initiatives.filter(status='COMPLETED').count(),
+                    'archived_count': all_initiatives.filter(status='ARCHIVED').count(),
                 }
 
                 for init in queryset:
@@ -1737,10 +1742,12 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         'updated_at': init.updated_at.isoformat() if init.updated_at else None,
                     }
                     if include_details:
+                        # Session 923: Fixed - 'blocked' is not a field, use status
                         record.update({
                             'parent_topic': init.parent_topic[:200] if init.parent_topic else None,
-                            'blocked': getattr(init, 'blocked', False),
-                            'block_reason': getattr(init, 'block_reason', None),
+                            'is_blocked': init.status == 'BLOCKED',
+                            'program': init.program,
+                            'purpose': init.purpose,
                         })
                     results.append(record)
 
