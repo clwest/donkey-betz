@@ -1,36 +1,32 @@
-# Session 937 - Start Here
+# Session 938 - Start Here
 
-**Previous Session:** 936 (Dashboard Integration + Voice System Complete)
+**Previous Session:** 937 (Content Quality Verification + Self-Blog Spider Fix)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE (7 integrations)** | **User Learning UI: COMPLETE** | **21 API Endpoints**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED**
 
 ---
 
-## Session 936 Summary (Just Completed)
+## Session 937 Summary (Just Completed)
 
-### Dashboard Integration - COMPLETE (PR #851)
-Added learning widgets to all key pages:
+### Content Quality Verification - COMPLETE (PR #855)
+Tested spider context injection and extended fixes to additional code paths.
 
-| Page | Integration |
-|------|-------------|
-| HomePage | 2-column grid with Goals + Insights before NL input |
-| AssistantPage | Learning tab sidebar with Goals + Insights |
-| DashboardPage | Activity Grid section with compact widgets |
+**Railway Verification:**
+- `python manage.py write_self_blog --tone professional`
+- Logs show: "Built spider context with 29 data sources" ✅
+- SpiderContextBuilder successfully invoked ✅
 
-Also renamed legacy `userLearningApi` to `legacyLearningApi` to avoid namespace conflict with Session 930 endpoints.
+**Additional Fixes:**
+| File | Issue | Fix |
+|------|-------|-----|
+| `write_self_blog.py` | Passed empty `spider_context={}` | Now calls SpiderContextBuilder |
+| `tasks.py:19368` | `generate_self_blog_task` used empty context | Now calls SpiderContextBuilder |
 
-### Voice System - COMPLETE (PR #852)
-Finished Universal Agent Voice System integration:
-
-| Component | ListenButton Location |
-|-----------|----------------------|
-| ConversationDetailModal | Each message + ListenAllButton |
-| DreamsPanel | Dream summaries |
-| DreamDetailModal | Full dream content |
-| **DeliverableDetailModal** | Next to Content header (NEW) |
-| **HiveMindPage** | Completed agent contributions (NEW) |
-
-All agent-generated content can now be listened to via ElevenLabs TTS with automatic voice assignment and caching.
+**Remaining `spider_context={}` Locations (for future):**
+- `creative_orchestrator.py` - 13 locations
+- `research_orchestrator.py` - 5 locations
+- `tasks.py` - ~10 other Celery tasks
+- `personal_ai_assistant_enhanced.py` - 4 locations
 
 ---
 
@@ -48,10 +44,11 @@ Update WebSocket consumer to match REST response format:
 - Add trace_id to WebSocket messages
 - Add profile_completeness to real-time updates
 
-### Option C: Voice System Polish
-- Voice preview in agent admin
-- Bulk voice assignment UI
-- Cost tracking dashboard
+### Option C: Fix Remaining Spider Context Paths
+Extend SpiderContextBuilder to remaining code paths:
+- `creative_orchestrator.py` (13 locations)
+- `research_orchestrator.py` (5 locations)
+- Other content generation tasks in `tasks.py`
 
 ### Option D: User Profile Onboarding
 Build onboarding flow for new users:
@@ -65,15 +62,26 @@ Build onboarding flow for new users:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
-| **936** | Dashboard Integration + Voice Complete | #851, #852 |
+| **937** | Content Quality Verification + Self-Blog Spider Fix | #855 |
+| **936** | Dashboard + Voice + Spider Context Fix | #851, #852, #853, #854 |
 | **935** | User Learning UI + ListenButton | #850 |
 | **934** | Frontend PA Integration | #849 |
 | **933** | Tool Audit + Attention Widget | #848 |
-| **932** | Attention Aggregator + REST API Wiring | #846 |
 
 ---
 
 ## Key Files Reference
+
+### Spider Context (Sessions 936-937)
+| File | Purpose |
+|------|---------|
+| `core/services/autonomous_action_executor.py` | Calls SpiderContextBuilder before content generation |
+| `core/services/spider_context_builder.py` | Builds spider context for agents (51 patterns) |
+| `core/services/spider_intelligence.py` | Spider category mappings (18 categories) |
+| `core/agents/content_diversity_orchestrator.py` | CATEGORY_SPIDERS (14 categories, 79 mappings) |
+| `core/services/finance_content_context.py` | Finance data using real methods |
+| `core/management/commands/write_self_blog.py` | Self-blog with spider context (Session 937) |
+| `core/tasks.py:19000` | generate_self_blog_task with spider context |
 
 ### User Learning Components
 | File | Purpose |
@@ -81,35 +89,22 @@ Build onboarding flow for new users:
 | `frontend/src/components/FeedbackButtons.tsx` | Thumbs up/down feedback |
 | `frontend/src/components/GoalProgressDashboard.tsx` | Goal progress with updates |
 | `frontend/src/components/LearningInsightsPanel.tsx` | Learning summary panel |
-| `core/views_user_learning_api.py` | Backend API endpoints |
 
 ### Voice System (COMPLETE)
 | File | Purpose |
 |------|---------|
 | `frontend/src/components/ListenButton.tsx` | TTS button + ListenAllButton |
 | `core/services/elevenlabs_tts_service.py` | TTS with caching |
-| `core/models_audio_cache.py` | Audio caching model |
-| `core/management/commands/assign_agent_voices.py` | Voice assignment |
-
-### PA Architecture
-| File | Purpose |
-|------|---------|
-| `core/services/unified_pa_entrypoint.py` | Single PA entry point |
-| `core/services/tool_dispatcher.py` | Centralized tool execution |
-| `frontend/src/pages/AssistantPage.tsx` | Chat UI with feedback |
 
 ### Key API Endpoints
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/user-learning/feedback/` | POST | Record agent feedback |
 | `/api/user-learning/goals/` | GET | Goals dashboard |
-| `/api/user-learning/goals/<id>/progress/` | POST | Record progress |
-| `/api/user-learning/skills/` | GET | Skills summary |
 | `/api/user-learning/summary/` | GET | Combined learning summary |
 | `/api/pa/chat/` | POST | UnifiedPA chat |
 | `/api/tts/generate/` | POST | Generate TTS audio |
-| `/api/tts/estimate/` | POST | Estimate TTS cost |
 
 ---
 
-**Session 937 Focus: Choose priority option above and continue building!**
+**Session 938 Focus: Choose priority option above and continue building!**
