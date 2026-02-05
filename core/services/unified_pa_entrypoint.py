@@ -329,11 +329,17 @@ class UnifiedPAEntrypoint:
         """
         message_lower = message.lower()
 
+        # Session 940: Boardroom patterns (takes precedence for boardroom-specific requests)
+        if 'boardroom' in message_lower or any(word in message_lower for word in [
+            'draft decision', 'promote decision', 'reject decision', 'canonical'
+        ]):
+            return ('boardroom', 'boardroom_tool')
+
         # Decision/attention patterns
         if any(word in message_lower for word in [
             'decision', 'pending', 'attention', 'approve', 'reject', 'review'
         ]):
-            return ('decision_management', 'human_decisions_tool')
+            return ('boardroom', 'boardroom_tool')  # Session 940: Route to boardroom_tool
 
         # System health patterns
         if any(word in message_lower for word in [
@@ -413,7 +419,36 @@ class UnifiedPAEntrypoint:
         }
 
         # Intent-specific payload adjustments
-        if intent == 'decision_management':
+        # Session 940: Boardroom tool actions
+        if intent == 'boardroom':
+            msg_lower = message.lower()
+
+            # Determine action based on message
+            if 'approve' in msg_lower and 'attention' in msg_lower:
+                payload['action'] = 'approve_attention'
+            elif 'ignore' in msg_lower and 'attention' in msg_lower:
+                payload['action'] = 'ignore_attention'
+            elif 'promote' in msg_lower and 'decision' in msg_lower:
+                payload['action'] = 'promote_decision'
+            elif 'reject' in msg_lower and 'decision' in msg_lower:
+                payload['action'] = 'reject_decision'
+            elif 'list' in msg_lower and 'decision' in msg_lower:
+                payload['action'] = 'list_decisions'
+            elif 'list' in msg_lower and 'attention' in msg_lower:
+                payload['action'] = 'list_attention'
+            elif 'stats' in msg_lower or 'status' in msg_lower:
+                payload['action'] = 'stats'
+            else:
+                # Default: show stats
+                payload['action'] = 'stats'
+
+            # Extract ID if present (e.g., "approve attention item abc123")
+            import re
+            id_match = re.search(r'(?:item|decision|id)\s+([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+            if id_match:
+                payload['id'] = id_match.group(1)
+
+        elif intent == 'decision_management':
             if 'approve' in message.lower():
                 payload['action'] = 'decide'
                 payload['decision'] = 'approve'
@@ -493,7 +528,60 @@ Address the user by name occasionally."""
     ) -> str:
         """Simple formatting fallback for tool results."""
         if isinstance(tool_result, dict):
-            if intent == 'decision_management':
+            # Session 940: Boardroom results
+            if intent == 'boardroom':
+                action = tool_result.get('action', '')
+
+                if action == 'stats':
+                    total = tool_result.get('total_pending', 0)
+                    attention = tool_result.get('attention_items', {})
+                    decisions = tool_result.get('draft_decisions', {})
+
+                    if total == 0:
+                        return f"Great news, {user_name}! Your Boardroom is all clear - no pending items."
+
+                    response = f"Hi {user_name}, your Boardroom has {total} pending items:\n\n"
+
+                    if attention.get('count', 0) > 0:
+                        att_count = attention['count']
+                        by_urgency = attention.get('by_urgency', {})
+                        critical = by_urgency.get('critical', 0)
+                        high = by_urgency.get('high', 0)
+                        response += f"**Attention Items:** {att_count}\n"
+                        if critical > 0:
+                            response += f"  - {critical} CRITICAL urgency\n"
+                        if high > 0:
+                            response += f"  - {high} high urgency\n"
+
+                    if decisions.get('count', 0) > 0:
+                        dec_count = decisions['count']
+                        by_type = decisions.get('by_type', {})
+                        response += f"\n**Draft Decisions:** {dec_count}\n"
+                        for dtype, count in list(by_type.items())[:3]:
+                            response += f"  - {count} {dtype}\n"
+
+                    response += "\nI can help you list, approve, ignore, promote, or reject items."
+                    return response
+
+                elif action in ['list_attention', 'list_decisions']:
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', len(items))
+                    if count == 0:
+                        return f"No items found matching your criteria, {user_name}."
+                    item_list = "\n".join([
+                        f"- {item.get('title', item.get('topic', 'Untitled'))} ({item.get('urgency', item.get('decision_type', 'unknown'))})"
+                        for item in items[:5]
+                    ])
+                    return f"Found {count} items:\n{item_list}"
+
+                elif action in ['approve_attention', 'ignore_attention', 'promote_decision', 'reject_decision']:
+                    if tool_result.get('success'):
+                        title = tool_result.get('title', tool_result.get('topic', 'Item'))
+                        return f"Done! {action.replace('_', ' ').title()}: {title}"
+                    else:
+                        return f"Failed to {action.replace('_', ' ')}: {tool_result}"
+
+            elif intent == 'decision_management':
                 items = tool_result.get('items', [])
                 count = tool_result.get('count', len(items))
                 if count == 0:
