@@ -8,7 +8,7 @@
 
 ## Session 937 Summary (Just Completed)
 
-### Content Quality Verification - COMPLETE (PR #855)
+### Content Quality Verification - COMPLETE (PRs #855, #857)
 Tested spider context injection and extended fixes to additional code paths.
 
 **Railway Verification:**
@@ -16,11 +16,17 @@ Tested spider context injection and extended fixes to additional code paths.
 - Logs show: "Built spider context with 29 data sources" ✅
 - SpiderContextBuilder successfully invoked ✅
 
-**Additional Fixes:**
+**Fixes Applied:**
 | File | Issue | Fix |
 |------|-------|-----|
 | `write_self_blog.py` | Passed empty `spider_context={}` | Now calls SpiderContextBuilder |
 | `tasks.py:19368` | `generate_self_blog_task` used empty context | Now calls SpiderContextBuilder |
+| `tasks.py:19138` | Trending topic query used wrong fields | Extract title/source from `raw_data` JSON |
+
+### Trending Topic Bug Fix (PR #857)
+**Bug:** `topic_category='trending'` failed with "Cannot resolve keyword 'title' into field"
+**Cause:** Code queried `SpiderData.title/source/url/content` but these are inside `raw_data` JSONField
+**Fix:** Extract from `raw_data.items[]` with fallbacks for title/name/headline formats
 
 **Remaining `spider_context={}` Locations (for future):**
 - `creative_orchestrator.py` - 13 locations
@@ -62,7 +68,7 @@ Build onboarding flow for new users:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
-| **937** | Content Quality Verification + Self-Blog Spider Fix | #855 |
+| **937** | Content Quality Verification + Spider Fixes | #855, #857 |
 | **936** | Dashboard + Voice + Spider Context Fix | #851, #852, #853, #854 |
 | **935** | User Learning UI + ListenButton | #850 |
 | **934** | Frontend PA Integration | #849 |
