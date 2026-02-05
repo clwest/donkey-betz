@@ -78,6 +78,9 @@ class FinanceContentContextBuilder:
         Get real market data from spiders.
 
         Returns formatted context about recent market movements.
+
+        Session 936: Fixed to use get_market_insights() instead of non-existent
+        get_aggregated_intelligence() method.
         """
         context_parts = []
 
@@ -85,19 +88,42 @@ class FinanceContentContextBuilder:
             if not self.spider_service:
                 return ""
 
-            # Get recent spider data for financial category
-            spider_data = self.spider_service.get_aggregated_intelligence(
-                categories=['financial', 'crypto'],
-                hours=48,
-                limit=10
-            )
+            # Session 936: Use actual method that exists in SpiderIntelligenceService
+            # get_market_insights() returns market data from financial spiders
+            market_data = self.spider_service.get_market_insights()
 
-            if spider_data and spider_data.get('items'):
+            if market_data:
                 context_parts.append("## Recent Market Intelligence (from our spider network)")
-                for item in spider_data['items'][:5]:
-                    title = item.get('title', '')
-                    source = item.get('source', 'Unknown')
-                    context_parts.append(f"- {title} (via {source})")
+
+                # Extract crypto prices if available
+                if market_data.get('crypto_prices'):
+                    context_parts.append("### Crypto Markets")
+                    for coin in market_data['crypto_prices'][:5]:
+                        name = coin.get('name', 'Unknown')
+                        price = coin.get('price', 0)
+                        change = coin.get('change_24h', 0)
+                        context_parts.append(f"- {name}: ${price:,.2f} ({change:+.2f}%)")
+
+                # Extract stock data if available
+                if market_data.get('stock_movers'):
+                    context_parts.append("### Stock Movers")
+                    for stock in market_data['stock_movers'][:5]:
+                        symbol = stock.get('symbol', '???')
+                        change = stock.get('change_percent', 0)
+                        context_parts.append(f"- {symbol}: {change:+.2f}%")
+
+                # Also get trending topics from financial category
+                trending = self.spider_service.get_trending_topics(
+                    category='financial',
+                    hours=48,
+                    limit=5
+                )
+                if trending:
+                    context_parts.append("### Trending Financial Topics")
+                    for item in trending[:5]:
+                        title = item.get('title', item.get('topic', 'Unknown'))
+                        source = item.get('source', item.get('spider', 'Unknown'))
+                        context_parts.append(f"- {title} (via {source})")
 
         except Exception as e:
             logger.debug(f"Could not fetch market data: {e}")

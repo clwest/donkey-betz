@@ -36,76 +36,88 @@ class SpiderContextBuilder:
 
     # Map agent types/names to spider categories they should receive data from
     # Format: agent_pattern -> list of spider categories
+    # Session 936: Expanded to include ALL spider categories for comprehensive coverage
     AGENT_SPIDER_MAPPINGS = {
         # Creative agents need design trends
-        'image': ['creative', 'tech'],
-        'video': ['creative', 'video', 'tech'],
-        'audio': ['creative', 'video'],
+        'image': ['creative', 'tech', 'entertainment'],
+        'video': ['creative', 'video', 'tech', 'entertainment'],
+        'audio': ['creative', 'video', 'entertainment'],
         '3d': ['creative', 'tech'],
         'image_editing': ['creative'],
-        'video_editing': ['creative', 'video'],
+        'video_editing': ['creative', 'video', 'entertainment'],
 
-        # Research agents need broad data
-        'research': ['tech', 'news', 'social', 'community'],
-        'content_writer': ['tech', 'news', 'social'],
-        'technical_document': ['tech'],
+        # Research agents need broad data - Session 936: Add ALL categories
+        'research': ['tech', 'news', 'social', 'community', 'financial', 'legal', 'science', 'health'],
+        'content_writer': ['tech', 'news', 'social', 'financial', 'sports', 'entertainment', 'lifestyle', 'science', 'health', 'education'],
+        'technical_document': ['tech', 'science'],
 
         # Strategy agents need market intelligence
-        'content_strategy': ['tech', 'news', 'social', 'creative'],
+        'content_strategy': ['tech', 'news', 'social', 'creative', 'entertainment'],
         'brand_identity': ['creative', 'social', 'community'],
         'brand_strategy': ['tech', 'news', 'social', 'creative'],
         'seo_optimizer': ['tech', 'news'],
-        'social_media': ['social', 'community', 'news'],
+        'social_media': ['social', 'community', 'news', 'entertainment'],
         'marketing_strategy': ['tech', 'news', 'social'],
 
         # Executive agents need broad awareness
-        'cto': ['tech', 'news', 'financial'],
-        'coo': ['tech', 'news', 'jobs'],
-        'creative_director': ['creative', 'tech', 'social'],
+        'cto': ['tech', 'news', 'financial', 'security'],
+        'coo': ['tech', 'news', 'jobs', 'financial'],
+        'creative_director': ['creative', 'tech', 'social', 'entertainment'],
 
         # Analysis agents need specific domain data
-        'trend_analysis': ['tech', 'news', 'social', 'creative'],
-        'opportunity_scoring': ['tech', 'jobs', 'financial'],
-        'market_intelligence': ['financial', 'tech', 'news'],
+        'trend_analysis': ['tech', 'news', 'social', 'creative', 'financial', 'sports'],
+        'opportunity_scoring': ['tech', 'jobs', 'financial', 'sports'],
+        'market_intelligence': ['financial', 'tech', 'news', 'crypto'],
         'competitor_analysis': ['tech', 'news', 'social'],
         'customer_research': ['social', 'community', 'news'],
 
-        # Financial/market agents
-        'stock': ['financial', 'news'],
-        'prediction_market': ['financial', 'news', 'social'],
-        'sports_odds': ['financial', 'news'],
-        'arbitrage': ['financial'],
+        # Financial/market agents - Session 936: Add sports for betting
+        'stock': ['financial', 'news', 'crypto'],
+        'prediction_market': ['financial', 'news', 'social', 'sports'],
+        'sports_odds': ['sports', 'news', 'financial'],
+        'arbitrage': ['financial', 'sports', 'crypto'],
         'blockchain': ['crypto', 'financial', 'tech'],
         'whale_watcher': ['crypto', 'financial'],
 
         # Development agents need tech trends
-        'code_generator': ['tech'],
+        'code_generator': ['tech', 'security'],
         'full_stack_developer': ['tech', 'jobs'],
-        'code_review': ['tech'],
-        'devops': ['tech'],
+        'code_review': ['tech', 'security'],
+        'devops': ['tech', 'security'],
 
-        # Content studio agents
-        'autonomous_content_studio': ['tech', 'news', 'social', 'creative'],
-        'topic_miner': ['tech', 'news', 'social'],
-        'contrarian': ['news', 'social', 'community'],
-        'performance_analyst': ['tech', 'news'],
-        'content_diversity': ['tech', 'news', 'social', 'creative', 'jobs', 'financial'],
+        # Content studio agents - Session 936: Comprehensive category access
+        'autonomous_content_studio': ['tech', 'news', 'social', 'creative', 'financial', 'sports', 'entertainment', 'science'],
+        'topic_miner': ['tech', 'news', 'social', 'financial', 'sports', 'entertainment', 'science', 'lifestyle'],
+        'contrarian': ['news', 'social', 'community', 'financial'],
+        'performance_analyst': ['tech', 'news', 'financial'],
+        'content_diversity': ['tech', 'news', 'social', 'creative', 'jobs', 'financial', 'sports', 'entertainment', 'science', 'lifestyle', 'health', 'education'],
 
         # Podcast agents
-        'podcast': ['tech', 'news', 'social'],
-        'debate': ['news', 'social', 'community'],
+        'podcast': ['tech', 'news', 'social', 'entertainment'],
+        'debate': ['news', 'social', 'community', 'financial'],
         'moderator': ['news', 'social'],
 
         # Job/career agents
         'job': ['jobs', 'tech'],
-        'career': ['jobs', 'tech', 'news'],
+        'career': ['jobs', 'tech', 'news', 'education'],
 
         # Legal agents (Session 744 enhancement)
         'legal': ['legal', 'news'],
         'legal_doc': ['legal', 'news'],
 
-        # Default for unmatched agents
-        'default': ['tech', 'news'],
+        # Session 936: Sports/betting agents
+        'sports': ['sports', 'news', 'financial'],
+        'betting': ['sports', 'financial', 'news'],
+
+        # Session 936: Health/science agents
+        'health': ['health', 'science', 'news'],
+        'science': ['science', 'tech', 'news'],
+
+        # Session 936: Education agents
+        'education': ['education', 'tech', 'news'],
+
+        # Default for unmatched agents - Session 936: Broader default coverage
+        'default': ['tech', 'news', 'financial', 'social'],
     }
 
     # Task keyword to category boost mappings
