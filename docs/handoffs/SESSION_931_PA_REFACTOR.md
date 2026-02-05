@@ -136,10 +136,32 @@ Already implemented in Session 926:
 
 ## Next Steps (Session 932+)
 
-1. **Attention Aggregator** - Single endpoint returning labeled counts (system vs human)
+1. ~~**Attention Aggregator** - Single endpoint returning labeled counts (system vs human)~~ ✅ DONE
 2. **Wire REST API** - Route `views_personal_assistant.py` through UnifiedPA
 3. **Audit "Needs Audit" tools** - ML Pipeline and Intelligence tools
 4. **Learning Loop** - Define success signals for tool executions
+
+---
+
+## Session 932 Addition: Attention Aggregator
+
+Fixed the 609 vs 17 attention items mismatch.
+
+**New Files:**
+- `core/services/attention_aggregator.py` - Unified attention aggregator
+
+**New Endpoints:**
+- `GET /api/assistant/attention/unified/` - Full unified response
+- `GET /api/assistant/attention/stats/` - Stats only (fast)
+
+**Usage:**
+```python
+from core.services.attention_aggregator import get_attention_aggregator
+
+aggregator = get_attention_aggregator(user)
+result = aggregator.get_unified_attention()
+# Returns both system_attention and human_attention with clear labels
+```
 
 ---
 
