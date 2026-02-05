@@ -1487,6 +1487,19 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.check_operating_rhythm_status',
         'schedule': crontab(hour=9, minute=0),  # Daily at 9:00 AM
     },
+    # =========================================================================
+    # Session 941: Boardroom Maintenance
+    # =========================================================================
+    # Clean up junk items (spider_action, [Learned] items)
+    'cleanup-boardroom-junk': {
+        'task': 'core.tasks.cleanup_boardroom_junk',
+        'schedule': crontab(hour='*/6', minute=15),  # Every 6 hours at :15
+    },
+    # Auto-approve low-risk items (insights, non-critical reviews, experiments, pipelines)
+    'auto-approve-boardroom-items': {
+        'task': 'core.tasks.auto_approve_boardroom_items',
+        'schedule': crontab(hour='*/6', minute=30),  # Every 6 hours at :30
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)

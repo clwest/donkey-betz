@@ -314,6 +314,93 @@ def cleanup_boardroom_junk(spider_action_hours: int = 24):
         raise
 
 
+@shared_task
+def auto_approve_boardroom_items():
+    """
+    Session 941: Auto-approve low-risk boardroom items to prevent backlog.
+
+    AUTO-APPROVES (HumanAttentionItem):
+    - insight items (informational only)
+    - review items with non-critical urgency
+
+    AUTO-PROMOTES (AgentDecisionSummary):
+    - experiment decisions
+    - pipeline decisions
+
+    Returns:
+        Dict with auto-approve statistics
+    """
+    from django.utils import timezone
+    from core.models_human_interface import HumanAttentionItem
+    from core.models_unified_system import AgentDecisionSummary
+
+    logger.info("✅ [BOARDROOM-AUTO-APPROVE] Starting auto-approve...")
+
+    try:
+        now = timezone.now()
+        stats = {
+            'insights_approved': 0,
+            'reviews_approved': 0,
+            'experiments_promoted': 0,
+            'pipelines_promoted': 0,
+        }
+
+        # 1. Auto-approve insight items (informational)
+        insights = HumanAttentionItem.objects.filter(
+            status='pending',
+            item_type='insight'
+        )
+        for item in insights:
+            item.status = 'approved'
+            item.handled_at = now
+            item.save(update_fields=['status', 'handled_at'])
+            stats['insights_approved'] += 1
+
+        # 2. Auto-approve non-critical review items
+        reviews = HumanAttentionItem.objects.filter(
+            status='pending',
+            item_type='review'
+        ).exclude(urgency='critical')
+        for item in reviews:
+            item.status = 'approved'
+            item.handled_at = now
+            item.save(update_fields=['status', 'handled_at'])
+            stats['reviews_approved'] += 1
+
+        # 3. Auto-promote experiment decisions
+        experiments = AgentDecisionSummary.objects.filter(
+            status='draft',
+            decision_type='experiment'
+        )
+        for decision in experiments:
+            decision.status = 'canonical'
+            decision.save(update_fields=['status'])
+            stats['experiments_promoted'] += 1
+
+        # 4. Auto-promote pipeline decisions
+        pipelines = AgentDecisionSummary.objects.filter(
+            status='draft',
+            decision_type='pipeline'
+        )
+        for decision in pipelines:
+            decision.status = 'canonical'
+            decision.save(update_fields=['status'])
+            stats['pipelines_promoted'] += 1
+
+        total = sum(stats.values())
+        logger.info(f"✅ [BOARDROOM-AUTO-APPROVE] Complete - processed {total} items "
+                   f"(insights: {stats['insights_approved']}, "
+                   f"reviews: {stats['reviews_approved']}, "
+                   f"experiments: {stats['experiments_promoted']}, "
+                   f"pipelines: {stats['pipelines_promoted']})")
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"✅ [BOARDROOM-AUTO-APPROVE] Failed: {e}", exc_info=True)
+        raise
+
+
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
 
 
