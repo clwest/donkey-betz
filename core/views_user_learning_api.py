@@ -38,7 +38,8 @@ def record_agent_feedback(request):
 
     Body:
     {
-        "agent_id": "uuid",
+        "agent_id": "uuid",           // Either agent_id or agent_name required
+        "agent_name": "AgentName",    // Alternative to agent_id
         "rating": 1,  // 1=helpful, 0=neutral, -1=not helpful
         "execution_id": "optional uuid",
         "deliverable_id": "optional uuid",
@@ -51,12 +52,19 @@ def record_agent_feedback(request):
         data = json.loads(request.body)
 
         agent_id = data.get('agent_id')
+        agent_name = data.get('agent_name')
         rating = data.get('rating')
 
-        if not agent_id or rating is None:
+        if not agent_id and not agent_name:
             return JsonResponse({
                 'success': False,
-                'error': 'agent_id and rating are required'
+                'error': 'agent_id or agent_name is required'
+            }, status=400)
+
+        if rating is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'rating is required'
             }, status=400)
 
         if rating not in [1, 0, -1]:
@@ -67,12 +75,23 @@ def record_agent_feedback(request):
 
         from core.models import Agent, Deliverable
 
+        # Look up agent by ID or name
+        agent = None
         try:
-            agent = Agent.objects.get(id=agent_id)
+            if agent_id:
+                agent = Agent.objects.get(id=agent_id)
+            elif agent_name:
+                # Try exact match first, then case-insensitive
+                agent = Agent.objects.filter(name=agent_name).first()
+                if not agent:
+                    agent = Agent.objects.filter(name__iexact=agent_name).first()
         except Agent.DoesNotExist:
+            pass
+
+        if not agent:
             return JsonResponse({
                 'success': False,
-                'error': f'Agent {agent_id} not found'
+                'error': f'Agent not found'
             }, status=404)
 
         deliverable = None
