@@ -14,10 +14,11 @@ import {
   X, FileText, Image, Video, Music, Code, BarChart3, FileSpreadsheet,
   Layout, Microscope, Target, FileCheck, Scroll,
   Bookmark, BookmarkCheck, Copy, Download,
-  Clock, Coins, Bot, Calendar, Tag, Bug
+  Clock, Coins, Bot, Calendar, Tag, Bug, Volume2
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Deliverable } from './DeliverableCard'
+import { ListenButton } from '@/components/ListenButton'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -263,7 +264,16 @@ export function DeliverableDetailModal({
 
             {/* Main Content */}
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-zinc-400 mb-3">Content</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-zinc-400">Content</h4>
+                {(deliverable.content || deliverable.preview_content) && (
+                  <ListenButton
+                    text={deliverable.content || deliverable.preview_content}
+                    agentName={deliverable.agent_name}
+                    size="sm"
+                  />
+                )}
+              </div>
               <div className="bg-zinc-800/50 rounded-lg p-4 prose prose-invert prose-sm max-w-none">
                 {deliverable.content_format === 'markdown' ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
