@@ -3204,6 +3204,83 @@ export const platformApi = {
         }
       }
     }>(`/initiatives/${initiativeId}/origin-trace/`),
+
+  // Session 928: Pipeline health monitoring
+  pipelineHealth: (staleHours?: number) =>
+    api.get<{
+      generated_at: string
+      stale_threshold_hours: number
+      summary: {
+        active_count: number
+        moved_last_24h: number
+        transitions_last_24h: number
+        transitions_last_1h: number
+        approvals_last_24h: number
+        stale_count: number
+        blocked_count: number
+      }
+      recent_transitions: Array<{
+        id: string
+        initiative_id: string
+        initiative_name: string
+        stage_number: number
+        from_status: string
+        to_status: string
+        timestamp: string
+        time_ago: string
+        triggered_by: string
+        trigger_type: string
+        quality_score: number | null
+        had_error: boolean
+      }>
+      stale_initiatives: Array<{
+        id: string
+        name: string
+        current_stage: number
+        last_activity: string
+        days_stale: number
+        completion_pct: number
+      }>
+      stage_distribution: Record<string, Record<string, number>>
+      hourly_activity: Array<{
+        hour: number
+        label: string
+        transitions: number
+      }>
+      health_status: 'healthy' | 'moderate' | 'slow' | 'stalled' | 'critical' | 'error' | 'unknown'
+      health_message: string
+    }>(`/initiatives/pipeline-health/${staleHours ? `?stale_hours=${staleHours}` : ''}`),
+
+  // Session 928: Diagnose stuck initiatives
+  diagnoseStuck: (limit?: number) =>
+    api.get<{
+      generated_at: string
+      rate_limit_stats: {
+        progressions_today: number
+        daily_limit: number
+        remaining: number
+      }
+      summary: {
+        total_checked: number
+        no_document: number
+        quality_failed: number
+        founder_intent_missing: number
+        ready_to_progress: number
+      }
+      blocking_reasons: Record<string, number>
+      initiatives: Array<{
+        id: string
+        name: string
+        stage: number
+        blockers: string[]
+        can_progress: boolean
+        quality_check?: {
+          passes: boolean
+          confidence: string
+          reason: string
+        }
+      }>
+    }>(`/initiatives/diagnose-stuck/${limit ? `?limit=${limit}` : '?limit=100'}`),
 }
 
 // Session 833: Blogs API for approval workflow
