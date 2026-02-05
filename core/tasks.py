@@ -246,6 +246,74 @@ def cleanup_junk_initiatives(stale_days: int = 7):
         raise
 
 
+@shared_task
+def cleanup_boardroom_junk(spider_action_hours: int = 24):
+    """
+    Session 927: Clean up boardroom junk to prevent backlog accumulation.
+
+    DELETES:
+    - spider_action items older than X hours (just news headlines)
+    - Items with [Learned] in title (auto-generated junk)
+    - Draft decisions with [Learned] in topic
+
+    Args:
+        spider_action_hours: Delete spider_action items older than this
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_human_interface import HumanAttentionItem
+    from core.models_unified_system import AgentDecisionSummary
+
+    logger.info(f"🧹 [BOARDROOM-CLEANUP] Starting cleanup...")
+
+    try:
+        now = timezone.now()
+        spider_cutoff = now - timedelta(hours=spider_action_hours)
+
+        stats = {
+            'spider_actions_deleted': 0,
+            'learned_attention_deleted': 0,
+            'learned_decisions_deleted': 0,
+        }
+
+        # 1. Delete old spider_action items (pending only, they're just news)
+        spider_deleted = HumanAttentionItem.objects.filter(
+            status='pending',
+            item_type='spider_action',
+            created_at__lt=spider_cutoff
+        ).delete()
+        stats['spider_actions_deleted'] = spider_deleted[0]
+
+        # 2. Delete [Learned] junk from HumanAttentionItem
+        learned_hai = HumanAttentionItem.objects.filter(
+            status='pending',
+            title__icontains='[Learned]'
+        ).delete()
+        stats['learned_attention_deleted'] = learned_hai[0]
+
+        # 3. Delete [Learned] junk from AgentDecisionSummary (draft only)
+        learned_decisions = AgentDecisionSummary.objects.filter(
+            status='draft',
+            topic__icontains='[Learned]'
+        ).delete()
+        stats['learned_decisions_deleted'] = learned_decisions[0]
+
+        total = sum(stats.values())
+        logger.info(f"🧹 [BOARDROOM-CLEANUP] Complete - deleted {total} items "
+                   f"(spider: {stats['spider_actions_deleted']}, "
+                   f"learned_attention: {stats['learned_attention_deleted']}, "
+                   f"learned_decisions: {stats['learned_decisions_deleted']})")
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"🧹 [BOARDROOM-CLEANUP] Failed: {e}", exc_info=True)
+        raise
+
+
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
 
 
