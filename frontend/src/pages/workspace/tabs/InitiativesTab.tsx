@@ -2924,7 +2924,8 @@ export function InitiativesTab() {
                   <div className="grid gap-3 md:grid-cols-5">
                     {[1, 2, 3, 4, 5].map((stageNum) => {
                       const stageDist = pipelineHealth.stage_distribution[`stage_${stageNum}`] || {}
-                      const total = Object.values(stageDist).reduce((sum: number, n) => sum + (n as number), 0) as number
+                      // Session 943: Use explicit count field (initiatives AT this stage)
+                      const total = (stageDist as { count?: number }).count ?? 0
                       return (
                         <div key={stageNum} className="bg-dark-bg rounded-lg p-3">
                           <div className="text-xs text-gray-500 mb-2">Stage {stageNum}</div>
