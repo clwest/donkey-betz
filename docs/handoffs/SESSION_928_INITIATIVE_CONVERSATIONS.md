@@ -186,6 +186,31 @@ context = f"""
 
 ---
 
+## Part 4: HiveMind Modal Updates (PR #832)
+
+### Problem
+When viewing a HiveMind session that was started from an initiative, there was no way to see which initiative it was linked to.
+
+### Solution
+Updated the HiveMind SessionDetailPanel to display the linked initiative with a clickable link.
+
+### Changes
+- **Backend:** `core/views_agent_learning.py` - `get_hivemind_detail()` now returns initiative data
+- **Frontend:** `frontend/src/pages/HiveMindPage.tsx` - Added initiative display with Target icon and status badge
+
+### Visual
+```
+┌─ HiveMind Session Detail ──────────────────────┐
+│ Question: How to implement this initiative?     │
+│ Context: ...                                    │
+│ 🎯 Initiative: My Initiative Name [ACTIVE]     │  ← NEW
+│                                                 │
+│ Status: completed                               │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
 ## Files Modified
 
 | File | Changes |
@@ -193,15 +218,19 @@ context = f"""
 | `core/models_unified_system.py` | Added `initiative` FK to HiveMindSession |
 | `core/migrations/0227_session_928_hivemind_initiative_fk.py` | New migration |
 | `core/views_initiative_kickstart.py` | Added `start_initiative_conversation()` endpoint |
+| `core/views_agent_learning.py` | Added initiative data to `get_hivemind_detail()` |
 | `core/urls.py` | Added route for new endpoint |
 | `frontend/src/lib/api.ts` | Added `pipelineHealth()`, `diagnoseStuck()`, `startConversation()` |
 | `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Added blocker analysis UI + "Discuss with Agents" button |
+| `frontend/src/pages/HiveMindPage.tsx` | Added initiative display in SessionDetailPanel |
 
 ---
 
 ## PRs Created
 - **#828**: Add Blocker Analysis to Initiative Health tab
 - **#830**: Fix 401 errors on Health tab + Add Initiative Conversations feature
+- **#831**: Add Initiative Conversations - Discuss with Agents
+- **#832**: Show linked initiative in HiveMind modal
 
 ---
 
@@ -224,21 +253,34 @@ curl -X POST "http://localhost:8000/api/initiatives/<uuid>/start-conversation/" 
 
 ---
 
-## Next Steps
+## Deployment Status
 
-1. **Run migration on production:**
+1. **Migration applied on production:** ✅
    ```bash
    railway run python manage.py migrate core 0227
+   # Result: Applying core.0227_session_928_hivemind_initiative_fk... OK
    ```
 
-2. **Monitor conversation creation:**
-   - Check HiveMindSession records have initiative FK populated
-   - Verify Celery tasks process conversations correctly
+2. **All PRs merged:** ✅
+   - #828, #830, #831, #832
 
-3. **Stage 2+ generation:**
-   - Now that founder_intent is fixed for 50 initiatives
-   - And stub documents are reset
-   - Next batch should generate proper Stage 1 docs and enable Stage 2
+3. **Feature live on production:** ✅
+   - "Discuss with Agents" button available in initiative modals
+   - HiveMind sessions show linked initiative
+
+## Next Steps for Session 930
+
+1. **Regenerate stub documents:**
+   - 286 stub stages are now PENDING
+   - Trigger Stage 1 regeneration batch
+
+2. **Start Stage 2 generation:**
+   - 50 initiatives now have founder_intent_set=True
+   - Ready for Stage 2 document generation
+
+3. **Monitor Initiative Conversations:**
+   - Test user flow from initiative → HiveMind → back
+   - Verify context injection is helpful for agents
 
 ---
 
