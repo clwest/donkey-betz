@@ -108,6 +108,15 @@ from .models_ats_optimization import (
     ResumeRewriteOrder,
 )
 
+# Import user learning models (Session 930 - User Context & Learning)
+from .models_user_learning import (
+    AgentFeedback,
+    GoalProgress,
+    UserSkill,
+    SkillDemonstration,
+    ProfileCompletionPrompt,
+)
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
