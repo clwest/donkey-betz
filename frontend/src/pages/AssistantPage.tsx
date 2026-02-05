@@ -435,10 +435,36 @@ export default function AssistantPage() {
     return () => audio.removeEventListener('ended', handleEnded)
   }, [])
 
-  // Feedback mutation
+  // Feedback mutation - records to both conversation and user learning system
   const feedbackMutation = useMutation({
-    mutationFn: ({ messageId, rating }: { messageId: string; rating: 'positive' | 'negative' }) =>
-      assistantApi.feedback(messageId, rating),
+    mutationFn: async ({ messageId, rating }: { messageId: string; rating: 'positive' | 'negative' }) => {
+      // Find the message to get agent info
+      const message = messages.find(m => m.id === messageId)
+
+      // Record conversation-level feedback
+      await assistantApi.feedback(messageId, rating)
+
+      // Session 935: Also record to user learning system if we have agent info
+      if (message?.routed_to) {
+        try {
+          await userLearningApi.recordFeedback({
+            agent_name: message.routed_to,
+            rating: rating === 'positive' ? 1 : -1,
+            execution_id: message.trace_id,
+            task_description: message.intent || undefined,
+            context_snapshot: {
+              tools_used: message.tools_used,
+              latency_ms: message.latency_ms,
+            },
+          })
+        } catch (err) {
+          // Don't fail the whole operation if learning feedback fails
+          console.warn('Failed to record user learning feedback:', err)
+        }
+      }
+
+      return { messageId, rating }
+    },
     onSuccess: (_, variables) => {
       setMessages((prev) =>
         prev.map((msg) =>
