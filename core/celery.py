@@ -2389,6 +2389,17 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+
+    # Session 927: Boardroom Cleanup to prevent attention item backlog
+    # Deletes spider_action news items and [Learned] junk
+    'cleanup-boardroom-junk': {
+        'task': 'core.tasks.cleanup_boardroom_junk',
+        'schedule': crontab(hour=4, minute=30),  # Daily at 4:30 AM
+        'kwargs': {'spider_action_hours': 24},  # Delete spider actions older than 24h
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Task routing configuration
