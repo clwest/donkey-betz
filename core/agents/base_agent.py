@@ -3495,11 +3495,37 @@ Consider this current data when formulating your response."""
             )
 
             logger.info(f"📦 Session 861: Saved Deliverable {deliverable.id} - {title[:50] if title else 'Untitled'}")
+
+            # Session 930: Trigger auto-learning from deliverable
+            self._trigger_deliverable_learning(deliverable, user)
+
             return deliverable
 
         except Exception as e:
             logger.warning(f"Failed to save Deliverable for {self.name}: {e}")
             return None
+
+    def _trigger_deliverable_learning(self, deliverable, user) -> None:
+        """
+        Session 930: Trigger learning services after deliverable creation.
+        """
+        if not user:
+            return
+
+        try:
+            from core.services.skill_evolution_service import get_skill_evolution_service
+            skill_service = get_skill_evolution_service()
+            base_quality = float(deliverable.quality_score) if deliverable.quality_score else 0.7
+            skill_service.update_skills_from_deliverable(user, deliverable, base_quality)
+        except Exception as e:
+            logger.debug(f"Skill evolution trigger failed: {e}")
+
+        try:
+            from core.services.goal_tracking_service import get_goal_tracking_service
+            goal_service = get_goal_tracking_service()
+            goal_service.auto_link_deliverable(deliverable)
+        except Exception as e:
+            logger.debug(f"Goal tracking trigger failed: {e}")
 
     def _get_deliverable_category(self) -> str:
         """
