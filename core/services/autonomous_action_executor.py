@@ -242,10 +242,28 @@ class AutonomousActionExecutor:
     def _execute_generate_content(self, name: str, params: Dict, reasoning: str) -> Dict[str, Any]:
         """Generate content using the ContentWriterAgent."""
         from core.agents.content_writer_agent import ContentWriterAgent
+        from core.services.spider_context_builder import SpiderContextBuilder
 
         topic = params.get('topic', 'system insights')
         content_type = params.get('content_type', 'blog')
         tone = params.get('tone', 'professional')
+
+        # Session 936: Build real spider context instead of empty dict
+        # This was the root cause of blogs only referencing "Kalshi spider"
+        spider_context = {}
+        try:
+            context_builder = SpiderContextBuilder()
+            spider_context = context_builder.build_context_for_agent(
+                agent_name='ContentWriterAgent',
+                task=f"{content_type} about {topic}",
+                hours=48,
+                max_trends=15,
+                max_discussions=10,
+                include_market_data=True
+            )
+            logger.info(f"[Session 936] Built spider context with {len(spider_context.get('data_sources', []))} data sources for content: {topic}")
+        except Exception as e:
+            logger.warning(f"[Session 936] Could not build spider context: {e}")
 
         agent = ContentWriterAgent()
         # ContentWriterAgent.execute takes: task, context, scifi_context, spider_context
@@ -253,7 +271,7 @@ class AutonomousActionExecutor:
             task=f"Write a {content_type} about: {topic}. Tone: {tone}. Context: {reasoning}",
             context={'topic': topic, 'content_type': content_type, 'tone': tone, 'autonomous': True},
             scifi_context={},
-            spider_context={}
+            spider_context=spider_context
         )
 
         return {

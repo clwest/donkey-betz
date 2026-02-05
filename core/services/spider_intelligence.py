@@ -34,22 +34,45 @@ class SpiderIntelligenceService:
 
     # Category mappings for spider classification
     # Session 222: Updated to include real data collector spider names
+    # Session 936: Expanded to include ALL 77 registered spiders
     CATEGORY_MAPPINGS = {
-        'tech': ['hackernews', 'devto', 'github_trending', 'producthunt', 'huggingface', 'kaggle',
-                 'techcrunch', 'theverge', 'wired', 'mit_tech_review', 'axios', 'hashnode',
-                 'medium', 'substack'],
-        'financial': ['coingecko', 'yahoo_finance', 'etherscan', 'financial', 'seekingalpha'],
-        'jobs': ['weworkremotely', 'remote_jobs', 'github_jobs', 'stackoverflow_jobs', 'flexjobs',
-                 'remoteok', 'weworkremotely', 'adzuna', 'angellist'],
-        'news': ['news_harvester', 'reuters', 'bbc', 'techcrunch', 'axios', 'theverge', 'wired',
-                 'mit_tech_review'],
+        'tech': [
+            'hackernews', 'devto', 'github', 'producthunt', 'huggingface', 'kaggle',
+            'techcrunch', 'theverge', 'wired', 'mit_tech_review', 'axios',
+            'medium', 'substack', 'arstechnica', 'venturebeat', 'techcrunch_startups',
+            'hackernoon', 'freecodecamp', 'smashingmagazine',
+        ],
+        'financial': [
+            'coingecko', 'yahoo_finance', 'etherscan', 'etherscan_api', 'finnhub',
+            'polygon_finance', 'sec_edgar', 'crunchbase', 'kickstarter',
+        ],
+        'jobs': [
+            'weworkremotely', 'github_jobs', 'remoteok', 'adzuna',
+        ],
+        'news': [
+            'reuters_rss', 'bbc', 'cnn', 'npr', 'axios', 'google_news', 'newsapi',
+            'business_news', 'defenseone',
+        ],
         # Session 294: Added bluesky and youtube for customer research
-        'social': ['reddit', 'bluesky', 'twitter_trends', 'social_sentiment'],
-        'video': ['youtube'],
-        'creative': ['dribbble', 'behance', 'medium', 'substack'],
-        'crypto': ['coingecko', 'etherscan', 'nft_tracker', 'defi_tracker'],
+        'social': ['reddit', 'bluesky', 'discord', 'discord_training'],
+        'video': ['youtube', 'giphy'],
+        'creative': ['behance', 'medium', 'substack', 'awwwards', 'unsplash'],
+        'crypto': ['coingecko', 'etherscan', 'etherscan_api'],
         # Session 294: Community category for customer research spiders
-        'community': ['reddit', 'bluesky', 'discord', 'indiehackers'],
+        'community': ['reddit', 'bluesky', 'discord'],
+        # Session 936: New categories for comprehensive coverage
+        'legal': [
+            'courtlistener', 'findlaw', 'justia', 'lii', 'colorado_family_law',
+            'justia_family_law', 'legal_news', 'government',
+        ],
+        'sports': ['theodds', 'kalshi'],
+        'entertainment': ['youtube', 'spotify', 'variety', 'polygon_gaming', 'giphy'],
+        'science': ['science', 'kaggle', 'huggingface', 'arxiv', 'library'],
+        'lifestyle': ['food', 'travel', 'parenting', 'health', 'real_estate', 'lifehacker'],
+        'education': ['coursera', 'udemy', 'teachable', 'education_rss'],
+        'security': ['securityweek'],
+        'health': ['mobihealthnews', 'health'],
+        'weather': ['noaa_weather', 'openmeteo'],
     }
 
     # Session 385: Job spiders to exclude from general trending topics
