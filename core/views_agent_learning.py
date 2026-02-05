@@ -3191,6 +3191,17 @@ def get_hivemind_detail(request, session_id):
             participants = Agent.objects.filter(id__in=session.participant_ids)
             participant_names = [{'id': str(p.id), 'name': p.name} for p in participants]
 
+        # Session 928: Include linked initiative data
+        initiative_data = None
+        if session.initiative:
+            initiative_data = {
+                'id': str(session.initiative.id),
+                'name': session.initiative.name,
+                'title': session.initiative.title,
+                'status': session.initiative.status,
+                'purpose': session.initiative.purpose,
+            }
+
         return JsonResponse({
             'success': True,
             'session': {
@@ -3207,6 +3218,7 @@ def get_hivemind_detail(request, session_id):
                 'total_thinking_time': session.total_thinking_time,
                 'created_at': session.created_at.isoformat() if session.created_at else None,
                 'completed_at': session.completed_at.isoformat() if session.completed_at else None,
+                'initiative': initiative_data,  # Session 928
             },
             'contributions': contributions_data
         })

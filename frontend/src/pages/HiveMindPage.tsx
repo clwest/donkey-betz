@@ -56,6 +56,14 @@ interface SessionDetail {
   completed_at: string | null
   contribution_count: number
   total_thinking_time: number
+  // Session 928: Linked initiative
+  initiative?: {
+    id: string
+    name: string
+    title: string
+    status: string
+    purpose: string
+  } | null
 }
 
 interface Contribution {
@@ -468,6 +476,21 @@ function SessionDetailPanel({
             <h3 className="text-lg font-semibold text-white">{session.question}</h3>
             {session.context && (
               <p className="text-sm text-gray-400 mt-1">{session.context}</p>
+            )}
+            {/* Session 928: Show linked initiative */}
+            {session.initiative && (
+              <div className="flex items-center gap-2 mt-2">
+                <Target className="h-4 w-4 text-amber-400" />
+                <a
+                  href={`/workspace?tab=initiatives&initiative=${session.initiative.id}`}
+                  className="text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                >
+                  Initiative: {session.initiative.title || session.initiative.name}
+                </a>
+                <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                  {session.initiative.status}
+                </span>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2 ml-4">
