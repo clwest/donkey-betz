@@ -19135,13 +19135,34 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500, topic_ca
 
         if topic_category == 'trending':
             # Get interesting topics from spider data
-            trending_data = list(
-                SpiderData.objects.filter(created_at__gte=last_24h).defer('embedding')
-                .exclude(title__isnull=True)
-                .exclude(title='')
-                .values('title', 'source', 'url', 'content')
-                .order_by('-created_at')[:20]
+            # Session 937: Fixed to use correct model fields
+            # title/source/url/content are inside raw_data JSON, not model fields
+            spider_entries = list(
+                SpiderData.objects.filter(created_at__gte=last_24h)
+                .defer('embedding', 'item_embeddings')
+                .order_by('-created_at')[:50]
             )
+
+            # Extract trending items from raw_data JSONField
+            trending_data = []
+            for entry in spider_entries:
+                if entry.raw_data and isinstance(entry.raw_data, dict):
+                    items = entry.raw_data.get('items', [])
+                    for item in items[:3]:  # Top 3 items per spider entry
+                        if not isinstance(item, dict):
+                            continue
+                        title = item.get('title') or item.get('name') or item.get('headline') or ''
+                        if title and len(str(title)) > 10:  # Filter short/empty titles
+                            trending_data.append({
+                                'title': str(title)[:200],
+                                'source': entry.spider_name,
+                                'url': item.get('url') or item.get('link') or entry.source_url,
+                                'content': (item.get('description') or item.get('summary') or item.get('content', ''))[:500]
+                            })
+                            if len(trending_data) >= 20:
+                                break
+                if len(trending_data) >= 20:
+                    break
 
             if trending_data:
                 # Pick a random interesting item
