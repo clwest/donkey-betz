@@ -173,9 +173,13 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 30):
 @shared_task
 def cleanup_junk_initiatives(stale_days: int = 7):
     """
-    Session 926: Clean up junk initiatives to prevent pipeline backlogs.
+    Session 926/943: Clean up junk initiatives to prevent pipeline backlogs.
 
-    DELETES initiatives with junk name patterns (cannot be processed).
+    Session 943 UPDATE: Now attempts to FIX names using title generator before deleting.
+    Only deletes if name cannot be fixed (no usable content to extract from).
+
+    FIXES initiatives with junk name patterns by regenerating clean titles.
+    DELETES initiatives that have no salvageable content.
     ARCHIVES initiatives that are stale (might be legitimate, just slow).
 
     Args:
@@ -188,6 +192,7 @@ def cleanup_junk_initiatives(stale_days: int = 7):
     from datetime import timedelta
     from django.db.models import Q
     from core.models_document_registry import Initiative, InitiativeStage
+    from core.services.initiative_title_generator import generate_initiative_title, _is_valid_title
 
     logger.info(f"🧹 [INITIATIVE-CLEANUP] Starting cleanup...")
 
@@ -196,16 +201,21 @@ def cleanup_junk_initiatives(stale_days: int = 7):
         cutoff = now - timedelta(days=stale_days)
 
         stats = {
+            'names_fixed': 0,
             'junk_deleted': 0,
             'stale_archived': 0,
+            'stage_invariant_fixed': 0,
         }
 
-        # 1. DELETE junk name patterns (these are malformed and can't be processed)
+        # 1. FIX or DELETE junk name patterns
+        # Session 943: Try to fix names before deleting
         junk_patterns = Q(name__icontains='[Learned]') | \
+                       Q(name__icontains='[Synthesis]') | \
                        Q(name__startswith='driven ') | \
                        Q(name__startswith='plan ') | \
                        Q(name__startswith='of-') | \
                        Q(name__startswith='analysis ') | \
+                       Q(name__startswith="Feature name:") | \
                        Q(name__regex=r'^[a-z]')  # Starts with lowercase (fragment)
 
         junk_initiatives = Initiative.objects.filter(
@@ -213,12 +223,64 @@ def cleanup_junk_initiatives(stale_days: int = 7):
         ).filter(junk_patterns)
 
         for init in junk_initiatives:
-            name = init.name[:50]
-            init.delete()
-            stats['junk_deleted'] += 1
-            logger.info(f"🗑️ [INITIATIVE-CLEANUP] Deleted junk: {name}")
+            old_name = init.name[:60]
 
-        # 2. ARCHIVE stale initiatives (no Stage 1 doc after X days)
+            # Session 943: Try to generate a clean title from available content
+            # Use description, parent_topic, or original name as sources
+            content_sources = [
+                init.description or '',
+                init.parent_topic or '',
+                init.name or '',
+            ]
+            combined_content = ' '.join(content_sources)
+
+            # Try to generate a valid title
+            new_title = generate_initiative_title(
+                content=combined_content,
+                topic_hint=init.parent_topic,
+                max_length=60,
+                use_llm=False  # Use heuristics only for speed
+            )
+
+            # Check if the new title is valid and different
+            if new_title and _is_valid_title(new_title) and new_title != init.name:
+                # Session 943: Check for duplicate name before saving
+                if Initiative.objects.filter(name=new_title).exclude(id=init.id).exists():
+                    # Add unique suffix to avoid duplicate
+                    import uuid
+                    suffix = str(uuid.uuid4())[:6]
+                    new_title = f"{new_title[:53]} ({suffix})"
+
+                try:
+                    init.name = new_title
+                    init.save(skip_invariant_check=True)  # Skip stage check for name-only fix
+                    stats['names_fixed'] += 1
+                    logger.info(f"✨ [INITIATIVE-CLEANUP] Fixed name: '{old_name}' → '{new_title}'")
+                except Exception as save_err:
+                    logger.warning(f"⚠️ Could not fix name '{old_name}': {save_err}")
+                    continue  # Skip deletion, leave as-is
+            else:
+                # Cannot fix - delete it
+                init.delete()
+                stats['junk_deleted'] += 1
+                logger.info(f"🗑️ [INITIATIVE-CLEANUP] Deleted unfixable: {old_name}")
+
+        # 2. Session 943: Fix stage invariant violations
+        # Find initiatives where current_stage > max_approved + 1
+        for init in Initiative.objects.filter(status='ACTIVE'):
+            max_approved = init.get_max_approved_stage()
+            max_allowed = max_approved + 1
+            if init.current_stage > max_allowed:
+                old_stage = init.current_stage
+                init.current_stage = max_allowed
+                init.save(skip_invariant_check=True)
+                stats['stage_invariant_fixed'] += 1
+                logger.info(
+                    f"🔧 [INITIATIVE-CLEANUP] Fixed stage: {init.name[:40]}... "
+                    f"(was {old_stage}, now {max_allowed})"
+                )
+
+        # 3. ARCHIVE stale initiatives (no Stage 1 doc after X days)
         # These might be legitimate, just slow - archive instead of delete
         stale_initiatives = Initiative.objects.filter(
             status='ACTIVE',
@@ -232,12 +294,17 @@ def cleanup_junk_initiatives(stale_days: int = 7):
 
         for init in stale_initiatives:
             init.status = 'ARCHIVED'
-            init.save()
+            init.save(skip_invariant_check=True)
             stats['stale_archived'] += 1
             logger.info(f"📦 [INITIATIVE-CLEANUP] Archived stale: {init.name[:50]}")
 
-        logger.info(f"🧹 [INITIATIVE-CLEANUP] Complete - deleted {stats['junk_deleted']} junk, "
-                   f"archived {stats['stale_archived']} stale")
+        logger.info(
+            f"🧹 [INITIATIVE-CLEANUP] Complete - "
+            f"fixed {stats['names_fixed']} names, "
+            f"deleted {stats['junk_deleted']} junk, "
+            f"archived {stats['stale_archived']} stale, "
+            f"fixed {stats['stage_invariant_fixed']} stage violations"
+        )
 
         return stats
 

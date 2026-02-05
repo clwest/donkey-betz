@@ -27,6 +27,50 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# Session 943: Junk prefixes that leak from knowledge transfer and other sources
+JUNK_PREFIXES = [
+    '[Learned] ',
+    '[Learned]',
+    '[Synthesis] ',
+    '[Synthesis]',
+    'Learned: ',
+    'Synthesis: ',
+    'Discussion: ',
+    'Panel: ',
+    'Research: ',
+    'Experiment: ',
+    'Feature name: ',
+    "Feature name: '",
+]
+
+
+def _strip_junk_prefixes(text: str) -> str:
+    """
+    Session 943: Strip common junk prefixes that leak into initiative names.
+
+    These come from:
+    - Knowledge transfer ([Learned])
+    - Synthesis outputs ([Synthesis])
+    - Conversation topics (Discussion:, Panel:)
+    - Feature extraction (Feature name:)
+    """
+    if not text:
+        return ""
+
+    # Strip prefixes iteratively (they can be nested)
+    changed = True
+    while changed:
+        changed = False
+        for prefix in JUNK_PREFIXES:
+            if text.startswith(prefix):
+                text = text[len(prefix):].strip()
+                changed = True
+
+    # Also strip trailing quotes that might be left over
+    text = text.strip("'\"")
+
+    return text.strip()
+
 
 def generate_initiative_title(
     content: str,
@@ -46,6 +90,10 @@ def generate_initiative_title(
     Returns:
         Clean, properly capitalized title (max_length chars)
     """
+    # Session 943: Pre-clean content and topic_hint to remove junk prefixes
+    content = _strip_junk_prefixes(content) if content else ""
+    topic_hint = _strip_junk_prefixes(topic_hint) if topic_hint else None
+
     # Step 1: Try to use the topic_hint if it's clean
     if topic_hint:
         cleaned_hint = _clean_title_text(topic_hint)
@@ -77,12 +125,29 @@ def _is_valid_title(title: str, max_length: int = 80) -> bool:
     - Contains technical fragments like "inputs =", "(4) exposes"
     - Too short (< 5 chars) or too long
     - Contains only punctuation/numbers
+    - Session 943: Contains [Learned], [Synthesis], or other junk prefixes
     """
     if not title or len(title) < 5:
         return False
 
     if len(title) > max_length:
         return False
+
+    # Session 943: Reject titles with junk prefixes that leaked through
+    for prefix in JUNK_PREFIXES:
+        if prefix.lower() in title.lower():
+            return False
+
+    # Session 943: Reject titles that look like truncated fragments
+    # These end with partial words or have unbalanced quotes
+    if title.count("'") == 1 or title.count('"') == 1:
+        return False  # Unbalanced quotes = truncated
+    if re.search(r"[a-z]{3,}$", title) and not title.endswith(('ing', 'tion', 'ment', 'ness', 'able', 'ible')):
+        # Ends with lowercase letters but not a common suffix - might be truncated
+        # Only flag if no space before the ending (definitely mid-word)
+        last_space = title.rfind(' ')
+        if last_space > 0 and len(title) - last_space > 15:
+            return False  # Long word at end, likely truncated
 
     title_lower = title.lower().strip()
 
