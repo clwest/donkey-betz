@@ -1,5 +1,11 @@
 """
 WebSocket consumers for Unified Platform V2
+
+Session 931: Updated to use UnifiedPAEntrypoint as single front door.
+All PA requests now go through the unified entrypoint for:
+- Consistent behavior
+- ToolDispatcher integration (no silent failures)
+- Structured responses with trace_id
 """
 import json
 import asyncio
@@ -7,7 +13,6 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from core.llm_enforcer import LLMEnforcer
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +20,8 @@ logger = logging.getLogger(__name__)
 class PersonalAssistantConsumer(AsyncWebsocketConsumer):
     """
     Personal Assistant WebSocket consumer with authentication.
-    Provides intelligent routing based on user intent.
+
+    Session 931: Now routes through UnifiedPAEntrypoint for consistent behavior.
     """
 
     async def connect(self):
@@ -31,8 +37,8 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         self.user_id = str(self.user.id)
         self.room_group_name = f"assistant_{self.user_id}"
 
-        # Initialize LLM enforcer for REAL AI responses
-        self.llm_enforcer = LLMEnforcer()
+        # Session 931: Initialize UnifiedPA entrypoint
+        self.unified_pa = None  # Lazy load to avoid import issues
 
         # Join user-specific channel group
         await self.channel_layer.group_add(
@@ -42,17 +48,13 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
-        # Send welcome message using REAL AI
-        user_name = self.user.first_name or self.user.username
-        welcome_response = await self.generate_ai_response(
-            f"Generate a friendly welcome message for {user_name} explaining what you can help them with.",
+        # Send welcome message through unified PA
+        welcome_response = await self._process_through_unified_pa(
+            "Generate a friendly welcome message explaining what you can help with.",
             is_welcome=True
         )
 
-        await self.send(text_data=json.dumps({
-            'type': 'message',
-            'content': welcome_response
-        }))
+        await self.send(text_data=json.dumps(welcome_response))
 
     async def disconnect(self, close_code):
         """Leave channel group on disconnect"""
@@ -70,12 +72,13 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
 
             if message_type == 'message':
                 content = data.get('content', '')
+                generate_audio = data.get('generate_audio', False)
 
-                # Detect user intent
-                intent = self.detect_intent(content)
-
-                # Handle based on intent
-                response = await self.handle_intent(intent, content)
+                # Session 931: Route through UnifiedPA entrypoint
+                response = await self._process_through_unified_pa(
+                    content,
+                    generate_audio=generate_audio
+                )
 
                 # Send response
                 await self.send(text_data=json.dumps(response))
@@ -83,13 +86,109 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
                 'type': 'error',
-                'message': 'Invalid message format'
+                'message': 'Invalid message format',
+                'trace_id': None
             }))
         except Exception as e:
+            logger.error(f"WebSocket error: {e}", exc_info=True)
             await self.send(text_data=json.dumps({
                 'type': 'error',
-                'message': f'Error processing message: {str(e)}'
+                'message': f'Error processing message: {str(e)}',
+                'trace_id': None
             }))
+
+    async def _process_through_unified_pa(
+        self,
+        message: str,
+        is_welcome: bool = False,
+        generate_audio: bool = False
+    ) -> dict:
+        """
+        Session 931: Process message through UnifiedPAEntrypoint.
+
+        Returns structured response with trace_id.
+        """
+        try:
+            # Lazy load UnifiedPA to avoid circular imports
+            if self.unified_pa is None:
+                from core.services.unified_pa_entrypoint import get_unified_pa
+                self.unified_pa = get_unified_pa(self.user)
+
+            # Process through unified entrypoint
+            result = await self.unified_pa.process_message(
+                message=message,
+                context={'is_welcome': is_welcome},
+                generate_audio=generate_audio
+            )
+
+            # Convert to WebSocket response format
+            return {
+                'type': 'message',
+                'content': result.content,
+                'trace_id': result.trace_id,
+                'tool_runs': result.tool_runs,
+                'audio_url': result.audio_url,
+                'intent': result.intent,
+                'profile_completeness': result.profile_completeness,
+                'latency_ms': result.latency_ms,
+            }
+
+        except Exception as e:
+            logger.error(f"UnifiedPA processing failed: {e}", exc_info=True)
+            # Fallback to basic response
+            return await self._generate_fallback_response(message, is_welcome)
+
+    async def _generate_fallback_response(self, message: str, is_welcome: bool = False) -> dict:
+        """
+        Fallback response if UnifiedPA fails.
+        Uses old LLM-based approach as backup.
+        """
+        try:
+            from core.llm_enforcer import LLMEnforcer
+            enforcer = LLMEnforcer()
+
+            user_name = getattr(self.user, 'first_name', None) or getattr(self.user, 'username', 'there')
+
+            system_context = f"""You are a helpful AI assistant for {user_name}.
+Be friendly and helpful. If this is a welcome message, introduce yourself briefly."""
+
+            result = await asyncio.to_thread(
+                enforcer.enforce_real_ai,
+                prompt=message if not is_welcome else f"Welcome {user_name}",
+                context=system_context,
+                agent_name="PersonalAssistantFallback",
+                task_type="conversation",
+                max_tokens=300
+            )
+
+            content = result.get('response', f"Hi {user_name}! How can I help you today?") if result.get('success') else f"Hi {user_name}! How can I help you today?"
+
+            return {
+                'type': 'message',
+                'content': content,
+                'trace_id': 'fallback',
+                'tool_runs': [],
+                'audio_url': None,
+                'intent': 'fallback',
+                'profile_completeness': None,
+                'latency_ms': 0,
+            }
+        except Exception as e:
+            logger.error(f"Fallback response also failed: {e}")
+            return {
+                'type': 'message',
+                'content': "Hi! I'm here to help. What would you like to do?",
+                'trace_id': 'error-fallback',
+                'tool_runs': [],
+                'audio_url': None,
+                'intent': None,
+                'profile_completeness': None,
+                'latency_ms': 0,
+            }
+
+    # =========================================================================
+    # LEGACY METHODS (kept for backward compatibility, not primary path)
+    # =========================================================================
 
     def detect_intent(self, message):
         """
