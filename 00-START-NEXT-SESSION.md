@@ -1,8 +1,27 @@
-# Session 928 - Start Here
+# Session 929 - Start Here
 
-**Previous Session:** 927 (Universal Agent Voice System)
+**Previous Session:** 928 (Blocker Analysis UI)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **PIPELINE: READY FOR STAGE 2+** | **Stage 1: 95% (358/373)** | **Universal Agent Voice: ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **PIPELINE: READY FOR STAGE 2+** | **Stage 1: 95% (358/373)** | **Universal Agent Voice: ACTIVE** | **Blocker Analysis: VISIBLE**
+
+---
+
+## Session 928 Summary: Blocker Analysis UI
+
+### Key Achievement
+Wired up the existing `/api/initiatives/diagnose-stuck/` endpoint to the Health tab UI, making it visible WHY initiatives are stuck in DRAFT/PENDING.
+
+### Changes Made
+- **Blocker Analysis section** in Health tab showing:
+  - Summary stats (checked, ready to progress, founder intent missing, quality failed)
+  - Top blocking reasons with visual breakdown bars
+  - Daily rate limit status (progressions today vs 40 limit)
+
+### Key Insight
+**The main blocker is `founder_intent_set = False`** - this flag defaults to False and stages 2+ require it to be True before auto-progression can occur. This explains why most initiatives are stuck after Stage 1.
+
+### PR
+- #828: Add Blocker Analysis to Initiative Health tab
 
 ---
 
@@ -34,27 +53,6 @@ Implemented **Listen buttons throughout the platform** - any agent-generated con
 
 ---
 
-## Session 926 Summary: Stage 1 Backfill Complete
-
-### Key Achievement
-Pushed Stage 1 coverage from **62% to 95%** through multiple backfill batches.
-
-### Batch Results
-| Batch | Status | Success Rate | Coverage After |
-|-------|--------|--------------|----------------|
-| DRAFT (41) | Complete | 100% (41/41) | 62% |
-| PENDING (40) | Complete | 100% (40/40) | 72% |
-| IN_REVIEW (50) | Complete | 100% (50/50) | 80% |
-| IN_REVIEW (50) | Complete | 90% (45/50) | 91% |
-| Final (29) | Complete | 100% (29/29) | 95% |
-
-### Production Stats
-- **Stage 1 Coverage:** 95% (358/373)
-- **Documents Created This Session:** 165+
-- **Remaining:** 15 initiatives (13 IN_REVIEW, 2 BLOCKED)
-
----
-
 ## Current Production State
 
 | Metric | Value |
@@ -63,62 +61,60 @@ Pushed Stage 1 coverage from **62% to 95%** through multiple backfill batches.
 | Stage 1 Coverage | **95%** (358/373) |
 | Stage 1 success rate | **100%** (all batches) |
 | Stuck execution cleanup | **Automated** (every 30 min) |
-| UI enhancements | HiveMind + Automation + Workflow tabs |
+| UI enhancements | HiveMind + Automation + Workflow + Blocker Analysis |
 
 ---
 
-## PRIORITY for Session 927
+## PRIORITY for Session 929
 
-### 1. Start Stage 2-5 Generation
-With 95% Stage 1 coverage, begin generating remaining pipeline stages:
+### 1. Fix the `founder_intent_set` Blocker
+Most initiatives are stuck because `founder_intent_set = False`. Options:
+- Auto-set `founder_intent_set = True` for all ACTIVE initiatives with Stage 1 APPROVED
+- Add UI to manually mark founder intent
+- Create a backfill command
+
 ```bash
-# Check initiatives ready for Stage 2
+# Check how many are blocked by founder_intent
+railway run python manage.py shell -c "
+from core.models_document_registry import Initiative, InitiativeStage
+blocked = Initiative.objects.filter(
+    status='ACTIVE',
+    founder_intent_set=False
+).count()
+with_stage1_approved = InitiativeStage.objects.filter(
+    stage_number=1,
+    status='APPROVED',
+    initiative__founder_intent_set=False
+).count()
+print(f'Blocked by founder_intent: {blocked}')
+print(f'With Stage 1 APPROVED but founder_intent=False: {with_stage1_approved}')
+"
+```
+
+### 2. Start Stage 2-5 Generation
+After fixing founder_intent blocker:
+```bash
+# Generate Stage 2 for initiatives with Stage 1 APPROVED
 railway run python manage.py shell -c "
 from core.models_document_registry import InitiativeStage
 from core.tasks import generate_initiative_stage_document
 
-# Find Stage 1 complete, Stage 2 not started
 ready = InitiativeStage.objects.filter(
-    stage=1, document__isnull=False, initiative__status='ACTIVE'
+    stage_number=1, status='APPROVED',
+    initiative__status='ACTIVE',
+    initiative__founder_intent_set=True
 ).values_list('initiative_id', flat=True)[:50]
 
 print(f'Processing Stage 2 for {len(ready)} initiatives...')
-success = 0
-for i, init_id in enumerate(ready, 1):
-    try:
-        result = generate_initiative_stage_document(str(init_id), 2)
-        if result.get('success'): success += 1
-        status = '✅' if result.get('success') else '❌'
-        print(f'{i}. {status}')
-    except Exception as e:
-        print(f'{i}. ❌ {str(e)[:30]}')
-print(f'Success: {success}/{len(ready)}')
-"
-```
-
-### 2. Finish Remaining Stage 1 (13 IN_REVIEW)
-```bash
-railway run python manage.py shell -c "
-from core.models_document_registry import InitiativeStage
-from core.tasks import generate_initiative_stage_document
-
-stages = InitiativeStage.objects.filter(
-    stage=1, initiative__status='ACTIVE', document__isnull=True
-).exclude(status='BLOCKED').select_related('initiative')
-
-print(f'Processing {stages.count()} remaining Stage 1 initiatives...')
-for stage in stages:
-    result = generate_initiative_stage_document(str(stage.initiative.id), 1)
+for init_id in ready:
+    result = generate_initiative_stage_document(str(init_id), 2)
     status = '✅' if result.get('success') else '❌'
-    print(f'{status} {stage.initiative.name[:50]}')
+    print(f'{status}')
 "
 ```
 
-### 3. Monitor Cleanup Task
-Verify auto-cleanup is working:
-```bash
-railway logs | grep "CLEANUP"
-```
+### 3. Monitor Blocker Analysis
+Check the Health tab to see blocking reasons updating in real-time.
 
 ---
 
@@ -126,13 +122,13 @@ railway logs | grep "CLEANUP"
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **926** | Stage 1 Backfill Push (62% → 91%) | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
+| **928** | Blocker Analysis UI - Wire diagnose-stuck to frontend | PR #828 |
+| **927** | Universal Agent Voice System | `docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
+| **926** | Stage 1 Backfill Push (62% → 95%) | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
 | 925 | Auto-Cleanup Stuck Executions + HiveMind Enhancement | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
 | 924 | UI Enhancements + Pipeline Fixes | `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` |
 | 923 | ResearchAgent Failure Investigation | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` |
 | 922 | Stage Generation Bug Fix + Backfill | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
-| 921 | Pipeline Health Monitoring | `docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md` |
-| 920 | Panel/Advisor System Improvements | `docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
 
 ---
 
@@ -140,12 +136,11 @@ railway logs | grep "CLEANUP"
 
 | Document | Purpose |
 |----------|---------|
+| `docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md` | Voice System implementation |
 | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` | Auto-cleanup + backfill status |
-| `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` | UI + pipeline fixes |
-| `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` | ResearchAgent root cause + fix |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 926 Complete - Stage 1 coverage pushed from 62% to 95% (358/373) with 165+ documents created. Ready for Stage 2-5 generation.**
+**Session 928 Complete - Blocker Analysis now visible in Health tab. Main blocker identified: founder_intent_set=False blocks stage 2+ progression.**
