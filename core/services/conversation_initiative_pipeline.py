@@ -595,15 +595,21 @@ def handle_stage_task_completion(
         if result['stage_updated'] and stage_num < 5:
             # Session 916: Use approve() method which enforces document requirement
             # Only approve if stage has a document (hard invariant)
+            # Session 943: Only advance if approval succeeds (hard invariant)
+            approval_succeeded = False
             if stage.document:
-                stage.approve(
-                    approved_by='conversation_pipeline',
-                    notes='Auto-approved via conversation initiative pipeline',
-                    checks_passed={
-                        'has_document': True,
-                        'stage_updated': True,
-                    }
-                )
+                try:
+                    stage.approve(
+                        approved_by='conversation_pipeline',
+                        notes='Auto-approved via conversation initiative pipeline',
+                        checks_passed={
+                            'has_document': True,
+                            'stage_updated': True,
+                        }
+                    )
+                    approval_succeeded = True
+                except Exception as approve_err:
+                    logger.warning(f"⚠️ Approval failed for Stage {stage_num}: {approve_err}")
             else:
                 # Cannot approve without document - log warning
                 logger.warning(
@@ -635,17 +641,23 @@ def handle_stage_task_completion(
                     )
                     logger.info(f"📋 Created Stage {prior_stage_num} in DRAFT (needs document)")
 
-            # Advance initiative to next stage
-            initiative.current_stage = stage_num + 1
-            initiative.save()
+            # Session 943: HARD INVARIANT - only advance if approval succeeded
+            # This prevents initiatives from skipping to Stage 5 without proper approvals
+            if approval_succeeded:
+                initiative.current_stage = stage_num + 1
+                initiative.save()
 
-            result['stage_advanced'] = True
-            result['new_stage'] = stage_num + 1
+                result['stage_advanced'] = True
+                result['new_stage'] = stage_num + 1
 
-            logger.info(f"⏭️ Advanced Initiative {initiative.name} to Stage {stage_num + 1}")
+                logger.info(f"⏭️ Advanced Initiative {initiative.name} to Stage {stage_num + 1}")
 
-            # Dispatch next stage tasks
-            _dispatch_next_stage_tasks(initiative, stage_num + 1)
+                # Dispatch next stage tasks
+                _dispatch_next_stage_tasks(initiative, stage_num + 1)
+            else:
+                logger.info(
+                    f"⏸️ Initiative {initiative.name[:30]} NOT advanced - Stage {stage_num} not approved"
+                )
 
     except Exception as e:
         logger.error(f"Error handling stage task completion: {e}")

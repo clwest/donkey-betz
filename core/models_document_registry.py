@@ -533,6 +533,70 @@ class Initiative(models.Model):
 
         return None
 
+    def get_max_approved_stage(self) -> int:
+        """
+        Session 943: Get the highest stage number that has APPROVED status.
+
+        Returns 0 if no stages are approved.
+        """
+        approved = self.stages.filter(status='APPROVED').values_list('stage', flat=True)
+        return max(approved) if approved else 0
+
+    def validate_stage_invariant(self) -> tuple:
+        """
+        Session 943: Validate that current_stage respects approval chain.
+
+        HARD INVARIANT: current_stage must be <= max_approved_stage + 1
+
+        This ensures initiatives cannot skip ahead to Stage 5 without
+        actually having prior stages approved.
+
+        Returns:
+            (is_valid, error_message)
+        """
+        max_approved = self.get_max_approved_stage()
+        max_allowed = max_approved + 1
+
+        if self.current_stage > max_allowed:
+            return (
+                False,
+                f"Stage invariant violated: current_stage={self.current_stage} "
+                f"but max_approved={max_approved}. Maximum allowed is {max_allowed}."
+            )
+
+        return (True, None)
+
+    def save(self, *args, **kwargs):
+        """
+        Session 943: Override save to enforce stage progression invariant.
+
+        Use skip_invariant_check=True in kwargs to bypass (for migrations/fixes).
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        skip_check = kwargs.pop('skip_invariant_check', False)
+
+        # Only check invariant for existing records (have pk) and if not skipped
+        if self.pk and not skip_check:
+            # Check if current_stage is being modified
+            try:
+                old_instance = Initiative.objects.get(pk=self.pk)
+                if old_instance.current_stage != self.current_stage:
+                    is_valid, error_msg = self.validate_stage_invariant()
+                    if not is_valid:
+                        logger.error(f"🚫 [INVARIANT] {error_msg} for Initiative: {self.name[:50]}")
+                        # Instead of raising, auto-correct to max_allowed
+                        max_approved = self.get_max_approved_stage()
+                        self.current_stage = min(self.current_stage, max_approved + 1)
+                        logger.warning(
+                            f"🔧 [INVARIANT] Auto-corrected current_stage to {self.current_stage}"
+                        )
+            except Initiative.DoesNotExist:
+                pass  # New record being created
+
+        super().save(*args, **kwargs)
+
     def is_complete(self):
         """Check if all 5 stages are approved."""
         approved_count = self.stages.filter(status='APPROVED').count()
