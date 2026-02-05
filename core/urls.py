@@ -364,6 +364,9 @@ from core.views_agent_learning import (
     get_boardroom_decisions,
     promote_decision,
     reject_decision,
+    # Session 942: Bulk decision actions
+    bulk_promote_decisions,
+    bulk_reject_decisions,
     # Session 659: Governance Stats
     get_governance_stats,
     # Session 660: Celery & Health APIs
@@ -3148,6 +3151,9 @@ urlpatterns = [
     path('api/boardroom/decisions/', get_boardroom_decisions, name='boardroom-decisions'),
     path('api/boardroom/decisions/<uuid:decision_id>/promote/', promote_decision, name='promote-decision'),
     path('api/boardroom/decisions/<uuid:decision_id>/reject/', reject_decision, name='reject-decision'),
+    # Session 942: Bulk decision actions
+    path('api/boardroom/decisions/bulk-promote/', bulk_promote_decisions, name='bulk-promote-decisions'),
+    path('api/boardroom/decisions/bulk-reject/', bulk_reject_decisions, name='bulk-reject-decisions'),
     # Session 604: Decision Prioritization
     path('api/boardroom/decisions/prioritized/', get_prioritized_decisions, name='prioritized-decisions'),
     path('api/boardroom/decisions/<uuid:decision_id>/priority/', get_decision_priority, name='decision-priority'),
