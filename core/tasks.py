@@ -470,9 +470,9 @@ def auto_approve_boardroom_items():
 
 @shared_task
 def auto_process_extracted_artifacts(
-    stale_days: int = 14,
-    archive_days: int = 30,
-    batch_size: int = 1000,
+    stale_days: int = 7,
+    archive_days: int = 14,
+    batch_size: int = 2000,
     aggressive: bool = True
 ):
     """
@@ -482,10 +482,13 @@ def auto_process_extracted_artifacts(
 
     AGGRESSIVE MODE (default=True) - Session 943 update:
     - ALL insights → approved (informational, no action needed)
-    - proposals older than 21 days with score < 0.6 → rejected
-    - experiments older than 14 days → rejected (stale experiments)
+    - proposals older than 10 days with score < 0.6 → rejected
+    - proposals with score < 0.4 (any age) → rejected
+    - experiments older than 7 days → rejected (stale experiments)
     - data_specs with score < 0.5 → rejected (low-value specs)
-    - questions older than 14 days → rejected
+    - questions older than 7 days → rejected
+    - risks with score < 0.4 → rejected (low-priority risks)
+    - action_items older than 14 days with score < 0.5 → rejected
 
     STANDARD MODE (aggressive=False):
     - insights with score < 0.5 → approved
@@ -495,14 +498,14 @@ def auto_process_extracted_artifacts(
     - data_specs with confidence < 0.3 → deferred
 
     ALWAYS KEEP PENDING (needs human review):
-    - risk artifacts (important for awareness)
-    - action_items (require execution)
-    - high-score proposals (score >= 0.6, age < 21 days)
+    - high-score risks (score >= 0.4)
+    - recent action_items with good scores (score >= 0.5, age < 14 days)
+    - high-score proposals (score >= 0.6, age < 10 days)
 
     Args:
-        stale_days: Days after which questions become stale (default: 14)
-        archive_days: Days after which low-score items get rejected (default: 30)
-        batch_size: Max items to process per run (default: 1000)
+        stale_days: Days after which questions/experiments become stale (default: 7)
+        archive_days: Days after which low-score items get rejected (default: 14)
+        batch_size: Max items to process per run (default: 2000)
         aggressive: Use aggressive cleanup rules (default: True)
 
     Returns:
@@ -518,10 +521,10 @@ def auto_process_extracted_artifacts(
 
     try:
         now = timezone.now()
-        stale_cutoff = now - timedelta(days=stale_days)
-        archive_cutoff = now - timedelta(days=archive_days)
-        proposal_cutoff = now - timedelta(days=21)  # 21 days for proposals
-        experiment_cutoff = now - timedelta(days=stale_days)  # Same as questions
+        stale_cutoff = now - timedelta(days=stale_days)  # 7 days for questions/experiments
+        archive_cutoff = now - timedelta(days=archive_days)  # 14 days for action_items
+        proposal_cutoff = now - timedelta(days=10)  # 10 days for proposals
+        experiment_cutoff = now - timedelta(days=stale_days)  # Same as questions (7 days)
 
         stats = {
             'insights_approved': 0,
@@ -531,6 +534,8 @@ def auto_process_extracted_artifacts(
             'specs_rejected': 0,
             'proposals_rejected': 0,
             'experiments_rejected': 0,
+            'risks_rejected': 0,
+            'action_items_rejected': 0,
             'specs_deferred': 0,
             'total_processed': 0,
             'still_pending': 0,
@@ -628,9 +633,12 @@ def auto_process_extracted_artifacts(
                 stats['total_processed'] += 1
 
         # =====================================================================
-        # 5. AGGRESSIVE: Reject old low-score proposals (>21 days, score < 0.6)
+        # 5. AGGRESSIVE: Reject proposals (two rules)
+        # Rule A: older than 10 days with score < 0.6 → rejected
+        # Rule B: very low score < 0.4 (any age) → rejected
         # =====================================================================
         if aggressive:
+            # Rule A: Old proposals with mediocre scores
             old_proposals = ExtractedArtifact.objects.filter(
                 status='pending',
                 artifact_type='proposal',
@@ -641,7 +649,22 @@ def auto_process_extracted_artifacts(
             for artifact in old_proposals:
                 artifact.status = 'rejected'
                 artifact.decided_at = now
-                artifact.decision_notes = 'Auto-rejected: Stale proposal (>21 days, score<0.6)'
+                artifact.decision_notes = 'Auto-rejected: Stale proposal (>10 days, score<0.6)'
+                artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+                stats['proposals_rejected'] += 1
+                stats['total_processed'] += 1
+
+            # Rule B: Very low-score proposals (any age)
+            low_score_proposals = ExtractedArtifact.objects.filter(
+                status='pending',
+                artifact_type='proposal',
+                composite_score__lt=0.4
+            )[:batch_size]
+
+            for artifact in low_score_proposals:
+                artifact.status = 'rejected'
+                artifact.decided_at = now
+                artifact.decision_notes = 'Auto-rejected: Low-score proposal (score<0.4)'
                 artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
                 stats['proposals_rejected'] += 1
                 stats['total_processed'] += 1
@@ -699,14 +722,54 @@ def auto_process_extracted_artifacts(
                 stats['total_processed'] += 1
 
         # =====================================================================
-        # 8. Count remaining pending
+        # 8. AGGRESSIVE: Reject low-score risks (score < 0.4)
+        # Low-score risks aren't actionable enough to keep
+        # =====================================================================
+        if aggressive:
+            low_risks = ExtractedArtifact.objects.filter(
+                status='pending',
+                artifact_type='risk',
+                composite_score__lt=0.4
+            )[:batch_size]
+
+            for artifact in low_risks:
+                artifact.status = 'rejected'
+                artifact.decided_at = now
+                artifact.decision_notes = 'Auto-rejected: Low-score risk (score<0.4)'
+                artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+                stats['risks_rejected'] += 1
+                stats['total_processed'] += 1
+
+        # =====================================================================
+        # 9. AGGRESSIVE: Reject old low-score action_items (>14 days, score<0.5)
+        # Old action items that weren't actioned can be cleared
+        # =====================================================================
+        if aggressive:
+            old_action_items = ExtractedArtifact.objects.filter(
+                status='pending',
+                artifact_type='action_item',
+                extracted_at__lt=archive_cutoff,
+                composite_score__lt=0.5
+            )[:batch_size]
+
+            for artifact in old_action_items:
+                artifact.status = 'rejected'
+                artifact.decided_at = now
+                artifact.decision_notes = 'Auto-rejected: Stale action item (>14 days, score<0.5)'
+                artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+                stats['action_items_rejected'] += 1
+                stats['total_processed'] += 1
+
+        # =====================================================================
+        # 10. Count remaining pending
         # =====================================================================
         stats['still_pending'] = ExtractedArtifact.objects.filter(status='pending').count()
 
         total_rejected = (
             stats['questions_rejected'] + stats['stale_rejected'] +
             stats['duplicates_rejected'] + stats['specs_rejected'] +
-            stats['proposals_rejected'] + stats['experiments_rejected']
+            stats['proposals_rejected'] + stats['experiments_rejected'] +
+            stats['risks_rejected'] + stats['action_items_rejected']
         )
         logger.info(
             f"🔄 [ARTIFACT-AUTO-PROCESS] Complete ({mode}) - processed {stats['total_processed']} items: "
@@ -714,6 +777,7 @@ def auto_process_extracted_artifacts(
             f"rejected={total_rejected} "
             f"(questions={stats['questions_rejected']}, proposals={stats['proposals_rejected']}, "
             f"experiments={stats['experiments_rejected']}, specs={stats['specs_rejected']}, "
+            f"risks={stats['risks_rejected']}, action_items={stats['action_items_rejected']}, "
             f"dupes={stats['duplicates_rejected']}, stale={stats['stale_rejected']}), "
             f"deferred={stats['specs_deferred']}, "
             f"still_pending={stats['still_pending']}"
