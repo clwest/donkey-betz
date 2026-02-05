@@ -21,6 +21,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Home,
+  Command,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -39,18 +40,16 @@ import {
 // - DataSources tab: Spiders, Spider Feed, Learning
 // - Content Studio tab: Podcast, Channels, Blogs, Distribution
 // - Command tab: Conversations, Dreams, Advisors
-// Session 884: Home is the AI OS boot experience
-// Session 857: Workspace is the command center
+// Session 931: Unified Command Center replaces Home, AI Assistant, Human
+// Session 857: Workspace is the modular content hub
 const navItems = [
-  // Session 884: Home - AI OS Boot Experience
-  { path: '/', label: 'Home', icon: Home },
+  // Session 931: Command Center - Unified AI interface + controls
+  { path: '/', label: 'Command Center', icon: Command },
 
   // Main Hub - Primary entry point
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
 
   // Core Navigation
-  { path: '/assistant', label: 'AI Assistant', icon: MessageSquare },
-  { path: '/human', label: 'Human', icon: User },
   { path: '/agents', label: 'Agents', icon: Bot },
 
   // Domain Features - Session 899: Commented out for YouTube demo focus

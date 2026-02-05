@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
-import AssistantPage from '@/pages/AssistantPage'
+import CommandCenterPage from '@/pages/CommandCenterPage'  // Session 931: Unified Command Center
 import AgentsPage from '@/pages/AgentsPage'
 import IntelligencePage from '@/pages/IntelligencePage'
 import ContentPage from '@/pages/ContentPage'
@@ -14,7 +14,7 @@ import LegalPage from '@/pages/LegalPage'
 import PodcastPage from '@/pages/PodcastPage'
 import PortfolioPage from '@/pages/PortfolioPage'
 import AdminPage from '@/pages/AdminPage'
-import HumanPage from '@/pages/HumanPage'
+// HumanPage removed - merged into CommandCenterPage (Session 931)
 import WorkspacePage from '@/pages/WorkspacePageNew'  // Session 825: New modular workspace
 import LLMRoutingPage from '@/pages/LLMRoutingPage'
 import BodyHealthPage from '@/pages/BodyHealthPage'
@@ -48,7 +48,7 @@ import OrchestrationPage from '@/pages/OrchestrationPage'  // Session 768: Orche
 import SpiderFeedPage from '@/pages/SpiderFeedPage'  // Session 783: Spider News Feed
 import DocsIndexPage from '@/pages/DocsIndexPage'  // Session 784: Documentation Index Browser
 import AgentMonitorPage from '@/pages/AgentMonitorPage'  // Session 794: Live Agent Monitor
-import HomePage from '@/pages/HomePage'  // Session 884: AI OS Boot Experience
+// HomePage removed - merged into CommandCenterPage (Session 931)
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -73,10 +73,10 @@ function App() {
           </ProtectedRoute>
         }
       >
-        {/* Session 884: Home page is the AI OS boot experience */}
-        <Route index element={<HomePage />} />
+        {/* Session 931: Unified Command Center replaces Home, Assistant, Human */}
+        <Route index element={<CommandCenterPage />} />
+        <Route path="assistant" element={<Navigate to="/" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="assistant" element={<AssistantPage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="intelligence" element={<IntelligencePage />} />
         <Route path="content" element={<ContentPage />} />
@@ -89,7 +89,7 @@ function App() {
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="llm-routing" element={<LLMRoutingPage />} />
-        <Route path="human" element={<HumanPage />} />
+        <Route path="human" element={<Navigate to="/" replace />} />  {/* Session 931: Redirect to Command Center */}
         <Route path="workspace" element={<WorkspacePage />} />
         <Route path="body-health" element={<BodyHealthPage />} />
         <Route path="hive-mind" element={<HiveMindPage />} />
