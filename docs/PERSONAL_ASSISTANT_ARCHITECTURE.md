@@ -117,19 +117,45 @@ The Personal Assistant is the "brain" of the platform - the central interface th
 | Persistent Memory | Multiple memory systems | Don't create another until consolidated |
 | Proactive Intelligence | Optional, silent | Fix failures first or it becomes noisy |
 
-### Attention Item Mismatch (609 vs 17)
+### Attention Item Mismatch (609 vs 17) - FIXED (Session 932)
 
-**Root Cause:** Different endpoints return different counts
+**Root Cause:** Different endpoints returned different counts
 - `Human Interface attention items` → 609 (all critical/high/etc)
 - `get_system_attention` → 17 (curated)
 
-**Fix:** Single "Attention Aggregator" that returns both with labels:
+**Solution:** Unified Attention Aggregator (`core/services/attention_aggregator.py`)
+
+**API Endpoints:**
+- `GET /api/assistant/attention/unified/` - Full unified response
+- `GET /api/assistant/attention/stats/` - Stats only (fast)
+
+**Response Format:**
 ```json
 {
-  "system_attention": {"count": 17, "source": "curated"},
-  "human_attention": {"count": 609, "source": "all_items"}
+  "system_attention": {
+    "count": 17,
+    "items": [...],
+    "source": "platform_health",
+    "description": "Platform health metrics and operational alerts"
+  },
+  "human_attention": {
+    "count": 609,
+    "items": [...],
+    "source": "user_notifications",
+    "description": "User-specific notifications, decisions, and alerts"
+  },
+  "combined_urgent": 5,
+  "total_count": 626,
+  "by_urgency": {"critical": 2, "high": 3, "medium": 10, "low": 5}
 }
 ```
+
+**Query Parameters:**
+- `include_system=true/false` - Include system health items
+- `include_human=true/false` - Include user notification items
+- `urgency=critical,high` - Filter by urgency levels
+- `limit=50` - Max items per source
+- `stats_only=true` - Only return counts (fast)
 
 ---
 
