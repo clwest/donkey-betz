@@ -1,5 +1,6 @@
 /**
  * Session 834: Dreams Panel for Command Tab
+ * Session 926: Added ListenButton for TTS
  *
  * Shows recent agent dreams with ability to trigger new dreams and react.
  * Replaces the need for the separate Dreams page.
@@ -11,6 +12,7 @@
  * - Trigger new dreams
  * - React to dreams (love, insightful, like)
  * - Expandable dream content
+ * - Listen to dreams via TTS
  */
 
 import { useState, useMemo } from 'react'
@@ -34,6 +36,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { dreamsApi, type TimeRange } from '@/lib/api'
+import { ListenButton } from '@/components/ListenButton'
 
 interface Dream {
   id: string
@@ -370,7 +373,17 @@ function DreamCard({ dream, isExpanded, onToggle }: DreamCardProps) {
         <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-3">
           {/* Dream Content */}
           <div>
-            <h4 className="text-xs font-semibold text-gray-400 uppercase mb-1">Dream Content</h4>
+            <div className="flex items-center justify-between mb-1">
+              <h4 className="text-xs font-semibold text-gray-400 uppercase">Dream Content</h4>
+              {dream.content && (
+                <ListenButton
+                  text={dream.content}
+                  agentName={dream.agent_name}
+                  size="sm"
+                  className="opacity-60 hover:opacity-100"
+                />
+              )}
+            </div>
             <p className="text-sm text-gray-300 whitespace-pre-wrap">
               {dream.content?.slice(0, 800)}
               {dream.content && dream.content.length > 800 && '...'}

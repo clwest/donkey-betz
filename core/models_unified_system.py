@@ -75,6 +75,12 @@ class Agent(models.Model):
     api_endpoint = models.CharField(max_length=200, blank=True)
     webhook_url = models.CharField(max_length=200, blank=True)
 
+    # Voice - ElevenLabs voice for TTS output (Session 926)
+    voice_id = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text="ElevenLabs voice ID or name (Rachel, Antoni, etc.)"
+    )
+
     # Spider connections - what data sources feed this agent
     spider_categories = models.ManyToManyField(
         'SpiderCategory',
