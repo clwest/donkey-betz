@@ -228,6 +228,24 @@ describing itself using its own capabilities.
             if use_flagship:
                 self.stdout.write(self.style.SUCCESS(f'   📝 Using FLAGSHIP template (CTA: {cta_type})'))
 
+            # Session 937: Build real spider context instead of empty dict
+            spider_context = {}
+            try:
+                from core.services.spider_context_builder import SpiderContextBuilder
+                context_builder = SpiderContextBuilder()
+                spider_context = context_builder.build_context_for_agent(
+                    agent_name='ContentWriterAgent',
+                    task=f"blog_post about AI platform",
+                    hours=48,
+                    max_trends=15,
+                    max_discussions=10,
+                    include_market_data=True
+                )
+                data_sources = spider_context.get('data_sources', [])
+                self.stdout.write(self.style.SUCCESS(f'   🕷️  Built spider context with {len(data_sources)} data sources'))
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f'   ⚠️  Could not build spider context: {e}'))
+
             # Session 851: Improved task prompt with editorial guidance
             # Session 854: Now uses flagship template for distinctive voice
             result = agent.execute(
@@ -254,7 +272,7 @@ describing itself using its own capabilities.
                     'collective_intelligence': True,
                     'self_aware': True,
                 },
-                spider_context={}
+                spider_context=spider_context  # Session 937: Use real spider data
             )
 
             if result.success:
