@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { assistantApi, userLearningApi, bodyApi, humanApi } from '@/lib/api'
+import { assistantApi, userLearningApi, bodyApi, humanApi, type ToolRun } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw,
@@ -8,7 +8,7 @@ import {
   ChevronRight, CheckCircle, XCircle, Zap, MessageSquare,
   Heart, TrendingUp, Lightbulb, Palette, Settings2, ExternalLink,
   Bell, ClipboardList, Play, Check, X, Clock, HelpCircle,
-  Volume2, VolumeX, Settings
+  Volume2, VolumeX, Settings, Wrench, Timer, Hash
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -47,6 +47,12 @@ interface Message {
   timestamp: Date
   tools_used?: string[]
   feedback?: 'positive' | 'negative'
+  // Session 934: Enhanced fields from UnifiedPA
+  tool_runs?: ToolRun[]
+  trace_id?: string
+  intent?: string
+  routed_to?: string
+  latency_ms?: number
 }
 
 interface ActionResult {
@@ -111,6 +117,53 @@ const baseQuickActions = [
   { label: 'Create content', prompt: 'Help me create a blog post about AI' },
   { label: 'Analyze trends', prompt: 'What are the latest trending topics?' },
 ]
+
+// Session 934: Profile Completeness Card - shows how well the PA knows the user
+function ProfileCompletenessCard() {
+  const { data: completeness } = useQuery({
+    queryKey: ['profile-completeness'],
+    queryFn: async () => {
+      // Try to get from PA context, fallback to cached value
+      try {
+        const response = await assistantApi.getPAContext()
+        return response.data?.profile_completeness ?? 0
+      } catch {
+        return 0
+      }
+    },
+    staleTime: 60000, // Cache for 1 minute
+    refetchOnWindowFocus: false,
+  })
+
+  const percentage = completeness ?? 0
+  const color = percentage >= 80 ? '#22c55e' : percentage >= 50 ? '#f59e0b' : '#ef4444'
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <User size={18} className="text-primary-400" />
+          <h3 className="font-semibold">Profile Completeness</h3>
+        </div>
+        <span className="text-sm font-bold" style={{ color }}>
+          {percentage}%
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-dark-bg overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${percentage}%`, backgroundColor: color }}
+        />
+      </div>
+      <p className="text-xs text-gray-400 mt-2">
+        {percentage < 30 && 'Tell me about yourself to get personalized assistance'}
+        {percentage >= 30 && percentage < 60 && 'Good start! Share more preferences for better results'}
+        {percentage >= 60 && percentage < 80 && 'I know you well. Keep chatting to refine my understanding'}
+        {percentage >= 80 && 'Excellent! I can provide highly personalized assistance'}
+      </p>
+    </div>
+  )
+}
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
   return (
@@ -227,21 +280,33 @@ export default function AssistantPage() {
     },
   })
 
-  // Chat mutation
+  // Session 934: Use UnifiedPA endpoint for enhanced visibility
   const chatMutation = useMutation({
-    mutationFn: (message: string) => assistantApi.chat(message, { use_personal_assistant: true }),
+    mutationFn: (message: string) => assistantApi.paChat(message),
     onSuccess: (response) => {
-      // Ensure content is always a string, not an object
-      const rawContent = response.data.response || response.data.message || 'No response'
-      const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
+      const data = response.data
+      // Ensure content is always a string
+      const content = typeof data.content === 'string' ? data.content : JSON.stringify(data.content)
+
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: data.trace_id || (Date.now() + 1).toString(),
         role: 'assistant',
         content,
         timestamp: new Date(),
-        tools_used: response.data.tools_used || [],
+        // Session 934: Include tool_runs with full details
+        tool_runs: data.tool_runs || [],
+        tools_used: data.tool_runs?.map(t => t.tool) || [],
+        trace_id: data.trace_id,
+        intent: data.intent || undefined,
+        routed_to: data.routed_to || undefined,
+        latency_ms: data.latency_ms,
       }
       setMessages((prev) => [...prev, assistantMessage])
+
+      // Update profile completeness if available
+      if (data.profile_completeness !== undefined) {
+        queryClient.setQueryData(['profile-completeness'], data.profile_completeness)
+      }
 
       // Session 894: Auto-play TTS if enabled
       if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
@@ -249,7 +314,7 @@ export default function AssistantPage() {
         ttsMutation.mutate(content)
       }
     },
-    onError: () => {
+    onError: (error) => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -257,6 +322,7 @@ export default function AssistantPage() {
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
+      console.error('PA Chat error:', error)
     },
   })
 
@@ -719,8 +785,42 @@ export default function AssistantPage() {
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
 
-                    {/* Tools used */}
-                    {message.tools_used && message.tools_used.length > 0 && (
+                    {/* Session 934: Enhanced tool runs display */}
+                    {message.tool_runs && message.tool_runs.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-dark-border space-y-1">
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mb-1">
+                          <Wrench size={12} />
+                          <span>Tools executed:</span>
+                        </div>
+                        {message.tool_runs.map((run, idx) => (
+                          <div
+                            key={`${run.tool}-${idx}`}
+                            className={cn(
+                              'flex items-center justify-between text-xs px-2 py-1 rounded',
+                              run.ok ? 'bg-accent-green/10' : 'bg-accent-red/10'
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              {run.ok ? (
+                                <CheckCircle size={12} className="text-accent-green" />
+                              ) : (
+                                <XCircle size={12} className="text-accent-red" />
+                              )}
+                              <span className={run.ok ? 'text-accent-green' : 'text-accent-red'}>
+                                {run.tool}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-400">
+                              <Timer size={10} />
+                              <span>{run.latency_ms}ms</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Fallback: Simple tools_used display for legacy responses */}
+                    {!message.tool_runs && message.tools_used && message.tools_used.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-dark-border">
                         {message.tools_used.map((tool) => (
                           <span
@@ -730,6 +830,34 @@ export default function AssistantPage() {
                             {tool}
                           </span>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Session 934: Trace ID and routing info */}
+                    {(message.trace_id || message.intent || message.latency_ms) && (
+                      <div className="flex flex-wrap items-center gap-3 mt-2 pt-1 text-[10px] text-gray-500">
+                        {message.trace_id && (
+                          <span className="flex items-center gap-1" title="Trace ID for debugging">
+                            <Hash size={10} />
+                            {message.trace_id.slice(0, 12)}...
+                          </span>
+                        )}
+                        {message.intent && (
+                          <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                            {message.intent}
+                          </span>
+                        )}
+                        {message.routed_to && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                            → {message.routed_to}
+                          </span>
+                        )}
+                        {message.latency_ms && (
+                          <span className="flex items-center gap-1">
+                            <Timer size={10} />
+                            {message.latency_ms}ms total
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -976,6 +1104,9 @@ export default function AssistantPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Session 934: Profile Completeness from UnifiedPA */}
+                <ProfileCompletenessCard />
 
                 {/* Session 796: Pending Decisions - Human Interface Bridge */}
                 {pendingDecisions.length > 0 && (
