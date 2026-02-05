@@ -32661,3 +32661,84 @@ def check_operating_rhythm_status():
     except Exception as e:
         logger.error(f"[Session 914.7] ❌ Rhythm status check failed: {e}")
         return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# Session 926: Audio Cache Cleanup for Universal Agent Voice System
+# =============================================================================
+
+@shared_task
+def cleanup_audio_cache():
+    """
+    Session 926: Clean up old audio cache entries to manage storage.
+
+    Eviction policy:
+    - Entries older than 30 days with access_count < 5 are deleted
+    - Tracks cache hit rate for monitoring
+
+    Scheduled: Daily at 3:00 AM
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db.models import Sum
+
+    logger.info("[Session 926] 🧹 Starting audio cache cleanup...")
+
+    try:
+        from core.models_audio_cache import AudioCache
+
+        # Calculate cutoff date
+        cutoff_date = timezone.now() - timedelta(days=30)
+
+        # Get stats before cleanup
+        total_entries = AudioCache.objects.count()
+        total_size = AudioCache.objects.aggregate(
+            total=Sum('file_size_bytes')
+        )['total'] or 0
+        total_accesses = AudioCache.objects.aggregate(
+            total=Sum('access_count')
+        )['total'] or 0
+
+        # Find entries to evict: older than 30 days AND accessed fewer than 5 times
+        entries_to_delete = AudioCache.objects.filter(
+            created_at__lt=cutoff_date,
+            access_count__lt=5
+        )
+
+        delete_count = entries_to_delete.count()
+        delete_size = entries_to_delete.aggregate(
+            total=Sum('file_size_bytes')
+        )['total'] or 0
+
+        # Delete the files and entries
+        for entry in entries_to_delete:
+            try:
+                if entry.audio_file:
+                    entry.audio_file.delete(save=False)
+            except Exception as e:
+                logger.warning(f"[Session 926] Could not delete file for {entry.id}: {e}")
+
+        entries_to_delete.delete()
+
+        # Calculate cache hit rate (accesses / entries is a rough proxy)
+        hit_rate = (total_accesses / total_entries * 100) if total_entries > 0 else 0
+
+        logger.info(
+            f"[Session 926] ✅ Audio cache cleanup complete: "
+            f"Deleted={delete_count} entries ({delete_size / (1024*1024):.2f} MB), "
+            f"Remaining={total_entries - delete_count} entries, "
+            f"Hit rate proxy={hit_rate:.1f}%"
+        )
+
+        return {
+            'success': True,
+            'deleted_count': delete_count,
+            'deleted_size_bytes': delete_size,
+            'remaining_count': total_entries - delete_count,
+            'remaining_size_bytes': total_size - delete_size,
+            'hit_rate_proxy': round(hit_rate, 2),
+        }
+
+    except Exception as e:
+        logger.error(f"[Session 926] ❌ Audio cache cleanup failed: {e}")
+        return {'success': False, 'error': str(e)}

@@ -146,6 +146,9 @@ from ..models_signal_intelligence import (
     TopicSuggestion,
 )
 
+# Import audio cache model (Session 926 - Universal Agent Voice System)
+from ..models_audio_cache import AudioCache
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -319,4 +322,7 @@ __all__ = [
     'SignalCluster',
     'AutoTopic',
     'TopicSuggestion',
+
+    # Audio Cache - Universal Agent Voice System (Session 926)
+    'AudioCache',
 ]

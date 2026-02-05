@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 3, 2026 - Session 920
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED**
+**Last Updated:** February 4, 2026 - Session 927
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
@@ -20,6 +20,7 @@
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Universal Agent Voice (927):** ListenButton throughout platform converts agent content to speech via ElevenLabs TTS. AudioCache model for content-based caching. 12 voices mapped to agent categories (Rachel=Research, Antoni=Financial, Bella=Creative, etc.). ListenAllButton for podcast-style sequential playback. Cost warning for content >2000 chars. Management command: `assign_agent_voices --apply`.
 - **Panel/Advisor System Improvements (920):** Enhanced panel output quality with 7 improvements: (1) Dedupe post-processor removes repeated DecisionSummary blocks, (2) Provenance headers track generation metadata (generated_at, inputs_used, freshness_window, publishable), (3) Placeholder validation detects invalid topics like "target"/"[learned]" and auto-generates valid ones, (4) Extended DecisionSummary with Decision (chosen/rejected), Why Now, Risk Assessment, Operating Constraints sections, (5) Enhanced validation requires has_decision and has_risk, (6) Estimate labeling validates numeric estimates are cited or labeled, (7) ExperimentCollisionService prevents A/B test collisions on same target. PR #804.
 - **Report Provenance + PDF Export (918):** Reports now track data sources, timestamps, and validation status via ReportProvenance dataclass. Publishing gates prevent stale data from being published. PDF export service using WeasyPrint with category-specific styling (sports=green, financial=blue, blockchain=purple, etc.). Frontend "Download PDF" button in Operations Panel. Operations pagination increased from 20 to 100. PRs #772, #774, #777, #779.
 - **Initiative UI Overhaul (904):** Complete redesign of initiative display. Three view modes: Stages (grouped by pipeline phase 1-5, color-coded), List (compact rows), Cards (original grid). Comprehensive modal for ALL initiatives (not just completed) showing action items, signal intelligence, full trace. Live Activity section shows agents currently working with progress percentage and current step. Enhanced Origin & Trigger with Conversation Summary (topic, objective, success criteria, synthesis, timestamps). PRs #688-692.
@@ -153,6 +154,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **927** | Universal Agent Voice - ListenButton for TTS, AudioCache model, 12 voice mappings, cost warnings | `SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
 | **920** | Panel/Advisor System Improvements - Dedupe, provenance headers, placeholder validation, extended DecisionSummary, estimate labeling, ExperimentCollisionService | `SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
 | **918** | Report Provenance + PDF Export - Data source tracking, publishing gates, WeasyPrint PDF service, download button, pagination fix | `SESSION_918_REPORT_PROVENANCE.md` |
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity, conversation details | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
@@ -167,7 +169,6 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **885** | Celery Content Pipeline + Operations Tab Fix - dedicated celery-content worker | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
 | **884** | AI OS Boot Experience - Home Page with greeting, while-away stats, projects, NL input | `SESSION_884_HOME_PAGE_BOOT.md` |
 | **872** | Executive Function - DecisionEnforcerAgent, 3 Contracts, AutoSpawner, Prompt Sharpening | `SESSION_872_COMPLETE.md` |
-| **867** | System-Wide Audit - 231 unscheduled tasks, 40+ stubs, Initiative Pipeline fix | `SESSION_867_SYSTEM_AUDIT.md` |
 
 **Older sessions:** See `docs/handoffs/` directory (Sessions 197-901)
 

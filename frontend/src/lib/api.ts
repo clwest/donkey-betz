@@ -2109,6 +2109,52 @@ export const voiceMarketplaceApi = {
   stats: () => api.get('/voice-marketplace/stats/'),
 }
 
+// Session 926: Universal Agent Voice System - TTS API
+export const ttsApi = {
+  /**
+   * Generate TTS audio with caching support.
+   * Supports agent voice lookup for automatic voice selection.
+   */
+  generate: (text: string, agentName?: string, voiceId?: string) =>
+    api.post('/tts/generate/', {
+      text,
+      agent_name: agentName,
+      voice_id: voiceId,
+    }),
+
+  /**
+   * Estimate TTS cost and duration before generation.
+   * Use this for long content to show cost warning.
+   */
+  estimate: (text: string) =>
+    api.post('/tts/estimate/', { text }),
+
+  /**
+   * List available TTS voices with descriptions.
+   */
+  voices: () => api.get('/tts/voices/'),
+
+  /**
+   * Get user's voice settings (enabled, default voice, cloned voice).
+   */
+  settings: () => api.get('/tts/settings/'),
+
+  /**
+   * Speak text with chunking and summarization support.
+   * Used for assistant chat responses.
+   */
+  speak: (text: string, voiceId?: string, options?: {
+    model?: string
+    chunk_index?: number
+    skip_summarize?: boolean
+  }) =>
+    api.post('/tts/speak/', {
+      text,
+      voice_id: voiceId,
+      ...options,
+    }),
+}
+
 // Session 758: Integration Health & Observability API
 export const integrationHealthApi = {
   // Health check for all 6 context sources
