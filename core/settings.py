@@ -1508,6 +1508,15 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.cleanup_halted_experiments',
         'schedule': crontab(hour=3, minute=0),  # Daily at 3:00 AM
     },
+    # =========================================================================
+    # Session 943: Stale Initiative Cleanup
+    # =========================================================================
+    # Archive stale initiatives to keep pipeline health view focused
+    'cleanup-stale-initiatives': {
+        'task': 'core.tasks.cleanup_stale_initiatives',
+        'schedule': crontab(hour=4, minute=0),  # Daily at 4:00 AM
+        'kwargs': {'days_stale': 14, 'stage1_days': 7},
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)

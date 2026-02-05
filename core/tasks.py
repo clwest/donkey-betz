@@ -484,6 +484,103 @@ def cleanup_halted_experiments(days_old: int = 7):
         raise
 
 
+@shared_task
+def cleanup_stale_initiatives(days_stale: int = 14, stage1_days: int = 7):
+    """
+    Session 943: Archive stale initiatives that have no activity.
+
+    ARCHIVES initiatives that are:
+    - ACTIVE status with no StageTransitionLog activity in X days
+    - Stage 1 initiatives with no activity in Y days (shorter threshold)
+    - Stage 5 initiatives with all stages APPROVED get COMPLETED instead
+
+    This reduces noise in the Pipeline Health view and keeps focus on
+    actively progressing initiatives.
+
+    Args:
+        days_stale: Archive initiatives with no activity for this many days (default: 14)
+        stage1_days: Archive Stage 1 initiatives after this many days (default: 7)
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_document_registry import Initiative, InitiativeStage, StageTransitionLog
+
+    logger.info(f"🧹 [INITIATIVE-CLEANUP] Starting stale initiative cleanup "
+               f"(>{days_stale} days general, >{stage1_days} days for Stage 1)...")
+
+    try:
+        now = timezone.now()
+        general_cutoff = now - timedelta(days=days_stale)
+        stage1_cutoff = now - timedelta(days=stage1_days)
+
+        stats = {
+            'archived_stage1': 0,
+            'archived_stale': 0,
+            'completed_stage5': 0,
+            'total_processed': 0,
+        }
+
+        # Get all active initiatives
+        active_initiatives = Initiative.objects.filter(status='ACTIVE')
+        logger.info(f"🧹 [INITIATIVE-CLEANUP] Checking {active_initiatives.count()} active initiatives")
+
+        for initiative in active_initiatives:
+            # Get last activity timestamp
+            last_log = StageTransitionLog.objects.filter(
+                stage__initiative=initiative
+            ).order_by('-timestamp').first()
+
+            last_activity = last_log.timestamp if last_log else initiative.created_at
+
+            # Case 1: Stage 5 with all stages APPROVED -> COMPLETED
+            if initiative.current_stage == 5:
+                approved_count = InitiativeStage.objects.filter(
+                    initiative=initiative,
+                    status='APPROVED'
+                ).count()
+
+                if approved_count == 5:
+                    initiative.status = 'COMPLETED'
+                    initiative.save(update_fields=['status', 'updated_at'])
+                    stats['completed_stage5'] += 1
+                    stats['total_processed'] += 1
+                    logger.debug(f"✅ [INITIATIVE-CLEANUP] Completed: {initiative.name[:50]}")
+                    continue
+
+            # Case 2: Stage 1 initiatives with no activity -> archive faster
+            if initiative.current_stage == 1 and last_activity < stage1_cutoff:
+                initiative.status = 'ARCHIVED'
+                initiative.save(update_fields=['status', 'updated_at'])
+                stats['archived_stage1'] += 1
+                stats['total_processed'] += 1
+                logger.debug(f"📦 [INITIATIVE-CLEANUP] Archived Stage 1: {initiative.name[:50]}")
+                continue
+
+            # Case 3: General stale initiatives -> archive
+            if last_activity < general_cutoff:
+                initiative.status = 'ARCHIVED'
+                initiative.save(update_fields=['status', 'updated_at'])
+                stats['archived_stale'] += 1
+                stats['total_processed'] += 1
+                logger.debug(f"📦 [INITIATIVE-CLEANUP] Archived stale: {initiative.name[:50]}")
+
+        logger.info(
+            f"🧹 [INITIATIVE-CLEANUP] Complete - processed {stats['total_processed']} initiatives: "
+            f"archived_stage1={stats['archived_stage1']}, "
+            f"archived_stale={stats['archived_stale']}, "
+            f"completed_stage5={stats['completed_stage5']}"
+        )
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"🧹 [INITIATIVE-CLEANUP] Failed: {e}", exc_info=True)
+        raise
+
+
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
 
 

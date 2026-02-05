@@ -1646,3 +1646,161 @@ def start_initiative_conversation(request, initiative_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def cleanup_stale_initiatives(request):
+    """
+    Session 943: Archive stale initiatives with no recent activity.
+
+    GET: Preview what would be cleaned up (dry run)
+    POST: Execute cleanup
+
+    POST/GET params:
+        dry_run: bool - Preview without making changes (default: True for GET)
+        days_stale: int - Archive initiatives with no activity for X days (default: 14)
+        stage1_days: int - Archive Stage 1 initiatives after X days (default: 7)
+
+    Example:
+        # Preview cleanup
+        curl -X GET "https://your-app.railway.app/api/initiatives/cleanup-stale/"
+
+        # Execute cleanup
+        curl -X POST "https://your-app.railway.app/api/initiatives/cleanup-stale/" \\
+             -H "Content-Type: application/json" \\
+             -d '{"dry_run": false}'
+
+    Returns:
+        JSON with cleanup statistics
+    """
+    from core.models_document_registry import Initiative, InitiativeStage, StageTransitionLog
+    from datetime import timedelta
+
+    # Parse params
+    if request.method == 'GET':
+        dry_run = True
+        data = request.query_params
+    else:
+        data = request.data if hasattr(request, 'data') else {}
+        dry_run = data.get('dry_run', True)
+        if isinstance(dry_run, str):
+            dry_run = dry_run.lower() not in ('false', '0', 'no')
+
+    days_stale = int(data.get('days_stale', 14))
+    stage1_days = int(data.get('stage1_days', 7))
+
+    now = timezone.now()
+    general_cutoff = now - timedelta(days=days_stale)
+    stage1_cutoff = now - timedelta(days=stage1_days)
+
+    result = {
+        'dry_run': dry_run,
+        'days_stale': days_stale,
+        'stage1_days': stage1_days,
+        'summary': {
+            'total_active': 0,
+            'would_archive_stage1': 0,
+            'would_archive_stale': 0,
+            'would_complete_stage5': 0,
+        },
+        'preview': [],
+    }
+
+    try:
+        # Get all active initiatives
+        active_initiatives = Initiative.objects.filter(status='ACTIVE')
+        result['summary']['total_active'] = active_initiatives.count()
+
+        for initiative in active_initiatives:
+            # Get last activity timestamp
+            last_log = StageTransitionLog.objects.filter(
+                stage__initiative=initiative
+            ).order_by('-timestamp').first()
+
+            last_activity = last_log.timestamp if last_log else initiative.created_at
+            days_since_activity = (now - last_activity).total_seconds() / 86400
+
+            action = None
+            reason = None
+
+            # Case 1: Stage 5 with all stages APPROVED -> COMPLETED
+            if initiative.current_stage == 5:
+                approved_count = InitiativeStage.objects.filter(
+                    initiative=initiative,
+                    status='APPROVED'
+                ).count()
+
+                if approved_count == 5:
+                    action = 'complete'
+                    reason = 'Stage 5 with all stages approved'
+                    result['summary']['would_complete_stage5'] += 1
+
+            # Case 2: Stage 1 initiatives with no activity -> archive faster
+            if not action and initiative.current_stage == 1 and last_activity < stage1_cutoff:
+                action = 'archive'
+                reason = f'Stage 1 with no activity for {days_since_activity:.1f} days'
+                result['summary']['would_archive_stage1'] += 1
+
+            # Case 3: General stale initiatives -> archive
+            if not action and last_activity < general_cutoff:
+                action = 'archive'
+                reason = f'No activity for {days_since_activity:.1f} days'
+                result['summary']['would_archive_stale'] += 1
+
+            if action:
+                preview_item = {
+                    'id': str(initiative.id),
+                    'name': initiative.name[:60] + ('...' if len(initiative.name) > 60 else ''),
+                    'current_stage': initiative.current_stage,
+                    'days_inactive': round(days_since_activity, 1),
+                    'action': action,
+                    'reason': reason,
+                }
+
+                if not dry_run:
+                    # Execute the action
+                    if action == 'complete':
+                        initiative.status = 'COMPLETED'
+                    else:
+                        initiative.status = 'ARCHIVED'
+                    initiative.save(update_fields=['status', 'updated_at'])
+                    preview_item['executed'] = True
+
+                result['preview'].append(preview_item)
+
+        # Limit preview to 50 items
+        if len(result['preview']) > 50:
+            result['preview'] = result['preview'][:50]
+            result['preview_truncated'] = True
+
+        total_affected = (
+            result['summary']['would_archive_stage1'] +
+            result['summary']['would_archive_stale'] +
+            result['summary']['would_complete_stage5']
+        )
+
+        if dry_run:
+            result['message'] = (
+                f"[DRY RUN] Would affect {total_affected} initiatives: "
+                f"archive {result['summary']['would_archive_stage1']} Stage 1, "
+                f"archive {result['summary']['would_archive_stale']} stale, "
+                f"complete {result['summary']['would_complete_stage5']} Stage 5. "
+                f"POST with dry_run=false to execute."
+            )
+        else:
+            result['message'] = (
+                f"Processed {total_affected} initiatives: "
+                f"archived {result['summary']['would_archive_stage1']} Stage 1, "
+                f"archived {result['summary']['would_archive_stale']} stale, "
+                f"completed {result['summary']['would_complete_stage5']} Stage 5."
+            )
+
+        logger.info(f"[cleanup_stale_initiatives] {result['message']}")
+
+    except Exception as e:
+        result['error'] = str(e)
+        result['message'] = f"Error: {e}"
+        logger.error(f"[cleanup_stale_initiatives] Error: {e}")
+
+    return Response(result)
