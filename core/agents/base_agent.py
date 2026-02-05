@@ -4113,6 +4113,85 @@ Consider this current data when formulating your response."""
             parsed = self._parse_code_files(result.message)
             files_to_write.extend(parsed)
 
+        # Session 943: If still no files, check for report-style content
+        # Financial agents produce structured_report or long messages that should be saved
+        if not files_to_write and result.data:
+            from django.utils import timezone
+
+            # Check for structured_report field (used by stock/market agents)
+            structured_report = result.data.get('structured_report')
+            if structured_report and len(str(structured_report)) > 200:
+                # Generate a filename based on agent name and task
+                agent_name = self.__class__.__name__.replace('Agent', '').lower()
+                timestamp = timezone.now().strftime('%Y-%m-%d_%H-%M')
+                filename = f"{agent_name}_report_{timestamp}.md"
+
+                # Determine category from agent name
+                category_map = {
+                    'stock': 'financial/stocks',
+                    'bull': 'financial/bull_cases',
+                    'bear': 'financial/bear_cases',
+                    'market': 'financial/market_analysis',
+                    'crypto': 'blockchain/analysis',
+                    'prediction': 'predictions',
+                    'trend': 'analysis/trends',
+                    'research': 'research',
+                }
+                category = 'reports'  # Default
+                for key, path in category_map.items():
+                    if key in agent_name.lower():
+                        category = path
+                        break
+
+                files_to_write.append({
+                    'filename': f"{category}/{filename}",
+                    'content': str(structured_report),
+                    'language': 'markdown'
+                })
+                logger.info(f"📊 [Session 943] Created report file from structured_report: {category}/{filename}")
+
+            # Also check for substantial message content (analysis results)
+            # Session 943 fix: Expanded detection - check for any report-like content, not just ## headers
+            # Reports often use **bold**, ---, bullet points, or section markers
+            elif result.message and len(result.message) > 500:
+                # Check if it looks like formatted content (not just plain text)
+                has_formatting = any(marker in result.message for marker in [
+                    '##', '**', '---', '•', '- ', '1)', '1.', ':',
+                ])
+                # Save if it has formatting OR is from a known report-producing agent
+                report_agents = {'stock', 'bull', 'bear', 'market', 'analyst', 'research', 'prediction', 'crypto', 'trend'}
+                agent_name_lower = self.__class__.__name__.lower()
+                is_report_agent = any(name in agent_name_lower for name in report_agents)
+
+                if has_formatting or is_report_agent:
+                    # Looks like a report - save it
+                    agent_name = self.__class__.__name__.replace('Agent', '').lower()
+                    timestamp = timezone.now().strftime('%Y-%m-%d_%H-%M')
+                    filename = f"{agent_name}_analysis_{timestamp}.md"
+
+                    category_map = {
+                        'stock': 'financial/stocks',
+                        'bull': 'financial/bull_cases',
+                        'bear': 'financial/bear_cases',
+                        'market': 'financial/market_analysis',
+                        'crypto': 'blockchain/analysis',
+                        'prediction': 'predictions',
+                        'trend': 'analysis/trends',
+                        'research': 'research',
+                    }
+                    category = 'reports'
+                    for key, path in category_map.items():
+                        if key in agent_name.lower():
+                            category = path
+                            break
+
+                    files_to_write.append({
+                        'filename': f"{category}/{filename}",
+                        'content': result.message,
+                        'language': 'markdown'
+                    })
+                    logger.info(f"📊 [Session 943] Created report file from message: {category}/{filename}")
+
         # Write files to workspace
         if files_to_write:
             write_result = self._write_files_to_workspace(
