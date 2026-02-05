@@ -243,6 +243,9 @@ class DeliverableEnvelopeService:
             )
             deliverable.save()
 
+            # Session 930: Auto-learning triggers
+            self._trigger_learning_from_deliverable(deliverable, user)
+
             self.logger.info(
                 f"Created deliverable: {deliverable.title} "
                 f"(type={deliverable_type}, agent={agent_name}, trace_id={deliverable.trace_id})"
@@ -590,6 +593,56 @@ class DeliverableEnvelopeService:
         except Exception as e:
             self.logger.warning(f"Citation gate check failed: {e}")
             return True  # Don't block on gate errors
+
+    def _trigger_learning_from_deliverable(self, deliverable, user) -> None:
+        """
+        Session 930: Trigger automatic learning from deliverable creation.
+
+        This calls the user learning services to:
+        1. Infer and track skills demonstrated in the deliverable
+        2. Auto-link the deliverable to relevant user goals
+
+        Runs asynchronously to not block deliverable creation.
+        """
+        if not user:
+            return
+
+        try:
+            # 1. Skill Evolution: Infer skills from deliverable content
+            from core.services.skill_evolution_service import get_skill_evolution_service
+            skill_service = get_skill_evolution_service()
+
+            # Use quality_score as base quality for skill demonstrations
+            base_quality = float(deliverable.quality_score) if deliverable.quality_score else 0.7
+
+            demonstrations = skill_service.update_skills_from_deliverable(
+                user=user,
+                deliverable=deliverable,
+                base_quality=base_quality,
+            )
+
+            if demonstrations:
+                self.logger.debug(
+                    f"Inferred {len(demonstrations)} skills from deliverable {deliverable.id}"
+                )
+
+        except Exception as e:
+            self.logger.debug(f"Skill evolution trigger failed: {e}")
+
+        try:
+            # 2. Goal Tracking: Auto-link deliverable to matching goals
+            from core.services.goal_tracking_service import get_goal_tracking_service
+            goal_service = get_goal_tracking_service()
+
+            progress = goal_service.auto_link_deliverable(deliverable)
+
+            if progress:
+                self.logger.debug(
+                    f"Auto-linked deliverable {deliverable.id} to goal {progress.goal_id}"
+                )
+
+        except Exception as e:
+            self.logger.debug(f"Goal tracking trigger failed: {e}")
 
 
 # Singleton instance for easy access
