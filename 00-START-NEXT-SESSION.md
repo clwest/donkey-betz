@@ -1,51 +1,40 @@
-# Session 943 - Start Here
+# Session 944 - Start Here
 
-**Previous Session:** 942 (Halted Experiment Cleanup + Bulk Boardroom Actions)
+**Previous Session:** 943 (Stage Distribution Fix + Stale Investigation)
 **Date:** February 5, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: COMPLETE** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED** | **Experiment Cleanup: SCHEDULED** | **Bulk Actions: COMPLETE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: COMPLETE** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED** | **Experiment Cleanup: SCHEDULED** | **Bulk Actions: COMPLETE** | **Stage Distribution: FIXED**
 
 ---
 
-## Session 942 Summary (Just Completed)
+## Session 943 Summary (Just Completed)
 
-### Integrity Anomaly Investigation
+### Stage Distribution Bug Fix (PR #876)
 
-Investigated the "Integrity anomaly detected in output logs" issue affecting 213 experiments:
+Fixed the Pipeline Health UI showing incorrect stage distribution numbers:
 
-**Root Cause:** The `_detect_integrity_anomaly()` method halts experiments during:
-- Error spikes (>10 failed AgentExecutions AND >3x baseline)
-- Rating drops (≥1.5 point drop in PipelineStageFeedback)
+**Problem:** All 5 stages displayed "436" - the total count of active initiatives. This was because the code counted all `InitiativeStage` records for each stage, but every initiative has 5 stage entries (one per stage), so all stages showed the same total.
 
-**Finding:** Session 925 already fixed this issue. Current state:
-- 225 → 205 halted experiments (20 deleted via cleanup)
-- All remaining are legitimately failed
-- No new halts since Feb 4
+**Fix:** Changed the query to count initiatives by their `current_stage` field:
+- **Before:** Count all stage entries for stage N (showed total initiatives)
+- **After:** Count initiatives WHERE `current_stage == N` (shows initiatives AT that stage)
 
-### Halted Experiment Cleanup Task (PR #874)
+| Stage | Old Display | New Display |
+|-------|-------------|-------------|
+| Stage 1 | 436 (all initiatives) | X (initiatives currently at Stage 1) |
+| Stage 2 | 436 (all initiatives) | Y (initiatives currently at Stage 2) |
+| etc. | ... | ... |
 
-Added scheduled task to delete old halted experiments:
+**Files Changed:**
+- `core/views_initiative_kickstart.py` - Fixed `pipeline_health()` query
+- `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` - Use `count` field
 
-| Task | Schedule | Purpose |
-|------|----------|---------|
-| `cleanup_halted_experiments` | Daily at 3:00 AM | Delete halted experiments older than 7 days |
+### Stale Initiatives Investigation
 
-### Bulk Actions for Boardroom UI (PR #875)
+The "Critical" warning showing 236 stale initiatives (54% with no activity in 48+ hours) is legitimate - the pipeline has many initiatives that aren't progressing. This is a real system health concern, not a display bug.
 
-Added batch selection and bulk actions to the Boardroom tab:
-
-**Backend Endpoints:**
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/human/attention/bulk-decide/` | POST | Bulk approve/ignore attention items |
-| `/api/boardroom/decisions/bulk-promote/` | POST | Bulk promote decisions |
-| `/api/boardroom/decisions/bulk-reject/` | POST | Bulk reject decisions |
-
-**Frontend Features:**
-- Checkboxes on each item
-- "Select All" button per tab
-- Bulk action bar when items selected
-- Approve All, Ignore All, Promote All, Reject All buttons
-- Selection clears after bulk action
+**Recommendations:**
+- Use the cleanup API to archive truly abandoned initiatives
+- Consider reducing the stale threshold or adjusting the warning levels
 
 ---
 
@@ -75,12 +64,19 @@ Address issues from prior panel/advisor system plan:
 - Dedupe repeated DecisionSummary blocks
 - Add provenance headers to panel results
 
+### Option E: Stale Initiative Cleanup
+Address the 236 stale initiatives:
+- Create automated cleanup for initiatives with no activity in X days
+- Add "archive stale" scheduled task
+- Investigate why so many initiatives are stalled
+
 ---
 
 ## Recent Session History
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **943** | Stage Distribution Fix + Stale Investigation | #876 |
 | **942** | Integrity Anomaly Investigation + Halted Experiment Cleanup + Bulk Boardroom Actions | #874, #875 |
 | **941** | Boardroom Auto-Approve Scheduled | #871 |
 | **940** | PA Boardroom Complete (Awareness + Tools + Triage + Learning) | #866-#869 |
@@ -90,6 +86,12 @@ Address issues from prior panel/advisor system plan:
 ---
 
 ## Key Files Reference
+
+### Stage Distribution Fix (Session 943)
+| File | Purpose |
+|------|---------|
+| `core/views_initiative_kickstart.py` | `pipeline_health()` endpoint - fixed stage distribution query |
+| `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` | Stage distribution UI display |
 
 ### Boardroom System (Session 940-942)
 | File | Purpose |
@@ -115,4 +117,4 @@ Address issues from prior panel/advisor system plan:
 
 ---
 
-**Session 943 Focus: Choose priority option above and continue building!**
+**Session 944 Focus: Choose priority option above and continue building!**
