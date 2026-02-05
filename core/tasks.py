@@ -19352,6 +19352,24 @@ The blog itself is proof of the capabilities you're describing.
 
         logger.info(f"🤖 [SELF-BLOG] Topic: {blog_topic}, invoking ContentWriterAgent...")
 
+        # Session 937: Build real spider context instead of empty dict
+        spider_context = {}
+        try:
+            from core.services.spider_context_builder import SpiderContextBuilder
+            context_builder = SpiderContextBuilder()
+            spider_context = context_builder.build_context_for_agent(
+                agent_name='ContentWriterAgent',
+                task=f"blog_post about {blog_topic}",
+                hours=48,
+                max_trends=15,
+                max_discussions=10,
+                include_market_data=True
+            )
+            data_sources = spider_context.get('data_sources', [])
+            logger.info(f"[Session 937] Built spider context with {len(data_sources)} data sources for self-blog")
+        except Exception as e:
+            logger.warning(f"[Session 937] Could not build spider context: {e}")
+
         # Generate blog
         agent = ContentWriterAgent(user=None)
         result = agent.execute(
@@ -19365,7 +19383,7 @@ The blog itself is proof of the capabilities you're describing.
                 'seo_keywords': seo_keywords,  # Session 572: Use topic-specific keywords
             },
             scifi_context={'collective_intelligence': True, 'self_aware': True},
-            spider_context={}
+            spider_context=spider_context  # Session 937: Use real spider data
         )
         
         if result.success:
