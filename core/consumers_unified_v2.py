@@ -154,6 +154,32 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         data_count = await self.get_spider_data_count()
         opportunity_count = await self.get_opportunity_count()
 
+        # Session 930: Get profile completeness context
+        profile_context = await self.get_profile_context()
+
+        # Build profile section for system context
+        profile_section = ""
+        if profile_context['has_gaps'] and profile_context['completeness_percent'] < 80:
+            profile_section = f"""
+
+USER PROFILE STATUS:
+- Profile completeness: {profile_context['completeness_percent']}%
+- Missing information in: {profile_context['question_category'] or 'various areas'}
+
+PROFILE PROMPTING GUIDELINES:
+When natural and conversational, consider asking about missing profile information.
+Suggested question to weave in naturally: "{profile_context['suggested_question']}"
+- Only ask if it fits the conversation flow
+- Don't force it if user is focused on a specific task
+- Frame it as helping you serve them better
+- If they answer, acknowledge and thank them"""
+        elif profile_context['completeness_percent'] >= 80:
+            profile_section = f"""
+
+USER PROFILE STATUS:
+- Profile completeness: {profile_context['completeness_percent']}% (well-filled!)
+- You have good context about this user to personalize responses"""
+
         # Build system context
         system_context = f"""You are an intelligent Personal Assistant for {user_name} in the Unified AI Platform.
 
@@ -173,6 +199,7 @@ AVAILABLE FEATURES:
 4. Data Intelligence - Access spider network data and opportunities
 5. Agent Execution - Run any of the {agent_count} specialized AI agents
 6. Advisor Consultation - Get expert guidance from {advisor_count} advisors
+{profile_section}
 
 INSTRUCTIONS:
 - Be friendly, conversational, and helpful
@@ -197,6 +224,14 @@ INSTRUCTIONS:
 
             if result['success']:
                 logger.info(f"✅ Generated REAL AI response using {result.get('model', 'GPT-5-mini')}")
+
+                # Session 930: Record profile prompt if we suggested one
+                if profile_context['has_gaps'] and profile_context['question_field']:
+                    await self.record_profile_prompt(
+                        field_name=profile_context['question_field'],
+                        prompt_text=profile_context['suggested_question'] or ''
+                    )
+
                 return result['response']
             else:
                 logger.warning(f"⚠️ AI generation failed: {result.get('error')}")
@@ -263,3 +298,62 @@ INSTRUCTIONS:
         """Get count of available opportunities"""
         from core.models_unified_system import Opportunity
         return Opportunity.objects.filter(status='active').count()
+
+    @database_sync_to_async
+    def get_profile_context(self):
+        """
+        Session 930: Get profile completeness context for natural prompting.
+
+        Returns dict with completeness score and suggested question.
+        """
+        try:
+            from core.services.profile_completeness_service import get_profile_completeness_service
+
+            service = get_profile_completeness_service()
+            score = service.get_completeness_score(self.user)
+            next_question = service.get_next_question(self.user)
+
+            context = {
+                'completeness_score': score,
+                'completeness_percent': int(score * 100),
+                'has_gaps': next_question is not None,
+                'suggested_question': None,
+                'question_field': None,
+                'question_category': None,
+            }
+
+            if next_question:
+                # Format as conversational prompt
+                context['suggested_question'] = service._format_conversational_prompt(
+                    next_question, context=None
+                )
+                context['question_field'] = next_question.field_name
+                context['question_category'] = next_question.category
+
+            return context
+        except Exception as e:
+            logger.debug(f"Profile context fetch failed: {e}")
+            return {
+                'completeness_score': 0,
+                'completeness_percent': 0,
+                'has_gaps': False,
+                'suggested_question': None,
+                'question_field': None,
+                'question_category': None,
+            }
+
+    @database_sync_to_async
+    def record_profile_prompt(self, field_name: str, prompt_text: str):
+        """
+        Session 930: Record that we suggested a profile question to the AI.
+
+        This tracks which questions were offered so we don't repeat them frequently.
+        """
+        try:
+            from core.services.profile_completeness_service import get_profile_completeness_service
+
+            service = get_profile_completeness_service()
+            service.record_prompt(self.user, field_name, prompt_text)
+            logger.debug(f"Recorded profile prompt for field: {field_name}")
+        except Exception as e:
+            logger.debug(f"Profile prompt recording failed: {e}")

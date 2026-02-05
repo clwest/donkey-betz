@@ -456,12 +456,84 @@ railway run python manage.py migrate core 0228 --no-input
 | **Infer skills from deliverables** | ✅ DONE | `DeliverableEnvelopeService._trigger_learning_from_deliverable()` |
 | **Adjust context per agent** | ✅ DONE | `AgentRouter._apply_agent_learning()` |
 | **BaseAgent learning triggers** | ✅ DONE | `BaseAgent._trigger_deliverable_learning()` |
-| **PA profile prompting** | 🔄 TODO | Integrate `ProfileCompletenessService` in PA |
+| **PA profile prompting** | ✅ DONE | See Part 10 below |
 
 ### Remaining Work (Future Sessions)
 
-1. **PA Profile Interview** - Integrate `ProfileCompletenessService.get_contextual_prompt()` into Personal Assistant conversations
-2. **Frontend Components** - Build React components to visualize learning data
+1. **Frontend Components** - Build React components to visualize learning data
+
+---
+
+## Part 10: PA Profile Interview (Session 931)
+
+Personal Assistant now naturally prompts users to fill in missing profile information.
+
+### Implementation Summary
+
+| Component | File | Change |
+|-----------|------|--------|
+| Profile Context Method | `consumers_unified_v2.py:302-352` | `get_profile_context()` - fetches completeness % and suggested question |
+| Context Injection | `consumers_unified_v2.py:156-180` | Injects profile section into system_context when gaps exist |
+| Prompt Recording | `consumers_unified_v2.py:354-368` | `record_profile_prompt()` - tracks which questions were suggested |
+| Agent Instructions | `personal_assistant_agent.py:478-493` | PROFILE AWARENESS section in system_prompt |
+
+### How It Works
+
+```
+User Sends Message to PA
+    │
+    ▼
+get_profile_context()
+    ├─ ProfileCompletenessService.get_completeness_score()
+    ├─ ProfileCompletenessService.get_next_question()
+    └─ Returns: { completeness_percent, suggested_question, question_field }
+    │
+    ▼
+Build System Context
+    ├─ If completeness < 80% AND has_gaps:
+    │   └─ Add USER PROFILE STATUS section with:
+    │       - completeness percentage
+    │       - suggested question to weave in naturally
+    │       - prompting guidelines (don't force it, etc.)
+    └─ If completeness >= 80%:
+        └─ Note: "Profile well-filled, personalize responses"
+    │
+    ▼
+LLM Generates Response (may naturally ask profile question)
+    │
+    ▼
+record_profile_prompt()
+    └─ Logs that this question was offered (prevents repeat prompts for 7 days)
+```
+
+### Profile Prompting Guidelines (in PA system prompt)
+
+```
+When natural and conversational, consider asking about missing profile information.
+Suggested question to weave in naturally: "[dynamic question]"
+- Only ask if it fits the conversation flow
+- Don't force it if user is focused on a specific task
+- Frame it as helping you serve them better
+- If they answer, acknowledge and thank them
+```
+
+### Example Natural Prompts Generated
+
+| Category | Example Question |
+|----------|------------------|
+| basic | "I'd like to get to know you better. What would you like me to call you?" |
+| skills | "To better match opportunities to you, what are your key skills?" |
+| career | "For career-related recommendations, what's your current job title?" |
+| goals | "To help you achieve your objectives, what are you trying to accomplish this quarter?" |
+| preferences | "To personalize your experience, how do you prefer to communicate?" |
+| financial | "For financial insights, what are your investment goals?" |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/consumers_unified_v2.py` | +66 lines: `get_profile_context()`, `record_profile_prompt()`, system_context injection |
+| `core/agents/personal_assistant_agent.py` | +16 lines: PROFILE AWARENESS section in system_prompt |
 
 ---
 
@@ -489,4 +561,4 @@ railway run python manage.py migrate core 0228 --no-input
 
 ---
 
-**Session 930 Complete - User Learning System Fully Implemented with Auto-Integration!**
+**Session 930-931 Complete - User Learning System + PA Profile Interview!**
