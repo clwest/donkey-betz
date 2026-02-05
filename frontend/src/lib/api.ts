@@ -3281,6 +3281,25 @@ export const platformApi = {
         }
       }>
     }>(`/initiatives/diagnose-stuck/${limit ? `?limit=${limit}` : '?limit=100'}`),
+
+  // Session 928: Start a conversation about an initiative
+  startConversation: (
+    initiativeId: string,
+    params?: {
+      topic?: string
+      objective?: string
+      conversation_type?: 'analytical' | 'creative' | 'debate' | 'planning' | 'critique' | 'general'
+      auto_select_agents?: boolean
+    }
+  ) =>
+    api.post<{
+      success: boolean
+      session_id: string
+      session_url: string
+      message: string
+      participants: number
+      conversation_type: string
+    }>(`/initiatives/${initiativeId}/start-conversation/`, params || {}),
 }
 
 // Session 833: Blogs API for approval workflow

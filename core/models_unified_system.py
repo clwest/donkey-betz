@@ -10006,6 +10006,16 @@ class HiveMindSession(models.Model):
         help_text='Session 900: Confidence score of the trigger (0-1)'
     )
 
+    # Session 928: Initiative context - conversations ABOUT an initiative
+    initiative = models.ForeignKey(
+        'core.Initiative',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='conversations',
+        help_text='Session 928: The initiative this conversation is discussing'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
