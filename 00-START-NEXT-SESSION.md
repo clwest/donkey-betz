@@ -1,54 +1,80 @@
-# Session 938 - Start Here
+# Session 940 - Start Here
 
-**Previous Session:** 937 (Content Quality Verification + Self-Blog Spider Fix)
+**Previous Session:** 939 (Boardroom Tab + Cleanup Automation)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE**
 
 ---
 
-## Session 937 Summary (Just Completed)
+## Session 939 Summary (Just Completed)
 
-### Content Quality Verification - COMPLETE (PRs #855, #857)
-Tested spider context injection and extended fixes to additional code paths.
+### Boardroom Tab - COMPLETE (PR #864)
+Added new workspace tab for reviewing and acting on pending decisions.
 
-**Railway Verification:**
-- `python manage.py write_self_blog --tone professional`
-- Logs show: "Built spider context with 29 data sources" ✅
-- SpiderContextBuilder successfully invoked ✅
+**Features:**
+- Two views: Attention Items + Draft Decisions
+- Filters by type (review, insight, alert, product, experiment, etc.)
+- Actions: Approve/Ignore for attention items, Promote/Reject for decisions
+- Expandable cards with details, ML recommendations, key insights
+- Auto-refresh every 30 seconds
 
-**Fixes Applied:**
-| File | Issue | Fix |
-|------|-------|-----|
-| `write_self_blog.py` | Passed empty `spider_context={}` | Now calls SpiderContextBuilder |
-| `tasks.py:19368` | `generate_self_blog_task` used empty context | Now calls SpiderContextBuilder |
-| `tasks.py:19138` | Trending topic query used wrong fields | Extract title/source from `raw_data` JSON |
+**Location:** Workspace → Boardroom (gavel icon, last tab)
 
-### Trending Topic Bug Fix (PR #857)
-**Bug:** `topic_category='trending'` failed with "Cannot resolve keyword 'title' into field"
-**Cause:** Code queried `SpiderData.title/source/url/content` but these are inside `raw_data` JSONField
-**Fix:** Extract from `raw_data.items[]` with fallbacks for title/name/headline formats
+### Boardroom Cleanup - COMPLETE (PRs #862, #863)
+Cleaned up 1,096 junk items and added automatic prevention.
 
-**Remaining `spider_context={}` Locations (for future):**
-- `creative_orchestrator.py` - 13 locations
-- `research_orchestrator.py` - 5 locations
-- `tasks.py` - ~10 other Celery tasks
-- `personal_ai_assistant_enhanced.py` - 4 locations
+**Manual Cleanup (Production):**
+| Type | Deleted |
+|------|---------|
+| spider_action items | 386 |
+| [Learned] HumanAttentionItems | 3 |
+| [Learned] AgentDecisionSummary | 707 |
+| **Total** | **1,096** |
+
+**Automatic Cleanup Task:**
+- `cleanup_boardroom_junk` runs daily at 4:30 AM
+- Deletes spider_action items older than 24h
+- Deletes items with `[Learned]` in title/topic
+
+### Initiative Cleanup Enhancement (PR #862)
+Updated `cleanup_junk_initiatives` to DELETE junk instead of archive.
+
+---
+
+## Current Boardroom Status
+
+| Type | Count | Location |
+|------|-------|----------|
+| Pending Attention Items | ~229 | Boardroom → Attention Items |
+| Draft Decisions | ~615 | Boardroom → Draft Decisions |
+
+**Attention Item Breakdown:**
+- review: 114 (content reviews)
+- insight: 103 (agent validations)
+- alert: 2 (stock alerts)
+- opportunity: 4
+
+**Decision Breakdown:**
+- product: 412
+- experiment: 101
+- pipeline: 83
+- research: 14
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
 
-### Option A: Learning Loop Backend
+### Option A: Bulk Actions for Boardroom
+Add batch approve/reject functionality:
+- Select multiple items
+- Approve all filtered items
+- Auto-approve low-risk items based on ML confidence
+
+### Option B: Learning Loop Backend
 Define success signals and implement feedback collection:
 - Track tool execution outcomes
 - Weight recent performance
 - Inject learnings into prompts
-
-### Option B: WebSocket PA Integration
-Update WebSocket consumer to match REST response format:
-- Ensure consistent tool_runs format
-- Add trace_id to WebSocket messages
-- Add profile_completeness to real-time updates
 
 ### Option C: Fix Remaining Spider Context Paths
 Extend SpiderContextBuilder to remaining code paths:
@@ -56,11 +82,11 @@ Extend SpiderContextBuilder to remaining code paths:
 - `research_orchestrator.py` (5 locations)
 - Other content generation tasks in `tasks.py`
 
-### Option D: User Profile Onboarding
-Build onboarding flow for new users:
-- Skills assessment wizard
-- Goal setting interface
-- Preference collection
+### Option D: Decision Auto-Promotion
+Auto-promote decisions that meet quality thresholds:
+- High confidence ML recommendations
+- Consistent with existing canonical decisions
+- No conflicting recommendations
 
 ---
 
@@ -68,49 +94,41 @@ Build onboarding flow for new users:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **939** | Boardroom Tab + Cleanup Automation | #862, #863, #864 |
 | **937** | Content Quality Verification + Spider Fixes | #855, #857 |
 | **936** | Dashboard + Voice + Spider Context Fix | #851, #852, #853, #854 |
 | **935** | User Learning UI + ListenButton | #850 |
 | **934** | Frontend PA Integration | #849 |
-| **933** | Tool Audit + Attention Widget | #848 |
 
 ---
 
 ## Key Files Reference
 
-### Spider Context (Sessions 936-937)
+### Boardroom System (Session 939)
 | File | Purpose |
 |------|---------|
-| `core/services/autonomous_action_executor.py` | Calls SpiderContextBuilder before content generation |
-| `core/services/spider_context_builder.py` | Builds spider context for agents (51 patterns) |
-| `core/services/spider_intelligence.py` | Spider category mappings (18 categories) |
-| `core/agents/content_diversity_orchestrator.py` | CATEGORY_SPIDERS (14 categories, 79 mappings) |
-| `core/services/finance_content_context.py` | Finance data using real methods |
-| `core/management/commands/write_self_blog.py` | Self-blog with spider context (Session 937) |
-| `core/tasks.py:19000` | generate_self_blog_task with spider context |
-
-### User Learning Components
-| File | Purpose |
-|------|---------|
-| `frontend/src/components/FeedbackButtons.tsx` | Thumbs up/down feedback |
-| `frontend/src/components/GoalProgressDashboard.tsx` | Goal progress with updates |
-| `frontend/src/components/LearningInsightsPanel.tsx` | Learning summary panel |
-
-### Voice System (COMPLETE)
-| File | Purpose |
-|------|---------|
-| `frontend/src/components/ListenButton.tsx` | TTS button + ListenAllButton |
-| `core/services/elevenlabs_tts_service.py` | TTS with caching |
+| `frontend/src/pages/workspace/tabs/BoardroomTab.tsx` | Boardroom UI component |
+| `core/tasks.py:cleanup_boardroom_junk` | Daily cleanup task |
+| `core/celery.py` | Scheduled at 4:30 AM |
+| `core/models_human_interface.py` | HumanAttentionItem model |
+| `core/models_unified_system.py` | AgentDecisionSummary model |
 
 ### Key API Endpoints
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/user-learning/feedback/` | POST | Record agent feedback |
-| `/api/user-learning/goals/` | GET | Goals dashboard |
-| `/api/user-learning/summary/` | GET | Combined learning summary |
-| `/api/pa/chat/` | POST | UnifiedPA chat |
-| `/api/tts/generate/` | POST | Generate TTS audio |
+| `/api/human/attention/` | GET | List pending attention items |
+| `/api/human/attention/{id}/decide/` | POST | Approve/ignore item |
+| `/api/boardroom/decisions/` | GET | List draft decisions |
+| `/api/boardroom/decisions/{id}/promote/` | POST | Promote to canonical |
+| `/api/boardroom/decisions/{id}/reject/` | POST | Reject decision |
+
+### Cleanup Tasks (Celery Beat)
+| Task | Schedule | Purpose |
+|------|----------|---------|
+| `cleanup_junk_initiatives` | Daily 4:00 AM | Delete junk initiatives |
+| `cleanup_boardroom_junk` | Daily 4:30 AM | Delete spider_action + [Learned] items |
+| `cleanup_stale_agent_executions` | Every 30 min | Mark stuck executions as failed |
 
 ---
 
-**Session 938 Focus: Choose priority option above and continue building!**
+**Session 940 Focus: Choose priority option above and continue building!**
