@@ -1,5 +1,6 @@
 // Session 834: Conversation Detail Modal
 // View full conversation details without leaving Workspace
+// Session 926: Added ListenButton for TTS
 
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { conversationsApi } from '@/lib/api'
+import { ListenButton, ListenAllButton } from '@/components/ListenButton'
 
 interface ConversationDetailModalProps {
   conversationId: string
@@ -180,9 +182,20 @@ export function ConversationDetailModal({ conversationId, onClose }: Conversatio
 
               {/* Conversation Thread */}
               <div className="bg-dark-bg rounded-lg p-4">
-                <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
-                  <Sparkles size={12} />
-                  Conversation ({conversation.messages?.length || 0} messages)
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Sparkles size={12} />
+                    Conversation ({conversation.messages?.length || 0} messages)
+                  </div>
+                  {conversation.messages && conversation.messages.length > 0 && (
+                    <ListenAllButton
+                      messages={conversation.messages.map(msg => ({
+                        text: msg.content,
+                        agentName: msg.agent,
+                      }))}
+                      className="text-xs"
+                    />
+                  )}
                 </div>
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                   {conversation.messages?.map((msg, idx) => (
@@ -190,15 +203,23 @@ export function ConversationDetailModal({ conversationId, onClose }: Conversatio
                       key={msg.id || idx}
                       className="pl-3 border-l-2 border-primary-500/30"
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm">{msg.agent_emoji || '🤖'}</span>
-                        <span className="text-sm font-medium text-white">{msg.agent}</span>
-                        <span className="text-xs text-gray-500">#{msg.sequence}</span>
-                        {msg.type && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
-                            {msg.type}
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{msg.agent_emoji || '🤖'}</span>
+                          <span className="text-sm font-medium text-white">{msg.agent}</span>
+                          <span className="text-xs text-gray-500">#{msg.sequence}</span>
+                          {msg.type && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
+                              {msg.type}
+                            </span>
+                          )}
+                        </div>
+                        <ListenButton
+                          text={msg.content}
+                          agentName={msg.agent}
+                          size="sm"
+                          className="opacity-50 hover:opacity-100"
+                        />
                       </div>
                       <p className="text-sm text-gray-300 whitespace-pre-wrap">{msg.content}</p>
                     </div>

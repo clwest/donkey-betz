@@ -510,3 +510,169 @@ def get_user_voice_settings(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 926: Universal Agent Voice System - Listen Button TTS
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def tts_generate(request):
+    """
+    POST /api/tts/generate/
+    Generate TTS audio with caching support.
+
+    Supports agent voice lookup for automatic voice selection.
+
+    Body: {
+        "text": "Text to speak",
+        "agent_name": "optional - looks up agent's voice",
+        "voice_id": "optional - explicit ElevenLabs voice ID",
+        "voice_name": "optional - voice name like Rachel"
+    }
+
+    Returns: {
+        "success": true,
+        "audio_url": "/media/audio_cache/...",
+        "cached": true/false,
+        "estimated_cost": 0.003,
+        "duration_estimate": 5.2,
+        "voice_name": "Rachel",
+        "voice_id": "21m00Tcm4TlvDq8ikWAM"
+    }
+    """
+    import json
+    from core.services.elevenlabs_tts_service import generate_audio_cached
+
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '').strip()
+        agent_name = data.get('agent_name')
+        voice_id = data.get('voice_id')
+        voice_name = data.get('voice_name')
+
+        if not text:
+            return JsonResponse({
+                'success': False,
+                'error': 'Text is required'
+            }, status=400)
+
+        logger.info(f"🔊 [TTS Generate] text={len(text)} chars, agent={agent_name}, "
+                   f"voice_id={voice_id}, voice_name={voice_name}")
+
+        result = generate_audio_cached(
+            text=text,
+            voice_id=voice_id,
+            voice_name=voice_name,
+            agent_name=agent_name,
+        )
+
+        return JsonResponse(result)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"❌ TTS Generate error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def tts_estimate(request):
+    """
+    POST /api/tts/estimate/
+    Estimate TTS cost and duration before generation.
+
+    Body: { "text": "Text to estimate" }
+
+    Returns: {
+        "text_length": 1500,
+        "word_count": 250,
+        "estimated_cost": 0.45,
+        "estimated_duration": 100.0,
+        "needs_confirmation": false
+    }
+    """
+    import json
+    from core.services.elevenlabs_tts_service import estimate_tts_cost
+
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '').strip()
+
+        if not text:
+            return JsonResponse({
+                'success': False,
+                'error': 'Text is required'
+            }, status=400)
+
+        estimate = estimate_tts_cost(text)
+        return JsonResponse({
+            'success': True,
+            **estimate
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"❌ TTS Estimate error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def tts_voices(request):
+    """
+    GET /api/tts/voices/
+    List available TTS voices.
+
+    Returns: {
+        "success": true,
+        "voices": [
+            {"name": "Rachel", "id": "21m00Tcm4TlvDq8ikWAM", "description": "Clear, authoritative"},
+            ...
+        ]
+    }
+    """
+    from core.services.elevenlabs_tts_service import VOICE_IDS
+
+    voice_descriptions = {
+        'Rachel': 'Clear, authoritative - ideal for research and analysis',
+        'Antoni': 'Warm, trustworthy - ideal for financial content',
+        'Bella': 'Warm, engaging - ideal for creative content',
+        'Daniel': 'Professional - ideal for technical content',
+        'George': 'Deep, authoritative - ideal for executive communication',
+        'Charlotte': 'Professional - ideal for legal content',
+        'Emily': 'Friendly - ideal for marketing and social',
+        'Matilda': 'Caring - ideal for health and wellness',
+        'Callum': 'Strategic - ideal for planning content',
+        'Domi': 'Technical - ideal for blockchain and crypto',
+        'Sam': 'Energetic - ideal for sports content',
+        'Elli': 'Friendly - ideal for support and assistance',
+    }
+
+    voices = [
+        {
+            'name': name,
+            'id': voice_id,
+            'description': voice_descriptions.get(name, 'General purpose voice')
+        }
+        for name, voice_id in VOICE_IDS.items()
+    ]
+
+    return JsonResponse({
+        'success': True,
+        'voices': voices
+    })

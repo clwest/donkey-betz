@@ -2517,6 +2517,11 @@ urlpatterns = [
     path('api/tts/speak/', lambda r: __import__('core.views_audio', fromlist=['speak_text']).speak_text(r), name='tts-speak'),
     path('api/tts/settings/', lambda r: __import__('core.views_audio', fromlist=['get_user_voice_settings']).get_user_voice_settings(r), name='tts-settings'),
 
+    # Session 926: Universal Agent Voice System - Listen Button TTS
+    path('api/tts/generate/', lambda r: __import__('core.views_audio', fromlist=['tts_generate']).tts_generate(r), name='tts-generate'),
+    path('api/tts/estimate/', lambda r: __import__('core.views_audio', fromlist=['tts_estimate']).tts_estimate(r), name='tts-estimate'),
+    path('api/tts/voices/', lambda r: __import__('core.views_audio', fromlist=['tts_voices']).tts_voices(r), name='tts-voices'),
+
     # Image Generation endpoints (Phase 2: Frontend Reality Fix)
     path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
     path('api/v1/gallery/optimize-prompt/', optimize_image_prompt, name='optimize-image-prompt'),  # Session 32: Intelligent prompting

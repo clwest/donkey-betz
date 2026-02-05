@@ -2368,6 +2368,16 @@ app.conf.beat_schedule = {
             'expires': 1800,  # 30 minutes
         }
     },
+
+    # Session 926: Audio Cache Cleanup for Universal Agent Voice System
+    # Evicts old cache entries to manage storage (>30 days with <5 accesses)
+    'cleanup-audio-cache': {
+        'task': 'core.tasks.cleanup_audio_cache',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Task routing configuration
