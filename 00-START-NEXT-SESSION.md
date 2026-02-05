@@ -1,86 +1,58 @@
-# Session 931 - Start Here
+# Session 932 - Start Here
 
-**Previous Session:** 930 (User Context Injection & Learning System)
+**Previous Session:** 931 (PA Profile Interview)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **User Learning System: DEPLOYED** | **14 New API Endpoints** | **5 New Models**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **User Learning System: DEPLOYED** | **PA Profile Interview: ACTIVE** | **14 API Endpoints** | **5 Models**
 
 ---
 
-## Session 930 Summary (Just Completed)
+## Session 931 Summary (Just Completed)
 
-### What Was Built
-Complete User Learning System backend with:
+### PA Profile Interview - IMPLEMENTED
 
-**Models (PR #836, Migration 0228):**
-- `AgentFeedback` - 👍/👎 tracking per agent execution
-- `GoalProgress` - Progress entries toward user goals
-- `UserSkill` - Skill proficiency levels (1-10)
-- `SkillDemonstration` - Evidence of skills from deliverables
-- `ProfileCompletionPrompt` - Track profile prompts/responses
+Personal Assistant now naturally prompts users to fill in missing profile information.
 
-**Services (PR #837):**
-- `AgentFeedbackService` - Track feedback, calculate effectiveness scores
-- `ProfileCompletenessService` - Identify gaps, generate contextual prompts
-- `GoalTrackingService` - Link deliverables/initiatives to goals
-- `SkillEvolutionService` - Infer skills, track proficiency evolution
+**Changes Made:**
 
-**API Endpoints (14 routes at `/api/user-learning/`):**
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/feedback/` | POST | Record agent feedback |
-| `/effectiveness/<agent_id>/` | GET | Get agent effectiveness |
-| `/agent-summary/` | GET | Get all agents summary |
-| `/profile-completeness/` | GET | Get profile gaps |
-| `/profile-next-question/` | GET | Get next question to ask |
-| `/profile-response/` | POST | Record profile response |
-| `/goals/` | GET | Get goals dashboard |
-| `/goals/<goal_id>/` | GET | Get goal detail |
-| `/goals/<goal_id>/progress/` | POST | Record goal progress |
-| `/skills/` | GET | Get skills summary |
-| `/skills/growth/` | GET | Get skill growth chart |
-| `/skills/demonstrate/` | POST | Record skill demonstration |
-| `/skills/recommendations/` | GET | Get skill recommendations |
-| `/summary/` | GET | Get combined learning summary |
+| Component | File | Change |
+|-----------|------|--------|
+| Profile Context Method | `consumers_unified_v2.py` | `get_profile_context()` - fetches completeness % and suggested question |
+| Context Injection | `consumers_unified_v2.py` | Injects profile section into system_context when gaps exist (<80%) |
+| Prompt Recording | `consumers_unified_v2.py` | `record_profile_prompt()` - tracks which questions were suggested |
+| Agent Instructions | `personal_assistant_agent.py` | PROFILE AWARENESS section in system_prompt |
 
-### PRs Merged
-- #835 - Documentation of context injection
-- #836 - User Learning Models + Migration 0228
-- #837 - Services + API endpoints
-- #838 - Complete handoff documentation
+**How It Works:**
+1. PA fetches user's profile completeness score and next suggested question
+2. If completeness < 80%, system_context includes profile prompting guidelines
+3. AI naturally weaves in profile questions when conversationally appropriate
+4. Questions are recorded to prevent repeat prompts for 7 days
 
----
-
-## Auto-Integration Complete (PR #840)
-
-**Option B was implemented this session!** Learning triggers now fire automatically:
-
-| Integration Point | File | Line | Triggers |
-|-------------------|------|------|----------|
-| `DeliverableEnvelopeService.wrap()` | deliverable_envelope.py | 247 | Skill inference + Goal linking |
-| `BaseAgent._save_deliverable()` | base_agent.py | 3500 | Skill inference + Goal linking |
-| `AgentRouter._get_user_context()` | agent_router.py | 1557 | Feedback-based context |
+**Example Natural Prompts:**
+- "I'd like to get to know you better. What would you like me to call you?"
+- "To better match opportunities to you, what are your key skills?"
+- "For career-related recommendations, what's your current job title?"
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
 
-### Option A: Frontend for User Learning
+### Option A: Frontend for User Learning (HIGH PRIORITY)
 Build React components to use the new APIs:
-- Profile Completeness Widget (home page progress bar)
-- Feedback Buttons (👍/👎 on agent outputs)
-- Goal Progress Dashboard (workspace tab)
-- Skill Evolution Chart (profile page)
+- **Profile Completeness Widget** (home page progress bar)
+- **Feedback Buttons** (👍/👎 on agent outputs)
+- **Goal Progress Dashboard** (workspace tab)
+- **Skill Evolution Chart** (profile page)
 
-### Option B: PA Profile Interview
-Integrate profile completeness into Personal Assistant:
-- PA calls `ProfileCompletenessService.get_contextual_prompt()` during conversations
-- Naturally prompts user to fill in missing profile data
-- Updates profile via API
-
-### Option C: Universal Agent Voice (Pending from Session 927)
+### Option B: Universal Agent Voice (Pending from Session 927)
 Continue the Listen Button implementation:
 - Plan exists at `/Users/donkeyking/.claude/plans/transient-coalescing-waffle.md`
 - AudioCache model, TTS caching, ListenButton component
+
+### Option C: Profile Response Processing
+Extend PA to actually parse and save profile responses:
+- Detect when user answers a profile question
+- Parse the response and update the appropriate profile field
+- Call `ProfileCompletenessService.record_response()`
 
 ---
 
@@ -88,7 +60,8 @@ Continue the Listen Button implementation:
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **930** | User Context & Learning System (Complete) | `SESSION_930_USER_CONTEXT_LEARNING.md` |
+| **931** | PA Profile Interview | `SESSION_930_USER_CONTEXT_LEARNING.md` (Part 10) |
+| **930** | User Context & Learning System | `SESSION_930_USER_CONTEXT_LEARNING.md` |
 | **928** | Initiative Conversations + Modal Updates | `SESSION_928_INITIATIVE_CONVERSATIONS.md` |
 | **927** | Universal Agent Voice System (Plan) | `SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
 | 925 | Auto-Cleanup Stuck Executions | `SESSION_925_AUTO_CLEANUP.md` |
@@ -97,7 +70,7 @@ Continue the Listen Button implementation:
 
 ## Key Files Reference
 
-### User Learning System (New)
+### User Learning System
 | File | Purpose |
 |------|---------|
 | `core/models_user_learning.py` | 5 new models |
@@ -106,6 +79,12 @@ Continue the Listen Button implementation:
 | `core/services/goal_tracking_service.py` | Goal progress |
 | `core/services/skill_evolution_service.py` | Skill inference |
 | `core/views_user_learning_api.py` | 14 API endpoints |
+
+### PA Profile Interview (New)
+| File | Purpose |
+|------|---------|
+| `core/consumers_unified_v2.py` | `get_profile_context()`, `record_profile_prompt()` |
+| `core/agents/personal_assistant_agent.py` | PROFILE AWARENESS instructions |
 
 ### Context Injection (Existing)
 | File | Purpose |
@@ -116,4 +95,4 @@ Continue the Listen Button implementation:
 
 ---
 
-**Session 931 Focus: Choose priority option above and continue building!**
+**Session 932 Focus: Choose priority option above and continue building!**

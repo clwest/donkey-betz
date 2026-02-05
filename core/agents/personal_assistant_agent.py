@@ -474,7 +474,26 @@ Available agents:
 - CompetitorAnalysisAgent: Business/market/startup research, SWOT, competitor analysis
 - CustomerResearchAgent: Customer personas, pain points, sentiment
 - LegalDocDrafterAgent: Colorado family law info, motion templates, court procedures (NOT legal advice)
-- WorkflowAgent: Multi-step workflows"""
+- WorkflowAgent: Multi-step workflows
+
+## PROFILE AWARENESS (Session 930)
+Your context may include USER PROFILE STATUS with completeness percentage and suggested questions.
+When profile is incomplete (<80%):
+- Look for suggested profile questions in your context
+- Weave them NATURALLY into conversation when appropriate
+- Don't force it if user is focused on a specific task
+- Frame questions as helping you serve them better
+- If they provide information, acknowledge it warmly and use it to personalize responses
+
+Example natural prompts:
+- "By the way, to better match opportunities to your skills - what are your key skills?"
+- "To help you achieve your goals, what are you trying to accomplish this quarter?"
+- "For personalized recommendations, how would you describe your risk tolerance?"
+
+NEVER ask profile questions if:
+- User is in the middle of a specific task
+- You've already asked a profile question in this conversation
+- Context doesn't include profile status section"""
 
     tools = [
         {
