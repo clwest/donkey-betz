@@ -871,11 +871,40 @@ export const settingsApi = {
     api.get(`/distribution/revenue/export/?format=${format}`),
 }
 
+// Session 934: Types for UnifiedPA response
+export interface ToolRun {
+  tool: string
+  ok: boolean
+  latency_ms: number
+  error_code?: string
+  error_message?: string
+}
+
+export interface UnifiedPAResponse {
+  success: boolean
+  content: string
+  trace_id: string
+  tool_runs: ToolRun[]
+  audio_url: string | null
+  intent: string | null
+  routed_to: string | null
+  profile_completeness: number
+  latency_ms: number
+  error?: string
+}
+
 export const assistantApi = {
   // Chat - Session 798: Use /assistant/chat/ endpoint (EnhancedPersonalAIAssistant with workspace awareness)
   // instead of /v1/assistant/chat/ (old hardcoded prompt from views_image.py)
   chat: (message: string, options?: { use_personal_assistant?: boolean }) =>
     api.post('/assistant/chat/', { message, ...options }),
+
+  // Session 934: UnifiedPA chat - dedicated endpoint with full tool_runs visibility
+  paChat: (message: string, options?: { context?: Record<string, unknown>; generate_audio?: boolean }) =>
+    api.post<UnifiedPAResponse>('/pa/chat/', { message, ...options }),
+
+  // Session 934: Get PA context info (available tools, system state)
+  getPAContext: () => api.get('/pa/context/'),
 
   // Voice Input (Speech-to-Text via Whisper)
   transcribe: (audioBlob: Blob) => {
