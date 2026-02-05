@@ -7,6 +7,9 @@ import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle
 import { cn } from '@/lib/cn'
 import HeartWidget from '@/components/HeartWidget'
 import { AttentionWidget } from '@/components/platform'
+// Session 935: User Learning Components
+import { GoalProgressDashboard } from '@/components/GoalProgressDashboard'
+import { LearningInsightsPanel } from '@/components/LearningInsightsPanel'
 
 interface StatCardProps {
   title: string
@@ -985,6 +988,14 @@ export default function DashboardPage() {
 
         {/* Session 933: Unified Attention Widget */}
         <AttentionWidget compact />
+
+        {/* Session 935: User Learning Widgets */}
+        <div className="card">
+          <GoalProgressDashboard compact maxItems={3} />
+        </div>
+        <div className="card">
+          <LearningInsightsPanel compact />
+        </div>
       </div>
 
       {/* Toast notification */}

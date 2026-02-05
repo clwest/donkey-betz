@@ -1,5 +1,6 @@
 /**
  * Session 884: AI OS Boot Experience - Home Page
+ * Session 935: Added learning widgets
  *
  * The "boot experience" that makes users feel like they're starting up
  * their AI operating system. Shows personalized greeting, activity since
@@ -26,6 +27,9 @@ import {
   Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+// Session 935: User Learning Components
+import { GoalProgressDashboard } from '@/components/GoalProgressDashboard'
+import { LearningInsightsPanel } from '@/components/LearningInsightsPanel'
 
 // Types for API response
 interface BootData {
@@ -396,6 +400,16 @@ export default function HomePage() {
 
       {/* Active Projects */}
       <ActiveProjectsSection projects={data?.active_projects} />
+
+      {/* Session 935: Learning & Goals Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <GoalProgressDashboard compact maxItems={3} />
+        </div>
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <LearningInsightsPanel compact />
+        </div>
+      </div>
 
       {/* Natural Language Input */}
       <div className="space-y-4">
