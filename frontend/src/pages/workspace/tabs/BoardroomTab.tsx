@@ -1,4 +1,5 @@
 // Session 927: Boardroom Tab - Decision Hub
+// Session 942: Added bulk selection and bulk actions
 // Displays HumanAttentionItems and AgentDecisionSummary for review/action
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,7 +13,6 @@ import {
   Filter,
   ThumbsUp,
   ThumbsDown,
-  Clock,
   AlertTriangle,
   Bot,
   FileText,
@@ -20,6 +20,8 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronRight,
+  CheckSquare,
+  Square,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { humanApi, decisionsApi } from '@/lib/api'
@@ -62,8 +64,10 @@ export function BoardroomTab() {
   const [attentionFilter, setAttentionFilter] = useState<AttentionFilter>('all')
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('all')
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
-  const [selectedItem, setSelectedItem] = useState<AttentionItem | null>(null)
-  const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null)
+
+  // Session 942: Bulk selection state
+  const [selectedAttention, setSelectedAttention] = useState<Set<string>>(new Set())
+  const [selectedDecisions, setSelectedDecisions] = useState<Set<string>>(new Set())
 
   // Fetch attention items
   const {
@@ -102,6 +106,16 @@ export function BoardroomTab() {
     },
   })
 
+  // Session 942: Bulk attention actions
+  const bulkDecideMutation = useMutation({
+    mutationFn: ({ decision, itemIds }: { decision: string; itemIds: string[] }) =>
+      humanApi.bulkDecide(decision, itemIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boardroom-attention'] })
+      setSelectedAttention(new Set())
+    },
+  })
+
   // Decision actions
   const promoteMutation = useMutation({
     mutationFn: (decisionId: string) => decisionsApi.promote(decisionId),
@@ -114,6 +128,23 @@ export function BoardroomTab() {
     mutationFn: (decisionId: string) => decisionsApi.reject(decisionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boardroom-decisions-list'] })
+    },
+  })
+
+  // Session 942: Bulk decision actions
+  const bulkPromoteMutation = useMutation({
+    mutationFn: (decisionIds: string[]) => decisionsApi.bulkPromote(decisionIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boardroom-decisions-list'] })
+      setSelectedDecisions(new Set())
+    },
+  })
+
+  const bulkRejectMutation = useMutation({
+    mutationFn: (decisionIds: string[]) => decisionsApi.bulkReject(decisionIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boardroom-decisions-list'] })
+      setSelectedDecisions(new Set())
     },
   })
 
@@ -160,6 +191,43 @@ export function BoardroomTab() {
     setExpandedItems(newExpanded)
   }
 
+  // Session 942: Selection helpers
+  const toggleAttentionSelection = (id: string) => {
+    const newSelected = new Set(selectedAttention)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedAttention(newSelected)
+  }
+
+  const toggleDecisionSelection = (id: string) => {
+    const newSelected = new Set(selectedDecisions)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedDecisions(newSelected)
+  }
+
+  const selectAllAttention = () => {
+    if (selectedAttention.size === filteredAttention.length) {
+      setSelectedAttention(new Set())
+    } else {
+      setSelectedAttention(new Set(filteredAttention.map(i => i.id)))
+    }
+  }
+
+  const selectAllDecisions = () => {
+    if (selectedDecisions.size === filteredDecisions.length) {
+      setSelectedDecisions(new Set())
+    } else {
+      setSelectedDecisions(new Set(filteredDecisions.map(d => d.id)))
+    }
+  }
+
   const getUrgencyStyle = (urgency: string) => {
     switch (urgency) {
       case 'critical':
@@ -187,6 +255,8 @@ export function BoardroomTab() {
         return <Bot size={14} />
     }
   }
+
+  const isBulkPending = bulkDecideMutation.isPending || bulkPromoteMutation.isPending || bulkRejectMutation.isPending
 
   return (
     <div className="space-y-4">
@@ -250,27 +320,75 @@ export function BoardroomTab() {
       {/* Attention Items View */}
       {activeView === 'attention' && (
         <div className="space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Filter size={14} className="text-gray-400" />
-            {(['all', 'review', 'insight', 'alert', 'opportunity'] as AttentionFilter[]).map(
-              (filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setAttentionFilter(filter)}
-                  className={cn(
-                    'px-3 py-1 text-sm rounded-full transition-colors',
-                    attentionFilter === filter
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-dark-border text-gray-400 hover:text-white'
-                  )}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                  <span className="ml-1 opacity-70">({attentionCounts[filter]})</span>
-                </button>
-              )
+          {/* Filters + Select All */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter size={14} className="text-gray-400" />
+              {(['all', 'review', 'insight', 'alert', 'opportunity'] as AttentionFilter[]).map(
+                (filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setAttentionFilter(filter)}
+                    className={cn(
+                      'px-3 py-1 text-sm rounded-full transition-colors',
+                      attentionFilter === filter
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-dark-border text-gray-400 hover:text-white'
+                    )}
+                  >
+                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    <span className="ml-1 opacity-70">({attentionCounts[filter]})</span>
+                  </button>
+                )
+              )}
+            </div>
+            {/* Select All checkbox */}
+            {filteredAttention.length > 0 && (
+              <button
+                onClick={selectAllAttention}
+                className="flex items-center gap-2 px-3 py-1 text-sm bg-dark-border rounded-lg hover:bg-dark-border/80 transition-colors"
+              >
+                {selectedAttention.size === filteredAttention.length ? (
+                  <CheckSquare size={16} className="text-primary-400" />
+                ) : (
+                  <Square size={16} className="text-gray-400" />
+                )}
+                Select All ({filteredAttention.length})
+              </button>
             )}
           </div>
+
+          {/* Session 942: Bulk Action Bar */}
+          {selectedAttention.size > 0 && (
+            <div className="flex items-center gap-3 p-3 bg-primary-500/10 border border-primary-500/30 rounded-lg">
+              <span className="text-sm font-medium text-primary-400">
+                {selectedAttention.size} selected
+              </span>
+              <div className="flex-1" />
+              <button
+                onClick={() => bulkDecideMutation.mutate({ decision: 'approved', itemIds: Array.from(selectedAttention) })}
+                disabled={isBulkPending}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors disabled:opacity-50"
+              >
+                {isBulkPending ? <Loader2 size={14} className="animate-spin" /> : <ThumbsUp size={14} />}
+                Approve All
+              </button>
+              <button
+                onClick={() => bulkDecideMutation.mutate({ decision: 'ignored', itemIds: Array.from(selectedAttention) })}
+                disabled={isBulkPending}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors disabled:opacity-50"
+              >
+                {isBulkPending ? <Loader2 size={14} className="animate-spin" /> : <ThumbsDown size={14} />}
+                Ignore All
+              </button>
+              <button
+                onClick={() => setSelectedAttention(new Set())}
+                className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          )}
 
           {/* Items List */}
           {loadingAttention ? (
@@ -287,12 +405,29 @@ export function BoardroomTab() {
               {filteredAttention.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-dark-card border border-dark-border rounded-lg overflow-hidden"
+                  className={cn(
+                    "bg-dark-card border rounded-lg overflow-hidden",
+                    selectedAttention.has(item.id) ? "border-primary-500/50" : "border-dark-border"
+                  )}
                 >
                   <div
                     className="flex items-start gap-3 p-3 cursor-pointer hover:bg-dark-border/30 transition-colors"
                     onClick={() => toggleExpanded(item.id)}
                   >
+                    {/* Checkbox */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleAttentionSelection(item.id)
+                      }}
+                      className="mt-1 flex-shrink-0"
+                    >
+                      {selectedAttention.has(item.id) ? (
+                        <CheckSquare size={18} className="text-primary-400" />
+                      ) : (
+                        <Square size={18} className="text-gray-500 hover:text-gray-300" />
+                      )}
+                    </button>
                     <div className="mt-1">
                       {expandedItems.has(item.id) ? (
                         <ChevronDown size={16} className="text-gray-400" />
@@ -365,27 +500,75 @@ export function BoardroomTab() {
       {/* Decisions View */}
       {activeView === 'decisions' && (
         <div className="space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Filter size={14} className="text-gray-400" />
-            {(['all', 'product', 'experiment', 'pipeline', 'research'] as DecisionFilter[]).map(
-              (filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setDecisionFilter(filter)}
-                  className={cn(
-                    'px-3 py-1 text-sm rounded-full transition-colors',
-                    decisionFilter === filter
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-dark-border text-gray-400 hover:text-white'
-                  )}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                  <span className="ml-1 opacity-70">({decisionCounts[filter]})</span>
-                </button>
-              )
+          {/* Filters + Select All */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter size={14} className="text-gray-400" />
+              {(['all', 'product', 'experiment', 'pipeline', 'research'] as DecisionFilter[]).map(
+                (filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setDecisionFilter(filter)}
+                    className={cn(
+                      'px-3 py-1 text-sm rounded-full transition-colors',
+                      decisionFilter === filter
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-dark-border text-gray-400 hover:text-white'
+                    )}
+                  >
+                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    <span className="ml-1 opacity-70">({decisionCounts[filter]})</span>
+                  </button>
+                )
+              )}
+            </div>
+            {/* Select All checkbox */}
+            {filteredDecisions.length > 0 && (
+              <button
+                onClick={selectAllDecisions}
+                className="flex items-center gap-2 px-3 py-1 text-sm bg-dark-border rounded-lg hover:bg-dark-border/80 transition-colors"
+              >
+                {selectedDecisions.size === filteredDecisions.length ? (
+                  <CheckSquare size={16} className="text-primary-400" />
+                ) : (
+                  <Square size={16} className="text-gray-400" />
+                )}
+                Select All ({filteredDecisions.length})
+              </button>
             )}
           </div>
+
+          {/* Session 942: Bulk Action Bar */}
+          {selectedDecisions.size > 0 && (
+            <div className="flex items-center gap-3 p-3 bg-primary-500/10 border border-primary-500/30 rounded-lg">
+              <span className="text-sm font-medium text-primary-400">
+                {selectedDecisions.size} selected
+              </span>
+              <div className="flex-1" />
+              <button
+                onClick={() => bulkPromoteMutation.mutate(Array.from(selectedDecisions))}
+                disabled={isBulkPending}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors disabled:opacity-50"
+              >
+                {isBulkPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                Promote All
+              </button>
+              <button
+                onClick={() => bulkRejectMutation.mutate(Array.from(selectedDecisions))}
+                disabled={isBulkPending}
+                className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors disabled:opacity-50"
+              >
+                {isBulkPending ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                Reject All
+              </button>
+              <button
+                onClick={() => setSelectedDecisions(new Set())}
+                className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          )}
 
           {/* Decisions List */}
           {loadingDecisions ? (
@@ -402,12 +585,29 @@ export function BoardroomTab() {
               {filteredDecisions.map((decision) => (
                 <div
                   key={decision.id}
-                  className="bg-dark-card border border-dark-border rounded-lg overflow-hidden"
+                  className={cn(
+                    "bg-dark-card border rounded-lg overflow-hidden",
+                    selectedDecisions.has(decision.id) ? "border-primary-500/50" : "border-dark-border"
+                  )}
                 >
                   <div
                     className="flex items-start gap-3 p-3 cursor-pointer hover:bg-dark-border/30 transition-colors"
                     onClick={() => toggleExpanded(decision.id)}
                   >
+                    {/* Checkbox */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleDecisionSelection(decision.id)
+                      }}
+                      className="mt-1 flex-shrink-0"
+                    >
+                      {selectedDecisions.has(decision.id) ? (
+                        <CheckSquare size={18} className="text-primary-400" />
+                      ) : (
+                        <Square size={18} className="text-gray-500 hover:text-gray-300" />
+                      )}
+                    </button>
                     <div className="mt-1">
                       {expandedItems.has(decision.id) ? (
                         <ChevronDown size={16} className="text-gray-400" />

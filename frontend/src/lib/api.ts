@@ -531,6 +531,9 @@ export const decisionsApi = {
   approve: (decisionId: string) => api.post(`/boardroom/decisions/${decisionId}/approve/`),
   reject: (decisionId: string, reason?: string) => api.post(`/boardroom/decisions/${decisionId}/reject/`, { reason }),
   promote: (decisionId: string) => api.post(`/boardroom/decisions/${decisionId}/promote/`),
+  // Session 942: Bulk actions
+  bulkPromote: (decisionIds: string[]) => api.post('/boardroom/decisions/bulk-promote/', { decision_ids: decisionIds }),
+  bulkReject: (decisionIds: string[]) => api.post('/boardroom/decisions/bulk-reject/', { decision_ids: decisionIds }),
 }
 
 // Session 710: Body Health Dashboard API
@@ -1198,6 +1201,9 @@ export const humanApi = {
   // Session 796: Batch decision support
   batchDecide: (decision: string, filters?: { urgency?: string; item_type?: string }, feedback?: string) =>
     api.post('/human/attention/batch-decide/', { decision, ...filters, feedback }),
+  // Session 942: Bulk decide by specific IDs
+  bulkDecide: (decision: string, itemIds: string[]) =>
+    api.post('/human/attention/bulk-decide/', { decision, item_ids: itemIds }),
   // Session 796: Get consultations awaiting response
   pendingConsultations: () =>
     api.get('/human/attention/?source_type=assistant&status=pending'),

@@ -442,6 +442,77 @@ class PreferencesView(View):
         return JsonResponse(result)
 
 
+@method_decorator([csrf_exempt, login_required], name='dispatch')
+class BulkAttentionDecideView(View):
+    """
+    Session 942: Bulk decide multiple attention items at once.
+    Supports deciding by specific IDs or by filter criteria.
+    """
+
+    def post(self, request):
+        """POST /api/human/attention/bulk-decide/"""
+        from core.models_human_interface import HumanAttentionItem
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        decision = data.get('decision')
+        if not decision or decision not in ['approved', 'ignored', 'rejected']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Valid decision required (approved, ignored, rejected)'
+            }, status=400)
+
+        item_ids = data.get('item_ids', [])
+        item_type = data.get('item_type')
+        urgency = data.get('urgency')
+
+        # Build query
+        queryset = HumanAttentionItem.objects.filter(
+            user=request.user,
+            status='pending'
+        )
+
+        # Filter by IDs if provided
+        if item_ids:
+            queryset = queryset.filter(id__in=item_ids)
+        else:
+            # Or filter by type/urgency
+            if item_type:
+                queryset = queryset.filter(item_type=item_type)
+            if urgency:
+                queryset = queryset.filter(urgency=urgency)
+
+        # Execute bulk update
+        now = timezone.now()
+        count = queryset.count()
+
+        if count == 0:
+            return JsonResponse({
+                'success': True,
+                'count': 0,
+                'message': 'No matching items found'
+            })
+
+        # Update all matching items
+        queryset.update(
+            status=decision,
+            decision=decision,
+            handled_at=now
+        )
+
+        logger.info(f"[Session 942] Bulk decided {count} attention items as '{decision}' for user {request.user.id}")
+
+        return JsonResponse({
+            'success': True,
+            'count': count,
+            'decision': decision,
+            'message': f'{count} items {decision}'
+        })
+
+
 # URL patterns for easy import
 def get_human_interface_urls():
     """Return URL patterns for the Human Interface API."""
@@ -451,6 +522,8 @@ def get_human_interface_urls():
         # Attention Stream
         path('api/human/attention/', AttentionStreamView.as_view(), name='human-attention'),
         path('api/human/attention/stats/', AttentionStatsView.as_view(), name='human-attention-stats'),
+        # Session 942: Bulk decide endpoint
+        path('api/human/attention/bulk-decide/', BulkAttentionDecideView.as_view(), name='human-attention-bulk-decide'),
         # Session 843: Detail endpoint for inline modal viewing
         path('api/human/attention/<uuid:item_id>/', AttentionDetailView.as_view(), name='human-attention-detail'),
         path('api/human/attention/<uuid:item_id>/decide/', AttentionDecideView.as_view(), name='human-attention-decide'),

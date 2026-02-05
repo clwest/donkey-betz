@@ -2237,6 +2237,152 @@ def reject_decision(request, decision_id):
 
 
 # =============================================================================
+# Session 942: Bulk Decision Actions
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def bulk_promote_decisions(request):
+    """
+    Session 942: Bulk promote multiple decisions to canonical status.
+
+    POST /api/boardroom/decisions/bulk-promote/
+
+    Body:
+        decision_ids: List of decision UUIDs to promote
+        OR
+        decision_type: Filter by type (product, experiment, etc)
+    """
+    from rest_framework.authtoken.models import Token
+    from core.models_unified_system import AgentDecisionSummary
+
+    # Auth check
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    decision_ids = data.get('decision_ids', [])
+    decision_type = data.get('decision_type')
+
+    # Build query
+    queryset = AgentDecisionSummary.objects.filter(status='draft')
+
+    if decision_ids:
+        queryset = queryset.filter(id__in=decision_ids)
+    elif decision_type:
+        queryset = queryset.filter(decision_type=decision_type)
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': 'decision_ids or decision_type required'
+        }, status=400)
+
+    count = queryset.count()
+    if count == 0:
+        return JsonResponse({'success': True, 'count': 0, 'message': 'No matching decisions found'})
+
+    # Promote all matching
+    promoted = 0
+    for decision in queryset:
+        try:
+            decision.promote_to_canonical(promoted_by='human-bulk')
+            promoted += 1
+        except Exception as e:
+            logger.warning(f"Failed to promote decision {decision.id}: {e}")
+
+    logger.info(f"🏛️ [Session 942] Bulk promoted {promoted} decisions")
+
+    return JsonResponse({
+        'success': True,
+        'count': promoted,
+        'message': f'{promoted} decisions promoted to canonical'
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def bulk_reject_decisions(request):
+    """
+    Session 942: Bulk reject multiple decisions.
+
+    POST /api/boardroom/decisions/bulk-reject/
+
+    Body:
+        decision_ids: List of decision UUIDs to reject
+        OR
+        decision_type: Filter by type (product, experiment, etc)
+    """
+    from rest_framework.authtoken.models import Token
+    from core.models_unified_system import AgentDecisionSummary
+
+    # Auth check
+    if not request.user.is_authenticated:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1]
+            try:
+                token = Token.objects.select_related('user').get(key=token_key)
+                if token.user.is_active:
+                    request.user = token.user
+            except Token.DoesNotExist:
+                pass
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    decision_ids = data.get('decision_ids', [])
+    decision_type = data.get('decision_type')
+
+    # Build query
+    queryset = AgentDecisionSummary.objects.filter(status='draft')
+
+    if decision_ids:
+        queryset = queryset.filter(id__in=decision_ids)
+    elif decision_type:
+        queryset = queryset.filter(decision_type=decision_type)
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': 'decision_ids or decision_type required'
+        }, status=400)
+
+    count = queryset.count()
+    if count == 0:
+        return JsonResponse({'success': True, 'count': 0, 'message': 'No matching decisions found'})
+
+    # Bulk update
+    queryset.update(status='rejected')
+
+    logger.info(f"🏛️ [Session 942] Bulk rejected {count} decisions")
+
+    return JsonResponse({
+        'success': True,
+        'count': count,
+        'message': f'{count} decisions rejected'
+    })
+
+
+# =============================================================================
 # Session 604: Decision Prioritization
 # =============================================================================
 
