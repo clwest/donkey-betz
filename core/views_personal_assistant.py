@@ -1,17 +1,23 @@
 """
 Personal AI Assistant API Views
 ================================
+
+Session 932: Updated to route through UnifiedPAEntrypoint for consistent behavior
+between REST and WebSocket endpoints.
 """
 
 import logging
+import asyncio
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from asgiref.sync import async_to_sync
 
 logger = logging.getLogger(__name__)
 
+# Legacy import for backward compatibility
 try:
     from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant as PersonalAIAssistant
     logger.info("Using Enhanced Personal AI Assistant with database access")
@@ -27,23 +33,73 @@ def chat_with_assistant(request):
     """
     Chat with the personal AI assistant.
 
+    Session 932: Now routes through UnifiedPAEntrypoint for consistent behavior.
+
     Request body:
     {
         "message": "User's message",
         "context": {} // Optional additional context
+        "generate_audio": false // Optional TTS
+        "use_legacy": false // Force old implementation (for debugging)
+    }
+
+    Response:
+    {
+        "success": true,
+        "data": {
+            "content": "Response text...",
+            "trace_id": "pa-123-abc",
+            "tool_runs": [...],
+            "audio_url": null,
+            "intent": "...",
+            "latency_ms": 1500
+        }
     }
     """
     try:
         message = request.data.get('message', '').strip()
         context = request.data.get('context', {})
+        generate_audio = request.data.get('generate_audio', False)
+        use_legacy = request.data.get('use_legacy', False)
 
         if not message:
             return Response({'error': 'Message is required'}, status=400)
 
-        # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
-        assistant = PersonalAIAssistant(request.user)
+        # Session 932: Route through UnifiedPA unless legacy mode requested
+        if not use_legacy:
+            try:
+                from core.services.unified_pa_entrypoint import get_unified_pa
 
-        # Process message
+                pa = get_unified_pa(request.user)
+
+                # Run async method in sync context
+                response = async_to_sync(pa.process_message)(
+                    message=message,
+                    context=context,
+                    generate_audio=generate_audio
+                )
+
+                return Response({
+                    'success': True,
+                    'data': {
+                        'content': response.content,
+                        'trace_id': response.trace_id,
+                        'tool_runs': response.tool_runs,
+                        'audio_url': response.audio_url,
+                        'intent': response.intent,
+                        'routed_to': response.routed_to,
+                        'profile_completeness': response.profile_completeness,
+                        'latency_ms': response.latency_ms,
+                        'error': response.error,
+                    }
+                })
+
+            except Exception as e:
+                logger.warning(f"UnifiedPA failed, falling back to legacy: {e}")
+                # Fall through to legacy implementation
+
+        # Legacy implementation (fallback or explicit)
+        assistant = PersonalAIAssistant(request.user)
         response_data = assistant.process_message(message, context)
 
         return Response({
@@ -106,6 +162,155 @@ def get_learning_summary(request):
         return Response({
             'error': 'Failed to get summary',
             'detail': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# SESSION 932: UNIFIED PA ENDPOINTS (No Legacy Fallback)
+# =============================================================================
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def unified_pa_chat(request):
+    """
+    Session 932: Chat through UnifiedPAEntrypoint exclusively.
+
+    This endpoint does NOT fall back to legacy - it will error if UnifiedPA fails.
+    Use this for clients that want consistent behavior with WebSocket.
+
+    Request body:
+    {
+        "message": "User's message",
+        "context": {} // Optional additional context
+        "generate_audio": false // Optional TTS
+    }
+
+    Response:
+    {
+        "success": true,
+        "content": "Response text...",
+        "trace_id": "pa-123-abc",
+        "tool_runs": [{"tool": "...", "ok": true, "latency_ms": 234}],
+        "audio_url": null,
+        "intent": "...",
+        "routed_to": "...",
+        "profile_completeness": 65,
+        "latency_ms": 1500
+    }
+    """
+    try:
+        from core.services.unified_pa_entrypoint import get_unified_pa
+
+        message = request.data.get('message', '').strip()
+        context = request.data.get('context', {})
+        generate_audio = request.data.get('generate_audio', False)
+
+        if not message:
+            return Response({'error': 'Message is required'}, status=400)
+
+        pa = get_unified_pa(request.user)
+
+        # Run async method in sync context
+        response = async_to_sync(pa.process_message)(
+            message=message,
+            context=context,
+            generate_audio=generate_audio
+        )
+
+        return Response({
+            'success': True,
+            'content': response.content,
+            'trace_id': response.trace_id,
+            'tool_runs': response.tool_runs,
+            'audio_url': response.audio_url,
+            'intent': response.intent,
+            'routed_to': response.routed_to,
+            'profile_completeness': response.profile_completeness,
+            'latency_ms': response.latency_ms,
+            'error': response.error,
+        })
+
+    except Exception as e:
+        import traceback
+        logger.error(f"Error in unified_pa_chat: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return Response({
+            'success': False,
+            'error': 'Failed to process message',
+            'detail': str(e),
+            'trace_id': None,
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def unified_pa_context(request):
+    """
+    Session 932: Get context from UnifiedPAEntrypoint.
+
+    Returns the context that would be used for the next message.
+
+    Response:
+    {
+        "success": true,
+        "user": {"name": "...", "profile_completeness": 65},
+        "system_stats": {"agents": 76, "spiders": 77, ...},
+        "available_tools": ["image_generation", "web_search", ...]
+    }
+    """
+    try:
+        from core.services.unified_pa_entrypoint import get_unified_pa
+
+        pa = get_unified_pa(request.user)
+
+        # Get profile completeness
+        profile_completeness = None
+        try:
+            if pa.profile_service:
+                score = pa.profile_service.get_completeness_score(request.user)
+                profile_completeness = int(score * 100)
+        except Exception:
+            pass
+
+        # Get system stats
+        system_stats = {}
+        try:
+            from core.models_unified_system import Agent, Advisor
+            from ai_core.spiders.spider_registry import spider_registry
+
+            system_stats = {
+                'agents': Agent.objects.count(),
+                'advisors': Advisor.objects.count(),
+                'spiders': len(spider_registry.list_spiders()),
+            }
+        except Exception:
+            pass
+
+        # Get available tools from dispatcher
+        available_tools = []
+        try:
+            available_tools = list(pa.tool_dispatcher.tools.keys())
+        except Exception:
+            pass
+
+        return Response({
+            'success': True,
+            'user': {
+                'username': request.user.username,
+                'first_name': request.user.first_name or request.user.username,
+                'profile_completeness': profile_completeness,
+            },
+            'system_stats': system_stats,
+            'available_tools': available_tools,
+            'tool_count': len(available_tools),
+        })
+
+    except Exception as e:
+        logger.error(f"Error in unified_pa_context: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
         }, status=500)
 
 
