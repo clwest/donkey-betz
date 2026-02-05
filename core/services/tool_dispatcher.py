@@ -359,39 +359,59 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle opportunity manager tool."""
+        """
+        Handle opportunity manager tool.
+
+        NOTE: Session 933 audit - Fixed field names:
+        - category → opportunity_type
+        - score → match_score
+        """
         from core.models_unified_system import Opportunity
 
         action = payload.get('action', 'list')
+
+        # Build base queryset - filter by user if available
+        base_qs = Opportunity.objects.all()
+        if user_id:
+            base_qs = base_qs.filter(user_id=user_id)
 
         if action == 'list':
             status = payload.get('status')
             limit = payload.get('limit', 20)
 
-            qs = Opportunity.objects.all()
+            qs = base_qs
             if status:
                 qs = qs.filter(status=status)
 
             opportunities = list(qs.order_by('-created_at')[:limit].values(
-                'id', 'title', 'status', 'category', 'score', 'created_at'
+                'id', 'title', 'status', 'opportunity_type', 'match_score', 'created_at'
             ))
 
             return {'action': 'list', 'count': len(opportunities), 'opportunities': opportunities}
 
         elif action == 'get':
             opp_id = payload.get('opportunity_id')
-            opp = Opportunity.objects.filter(id=opp_id).first()
+            opp = base_qs.filter(id=opp_id).first()
             if not opp:
                 raise ValueError(f"Opportunity {opp_id} not found")
             return {'action': 'get', 'opportunity': {
                 'id': str(opp.id), 'title': opp.title, 'status': opp.status,
-                'description': opp.description, 'category': opp.category,
+                'description': opp.description, 'opportunity_type': opp.opportunity_type,
+                'match_score': opp.match_score, 'potential_revenue': str(opp.potential_revenue),
             }}
 
         elif action == 'stats':
-            from django.db.models import Count
-            stats = dict(Opportunity.objects.values('status').annotate(c=Count('id')).values_list('status', 'c'))
-            return {'action': 'stats', 'by_status': stats, 'total': sum(stats.values())}
+            from django.db.models import Count, Sum
+            by_status = dict(base_qs.values('status').annotate(c=Count('id')).values_list('status', 'c'))
+            by_type = dict(base_qs.values('opportunity_type').annotate(c=Count('id')).values_list('opportunity_type', 'c'))
+            total_potential = base_qs.aggregate(total=Sum('potential_revenue'))['total'] or 0
+            return {
+                'action': 'stats',
+                'total': sum(by_status.values()),
+                'by_status': by_status,
+                'by_type': by_type,
+                'total_potential_revenue': str(total_potential),
+            }
 
         else:
             raise ValueError(f"Unknown action: {action}")
@@ -403,24 +423,43 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle task manager tool."""
+        """Handle task manager tool for opportunity-linked tasks."""
         from core.models_unified_system import OpportunityTask
 
         action = payload.get('action', 'list')
 
+        # Build base queryset - filter by user if available
+        base_qs = OpportunityTask.objects.all()
+        if user_id:
+            base_qs = base_qs.filter(user_id=user_id)
+
         if action == 'list':
             status = payload.get('status')
+            priority = payload.get('priority')
             limit = payload.get('limit', 20)
 
-            qs = OpportunityTask.objects.all()
+            qs = base_qs
             if status:
                 qs = qs.filter(status=status)
+            if priority:
+                qs = qs.filter(priority=priority)
 
             tasks = list(qs.order_by('-created_at')[:limit].values(
-                'id', 'title', 'status', 'priority', 'created_at'
+                'id', 'title', 'status', 'priority', 'created_at', 'opportunity_id'
             ))
 
             return {'action': 'list', 'count': len(tasks), 'tasks': tasks}
+
+        elif action == 'stats':
+            from django.db.models import Count
+            by_status = dict(base_qs.values('status').annotate(c=Count('id')).values_list('status', 'c'))
+            by_priority = dict(base_qs.values('priority').annotate(c=Count('id')).values_list('priority', 'c'))
+            return {
+                'action': 'stats',
+                'total': sum(by_status.values()),
+                'by_status': by_status,
+                'by_priority': by_priority,
+            }
 
         else:
             raise ValueError(f"Unknown action: {action}")
@@ -432,14 +471,31 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle pipeline orchestrator tool."""
+        """
+        Handle pipeline orchestrator tool.
+
+        NOTE: Session 933 audit - This is a status-only stub.
+        The actual pipeline orchestration happens via Celery tasks and
+        the Initiative pipeline (5 stages). This tool provides status visibility.
+        """
+        from core.models_unified_system import Initiative
+
         action = payload.get('action', 'status')
 
         if action == 'status':
+            # Get real pipeline stats from Initiative model
+            total = Initiative.objects.count()
+            by_stage = {}
+            for stage in range(1, 6):
+                by_stage[f'stage_{stage}'] = Initiative.objects.filter(stage=stage).count()
+            active = Initiative.objects.filter(stage__lt=5, status='active').count()
+
             return {
                 'action': 'status',
-                'pipeline': 'ready',
-                'message': 'Pipeline orchestrator is operational'
+                'pipeline': 'operational',
+                'initiatives_total': total,
+                'initiatives_active': active,
+                'by_stage': by_stage,
             }
 
         else:
@@ -452,17 +508,62 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle revenue tracker tool."""
+        """
+        Handle revenue tracker tool.
+
+        NOTE: Session 933 audit - Wired to real Revenue model in core/models.py
+        """
+        from core.models import Revenue
+        from django.db.models import Sum, Count
+        from django.utils import timezone
+        from datetime import timedelta
+
         action = payload.get('action', 'stats')
 
+        # Build base queryset - filter by user if available
+        base_qs = Revenue.objects.all()
+        if user_id:
+            base_qs = base_qs.filter(user_id=user_id)
+
         if action == 'stats':
-            # Return mock stats for now - wire to real RevenueForecast model
+            # Get total revenue
+            total = base_qs.aggregate(total=Sum('amount'))['total'] or 0
+
+            # Get by source
+            by_source = dict(
+                base_qs.values('source').annotate(
+                    total=Sum('amount')
+                ).values_list('source', 'total')
+            )
+
+            # Get by status
+            by_status = dict(
+                base_qs.values('status').annotate(
+                    c=Count('id')
+                ).values_list('status', 'c')
+            )
+
+            # Get recent (last 30 days)
+            thirty_days_ago = timezone.now() - timedelta(days=30)
+            recent_total = base_qs.filter(
+                created_at__gte=thirty_days_ago
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
             return {
                 'action': 'stats',
-                'total_revenue': 0,
-                'period': 'all_time',
-                'message': 'Revenue tracking operational'
+                'total_revenue': str(total),
+                'revenue_last_30_days': str(recent_total),
+                'by_source': {k: str(v) for k, v in by_source.items()},
+                'by_status': by_status,
+                'record_count': base_qs.count(),
             }
+
+        elif action == 'list':
+            limit = payload.get('limit', 20)
+            revenues = list(base_qs.order_by('-created_at')[:limit].values(
+                'id', 'amount', 'source', 'status', 'created_at', 'description'
+            ))
+            return {'action': 'list', 'count': len(revenues), 'revenues': revenues}
 
         else:
             raise ValueError(f"Unknown action: {action}")
@@ -474,19 +575,58 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle ML analysis tool."""
+        """
+        Handle ML analysis tool.
+
+        NOTE: Session 933 audit - MLEngine doesn't have generic 'analyze' method.
+        Available actions: status, decision_pattern, detect_opportunity
+        """
         from ml.core.ml_engine import MLEngine
 
-        data = payload.get('data', {})
-        task_type = payload.get('task_type', 'auto')
+        action = payload.get('action', 'status')
 
         engine = MLEngine()
-        result = engine.analyze(data, task_type=task_type)
 
-        return {
-            'task_type': task_type,
-            'analysis': result,
-        }
+        if action == 'status':
+            # Get ML engine system health
+            health = engine.get_system_health()
+            return {
+                'action': 'status',
+                'engine': 'MLEngine',
+                'health': health,
+            }
+
+        elif action == 'decision_pattern':
+            # Analyze user decision pattern
+            decision_data = payload.get('data', {})
+            if not decision_data:
+                raise ValueError("data is required for decision_pattern analysis")
+            confidence = engine.analyze_user_decision_pattern(decision_data)
+            return {
+                'action': 'decision_pattern',
+                'confidence': confidence,
+                'data': decision_data,
+            }
+
+        elif action == 'detect_opportunity':
+            # Detect cross-domain opportunities
+            market_data = payload.get('data', {})
+            if not market_data:
+                raise ValueError("data (market_data) is required for detect_opportunity")
+            opportunities = engine.detect_cross_domain_opportunity(market_data)
+            return {
+                'action': 'detect_opportunity',
+                'opportunities': [o.__dict__ for o in opportunities] if opportunities else [],
+                'count': len(opportunities) if opportunities else 0,
+            }
+
+        else:
+            # Return available actions
+            return {
+                'action': action,
+                'error': f"Unknown action: {action}",
+                'available_actions': ['status', 'decision_pattern', 'detect_opportunity'],
+            }
 
     def _handle_universal_agent(
         self,
@@ -630,36 +770,26 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle predictions tool."""
-        from core.models_unified_system import AgentPrediction
+        """
+        Handle predictions tool.
 
+        NOTE: AgentPrediction model is DEPRECATED (Session 284).
+        This handler returns deprecation notice instead of querying dead model.
+        """
         action = payload.get('action', 'list')
-        limit = payload.get('limit', 20)
 
-        if action == 'list':
-            predictions = list(
-                AgentPrediction.objects.order_by('-created_at')[:limit].values(
-                    'id', 'agent_name', 'prediction_text', 'confidence', 'status', 'created_at'
-                )
-            )
-            return {'action': 'list', 'count': len(predictions), 'predictions': predictions}
-
-        elif action == 'stats':
-            from django.db.models import Count, Avg
-            total = AgentPrediction.objects.count()
-            by_status = dict(
-                AgentPrediction.objects.values('status').annotate(c=Count('id')).values_list('status', 'c')
-            )
-            avg_confidence = AgentPrediction.objects.aggregate(avg=Avg('confidence'))['avg'] or 0
-            return {
-                'action': 'stats',
-                'total': total,
-                'by_status': by_status,
-                'avg_confidence': round(avg_confidence, 2),
-            }
-
-        else:
-            raise ValueError(f"Unknown action: {action}")
+        # Return deprecation notice for all actions
+        return {
+            'action': action,
+            'deprecated': True,
+            'message': (
+                'AgentPrediction is deprecated (Session 284). '
+                'No predictions have ever been recorded. '
+                'Use HumanAttentionItem for tracking opportunities and decisions instead.'
+            ),
+            'count': 0,
+            'predictions': [],
+        }
 
     def _handle_gates(
         self,
@@ -668,18 +798,26 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle gates tool."""
-        from core.models_unified_system import PilotReadinessGate
+        """
+        Handle gates tool.
+
+        NOTE: Session 933 audit - PilotReadinessGate has no 'name' field.
+        Uses 'summary' and 'decision__topic' instead.
+        """
+        from core.models_pilot_readiness import PilotReadinessGate
 
         action = payload.get('action', 'list')
         limit = payload.get('limit', 20)
 
         if action == 'list':
             gates = list(
-                PilotReadinessGate.objects.order_by('-created_at')[:limit].values(
-                    'id', 'name', 'status', 'risk_level', 'created_at'
+                PilotReadinessGate.objects.select_related('decision').order_by('-created_at')[:limit].values(
+                    'id', 'summary', 'status', 'risk_level', 'created_at', 'decision__topic'
                 )
             )
+            # Flatten decision__topic to topic for cleaner response
+            for gate in gates:
+                gate['topic'] = gate.pop('decision__topic', '')
             return {'action': 'list', 'count': len(gates), 'gates': gates}
 
         elif action == 'stats':
@@ -688,7 +826,10 @@ class ToolDispatcher:
             by_status = dict(
                 PilotReadinessGate.objects.values('status').annotate(c=Count('id')).values_list('status', 'c')
             )
-            return {'action': 'stats', 'total': total, 'by_status': by_status}
+            by_risk = dict(
+                PilotReadinessGate.objects.values('risk_level').annotate(c=Count('id')).values_list('risk_level', 'c')
+            )
+            return {'action': 'stats', 'total': total, 'by_status': by_status, 'by_risk_level': by_risk}
 
         else:
             raise ValueError(f"Unknown action: {action}")
@@ -700,8 +841,8 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle pilots tool."""
-        from core.models_unified_system import PilotExecution
+        """Handle pilots tool - track pilot executions and outcomes."""
+        from core.models_pilot_readiness import PilotExecution
 
         action = payload.get('action', 'list')
         limit = payload.get('limit', 20)
@@ -743,36 +884,53 @@ class ToolDispatcher:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle human decisions tool."""
-        from core.models_human_interface import HumanDecisionItem
+        """
+        Handle human decisions tool.
+
+        NOTE: Session 933 audit - Uses HumanAttentionItem (not HumanDecisionItem which doesn't exist).
+        Field mappings: description → summary, feedback → decision_feedback
+        """
+        from core.models_human_interface import HumanAttentionItem
 
         action = payload.get('action', 'list')
         limit = payload.get('limit', 10)
 
+        # Build base queryset - filter by user if available
+        base_qs = HumanAttentionItem.objects
+        if user_id:
+            base_qs = base_qs.filter(user_id=user_id)
+
         if action == 'list':
             items = list(
-                HumanDecisionItem.objects.filter(
-                    status='pending'
-                ).order_by('-urgency', '-created_at')[:limit].values(
-                    'id', 'title', 'description', 'urgency', 'item_type', 'created_at'
+                base_qs.filter(
+                    status__in=['pending', 'viewed']
+                ).order_by('-priority_score', '-created_at')[:limit].values(
+                    'id', 'title', 'summary', 'urgency', 'item_type', 'created_at',
+                    'source_agent', 'ml_recommendation'
                 )
             )
             return {'action': 'list', 'count': len(items), 'items': items}
 
         elif action == 'stats':
             from django.db.models import Count
-            total = HumanDecisionItem.objects.count()
-            pending = HumanDecisionItem.objects.filter(status='pending').count()
+            total = base_qs.count()
+            pending = base_qs.filter(status__in=['pending', 'viewed']).count()
             by_urgency = dict(
-                HumanDecisionItem.objects.filter(status='pending').values('urgency').annotate(
+                base_qs.filter(status__in=['pending', 'viewed']).values('urgency').annotate(
                     c=Count('id')
                 ).values_list('urgency', 'c')
+            )
+            by_type = dict(
+                base_qs.filter(status__in=['pending', 'viewed']).values('item_type').annotate(
+                    c=Count('id')
+                ).values_list('item_type', 'c')
             )
             return {
                 'action': 'stats',
                 'total': total,
                 'pending': pending,
                 'by_urgency': by_urgency,
+                'by_type': by_type,
             }
 
         elif action == 'decide':
@@ -783,19 +941,21 @@ class ToolDispatcher:
             if not item_id or not decision:
                 raise ValueError("item_id and decision are required")
 
-            item = HumanDecisionItem.objects.filter(id=item_id).first()
+            item = base_qs.filter(id=item_id).first()
             if not item:
-                raise ValueError(f"Decision item {item_id} not found")
+                raise ValueError(f"Attention item {item_id} not found")
 
-            item.status = 'decided'
-            item.decision = decision
-            item.feedback = feedback
-            item.save()
+            # Use the model's record_decision method for proper status handling
+            item.record_decision(
+                decision=decision,
+                feedback=feedback,
+            )
 
             return {
                 'action': 'decide',
                 'item_id': str(item_id),
                 'decision': decision,
+                'new_status': item.status,
                 'success': True,
             }
 
