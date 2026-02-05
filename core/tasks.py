@@ -791,6 +791,68 @@ def auto_process_extracted_artifacts(
 
 
 @shared_task
+def cleanup_discussion_artifacts(batch_size: int = 5000):
+    """
+    Session 943: Bulk-reject all pending artifacts from Discussion conversations.
+
+    Discussion conversations are automated multi-agent brainstorming sessions.
+    Their artifacts are hypothetical ideas, not actionable items requiring human review.
+
+    This is a ONE-TIME cleanup task to clear the existing backlog.
+    Going forward, the extraction service will skip Discussion conversations entirely.
+
+    Args:
+        batch_size: Max items to process per run (default: 5000)
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    from django.utils import timezone
+    from django.db.models import Q
+    from core.models_conversation_artifacts import ExtractedArtifact
+
+    logger.info("🧹 [DISCUSSION-CLEANUP] Starting Discussion artifact cleanup...")
+
+    now = timezone.now()
+
+    # Find all pending artifacts from Discussion conversations
+    discussion_artifacts = ExtractedArtifact.objects.filter(
+        status='pending',
+        conversation__topic__startswith='Discussion:'
+    )[:batch_size]
+
+    total_count = ExtractedArtifact.objects.filter(
+        status='pending',
+        conversation__topic__startswith='Discussion:'
+    ).count()
+
+    rejected_count = 0
+    for artifact in discussion_artifacts:
+        artifact.status = 'rejected'
+        artifact.decided_at = now
+        artifact.decision_notes = 'Auto-rejected: Discussion conversation artifact (brainstorming, not actionable)'
+        artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+        rejected_count += 1
+
+    still_pending = ExtractedArtifact.objects.filter(
+        status='pending',
+        conversation__topic__startswith='Discussion:'
+    ).count()
+
+    logger.info(
+        f"🧹 [DISCUSSION-CLEANUP] Complete - rejected {rejected_count} of {total_count} "
+        f"Discussion artifacts. Still pending: {still_pending}"
+    )
+
+    return {
+        'rejected': rejected_count,
+        'total_discussion_pending': total_count,
+        'still_pending': still_pending,
+        'all_pending': ExtractedArtifact.objects.filter(status='pending').count(),
+    }
+
+
+@shared_task
 def cleanup_halted_experiments(days_old: int = 7):
     """
     Session 942: Delete old halted experiments to prevent cluttering system reviews.

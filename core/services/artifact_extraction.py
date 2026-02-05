@@ -64,6 +64,15 @@ class ArtifactExtractionService:
             logger.warning(f"Conversation {conversation_id} not found")
             return []
 
+        # Session 943: Skip Discussion conversations - they're automated brainstorming
+        # that generates thousands of hypothetical artifacts. These are not actionable
+        # items requiring human review.
+        topic = conversation.topic or ''
+        if topic.startswith('Discussion:'):
+            logger.debug(f"Skipping extraction for Discussion conversation {conversation_id}: {topic[:50]}")
+            # Don't log to DB for every Discussion - just skip silently
+            return []
+
         # Check if already extracted
         if conversation.extracted_artifacts.exists():
             logger.info(f"Conversation {conversation_id} already has artifacts, skipping")
