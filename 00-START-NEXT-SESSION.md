@@ -50,7 +50,19 @@ Complete User Learning System backend with:
 
 ---
 
-## PRIORITY OPTIONS FOR SESSION 931
+## Auto-Integration Complete (PR #840)
+
+**Option B was implemented this session!** Learning triggers now fire automatically:
+
+| Integration Point | File | Line | Triggers |
+|-------------------|------|------|----------|
+| `DeliverableEnvelopeService.wrap()` | deliverable_envelope.py | 247 | Skill inference + Goal linking |
+| `BaseAgent._save_deliverable()` | base_agent.py | 3500 | Skill inference + Goal linking |
+| `AgentRouter._get_user_context()` | agent_router.py | 1557 | Feedback-based context |
+
+---
+
+## PRIORITY OPTIONS FOR NEXT SESSION
 
 ### Option A: Frontend for User Learning
 Build React components to use the new APIs:
@@ -59,19 +71,13 @@ Build React components to use the new APIs:
 - Goal Progress Dashboard (workspace tab)
 - Skill Evolution Chart (profile page)
 
-### Option B: Auto-Integration of Learning
-Wire up automatic learning triggers:
-- Call `SkillEvolutionService.update_skills_from_deliverable()` on deliverable publish
-- Call `GoalTrackingService.auto_link_deliverable()` in deliverable creation
-- Integrate `AgentFeedbackService.adjust_context_for_agent()` in AgentRouter
-
-### Option C: PA Profile Interview
+### Option B: PA Profile Interview
 Integrate profile completeness into Personal Assistant:
 - PA calls `ProfileCompletenessService.get_contextual_prompt()` during conversations
 - Naturally prompts user to fill in missing profile data
 - Updates profile via API
 
-### Option D: Universal Agent Voice (Pending from Session 927)
+### Option C: Universal Agent Voice (Pending from Session 927)
 Continue the Listen Button implementation:
 - Plan exists at `/Users/donkeyking/.claude/plans/transient-coalescing-waffle.md`
 - AudioCache model, TTS caching, ListenButton component
