@@ -1206,17 +1206,30 @@ def pipeline_health(request):
         result['summary']['stale_count'] = len(stale_initiatives)
 
         # === STAGE DISTRIBUTION ===
-        # Count stages by status for each stage number
+        # Session 943: Fix to show initiatives AT each stage (by current_stage),
+        # not just the stage entry status. Previous bug showed 436 for all stages
+        # because every initiative has 5 stage entries.
         stage_dist = {}
         for stage_num in range(1, 6):
+            # Count initiatives WHERE current_stage == stage_num
+            initiatives_at_stage = Initiative.objects.filter(
+                status='ACTIVE',
+                current_stage=stage_num
+            )
+            count_at_stage = initiatives_at_stage.count()
+
+            # Get the status breakdown of stage entries for those initiatives
             stage_counts = InitiativeStage.objects.filter(
-                initiative__status='ACTIVE',
+                initiative__in=initiatives_at_stage,
                 stage=stage_num
             ).values('status').annotate(count=Count('id'))
 
             stage_dist[f'stage_{stage_num}'] = {
-                item['status'].lower(): item['count']
-                for item in stage_counts
+                'count': count_at_stage,  # Main number: how many ARE at this stage
+                **{
+                    item['status'].lower(): item['count']
+                    for item in stage_counts
+                }
             }
 
         result['stage_distribution'] = stage_dist
