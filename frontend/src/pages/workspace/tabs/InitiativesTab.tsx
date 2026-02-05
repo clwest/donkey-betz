@@ -2221,6 +2221,21 @@ export function InitiativesTab() {
     enabled: activeTab === 'health', // Only fetch when on health tab
   })
 
+  // Session 928: Blocker analysis - WHY initiatives are stuck
+  const {
+    data: blockerAnalysis,
+    isLoading: blockerLoading,
+  } = useQuery({
+    queryKey: ['blocker-analysis'],
+    queryFn: async () => {
+      const res = await fetch('/api/initiatives/diagnose-stuck/?limit=100')
+      if (!res.ok) throw new Error('Failed to fetch blocker analysis')
+      return res.json()
+    },
+    refetchInterval: 60000, // Refresh every minute
+    enabled: activeTab === 'health', // Only fetch when on health tab
+  })
+
   const populateMutation = useMutation({
     mutationFn: () => platformApi.populateInitiatives(),
     onSuccess: () => {
@@ -2911,6 +2926,91 @@ export function InitiativesTab() {
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Session 928: Blocker Analysis - WHY initiatives are stuck */}
+              {blockerAnalysis && !blockerLoading && (
+                <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-orange-400" />
+                    Blocker Analysis (DRAFT Stages)
+                  </h3>
+
+                  {/* Summary Stats */}
+                  <div className="grid gap-3 md:grid-cols-4 mb-4">
+                    <div className="bg-dark-bg rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Checked</div>
+                      <div className="text-xl font-bold text-white">{blockerAnalysis.summary?.total_checked || 0}</div>
+                    </div>
+                    <div className="bg-dark-bg rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Ready to Progress</div>
+                      <div className="text-xl font-bold text-green-400">{blockerAnalysis.summary?.ready_to_progress || 0}</div>
+                    </div>
+                    <div className="bg-dark-bg rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Founder Intent Missing</div>
+                      <div className="text-xl font-bold text-orange-400">{blockerAnalysis.summary?.founder_intent_missing || 0}</div>
+                    </div>
+                    <div className="bg-dark-bg rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Quality Failed</div>
+                      <div className="text-xl font-bold text-red-400">{blockerAnalysis.summary?.quality_failed || 0}</div>
+                    </div>
+                  </div>
+
+                  {/* Blocking Reasons Breakdown */}
+                  {blockerAnalysis.blocking_reasons && Object.keys(blockerAnalysis.blocking_reasons).length > 0 && (
+                    <div className="mb-4">
+                      <div className="text-xs text-gray-500 mb-2">Top Blocking Reasons</div>
+                      <div className="space-y-2">
+                        {Object.entries(blockerAnalysis.blocking_reasons as Record<string, number>)
+                          .slice(0, 5)
+                          .map(([reason, count]) => {
+                            const total = blockerAnalysis.summary?.total_checked || 1
+                            const pct = Math.round((count / total) * 100)
+                            return (
+                              <div key={reason} className="flex items-center gap-3">
+                                <div className="flex-1 bg-dark-bg rounded-full h-6 overflow-hidden">
+                                  <div
+                                    className={cn(
+                                      'h-full flex items-center px-2 text-xs font-medium',
+                                      reason === 'founder_intent_not_set' ? 'bg-orange-500/30 text-orange-400' :
+                                      reason === 'no_document' ? 'bg-red-500/30 text-red-400' :
+                                      reason === 'quality_check' ? 'bg-yellow-500/30 text-yellow-400' :
+                                      'bg-gray-500/30 text-gray-400'
+                                    )}
+                                    style={{ width: `${Math.max(pct, 10)}%` }}
+                                  >
+                                    {reason.replace(/_/g, ' ')}
+                                  </div>
+                                </div>
+                                <div className="text-sm text-gray-400 w-16 text-right">
+                                  {count} ({pct}%)
+                                </div>
+                              </div>
+                            )
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rate Limit Stats */}
+                  {blockerAnalysis.rate_limit_stats && (
+                    <div className="bg-dark-bg rounded-lg p-3 text-xs">
+                      <div className="text-gray-500 mb-1">Daily Rate Limit</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white">
+                          {blockerAnalysis.rate_limit_stats.progressions_today || 0} / {blockerAnalysis.rate_limit_stats.daily_limit || 40}
+                        </span>
+                        <span className="text-gray-600">progressions today</span>
+                        {blockerAnalysis.rate_limit_stats.remaining > 0 && (
+                          <span className="text-green-400 ml-auto">{blockerAnalysis.rate_limit_stats.remaining} remaining</span>
+                        )}
+                        {blockerAnalysis.rate_limit_stats.remaining === 0 && (
+                          <span className="text-red-400 ml-auto">Limit reached</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
