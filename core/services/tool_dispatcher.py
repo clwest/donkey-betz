@@ -132,6 +132,9 @@ class ToolDispatcher:
         self.register("human_decisions_tool", self._handle_human_decisions)
         self.register("reasoning_engine_tool", self._handle_reasoning_engine)
 
+        # Session 940: Boardroom tools for PA to act on pending items
+        self.register("boardroom_tool", self._handle_boardroom)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)
@@ -1010,6 +1013,225 @@ class ToolDispatcher:
 
         else:
             raise ValueError(f"Unknown action: {action}")
+
+    def _handle_boardroom(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 940: Comprehensive boardroom tool for PA to act on pending items.
+
+        Actions:
+        - stats: Get overall boardroom statistics
+        - list_attention: List pending attention items
+        - list_decisions: List draft decisions
+        - approve_attention: Approve an attention item (id required)
+        - ignore_attention: Ignore an attention item (id required)
+        - promote_decision: Promote a draft decision to canonical (id required)
+        - reject_decision: Reject a draft decision (id required)
+        """
+        from core.models_human_interface import HumanAttentionItem
+        from core.models_unified_system import AgentDecisionSummary
+        from django.db.models import Count
+
+        action = payload.get('action', 'stats')
+        limit = payload.get('limit', 10)
+        item_type_filter = payload.get('item_type')
+        decision_type_filter = payload.get('decision_type')
+        urgency_filter = payload.get('urgency')
+
+        # Build base querysets - filter by user if available
+        attention_qs = HumanAttentionItem.objects.filter(status='pending')
+        if user_id:
+            attention_qs = attention_qs.filter(user_id=user_id)
+
+        decisions_qs = AgentDecisionSummary.objects.filter(status='draft')
+
+        if action == 'stats':
+            # Get attention item stats
+            attention_count = attention_qs.count()
+            attention_by_urgency = dict(
+                attention_qs.values('urgency')
+                .annotate(count=Count('id'))
+                .values_list('urgency', 'count')
+            )
+            attention_by_type = dict(
+                attention_qs.values('item_type')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:5]
+                .values_list('item_type', 'count')
+            )
+
+            # Get decision stats
+            decision_count = decisions_qs.count()
+            decisions_by_type = dict(
+                decisions_qs.values('decision_type')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:5]
+                .values_list('decision_type', 'count')
+            )
+
+            return {
+                'action': 'stats',
+                'total_pending': attention_count + decision_count,
+                'attention_items': {
+                    'count': attention_count,
+                    'by_urgency': attention_by_urgency,
+                    'by_type': attention_by_type,
+                },
+                'draft_decisions': {
+                    'count': decision_count,
+                    'by_type': decisions_by_type,
+                },
+            }
+
+        elif action == 'list_attention':
+            # Apply filters
+            qs = attention_qs
+            if item_type_filter:
+                qs = qs.filter(item_type=item_type_filter)
+            if urgency_filter:
+                qs = qs.filter(urgency=urgency_filter)
+
+            items = list(
+                qs.order_by('-priority_score', '-created_at')[:limit].values(
+                    'id', 'title', 'summary', 'urgency', 'item_type',
+                    'created_at', 'source_agent', 'ml_recommendation'
+                )
+            )
+            return {
+                'action': 'list_attention',
+                'count': len(items),
+                'items': items,
+                'filters_applied': {
+                    'item_type': item_type_filter,
+                    'urgency': urgency_filter,
+                }
+            }
+
+        elif action == 'list_decisions':
+            # Apply filters
+            qs = decisions_qs
+            if decision_type_filter:
+                qs = qs.filter(decision_type=decision_type_filter)
+
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'topic', 'decision_type', 'impact_area',
+                    'recommended_stance', 'key_insights', 'created_at'
+                )
+            )
+            return {
+                'action': 'list_decisions',
+                'count': len(items),
+                'items': items,
+                'filters_applied': {
+                    'decision_type': decision_type_filter,
+                }
+            }
+
+        elif action == 'approve_attention':
+            item_id = payload.get('id')
+            feedback = payload.get('feedback', 'Approved via PA')
+
+            if not item_id:
+                raise ValueError("id is required for approve_attention")
+
+            item = attention_qs.filter(id=item_id).first()
+            if not item:
+                raise ValueError(f"Attention item {item_id} not found or not pending")
+
+            # Use the model's record_decision method
+            item.record_decision(
+                decision='approved',
+                feedback=feedback,
+            )
+
+            return {
+                'action': 'approve_attention',
+                'id': str(item_id),
+                'title': item.title,
+                'new_status': item.status,
+                'success': True,
+            }
+
+        elif action == 'ignore_attention':
+            item_id = payload.get('id')
+            feedback = payload.get('feedback', 'Ignored via PA')
+
+            if not item_id:
+                raise ValueError("id is required for ignore_attention")
+
+            item = attention_qs.filter(id=item_id).first()
+            if not item:
+                raise ValueError(f"Attention item {item_id} not found or not pending")
+
+            # Use the model's record_decision method
+            item.record_decision(
+                decision='ignored',
+                feedback=feedback,
+            )
+
+            return {
+                'action': 'ignore_attention',
+                'id': str(item_id),
+                'title': item.title,
+                'new_status': item.status,
+                'success': True,
+            }
+
+        elif action == 'promote_decision':
+            decision_id = payload.get('id')
+            promoted_by = payload.get('promoted_by', 'PA')
+
+            if not decision_id:
+                raise ValueError("id is required for promote_decision")
+
+            decision = decisions_qs.filter(id=decision_id).first()
+            if not decision:
+                raise ValueError(f"Draft decision {decision_id} not found")
+
+            # Promote to canonical
+            decision.promote_to_canonical(promoted_by=promoted_by)
+
+            return {
+                'action': 'promote_decision',
+                'id': str(decision_id),
+                'topic': decision.topic,
+                'new_status': decision.status,
+                'is_canonical': decision.is_canonical,
+                'success': True,
+            }
+
+        elif action == 'reject_decision':
+            decision_id = payload.get('id')
+            reason = payload.get('reason', 'Rejected via PA')
+
+            if not decision_id:
+                raise ValueError("id is required for reject_decision")
+
+            decision = decisions_qs.filter(id=decision_id).first()
+            if not decision:
+                raise ValueError(f"Draft decision {decision_id} not found")
+
+            # Reject the decision
+            decision.status = 'rejected'
+            decision.save()
+
+            return {
+                'action': 'reject_decision',
+                'id': str(decision_id),
+                'topic': decision.topic,
+                'new_status': decision.status,
+                'reason': reason,
+                'success': True,
+            }
+
+        else:
+            raise ValueError(f"Unknown action: {action}. Valid actions: stats, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision")
 
 
 # Singleton instance
