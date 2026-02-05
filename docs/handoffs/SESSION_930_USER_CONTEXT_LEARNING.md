@@ -2,18 +2,32 @@
 
 **Date:** February 4, 2026
 **Focus:** How user context flows to agents + How system learns from user interactions
+**Status:** ✅ COMPLETE - Backend fully implemented, deployed to production
 
 ---
 
-## Overview
+## Session Summary
 
-This session addresses two fundamental questions:
-1. **How does the User get injected into context?**
-2. **How does the system start learning from the User?**
+This session addressed two fundamental questions:
+1. **How does the User get injected into context?** → Documented existing system
+2. **How does the system start learning from the User?** → Implemented new learning infrastructure
+
+### What Was Completed
+
+| Component | Status | PR | Details |
+|-----------|--------|-----|---------|
+| Documentation of current system | ✅ | #835 | Context injection flow, injection policies |
+| User Learning Models | ✅ | #836 | 5 new models in `models_user_learning.py` |
+| Migration 0228 | ✅ | #836 | Applied to Railway production |
+| ProfileCompletenessService | ✅ | #837 | Gap detection, contextual prompts |
+| AgentFeedbackService | ✅ | #837 | 👍/👎 tracking, effectiveness scoring |
+| GoalTrackingService | ✅ | #837 | Progress tracking, auto-linking |
+| SkillEvolutionService | ✅ | #837 | Skill inference, proficiency tracking |
+| API Endpoints (14 routes) | ✅ | #837 | Full REST API at `/api/user-learning/` |
 
 ---
 
-## Part 1: Current User Context System
+## Part 1: Current User Context System (Documented)
 
 ### User Profile Models (4 Layers)
 
@@ -75,7 +89,7 @@ Agent Execution with Personalized Context
 
 ---
 
-## Part 2: Current Learning Mechanisms
+## Part 2: Existing Learning Mechanisms (Documented)
 
 ### Learning Bridges Architecture
 
@@ -114,17 +128,6 @@ User Interaction (view, click, apply, etc.)
 └─────────────────────────────────────────────┘
 ```
 
-### Engagement Depth Tracking
-
-| Action | Depth Score | Learning Signal |
-|--------|-------------|-----------------|
-| View | 1 | Weak interest |
-| Click | 2 | Moderate interest |
-| Bookmark | 3 | Strong interest |
-| Apply | 4 | Intent to act |
-| Interview | 5 | Serious commitment |
-| Accept | 6 | Conversion |
-
 ### Memory Decay Weighting
 
 **Formula:** `weight = e^(-age_days / 21)`
@@ -139,195 +142,291 @@ User Interaction (view, click, apply, etc.)
 
 ---
 
-## Part 3: Identified Gaps
+## Part 3: Gaps Identified & Addressed
 
-### Gap Analysis
-
-| Gap | Current State | Impact | Priority |
-|-----|--------------|--------|----------|
-| **User Skill Evolution** | Skills stored statically | No tracking of improvement over time | HIGH |
-| **Agent-Specific Learning** | Learning is global | No per-agent profiles of what works | HIGH |
-| **Conversion Metrics** | Basic engagement tracking | Can't measure which personalization converts | MEDIUM |
-| **Goal Progress Tracking** | Goals stored, no progress | User can't see progress toward goals | HIGH |
-| **Active Feedback Loop** | Passive learning only | System never asks user directly | HIGH |
-| **Profile Completeness UX** | No prompting | User doesn't know what to fill in | MEDIUM |
+| Gap | Status | Solution |
+|-----|--------|----------|
+| **User Skill Evolution** | ✅ FIXED | `UserSkill` + `SkillDemonstration` models, `SkillEvolutionService` |
+| **Agent-Specific Learning** | ✅ FIXED | `AgentFeedback` model, `AgentFeedbackService` |
+| **Goal Progress Tracking** | ✅ FIXED | `GoalProgress` model, `GoalTrackingService` |
+| **Active Feedback Loop** | ✅ FIXED | 👍/👎 API endpoint, effectiveness scoring |
+| **Profile Completeness UX** | ✅ FIXED | `ProfileCompletionPrompt` model, `ProfileCompletenessService` |
+| **Conversion Metrics** | 🔄 PARTIAL | Can now link deliverables to goals for tracking |
 
 ---
 
-## Part 4: Implementation Plan
+## Part 4: New Models Created (PR #836)
 
-### A. Profile Completeness & Active Prompting
+**File:** `core/models_user_learning.py`
 
-**Goal:** PA proactively asks user about missing profile fields
+### AgentFeedback
+Track user feedback on agent executions for per-agent learning.
 
-**New Components:**
-1. `ProfileCompletenessService` - Identifies gaps in user profiles
-2. PA integration - Prompts user naturally during conversations
-
-**Implementation:**
 ```python
-# core/services/profile_completeness_service.py
-class ProfileCompletenessService:
-    REQUIRED_FIELDS = {
-        'basic': ['display_name', 'skills', 'occupation'],
-        'career': ['desired_salary', 'remote_preference', 'industries'],
-        'goals': ['long_term_goals', 'quarterly_objectives'],
-        'preferences': ['communication_style', 'risk_tolerance']
-    }
-
-    def get_profile_gaps(self, user) -> dict:
-        """Returns missing fields by category"""
-
-    def get_next_question(self, user) -> str:
-        """Returns natural language question for highest-priority gap"""
-
-    def get_completeness_score(self, user) -> float:
-        """Returns 0-1 completeness score"""
-```
-
-### B. Feedback After Agent Execution
-
-**Goal:** Collect 👍/👎 feedback after key outputs to learn per-agent preferences
-
-**New Components:**
-1. `AgentFeedback` model - Stores user feedback per agent execution
-2. Frontend feedback UI - Simple thumbs up/down
-3. `AgentLearningService` - Aggregates feedback into learning patterns
-
-**Implementation:**
-```python
-# core/models_agent_feedback.py
 class AgentFeedback(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
-    execution_id = models.UUIDField()  # Link to AgentExecution
-    rating = models.IntegerField(choices=[(1, 'helpful'), (-1, 'not_helpful')])
+    user = models.ForeignKey(User, related_name='agent_feedbacks')
+    agent = models.ForeignKey(Agent, related_name='user_feedbacks')
+    execution_id = models.UUIDField(null=True)  # Link to AgentExecution
+    rating = models.IntegerField(choices=[(1, 'Helpful'), (0, 'Neutral'), (-1, 'Not Helpful')])
     feedback_text = models.TextField(blank=True)
-    context_snapshot = models.JSONField()  # What context was used
+    context_snapshot = models.JSONField(default=dict)
+    task_description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
-# core/services/agent_learning_service.py
-class AgentLearningService:
-    def record_feedback(self, user, agent, execution_id, rating, text=None):
-        """Store feedback and update agent-specific learning"""
-
-    def get_agent_effectiveness(self, user, agent) -> dict:
-        """Get success rate and patterns for user+agent combo"""
-
-    def adjust_context_for_agent(self, user, agent, base_context) -> dict:
-        """Modify context based on what works for this user+agent"""
 ```
 
-### C. Goal Progress Tracking
+### GoalProgress
+Track progress entries toward user goals.
 
-**Goal:** Link user goals to deliverables/initiatives and show progress
-
-**New Components:**
-1. `GoalProgress` model - Tracks progress toward goals
-2. Goal-Deliverable linking - Connect outputs to goals
-3. Progress dashboard widget
-
-**Implementation:**
 ```python
-# core/models_goal_tracking.py
-class UserGoal(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    target_date = models.DateField(null=True)
-    category = models.CharField(max_length=50)  # career, financial, learning, etc.
-    success_criteria = models.JSONField()  # Measurable criteria
-    status = models.CharField(max_length=20)  # active, achieved, abandoned
-
 class GoalProgress(models.Model):
-    goal = models.ForeignKey(UserGoal, on_delete=models.CASCADE, related_name='progress_entries')
-    deliverable = models.ForeignKey('Deliverable', null=True, on_delete=models.SET_NULL)
-    initiative = models.ForeignKey('Initiative', null=True, on_delete=models.SET_NULL)
-    progress_percentage = models.IntegerField()
+    goal = models.ForeignKey(UserGoal, related_name='goal_progress_entries')
+    deliverable = models.ForeignKey(Deliverable, null=True)
+    initiative = models.ForeignKey(Initiative, null=True)
+    progress_delta = models.IntegerField()  # Percentage points (e.g., 5 = +5%)
     milestone_reached = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
+    is_automatic = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
-# core/services/goal_tracking_service.py
-class GoalTrackingService:
-    def link_deliverable_to_goal(self, deliverable, goal):
-        """Connect a deliverable to a goal and calculate progress"""
-
-    def calculate_progress(self, goal) -> int:
-        """Calculate overall progress percentage"""
-
-    def get_user_goal_summary(self, user) -> dict:
-        """Get all goals with progress for dashboard"""
 ```
 
-### D. Skill Evolution Tracking
+### UserSkill
+Track user skill proficiency levels (1-10 scale).
 
-**Goal:** Track how user skills improve based on successful outputs
-
-**New Components:**
-1. `SkillEvolution` model - Tracks skill levels over time
-2. Skill inference from deliverables
-3. Skill growth visualization
-
-**Implementation:**
 ```python
-# core/models_skill_evolution.py
 class UserSkill(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='tracked_skills')
     skill_name = models.CharField(max_length=100)
-    proficiency_level = models.IntegerField()  # 1-10
-    evidence_count = models.IntegerField(default=0)  # Number of demonstrations
-    last_demonstrated = models.DateTimeField()
+    category = models.CharField(choices=[
+        ('technical', 'Technical'), ('creative', 'Creative'),
+        ('analytical', 'Analytical'), ('communication', 'Communication'),
+        ('leadership', 'Leadership'), ('domain', 'Domain Knowledge')
+    ])
+    proficiency_level = models.IntegerField(default=1)  # 1-10
+    evidence_count = models.IntegerField(default=0)
+    confidence = models.FloatField(default=0.5)  # 0-1
+    first_demonstrated = models.DateTimeField(auto_now_add=True)
+    last_demonstrated = models.DateTimeField(auto_now=True)
+```
 
+### SkillDemonstration
+Record individual skill demonstrations as evidence.
+
+```python
 class SkillDemonstration(models.Model):
-    skill = models.ForeignKey(UserSkill, on_delete=models.CASCADE)
-    deliverable = models.ForeignKey('Deliverable', null=True, on_delete=models.SET_NULL)
-    quality_score = models.FloatField()  # From content quality assessment
-    context = models.TextField()  # How skill was demonstrated
+    skill = models.ForeignKey(UserSkill, related_name='demonstrations')
+    deliverable = models.ForeignKey(Deliverable, null=True)
+    quality_score = models.FloatField()  # 0-1
+    context = models.TextField(blank=True)
+    inference_source = models.CharField(default='deliverable')  # deliverable, manual, import
     created_at = models.DateTimeField(auto_now_add=True)
+```
 
-# core/services/skill_evolution_service.py
+### ProfileCompletionPrompt
+Track profile completion prompts to prevent over-prompting.
+
+```python
+class ProfileCompletionPrompt(models.Model):
+    user = models.ForeignKey(User, related_name='profile_prompts')
+    field_category = models.CharField(max_length=50)
+    field_name = models.CharField(max_length=100)
+    prompt_text = models.TextField()
+    was_completed = models.BooleanField(default=False)
+    was_dismissed = models.BooleanField(default=False)
+    response_value = models.TextField(blank=True)
+    prompted_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True)
+```
+
+---
+
+## Part 5: New Services Created (PR #837)
+
+### ProfileCompletenessService
+**File:** `core/services/profile_completeness_service.py`
+
+Identifies gaps in user profiles and generates natural language prompts.
+
+```python
+class ProfileCompletenessService:
+    PROFILE_FIELDS = {
+        'basic': [('display_name', 'Display Name', 1, "What would you like me to call you?"), ...],
+        'skills': [...],
+        'career': [...],
+        'goals': [...],
+        'preferences': [...],
+        'financial': [...],
+    }
+
+    def get_completeness_score(self, user) -> float
+    def get_profile_gaps(self, user) -> Dict[str, List[ProfileGap]]
+    def get_next_question(self, user) -> Optional[ProfileGap]
+    def get_contextual_prompt(self, user, context: str = None) -> Optional[str]
+    def record_prompt(self, user, field_name: str, prompt_text: str) -> None
+    def record_response(self, user, field_name: str, value: str, completed: bool = True) -> None
+```
+
+### AgentFeedbackService
+**File:** `core/services/agent_feedback_service.py`
+
+Handles 👍/👎 feedback and calculates agent effectiveness for each user.
+
+```python
+class AgentFeedbackService:
+    def record_feedback(self, user, agent, rating: int, ...) -> AgentFeedback
+    def get_agent_effectiveness(self, user, agent) -> AgentEffectiveness
+    def adjust_context_for_agent(self, user, agent, base_context: Dict) -> Dict
+    def get_user_agent_summary(self, user) -> Dict[str, Any]
+
+    # Syncs to existing AgentLearningService for deep learning
+    def _sync_to_learning_service(self, user, agent, rating: int, context: Dict = None)
+```
+
+**AgentEffectiveness dataclass:**
+```python
+@dataclass
+class AgentEffectiveness:
+    agent_id: str
+    agent_name: str
+    total_feedbacks: int
+    helpful_count: int
+    not_helpful_count: int
+    neutral_count: int
+    effectiveness_score: float  # -1 to 1
+    recent_trend: str  # 'improving', 'declining', 'stable'
+    top_successful_contexts: List[str]
+    areas_for_improvement: List[str]
+```
+
+### GoalTrackingService
+**File:** `core/services/goal_tracking_service.py`
+
+Links deliverables and initiatives to goals, calculates progress.
+
+```python
+class GoalTrackingService:
+    def link_deliverable_to_goal(self, deliverable, goal, progress_delta: int = 5, ...) -> GoalProgress
+    def link_initiative_to_goal(self, initiative, goal, progress_delta: int = 10, ...) -> GoalProgress
+    def record_manual_progress(self, goal, progress_delta: int, milestone: str = '', ...) -> GoalProgress
+    def calculate_progress(self, goal) -> int  # 0-100
+    def get_goal_summary(self, goal) -> GoalSummary
+    def get_user_goals_dashboard(self, user) -> Dict[str, Any]
+    def suggest_goal_for_deliverable(self, user, deliverable) -> Optional[UserGoal]
+    def auto_link_deliverable(self, deliverable) -> Optional[GoalProgress]
+```
+
+### SkillEvolutionService
+**File:** `core/services/skill_evolution_service.py`
+
+Infers skills from deliverables and tracks proficiency evolution.
+
+```python
 class SkillEvolutionService:
-    def infer_skills_from_deliverable(self, deliverable) -> List[str]:
-        """Extract skills demonstrated in a deliverable"""
+    # 50+ skill patterns mapped to categories
+    SKILL_PATTERNS = {
+        'python': ('Python', 'technical'),
+        'writing': ('Writing', 'creative'),
+        'analysis': ('Analysis', 'analytical'),
+        ...
+    }
 
-    def update_user_skills(self, user, skills, quality_score):
-        """Update skill proficiency based on new demonstration"""
-
-    def get_skill_growth_chart(self, user) -> dict:
-        """Get skill levels over time for visualization"""
+    def infer_skills_from_deliverable(self, deliverable, min_confidence: float = 0.5) -> List[tuple]
+    def record_skill_demonstration(self, user, skill_name: str, category: str, quality_score: float, ...) -> SkillDemonstration
+    def update_skills_from_deliverable(self, user, deliverable, base_quality: float = 0.7) -> List[SkillDemonstration]
+    def get_user_skills(self, user) -> List[Dict]
+    def get_skill_growth_chart(self, user, months: int = 6) -> Dict[str, Any]
+    def get_skill_recommendations(self, user) -> List[Dict]
+    def get_skills_summary(self, user) -> Dict[str, Any]
 ```
 
 ---
 
-## Part 5: Database Migrations
+## Part 6: API Endpoints Created (PR #837)
 
-### New Models to Create
+**File:** `core/views_user_learning_api.py`
+**Base URL:** `/api/user-learning/`
 
-```python
-# Migration: 0228_session_930_user_learning_system.py
+### Agent Feedback Endpoints
 
-# 1. AgentFeedback - Per-agent user feedback
-# 2. UserGoal - User goals with criteria
-# 3. GoalProgress - Progress tracking
-# 4. UserSkill - Skill proficiency levels
-# 5. SkillDemonstration - Evidence of skills
-```
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/feedback/` | POST | Record agent feedback (👍/👎) |
+| `/effectiveness/<agent_id>/` | GET | Get agent effectiveness for user |
+| `/agent-summary/` | GET | Get summary of all agents for user |
 
-### Profile Updates
+### Profile Completeness Endpoints
 
-```python
-# Add to EnhancedUserProfile
-profile_completeness = models.FloatField(default=0.0)
-last_completeness_prompt = models.DateTimeField(null=True)
-prompt_preferences = models.JSONField(default=dict)  # When/how to prompt
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/profile-completeness/` | GET | Get completeness score and gaps |
+| `/profile-next-question/` | GET | Get next profile question to ask |
+| `/profile-response/` | POST | Record user's profile response |
+
+### Goal Tracking Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/goals/` | GET | Get goals dashboard |
+| `/goals/<goal_id>/` | GET | Get goal detail with progress |
+| `/goals/<goal_id>/progress/` | POST | Record manual goal progress |
+
+### Skill Evolution Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/skills/` | GET | Get skills summary |
+| `/skills/growth/` | GET | Get skill growth chart data |
+| `/skills/demonstrate/` | POST | Record manual skill demonstration |
+| `/skills/recommendations/` | GET | Get skill improvement recommendations |
+
+### Combined Endpoint
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/summary/` | GET | Get combined learning summary |
+
+---
+
+## Part 7: Files Created/Modified
+
+| Action | File | Purpose |
+|--------|------|---------|
+| ✅ CREATE | `core/models_user_learning.py` | 5 new models (326 lines) |
+| ✅ CREATE | `core/migrations/0228_session_930_user_learning.py` | Migration (141 lines) |
+| ✅ CREATE | `core/services/profile_completeness_service.py` | Gap detection service (339 lines) |
+| ✅ CREATE | `core/services/agent_feedback_service.py` | Feedback service (350 lines) |
+| ✅ CREATE | `core/services/goal_tracking_service.py` | Goal tracking service (399 lines) |
+| ✅ CREATE | `core/services/skill_evolution_service.py` | Skill evolution service (473 lines) |
+| ✅ CREATE | `core/views_user_learning_api.py` | API endpoints (660 lines) |
+| ✅ MODIFY | `core/models.py` | Import new models |
+| ✅ MODIFY | `core/urls.py` | Add 14 API routes |
+
+**Total new code:** ~2,700 lines
+
+---
+
+## Part 8: Production Deployment
+
+### Pull Requests Merged
+
+| PR | Title | Status |
+|----|-------|--------|
+| #835 | docs(Session 930): User Context & Learning System handoff | ✅ Merged |
+| #836 | feat(Session 930): Add User Learning System models | ✅ Merged |
+| #837 | feat(Session 930): Add User Learning System services and API | ✅ Merged |
+
+### Database Migration
+
+```bash
+# Migration 0228 applied to Railway production
+railway run python manage.py migrate core 0228 --no-input
+# Result: [X] core.0228_session_930_user_learning
 ```
 
 ---
 
-## Part 6: Frontend Components
+## Part 9: Next Steps (Future Sessions)
 
-### New UI Elements
+### Frontend Components Needed
 
 1. **Profile Completeness Widget** (Home page)
    - Progress bar showing completeness %
@@ -349,67 +448,24 @@ prompt_preferences = models.JSONField(default=dict)  # When/how to prompt
    - Recent demonstrations
    - Growth recommendations
 
----
+### Integration Points
 
-## Part 7: Implementation Order
-
-### Phase 1: Foundation (This Session)
-1. ✅ Document current state (complete)
-2. Create new models (AgentFeedback, UserGoal, GoalProgress, UserSkill)
-3. Create migrations
-4. Create base services
-
-### Phase 2: Profile Completeness
-1. ProfileCompletenessService
-2. PA integration for prompting
-3. Frontend completeness widget
-
-### Phase 3: Agent Feedback Loop
-1. AgentFeedback model active
-2. Frontend feedback buttons
-3. AgentLearningService
-4. Context adjustment based on feedback
-
-### Phase 4: Goal Tracking
-1. Goal creation UI
-2. Deliverable-goal linking
-3. Progress calculation
-4. Dashboard widget
-
-### Phase 5: Skill Evolution
-1. Skill inference from deliverables
-2. Proficiency tracking
-3. Growth visualization
-
----
-
-## Files to Create/Modify
-
-| Action | File | Purpose |
-|--------|------|---------|
-| CREATE | `core/models_user_learning.py` | AgentFeedback, UserGoal, GoalProgress, UserSkill, SkillDemonstration |
-| CREATE | `core/services/profile_completeness_service.py` | Gap detection and prompting |
-| CREATE | `core/services/agent_learning_service.py` | Per-agent feedback aggregation |
-| CREATE | `core/services/goal_tracking_service.py` | Goal progress calculation |
-| CREATE | `core/services/skill_evolution_service.py` | Skill inference and tracking |
-| CREATE | `core/migrations/0228_session_930_user_learning.py` | New models migration |
-| MODIFY | `core/agent_router.py` | Integrate agent-specific learning |
-| MODIFY | `core/models.py` | Add profile_completeness to EnhancedUserProfile |
-| CREATE | `frontend/src/components/ProfileCompleteness.tsx` | Completeness widget |
-| CREATE | `frontend/src/components/AgentFeedback.tsx` | Feedback buttons |
-| CREATE | `frontend/src/components/GoalProgress.tsx` | Goal dashboard |
+1. **Auto-link deliverables to goals** - Call `GoalTrackingService.auto_link_deliverable()` in deliverable creation
+2. **Infer skills from deliverables** - Call `SkillEvolutionService.update_skills_from_deliverable()` on publish
+3. **Adjust context per agent** - Call `AgentFeedbackService.adjust_context_for_agent()` in AgentRouter
+4. **PA profile prompting** - Integrate `ProfileCompletenessService.get_contextual_prompt()` in PA
 
 ---
 
 ## Success Metrics
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Profile completeness avg | Unknown | 70%+ |
-| Feedback collection rate | 0% | 20%+ of executions |
-| Goals with progress tracking | 0 | 50%+ of users have goals |
-| Skill demonstrations tracked | 0 | 100+ per week |
+| Metric | Current | Target | Notes |
+|--------|---------|--------|-------|
+| Profile completeness avg | Unknown | 70%+ | API available, need frontend |
+| Feedback collection rate | 0% | 20%+ | API available, need frontend |
+| Goals with progress tracking | 0 | 50%+ | API available, need frontend |
+| Skill demonstrations tracked | 0 | 100+/week | Need auto-inference integration |
 
 ---
 
-**Session 930 Ready - Let's implement the User Learning System!**
+**Session 930 Complete - User Learning System Backend Fully Implemented!**
