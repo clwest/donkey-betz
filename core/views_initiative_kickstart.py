@@ -1154,7 +1154,7 @@ def pipeline_health(request):
                 'id': str(log.id),
                 'initiative_id': str(log.stage.initiative.id),
                 'initiative_name': log.stage.initiative.name[:60] + ('...' if len(log.stage.initiative.name) > 60 else ''),
-                'stage_number': log.stage.stage_number,
+                'stage_number': log.stage.stage,
                 'from_status': log.from_status,
                 'to_status': log.to_status,
                 'timestamp': log.timestamp.isoformat(),
@@ -1211,7 +1211,7 @@ def pipeline_health(request):
         for stage_num in range(1, 6):
             stage_counts = InitiativeStage.objects.filter(
                 initiative__status='ACTIVE',
-                stage_number=stage_num
+                stage=stage_num
             ).values('status').annotate(count=Count('id'))
 
             stage_dist[f'stage_{stage_num}'] = {
