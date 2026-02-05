@@ -10,6 +10,7 @@ Instead of waiting for commands, it observes, thinks, and acts on its own.
 
 import logging
 import json
+import re
 from datetime import timedelta
 from typing import Dict, Any
 from django.utils import timezone
@@ -214,8 +215,14 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             # Parse the response
             thinking_result = self._parse_thinking_response(response)
 
+            # Session 941: Validate data integrity against context
+            thinking_result = self._validate_data_integrity(thinking_result, context)
+
             logger.info(f"ThinkingAgent: Generated {len(thinking_result.get('insights', []))} insights, "
                        f"{len(thinking_result.get('decisions', []))} decisions")
+
+            if thinking_result.get('_data_integrity_warnings'):
+                logger.warning(f"ThinkingAgent: Data integrity warnings: {thinking_result['_data_integrity_warnings']}")
 
             return thinking_result
 
@@ -360,9 +367,19 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             pilots = ps.get('pilots', {})
             prompt_parts.append(f"- **Pilots:** {pilots.get('total', 0)} total, {pilots.get('running', 0)} running, {pilots.get('completed', 0)} completed\n")
 
-            # Experiments
+            # Experiments - Session 941: Enhanced breakdown
             experiments = ps.get('experiments', {})
-            prompt_parts.append(f"- **Experiments:** {experiments.get('total', 0)} total, {experiments.get('running', 0)} running\n")
+            exp_by_status = experiments.get('by_status', {})
+            prompt_parts.append(f"- **Experiments:** {experiments.get('total', 0)} total\n")
+            prompt_parts.append(f"  - Running: {experiments.get('running', 0)}\n")
+            prompt_parts.append(f"  - Success: {exp_by_status.get('success', 0)}\n")
+            prompt_parts.append(f"  - Partial: {exp_by_status.get('partial', 0)}\n")
+            prompt_parts.append(f"  - Failure: {exp_by_status.get('failure', 0)}\n")
+            prompt_parts.append(f"  - Halted (is_halted=True): {experiments.get('halted', 0)}\n")
+            if experiments.get('halt_reasons'):
+                prompt_parts.append("  - Halt Reasons:\n")
+                for reason, count in experiments['halt_reasons'].items():
+                    prompt_parts.append(f"    - \"{reason}\": {count}\n")
 
             # Session 654: Add gate backlog assessment
             low_risk_not_started = by_status.get('not_started', 0)
@@ -561,10 +578,44 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             prompt_parts.append("- Prescriptions with high confidence and low effort should be prioritized\n")
             prompt_parts.append("\n")
 
+        # Session 941: Add MANDATORY data summary to prevent hallucination
+        prompt_parts.append("\n## ═══════════════════════════════════════════════════════════════\n")
+        prompt_parts.append("## MANDATORY DATA REFERENCE - USE ONLY THESE NUMBERS\n")
+        prompt_parts.append("## ═══════════════════════════════════════════════════════════════\n\n")
+        prompt_parts.append("**CRITICAL: You MUST reference ONLY the numbers below. DO NOT invent numbers.**\n\n")
+
+        # Extract key metrics for mandatory reference
+        learning = context.get('learning_stats', {})
+        convo = context.get('conversation_stats', {})
+        dream = context.get('dream_stats', {})
+        pipeline = context.get('pipeline_stats', {})
+        spider = context.get('spider_stats', {})
+        experiments = pipeline.get('experiments', {})
+
+        prompt_parts.append("| Metric | ACTUAL Value |\n")
+        prompt_parts.append("|--------|-------------|\n")
+        prompt_parts.append(f"| Knowledge Transfers (24h) | {learning.get('transfers_24h', 0)} |\n")
+        prompt_parts.append(f"| Conversations (24h) | {convo.get('count_24h', 0)} |\n")
+        prompt_parts.append(f"| Dreams (24h) | {dream.get('count_24h', 0)} |\n")
+        prompt_parts.append(f"| Dreams NOT shown to user | {dream.get('pending_decision', 0)} |\n")
+        prompt_parts.append(f"| Oldest unshown dream (hours) | {dream.get('oldest_pending_hours', 0)} |\n")
+        prompt_parts.append(f"| Experiments Total | {experiments.get('total', 0)} |\n")
+        prompt_parts.append(f"| Experiments Running | {experiments.get('running', 0)} |\n")
+        prompt_parts.append(f"| Experiments Halted (is_halted=True) | {experiments.get('halted', 0)} |\n")
+        prompt_parts.append(f"| Experiments Success | {experiments.get('by_status', {}).get('success', 0)} |\n")
+        prompt_parts.append(f"| Experiments Failure | {experiments.get('by_status', {}).get('failure', 0)} |\n")
+        prompt_parts.append(f"| Spider Data (24h) | {spider.get('data_24h', 0)} |\n")
+        prompt_parts.append(f"| Active Spiders | {spider.get('active_count', 0)} |\n")
+
+        prompt_parts.append("\n**WARNING:** If you cite a number that is NOT in this table, your response will be REJECTED.\n")
+        prompt_parts.append("**WARNING:** Do NOT say '442 halted experiments' unless the table shows 442.\n")
+        prompt_parts.append("**WARNING:** Do NOT say '497 pending dreams' unless the table shows 497.\n\n")
+
         # Add the task
         prompt_parts.append("\n## Your Task\n")
         prompt_parts.append("Analyze this context deeply. Identify patterns, generate insights, ")
         prompt_parts.append("and decide what actions the system should take autonomously.\n")
+        prompt_parts.append("**IMPORTANT: All numbers in your response MUST match the MANDATORY DATA REFERENCE table above.**\n")
         prompt_parts.append("\nRespond with the JSON format specified above.")
 
         return "".join(prompt_parts)
@@ -578,10 +629,27 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
 
         # Session 855: Increased from 4000 to 8000 tokens to accommodate
         # detailed root cause analysis and proposed solutions in concerns
+        # Session 941: Enhanced system message to prevent hallucination
+        system_message = """You are an autonomous reasoning engine. Respond only with valid JSON.
+
+CRITICAL DATA INTEGRITY RULES:
+1. You MUST use ONLY the numbers provided in the MANDATORY DATA REFERENCE table
+2. Do NOT invent, estimate, or hallucinate any metrics
+3. If a metric is not in the provided data, say "not available" instead of making up a number
+4. Every number you cite MUST appear in the context provided
+5. For EVERY concern, you MUST include root_cause_hypothesis, investigation_steps, and proposed_solution
+
+EXAMPLES OF FORBIDDEN BEHAVIOR:
+- Saying "442 halted experiments" when the data shows 0 halted
+- Saying "497 pending dreams" when the data shows a different number
+- Inventing "integrity anomaly" issues that aren't in the halt_reasons
+
+If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, your response is INVALID."""
+
         response = client.chat.completions.create(
             model="gpt-5-mini",
             messages=[
-                {"role": "system", "content": "You are an autonomous reasoning engine. Respond only with valid JSON. For EVERY concern, you MUST include root_cause_hypothesis, investigation_steps, and proposed_solution."},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ],
             max_completion_tokens=8000,
@@ -629,6 +697,56 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 "next_focus": "Retry with better JSON formatting",
                 "parse_error": str(e)
             }
+
+    def _validate_data_integrity(self, result: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 941: Validate that the response uses real data from context.
+        Flags hallucinated numbers with warnings.
+        """
+        warnings = []
+
+        # Extract expected values from context
+        expected = {
+            'halted_experiments': context.get('pipeline_stats', {}).get('experiments', {}).get('halted', 0),
+            'pending_dreams': context.get('dream_stats', {}).get('pending_decision', 0),
+            'oldest_dream_hours': context.get('dream_stats', {}).get('oldest_pending_hours', 0),
+            'conversations_24h': context.get('conversation_stats', {}).get('count_24h', 0),
+            'dreams_24h': context.get('dream_stats', {}).get('count_24h', 0),
+            'transfers_24h': context.get('learning_stats', {}).get('transfers_24h', 0),
+        }
+
+        # Check concerns for hallucinated numbers
+        for concern in result.get('concerns', []):
+            concern_text = str(concern.get('concern', '')).lower()
+
+            # Check for hallucinated halted experiments
+            if 'halted' in concern_text and 'experiment' in concern_text:
+                import re
+                numbers = re.findall(r'\d+', concern_text)
+                for num in numbers:
+                    if int(num) > 10 and int(num) != expected['halted_experiments']:
+                        warnings.append(
+                            f"HALLUCINATION DETECTED: Concern mentions {num} halted experiments "
+                            f"but actual count is {expected['halted_experiments']}"
+                        )
+                        concern['_hallucination_warning'] = True
+
+            # Check for hallucinated pending dreams
+            if 'pending' in concern_text and 'dream' in concern_text:
+                numbers = re.findall(r'\d+', concern_text)
+                for num in numbers:
+                    if int(num) > 100 and abs(int(num) - expected['pending_dreams']) > 100:
+                        warnings.append(
+                            f"HALLUCINATION DETECTED: Concern mentions {num} pending dreams "
+                            f"but actual count is {expected['pending_dreams']}"
+                        )
+                        concern['_hallucination_warning'] = True
+
+        if warnings:
+            result['_data_integrity_warnings'] = warnings
+            logger.warning(f"ThinkingAgent data integrity issues: {warnings}")
+
+        return result
 
     def _validate_concerns(self, concerns: list) -> list:
         """
@@ -741,6 +859,7 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             context['conversation_stats'] = {}
 
         # Gather dream stats
+        # Session 941: Fixed to use correct fields (shown_to_user, not decision_outcome)
         try:
             total_dreams = AgentDream.objects.count()
             dreams_24h = AgentDream.objects.filter(dreamed_at__gte=cutoff).count()
@@ -750,21 +869,17 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 'agent__name', 'title', 'content'
             )[:5])
 
-            # Session 551: Track pending dreams awaiting decision
-            pending_dreams = AgentDream.objects.filter(
-                promoted_to_decision=True,
-                decision_outcome='pending'
-            ).count()
+            # Session 941: Track dreams not shown to user (the actual backlog)
+            pending_dreams = AgentDream.objects.filter(shown_to_user=False).count()
 
-            # Get oldest pending dream age for backlog assessment
+            # Get oldest unshown dream age for backlog assessment
             oldest_pending = AgentDream.objects.filter(
-                promoted_to_decision=True,
-                decision_outcome='pending'
-            ).order_by('promoted_at').first()
+                shown_to_user=False
+            ).order_by('dreamed_at').first()
 
             pending_age_hours = 0
-            if oldest_pending and oldest_pending.promoted_at:
-                pending_age_hours = (timezone.now() - oldest_pending.promoted_at).total_seconds() / 3600
+            if oldest_pending and oldest_pending.dreamed_at:
+                pending_age_hours = (timezone.now() - oldest_pending.dreamed_at).total_seconds() / 3600
 
             context['dream_stats'] = {
                 'total': total_dreams,
@@ -822,9 +937,26 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             running_pilots = PilotExecution.objects.filter(status='running').count()
             completed_pilots = PilotExecution.objects.filter(status='completed').count()
 
-            # Experiment stats
+            # Experiment stats - Session 941: Include halted experiments with is_halted field
             total_experiments = Experiment.objects.count()
             running_experiments = Experiment.objects.filter(status='running').count()
+            halted_experiments = Experiment.objects.filter(is_halted=True).count()
+
+            # Session 941: Track experiments by status for accurate reporting
+            experiments_by_status = {}
+            for status_choice in ['running', 'success', 'partial', 'failure']:
+                experiments_by_status[status_choice] = Experiment.objects.filter(status=status_choice).count()
+
+            # Session 941: Track halt reasons if any
+            halt_reasons = {}
+            if halted_experiments > 0:
+                from django.db.models import Count as DjCount
+                reasons = Experiment.objects.filter(is_halted=True).values('halt_reason').annotate(
+                    count=DjCount('id')
+                ).order_by('-count')[:5]
+                for r in reasons:
+                    if r['halt_reason']:
+                        halt_reasons[r['halt_reason'][:50]] = r['count']
 
             # Coverage calculation
             total_decisions = context.get('boardroom_stats', {}).get('total', 0)
@@ -845,6 +977,9 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 'experiments': {
                     'total': total_experiments,
                     'running': running_experiments,
+                    'halted': halted_experiments,  # Session 941: Track halted
+                    'by_status': experiments_by_status,  # Session 941: Detailed breakdown
+                    'halt_reasons': halt_reasons,  # Session 941: Why experiments halted
                 },
             }
         except Exception as e:
