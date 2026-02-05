@@ -223,6 +223,13 @@ When users ask about agents, you should:
             except Exception as e:
                 logger.debug(f"Could not get policy context: {e}")
 
+            # Session 939: Get boardroom context for proactive awareness
+            boardroom_context = self._get_boardroom_context()
+            boardroom_context_text = boardroom_context.get('context_text', '')
+            if boardroom_context.get('total_pending', 0) > 0:
+                logger.info(f"🏛️ Boardroom context: {boardroom_context.get('total_pending')} pending items "
+                           f"({boardroom_context.get('critical_count', 0)} critical)")
+
             # Session 554: Get comprehensive agent intelligence using IntelligenceQueryService
             agent_knowledge_context = ""
             intelligence_summary = None
@@ -345,6 +352,12 @@ Use this real-time data to provide informed, data-driven responses. Reference sp
 {agent_knowledge_context}
 """
 
+                # Session 939: Add boardroom context for proactive awareness
+                if boardroom_context_text:
+                    enhanced_prompt += f"""
+{boardroom_context_text}
+"""
+
                 enhanced_prompt += f"""
 User message: {message}
 
@@ -403,6 +416,19 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
                     'has_intelligence': True
                 }
                 result['metadata']['intelligence_used'] = True
+
+            # Session 939: Add boardroom data to response
+            if boardroom_context.get('total_pending', 0) > 0:
+                result['boardroom_data'] = {
+                    'total_pending': boardroom_context.get('total_pending', 0),
+                    'attention_items': boardroom_context.get('attention_count', 0),
+                    'draft_decisions': boardroom_context.get('decision_count', 0),
+                    'critical_count': boardroom_context.get('critical_count', 0),
+                    'high_urgency_count': boardroom_context.get('high_count', 0),
+                    'attention_by_type': boardroom_context.get('attention_by_type', {}),
+                    'decisions_by_type': boardroom_context.get('decisions_by_type', {}),
+                }
+                result['metadata']['boardroom_context_used'] = True
 
             return result
 
@@ -921,3 +947,90 @@ The Neural Orchestra is NOT a music AI - it's their sophisticated mission contro
 
 When users ask about ANY of these components, explain their ACTUAL platform features, not generic explanations.
 """
+
+    def _get_boardroom_context(self) -> Dict[str, Any]:
+        """
+        Session 939: Get boardroom context for PA awareness.
+        Returns stats about pending decisions and attention items.
+        """
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from core.models_unified_system import AgentDecisionSummary
+            from django.db.models import Count
+
+            # Get attention item stats
+            attention_items = HumanAttentionItem.objects.filter(
+                user=self.user,
+                status='pending'
+            )
+            attention_count = attention_items.count()
+            attention_by_urgency = dict(
+                attention_items.values('urgency')
+                .annotate(count=Count('id'))
+                .values_list('urgency', 'count')
+            )
+            attention_by_type = dict(
+                attention_items.values('item_type')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:5]
+                .values_list('item_type', 'count')
+            )
+
+            # Get decision stats
+            decisions = AgentDecisionSummary.objects.filter(status='draft')
+            decision_count = decisions.count()
+            decisions_by_type = dict(
+                decisions.values('decision_type')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:5]
+                .values_list('decision_type', 'count')
+            )
+
+            # Build context
+            total_pending = attention_count + decision_count
+            critical_count = attention_by_urgency.get('critical', 0)
+            high_count = attention_by_urgency.get('high', 0)
+
+            context_parts = []
+            if total_pending > 0:
+                context_parts.append(f"\n== BOARDROOM STATUS ==")
+                context_parts.append(f"You have {total_pending} items awaiting your attention in the Boardroom:")
+
+                if attention_count > 0:
+                    context_parts.append(f"- {attention_count} attention items (reviews, alerts, opportunities)")
+                    if critical_count > 0:
+                        context_parts.append(f"  ⚠️ {critical_count} CRITICAL urgency!")
+                    if high_count > 0:
+                        context_parts.append(f"  ⚡ {high_count} high urgency")
+
+                if decision_count > 0:
+                    context_parts.append(f"- {decision_count} draft decisions from agent conversations")
+                    top_types = [f"{count} {dtype}" for dtype, count in list(decisions_by_type.items())[:3]]
+                    if top_types:
+                        context_parts.append(f"  Types: {', '.join(top_types)}")
+
+                context_parts.append("\nYou should proactively mention these pending items when relevant, especially if there are critical or high-urgency items. Offer to help the user review them.")
+
+            return {
+                'context_text': '\n'.join(context_parts) if context_parts else '',
+                'total_pending': total_pending,
+                'attention_count': attention_count,
+                'decision_count': decision_count,
+                'critical_count': critical_count,
+                'high_count': high_count,
+                'attention_by_type': attention_by_type,
+                'decisions_by_type': decisions_by_type,
+            }
+
+        except Exception as e:
+            logger.warning(f"Could not get boardroom context: {e}")
+            return {
+                'context_text': '',
+                'total_pending': 0,
+                'attention_count': 0,
+                'decision_count': 0,
+                'critical_count': 0,
+                'high_count': 0,
+                'attention_by_type': {},
+                'decisions_by_type': {},
+            }
