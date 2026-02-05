@@ -1474,3 +1474,162 @@ def trigger_stage_backfill(request):
         logger.error(f"[trigger_backfill] Error: {e}")
 
     return Response(result)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_initiative_conversation(request, initiative_id):
+    """
+    Session 928: Start a conversation about an initiative.
+
+    Creates a HiveMindSession linked to the initiative, with full context
+    injected so agents can discuss the initiative intelligently.
+
+    POST /api/initiatives/{initiative_id}/start-conversation/
+    {
+        "topic": "optional custom topic - defaults to initiative name",
+        "objective": "optional objective - defaults to discussing next steps",
+        "conversation_type": "analytical" | "creative" | "debate" | "planning" | "critique" | "general",
+        "auto_select_agents": true | false (default: true)
+    }
+
+    Returns:
+        {
+            "success": true,
+            "session_id": "uuid",
+            "session_url": "/workspace?tab=hivemind&session=uuid",
+            "message": "Started conversation about initiative"
+        }
+    """
+    from core.models_document_registry import Initiative, InitiativeStage
+    from core.models_unified_system import HiveMindSession, Agent
+    from core.agent_router import AgentRouter
+    import uuid as uuid_module
+
+    try:
+        # Get the initiative
+        try:
+            initiative_uuid = uuid_module.UUID(str(initiative_id))
+            initiative = Initiative.objects.get(id=initiative_uuid)
+        except (ValueError, Initiative.DoesNotExist):
+            return Response({
+                'success': False,
+                'error': f'Initiative not found: {initiative_id}'
+            }, status=404)
+
+        # Parse request data
+        data = request.data if hasattr(request, 'data') else {}
+        topic = data.get('topic') or f"Discuss: {initiative.name}"
+        objective = data.get('objective') or f"Discuss next steps and strategy for the initiative: {initiative.name}"
+        conversation_type = data.get('conversation_type', 'analytical')
+        auto_select_agents = data.get('auto_select_agents', True)
+
+        # Build rich context about the initiative
+        context_parts = [
+            f"## Initiative: {initiative.name}",
+            f"**Status:** {initiative.status}",
+            f"**Current Stage:** {initiative.current_stage}/5",
+            f"**Description:** {initiative.description[:1000] if initiative.description else 'No description'}",
+            "",
+        ]
+
+        # Add stage information
+        stages = InitiativeStage.objects.filter(initiative=initiative).order_by('stage')
+        if stages.exists():
+            context_parts.append("## Pipeline Stages:")
+            for stage in stages:
+                stage_names = {
+                    1: 'Research Brief',
+                    2: 'Prototype Plan',
+                    3: 'Evaluation Protocol',
+                    4: 'Technical Design',
+                    5: 'Pilot Execution'
+                }
+                stage_name = stage_names.get(stage.stage, f'Stage {stage.stage}')
+                has_doc = "with document" if stage.document else "no document"
+                context_parts.append(f"  - **Stage {stage.stage} ({stage_name}):** {stage.status} ({has_doc})")
+
+        context_parts.append("")
+        context_parts.append("## Discussion Focus:")
+        context_parts.append("Please discuss this initiative, considering:")
+        context_parts.append("1. What should happen next?")
+        context_parts.append("2. What blockers or risks exist?")
+        context_parts.append("3. What resources or agents are needed?")
+        context_parts.append("4. What is the strategic value of this initiative?")
+
+        context = "\n".join(context_parts)
+
+        # Select agents based on initiative or use defaults
+        participant_ids = []
+        if auto_select_agents:
+            # Use AgentRouter to find relevant agents
+            try:
+                router = AgentRouter()
+                # Get agents relevant to the topic
+                routing_result = router.route_by_query(
+                    query=f"{initiative.name} {initiative.description[:200] if initiative.description else ''}"
+                )
+                if routing_result and routing_result.get('agents'):
+                    relevant_agents = routing_result['agents'][:5]
+                    participant_ids = [str(a.id) for a in relevant_agents]
+            except Exception as e:
+                logger.warning(f"Agent routing failed: {e}")
+
+        # Fallback: use default strategic agents
+        if not participant_ids:
+            default_agent_names = [
+                'ResearchAgent',
+                'StrategyAgent',
+                'CTOAgent',
+                'SystemIntelligenceAgent',
+                'ThinkingAgent'
+            ]
+            default_agents = Agent.objects.filter(name__in=default_agent_names)[:5]
+            participant_ids = [str(a.id) for a in default_agents]
+
+        # Create the HiveMindSession
+        session = HiveMindSession.objects.create(
+            session_mode='conversation',
+            question=topic,
+            context=context,
+            conversation_topic=topic[:200],
+            conversation_type=conversation_type,
+            objective=objective,
+            success_criteria=[
+                "Clear next steps identified",
+                "Blockers and risks discussed",
+                "Strategic alignment confirmed"
+            ],
+            auto_selected_agents=auto_select_agents,
+            rich_context_injected=True,
+            status='initializing',
+            participant_ids=participant_ids,
+            initiative=initiative,  # Link to initiative
+        )
+
+        # Trigger conversation processing via Celery
+        try:
+            from core.tasks import run_triggered_conversation
+            run_triggered_conversation.delay(str(session.id))
+            session.status = 'gathering'
+            session.started_at = timezone.now()
+            session.save(update_fields=['status', 'started_at'])
+        except Exception as e:
+            logger.warning(f"Failed to trigger conversation task: {e}")
+            # Session is created, will be picked up by periodic task
+
+        return Response({
+            'success': True,
+            'session_id': str(session.id),
+            'session_url': f'/workspace?tab=hivemind&session={session.id}',
+            'message': f'Started conversation about: {initiative.name}',
+            'participants': len(participant_ids),
+            'conversation_type': conversation_type,
+        })
+
+    except Exception as e:
+        logger.error(f"[start_initiative_conversation] Error: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)

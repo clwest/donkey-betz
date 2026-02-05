@@ -656,6 +656,25 @@ function InitiativeDetailModal({
   // Session 866: State for viewing stage documents
   const [viewingDocument, setViewingDocument] = useState<{ id: string; stageName: string } | null>(null)
 
+  // Session 928: Start conversation about initiative
+  const [isStartingConversation, setIsStartingConversation] = useState(false)
+  const handleStartConversation = async () => {
+    setIsStartingConversation(true)
+    try {
+      const res = await platformApi.startConversation(initiative.id, {
+        conversation_type: 'analytical',
+        auto_select_agents: true,
+      })
+      if (res.data.success && res.data.session_url) {
+        // Navigate to the conversation
+        window.location.href = res.data.session_url
+      }
+    } catch (error) {
+      console.error('Failed to start conversation:', error)
+      setIsStartingConversation(false)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -863,12 +882,27 @@ function InitiativeDetailModal({
             <span>Updated: {new Date(initiative.updated_at).toLocaleDateString()}</span>
             <span className="capitalize">Status: {initiative.status.toLowerCase()}</span>
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Session 928: Discuss with Agents button */}
+            <button
+              onClick={handleStartConversation}
+              disabled={isStartingConversation}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary-500 hover:bg-primary-600 disabled:bg-primary-500/50 text-white rounded-lg transition-colors"
+            >
+              {isStartingConversation ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <MessageSquare size={16} />
+              )}
+              Discuss with Agents
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         {/* Session 866: Document viewer modal */}
