@@ -26,7 +26,9 @@ import {
   Lightbulb,
   Target,
   Zap,
+  Volume2,
 } from 'lucide-react'
+import { ListenButton } from '@/components/ListenButton'
 import { cn } from '@/lib/cn'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
@@ -350,6 +352,13 @@ function ContributionCard({ contribution }: { contribution: Contribution }) {
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {contribution.status === 'completed' && contribution.contribution && (
+                <ListenButton
+                  text={contribution.contribution}
+                  agentName={contribution.agent.name}
+                  size="sm"
+                />
+              )}
               {contribution.confidence_score > 0 && (
                 <span className="text-xs text-gray-500">
                   {Math.round(contribution.confidence_score * 100)}% confidence
