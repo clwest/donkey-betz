@@ -1500,6 +1500,14 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.auto_approve_boardroom_items',
         'schedule': crontab(hour='*/6', minute=30),  # Every 6 hours at :30
     },
+    # =========================================================================
+    # Session 942: Experiment Cleanup
+    # =========================================================================
+    # Delete old halted experiments to prevent cluttering system reviews
+    'cleanup-halted-experiments': {
+        'task': 'core.tasks.cleanup_halted_experiments',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3:00 AM
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
