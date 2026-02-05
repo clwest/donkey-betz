@@ -52,14 +52,14 @@ The Personal Assistant is the "brain" of the platform - the central interface th
 | `marketing_strategy_agent` | MarketingStrategyAgent | ✅ Works |
 | `content_writer_agent` | ContentWriterAgent | ✅ Works |
 
-### ML Pipeline Tools (5)
-| Tool | Handler | Status |
-|------|---------|--------|
-| `opportunity_manager_tool` | OpportunityManager | ⚠️ Needs audit |
-| `task_manager_tool` | TaskManager | ⚠️ Needs audit |
-| `pipeline_orchestrator_tool` | PipelineOrchestrator | ⚠️ Needs audit |
-| `revenue_tracker_tool` | RevenueTracker | ⚠️ Needs audit |
-| `ml_analysis` | MLEngine | ⚠️ Needs audit |
+### ML Pipeline Tools (5) - Audited Session 933
+| Tool | Handler | Status | Notes |
+|------|---------|--------|-------|
+| `opportunity_manager_tool` | Opportunity model | ✅ Fixed | Field names corrected: category→opportunity_type, score→match_score |
+| `task_manager_tool` | OpportunityTask model | ✅ Fixed | Added stats action, user filtering |
+| `pipeline_orchestrator_tool` | Initiative model | ✅ Fixed | Now returns real Initiative pipeline stats |
+| `revenue_tracker_tool` | Revenue model | ✅ Fixed | Wired to real Revenue model with stats/list actions |
+| `ml_analysis` | MLEngine | ✅ Fixed | Uses real methods: status, decision_pattern, detect_opportunity |
 
 ### Universal Access Tools (2)
 | Tool | Handler | Status |
@@ -74,14 +74,14 @@ The Personal Assistant is the "brain" of the platform - the central interface th
 | `check_resource_budget` | LungsSystem | ✅ Works |
 | `get_system_alerts` | AlertsService | ✅ Works |
 
-### Intelligence Tools (5)
-| Tool | Handler | Status |
-|------|---------|--------|
-| `predictions_tool` | PredictionsService | ⚠️ Needs audit |
-| `gates_tool` | GatesService | ⚠️ Needs audit |
-| `pilots_tool` | PilotsService | ⚠️ Needs audit |
-| `human_decisions_tool` | HumanDecisionsService | ⚠️ Needs audit |
-| `reasoning_engine_tool` | ThinkingAgent | ⚠️ Needs audit |
+### Intelligence Tools (5) - Audited Session 933
+| Tool | Handler | Status | Notes |
+|------|---------|--------|-------|
+| `predictions_tool` | AgentPrediction | ⚠️ Deprecated | Returns deprecation notice (model has 0 records, marked deprecated in Session 284) |
+| `gates_tool` | PilotReadinessGate | ✅ Fixed | Removed non-existent `name` field, uses `summary` + `decision__topic` |
+| `pilots_tool` | PilotExecution | ✅ Fixed | Corrected import path to models_pilot_readiness |
+| `human_decisions_tool` | HumanAttentionItem | ✅ Fixed | Was using non-existent HumanDecisionItem, now uses correct model |
+| `reasoning_engine_tool` | ThinkingAgent | ✅ Works | Verified operational
 
 ### Workflow Tools (5)
 | Tool | Handler | Status |
