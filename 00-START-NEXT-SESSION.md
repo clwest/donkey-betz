@@ -1,92 +1,121 @@
-# Session 940 - Start Here
+# Session 941 - Start Here
 
-**Previous Session:** 939 (Boardroom Tab + Cleanup Automation)
-**Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE**
-
----
-
-## Session 939 Summary (Just Completed)
-
-### Boardroom Tab - COMPLETE (PR #864)
-Added new workspace tab for reviewing and acting on pending decisions.
-
-**Features:**
-- Two views: Attention Items + Draft Decisions
-- Filters by type (review, insight, alert, product, experiment, etc.)
-- Actions: Approve/Ignore for attention items, Promote/Reject for decisions
-- Expandable cards with details, ML recommendations, key insights
-- Auto-refresh every 30 seconds
-
-**Location:** Workspace → Boardroom (gavel icon, last tab)
-
-### Boardroom Cleanup - COMPLETE (PRs #862, #863)
-Cleaned up 1,096 junk items and added automatic prevention.
-
-**Manual Cleanup (Production):**
-| Type | Deleted |
-|------|---------|
-| spider_action items | 386 |
-| [Learned] HumanAttentionItems | 3 |
-| [Learned] AgentDecisionSummary | 707 |
-| **Total** | **1,096** |
-
-**Automatic Cleanup Task:**
-- `cleanup_boardroom_junk` runs daily at 4:30 AM
-- Deletes spider_action items older than 24h
-- Deletes items with `[Learned]` in title/topic
-
-### Initiative Cleanup Enhancement (PR #862)
-Updated `cleanup_junk_initiatives` to DELETE junk instead of archive.
+**Previous Session:** 940 (PA Boardroom Integration Complete)
+**Date:** February 5, 2026
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: COMPLETE** | **Boardroom Learning: ACTIVE**
 
 ---
 
-## Current Boardroom Status
+## Session 940 Summary (Just Completed)
 
-| Type | Count | Location |
-|------|-------|----------|
-| Pending Attention Items | ~229 | Boardroom → Attention Items |
-| Draft Decisions | ~615 | Boardroom → Draft Decisions |
+### Complete PA + Boardroom Integration (4 PRs)
 
-**Attention Item Breakdown:**
-- review: 114 (content reviews)
-- insight: 103 (agent validations)
-- alert: 2 (stock alerts)
-- opportunity: 4
+| PR | Feature | Description |
+|----|---------|-------------|
+| #866 | Awareness | PA knows about pending boardroom items |
+| #867 | Tools | PA can act on items (approve, ignore, promote, reject) |
+| #868 | Triage Mode | PA walks user through items one by one |
+| #869 | Feedback Loop | User decisions recorded for learning |
 
-**Decision Breakdown:**
-- product: 412
-- experiment: 101
-- pipeline: 83
-- research: 14
+---
+
+### 1. PA Proactive Boardroom Awareness (PR #866)
+- `_get_boardroom_context()` retrieves stats from models
+- Injects context into PA prompt with urgency indicators
+- Adds `boardroom_data` to response metadata
+
+### 2. PA Boardroom Tools (PR #867)
+**`boardroom_tool`** with 8 actions:
+| Action | Description |
+|--------|-------------|
+| `stats` | Get boardroom statistics |
+| `list_attention` | List attention items (filterable) |
+| `list_decisions` | List draft decisions (filterable) |
+| `approve_attention` | Approve an attention item |
+| `ignore_attention` | Ignore an attention item |
+| `promote_decision` | Promote to canonical |
+| `reject_decision` | Reject a decision |
+| `get_triage_batch` | Get prioritized items for triage |
+
+### 3. Triage Mode (PR #868)
+Conversational triage where PA walks through items:
+- "triage attention" or "triage decisions" to start
+- Shows one item with full context
+- User responds: approve/ignore/skip/stop
+- Tracks stats, shows summary when done
+- Items prioritized by urgency (critical first)
+
+### 4. Feedback Loop (PR #869)
+**BoardroomLearningService** records user decisions:
+- Tracks approval rates by item type
+- Tracks approval rates by source agent
+- Tracks promotion rates by decision type
+- Generates insights: "You approve 80% of alerts"
+- Provides context for future PA recommendations
+
+---
+
+## PA + Boardroom Integration Status: COMPLETE
+
+| Feature | Status | PR |
+|---------|--------|-----|
+| PA mentions pending items | ✅ COMPLETE | #866 |
+| PA acts on Boardroom items | ✅ COMPLETE | #867 |
+| Triage mode | ✅ COMPLETE | #868 |
+| Feedback loop (learning) | ✅ COMPLETE | #869 |
+
+---
+
+## Example PA Interactions
+
+```
+User: "What's in my boardroom?"
+PA: You have 844 items in your Boardroom:
+- 229 attention items (2 critical, 10 high urgency)
+- 615 draft decisions (412 product, 101 experiment)
+
+User: "triage attention"
+PA: Starting triage. I'll walk you through 5 items.
+
+**Item 1/5** (229 total remaining)
+🔴 **Stock Alert: AAPL Earnings Beat**
+Type: alert | Urgency: critical
+Source: StockAuditCoordinator
+[ML Recommendation: Approve]
+Reply: approve, ignore, skip, or stop
+
+User: "approve"
+PA: ✓ Approved!
+**Item 2/5** ...
+```
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
 
-### Option A: Bulk Actions for Boardroom
-Add batch approve/reject functionality:
+### Option A: Bulk Actions for Boardroom UI
+Add batch approve/reject in the UI:
 - Select multiple items
 - Approve all filtered items
-- Auto-approve low-risk items based on ML confidence
+- Auto-approve low-risk based on ML confidence
 
-### Option B: Learning Loop Backend
-Define success signals and implement feedback collection:
+### Option B: Auto-Promotion for Decisions
+Auto-promote decisions meeting quality thresholds:
+- High ML confidence
+- Consistent with existing canonical decisions
+- No conflicting recommendations
+
+### Option C: Learning Loop Backend (General)
+Define success signals across the platform:
 - Track tool execution outcomes
 - Weight recent performance
 - Inject learnings into prompts
 
-### Option C: Fix Remaining Spider Context Paths
-Extend SpiderContextBuilder to remaining code paths:
+### Option D: Spider Context for Remaining Paths
+Extend SpiderContextBuilder to:
 - `creative_orchestrator.py` (13 locations)
 - `research_orchestrator.py` (5 locations)
-- Other content generation tasks in `tasks.py`
-
-### Option D: Decision Auto-Promotion
-Auto-promote decisions that meet quality thresholds:
-- High confidence ML recommendations
-- Consistent with existing canonical decisions
-- No conflicting recommendations
+- Other content generation tasks
 
 ---
 
@@ -94,41 +123,35 @@ Auto-promote decisions that meet quality thresholds:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **940** | PA Boardroom Complete (Awareness + Tools + Triage + Learning) | #866, #867, #868, #869 |
 | **939** | Boardroom Tab + Cleanup Automation | #862, #863, #864 |
 | **937** | Content Quality Verification + Spider Fixes | #855, #857 |
 | **936** | Dashboard + Voice + Spider Context Fix | #851, #852, #853, #854 |
 | **935** | User Learning UI + ListenButton | #850 |
-| **934** | Frontend PA Integration | #849 |
 
 ---
 
 ## Key Files Reference
 
-### Boardroom System (Session 939)
+### PA Boardroom System (Session 940)
 | File | Purpose |
 |------|---------|
-| `frontend/src/pages/workspace/tabs/BoardroomTab.tsx` | Boardroom UI component |
-| `core/tasks.py:cleanup_boardroom_junk` | Daily cleanup task |
-| `core/celery.py` | Scheduled at 4:30 AM |
-| `core/models_human_interface.py` | HumanAttentionItem model |
-| `core/models_unified_system.py` | AgentDecisionSummary model |
+| `core/unified_personal_assistant.py` | `_get_boardroom_context()` |
+| `core/services/tool_dispatcher.py` | `_handle_boardroom()` handler |
+| `core/services/unified_pa_entrypoint.py` | Routing + triage mode |
+| `core/services/boardroom_learning_service.py` | **NEW** - Learning service |
 
-### Key API Endpoints
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/human/attention/` | GET | List pending attention items |
-| `/api/human/attention/{id}/decide/` | POST | Approve/ignore item |
-| `/api/boardroom/decisions/` | GET | List draft decisions |
-| `/api/boardroom/decisions/{id}/promote/` | POST | Promote to canonical |
-| `/api/boardroom/decisions/{id}/reject/` | POST | Reject decision |
+### Boardroom Models
+| File | Model |
+|------|-------|
+| `core/models_human_interface.py` | HumanAttentionItem |
+| `core/models_unified_system.py` | AgentDecisionSummary, LearningPattern |
 
-### Cleanup Tasks (Celery Beat)
-| Task | Schedule | Purpose |
-|------|----------|---------|
-| `cleanup_junk_initiatives` | Daily 4:00 AM | Delete junk initiatives |
-| `cleanup_boardroom_junk` | Daily 4:30 AM | Delete spider_action + [Learned] items |
-| `cleanup_stale_agent_executions` | Every 30 min | Mark stuck executions as failed |
+### Boardroom UI
+| File | Purpose |
+|------|---------|
+| `frontend/src/pages/workspace/tabs/BoardroomTab.tsx` | Boardroom UI |
 
 ---
 
-**Session 940 Focus: Choose priority option above and continue building!**
+**Session 941 Focus: Choose priority option above and continue building!**
