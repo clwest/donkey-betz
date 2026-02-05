@@ -244,22 +244,34 @@ On failure:
 
 ## Implementation Plan
 
-### Phase 1: Single Entrypoint + ToolDispatcher (Session 931)
+### Phase 1: Single Entrypoint + ToolDispatcher (Session 931) ✅ COMPLETE
 1. Create `UnifiedPAEntrypoint` class - single front door
 2. Create `ToolDispatcher` with structured results
-3. Route all UI requests through entrypoint
+3. Route WebSocket requests through entrypoint
 4. Surface `trace_id` in responses
 
-### Phase 2: TTS Output (Session 931)
+### Phase 2: TTS Output (Session 926) ✅ COMPLETE
 1. Add ElevenLabs TTS wrapper tool
 2. Extend response schema with `audio_url`
 3. Add "Listen" button to frontend
 4. Add "Narrate" feature for conversations
 
-### Phase 3: Attention Aggregator (Session 932)
+### Phase 3: Attention Aggregator (Session 932) ✅ COMPLETE
 1. Create unified attention endpoint
 2. Label sources (system vs human)
-3. Update frontend to show labeled counts
+3. API: `/api/assistant/attention/unified/` and `/api/assistant/attention/stats/`
+
+### Phase 3.5: REST API Wiring (Session 932) ✅ COMPLETE
+1. Route `chat_with_assistant` through UnifiedPA (with legacy fallback)
+2. Create dedicated `/api/pa/chat/` endpoint (no legacy fallback)
+3. Create `/api/pa/context/` endpoint for system info
+
+**REST API Endpoints:**
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/assistant/chat/` | Original endpoint, now routes through UnifiedPA |
+| `POST /api/pa/chat/` | Dedicated UnifiedPA endpoint (no fallback) |
+| `GET /api/pa/context/` | Get PA context info |
 
 ### Phase 4: Learning Loop (Future)
 1. Define success signals
