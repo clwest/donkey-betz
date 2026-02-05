@@ -1,88 +1,75 @@
-# Session 936 - Start Here
+# Session 937 - Start Here
 
-**Previous Session:** 935 (Frontend for User Learning)
+**Previous Session:** 936 (Dashboard Integration + Voice System Complete)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **ListenButton: 5 INTEGRATIONS** | **User Learning UI: FEEDBACK + GOALS + INSIGHTS** | **21 API Endpoints**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE (7 integrations)** | **User Learning UI: COMPLETE** | **21 API Endpoints**
 
 ---
 
-## Session 935 Summary (Just Completed)
+## Session 936 Summary (Just Completed)
 
-### Part 1: ListenButton Integration (PR #850)
-Added ListenButton TTS to DeliverableDetailModal and HiveMindPage.
+### Dashboard Integration - COMPLETE (PR #851)
+Added learning widgets to all key pages:
 
-### Part 2: Frontend for User Learning - COMPLETE
+| Page | Integration |
+|------|-------------|
+| HomePage | 2-column grid with Goals + Insights before NL input |
+| AssistantPage | Learning tab sidebar with Goals + Insights |
+| DashboardPage | Activity Grid section with compact widgets |
 
-Built React components for the user learning system:
+Also renamed legacy `userLearningApi` to `legacyLearningApi` to avoid namespace conflict with Session 930 endpoints.
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| FeedbackButtons | `components/FeedbackButtons.tsx` | Thumbs up/down on any agent output |
-| GoalProgressDashboard | `components/GoalProgressDashboard.tsx` | Goals with progress bars + inline updates |
-| LearningInsightsPanel | `components/LearningInsightsPanel.tsx` | Profile, skills, agents summary |
+### Voice System - COMPLETE (PR #852)
+Finished Universal Agent Voice System integration:
 
-**API Additions (Session 930 Backend):**
-```typescript
-userLearningApi.recordFeedback({ agent_name, rating, ... })
-userLearningApi.getGoalsDashboard()
-userLearningApi.getGoalDetail(goalId)
-userLearningApi.recordGoalProgress(goalId, { progress_delta })
-userLearningApi.getSkillsSummary()
-userLearningApi.getSummary()  // Combined learning summary
-```
+| Component | ListenButton Location |
+|-----------|----------------------|
+| ConversationDetailModal | Each message + ListenAllButton |
+| DreamsPanel | Dream summaries |
+| DreamDetailModal | Full dream content |
+| **DeliverableDetailModal** | Next to Content header (NEW) |
+| **HiveMindPage** | Completed agent contributions (NEW) |
 
-**Backend Enhancement:**
-- `record_agent_feedback` now accepts `agent_name` as alternative to `agent_id`
-
-**AssistantPage Integration:**
-- Feedback buttons now record to both conversation AND user learning system
-- Uses `routed_to` (agent name) for learning feedback
-
----
-
-## Session 934 Summary
-
-### Frontend PA Integration - COMPLETE (PR #849)
-
-Updated AssistantPage to use UnifiedPA endpoint with enhanced visibility.
+All agent-generated content can now be listened to via ElevenLabs TTS with automatic voice assignment and caching.
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
 
-### Option A: Dashboard Integration
-Add GoalProgressDashboard and LearningInsightsPanel to:
-- Home page sidebar
-- Assistant page sidebar
-- Workspace dashboard
-
-### Option B: Learning Loop Backend
+### Option A: Learning Loop Backend
 Define success signals and implement feedback collection:
 - Track tool execution outcomes
 - Weight recent performance
 - Inject learnings into prompts
 
-### Option C: WebSocket PA Integration
+### Option B: WebSocket PA Integration
 Update WebSocket consumer to match REST response format:
 - Ensure consistent tool_runs format
 - Add trace_id to WebSocket messages
 - Add profile_completeness to real-time updates
 
-### Option D: Voice System Polish
-- ListenAllButton integration (conversations as podcasts)
+### Option C: Voice System Polish
 - Voice preview in agent admin
+- Bulk voice assignment UI
+- Cost tracking dashboard
+
+### Option D: User Profile Onboarding
+Build onboarding flow for new users:
+- Skills assessment wizard
+- Goal setting interface
+- Preference collection
 
 ---
 
 ## Recent Session History
 
-| Session | Focus | Handoff |
-|---------|-------|---------|
-| **935** | User Learning UI + ListenButton | `FeedbackButtons.tsx`, `GoalProgressDashboard.tsx` |
-| **934** | Frontend PA Integration | `AssistantPage.tsx` |
-| **933** | Tool Audit + Attention Widget | `PERSONAL_ASSISTANT_ARCHITECTURE.md` |
-| **932** | Attention Aggregator + REST API Wiring | `SESSION_931_PA_REFACTOR.md` |
-| **931** | PA Architecture Refactor | `SESSION_931_PA_REFACTOR.md` |
+| Session | Focus | PRs |
+|---------|-------|-----|
+| **936** | Dashboard Integration + Voice Complete | #851, #852 |
+| **935** | User Learning UI + ListenButton | #850 |
+| **934** | Frontend PA Integration | #849 |
+| **933** | Tool Audit + Attention Widget | #848 |
+| **932** | Attention Aggregator + REST API Wiring | #846 |
 
 ---
 
@@ -96,11 +83,13 @@ Update WebSocket consumer to match REST response format:
 | `frontend/src/components/LearningInsightsPanel.tsx` | Learning summary panel |
 | `core/views_user_learning_api.py` | Backend API endpoints |
 
-### Voice System
+### Voice System (COMPLETE)
 | File | Purpose |
 |------|---------|
 | `frontend/src/components/ListenButton.tsx` | TTS button + ListenAllButton |
 | `core/services/elevenlabs_tts_service.py` | TTS with caching |
+| `core/models_audio_cache.py` | Audio caching model |
+| `core/management/commands/assign_agent_voices.py` | Voice assignment |
 
 ### PA Architecture
 | File | Purpose |
@@ -119,7 +108,8 @@ Update WebSocket consumer to match REST response format:
 | `/api/user-learning/summary/` | GET | Combined learning summary |
 | `/api/pa/chat/` | POST | UnifiedPA chat |
 | `/api/tts/generate/` | POST | Generate TTS audio |
+| `/api/tts/estimate/` | POST | Estimate TTS cost |
 
 ---
 
-**Session 936 Focus: Choose priority option above and continue building!**
+**Session 937 Focus: Choose priority option above and continue building!**
