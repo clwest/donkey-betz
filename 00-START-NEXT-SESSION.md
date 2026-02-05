@@ -2,108 +2,154 @@
 
 **Previous Session:** 928 (Initiative Conversations + Modal Updates)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **PIPELINE: READY FOR STAGE 2+** | **Stage 1: 95% (358/373)** | **Universal Agent Voice: ACTIVE** | **Blocker Analysis: VISIBLE** | **Initiative Conversations: DEPLOYED**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Initiative Conversations: DEPLOYED** | **User Context Injection: EXISTS** | **User Learning: PARTIAL**
 
 ---
 
-## Session 928 Summary: Initiative Conversations + Modal Updates
+## PRIORITY: User Context Injection & Learning System
 
-### Key Achievements
+### The Question
+How does the User get injected into context, and how does the system start learning from the User?
 
-#### 1. Initiative Conversations Feature
-- **"Discuss with Agents" button** in Initiative modal
-- Creates HiveMindSession linked to initiative via FK
-- Injects full context (origin, stages, action items, signals)
-- Auto-selects relevant agents via AgentRouter
-- **Endpoint:** `POST /api/initiatives/<uuid>/start-conversation/`
+### Current State (from codebase exploration)
 
-#### 2. HiveMind Modal Updates
-- Sessions show linked initiative with Target icon
-- Clickable link navigates back to initiative
-- Status badge shows initiative state
+#### What EXISTS (Session 858+):
 
-#### 3. Production Fixes Applied
-- Fixed `founder_intent_set` for 50 initiatives (enables Stage 2+)
-- Reset 286 stub documents to PENDING for regeneration
-- Wired diagnose-stuck endpoint to Health tab
+**User Profile Models:**
+| Model | Location | Purpose |
+|-------|----------|---------|
+| `UserProfile` | `core/models.py:552` | Basic profile, skills, job preferences, AI preferences |
+| `ExtendedUserProfile` | `core/models.py:807` | Work history, education, salary expectations |
+| `EnhancedUserProfile` | `core/models.py:1600` | Goals, OKRs, risk tolerance, learning preferences |
+| `HumanPreference` | `core/models_human_interface.py:263` | Notification prefs, learned preferences (topic_weights, approval_rate) |
+
+**Context Injection Flow:**
+```
+User Request
+    ↓
+AgentRouter.route()
+    ↓
+_get_user_context(agent_name, task)
+    ├─ AgentContextMiddleware.get_user_context()  [5-min cache]
+    └─ MemoryContextService.get_prompt_context()  [decay-weighted memories]
+    ↓
+_apply_injection_policy(agent_name)  [category-based filtering]
+    ↓
+Agent Execution with Personalized Context
+```
+
+**Injection Policies by Category:**
+| Category | Fields Injected |
+|----------|-----------------|
+| `personal_assistant` | **ALL** (full context) |
+| `career` | skills, job_preferences, salary_range, work_history, success_patterns |
+| `content` | communication_style, tone_preferences, goals |
+| `financial` | risk_tolerance, betting_preferences, investment_goals |
+| `development` | skills, tech_stack, github_username |
+| `research` | interests, learning_goals, preferred_topics |
+| `default` | name, goals, communication_style |
+
+**Learning Mechanisms:**
+- `PersonalizationFeedbackLoop` - Learns from opportunity interactions (view→click→apply→interview→accept)
+- `UserAgentLearning` model - Stores domain-specific learnings with confidence scores
+- `UserMemoryContext` - Decay-weighted memories (e^(-age_days/21))
+
+#### What's MISSING:
+
+| Gap | Impact |
+|-----|--------|
+| **User Skill Evolution** | No tracking of how skills improve over time |
+| **Agent-Specific Learning** | No per-agent profiles of what works for specific user |
+| **Conversion Metrics** | No tracking of which personalization strategies convert to action |
+| **Goal Progress Tracking** | Goals stored but no progress metrics |
+| **Active Learning Loop** | System doesn't ask user for feedback to improve |
+| **Profile Completeness UX** | No prompting user to fill gaps in profile |
+
+---
+
+### Session 930 Tasks
+
+#### 1. Audit Current User Context Flow
+```bash
+# Check which users have profiles
+railway run python manage.py shell -c "
+from core.models import UserProfile, ExtendedUserProfile, EnhancedUserProfile
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+total = User.objects.count()
+with_profile = UserProfile.objects.count()
+with_extended = ExtendedUserProfile.objects.count()
+with_enhanced = EnhancedUserProfile.objects.count()
+
+print(f'Users: {total}')
+print(f'With UserProfile: {with_profile}')
+print(f'With ExtendedUserProfile: {with_extended}')
+print(f'With EnhancedUserProfile: {with_enhanced}')
+"
+```
+
+#### 2. Trace Context Injection
+Test what context actually reaches agents:
+```python
+# In shell, test context for a specific user
+from core.agent_context_middleware import AgentContextMiddleware
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+user = User.objects.first()
+middleware = AgentContextMiddleware()
+context = middleware.get_user_context(user)
+print(context)
+```
+
+#### 3. Implement Active Learning Improvements
+
+**Option A: Profile Completeness Prompting**
+- Add `profile_gaps` method to identify missing fields
+- PA prompts user: "I notice I don't know your salary expectations. Would you like to share?"
+
+**Option B: Feedback After Agent Execution**
+- After key agent outputs, ask: "Was this helpful? (👍/👎)"
+- Store in `UserAgentLearning` with agent_id for per-agent learning
+
+**Option C: Goal Progress Tracking**
+- Add `GoalProgress` model linking goals to deliverables/initiatives
+- Show user: "You're 40% toward your goal of [X]"
+
+**Option D: Skill Evolution Tracking**
+- Track skills demonstrated in deliverables
+- Auto-update user skills based on successful outputs
+
+---
+
+### Key Files to Review
+
+| File | Purpose |
+|------|---------|
+| `core/agent_router.py` | `_get_user_context()`, `_apply_injection_policy()` |
+| `core/agent_context_middleware.py` | `AgentContextMiddleware.get_user_context()` |
+| `core/services/memory_context_service.py` | `MemoryContextService.get_prompt_context()` |
+| `core/learning_bridges/personalization_bridge.py` | `PersonalizationFeedbackLoop` |
+| `core/models.py` | UserProfile, ExtendedUserProfile, EnhancedUserProfile |
+| `core/models_human_interface.py` | HumanPreference, HumanFeedbackRecord |
+
+---
+
+## Session 928 Summary (Previous)
+
+### Deployed Features
+- **Initiative Conversations** - "Discuss with Agents" button creates HiveMindSession with initiative context
+- **HiveMind Modal Updates** - Sessions show linked initiative with clickable link
+- **Blocker Analysis UI** - Health tab shows why initiatives are stuck
+
+### Production Fixes
+- Fixed `founder_intent_set` for 50 initiatives
+- Reset 286 stub documents to PENDING
+- Migration 0227 applied
 
 ### PRs Merged
-- #828: Blocker Analysis UI
-- #830: 401 fixes + API methods
-- #831: Initiative Conversations feature
-- #832: HiveMind modal initiative display
-
-### Migration Applied
-```
-Applying core.0227_session_928_hivemind_initiative_fk... OK
-```
-
-### Handoff
-`docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md`
-
----
-
-## Current Production State
-
-| Metric | Value |
-|--------|-------|
-| Total Initiatives | 373 |
-| Stage 1 Coverage | **95%** (358/373) |
-| Founder Intent Fixed | **50** (now True) |
-| Stub Documents Reset | **286** (will regenerate) |
-| Initiative Conversations | **DEPLOYED** |
-| HiveMind Initiative Link | **DEPLOYED** |
-
----
-
-## PRIORITY for Session 930
-
-### 1. Regenerate Stub Documents
-The 286 stub stages are now PENDING - trigger regeneration:
-```bash
-railway run python manage.py shell -c "
-from core.models_document_registry import InitiativeStage
-from core.tasks import generate_initiative_stage_document
-
-pending = InitiativeStage.objects.filter(
-    stage=1, status='PENDING',
-    initiative__status='ACTIVE'
-).values_list('initiative_id', flat=True)[:50]
-
-print(f'Regenerating Stage 1 for {len(pending)} initiatives...')
-for init_id in pending:
-    result = generate_initiative_stage_document(str(init_id), 1)
-    print('.' if result.get('success') else 'x', end='', flush=True)
-print()
-"
-```
-
-### 2. Start Stage 2 Generation
-After Stage 1 regeneration:
-```bash
-railway run python manage.py shell -c "
-from core.models_document_registry import InitiativeStage
-from core.tasks import generate_initiative_stage_document
-
-ready = InitiativeStage.objects.filter(
-    stage=1, status='APPROVED',
-    initiative__status='ACTIVE',
-    initiative__founder_intent_set=True
-).values_list('initiative_id', flat=True)[:50]
-
-print(f'Generating Stage 2 for {len(ready)} initiatives...')
-for init_id in ready:
-    result = generate_initiative_stage_document(str(init_id), 2)
-    print('.' if result.get('success') else 'x', end='', flush=True)
-print()
-"
-```
-
-### 3. Test Initiative Conversations
-1. Open any initiative modal
-2. Click "Discuss with Agents"
-3. Verify conversation creates with full context
-4. Check HiveMind session shows initiative link
+#828, #829, #830, #831, #832, #833
 
 ---
 
@@ -111,23 +157,11 @@ print()
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **928** | Initiative Conversations + Modal Updates | `docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md` |
-| **927** | Universal Agent Voice System | `docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
-| **926** | Stage 1 Backfill Push (62% → 95%) | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
-| 925 | Auto-Cleanup Stuck Executions + HiveMind Enhancement | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
-| 924 | UI Enhancements + Pipeline Fixes | `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` |
+| **928** | Initiative Conversations + Modal Updates | `SESSION_928_INITIATIVE_CONVERSATIONS.md` |
+| **927** | Universal Agent Voice System | `SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
+| **926** | Stage 1 Backfill Push (62% → 95%) | `SESSION_925_AUTO_CLEANUP.md` |
+| 925 | Auto-Cleanup Stuck Executions | `SESSION_925_AUTO_CLEANUP.md` |
 
 ---
 
-## Key Documentation
-
-| Document | Purpose |
-|----------|---------|
-| `docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md` | Initiative Conversations + Modal Updates |
-| `docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md` | Voice System implementation |
-| `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
-| `CLAUDE.md` | AI session entry point |
-
----
-
-**Session 928 Complete - Initiative Conversations deployed with bidirectional navigation between initiatives and HiveMind sessions.**
+**Session 930 Focus: Understand and enhance how user context flows into agents and how the system learns from user interactions.**
