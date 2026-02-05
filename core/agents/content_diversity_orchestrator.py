@@ -61,19 +61,58 @@ Categories you manage:
     tools = []  # No GPT tools - this agent works directly with data
 
     # Category to spider mapping
+    # Session 936: Updated to include ALL 77 registered spiders
+    # Previously only ~42 spiders were mapped, causing content to miss data from 35 spiders
     CATEGORY_SPIDERS = {
-        'finance': ['yahoo_finance', 'coingecko', 'finnhub', 'polygon_finance', 'sec_edgar', 'etherscan'],
-        'legal': ['courtlistener', 'findlaw', 'justia', 'lii', 'colorado_family_law', 'justia_family_law'],
+        'finance': [
+            'yahoo_finance', 'coingecko', 'finnhub', 'polygon_finance', 'sec_edgar',
+            'etherscan', 'etherscan_api', 'crunchbase', 'kickstarter',
+        ],
+        'legal': [
+            'courtlistener', 'findlaw', 'justia', 'lii', 'colorado_family_law',
+            'justia_family_law', 'legal_news', 'government',
+        ],
         'sports': ['theodds', 'kalshi'],
-        'entertainment': ['youtube', 'spotify', 'variety', 'polygon_gaming'],
-        'science': ['science', 'kaggle', 'huggingface', 'arxiv'],
-        'jobs': ['adzuna', 'remoteok', 'weworkremotely', 'github_jobs'],
-        'tech': ['hackernews', 'devto', 'techcrunch', 'theverge', 'github', 'producthunt'],
-        'news': ['reuters_rss', 'bbc', 'cnn', 'npr', 'axios'],
-        'lifestyle': ['food', 'travel', 'parenting', 'health', 'real_estate'],
+        'entertainment': [
+            'youtube', 'spotify', 'variety', 'polygon_gaming', 'giphy', 'unsplash',
+        ],
+        'science': [
+            'science', 'kaggle', 'huggingface', 'arxiv', 'library',
+        ],
+        'jobs': [
+            'adzuna', 'remoteok', 'weworkremotely', 'github_jobs',
+        ],
+        'tech': [
+            'hackernews', 'devto', 'techcrunch', 'theverge', 'github', 'producthunt',
+            'arstechnica', 'wired', 'venturebeat', 'mit_tech_review', 'techcrunch_startups',
+            'hackernoon', 'freecodecamp', 'smashingmagazine', 'awwwards', 'behance',
+        ],
+        'news': [
+            'reuters_rss', 'bbc', 'cnn', 'npr', 'axios', 'google_news', 'newsapi',
+            'business_news', 'defenseone',
+        ],
+        'lifestyle': [
+            'food', 'travel', 'parenting', 'health', 'real_estate', 'lifehacker',
+        ],
+        'social': [
+            'reddit', 'bluesky', 'discord', 'discord_training', 'medium', 'substack',
+        ],
+        'education': [
+            'coursera', 'udemy', 'teachable', 'education_rss',
+        ],
+        'security': [
+            'securityweek',
+        ],
+        'health': [
+            'mobihealthnews',
+        ],
+        'weather': [
+            'noaa_weather', 'openmeteo',
+        ],
     }
 
     # Category to channel name mapping
+    # Session 936: Added channels for new spider categories
     CATEGORY_CHANNELS = {
         'finance': 'Finance & Markets Daily',
         'legal': 'Legal Developments Weekly',
@@ -82,17 +121,32 @@ Categories you manage:
         'science': 'Science & Research Roundup',
         'jobs': 'Job Market & Career Trends',
         'tech': 'Daily AI News',  # Existing channel
+        'news': 'Breaking News Digest',
+        'lifestyle': 'Lifestyle & Wellness',
+        'social': 'Social Media Trends',
+        'education': 'Education & Learning',
+        'security': 'Security Updates',
+        'health': 'Health Tech News',
+        'weather': 'Weather & Climate',
     }
 
     # Minimum content frequency per category (in days)
+    # Session 936: Added frequencies for new spider categories
     CATEGORY_FREQUENCY = {
-        'finance': 1,      # daily
-        'legal': 7,        # weekly
-        'sports': 1,       # daily
-        'entertainment': 7, # weekly
-        'science': 7,      # weekly
-        'jobs': 7,         # weekly
-        'tech': 1,         # daily
+        'finance': 1,       # daily
+        'legal': 7,         # weekly
+        'sports': 1,        # daily
+        'entertainment': 7,  # weekly
+        'science': 7,       # weekly
+        'jobs': 7,          # weekly
+        'tech': 1,          # daily
+        'news': 1,          # daily
+        'lifestyle': 7,     # weekly
+        'social': 3,        # every 3 days
+        'education': 7,     # weekly
+        'security': 3,      # every 3 days
+        'health': 7,        # weekly
+        'weather': 1,       # daily
     }
 
     def __init__(self, user=None):
