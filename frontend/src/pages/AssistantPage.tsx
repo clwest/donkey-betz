@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { assistantApi, userLearningApi, bodyApi, humanApi, type ToolRun } from '@/lib/api'
+import { assistantApi, userLearningApi, legacyLearningApi, bodyApi, humanApi, type ToolRun } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw,
@@ -11,6 +11,9 @@ import {
   Volume2, VolumeX, Settings, Wrench, Timer, Hash
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+// Session 935: User Learning Components
+import { GoalProgressDashboard } from '@/components/GoalProgressDashboard'
+import { LearningInsightsPanel } from '@/components/LearningInsightsPanel'
 
 // Session 894: Voice Mode Settings
 interface VoiceSettings {
@@ -226,28 +229,28 @@ export default function AssistantPage() {
   // User Learning Queries
   const { data: preferencesData } = useQuery({
     queryKey: ['user-preferences'],
-    queryFn: () => userLearningApi.getAllPreferences(),
+    queryFn: () => legacyLearningApi.getAllPreferences(),
     enabled: isAuthenticated && sidebarTab === 'learning',
     retry: false,
   })
 
   const { data: styleEvolutionData } = useQuery({
     queryKey: ['style-evolution'],
-    queryFn: () => userLearningApi.getStyleEvolution(),
+    queryFn: () => legacyLearningApi.getStyleEvolution(),
     enabled: isAuthenticated && sidebarTab === 'learning',
     retry: false,
   })
 
   const { data: insightsData } = useQuery({
     queryKey: ['learning-insights'],
-    queryFn: () => userLearningApi.getInsights(),
+    queryFn: () => legacyLearningApi.getInsights(),
     enabled: isAuthenticated && sidebarTab === 'learning',
     retry: false,
   })
 
   const { data: velocityData } = useQuery({
     queryKey: ['learning-velocity'],
-    queryFn: () => userLearningApi.getVelocity(),
+    queryFn: () => legacyLearningApi.getVelocity(),
     enabled: isAuthenticated && sidebarTab === 'learning',
     retry: false,
   })
@@ -270,7 +273,7 @@ export default function AssistantPage() {
 
   // Generate insights mutation
   const generateInsightsMutation = useMutation({
-    mutationFn: () => userLearningApi.generateInsights(),
+    mutationFn: () => legacyLearningApi.generateInsights(),
     onSuccess: () => {
       setActionResult({ type: 'success', message: 'New insights generated!' })
       queryClient.invalidateQueries({ queryKey: ['learning-insights'] })
@@ -435,10 +438,36 @@ export default function AssistantPage() {
     return () => audio.removeEventListener('ended', handleEnded)
   }, [])
 
-  // Feedback mutation
+  // Feedback mutation - records to both conversation and user learning system
   const feedbackMutation = useMutation({
-    mutationFn: ({ messageId, rating }: { messageId: string; rating: 'positive' | 'negative' }) =>
-      assistantApi.feedback(messageId, rating),
+    mutationFn: async ({ messageId, rating }: { messageId: string; rating: 'positive' | 'negative' }) => {
+      // Find the message to get agent info
+      const message = messages.find(m => m.id === messageId)
+
+      // Record conversation-level feedback
+      await assistantApi.feedback(messageId, rating)
+
+      // Session 935: Also record to user learning system if we have agent info
+      if (message?.routed_to) {
+        try {
+          await userLearningApi.recordFeedback({
+            agent_name: message.routed_to,
+            rating: rating === 'positive' ? 1 : -1,
+            execution_id: message.trace_id,
+            task_description: message.intent || undefined,
+            context_snapshot: {
+              tools_used: message.tools_used,
+              latency_ms: message.latency_ms,
+            },
+          })
+        } catch (err) {
+          // Don't fail the whole operation if learning feedback fails
+          console.warn('Failed to record user learning feedback:', err)
+        }
+      }
+
+      return { messageId, rating }
+    },
     onSuccess: (_, variables) => {
       setMessages((prev) =>
         prev.map((msg) =>
@@ -1314,7 +1343,17 @@ export default function AssistantPage() {
               </>
             ) : (
               <>
-                {/* Learning Velocity */}
+                {/* Session 935: Goals Progress Dashboard */}
+                <div className="card">
+                  <GoalProgressDashboard compact maxItems={3} />
+                </div>
+
+                {/* Session 935: Learning Insights Panel */}
+                <div className="card">
+                  <LearningInsightsPanel compact />
+                </div>
+
+                {/* Legacy: Learning Velocity (kept for additional context) */}
                 <div className="card">
                   <div className="flex items-center gap-2 mb-3">
                     <TrendingUp size={18} className="text-accent-green" />
@@ -1338,72 +1377,12 @@ export default function AssistantPage() {
                   </div>
                 </div>
 
-                {/* Your Preferences */}
-                <div className="card">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Palette size={18} className="text-primary-400" />
-                    <h3 className="font-semibold">Your Preferences</h3>
-                  </div>
-                  {Array.isArray(userPreferences) && userPreferences.length > 0 ? (
-                    <div className="space-y-2">
-                      {userPreferences.slice(0, 5).map((pref, idx) => (
-                        <div
-                          key={pref.id || idx}
-                          className="p-2 rounded-lg bg-dark-bg"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-primary-400">{pref.category}</span>
-                            <span className="text-xs text-gray-500">{Math.round(pref.confidence * 100)}%</span>
-                          </div>
-                          <p className="text-sm mt-1">{pref.preference}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-400 text-center py-4">
-                      As you use the assistant, your preferences will be learned automatically.
-                    </p>
-                  )}
-                </div>
-
-                {/* Style Evolution */}
-                <div className="card">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Settings2 size={18} className="text-accent-amber" />
-                    <h3 className="font-semibold">Style Evolution</h3>
-                  </div>
-                  {Array.isArray(styleEvolution) && styleEvolution.length > 0 ? (
-                    <div className="space-y-2">
-                      {styleEvolution.slice(0, 4).map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 p-2 rounded-lg bg-dark-bg"
-                        >
-                          <span className={cn(
-                            'h-2 w-2 rounded-full flex-shrink-0',
-                            item.change === 'added' ? 'bg-accent-green' :
-                            item.change === 'strengthened' ? 'bg-accent-cyan' : 'bg-accent-amber'
-                          )} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm truncate">{item.style}</p>
-                            <p className="text-xs text-gray-500">{item.date}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-400 text-center py-4">
-                      Your style preferences will evolve over time.
-                    </p>
-                  )}
-                </div>
-
-                {/* Insights */}
+                {/* Legacy: Insights with Generate button */}
                 <div className="card">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Lightbulb size={18} className="text-accent-cyan" />
-                      <h3 className="font-semibold">Insights</h3>
+                      <h3 className="font-semibold">Quick Insights</h3>
                     </div>
                     <button
                       onClick={() => generateInsightsMutation.mutate()}

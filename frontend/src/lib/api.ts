@@ -735,6 +735,72 @@ export const learningApi = {
   insights: (limit = 20) => api.get('/learning/insights/', { params: { limit } }),
 }
 
+// Session 935: User Learning System API (Session 930 backend)
+export interface FeedbackRequest {
+  agent_id?: string      // Either agent_id or agent_name required
+  agent_name?: string    // Alternative to agent_id (looked up server-side)
+  rating: 1 | 0 | -1     // 1=helpful, 0=neutral, -1=not helpful
+  execution_id?: string
+  deliverable_id?: string
+  feedback_text?: string
+  task_description?: string
+  context_snapshot?: Record<string, unknown>
+}
+
+export interface GoalProgressRequest {
+  progress_delta: number
+  milestone?: string
+  notes?: string
+}
+
+export interface SkillDemonstrationRequest {
+  skill_name: string
+  category?: 'technical' | 'creative' | 'analytical' | 'communication' | 'leadership' | 'domain'
+  quality_score?: number
+  context?: string
+  deliverable_id?: string
+}
+
+export const userLearningApi = {
+  // Feedback
+  recordFeedback: (data: FeedbackRequest) =>
+    api.post('/user-learning/feedback/', data),
+  getAgentEffectiveness: (agentId: string) =>
+    api.get(`/user-learning/effectiveness/${agentId}/`),
+  getAgentSummary: () =>
+    api.get('/user-learning/agent-summary/'),
+
+  // Profile
+  getProfileCompleteness: () =>
+    api.get('/user-learning/profile-completeness/'),
+  getNextProfileQuestion: (context?: string) =>
+    api.get('/user-learning/profile-next-question/', { params: context ? { context } : {} }),
+  recordProfileResponse: (fieldName: string, value: string, completed = true) =>
+    api.post('/user-learning/profile-response/', { field_name: fieldName, value, completed }),
+
+  // Goals
+  getGoalsDashboard: () =>
+    api.get('/user-learning/goals/'),
+  getGoalDetail: (goalId: string) =>
+    api.get(`/user-learning/goals/${goalId}/`),
+  recordGoalProgress: (goalId: string, data: GoalProgressRequest) =>
+    api.post(`/user-learning/goals/${goalId}/progress/`, data),
+
+  // Skills
+  getSkillsSummary: () =>
+    api.get('/user-learning/skills/'),
+  getSkillGrowthChart: (months = 6) =>
+    api.get('/user-learning/skills/growth/', { params: { months } }),
+  recordSkillDemonstration: (data: SkillDemonstrationRequest) =>
+    api.post('/user-learning/skills/demonstrate/', data),
+  getSkillRecommendations: () =>
+    api.get('/user-learning/skills/recommendations/'),
+
+  // Combined summary
+  getSummary: () =>
+    api.get('/user-learning/summary/'),
+}
+
 // Session 745: Research API for network graph
 export const researchApi = {
   networkGraph: () => api.get('/v1/research/network-graph/'),
@@ -993,7 +1059,8 @@ export const bettingApi = {
   cancelWager: (wagerId: string) => api.post(`/v1/betting/wagers/${wagerId}/cancel/`),
 }
 
-export const userLearningApi = {
+// Legacy learning API (older endpoints - kept for backwards compatibility)
+export const legacyLearningApi = {
   // Dashboard & Profile
   dashboard: () => api.get('/learning/dashboard/'),
   profile: () => api.get('/learning/profile/'),
