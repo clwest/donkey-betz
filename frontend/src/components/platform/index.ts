@@ -27,3 +27,5 @@ export { ConversationDetailModal } from './ConversationDetailModal'
 export { DreamDetailModal } from './DreamDetailModal'
 // Session 843: Decision Detail Modal for inline viewing
 export { DecisionDetailModal } from './DecisionDetailModal'
+// Session 933: Unified Attention Widget
+export { AttentionWidget, AttentionBadge } from './AttentionWidget'

@@ -904,6 +904,22 @@ export const assistantApi = {
   getAttentionItems: () => api.get('/assistant/attention-items/'),
   getTaskProgress: () => api.get('/assistant/task-progress/'),
 
+  // Session 933: Unified Attention Aggregator - combines system health + user notifications
+  getUnifiedAttention: (params?: {
+    include_system?: boolean
+    include_human?: boolean
+    urgency?: string[]
+    limit?: number
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.include_system !== undefined) searchParams.set('include_system', String(params.include_system))
+    if (params?.include_human !== undefined) searchParams.set('include_human', String(params.include_human))
+    if (params?.urgency) params.urgency.forEach(u => searchParams.append('urgency', u))
+    if (params?.limit) searchParams.set('limit', params.limit.toString())
+    return api.get(`/assistant/attention/unified/?${searchParams.toString()}`)
+  },
+  getAttentionStats: () => api.get('/assistant/attention/stats/'),
+
   // Feedback & Reset
   feedback: (messageId: string, rating: 'positive' | 'negative', comment?: string) =>
     api.post('/assistant/feedback/', { message_id: messageId, rating, comment }),
