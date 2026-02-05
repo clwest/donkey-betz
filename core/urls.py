@@ -62,6 +62,24 @@ from core.views_ats_optimization import (
     ATSConversionStatsView,
 )
 
+# Session 930: User Learning System API
+from core.views_user_learning_api import (
+    record_agent_feedback,
+    get_agent_effectiveness,
+    get_user_agent_summary,
+    get_profile_completeness,
+    get_next_profile_question,
+    record_profile_response,
+    get_goals_dashboard,
+    get_goal_detail,
+    record_goal_progress,
+    get_skills_summary,
+    get_skill_growth_chart,
+    record_skill_demonstration,
+    get_skill_recommendations,
+    get_user_learning_summary,
+)
+
 # Session 237: Redirect handler for legacy broken URLs
 def legacy_portfolio_image_redirect(request, path):
     """
@@ -1518,6 +1536,27 @@ urlpatterns = [
     path('api/ats/templates/', ATSTemplatesView.as_view(), name='ats-templates'),
     path('api/ats/generate-summary/', ATSGenerateSummaryView.as_view(), name='ats-generate-summary'),
     path('api/ats/stats/', ATSConversionStatsView.as_view(), name='ats-stats'),
+
+    # Session 930: User Learning System API
+    # Agent Feedback
+    path('api/user-learning/feedback/', record_agent_feedback, name='user-learning-feedback'),
+    path('api/user-learning/effectiveness/<uuid:agent_id>/', get_agent_effectiveness, name='user-learning-effectiveness'),
+    path('api/user-learning/agent-summary/', get_user_agent_summary, name='user-learning-agent-summary'),
+    # Profile Completeness
+    path('api/user-learning/profile-completeness/', get_profile_completeness, name='user-learning-profile-completeness'),
+    path('api/user-learning/profile-next-question/', get_next_profile_question, name='user-learning-profile-question'),
+    path('api/user-learning/profile-response/', record_profile_response, name='user-learning-profile-response'),
+    # Goal Tracking
+    path('api/user-learning/goals/', get_goals_dashboard, name='user-learning-goals'),
+    path('api/user-learning/goals/<uuid:goal_id>/', get_goal_detail, name='user-learning-goal-detail'),
+    path('api/user-learning/goals/<uuid:goal_id>/progress/', record_goal_progress, name='user-learning-goal-progress'),
+    # Skill Evolution
+    path('api/user-learning/skills/', get_skills_summary, name='user-learning-skills'),
+    path('api/user-learning/skills/growth/', get_skill_growth_chart, name='user-learning-skills-growth'),
+    path('api/user-learning/skills/demonstrate/', record_skill_demonstration, name='user-learning-skill-demonstrate'),
+    path('api/user-learning/skills/recommendations/', get_skill_recommendations, name='user-learning-skill-recommendations'),
+    # Combined Summary
+    path('api/user-learning/summary/', get_user_learning_summary, name='user-learning-summary'),
 
     # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
     path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),
