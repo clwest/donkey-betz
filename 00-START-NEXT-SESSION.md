@@ -1,47 +1,42 @@
 # Session 930 - Start Here
 
-**Previous Session:** 928 (Initiative Conversations + Blocker Analysis)
+**Previous Session:** 928 (Initiative Conversations + Modal Updates)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **PIPELINE: READY FOR STAGE 2+** | **Stage 1: 95% (358/373)** | **Universal Agent Voice: ACTIVE** | **Blocker Analysis: VISIBLE** | **Initiative Conversations: ACTIVE**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **PIPELINE: READY FOR STAGE 2+** | **Stage 1: 95% (358/373)** | **Universal Agent Voice: ACTIVE** | **Blocker Analysis: VISIBLE** | **Initiative Conversations: DEPLOYED**
 
 ---
 
-## Session 928 Summary: Initiative Conversations + Blocker Analysis
+## Session 928 Summary: Initiative Conversations + Modal Updates
 
 ### Key Achievements
 
-#### 1. Initiative Conversations Feature (NEW)
-Users can now **discuss any initiative with agents** via the "Discuss with Agents" button:
+#### 1. Initiative Conversations Feature
+- **"Discuss with Agents" button** in Initiative modal
 - Creates HiveMindSession linked to initiative via FK
-- Injects full initiative context (origin, stages, action items, signals)
+- Injects full context (origin, stages, action items, signals)
 - Auto-selects relevant agents via AgentRouter
-- Redirects to HiveMind conversation page
+- **Endpoint:** `POST /api/initiatives/<uuid>/start-conversation/`
 
-**Endpoint:** `POST /api/initiatives/<uuid>/start-conversation/`
+#### 2. HiveMind Modal Updates
+- Sessions show linked initiative with Target icon
+- Clickable link navigates back to initiative
+- Status badge shows initiative state
 
-#### 2. Fixed Founder Intent Blocker
-- Updated 50 initiatives with `founder_intent_set = True`
-- These had Stage 1 APPROVED but were blocked from Stage 2+
-
-#### 3. Reset Stub Documents
-- Discovered 287 Stage 1 documents were stubs (~260 chars)
-- Reset 286 stub stages to PENDING for regeneration
-
-#### 4. Blocker Analysis UI
+#### 3. Production Fixes Applied
+- Fixed `founder_intent_set` for 50 initiatives (enables Stage 2+)
+- Reset 286 stub documents to PENDING for regeneration
 - Wired diagnose-stuck endpoint to Health tab
-- Shows blocking reasons with visual breakdown
 
-### Files Changed
-- `core/models_unified_system.py` - Added initiative FK to HiveMindSession
-- `core/migrations/0227_session_928_hivemind_initiative_fk.py` - New migration
-- `core/views_initiative_kickstart.py` - Added `start_initiative_conversation()` endpoint
-- `core/urls.py` - Added route
-- `frontend/src/lib/api.ts` - Added `startConversation()`, `pipelineHealth()`, `diagnoseStuck()`
-- `frontend/src/pages/workspace/tabs/InitiativesTab.tsx` - Added button + blocker analysis
-
-### PRs
+### PRs Merged
 - #828: Blocker Analysis UI
-- #830: Initiative Conversations + 401 fixes
+- #830: 401 fixes + API methods
+- #831: Initiative Conversations feature
+- #832: HiveMind modal initiative display
+
+### Migration Applied
+```
+Applying core.0227_session_928_hivemind_initiative_fk... OK
+```
 
 ### Handoff
 `docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md`
@@ -56,26 +51,14 @@ Users can now **discuss any initiative with agents** via the "Discuss with Agent
 | Stage 1 Coverage | **95%** (358/373) |
 | Founder Intent Fixed | **50** (now True) |
 | Stub Documents Reset | **286** (will regenerate) |
-| Initiative Conversations | **ACTIVE** |
-| Stuck execution cleanup | **Automated** (every 30 min) |
+| Initiative Conversations | **DEPLOYED** |
+| HiveMind Initiative Link | **DEPLOYED** |
 
 ---
 
 ## PRIORITY for Session 930
 
-### 1. Deploy Session 928 Changes
-```bash
-# 1. Run migration on production
-railway run python manage.py migrate core 0227
-
-# 2. Verify endpoint works
-railway run python manage.py shell -c "
-from core.models_unified_system import HiveMindSession
-print(f'HiveMindSession has initiative field: {hasattr(HiveMindSession, \"initiative\")}')
-"
-```
-
-### 2. Regenerate Stub Documents
+### 1. Regenerate Stub Documents
 The 286 stub stages are now PENDING - trigger regeneration:
 ```bash
 railway run python manage.py shell -c "
@@ -95,7 +78,7 @@ print()
 "
 ```
 
-### 3. Start Stage 2 Generation
+### 2. Start Stage 2 Generation
 After Stage 1 regeneration:
 ```bash
 railway run python manage.py shell -c "
@@ -116,11 +99,11 @@ print()
 "
 ```
 
-### 4. Monitor Initiative Conversations
-Test the new feature:
+### 3. Test Initiative Conversations
 1. Open any initiative modal
 2. Click "Discuss with Agents"
-3. Verify conversation creates with context
+3. Verify conversation creates with full context
+4. Check HiveMind session shows initiative link
 
 ---
 
@@ -128,13 +111,11 @@ Test the new feature:
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **928** | Initiative Conversations + Blocker Analysis + Founder Intent Fix | `docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md` |
+| **928** | Initiative Conversations + Modal Updates | `docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md` |
 | **927** | Universal Agent Voice System | `docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
 | **926** | Stage 1 Backfill Push (62% → 95%) | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
 | 925 | Auto-Cleanup Stuck Executions + HiveMind Enhancement | `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` |
 | 924 | UI Enhancements + Pipeline Fixes | `docs/handoffs/SESSION_924_UI_ENHANCEMENTS.md` |
-| 923 | ResearchAgent Failure Investigation | `docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md` |
-| 922 | Stage Generation Bug Fix + Backfill | `docs/handoffs/SESSION_922_STAGE_GEN_FIX.md` |
 
 ---
 
@@ -142,11 +123,11 @@ Test the new feature:
 
 | Document | Purpose |
 |----------|---------|
-| `docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md` | Initiative Conversations feature |
+| `docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md` | Initiative Conversations + Modal Updates |
 | `docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md` | Voice System implementation |
 | `docs/DREAM_INITIATIVE_WORKFLOW.md` | Complete pipeline documentation |
 | `CLAUDE.md` | AI session entry point |
 
 ---
 
-**Session 928 Complete - Initiative Conversations feature allows users to discuss any initiative with relevant agents. Main blockers fixed: founder_intent and stub documents.**
+**Session 928 Complete - Initiative Conversations deployed with bidirectional navigation between initiatives and HiveMind sessions.**
