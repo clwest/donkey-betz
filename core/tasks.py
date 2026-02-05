@@ -469,6 +469,180 @@ def auto_approve_boardroom_items():
 
 
 @shared_task
+def auto_process_extracted_artifacts(
+    stale_days: int = 14,
+    archive_days: int = 30,
+    batch_size: int = 1000
+):
+    """
+    Session 943: Auto-process ExtractedArtifacts to prevent backlog accumulation.
+
+    Processes 42K+ pending artifacts based on type, age, and score:
+
+    AUTO-APPROVE (informational, low-risk):
+    - insight with score < 0.5 (just observations)
+    - question older than 14 days (stale questions)
+
+    AUTO-REJECT (stale, low-value):
+    - Any artifact older than 30 days with score < 0.4
+    - Duplicate titles within same type (keep highest score)
+
+    AUTO-DEFER (needs context):
+    - data_spec with confidence < 0.3 (unclear specs)
+
+    KEEP PENDING (needs human review):
+    - risk with score >= 0.7 (important risks)
+    - proposal with score >= 0.6 (significant proposals)
+    - action_item with urgency >= 0.7 (urgent actions)
+
+    Args:
+        stale_days: Days after which questions become stale (default: 14)
+        archive_days: Days after which low-score items get rejected (default: 30)
+        batch_size: Max items to process per run (default: 1000)
+
+    Returns:
+        Dict with processing statistics
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db.models import Count
+    from core.models_conversation_artifacts import ExtractedArtifact
+
+    logger.info("🔄 [ARTIFACT-AUTO-PROCESS] Starting auto-processing...")
+
+    try:
+        now = timezone.now()
+        stale_cutoff = now - timedelta(days=stale_days)
+        archive_cutoff = now - timedelta(days=archive_days)
+
+        stats = {
+            'insights_approved': 0,
+            'questions_rejected': 0,
+            'stale_rejected': 0,
+            'duplicates_rejected': 0,
+            'specs_deferred': 0,
+            'total_processed': 0,
+            'still_pending': 0,
+        }
+
+        # =====================================================================
+        # 1. AUTO-APPROVE: Low-score insights (informational only)
+        # =====================================================================
+        insights = ExtractedArtifact.objects.filter(
+            status='pending',
+            artifact_type='insight',
+            composite_score__lt=0.5
+        )[:batch_size]
+
+        for artifact in insights:
+            artifact.status = 'approved'
+            artifact.decided_at = now
+            artifact.decision_notes = 'Auto-approved: Low-score insight (informational)'
+            artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+            stats['insights_approved'] += 1
+            stats['total_processed'] += 1
+
+        # =====================================================================
+        # 2. AUTO-REJECT: Stale questions (older than stale_days)
+        # =====================================================================
+        stale_questions = ExtractedArtifact.objects.filter(
+            status='pending',
+            artifact_type='question',
+            extracted_at__lt=stale_cutoff
+        )[:batch_size]
+
+        for artifact in stale_questions:
+            artifact.status = 'rejected'
+            artifact.decided_at = now
+            artifact.decision_notes = f'Auto-rejected: Stale question (>{stale_days} days old)'
+            artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+            stats['questions_rejected'] += 1
+            stats['total_processed'] += 1
+
+        # =====================================================================
+        # 3. AUTO-REJECT: Old low-score artifacts (older than archive_days, score < 0.4)
+        # =====================================================================
+        stale_low_score = ExtractedArtifact.objects.filter(
+            status='pending',
+            extracted_at__lt=archive_cutoff,
+            composite_score__lt=0.4
+        )[:batch_size]
+
+        for artifact in stale_low_score:
+            artifact.status = 'rejected'
+            artifact.decided_at = now
+            artifact.decision_notes = f'Auto-rejected: Stale and low-priority (>{archive_days} days, score<0.4)'
+            artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+            stats['stale_rejected'] += 1
+            stats['total_processed'] += 1
+
+        # =====================================================================
+        # 4. AUTO-REJECT: Duplicate titles (keep highest score)
+        # =====================================================================
+        # Find duplicate titles within each artifact type
+        duplicates = (
+            ExtractedArtifact.objects
+            .filter(status='pending')
+            .values('artifact_type', 'title')
+            .annotate(count=Count('id'))
+            .filter(count__gt=1)
+        )[:100]  # Limit duplicate groups to check
+
+        for dup in duplicates:
+            # Get all artifacts with this title/type, ordered by score desc
+            matching = ExtractedArtifact.objects.filter(
+                status='pending',
+                artifact_type=dup['artifact_type'],
+                title=dup['title']
+            ).order_by('-composite_score')
+
+            # Keep the first (highest score), reject the rest
+            for artifact in matching[1:]:
+                artifact.status = 'rejected'
+                artifact.decided_at = now
+                artifact.decision_notes = 'Auto-rejected: Duplicate (lower score copy)'
+                artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+                stats['duplicates_rejected'] += 1
+                stats['total_processed'] += 1
+
+        # =====================================================================
+        # 5. AUTO-DEFER: Low-confidence data specs
+        # =====================================================================
+        unclear_specs = ExtractedArtifact.objects.filter(
+            status='pending',
+            artifact_type='data_spec',
+            confidence_score__lt=0.3
+        )[:batch_size]
+
+        for artifact in unclear_specs:
+            artifact.status = 'deferred'
+            artifact.decided_at = now
+            artifact.decision_notes = 'Auto-deferred: Low-confidence spec needs clarification'
+            artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
+            stats['specs_deferred'] += 1
+            stats['total_processed'] += 1
+
+        # =====================================================================
+        # 6. Count remaining pending
+        # =====================================================================
+        stats['still_pending'] = ExtractedArtifact.objects.filter(status='pending').count()
+
+        logger.info(
+            f"🔄 [ARTIFACT-AUTO-PROCESS] Complete - processed {stats['total_processed']} items: "
+            f"approved={stats['insights_approved']}, "
+            f"rejected={stats['questions_rejected'] + stats['stale_rejected'] + stats['duplicates_rejected']}, "
+            f"deferred={stats['specs_deferred']}, "
+            f"still_pending={stats['still_pending']}"
+        )
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"🔄 [ARTIFACT-AUTO-PROCESS] Failed: {e}", exc_info=True)
+        raise
+
+
+@shared_task
 def cleanup_halted_experiments(days_old: int = 7):
     """
     Session 942: Delete old halted experiments to prevent cluttering system reviews.

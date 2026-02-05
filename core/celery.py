@@ -2400,6 +2400,21 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+
+    # Session 943: Auto-process ExtractedArtifacts to prevent 42K+ backlog
+    # Runs every 6 hours to approve/reject/defer artifacts based on type and score
+    'auto-process-extracted-artifacts': {
+        'task': 'core.tasks.auto_process_extracted_artifacts',
+        'schedule': crontab(hour='*/6', minute=15),  # Every 6 hours at :15
+        'kwargs': {
+            'stale_days': 14,      # Questions older than 14 days → rejected
+            'archive_days': 30,    # Low-score items older than 30 days → rejected
+            'batch_size': 2000,    # Process up to 2000 items per run
+        },
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Task routing configuration
