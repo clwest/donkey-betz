@@ -1,17 +1,19 @@
 """
-ElevenLabs TTS Service - Session 872
-====================================
+ElevenLabs TTS Service - Session 872, 926
+==========================================
 
 Centralized service for ElevenLabs text-to-speech operations with:
 - Adaptive timeout based on text length
 - Exponential backoff retry logic for transient failures
 - Unified API key retrieval
 - Voice profile integration
+- Audio caching for cost savings (Session 926)
 
 This service is used by:
 - AudioAgent (core/agents/audio_agent.py)
 - Podcast Audio Service (core/services/podcast_audio_service.py)
 - Voice generation view (core/views_image.py)
+- Universal Listen Button (Session 926)
 """
 
 import logging
@@ -241,3 +243,277 @@ def get_voice_id(voice_name: str, fallback: str = 'Rachel') -> str:
 
     # Return fallback
     return VOICE_IDS.get(fallback, VOICE_IDS['Rachel'])
+
+
+# =============================================================================
+# Session 926: Audio Caching for Universal Listen Button
+# =============================================================================
+
+# Agent category to voice mapping
+AGENT_VOICE_MAP = {
+    # Research & Analysis -> Rachel (clear, authoritative)
+    'research': 'Rachel',
+    'analysis': 'Rachel',
+    'intelligence': 'Rachel',
+
+    # Financial -> Antoni (trustworthy)
+    'financial': 'Antoni',
+    'trading': 'Antoni',
+    'stocks': 'Antoni',
+    'investment': 'Antoni',
+
+    # Content & Creative -> Bella (warm, engaging)
+    'content': 'Bella',
+    'creative': 'Bella',
+    'writing': 'Bella',
+    'marketing': 'Emily',
+    'social': 'Emily',
+
+    # Technical & Development -> Daniel (professional)
+    'technical': 'Daniel',
+    'development': 'Daniel',
+    'code': 'Daniel',
+    'devops': 'Daniel',
+
+    # Executive -> George (deep, authoritative)
+    'executive': 'George',
+    'cto': 'George',
+    'coo': 'George',
+    'strategy': 'Callum',
+
+    # Legal & Compliance -> Charlotte (professional)
+    'legal': 'Charlotte',
+    'compliance': 'Charlotte',
+
+    # Health & Wellness -> Matilda (caring)
+    'health': 'Matilda',
+    'wellness': 'Matilda',
+
+    # Blockchain & Crypto -> Domi (technical)
+    'blockchain': 'Domi',
+    'crypto': 'Domi',
+
+    # Sports -> Sam (energetic)
+    'sports': 'Sam',
+    'betting': 'Sam',
+
+    # Support & Assistant -> Elli (friendly)
+    'support': 'Elli',
+    'assistant': 'Elli',
+}
+
+
+def get_voice_for_agent(agent_name: str, agent_category: str = None) -> str:
+    """
+    Get the appropriate voice for an agent based on name or category.
+
+    Args:
+        agent_name: Name of the agent (e.g., 'ContentWriterAgent')
+        agent_category: Optional category slug (e.g., 'content')
+
+    Returns:
+        Voice name (e.g., 'Rachel')
+    """
+    # First check if agent has a voice_id in the database
+    try:
+        from core.models_unified_system import Agent
+        agent = Agent.objects.filter(name=agent_name).first()
+        if agent and agent.voice_id:
+            # Could be a voice name or voice ID
+            if agent.voice_id in VOICE_IDS:
+                return agent.voice_id
+            # Return as-is if it's already a voice ID
+            return agent.voice_id
+    except Exception as e:
+        logger.warning(f"Could not look up agent voice: {e}")
+
+    # Fall back to category mapping
+    name_lower = agent_name.lower()
+
+    # Check agent name patterns
+    for keyword, voice in AGENT_VOICE_MAP.items():
+        if keyword in name_lower:
+            return voice
+
+    # Check explicit category
+    if agent_category:
+        cat_lower = agent_category.lower()
+        if cat_lower in AGENT_VOICE_MAP:
+            return AGENT_VOICE_MAP[cat_lower]
+
+    # Default to Rachel
+    return 'Rachel'
+
+
+def generate_audio_cached(
+    text: str,
+    voice_id: str = None,
+    voice_name: str = None,
+    agent_name: str = None,
+    stability: float = 0.5,
+    similarity_boost: float = 0.75,
+    model_id: str = "eleven_monolingual_v1",
+) -> Dict[str, Any]:
+    """
+    Generate TTS audio with caching support.
+
+    Checks the AudioCache first. If not cached, generates via ElevenLabs
+    and stores the result for future use.
+
+    Args:
+        text: Text to convert to speech
+        voice_id: Explicit ElevenLabs voice ID (overrides voice_name and agent_name)
+        voice_name: Voice name like 'Rachel' (overrides agent_name)
+        agent_name: Agent name for automatic voice selection
+        stability: Voice stability (0.0-1.0)
+        similarity_boost: Voice similarity boost (0.0-1.0)
+        model_id: ElevenLabs model ID
+
+    Returns:
+        Dict with:
+        - success: bool
+        - audio_url: URL to the cached audio file (if success)
+        - cached: bool - True if served from cache
+        - estimated_cost: float - Cost in USD
+        - duration_estimate: float - Estimated duration in seconds
+        - error: str (if failed)
+    """
+    from decimal import Decimal
+    from django.core.files.base import ContentFile
+
+    # Determine voice to use
+    if voice_id:
+        resolved_voice_id = voice_id
+        resolved_voice_name = next(
+            (name for name, vid in VOICE_IDS.items() if vid == voice_id),
+            None
+        )
+    elif voice_name:
+        resolved_voice_id = get_voice_id(voice_name)
+        resolved_voice_name = voice_name
+    elif agent_name:
+        resolved_voice_name = get_voice_for_agent(agent_name)
+        resolved_voice_id = get_voice_id(resolved_voice_name)
+    else:
+        resolved_voice_name = 'Rachel'
+        resolved_voice_id = VOICE_IDS['Rachel']
+
+    # Check cache first
+    try:
+        from core.models_audio_cache import AudioCache
+
+        cache_entry = AudioCache.get_cached(text, resolved_voice_id)
+        if cache_entry:
+            logger.info(f"🎵 Cache HIT for TTS (voice={resolved_voice_name}, chars={len(text)})")
+            return {
+                'success': True,
+                'audio_url': cache_entry.audio_file.url,
+                'cached': True,
+                'estimated_cost': 0,  # Free from cache
+                'duration_estimate': cache_entry.duration_seconds or (len(text) / 15),  # ~15 chars/sec
+                'voice_name': resolved_voice_name,
+                'voice_id': resolved_voice_id,
+                'text_length': len(text),
+            }
+    except Exception as e:
+        logger.warning(f"Cache lookup failed, generating fresh: {e}")
+
+    logger.info(f"🎵 Cache MISS for TTS (voice={resolved_voice_name}, chars={len(text)})")
+
+    # Generate audio via ElevenLabs
+    result = generate_speech_with_retry(
+        text=text,
+        voice_id=resolved_voice_id,
+        stability=stability,
+        similarity_boost=similarity_boost,
+        model_id=model_id,
+    )
+
+    if not result.get('success'):
+        return {
+            'success': False,
+            'error': result.get('error', 'TTS generation failed'),
+            'cached': False,
+        }
+
+    # Store in cache
+    audio_data = result['audio_data']
+    estimated_cost = (len(text) / 1000) * 0.30  # ~$0.30 per 1000 chars
+    duration_estimate = len(text) / 15  # ~15 chars/sec estimate
+
+    try:
+        from core.models_audio_cache import AudioCache
+        import uuid
+
+        content_hash = AudioCache.compute_hash(text, resolved_voice_id)
+        filename = f"{content_hash[:16]}_{uuid.uuid4().hex[:8]}.mp3"
+
+        cache_entry = AudioCache.objects.create(
+            content_hash=content_hash,
+            audio_file=ContentFile(audio_data, name=filename),
+            text_preview=text[:200],
+            text_length=len(text),
+            voice_id=resolved_voice_id,
+            voice_name=resolved_voice_name or '',
+            file_size_bytes=len(audio_data),
+            duration_seconds=duration_estimate,
+            generation_cost=Decimal(str(estimated_cost)),
+        )
+
+        logger.info(f"✅ Cached TTS audio: {filename} ({len(audio_data)} bytes)")
+
+        return {
+            'success': True,
+            'audio_url': cache_entry.audio_file.url,
+            'cached': False,  # Just generated, not from cache
+            'estimated_cost': estimated_cost,
+            'duration_estimate': duration_estimate,
+            'voice_name': resolved_voice_name,
+            'voice_id': resolved_voice_id,
+            'text_length': len(text),
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to cache audio: {e}")
+        # Return audio data directly if caching fails
+        import base64
+        return {
+            'success': True,
+            'audio_base64': base64.b64encode(audio_data).decode('utf-8'),
+            'cached': False,
+            'estimated_cost': estimated_cost,
+            'duration_estimate': duration_estimate,
+            'voice_name': resolved_voice_name,
+            'voice_id': resolved_voice_id,
+            'text_length': len(text),
+            'cache_error': str(e),
+        }
+
+
+def estimate_tts_cost(text: str) -> Dict[str, Any]:
+    """
+    Estimate the cost and duration for TTS generation.
+
+    Args:
+        text: The text to estimate for
+
+    Returns:
+        Dict with:
+        - text_length: int
+        - estimated_cost: float (USD)
+        - estimated_duration: float (seconds)
+        - word_count: int
+        - needs_confirmation: bool (True if > 2000 chars)
+    """
+    text_length = len(text)
+    word_count = len(text.split())
+    estimated_cost = (text_length / 1000) * 0.30
+    estimated_duration = text_length / 15  # ~15 chars/sec
+
+    return {
+        'text_length': text_length,
+        'word_count': word_count,
+        'estimated_cost': round(estimated_cost, 4),
+        'estimated_duration': round(estimated_duration, 1),
+        'needs_confirmation': text_length > 2000,
+    }

@@ -1,5 +1,6 @@
 // Session 834: Dream Detail Modal
 // View full dream details without leaving Workspace
+// Session 926: Added ListenButton for TTS
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { dreamsApi } from '@/lib/api'
+import { ListenButton } from '@/components/ListenButton'
 
 interface DreamDetailModalProps {
   dreamId: string
@@ -162,10 +164,20 @@ export function DreamDetailModal({ dreamId, onClose }: DreamDetailModalProps) {
 
               {/* Dream Content */}
               <div className="bg-dark-bg rounded-lg p-4">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-2">
-                  <Sparkles size={12} />
-                  Dream Content
-                </h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-2">
+                    <Sparkles size={12} />
+                    Dream Content
+                  </h4>
+                  {dream.content && (
+                    <ListenButton
+                      text={dream.content}
+                      agentName={dream.agent_name}
+                      size="sm"
+                      className="opacity-60 hover:opacity-100"
+                    />
+                  )}
+                </div>
                 <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
                   {dream.content}
                 </p>
