@@ -2206,6 +2206,7 @@ export function InitiativesTab() {
   })
 
   // Session 921: Pipeline health monitoring - real-time progress visibility
+  // Session 928: Fixed to use platformApi for auth
   const {
     data: pipelineHealth,
     isLoading: healthLoading,
@@ -2213,9 +2214,8 @@ export function InitiativesTab() {
   } = useQuery({
     queryKey: ['pipeline-health'],
     queryFn: async () => {
-      const res = await fetch('/api/initiatives/pipeline-health/')
-      if (!res.ok) throw new Error('Failed to fetch pipeline health')
-      return res.json()
+      const res = await platformApi.pipelineHealth()
+      return res.data
     },
     refetchInterval: 15000, // Refresh every 15 seconds for real-time feel
     enabled: activeTab === 'health', // Only fetch when on health tab
@@ -2228,9 +2228,8 @@ export function InitiativesTab() {
   } = useQuery({
     queryKey: ['blocker-analysis'],
     queryFn: async () => {
-      const res = await fetch('/api/initiatives/diagnose-stuck/?limit=100')
-      if (!res.ok) throw new Error('Failed to fetch blocker analysis')
-      return res.json()
+      const res = await platformApi.diagnoseStuck(100)
+      return res.data
     },
     refetchInterval: 60000, // Refresh every minute
     enabled: activeTab === 'health', // Only fetch when on health tab
