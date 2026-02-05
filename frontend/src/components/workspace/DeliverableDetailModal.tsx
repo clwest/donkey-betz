@@ -1,11 +1,13 @@
 /**
  * Session 819: Deliverables Marketplace - Detail Modal
+ * Session 935: Added ListenButton for TTS
  *
  * Full-screen modal showing complete deliverable content with:
  * - Markdown rendering
  * - All metadata displayed
  * - Action buttons (Save, Clone, Export, Templateize)
  * - Code syntax highlighting
+ * - Listen button for TTS audio
  */
 
 import React, { useState } from 'react'
@@ -20,6 +22,7 @@ import { cn } from '@/lib/cn'
 import { Deliverable } from './DeliverableCard'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { ListenButton } from '@/components/ListenButton'
 
 interface DeliverableDetailModalProps {
   deliverable: Deliverable
@@ -263,7 +266,17 @@ export function DeliverableDetailModal({
 
             {/* Main Content */}
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-zinc-400 mb-3">Content</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-zinc-400">Content</h4>
+                {(deliverable.content || deliverable.preview_content) && (
+                  <ListenButton
+                    text={deliverable.content || deliverable.preview_content}
+                    agentName={deliverable.agent_name}
+                    size="sm"
+                    className="text-zinc-400 hover:text-zinc-200"
+                  />
+                )}
+              </div>
               <div className="bg-zinc-800/50 rounded-lg p-4 prose prose-invert prose-sm max-w-none">
                 {deliverable.content_format === 'markdown' ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>

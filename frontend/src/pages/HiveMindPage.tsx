@@ -1,5 +1,6 @@
 /**
  * Session 715: Hive Mind Page
+ * Session 935: Added ListenButton for TTS on agent contributions
  *
  * Multi-agent collaborative sessions where all relevant agents
  * work together on a problem simultaneously.
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
+import { ListenButton } from '@/components/ListenButton'
 
 // ============================================================================
 // Types
@@ -350,6 +352,14 @@ function ContributionCard({ contribution }: { contribution: Contribution }) {
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {contribution.status === 'completed' && contribution.contribution && (
+                <ListenButton
+                  text={contribution.contribution}
+                  agentName={contribution.agent.name}
+                  size="sm"
+                  className="text-gray-400 hover:text-gray-200"
+                />
+              )}
               {contribution.confidence_score > 0 && (
                 <span className="text-xs text-gray-500">
                   {Math.round(contribution.confidence_score * 100)}% confidence

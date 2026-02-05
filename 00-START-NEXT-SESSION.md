@@ -1,95 +1,78 @@
-# Session 933 - Start Here
+# Session 936 - Start Here
 
-**Previous Session:** 932 (REST API Wiring Through UnifiedPA)
+**Previous Session:** 935 (Universal Agent Voice Integration)
 **Date:** February 4, 2026
-**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: REST + WebSocket** | **ToolDispatcher: ACTIVE** | **Attention Aggregator: DEPLOYED** | **18 API Endpoints**
+**Status:** 76 Agents | 77 Spiders | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **ToolDispatcher: ALL TOOLS AUDITED** | **ListenButton: 5 INTEGRATIONS** | **PA Chat UI: ENHANCED** | **20 API Endpoints**
 
 ---
 
-## Session 932 Summary (Just Completed)
+## Session 935 Summary (Just Completed)
 
-### 1. Attention Aggregator - COMPLETE
+### Universal Agent Voice System - Integration Complete
 
-Fixed the 609 vs 17 attention items mismatch.
+Added ListenButton TTS integration to 2 additional frontend components:
 
-**New Endpoints:**
-- `GET /api/assistant/attention/unified/` - Full unified response
-- `GET /api/assistant/attention/stats/` - Stats only (fast)
+| Component | File | Description |
+|-----------|------|-------------|
+| DeliverableDetailModal | `workspace/DeliverableDetailModal.tsx` | Listen to agent-generated content |
+| HiveMindPage | `pages/HiveMindPage.tsx` | Listen to agent contributions |
 
-### 2. REST API Wiring Through UnifiedPA - COMPLETE
+**Full Integration Status:**
+| Location | Status |
+|----------|--------|
+| ConversationDetailModal | ✅ Done (Session 926) |
+| DreamsPanel | ✅ Done (Session 926) |
+| DreamDetailModal | ✅ Done (Session 926) |
+| DeliverableDetailModal | ✅ Done (Session 935) |
+| HiveMindPage | ✅ Done (Session 935) |
 
-REST endpoints now route through the same `UnifiedPAEntrypoint` as WebSocket.
-
-**Changes Made:**
-
-| Change | Description |
-|--------|-------------|
-| `chat_with_assistant` updated | Now routes through UnifiedPA (with legacy fallback) |
-| `unified_pa_chat` endpoint | NEW - Dedicated UnifiedPA endpoint (no fallback) |
-| `unified_pa_context` endpoint | NEW - Get PA context info |
-
-**New REST Endpoints:**
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /api/pa/chat/` | UnifiedPA chat (no legacy fallback) |
-| `GET /api/pa/context/` | Get system context and available tools |
-
-**Response Format (matches WebSocket):**
-```json
-{
-    "success": true,
-    "content": "Response text...",
-    "trace_id": "pa-123-abc",
-    "tool_runs": [{"tool": "...", "ok": true, "latency_ms": 234}],
-    "audio_url": null,
-    "intent": "income_generation",
-    "routed_to": "income_tool",
-    "profile_completeness": 65,
-    "latency_ms": 1500
-}
-```
-
-**Benefits:**
-- Consistent behavior between REST and WebSocket
-- Same trace_id format for debugging
-- Same tool_runs array showing what executed
-- Legacy fallback available via `use_legacy=true` parameter
+**Backend (complete from Session 926):**
+- `voice_id` field on Agent model
+- AudioCache model with caching
+- `/api/tts/generate/` endpoint with ElevenLabs integration
+- `/api/tts/estimate/` endpoint for cost warnings
+- 12 voices mapped to agent categories
 
 ---
 
-## Session 931 Summary
+## Session 934 Summary
 
-### PA Architecture Refactor - COMPLETE
+### Frontend PA Integration - COMPLETE (PR #849)
 
-- **UnifiedPAEntrypoint** - Single front door for all PA requests
-- **ToolDispatcher** - Centralized tool execution, no silent failures
+Updated AssistantPage to use new UnifiedPA endpoint (`/api/pa/chat/`) for enhanced visibility.
+
+**Features:**
+- Tool Runs Display (success/failure icon + execution time)
+- Trace ID display for debugging
+- Intent Badge and Routed To Badge
+- Profile Completeness Card sidebar widget
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
 
-### Option A: Audit "Needs Audit" Tools (HIGH PRIORITY)
-Test and fix the 10 tools marked as needing audit:
-- ML Pipeline: opportunity_manager_tool, task_manager_tool, etc.
-- Intelligence: predictions_tool, gates_tool, pilots_tool, etc.
-
-### Option B: Frontend Attention Widget
-Build React component to display unified attention:
-- Show system vs human attention counts
-- Filter by urgency
-- Click to navigate to attention items
-
-### Option C: Frontend for User Learning
+### Option A: Frontend for User Learning
 Build React components for the learning system APIs:
-- Profile Completeness Widget
-- Feedback Buttons (👍/👎)
+- Feedback Buttons (thumbs up/down) on PA responses
 - Goal Progress Dashboard
+- Learning Insights panel
 
-### Option D: Frontend PA Integration
-Update frontend to use new `/api/pa/chat/` endpoint:
-- Consistent response format
-- Show tool_runs in UI
-- Display trace_id for debugging
+### Option B: Learning Loop Implementation (Backend)
+Define success signals and implement feedback collection:
+- Track tool execution outcomes
+- Weight recent performance
+- Inject learnings into prompts
+
+### Option C: WebSocket PA Integration
+Update WebSocket consumer to match REST response format:
+- Ensure consistent tool_runs format
+- Add trace_id to WebSocket messages
+- Add profile_completeness to real-time updates
+
+### Option D: Voice System Polish
+- ListenAllButton integration (conversations as podcasts)
+- Agent voice assignment management command
+- Voice preview in admin
 
 ---
 
@@ -97,35 +80,42 @@ Update frontend to use new `/api/pa/chat/` endpoint:
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **932** | Attention Aggregator + REST API Wiring | `SESSION_931_PA_REFACTOR.md` (updated) |
+| **935** | Universal Agent Voice Integration | `ListenButton.tsx` integrations |
+| **934** | Frontend PA Integration | `AssistantPage.tsx` |
+| **933** | Tool Audit + Attention Widget | `PERSONAL_ASSISTANT_ARCHITECTURE.md` |
+| **932** | Attention Aggregator + REST API Wiring | `SESSION_931_PA_REFACTOR.md` |
 | **931** | PA Architecture Refactor | `SESSION_931_PA_REFACTOR.md` |
-| **930** | User Context & Learning System | `SESSION_930_USER_CONTEXT_LEARNING.md` |
-| **928** | Initiative Conversations + Modal Updates | `SESSION_928_INITIATIVE_CONVERSATIONS.md` |
-| 927 | Universal Agent Voice System (Plan) | `SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
 
 ---
 
 ## Key Files Reference
 
+### Voice System
+| File | Purpose |
+|------|---------|
+| `core/services/elevenlabs_tts_service.py` | TTS with caching (generate_audio_cached) |
+| `core/models_audio_cache.py` | AudioCache model |
+| `core/views_audio.py` | TTS API endpoints |
+| `frontend/src/components/ListenButton.tsx` | ListenButton + ListenAllButton |
+
 ### PA Architecture
 | File | Purpose |
 |------|---------|
 | `core/services/unified_pa_entrypoint.py` | Single PA entry point |
-| `core/services/tool_dispatcher.py` | Centralized tool execution |
+| `core/services/tool_dispatcher.py` | Centralized tool execution (all 47 tools) |
 | `core/services/attention_aggregator.py` | Unified attention aggregator |
-| `core/consumers_unified_v2.py` | WebSocket consumer |
-| `core/views_personal_assistant.py` | REST endpoints (updated) |
-| `docs/PERSONAL_ASSISTANT_ARCHITECTURE.md` | Full documentation |
+| `core/views_personal_assistant.py` | REST endpoints |
+| `frontend/src/pages/AssistantPage.tsx` | Chat UI with enhanced tool visibility |
 
 ### PA API Endpoints
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/assistant/chat/` | POST | Original chat (now uses UnifiedPA) |
-| `/api/pa/chat/` | POST | Dedicated UnifiedPA chat |
+| `/api/pa/chat/` | POST | UnifiedPA chat (enhanced response) |
 | `/api/pa/context/` | GET | Get PA context and tools |
+| `/api/tts/generate/` | POST | Generate TTS audio (cached) |
+| `/api/tts/estimate/` | POST | Estimate TTS cost/duration |
 | `/api/assistant/attention/unified/` | GET | Unified attention (system + human) |
-| `/api/assistant/attention/stats/` | GET | Attention stats only |
 
 ---
 
-**Session 933 Focus: Choose priority option above and continue building!**
+**Session 936 Focus: Choose priority option above and continue building!**
