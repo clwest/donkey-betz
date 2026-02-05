@@ -6,6 +6,7 @@ import { useWebSocket, useSystemEvents, type WebSocketStatus } from '@/hooks/use
 import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket, DollarSign, ArrowUpRight, GitBranch } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import HeartWidget from '@/components/HeartWidget'
+import { AttentionWidget } from '@/components/platform'
 
 interface StatCardProps {
   title: string
@@ -981,6 +982,9 @@ export default function DashboardPage() {
 
         {/* HEART Service - System Health (Session 702) */}
         <HeartWidget />
+
+        {/* Session 933: Unified Attention Widget */}
+        <AttentionWidget compact />
       </div>
 
       {/* Toast notification */}

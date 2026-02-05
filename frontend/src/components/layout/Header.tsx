@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Bell, Search } from 'lucide-react'
 import { reasoningApi } from '@/lib/api'
+import { AttentionBadge } from '@/components/platform'
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -42,6 +43,9 @@ export default function Header() {
             className="input w-64 pl-10"
           />
         </div>
+
+        {/* Session 933: Unified Attention Badge - shows urgent items count */}
+        <AttentionBadge />
 
         {/* Notifications - Session 745: Real pending actions count */}
         <button className="relative text-gray-400 hover:text-white transition-colors">
