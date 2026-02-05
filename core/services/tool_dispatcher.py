@@ -1150,6 +1150,26 @@ class ToolDispatcher:
                 feedback=feedback,
             )
 
+            # Session 940: Record for learning
+            if user_id:
+                try:
+                    from core.services.boardroom_learning_service import get_boardroom_learning_service
+                    learning_service = get_boardroom_learning_service()
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.get(id=user_id)
+                    learning_service.record_attention_decision(
+                        user=user,
+                        item_id=str(item_id),
+                        decision='approved',
+                        source_agent=item.source_agent or 'Unknown',
+                        item_type=item.item_type or 'unknown',
+                        urgency=item.urgency or 'medium',
+                        via='PA'
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to record learning: {e}")
+
             return {
                 'action': 'approve_attention',
                 'id': str(item_id),
@@ -1175,6 +1195,26 @@ class ToolDispatcher:
                 feedback=feedback,
             )
 
+            # Session 940: Record for learning
+            if user_id:
+                try:
+                    from core.services.boardroom_learning_service import get_boardroom_learning_service
+                    learning_service = get_boardroom_learning_service()
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.get(id=user_id)
+                    learning_service.record_attention_decision(
+                        user=user,
+                        item_id=str(item_id),
+                        decision='ignored',
+                        source_agent=item.source_agent or 'Unknown',
+                        item_type=item.item_type or 'unknown',
+                        urgency=item.urgency or 'medium',
+                        via='PA'
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to record learning: {e}")
+
             return {
                 'action': 'ignore_attention',
                 'id': str(item_id),
@@ -1196,6 +1236,25 @@ class ToolDispatcher:
 
             # Promote to canonical
             decision.promote_to_canonical(promoted_by=promoted_by)
+
+            # Session 940: Record for learning
+            if user_id:
+                try:
+                    from core.services.boardroom_learning_service import get_boardroom_learning_service
+                    learning_service = get_boardroom_learning_service()
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.get(id=user_id)
+                    learning_service.record_decision_action(
+                        user=user,
+                        decision_id=str(decision_id),
+                        action='promoted',
+                        decision_type=decision.decision_type or 'unknown',
+                        impact_area=decision.impact_area or 'unknown',
+                        via='PA'
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to record learning: {e}")
 
             return {
                 'action': 'promote_decision',
@@ -1220,6 +1279,25 @@ class ToolDispatcher:
             # Reject the decision
             decision.status = 'rejected'
             decision.save()
+
+            # Session 940: Record for learning
+            if user_id:
+                try:
+                    from core.services.boardroom_learning_service import get_boardroom_learning_service
+                    learning_service = get_boardroom_learning_service()
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user = User.objects.get(id=user_id)
+                    learning_service.record_decision_action(
+                        user=user,
+                        decision_id=str(decision_id),
+                        action='rejected',
+                        decision_type=decision.decision_type or 'unknown',
+                        impact_area=decision.impact_area or 'unknown',
+                        via='PA'
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to record learning: {e}")
 
             return {
                 'action': 'reject_decision',
