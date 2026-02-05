@@ -19,6 +19,7 @@ export type WorkspaceTab =
   | 'career'  // Session 866: ATS Resume Optimizer
   | 'voices'  // Session 869: Voice Marketplace
   | 'learning'  // Session 870: Learning Journey Dashboard
+  | 'boardroom'  // Session 927: Boardroom Decision Hub
 
 // Sub-tab types for each main tab
 export type InfrastructureSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'

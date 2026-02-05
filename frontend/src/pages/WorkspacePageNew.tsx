@@ -33,6 +33,7 @@ import {
   Briefcase,  // Session 866: Career tab icon
   Mic,  // Session 869: Voice Marketplace tab icon
   GraduationCap,  // Session 870: Learning Journey tab icon
+  Gavel,  // Session 927: Boardroom tab icon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -62,6 +63,7 @@ import {
   CareerTab,  // Session 866: ATS Resume Optimizer
   VoiceMarketplaceTab,  // Session 869: Voice Marketplace
   LearningJourneyTab,  // Session 870: Learning Journey Dashboard
+  BoardroomTab,  // Session 927: Boardroom Decision Hub
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -85,6 +87,7 @@ const tabs = [
   { id: 'career' as WorkspaceTab, label: 'Career', icon: Briefcase },  // Session 866
   { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },  // Session 869
   { id: 'learning' as WorkspaceTab, label: 'Learn', icon: GraduationCap },  // Session 870
+  { id: 'boardroom' as WorkspaceTab, label: 'Boardroom', icon: Gavel },  // Session 927
 ]
 
 // Workspace Selector Modal
@@ -926,6 +929,9 @@ export default function WorkspacePage() {
 
           {/* Session 870: Learning Journey Dashboard */}
           {activeTab === 'learning' && <LearningJourneyTab />}
+
+          {/* Session 927: Boardroom Decision Hub */}
+          {activeTab === 'boardroom' && <BoardroomTab />}
         </>
       )}
 

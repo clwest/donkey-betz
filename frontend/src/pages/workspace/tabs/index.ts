@@ -40,3 +40,6 @@ export { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
 
 // Session 870: Learning Journey Dashboard Tab
 export { LearningJourneyTab } from './LearningJourneyTab'
+
+// Session 927: Boardroom Tab - Decision Hub
+export { BoardroomTab } from './BoardroomTab'
