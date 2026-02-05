@@ -1,42 +1,40 @@
-# Session 942 - Start Here
+# Session 943 - Start Here
 
-**Previous Session:** 941 (Boardroom Auto-Approve Scheduled)
+**Previous Session:** 942 (Halted Experiment Cleanup)
 **Date:** February 5, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: COMPLETE** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: COMPLETE** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED** | **Experiment Cleanup: SCHEDULED**
 
 ---
 
-## Session 941 Summary (Just Completed)
+## Session 942 Summary (Just Completed)
 
-### Boardroom Auto-Approve Automation (PR #871)
+### Integrity Anomaly Investigation
 
-Added scheduled Celery Beat task to automatically process low-risk boardroom items every 6 hours:
+Investigated the "Integrity anomaly detected in output logs" issue affecting 213 experiments:
+
+**Root Cause:** The `_detect_integrity_anomaly()` method halts experiments during:
+- Error spikes (>10 failed AgentExecutions AND >3x baseline)
+- Rating drops (≥1.5 point drop in PipelineStageFeedback)
+
+**Finding:** Session 925 already fixed this issue. Current state:
+- 225 total halted experiments
+- 205 with failure/fail outcome (legitimate)
+- 20 with partial/learn outcome (legitimate)
+- 0 SUCCESS+PASS incorrectly halted (all fixed)
+- No new halts since Feb 4
+
+### Halted Experiment Cleanup Task
+
+Added scheduled task to delete old halted experiments that clutter system reviews:
 
 | Task | Schedule | Purpose |
 |------|----------|---------|
-| `cleanup_boardroom_junk` | Every 6 hours at :15 | Delete spider_action items, [Learned] junk |
-| `auto_approve_boardroom_items` | Every 6 hours at :30 | Auto-approve low-risk items |
+| `cleanup_halted_experiments` | Daily at 3:00 AM | Delete halted experiments older than 7 days with fail/failure outcome |
 
-**Auto-Approves (HumanAttentionItem):**
-- insight items (informational only)
-- review items with non-critical urgency
-
-**Auto-Promotes (AgentDecisionSummary):**
-- experiment decisions
-- pipeline decisions
-
-### Manual Cleanup Run
-Before adding the scheduled task, ran manual cleanup:
-- Deleted 854 junk items (spider_action + [Learned])
-- Downgraded 92 false "critical" items to "medium"
-- Auto-approved 182 low-risk items (65 insights, 70 non-critical reviews, 32 experiments, 15 pipelines)
-- **Reduced boardroom from 756 → 210 items**
-
-### Current Boardroom State
-- **50 attention items** (42 critical reviews, 3 opportunities, 3 opportunity approvals, 2 alerts)
-- **160 draft decisions** (158 product, 2 architecture)
-
-These remaining items are legitimate and need actual human review.
+**Cleanup Criteria:**
+- `is_halted=True` AND older than 7 days
+- `outcome_classification` in ('fail', 'learn') OR `status` in ('failure', 'partial')
+- Preserves experiments still being investigated
 
 ---
 
@@ -72,11 +70,11 @@ Improve ML recommendations for boardroom items:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **942** | Integrity Anomaly Investigation + Halted Experiment Cleanup | #874 |
 | **941** | Boardroom Auto-Approve Scheduled | #871 |
 | **940** | PA Boardroom Complete (Awareness + Tools + Triage + Learning) | #866, #867, #868, #869 |
 | **939** | Boardroom Tab + Cleanup Automation | #862, #863, #864 |
 | **937** | Content Quality Verification + Spider Fixes | #855, #857 |
-| **936** | Dashboard + Voice + Spider Context Fix | #851, #852, #853, #854 |
 
 ---
 
@@ -89,8 +87,15 @@ Improve ML recommendations for boardroom items:
 | `core/services/tool_dispatcher.py` | `_handle_boardroom()` handler |
 | `core/services/unified_pa_entrypoint.py` | Routing + triage mode |
 | `core/services/boardroom_learning_service.py` | Learning service |
-| `core/tasks.py` | `auto_approve_boardroom_items`, `cleanup_boardroom_junk` |
+| `core/tasks.py` | `auto_approve_boardroom_items`, `cleanup_boardroom_junk`, `cleanup_halted_experiments` |
 | `core/settings.py` | Celery Beat schedule |
+
+### Experiment System
+| File | Purpose |
+|------|---------|
+| `core/models_pilot_readiness.py` | Experiment model (is_halted, halt_reason, outcome_classification) |
+| `core/services/experiment_metrics.py` | `_detect_integrity_anomaly()` |
+| `docs/handoffs/SESSION_925_AUTO_CLEANUP.md` | Prior investigation documentation |
 
 ### Boardroom Models
 | File | Model |
@@ -98,11 +103,6 @@ Improve ML recommendations for boardroom items:
 | `core/models_human_interface.py` | HumanAttentionItem |
 | `core/models_unified_system.py` | AgentDecisionSummary, LearningPattern |
 
-### Boardroom UI
-| File | Purpose |
-|------|---------|
-| `frontend/src/pages/workspace/tabs/BoardroomTab.tsx` | Boardroom UI |
-
 ---
 
-**Session 942 Focus: Choose priority option above and continue building!**
+**Session 943 Focus: Choose priority option above and continue building!**

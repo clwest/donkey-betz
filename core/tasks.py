@@ -401,6 +401,89 @@ def auto_approve_boardroom_items():
         raise
 
 
+@shared_task
+def cleanup_halted_experiments(days_old: int = 7):
+    """
+    Session 942: Delete old halted experiments to prevent cluttering system reviews.
+
+    DELETES experiments that are:
+    - is_halted=True AND older than X days
+    - outcome_classification in ('fail', 'learn') OR status in ('failure', 'partial')
+
+    This prevents ThinkingAgent and other system reviews from repeatedly
+    flagging the same old halted experiments.
+
+    Args:
+        days_old: Delete halted experiments older than this many days (default: 7)
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_pilot_readiness import Experiment
+
+    logger.info(f"🧹 [EXPERIMENT-CLEANUP] Starting halted experiment cleanup (>{days_old} days old)...")
+
+    try:
+        cutoff = timezone.now() - timedelta(days=days_old)
+
+        stats = {
+            'failed_deleted': 0,
+            'partial_deleted': 0,
+            'total_deleted': 0,
+        }
+
+        # Find halted experiments older than cutoff with failed outcomes
+        halted_failed = Experiment.objects.filter(
+            is_halted=True,
+            halted_at__lt=cutoff,
+            outcome_classification__in=['fail', 'learn']
+        )
+
+        # Also catch ones with failure/partial status but pending outcome
+        halted_by_status = Experiment.objects.filter(
+            is_halted=True,
+            halted_at__lt=cutoff,
+            status__in=['failure', 'partial']
+        ).exclude(
+            outcome_classification__in=['fail', 'learn']  # Don't double count
+        )
+
+        # Delete failed outcome experiments
+        for exp in halted_failed:
+            exp_name = exp.name[:50] if exp.name else str(exp.id)[:8]
+            logger.debug(f"🗑️ [EXPERIMENT-CLEANUP] Deleting halted experiment: {exp_name} "
+                        f"(outcome: {exp.outcome_classification}, halted: {exp.halted_at})")
+            if exp.outcome_classification == 'fail':
+                stats['failed_deleted'] += 1
+            else:
+                stats['partial_deleted'] += 1
+            exp.delete()
+
+        # Delete by status
+        for exp in halted_by_status:
+            exp_name = exp.name[:50] if exp.name else str(exp.id)[:8]
+            logger.debug(f"🗑️ [EXPERIMENT-CLEANUP] Deleting halted experiment: {exp_name} "
+                        f"(status: {exp.status}, halted: {exp.halted_at})")
+            if exp.status == 'failure':
+                stats['failed_deleted'] += 1
+            else:
+                stats['partial_deleted'] += 1
+            exp.delete()
+
+        stats['total_deleted'] = stats['failed_deleted'] + stats['partial_deleted']
+
+        logger.info(f"🧹 [EXPERIMENT-CLEANUP] Complete - deleted {stats['total_deleted']} experiments "
+                   f"(failed: {stats['failed_deleted']}, partial: {stats['partial_deleted']})")
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"🧹 [EXPERIMENT-CLEANUP] Failed: {e}", exc_info=True)
+        raise
+
+
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
 
 
