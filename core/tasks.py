@@ -175,9 +175,8 @@ def cleanup_junk_initiatives(stale_days: int = 7):
     """
     Session 926: Clean up junk initiatives to prevent pipeline backlogs.
 
-    Archives initiatives that:
-    1. Have junk name patterns ([Learned], incomplete prefixes)
-    2. Are stale (no Stage 1 doc after X days)
+    DELETES initiatives with junk name patterns (cannot be processed).
+    ARCHIVES initiatives that are stale (might be legitimate, just slow).
 
     Args:
         stale_days: Archive initiatives with no Stage 1 doc after this many days
@@ -197,12 +196,11 @@ def cleanup_junk_initiatives(stale_days: int = 7):
         cutoff = now - timedelta(days=stale_days)
 
         stats = {
-            'junk_names_archived': 0,
+            'junk_deleted': 0,
             'stale_archived': 0,
-            'total_archived': 0,
         }
 
-        # 1. Archive junk name patterns
+        # 1. DELETE junk name patterns (these are malformed and can't be processed)
         junk_patterns = Q(name__icontains='[Learned]') | \
                        Q(name__startswith='driven ') | \
                        Q(name__startswith='plan ') | \
@@ -215,12 +213,13 @@ def cleanup_junk_initiatives(stale_days: int = 7):
         ).filter(junk_patterns)
 
         for init in junk_initiatives:
-            init.status = 'ARCHIVED'
-            init.save()
-            stats['junk_names_archived'] += 1
-            logger.info(f"🧹 [INITIATIVE-CLEANUP] Archived junk: {init.name[:50]}")
+            name = init.name[:50]
+            init.delete()
+            stats['junk_deleted'] += 1
+            logger.info(f"🗑️ [INITIATIVE-CLEANUP] Deleted junk: {name}")
 
-        # 2. Archive stale initiatives (no Stage 1 doc after X days)
+        # 2. ARCHIVE stale initiatives (no Stage 1 doc after X days)
+        # These might be legitimate, just slow - archive instead of delete
         stale_initiatives = Initiative.objects.filter(
             status='ACTIVE',
             created_at__lt=cutoff
@@ -235,12 +234,10 @@ def cleanup_junk_initiatives(stale_days: int = 7):
             init.status = 'ARCHIVED'
             init.save()
             stats['stale_archived'] += 1
-            logger.info(f"🧹 [INITIATIVE-CLEANUP] Archived stale: {init.name[:50]}")
+            logger.info(f"📦 [INITIATIVE-CLEANUP] Archived stale: {init.name[:50]}")
 
-        stats['total_archived'] = stats['junk_names_archived'] + stats['stale_archived']
-
-        logger.info(f"🧹 [INITIATIVE-CLEANUP] Complete - archived {stats['total_archived']} "
-                   f"(junk: {stats['junk_names_archived']}, stale: {stats['stale_archived']})")
+        logger.info(f"🧹 [INITIATIVE-CLEANUP] Complete - deleted {stats['junk_deleted']} junk, "
+                   f"archived {stats['stale_archived']} stale")
 
         return stats
 
