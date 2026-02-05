@@ -170,6 +170,85 @@ def cleanup_stale_agent_executions(self, minutes_threshold: int = 30):
         raise
 
 
+@shared_task
+def cleanup_junk_initiatives(stale_days: int = 7):
+    """
+    Session 926: Clean up junk initiatives to prevent pipeline backlogs.
+
+    Archives initiatives that:
+    1. Have junk name patterns ([Learned], incomplete prefixes)
+    2. Are stale (no Stage 1 doc after X days)
+
+    Args:
+        stale_days: Archive initiatives with no Stage 1 doc after this many days
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db.models import Q
+    from core.models_document_registry import Initiative, InitiativeStage
+
+    logger.info(f"🧹 [INITIATIVE-CLEANUP] Starting cleanup...")
+
+    try:
+        now = timezone.now()
+        cutoff = now - timedelta(days=stale_days)
+
+        stats = {
+            'junk_names_archived': 0,
+            'stale_archived': 0,
+            'total_archived': 0,
+        }
+
+        # 1. Archive junk name patterns
+        junk_patterns = Q(name__icontains='[Learned]') | \
+                       Q(name__startswith='driven ') | \
+                       Q(name__startswith='plan ') | \
+                       Q(name__startswith='of-') | \
+                       Q(name__startswith='analysis ') | \
+                       Q(name__regex=r'^[a-z]')  # Starts with lowercase (fragment)
+
+        junk_initiatives = Initiative.objects.filter(
+            status='ACTIVE'
+        ).filter(junk_patterns)
+
+        for init in junk_initiatives:
+            init.status = 'ARCHIVED'
+            init.save()
+            stats['junk_names_archived'] += 1
+            logger.info(f"🧹 [INITIATIVE-CLEANUP] Archived junk: {init.name[:50]}")
+
+        # 2. Archive stale initiatives (no Stage 1 doc after X days)
+        stale_initiatives = Initiative.objects.filter(
+            status='ACTIVE',
+            created_at__lt=cutoff
+        ).exclude(
+            id__in=InitiativeStage.objects.filter(
+                stage=1,
+                document__isnull=False
+            ).values_list('initiative_id', flat=True)
+        )
+
+        for init in stale_initiatives:
+            init.status = 'ARCHIVED'
+            init.save()
+            stats['stale_archived'] += 1
+            logger.info(f"🧹 [INITIATIVE-CLEANUP] Archived stale: {init.name[:50]}")
+
+        stats['total_archived'] = stats['junk_names_archived'] + stats['stale_archived']
+
+        logger.info(f"🧹 [INITIATIVE-CLEANUP] Complete - archived {stats['total_archived']} "
+                   f"(junk: {stats['junk_names_archived']}, stale: {stats['stale_archived']})")
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"🧹 [INITIATIVE-CLEANUP] Failed: {e}", exc_info=True)
+        raise
+
+
 # ==================== SESSION 265 PHASE 6: AUTONOMY ENGINE ====================
 
 

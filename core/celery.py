@@ -2378,6 +2378,17 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+
+    # Session 926: Junk Initiative Cleanup to prevent pipeline backlogs
+    # Archives initiatives with bad names or stale without Stage 1 docs
+    'cleanup-junk-initiatives': {
+        'task': 'core.tasks.cleanup_junk_initiatives',
+        'schedule': crontab(hour=4, minute=0),  # Daily at 4 AM
+        'kwargs': {'stale_days': 7},  # Archive after 7 days with no Stage 1 doc
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Task routing configuration
