@@ -83,6 +83,13 @@ class UnifiedPAEntrypoint:
         self._profile_service = None
         self._knowledge_injector = None
 
+        # Session 940: Triage mode state
+        self._triage_mode = False
+        self._triage_items: List[Dict[str, Any]] = []
+        self._triage_index = 0
+        self._triage_type = None  # 'attention' or 'decisions'
+        self._triage_stats = {'approved': 0, 'ignored': 0, 'skipped': 0, 'promoted': 0, 'rejected': 0}
+
         logger.info(f"UnifiedPA initialized for user {user.username}")
 
     def _generate_trace_id(self) -> str:
@@ -152,6 +159,46 @@ class UnifiedPAEntrypoint:
         logger.info(f"[{trace_id}] Processing message: {message[:100]}...")
 
         try:
+            # Session 940: Check for triage mode first
+            if self._triage_mode:
+                # Handle triage responses
+                content = await self.handle_triage_response(message)
+                latency_ms = int((time.time() - start_time) * 1000)
+                return PAResponse(
+                    content=content,
+                    trace_id=trace_id,
+                    tool_runs=[],
+                    audio_url=None,
+                    intent='triage',
+                    routed_to='boardroom_tool',
+                    profile_completeness=None,
+                    latency_ms=latency_ms,
+                    error=None
+                )
+
+            # Session 940: Check for triage start commands
+            message_lower = message.lower()
+            if 'triage' in message_lower:
+                if 'attention' in message_lower or 'review' in message_lower:
+                    content = await self.start_triage('attention')
+                elif 'decision' in message_lower:
+                    content = await self.start_triage('decisions')
+                else:
+                    content = await self.start_triage('attention')  # Default to attention
+
+                latency_ms = int((time.time() - start_time) * 1000)
+                return PAResponse(
+                    content=content,
+                    trace_id=trace_id,
+                    tool_runs=[],
+                    audio_url=None,
+                    intent='triage',
+                    routed_to='boardroom_tool',
+                    profile_completeness=None,
+                    latency_ms=latency_ms,
+                    error=None
+                )
+
             # 1. Build context
             full_context = await self._build_context(message, context)
 
@@ -686,6 +733,219 @@ Be helpful, conversational, and personalized. Address the user by name."""
     def clear_history(self):
         """Clear conversation history."""
         self._conversation_history = []
+
+    # =========================================================================
+    # Session 940: Triage Mode Methods
+    # =========================================================================
+
+    async def start_triage(self, triage_type: str = 'attention', batch_size: int = 5) -> str:
+        """
+        Start triage mode for boardroom items.
+
+        Args:
+            triage_type: 'attention' or 'decisions'
+            batch_size: Number of items to triage
+
+        Returns:
+            First item to triage or message if no items
+        """
+        # Get items to triage
+        result = await self.tool_dispatcher.execute(
+            tool_name='boardroom_tool',
+            payload={
+                'action': 'get_triage_batch',
+                'triage_type': triage_type,
+                'batch_size': batch_size,
+            },
+            user_id=self.user.id
+        )
+
+        if not result.ok:
+            return f"Failed to start triage: {result.error_message}"
+
+        items = result.result.get('items', [])
+        if not items:
+            return f"No {triage_type} items to triage. Your boardroom is clear!"
+
+        # Set triage state
+        self._triage_mode = True
+        self._triage_items = items
+        self._triage_index = 0
+        self._triage_type = triage_type
+        self._triage_stats = {'approved': 0, 'ignored': 0, 'skipped': 0, 'promoted': 0, 'rejected': 0}
+
+        total = result.result.get('total_remaining', len(items))
+
+        return self._format_triage_item(
+            items[0],
+            1,
+            len(items),
+            total,
+            f"Starting triage of {triage_type} items. I'll walk you through {len(items)} items.\n\n"
+        )
+
+    def _format_triage_item(
+        self,
+        item: Dict[str, Any],
+        current: int,
+        batch_total: int,
+        total_remaining: int,
+        prefix: str = ""
+    ) -> str:
+        """Format a single item for triage display."""
+        if self._triage_type == 'attention':
+            urgency = item.get('urgency', 'unknown')
+            urgency_icon = {'critical': '🔴', 'high': '🟠', 'medium': '🟡'}.get(urgency, '⚪')
+
+            return f"""{prefix}**Item {current}/{batch_total}** ({total_remaining} total remaining)
+
+{urgency_icon} **{item.get('title', 'Untitled')}**
+Type: {item.get('item_type', 'unknown')} | Urgency: {urgency}
+Source: {item.get('source_agent', 'System')}
+
+{item.get('summary', 'No summary available.')[:300]}
+
+**ML Recommendation:** {item.get('ml_recommendation', 'No recommendation')}
+
+Reply: **approve**, **ignore**, **skip**, or **stop**"""
+
+        else:  # decisions
+            return f"""{prefix}**Decision {current}/{batch_total}** ({total_remaining} total remaining)
+
+**{item.get('topic', 'Untitled')}**
+Type: {item.get('decision_type', 'unknown')} | Area: {item.get('impact_area', 'unknown')}
+
+**Recommended Stance:**
+{item.get('recommended_stance', 'No stance provided.')[:300]}
+
+**Key Insights:**
+{chr(10).join(['- ' + str(i) for i in item.get('key_insights', [])[:3]])}
+
+Reply: **promote**, **reject**, **skip**, or **stop**"""
+
+    async def handle_triage_response(self, response: str) -> str:
+        """
+        Handle user's response during triage mode.
+
+        Args:
+            response: User's response (approve/ignore/skip/stop for attention,
+                     promote/reject/skip/stop for decisions)
+
+        Returns:
+            Next item or summary
+        """
+        if not self._triage_mode:
+            return "Not in triage mode. Say 'triage attention' or 'triage decisions' to start."
+
+        response_lower = response.lower().strip()
+        current_item = self._triage_items[self._triage_index]
+        item_id = current_item.get('id')
+
+        # Handle the response
+        action_taken = None
+        if self._triage_type == 'attention':
+            if response_lower in ['approve', 'yes', 'ok', 'y']:
+                result = await self.tool_dispatcher.execute(
+                    tool_name='boardroom_tool',
+                    payload={'action': 'approve_attention', 'id': item_id},
+                    user_id=self.user.id
+                )
+                action_taken = 'approved'
+                self._triage_stats['approved'] += 1
+            elif response_lower in ['ignore', 'no', 'n', 'dismiss']:
+                result = await self.tool_dispatcher.execute(
+                    tool_name='boardroom_tool',
+                    payload={'action': 'ignore_attention', 'id': item_id},
+                    user_id=self.user.id
+                )
+                action_taken = 'ignored'
+                self._triage_stats['ignored'] += 1
+            elif response_lower in ['skip', 's', 'next']:
+                action_taken = 'skipped'
+                self._triage_stats['skipped'] += 1
+            elif response_lower in ['stop', 'done', 'exit', 'quit']:
+                return self._end_triage()
+            else:
+                return f"Please reply with **approve**, **ignore**, **skip**, or **stop**."
+
+        else:  # decisions
+            if response_lower in ['promote', 'yes', 'ok', 'y', 'approve']:
+                result = await self.tool_dispatcher.execute(
+                    tool_name='boardroom_tool',
+                    payload={'action': 'promote_decision', 'id': item_id},
+                    user_id=self.user.id
+                )
+                action_taken = 'promoted'
+                self._triage_stats['promoted'] += 1
+            elif response_lower in ['reject', 'no', 'n', 'dismiss']:
+                result = await self.tool_dispatcher.execute(
+                    tool_name='boardroom_tool',
+                    payload={'action': 'reject_decision', 'id': item_id},
+                    user_id=self.user.id
+                )
+                action_taken = 'rejected'
+                self._triage_stats['rejected'] += 1
+            elif response_lower in ['skip', 's', 'next']:
+                action_taken = 'skipped'
+                self._triage_stats['skipped'] += 1
+            elif response_lower in ['stop', 'done', 'exit', 'quit']:
+                return self._end_triage()
+            else:
+                return f"Please reply with **promote**, **reject**, **skip**, or **stop**."
+
+        # Move to next item
+        self._triage_index += 1
+
+        if self._triage_index >= len(self._triage_items):
+            return self._end_triage(f"✓ {action_taken.title()}!\n\n")
+
+        # Show next item
+        return self._format_triage_item(
+            self._triage_items[self._triage_index],
+            self._triage_index + 1,
+            len(self._triage_items),
+            len(self._triage_items) - self._triage_index,
+            f"✓ {action_taken.title()}!\n\n"
+        )
+
+    def _end_triage(self, prefix: str = "") -> str:
+        """End triage mode and show summary."""
+        stats = self._triage_stats
+        triage_type = self._triage_type
+
+        # Reset state
+        self._triage_mode = False
+        self._triage_items = []
+        self._triage_index = 0
+        self._triage_type = None
+
+        if triage_type == 'attention':
+            summary = f"""{prefix}**Triage Complete!**
+
+| Action | Count |
+|--------|-------|
+| Approved | {stats['approved']} |
+| Ignored | {stats['ignored']} |
+| Skipped | {stats['skipped']} |
+
+Say 'triage attention' to continue with more items, or 'what's in my boardroom' for stats."""
+        else:
+            summary = f"""{prefix}**Triage Complete!**
+
+| Action | Count |
+|--------|-------|
+| Promoted | {stats['promoted']} |
+| Rejected | {stats['rejected']} |
+| Skipped | {stats['skipped']} |
+
+Say 'triage decisions' to continue with more items, or 'what's in my boardroom' for stats."""
+
+        return summary
+
+    @property
+    def is_in_triage_mode(self) -> bool:
+        """Check if currently in triage mode."""
+        return self._triage_mode
 
 
 # Cache for PA instances per user

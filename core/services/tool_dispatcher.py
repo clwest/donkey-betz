@@ -1230,8 +1230,76 @@ class ToolDispatcher:
                 'success': True,
             }
 
+        elif action == 'get_triage_batch':
+            # Session 940: Get items for triage mode
+            from django.db.models import Case, When, IntegerField
+
+            triage_type = payload.get('triage_type', 'attention')
+            batch_size = payload.get('batch_size', 5)
+
+            if triage_type == 'attention':
+                # Prioritize critical/high urgency
+                qs = attention_qs.order_by(
+                    Case(
+                        When(urgency='critical', then=0),
+                        When(urgency='high', then=1),
+                        When(urgency='medium', then=2),
+                        default=3,
+                        output_field=IntegerField()
+                    ),
+                    '-priority_score',
+                    '-created_at'
+                )[:batch_size]
+
+                items = []
+                for item in qs:
+                    items.append({
+                        'id': str(item.id),
+                        'title': item.title,
+                        'summary': item.summary or '',
+                        'urgency': item.urgency,
+                        'item_type': item.item_type,
+                        'source_agent': item.source_agent or 'System',
+                        'ml_recommendation': item.ml_recommendation,
+                        'created_at': item.created_at.isoformat() if item.created_at else None,
+                    })
+
+                return {
+                    'action': 'get_triage_batch',
+                    'triage_type': 'attention',
+                    'count': len(items),
+                    'total_remaining': attention_qs.count(),
+                    'items': items,
+                }
+
+            elif triage_type == 'decisions':
+                qs = decisions_qs.order_by('-created_at')[:batch_size]
+
+                items = []
+                for item in qs:
+                    items.append({
+                        'id': str(item.id),
+                        'topic': item.topic,
+                        'decision_type': item.decision_type,
+                        'impact_area': item.impact_area,
+                        'recommended_stance': item.recommended_stance[:200] if item.recommended_stance else '',
+                        'key_insights': item.key_insights[:3] if item.key_insights else [],
+                        'created_at': item.created_at.isoformat() if item.created_at else None,
+                    })
+
+                return {
+                    'action': 'get_triage_batch',
+                    'triage_type': 'decisions',
+                    'count': len(items),
+                    'total_remaining': decisions_qs.count(),
+                    'items': items,
+                }
+
+            else:
+                raise ValueError(f"Invalid triage_type: {triage_type}. Use 'attention' or 'decisions'")
+
         else:
-            raise ValueError(f"Unknown action: {action}. Valid actions: stats, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision")
+            raise ValueError(f"Unknown action: {action}. Valid actions: stats, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch")
 
 
 # Singleton instance
