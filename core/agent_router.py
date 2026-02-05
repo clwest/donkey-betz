@@ -1553,6 +1553,9 @@ class AgentRouter:
                 memory_context=memory_context
             )
 
+            # Session 930: Enhance context with agent-specific learning
+            user_context = self._apply_agent_learning(agent_name, user_context)
+
             user_context['has_user_context'] = True
 
             logger.debug(
@@ -1655,6 +1658,50 @@ class AgentRouter:
             user_context['research_interests'] = basic.get('research_topics', [])
 
         return user_context
+
+    def _apply_agent_learning(
+        self,
+        agent_name: str,
+        user_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Session 930: Enhance context with agent-specific learning.
+
+        Uses AgentFeedbackService to inject learning metadata based on
+        past feedback for this user+agent combination.
+
+        Args:
+            agent_name: Name of the agent
+            user_context: Base context to enhance
+
+        Returns:
+            Enhanced context with learning metadata
+        """
+        if self.user is None:
+            return user_context
+
+        try:
+            from core.services.agent_feedback_service import get_agent_feedback_service
+            from core.models import Agent
+
+            # Find the agent
+            agent = Agent.objects.filter(name=agent_name).first()
+            if not agent:
+                return user_context
+
+            # Get feedback service and adjust context
+            feedback_service = get_agent_feedback_service()
+            enhanced_context = feedback_service.adjust_context_for_agent(
+                user=self.user,
+                agent=agent,
+                base_context=user_context,
+            )
+
+            return enhanced_context
+
+        except Exception as e:
+            logger.debug(f"Agent learning context failed for {agent_name}: {e}")
+            return user_context
 
     def _record_user_learning(
         self,
