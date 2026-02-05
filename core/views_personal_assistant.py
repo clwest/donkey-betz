@@ -575,3 +575,114 @@ def _get_suggested_action(item):
     else:
         # Default - simple task pattern
         return f"Help me with: {clean_title}"
+
+
+# =============================================================================
+# SESSION 932: UNIFIED ATTENTION AGGREGATOR
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_unified_attention(request):
+    """
+    Session 932: Get unified attention from all sources.
+
+    Combines:
+    - System attention: Platform health metrics (curated, ~17 items)
+    - Human attention: User notifications, decisions, alerts (~600+ items)
+
+    Query params:
+        include_system: bool (default true)
+        include_human: bool (default true)
+        urgency: comma-separated list (critical,high,medium,low)
+        limit: int (default 50)
+        stats_only: bool (default false) - only return counts, not items
+
+    Returns:
+        {
+            "system_attention": {"count": 17, "items": [...], "source": "platform_health"},
+            "human_attention": {"count": 609, "items": [...], "source": "user_notifications"},
+            "combined_urgent": 5,
+            "total_count": 626,
+            "by_urgency": {"critical": 2, "high": 3, "medium": 10, "low": 5}
+        }
+    """
+    try:
+        from core.services.attention_aggregator import get_attention_aggregator
+
+        aggregator = get_attention_aggregator(request.user)
+
+        # Parse query params
+        include_system = request.GET.get('include_system', 'true').lower() == 'true'
+        include_human = request.GET.get('include_human', 'true').lower() == 'true'
+        urgency_param = request.GET.get('urgency', '')
+        limit = int(request.GET.get('limit', 50))
+        stats_only = request.GET.get('stats_only', 'false').lower() == 'true'
+
+        urgency_filter = None
+        if urgency_param:
+            urgency_filter = [u.strip() for u in urgency_param.split(',')]
+
+        # Stats only mode - fast response
+        if stats_only:
+            stats = aggregator.get_stats()
+            return Response({
+                'success': True,
+                **stats
+            })
+
+        # Full response
+        result = aggregator.get_unified_attention(
+            include_system=include_system,
+            include_human=include_human,
+            urgency_filter=urgency_filter,
+            limit_per_source=limit,
+        )
+
+        return Response({
+            'success': True,
+            **result
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting unified attention: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e),
+            'system_attention': None,
+            'human_attention': None,
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_attention_stats(request):
+    """
+    Session 932: Get attention statistics without full items.
+
+    Fast endpoint for dashboard widgets that only need counts.
+
+    Returns:
+        {
+            "human_attention": {"pending": 45, "total": 609, "by_urgency": {...}},
+            "system_attention": {"count": 17, "by_urgency": {...}},
+            "combined": {"pending": 62, "urgent": 5}
+        }
+    """
+    try:
+        from core.services.attention_aggregator import get_attention_aggregator
+
+        aggregator = get_attention_aggregator(request.user)
+        stats = aggregator.get_stats()
+
+        return Response({
+            'success': True,
+            **stats
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting attention stats: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -1053,6 +1053,7 @@ from core.views_personal_assistant import (
     provide_feedback, reset_assistant, voice_to_assistant,
     voice_interview_response, transcribe_only,  # Session 456: Voice interview
     get_attention_items,  # Session 574: Attention items for PA UI
+    get_unified_attention, get_attention_stats,  # Session 932: Unified attention aggregator
 )
 from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
 from core.views_assistant_bypass import assistant_chat_bypass, get_task_progress
@@ -2223,6 +2224,9 @@ urlpatterns = [
     path('api/assistant/feedback/', provide_feedback, name='personal-assistant-feedback'),
     path('api/assistant/reset/', reset_assistant, name='personal-assistant-reset'),
     path('api/assistant/attention-items/', get_attention_items, name='assistant-attention-items'),  # Session 574
+    # Session 932: Unified attention aggregator (combines system + human attention)
+    path('api/assistant/attention/unified/', get_unified_attention, name='assistant-attention-unified'),
+    path('api/assistant/attention/stats/', get_attention_stats, name='assistant-attention-stats'),
 
     # Unified Assistant endpoints (The One True Assistant™)
     path('api/unified/chat/', unified_assistant_chat, name='unified-assistant-chat'),
