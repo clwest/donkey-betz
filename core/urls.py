@@ -805,6 +805,18 @@ from core.views_learning_loop import (
     get_agent_learnings,
 )
 
+# Session 954: Import RAG Observability views
+from core.views_rag_observability import (
+    rag_observability_dashboard,
+    rag_document_inventory,
+    rag_context_budget,
+    rag_risk_boost_stats,
+    rag_critical_docs,
+    rag_risk_distribution,
+    rag_retrieval_channels,
+    rag_run_classification,
+)
+
 # Session 449: Import Pipeline Learning views (Learning Loops for AI Series)
 from core.views_learning import (
     record_feedback as pipeline_record_feedback,
@@ -1836,6 +1848,16 @@ urlpatterns = [
     path('api/learning/loop/track/', track_learning_outcome, name='learning-loop-track'),
     path('api/learning/loop/run/', run_learning_cycle, name='learning-loop-run'),
     path('api/learning/loop/agent/', get_agent_learnings, name='learning-loop-agent'),
+
+    # Session 954: RAG Observability Dashboard APIs
+    path('api/rag/observability/dashboard/', rag_observability_dashboard, name='rag-observability-dashboard'),
+    path('api/rag/observability/inventory/', rag_document_inventory, name='rag-observability-inventory'),
+    path('api/rag/observability/budget/', rag_context_budget, name='rag-observability-budget'),
+    path('api/rag/observability/boost/', rag_risk_boost_stats, name='rag-observability-boost'),
+    path('api/rag/observability/critical-docs/', rag_critical_docs, name='rag-observability-critical-docs'),
+    path('api/rag/observability/risk-distribution/', rag_risk_distribution, name='rag-observability-risk-distribution'),
+    path('api/rag/observability/channels/', rag_retrieval_channels, name='rag-observability-channels'),
+    path('api/rag/observability/classify/', rag_run_classification, name='rag-observability-classify'),
 
     # Session 449: Pipeline Learning APIs (Learning Loops for AI Content Pipeline)
     path('api/pipeline-learning/feedback/', pipeline_record_feedback, name='pipeline-learning-feedback'),
