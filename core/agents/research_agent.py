@@ -188,8 +188,9 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         },
                         "topic_filter": {
                             "type": "string",
-                            "description": "Filter results to specific topic: 'ai' for AI/ML, 'web' for web dev, 'security' for cybersecurity, 'cloud' for cloud/devops, 'design' for UI/UX/graphic design",
-                            "enum": ["ai", "web", "security", "cloud", "design"],
+                            # Session 957: Added '3d' filter for 3D design/modeling content
+                            "description": "Filter results to specific topic: 'ai' for AI/ML, 'web' for web dev, 'security' for cybersecurity, 'cloud' for cloud/devops, 'design' for UI/UX/graphic design, '3d' for 3D modeling/design",
+                            "enum": ["ai", "web", "security", "cloud", "design", "3d"],
                             "default": None
                         },
                         "hours": {
@@ -986,13 +987,15 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
         # Minimum threshold for "sufficient" data
         # Adjust based on task complexity
+        # Session 957: Lowered default from 5 to 3 - getting any results is useful
+        # for trend research, shouldn't mark as BLOCKED with limited data
         task_lower = task.lower()
         if 'comprehensive' in task_lower or 'detailed' in task_lower:
-            min_items = 10
+            min_items = 8
         elif 'quick' in task_lower or 'brief' in task_lower:
-            min_items = 3
+            min_items = 2
         else:
-            min_items = 5
+            min_items = 3
 
         is_sufficient = total_items >= min_items
 
@@ -1151,8 +1154,9 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         # Check for common data needs
         if 'trend' in task_lower or 'analysis' in task_lower:
             # Check if we have time-series data
+            # Session 957: Include 'created' to match 'created_at' fields in spider data
             has_temporal = any(
-                'timestamp' in str(r) or 'date' in str(r) or 'time' in str(r)
+                'timestamp' in str(r) or 'date' in str(r) or 'time' in str(r) or 'created' in str(r)
                 for r in all_results
             )
             if not has_temporal:
@@ -1375,9 +1379,10 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 elif category == 'creative':
                     # Session 272: For design queries, use get_tech_trends with design filter
                     # since it has topic filtering logic; fallback to creative_trends otherwise
-                    if topic_filter == 'design':
+                    # Session 957: Added '3d' topic filter for 3D design/modeling content
+                    if topic_filter in ('design', '3d'):
                         # Session 274: Exclude ProductHunt from research
-                        results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter='design', include_producthunt=False)
+                        results = self.spider_service.get_tech_trends(hours=hours, limit=limit, topic_filter=topic_filter, include_producthunt=False)
                     else:
                         results = self.spider_service.get_creative_trends(hours=hours, limit=limit)
                 elif category == 'jobs':
