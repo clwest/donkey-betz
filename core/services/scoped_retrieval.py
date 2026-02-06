@@ -78,6 +78,27 @@ class ScopedRetrievalService:
         self.include_incident_channel = True  # Include incident/postmortem docs
         self.incident_lookback_days = 30  # How far back to look for incidents
 
+        # Session 949 P2: Risk-aware re-ranking configuration
+        # These boosts are additive to similarity scores (0.0 - 1.0 scale)
+        self.risk_level_boosts = {
+            'critical': 0.25,  # +25% boost for critical docs
+            'high': 0.15,      # +15% boost for high-risk docs
+            'medium': 0.0,     # No boost for medium (default)
+            'low': -0.05,      # Slight penalty for low-priority docs
+        }
+        self.document_class_boosts = {
+            'postmortem': 0.20,       # Postmortems are highly valuable
+            'incident_report': 0.15,  # Incident reports next
+            'security': 0.15,         # Security advisories important
+            'constraint': 0.10,       # Policy/constraint docs
+            'architecture': 0.05,     # Architecture decisions
+            'runbook': 0.05,          # Operational runbooks
+            'changelog': 0.0,         # Changelogs standard
+            'reference': 0.0,         # Reference docs standard
+        }
+        self.critical_doc_boost = 0.30  # is_critical=True gets max boost
+        self.enable_risk_reranking = True  # Toggle for risk-aware re-ranking
+
     def search(
         self,
         query: str,
@@ -170,7 +191,7 @@ class ScopedRetrievalService:
         queryset,
         limit: int
     ) -> List[RetrievalResult]:
-        """Perform semantic similarity search using embeddings."""
+        """Perform semantic similarity search using embeddings with risk-aware re-ranking."""
         try:
             from content.models import DocumentEmbedding
             from core.services.embedding_service import EmbeddingService
@@ -186,27 +207,38 @@ class ScopedRetrievalService:
             if not query_embedding or not query_embedding.embedding:
                 return []
 
-            # Find similar documents - extract vector from EmbeddingResult
+            # Find similar documents - fetch more than limit for re-ranking
+            # Session 949 P2: Fetch extra to allow re-ranking to surface risk-boosted docs
+            fetch_limit = limit * 2 if self.enable_risk_reranking else limit
             results = DocumentEmbedding.cosine_similarity_search(
                 query_vector=query_embedding.embedding,
-                limit=limit,
+                limit=fetch_limit,
                 min_similarity=self.min_similarity
             )
 
-            return [
+            # Build results with risk metadata
+            retrieval_results = [
                 RetrievalResult(
                     document_id=str(r.document_id),
                     title=r.document.title,
                     path=r.document.file_path,
                     content_snippet=r.chunk_text[:300],
                     similarity_score=1 - r.distance,  # Convert distance to similarity
-                    scope=r.document.extracted_metadata.get('scope', 'unknown'),
+                    scope=r.document.extracted_metadata.get('scope', 'unknown') if r.document.extracted_metadata else 'unknown',
                     status=r.document.status,
-                    is_curated=r.document.extracted_metadata.get('scope') == 'docs_index'
+                    is_curated=r.document.extracted_metadata.get('scope') == 'docs_index' if r.document.extracted_metadata else False,
+                    # Session 949 P2: Include risk metadata for re-ranking
+                    is_critical=getattr(r.document, 'is_critical', False),
+                    risk_level=getattr(r.document, 'risk_level', 'medium'),
+                    document_class=getattr(r.document, 'document_class', 'reference'),
+                    retrieval_channel='semantic'
                 )
                 for r in results
                 if r.document
             ]
+
+            # Session 949 P2: Apply risk-aware re-ranking
+            return self._apply_risk_reranking(retrieval_results, limit)
 
         except Exception as e:
             logger.error(f"Semantic search failed: {e}")
@@ -219,7 +251,7 @@ class ScopedRetrievalService:
         limit: int,
         scope: DocumentScope
     ) -> List[RetrievalResult]:
-        """Fall back to keyword-based search."""
+        """Fall back to keyword-based search with risk-aware re-ranking."""
         try:
             # Split query into keywords
             keywords = query.lower().split()
@@ -233,9 +265,11 @@ class ScopedRetrievalService:
                     Q(description__icontains=keyword)
                 )
 
-            results = queryset.filter(q_objects)[:limit]
+            # Session 949 P2: Fetch extra for re-ranking
+            fetch_limit = limit * 2 if self.enable_risk_reranking else limit
+            results = queryset.filter(q_objects)[:fetch_limit]
 
-            return [
+            retrieval_results = [
                 RetrievalResult(
                     document_id=str(doc.id),
                     title=doc.title,
@@ -244,10 +278,18 @@ class ScopedRetrievalService:
                     similarity_score=0.5,  # Fixed score for keyword matches
                     scope=doc.extracted_metadata.get('scope', 'unknown') if doc.extracted_metadata else 'unknown',
                     status=doc.status,
-                    is_curated=doc.extracted_metadata.get('scope') == 'docs_index' if doc.extracted_metadata else False
+                    is_curated=doc.extracted_metadata.get('scope') == 'docs_index' if doc.extracted_metadata else False,
+                    # Session 949 P2: Include risk metadata for re-ranking
+                    is_critical=getattr(doc, 'is_critical', False),
+                    risk_level=getattr(doc, 'risk_level', 'medium'),
+                    document_class=getattr(doc, 'document_class', 'reference'),
+                    retrieval_channel='keyword'
                 )
                 for doc in results
             ]
+
+            # Session 949 P2: Apply risk-aware re-ranking
+            return self._apply_risk_reranking(retrieval_results, limit)
 
         except Exception as e:
             logger.error(f"Keyword search failed: {e}")
@@ -261,6 +303,177 @@ class ScopedRetrievalService:
             DocumentScope.REPO_MARKDOWN: None
         }
         return expansion_order.get(current_scope)
+
+    # =========================================================================
+    # Session 949 P2: Risk-Aware Re-Ranking
+    # =========================================================================
+
+    def _calculate_risk_boost(self, result: RetrievalResult) -> float:
+        """
+        Calculate the risk-based boost for a retrieval result.
+
+        Args:
+            result: The retrieval result to calculate boost for
+
+        Returns:
+            Float boost value (can be positive or negative)
+        """
+        boost = 0.0
+
+        # Critical doc boost (highest priority)
+        if result.is_critical:
+            boost += self.critical_doc_boost
+
+        # Risk level boost
+        boost += self.risk_level_boosts.get(result.risk_level, 0.0)
+
+        # Document class boost
+        boost += self.document_class_boosts.get(result.document_class, 0.0)
+
+        return boost
+
+    def _apply_risk_reranking(
+        self,
+        results: List[RetrievalResult],
+        limit: int
+    ) -> List[RetrievalResult]:
+        """
+        Session 949 P2: Re-rank results based on risk levels and document classes.
+
+        Applies boost factors to similarity scores and re-sorts results.
+        Critical docs, incident reports, and postmortems get priority.
+
+        Args:
+            results: List of retrieval results with similarity scores
+            limit: Maximum number of results to return
+
+        Returns:
+            Re-ranked list of results
+        """
+        if not self.enable_risk_reranking or not results:
+            return results[:limit]
+
+        # Calculate boosted scores
+        scored_results = []
+        for result in results:
+            boost = self._calculate_risk_boost(result)
+            boosted_score = min(1.0, result.similarity_score + boost)  # Cap at 1.0
+
+            # Log significant boosts for observability
+            if boost > 0.1:
+                logger.debug(
+                    f"🎯 [Session 949 P2] Risk boost +{boost:.2f} for '{result.title}' "
+                    f"(is_critical={result.is_critical}, risk={result.risk_level}, "
+                    f"class={result.document_class})"
+                )
+
+            scored_results.append((boosted_score, result))
+
+        # Sort by boosted score (descending)
+        scored_results.sort(key=lambda x: x[0], reverse=True)
+
+        # Update similarity scores to reflect boosted values
+        reranked = []
+        for boosted_score, result in scored_results[:limit]:
+            # Create new result with boosted score
+            reranked.append(RetrievalResult(
+                document_id=result.document_id,
+                title=result.title,
+                path=result.path,
+                content_snippet=result.content_snippet,
+                similarity_score=boosted_score,  # Use boosted score
+                scope=result.scope,
+                status=result.status,
+                is_curated=result.is_curated,
+                is_critical=result.is_critical,
+                risk_level=result.risk_level,
+                document_class=result.document_class,
+                retrieval_channel=result.retrieval_channel,
+            ))
+
+        return reranked
+
+    def search_by_document_class(
+        self,
+        document_classes: List[str],
+        limit: int = 10,
+        risk_levels: Optional[List[str]] = None
+    ) -> List[RetrievalResult]:
+        """
+        Session 949 P2: Search for documents by their classification.
+
+        Use this to find all postmortems, incident reports, security advisories, etc.
+
+        Args:
+            document_classes: List of document classes to search for
+                              Options: postmortem, incident_report, security, constraint,
+                                      architecture, runbook, changelog, reference
+            limit: Maximum number of results
+            risk_levels: Optional filter by risk levels (critical, high, medium, low)
+
+        Returns:
+            List of matching documents, ordered by risk_level and recency
+        """
+        try:
+            from content.models import Document, ContentStatus
+
+            qs = Document.objects.filter(
+                document_class__in=document_classes,
+                status=ContentStatus.PROCESSED
+            )
+
+            if risk_levels:
+                qs = qs.filter(risk_level__in=risk_levels)
+
+            # Order by risk level (critical first) and recency
+            docs = qs.order_by('-is_critical', '-retrieval_boost', '-updated_at')[:limit]
+
+            return [
+                RetrievalResult(
+                    document_id=str(doc.id),
+                    title=doc.title,
+                    path=doc.file_path,
+                    content_snippet=doc.processed_content[:300] if doc.processed_content else '',
+                    similarity_score=1.0 if doc.is_critical else 0.9,  # High base score
+                    scope=doc.extracted_metadata.get('scope', 'unknown') if doc.extracted_metadata else 'unknown',
+                    status=doc.status,
+                    is_curated=doc.extracted_metadata.get('scope') == 'docs_index' if doc.extracted_metadata else False,
+                    is_critical=doc.is_critical,
+                    risk_level=doc.risk_level,
+                    document_class=doc.document_class,
+                    retrieval_channel='class_filter'
+                )
+                for doc in docs
+            ]
+
+        except Exception as e:
+            logger.error(f"Document class search failed: {e}")
+            return []
+
+    def get_postmortems(self, limit: int = 10) -> List[RetrievalResult]:
+        """Convenience method to get postmortem documents."""
+        return self.search_by_document_class(['postmortem'], limit=limit)
+
+    def get_incident_reports(self, limit: int = 10) -> List[RetrievalResult]:
+        """Convenience method to get incident report documents."""
+        return self.search_by_document_class(['incident_report'], limit=limit)
+
+    def get_security_advisories(self, limit: int = 10) -> List[RetrievalResult]:
+        """Convenience method to get security advisory documents."""
+        return self.search_by_document_class(['security'], limit=limit)
+
+    def get_constraint_docs(self, limit: int = 10) -> List[RetrievalResult]:
+        """Convenience method to get policy/constraint documents."""
+        return self.search_by_document_class(['constraint'], limit=limit)
+
+    def get_high_risk_docs(self, limit: int = 10) -> List[RetrievalResult]:
+        """Get all documents with critical or high risk levels."""
+        return self.search_by_document_class(
+            document_classes=['postmortem', 'incident_report', 'security', 'constraint',
+                            'architecture', 'runbook', 'changelog', 'reference'],
+            limit=limit,
+            risk_levels=['critical', 'high']
+        )
 
     # =========================================================================
     # Session 949: Risk-Aware RAG - Dual-Channel Retrieval
