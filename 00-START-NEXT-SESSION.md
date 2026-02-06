@@ -1,12 +1,36 @@
-# Session 952 - Start Here
+# Session 953 - Start Here
 
-**Previous Session:** 951 (PA Platform Query Tool)
+**Previous Session:** 952 (Narrative Injection Enhancement)
 **Date:** February 6, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Dual-Channel Retrieval: ACTIVE** | **Risk Re-Ranking: ACTIVE** | **RESERVED Budget Tier: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: ACTIVE** | **PA Platform Query: ACTIVE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Dual-Channel Retrieval: ACTIVE** | **Risk Re-Ranking: ACTIVE** | **RESERVED Budget Tier: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: ACTIVE** | **PA Platform Query: ACTIVE** | **Narrative Injection: ENHANCED**
 
 ---
 
-## Session 951 Summary (Just Completed)
+## Session 952 Summary (Just Completed)
+
+### Enhanced NarrativeInjectionService - PR #930
+
+Fixed ContentWriterAgent blogs always defaulting to "kalshi spider pulled 500 items" in builder stories.
+
+**Root Cause:** `_get_spider_discoveries()` treated routine spider data collection as "incidents" - these are telemetry, not narrative-worthy events.
+
+**Solution:** Multi-layered enhancement to NarrativeInjectionService:
+
+1. **Removed spider telemetry from incidents** - Spider data collection is not narrative-worthy
+2. **Added topic relevance filtering** - 6 domain categories (ai, finance, sports, tech, content, business)
+3. **Added diversity constraints** - Max 1 incident per type prevents same-type dominance
+4. **Added fallback incidents** - 3 curated incidents when database is empty (learning, decision, recovery)
+
+**Files Changed:**
+- `core/services/content_voice_system.py` - Enhanced NarrativeInjectionService with DOMAIN_KEYWORDS, FALLBACK_INCIDENTS, topic filtering, diversity constraints
+
+### PA Platform Query Tool - PR #929
+
+Merged from Session 951. PA can now query platform data (deliverables, reports, initiatives).
+
+---
+
+## Session 951 Summary
 
 ### PA Platform Query Tool
 
@@ -26,49 +50,6 @@ Fixed PA's inability to query platform data when asked questions like "what repo
 
 **Files Changed:**
 - `core/personal_ai_assistant_enhanced.py` - Added tool definition + handler
-
----
-
-## Session 950 Summary
-
-### Kalshi Sports Betting Market Categorization Fix - PR #926
-
-Fixed sports betting markets being miscategorized as "tech" or "general" in Market Intelligence reports.
-
-**Changes:**
-- Added dedicated 'sports' category to Kalshi spider with comprehensive patterns:
-  - Major leagues: NBA, NFL, MLB, NHL, MLS, WNBA, NCAA, PGA, UFC, MMA
-  - Esports: League of Legends, Valorant, Counter-Strike, Dota, Overwatch
-  - Betting terms: parlay, spread, over/under, moneyline, prop bet
-  - Player stats: points, assists, rebounds, touchdowns, yards, goals
-  - Team names: Lakers, Celtics, Cowboys, Patriots, Yankees, etc.
-  - Player names: LeBron, Curry, Mahomes, etc.
-- Added `_clean_title()` for multi-leg parlay bets:
-  - Detects concatenated "yes X: value, yes Y: value" patterns
-  - Creates readable titles like "Player + 9 others Parlay (10 legs)"
-- Improved volume/probability handling:
-  - Use `last_price` as fallback for probability calculation
-  - Check multiple volume field names (volume, volume_24h, dollar_volume)
-- Updated MarketIntelligenceCoordinator to include 'sports' in categories
-
-### Workspace Scroll Fix - PR #924
-
-Fixed workspace pages not scrolling after PA dock was added in Session 948.
-
-### Empty Stock Analysis Fix - PR #927
-
-Fixed BullCaseAgent and BearCaseAgent returning empty results in Market Intelligence reports.
-
-**Root Cause:** Session 761 refactored the agents to use LLM tool calling, but changed the return structure from a list of cases to a single dict. The coordinator expected `{'bull_cases': [...]}` but got `{'analysis': ..., 'ticker': 'AAPL'}`.
-
-**Fix:** Updated both agents to iterate over all tickers and return the expected list format.
-
-**Files Changed:**
-- `ai_core/spiders/specialized/kalshi_spider.py` - Sports category + title cleanup
-- `core/agents/stocks/market_intelligence_coordinator.py` - Sports signals
-- `core/agents/stocks/bull_case_agent.py` - Return bull_cases list
-- `core/agents/stocks/bear_case_agent.py` - Return bear_cases list
-- `frontend/src/components/layout/Layout.tsx` - Fixed overflow-hidden to overflow-auto
 
 ---
 
@@ -106,12 +87,20 @@ Create visibility into the new risk-aware RAG system:
 - Track risk re-ranking effectiveness
 - Monitor dual-channel usage stats
 
+### Option F: Panel/Advisor System Improvements
+From ChatGPT feedback analysis (plan file exists):
+- Dedupe repeated DecisionSummary blocks
+- Add provenance headers to panel results
+- Require estimate labeling (cited OR explicit)
+- Enhance DecisionSummary with decision/risk fields
+
 ---
 
 ## Recent Session History
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **952** | Narrative Injection Enhancement - Topic filtering, diversity, fallbacks | #929, #930 |
 | **951** | PA Platform Query Tool - Query deliverables, reports, initiatives | #929 |
 | **950** | Kalshi Sports Categorization + Workspace Scroll + Stock Analysis Fix | #924, #926, #927 |
 | **949** | Risk-Aware RAG - Dual-channel retrieval, RESERVED budget, risk re-ranking | #920, #921, #922 |
@@ -119,11 +108,15 @@ Create visibility into the new risk-aware RAG system:
 | **946** | Learning Loop Backend - LearningLoopOrchestrator, prompt injection, scheduled extraction | #903 |
 | **945** | Stale Initiative Cleanup - New junk patterns, activity tracking, last_activity_at field | #901 |
 | **944** | Operations Tab Fix + PA Boardroom Listing + ConceptForge Dedupe | #897, #898, #899 |
-| **943** | Stage Distribution Fix + Stale Investigation | #876 |
 
 ---
 
 ## Key Files Reference
+
+### Session 952 - Narrative Injection Enhancement
+| File | Purpose |
+|------|---------|
+| `core/services/content_voice_system.py` | DOMAIN_KEYWORDS, FALLBACK_INCIDENTS, topic filtering, diversity constraints |
 
 ### Session 951 - PA Platform Query Tool
 | File | Purpose |
@@ -157,4 +150,4 @@ Create visibility into the new risk-aware RAG system:
 
 ---
 
-**Session 951 Focus: Choose priority option above and continue building!**
+**Session 953 Focus: Choose priority option above and continue building!**
