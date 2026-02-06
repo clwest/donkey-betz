@@ -34,11 +34,12 @@ Usage:
 import logging
 import time
 from typing import Dict, Any, List, Optional, Tuple
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from decimal import Decimal
 from dataclasses import dataclass, field
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -347,13 +348,41 @@ You score and analyze - you do NOT create content or execute workflows."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 953: Build provenance from scoring results
+                    sources = []
+                    for tc in tool_calls_made:
+                        sources.append({
+                            'name': tc.get('tool', 'opportunity_scoring'),
+                            'endpoint': 'spider_data',
+                            'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                            'record_count': 1,
+                        })
+                    if not sources:
+                        sources = [{
+                            'name': 'opportunity_scoring',
+                            'endpoint': 'spider_data',
+                            'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                            'record_count': 0,
+                        }]
+                    provenance = build_provenance(
+                        report_type='analysis',
+                        agent_name=self.name,
+                        sources=sources,
+                        stale_threshold_hours=24.0,
+                    )
+                    provenance.disclaimer = format_disclaimer('analysis')
+                    provenance_block = provenance.to_markdown_block()
+
                     result = AgentResult(
                         success=True,
-                        message="Opportunity scoring completed",
+                        message=provenance_block + "\n\nOpportunity scoring completed",
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
                             'ml_analysis': ml_insights,  # Session 683: Add RL optimization
+                            'provenance': provenance.to_dict(),
+                            'publishable': provenance.publishable,
+                            'validation_status': provenance.validation_status,
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,

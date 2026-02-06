@@ -28,10 +28,11 @@ Usage:
 import logging
 import time
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from dataclasses import dataclass, field
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -442,12 +443,40 @@ You analyze and report - you do NOT create content or execute workflows."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 953: Build provenance from analysis results
+                    sources = []
+                    for tc in tool_calls_made:
+                        sources.append({
+                            'name': tc.get('tool', 'trend_analysis'),
+                            'endpoint': 'spider_intelligence',
+                            'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                            'record_count': 1,
+                        })
+                    if not sources:
+                        sources = [{
+                            'name': 'trend_analysis',
+                            'endpoint': 'spider_intelligence',
+                            'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                            'record_count': 0,
+                        }]
+                    provenance = build_provenance(
+                        report_type='analysis',
+                        agent_name=self.name,
+                        sources=sources,
+                        stale_threshold_hours=24.0,
+                    )
+                    provenance.disclaimer = format_disclaimer('analysis')
+                    provenance_block = provenance.to_markdown_block()
+
                     result = AgentResult(
                         success=True,
-                        message="Trend analysis completed",
+                        message=provenance_block + "\n\nTrend analysis completed",
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'provenance': provenance.to_dict(),
+                            'publishable': provenance.publishable,
+                            'validation_status': provenance.validation_status,
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,

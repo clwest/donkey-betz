@@ -9,13 +9,17 @@ Architecture:
 
 Session 306: Added learning infrastructure hooks for cross-agent knowledge sharing.
 Session 728: Migrated from agents/creation_agent.py to core/agents/
+Session 953: Added provenance tracking for data source transparency.
 """
 
 import logging
 import json
+from datetime import datetime, timezone as dt_timezone
 from typing import Dict, Any, Optional, List
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory
+
+from core.agents.report_schemas import build_provenance, format_disclaimer
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -375,6 +379,25 @@ class CreationAgent(CreationLearningMixin):
                     },
                     confidence=0.75
                 )
+
+                # Session 953: Build provenance for image generation
+                sources = [{
+                    'name': 'stability_ai',
+                    'endpoint': 'gallery_generate',
+                    'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                    'record_count': len(image_ids),
+                }]
+                provenance = build_provenance(
+                    report_type='content_generation',
+                    agent_name=self.agent_name,
+                    sources=sources,
+                    stale_threshold_hours=24.0,  # Generated content doesn't go stale quickly
+                )
+                provenance.disclaimer = format_disclaimer('content_generation')
+
+                success_result['provenance'] = provenance.to_dict()
+                success_result['publishable'] = provenance.publishable
+                success_result['validation_status'] = provenance.validation_status
 
                 return success_result
             else:

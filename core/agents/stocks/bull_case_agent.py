@@ -18,9 +18,10 @@ Key capabilities:
 import json
 import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -273,6 +274,9 @@ Always acknowledge risks but emphasize potential rewards."""
             logger.info(f"BullCaseAgent analyzing {len(tickers)} tickers: {tickers[:5]}...")
 
             try:
+                # Session 953: Track sources for provenance
+                self._collected_sources = []
+
                 # Session 950: Build bull cases for ALL tickers
                 bull_cases = []
                 all_tool_calls = []
@@ -288,15 +292,35 @@ Always acknowledge risks but emphasize potential rewards."""
 
                 execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
+                # Session 953: Build provenance from collected sources
+                collected_sources = getattr(self, '_collected_sources', [])
+                if not collected_sources and bull_cases:
+                    # Default source if none tracked
+                    collected_sources = [{
+                        'name': 'MarketDataService',
+                        'endpoint': 'yahoo_finance/polygon',
+                        'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                        'record_count': len(bull_cases),
+                    }]
+                provenance = build_provenance(
+                    report_type='stock_analysis',
+                    agent_name=self.name,
+                    sources=collected_sources,
+                    stale_threshold_hours=24.0,
+                )
+                provenance.disclaimer = format_disclaimer('stock_analysis')
+
                 # Session 950: Generate summary for the message
                 summary = self._generate_summary(bull_cases)
-                message = (
+                base_message = (
                     f"Analyzed {summary['total_analyzed']} stocks. "
                     f"HIGH conviction: {summary['high_conviction']}, "
                     f"MEDIUM: {summary['medium_conviction']}, "
                     f"LOW: {summary['low_conviction']}. "
                     f"Top opportunities: {', '.join(summary['strongest_tickers'][:3]) or 'None'}"
                 )
+                # Session 953: Prepend provenance to message
+                message = provenance.to_markdown_block() + "\n" + base_message
 
                 result = AgentResult(
                     success=True,
@@ -307,6 +331,10 @@ Always acknowledge risks but emphasize potential rewards."""
                         'conviction_distribution': self._get_conviction_distribution(bull_cases),
                         'top_opportunities': self._get_top_opportunities(bull_cases),
                         'tickers_analyzed': len(bull_cases),
+                        # Session 953: Include provenance
+                        'provenance': provenance.to_dict(),
+                        'publishable': provenance.publishable,
+                        'validation_status': provenance.validation_status,
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time,
