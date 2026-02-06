@@ -489,12 +489,18 @@ class UnifiedPAEntrypoint:
 
         # Session 943: Content REVIEW patterns - MUST come before content creation patterns
         # These are for viewing/reviewing existing content, not creating new
+        # Session 957: Added blog/report query patterns for "what blogs have been written by agents"
         if any(phrase in message_lower for phrase in [
             'what content', 'content created', 'content been created',
             'show content', 'list content', 'my content', 'created content',
             'deliverable', 'content ready', 'ready for review',
             'ready to publish', 'publish content', 'archive content',
-            'content stats', 'review content', 'view content'
+            'content stats', 'review content', 'view content',
+            # Session 957: Blog/report query patterns
+            'what blogs', 'blogs written', 'written by agents', 'agent written',
+            'list blogs', 'show blogs', 'blog posts', 'what reports',
+            'reports written', 'what has been written', 'produced by agents',
+            'agent outputs', 'agent content', 'agent created'
         ]):
             return ('content_review', 'content_review_tool')
 
@@ -710,11 +716,17 @@ class UnifiedPAEntrypoint:
             if 'stats' in msg_lower or 'statistics' in msg_lower or 'how many' in msg_lower:
                 payload['action'] = 'stats'
             # Session 948: "what content has been created" -> recent action
+            # Session 957: Added "written", "blogs", "reports" patterns
             elif any(phrase in msg_lower for phrase in [
                 'created', 'been created', 'was created', 'recently created',
-                'my content', 'all content', 'recent content'
+                'my content', 'all content', 'recent content',
+                # Session 957: Blog/report query patterns should show all recent, not just 'ready'
+                'written', 'been written', 'blogs written', 'reports written',
+                'what blogs', 'what reports', 'by agents', 'agent outputs',
+                'produced by', 'agent created', 'agent content'
             ]):
                 payload['action'] = 'recent'
+                payload['days'] = 30  # Session 957: Default to 30 days for blog queries
             elif 'publish' in msg_lower:
                 payload['action'] = 'publish'
                 # Try to extract ID if present
