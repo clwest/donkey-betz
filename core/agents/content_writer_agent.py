@@ -54,6 +54,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig, OutputCategory, QualityTier
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 # Session 523: Import Intelligent Prompting System
@@ -624,6 +625,46 @@ For this {content_type}, ensure:
                     was_truncated=was_truncated
                 )
 
+                # Session 954: Build provenance to track data sources
+                from datetime import timezone
+                provenance_sources = []
+
+                # Track research source if provided
+                if research:
+                    provenance_sources.append({
+                        'name': 'ResearchContext',
+                        'endpoint': 'input/research',
+                        'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                        'record_count': len(research.split()) if research else 0,
+                    })
+
+                # Track spider data if used
+                if spider_context:
+                    spider_count = len(spider_context.get('data', [])) if isinstance(spider_context.get('data'), list) else 1
+                    provenance_sources.append({
+                        'name': 'SpiderNetwork',
+                        'endpoint': 'spider/context',
+                        'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                        'record_count': spider_count,
+                    })
+
+                # Track domain context if injected
+                if DOMAIN_CONTEXT_AVAILABLE and topic:
+                    provenance_sources.append({
+                        'name': 'DomainContext',
+                        'endpoint': 'domain/content-context',
+                        'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                        'record_count': 1,
+                    })
+
+                provenance = build_provenance(
+                    report_type='content_generation',
+                    agent_name=self.name,
+                    sources=provenance_sources,
+                    stale_threshold_hours=72.0,  # Content sources valid for 72h
+                )
+                provenance.disclaimer = format_disclaimer('market_report')  # Appropriate for content
+
                 # Session 856: Build descriptive message for content review UI
                 content_type_display = content_config['name']
                 message_parts = [f"{content_type_display}: \"{content_title[:80]}\""]
@@ -660,7 +701,11 @@ For this {content_type}, ensure:
                             'quality_tier': quality_tier,
                             'confidence': confidence,
                             'truncated': was_truncated,
-                        }
+                        },
+                        # Session 954: Add provenance tracking
+                        'provenance': provenance.to_dict(),
+                        'publishable': provenance.publishable,
+                        'validation_status': provenance.validation_status,
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time,

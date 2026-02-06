@@ -1,12 +1,12 @@
-# Session 956 - Start Here
+# Session 957 - Start Here
 
-**Previous Session:** 954/955 (Boardroom ML + Initiative Cleanup + Learning Loop)
+**Previous Session:** 954-956 (Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance)
 **Date:** February 6, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 18 AGENTS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS**
 
 ---
 
-## Session 954/955 Summary (Just Completed)
+## Session 954-956 Summary (Just Completed)
 
 ### Option A: Document Classification - COMPLETE
 Ran document classification for Risk-Aware RAG on Railway production.
@@ -38,15 +38,19 @@ Created visibility into the risk-aware RAG system:
 - **Health indicators** - Critical coverage, classification coverage
 - **8 API endpoints** - `/api/rag/observability/*`
 
+### Option F: Agent Provenance Extension - COMPLETE
+Extended provenance tracking to 5 additional agent categories:
+- **ContentWriterAgent** - content_generation (72h stale threshold)
+- **PodcastCoordinatorAgent** - podcast_coordination (48h)
+- **CTOAgent** - technical_analysis (24h)
+- **COOAgent** - operational_analysis (24h)
+- **FullStackDeveloperAgent** - code_generation (168h/1 week)
+
+**Total agents with provenance: 26+** (was 18)
+
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
-
-### Option F: Extend Provenance to Remaining Agents
-Add provenance to additional agent categories:
-- Content agents (ContentWriterAgent, PodcastCoordinatorAgent)
-- Executive agents (CTOAgent, COOAgent)
-- Development agents (FullStackDeveloperAgent)
 
 ### Option G: Boardroom ML UI Integration
 Show ML predictions to users in the boardroom UI:
@@ -60,13 +64,20 @@ Build UI components to display learning effectiveness:
 - Show most/least effective learnings
 - Visualize learning cycle results
 
+### Option I: RAG Observability Frontend
+Build UI dashboard for RAG system monitoring:
+- Document inventory visualization
+- Context budget utilization charts
+- Risk distribution matrix
+- Critical docs management
+
 ---
 
 ## Recent Session History
 
 | Session | Focus | PRs |
 |---------|-------|-----|
-| **954/955** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop Refinement | #935 |
+| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance Extension (26+ agents) | #935 |
 | **953** | Agent Provenance Expansion - 18 agents with provenance tracking | - |
 | **952** | Narrative Injection Enhancement - Topic filtering, diversity, fallbacks | #929, #930 |
 | **951** | PA Platform Query Tool - Query deliverables, reports, initiatives | #929 |

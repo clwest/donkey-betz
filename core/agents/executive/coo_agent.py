@@ -29,6 +29,7 @@ import time
 from typing import Dict, Any
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -239,12 +240,39 @@ You CANNOT execute changes - only analyze and recommend."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 954: Build provenance for operational analysis
+                    from datetime import timezone
+                    provenance_sources = [{
+                        'name': 'OperationalAnalysis',
+                        'endpoint': 'coo/analysis',
+                        'retrieved_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                        'record_count': len(tool_calls_made),
+                    }]
+                    if spider_context:
+                        provenance_sources.append({
+                            'name': 'SpiderNetwork',
+                            'endpoint': 'spider/context',
+                            'retrieved_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'record_count': 1,
+                        })
+                    provenance = build_provenance(
+                        report_type='operational_analysis',
+                        agent_name=self.name,
+                        sources=provenance_sources,
+                        stale_threshold_hours=24.0,
+                    )
+                    provenance.disclaimer = "Operational analysis and planning. Verify timelines and resources with team leads."
+
                     result = AgentResult(
                         success=True,
                         message="Operational analysis completed",
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            # Session 954: Add provenance
+                            'provenance': provenance.to_dict(),
+                            'publishable': provenance.publishable,
+                            'validation_status': provenance.validation_status,
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,
