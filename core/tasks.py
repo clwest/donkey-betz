@@ -30012,7 +30012,9 @@ def run_content_creation_agents():
             'ImageAgent': 'Analyze recent trends and generate a creative image based on current popular topics',
             'VideoAgent': 'Create a short video concept based on trending content',
             'AudioAgent': 'Generate audio content or music based on current themes',
-            'ThreeDAgent': 'Create a 3D model concept based on trending designs',
+            # Session 957: Give ThreeDAgent a specific 3D task using its native generate_3d_scene tool
+            # instead of triggering research delegation that returns irrelevant generic tech trends
+            'ThreeDAgent': 'Generate a 3D scene: A modern minimalist product display pedestal with ambient lighting - style: realistic, format: glb',
             'ContentWriterAgent': 'Write an article about recent trending topics from spider data',
             'ContentExecutorAgent': 'Review pending content tasks and execute the highest priority one',
             'ImageEditingAgent': 'Review recent images and suggest improvements or variations',
