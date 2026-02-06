@@ -299,22 +299,27 @@ class ToolDispatcher:
         agent_name = self._tool_to_agent_name(tool_name)
 
         registry = get_agent_registry()
-        agent = registry.get_agent(agent_name)
+        agent_metadata = registry.get_agent(agent_name)
 
-        if not agent:
+        if not agent_metadata:
             raise ValueError(f"Agent '{agent_name}' not found for tool '{tool_name}'")
 
         # Extract task from payload
         task = payload.get('task') or payload.get('prompt') or payload.get('query', '')
         context = payload.get('context', {})
 
-        # Execute agent
-        result = agent.run(task=task, context=context)
+        # Session 948: Use registry.execute_agent() which properly handles agent instantiation
+        # The old code incorrectly called .run() on metadata dict
+        task_data = {
+            'task': task,
+            'context': context,
+        }
+        result = registry.execute_agent(agent_name, task_data)
 
         return {
             'agent': agent_name,
-            'output': result.output if hasattr(result, 'output') else str(result),
-            'success': result.success if hasattr(result, 'success') else True,
+            'output': result if result else 'Agent execution completed',
+            'success': True if result else False,
         }
 
     def _tool_to_agent_name(self, tool_name: str) -> str:
@@ -354,14 +359,15 @@ class ToolDispatcher:
         from core.agents.registry import get_agent_registry
 
         registry = get_agent_registry()
-        agent = registry.get_agent('ResearchAgent')
-
         query = payload.get('query', '')
-        result = agent.run(task=f"Search for: {query}")
+
+        # Session 948: Use execute_agent instead of calling .run() on metadata dict
+        task_data = {'task': f"Search for: {query}"}
+        result = registry.execute_agent('ResearchAgent', task_data)
 
         return {
             'query': query,
-            'results': result.output if hasattr(result, 'output') else str(result),
+            'results': result if result else 'No results found',
         }
 
     def _handle_opportunity_manager(
@@ -658,17 +664,19 @@ class ToolDispatcher:
             raise ValueError("agent_name is required")
 
         registry = get_agent_registry()
-        agent = registry.get_agent(agent_name)
+        agent_metadata = registry.get_agent(agent_name)
 
-        if not agent:
+        if not agent_metadata:
             raise ValueError(f"Agent '{agent_name}' not found")
 
-        result = agent.run(task=task, context=context)
+        # Session 948: Use execute_agent instead of calling .run() on metadata dict
+        task_data = {'task': task, 'context': context}
+        result = registry.execute_agent(agent_name, task_data)
 
         return {
             'agent': agent_name,
-            'output': result.output if hasattr(result, 'output') else str(result),
-            'success': result.success if hasattr(result, 'success') else True,
+            'output': result if result else 'Agent execution completed',
+            'success': True if result else False,
         }
 
     def _handle_workspace(
@@ -1008,14 +1016,16 @@ class ToolDispatcher:
 
         elif action == 'trigger':
             # Trigger a new thinking cycle
+            # Session 948: Use execute_agent instead of calling .run() on metadata dict
             registry = get_agent_registry()
-            agent = registry.get_agent('ThinkingAgent')
-            if agent:
-                result = agent.run(task="Reflect on recent system activity and generate insights")
+            agent_metadata = registry.get_agent('ThinkingAgent')
+            if agent_metadata:
+                task_data = {'task': "Reflect on recent system activity and generate insights"}
+                result = registry.execute_agent('ThinkingAgent', task_data)
                 return {
                     'action': 'trigger',
                     'triggered': True,
-                    'output': result.output if hasattr(result, 'output') else str(result),
+                    'output': result if result else 'Thinking cycle triggered',
                 }
             else:
                 return {'action': 'trigger', 'triggered': False, 'error': 'ThinkingAgent not found'}
