@@ -120,12 +120,9 @@ export function ChatMarkdown({ content, className }: ChatMarkdownProps) {
           ),
 
           // List items - modern bullet style
-          li: ({ children, ordered }) => (
-            <li className="flex gap-2 text-gray-200">
-              {!ordered && (
-                <span className="text-primary-400 mt-1.5 flex-shrink-0">•</span>
-              )}
-              <span className="flex-1">{children}</span>
+          li: ({ children }) => (
+            <li className="text-gray-200 ml-4">
+              {children}
             </li>
           ),
 
