@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import GlobalAlertBanner, { useAlertBannerHeight } from '@/components/GlobalAlertBanner'
+import GlobalPADock from '@/components/GlobalPADock'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useUnifiedStore } from '@/stores/unifiedStore'
 
@@ -56,6 +57,9 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Session 948: Global PA Dock - available on every page */}
+      <GlobalPADock />
     </div>
   )
 }
