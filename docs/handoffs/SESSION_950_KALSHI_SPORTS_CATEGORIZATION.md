@@ -127,6 +127,39 @@ python manage.py shell
 
 ---
 
+## Session 951 Additions
+
+### PA Platform Query Tool - Session 951
+
+**Problem:** PA couldn't answer questions about platform data (e.g., "what reports have been written by agents") because it had no tool for querying the database.
+
+**Root Cause:** The PA had 29 tools for creative generation, strategy, and research, but NO tool for querying:
+- `Deliverable` model (blog posts, reports, analyses)
+- `AuditReport` model (agent audit findings)
+- `Initiative` model (tracked initiatives)
+
+**Solution:** Added `platform_query_tool` with 5 query types:
+- `deliverables` - Query blog posts, reports, analyses with filters (agent, type, category, days)
+- `audit_reports` - Query audit reports from agents
+- `initiatives` - Query tracked initiatives
+- `agent_outputs` - Query outputs by specific agent or get summary by agent
+- `content_summary` - Overview of all platform content
+
+**Files Changed:**
+- `core/personal_ai_assistant_enhanced.py`:
+  - Added tool definition (lines 1260-1287)
+  - Added handler dispatch (line 1481)
+  - Added `_handle_platform_query_tool()` method (lines 13766-13963)
+
+**Verification:**
+```python
+# Test the new tool
+result = assistant._handle_platform_query_tool({'query_type': 'content_summary'})
+# Returns: 355 deliverables, 61 audit reports, 169 initiatives
+```
+
+---
+
 ## Next Steps
 
 - **Option F in session doc**: Investigate why BullCaseAgent/BearCaseAgent return empty results
