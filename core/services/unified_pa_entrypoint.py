@@ -82,6 +82,7 @@ class UnifiedPAEntrypoint:
         self._llm_enforcer = None
         self._profile_service = None
         self._knowledge_injector = None
+        self._docs_context_builder = None  # Session 943: Docs injection for PA
 
         # Session 940: Triage mode state
         self._triage_mode = False
@@ -134,6 +135,26 @@ class UnifiedPAEntrypoint:
             except ImportError:
                 self._knowledge_injector = None
         return self._knowledge_injector
+
+    @property
+    def docs_context_builder(self):
+        """
+        Session 943: Lazy load DocsContextBuilder for PA awareness of system docs.
+
+        This gives the PA knowledge of:
+        - CLAUDE.md (system overview, stats, architecture)
+        - 00-START-NEXT-SESSION.md (current priorities)
+        - Recent session handoffs (what we've been working on)
+        - Relevant architecture and feature docs
+        """
+        if self._docs_context_builder is None:
+            try:
+                from core.services.docs_context_builder import get_docs_context_builder
+                self._docs_context_builder = get_docs_context_builder()
+            except ImportError:
+                logger.warning("DocsContextBuilder not available")
+                self._docs_context_builder = None
+        return self._docs_context_builder
 
     async def process_message(
         self,
@@ -338,6 +359,25 @@ class UnifiedPAEntrypoint:
             context['system_stats'] = await self._get_system_stats()
         except Exception as e:
             logger.debug(f"Failed to get system stats: {e}")
+
+        # Session 943: Inject docs context so PA knows about system architecture,
+        # recent sessions, and what we've been working on
+        if self.docs_context_builder:
+            try:
+                docs_context = await asyncio.to_thread(
+                    self.docs_context_builder.build_context_for_agent,
+                    agent_name='personal_assistant',
+                    task=message,
+                    max_docs=8,
+                    include_recent_sessions=True,
+                    include_content_snippets=False,  # Keep context size manageable
+                    include_critical_docs=True  # Always include CLAUDE.md, 00-START-NEXT-SESSION.md
+                )
+                if docs_context.get('has_docs'):
+                    context['docs_context'] = docs_context
+                    logger.debug(f"📚 [Session 943] PA docs context: {len(docs_context.get('relevant_docs', []))} docs")
+            except Exception as e:
+                logger.debug(f"Failed to inject docs context: {e}")
 
         # Merge user-provided context
         context.update(user_context)
@@ -909,6 +949,7 @@ Address the user by name occasionally."""
         user_name = context.get('user_name', 'there')
         stats = context.get('system_stats', {})
         profile = context.get('profile', {})
+        docs_context = context.get('docs_context', {})
 
         # Build system context
         system_prompt = f"""You are the Personal Assistant for {user_name} in the Unified AI Platform.
@@ -923,6 +964,16 @@ USER PROFILE:
 - Goals: {profile.get('goals', 'Not specified')}
 
 Be helpful, conversational, and personalized. Address the user by name."""
+
+        # Session 943: Add docs context so PA knows about system architecture and recent work
+        if docs_context.get('has_docs'):
+            docs_summary = docs_context.get('summary', '')
+            if docs_summary:
+                # Truncate if too long to keep context manageable
+                if len(docs_summary) > 4000:
+                    docs_summary = docs_summary[:4000] + "\n... (truncated)"
+                system_prompt += f"\n\n{docs_summary}"
+                logger.debug(f"[{trace_id}] Added docs context to PA prompt ({len(docs_summary)} chars)")
 
         # Add conversation history
         history_text = ""

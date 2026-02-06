@@ -2,15 +2,16 @@
 
 **Date:** February 5, 2026
 **Status:** Complete
-**PRs:** #879, #880, #881, #882, #883, #884, #886, #888
+**PRs:** #879, #880, #881, #882, #883, #884, #886, #888, #889
 
 ## Summary
 
-Fixed four major issues:
+Fixed five major issues:
 1. **Operations Tab not creating WorkspaceOperations** for financial agent reports
 2. **42K+ pending ExtractedArtifacts backlog** from automated brainstorming conversations
 3. **PA/Boardroom couldn't access brainstorming insights** after disabling extraction
 4. **PA couldn't access content (blogs, reports) awaiting human review**
+5. **PA lacked awareness of system docs** (CLAUDE.md, recent sessions, architecture)
 
 ## Problem 1: Operations Tab Empty
 
@@ -155,6 +156,41 @@ self.register("content_review_tool", self._handle_content_review)
 - "Publish [id]"
 - "Archive [id]"
 
+## Problem 5: PA Lacked System Awareness
+
+### Root Cause
+The PA didn't have access to the DocsContextBuilder that agents use. It couldn't answer questions about:
+- What we've been working on (recent sessions)
+- System architecture and capabilities
+- Current priorities (00-START-NEXT-SESSION.md)
+
+### Solution: Docs Context Injection for PA (PR #889)
+
+Added `docs_context_builder` to the PA that injects:
+- **CLAUDE.md** (300 lines) - System overview, stats, architecture
+- **00-START-NEXT-SESSION.md** (200 lines) - Current priorities
+- **Recent session handoffs** - What we've been working on
+- **Relevant docs** based on the user's query
+
+```python
+# In _build_context:
+docs_context = self.docs_context_builder.build_context_for_agent(
+    agent_name='personal_assistant',
+    task=message,
+    include_critical_docs=True
+)
+
+# In _generate_direct_response:
+if docs_context.get('has_docs'):
+    system_prompt += docs_context.get('summary', '')
+```
+
+### Example PA Queries Now Supported
+- "What have we been working on?"
+- "What's the system architecture?"
+- "What are the current priorities?"
+- "How many agents do we have?"
+
 ## Files Changed
 
 | File | Changes |
@@ -165,7 +201,7 @@ self.register("content_review_tool", self._handle_content_review)
 | `core/celery.py` | Updated schedule with aggressive=True |
 | `core/services/brainstorm_search_service.py` | **NEW** - Search Discussion/Panel conversations |
 | `core/services/tool_dispatcher.py` | Added brainstorm_tool + content_review_tool handlers |
-| `core/services/unified_pa_entrypoint.py` | Added brainstorming + content_review routing and formatting |
+| `core/services/unified_pa_entrypoint.py` | Added brainstorming + content_review + docs context injection |
 
 ## Going Forward
 
@@ -174,6 +210,8 @@ self.register("content_review_tool", self._handle_content_review)
 - Pending queue is clean for legitimate human-initiated artifacts
 - Auto-processing runs every 6 hours to keep queue manageable
 - PA and Boardroom can search brainstorming insights on demand via `brainstorm_tool`
+- PA can access content ready for review via `content_review_tool`
+- PA now has full system awareness via docs injection (CLAUDE.md, sessions, architecture)
 
 ## Testing
 
