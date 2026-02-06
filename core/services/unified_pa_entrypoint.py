@@ -448,6 +448,14 @@ class UnifiedPAEntrypoint:
         ]):
             return ('agent_execution', 'universal_agent_tool')
 
+        # Session 943: Brainstorming/Discussion/Panel search patterns
+        if any(word in message_lower for word in [
+            'brainstorm', 'discussion', 'panel', 'ideas from',
+            'what did agents', 'agent ideas', 'think tank',
+            'past conversations', 'previous discussion'
+        ]):
+            return ('brainstorming', 'brainstorm_tool')
+
         # Default: no tool, direct response
         return ('general', None)
 
@@ -520,6 +528,35 @@ class UnifiedPAEntrypoint:
                 payload['action'] = 'trigger'
             else:
                 payload['action'] = 'thoughts'
+
+        # Session 943: Brainstorming tool payload
+        elif intent == 'brainstorming':
+            msg_lower = message.lower()
+
+            # Determine action based on message
+            if 'recent' in msg_lower or 'latest' in msg_lower or 'this week' in msg_lower:
+                payload['action'] = 'recent'
+                payload['days'] = 7
+            elif 'stats' in msg_lower or 'statistics' in msg_lower or 'how much' in msg_lower:
+                payload['action'] = 'stats'
+            elif any(cat in msg_lower for cat in ['competitor', 'customer', 'pricing', 'content', 'product', 'technical', 'marketing']):
+                # Category-based search
+                payload['action'] = 'by_category'
+                for cat in ['competitor', 'customer', 'pricing', 'content', 'product', 'technical', 'marketing']:
+                    if cat in msg_lower:
+                        payload['category'] = cat
+                        break
+            else:
+                # Default to search with the query
+                payload['action'] = 'search'
+                # Extract meaningful search terms
+                import re
+                # Remove common words and extract key terms
+                search_terms = re.sub(
+                    r'\b(what|did|the|agents?|brainstorm|discuss|panel|about|from|conversations?|ideas?|think)\b',
+                    '', msg_lower
+                ).strip()
+                payload['query'] = search_terms if search_terms else message
 
         # Add any context
         payload['context'] = context
@@ -647,6 +684,92 @@ Address the user by name occasionally."""
                 action = tool_result.get('action', 'list')
                 count = tool_result.get('count', 0)
                 return f"Found {count} {intent}: {tool_result}"
+
+            # Session 943: Brainstorming results formatting
+            elif intent == 'brainstorming':
+                action = tool_result.get('action', '')
+
+                if action == 'search':
+                    topic_matches = tool_result.get('topic_matches', [])
+                    content_matches = tool_result.get('content_matches', [])
+                    total = tool_result.get('total_found', 0)
+                    query = tool_result.get('query', '')
+
+                    if total == 0:
+                        return f"No brainstorming results found for '{query}', {user_name}."
+
+                    response = f"Found {total} brainstorming results for '{query}':\n\n"
+
+                    if topic_matches:
+                        response += "**Relevant discussions:**\n"
+                        for m in topic_matches[:3]:
+                            topic = m.get('topic', '').replace('Discussion:', '').replace('Panel:', '').strip()
+                            response += f"- {topic[:60]}\n"
+
+                    if content_matches:
+                        response += "\n**Matching ideas:**\n"
+                        for m in content_matches[:3]:
+                            msg = m.get('matching_message', '')[:100]
+                            agent = m.get('agent', 'Unknown')
+                            response += f"- {agent}: \"{msg}...\"\n"
+
+                    return response
+
+                elif action == 'recent':
+                    discussions = tool_result.get('discussions', [])
+                    panels = tool_result.get('panels', [])
+                    total_d = tool_result.get('total_discussions', 0)
+                    total_p = tool_result.get('total_panels', 0)
+
+                    response = f"Recent brainstorming activity ({tool_result.get('period_days', 7)} days):\n\n"
+                    response += f"**{total_d} Discussions, {total_p} Panels**\n\n"
+
+                    if discussions:
+                        response += "Recent discussions:\n"
+                        for d in discussions[:3]:
+                            response += f"- {d.get('topic', 'Untitled')[:50]} ({d.get('date', '')})\n"
+
+                    if panels:
+                        response += "\nRecent panels:\n"
+                        for p in panels[:3]:
+                            response += f"- {p.get('topic', 'Untitled')[:50]} ({p.get('date', '')})\n"
+
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total_brainstorming', 0)
+                    discussions = tool_result.get('total_discussions', 0)
+                    panels = tool_result.get('total_panels', 0)
+                    keywords = tool_result.get('top_keywords', [])
+
+                    response = f"Brainstorming stats ({tool_result.get('period_days', 30)} days):\n\n"
+                    response += f"- Total sessions: {total}\n"
+                    response += f"- Discussions: {discussions}\n"
+                    response += f"- Panels: {panels}\n"
+
+                    if keywords:
+                        top = ', '.join([k.get('word', '') for k in keywords[:5]])
+                        response += f"\nTop topics: {top}"
+
+                    return response
+
+                elif action == 'by_category':
+                    category = tool_result.get('category', '')
+                    results = tool_result.get('results', [])
+                    total = tool_result.get('total_found', 0)
+
+                    if total == 0:
+                        return f"No {category} brainstorming found, {user_name}."
+
+                    response = f"Found {total} {category}-related brainstorming sessions:\n\n"
+                    for r in results[:5]:
+                        topic = r.get('topic', '').replace('Discussion:', '').replace('Panel:', '').strip()
+                        response += f"- {topic[:60]}\n"
+
+                    return response
+
+                else:
+                    return str(tool_result)
 
             else:
                 return str(tool_result)
