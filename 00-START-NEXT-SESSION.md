@@ -1,12 +1,29 @@
-# Session 957 - Start Here
+# Session 958 - Start Here
 
-**Previous Session:** 954-956 (Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance)
+**Previous Session:** 957 (RAG Observability Frontend)
 **Date:** February 6, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE**
 
 ---
 
-## Session 954-956 Summary (Just Completed)
+## Session 957 Summary (Just Completed)
+
+### Option I: RAG Observability Frontend - COMPLETE
+Built comprehensive UI dashboard for monitoring the Risk-Aware RAG system in KnowledgeTab:
+- **Summary stats row** - Total docs, critical docs, classified docs, budget utilization %
+- **Health indicators** - Color-coded (green/amber/blue) status with recommendations
+- **Collapsible detail panels**:
+  - Context budget allocation by tier (Reserved, Critical, High, Medium, Low) with progress bars
+  - Documents by risk level (critical, high, medium, low) with colored cards
+  - Documents by classification (reference, architecture, constraint, etc.)
+  - Risk boost effectiveness (boosted docs, avg/max boost percentages)
+  - Retrieval channel distribution (semantic, critical, incident, constraint)
+- **Run Classification** button to trigger document classification
+- **4 API endpoints** - ragDashboard, ragCriticalDocs, ragRiskDistribution, ragRunClassification
+
+---
+
+## Session 954-956 Summary
 
 ### Option A: Document Classification - COMPLETE
 Ran document classification for Risk-Aware RAG on Railway production.
@@ -70,12 +87,26 @@ Added "AI Learning" sub-tab to LearningJourneyTab:
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
 
-### Option I: RAG Observability Frontend
-Build UI dashboard for RAG system monitoring:
-- Document inventory visualization
-- Context budget utilization charts
-- Risk distribution matrix
-- Critical docs management
+### Option J: Critical Docs Management UI
+Extend RAG Observability with critical document management:
+- View/edit critical docs list
+- Mark/unmark documents as critical
+- Quick filters for classification status
+- Bulk classification actions
+
+### Option K: RAG Retrieval Analytics
+Add retrieval logging and analytics:
+- Log each retrieval with query, results, and context used
+- Show retrieval success metrics
+- Query analysis (what topics are frequently searched)
+- Context efficiency metrics
+
+### Option L: Provenance Dashboard
+Build UI for viewing agent provenance data:
+- Freshness indicators across all agents
+- Stale data warnings
+- Data source traceability
+- Publishability status overview
 
 ---
 
@@ -83,7 +114,8 @@ Build UI dashboard for RAG system monitoring:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
-| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance Extension + ML UI + Learning UI | #935-#941 |
+| **957** | RAG Observability Frontend - Complete UI dashboard for risk-aware RAG system | #943 |
+| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance Extension + ML UI + Learning UI | #935-#942 |
 | **953** | Agent Provenance Expansion - 18 agents with provenance tracking | - |
 | **952** | Narrative Injection Enhancement - Topic filtering, diversity, fallbacks | #929, #930 |
 | **951** | PA Platform Query Tool - Query deliverables, reports, initiatives | #929 |
@@ -110,6 +142,12 @@ Build UI dashboard for RAG system monitoring:
 | `core/services/decision_extractor.py` | +_is_valid_initiative_name() validation |
 | `core/management/commands/enrich_boardroom_ml.py` | Backfill command |
 
+### Session 957 - RAG Observability Frontend
+| File | Purpose |
+|------|---------|
+| `frontend/src/lib/api.ts` | +4 RAG observability API endpoints |
+| `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | +RAG System Health section with full visualization |
+
 ### Session 956 - Provenance + ML UI + Learning UI
 | File | Purpose |
 |------|---------|
@@ -130,4 +168,4 @@ Build UI dashboard for RAG system monitoring:
 
 ---
 
-**Session 957 Focus: Option I (RAG Observability Frontend) is the priority - or choose another direction!**
+**Session 958 Focus: Choose from Options J, K, or L above - or pick a new direction!**
