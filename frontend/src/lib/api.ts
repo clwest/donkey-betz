@@ -3418,6 +3418,119 @@ export const platformApi = {
       participants: number
       conversation_type: string
     }>(`/initiatives/${initiativeId}/start-conversation/`, params || {}),
+
+  // Session 957: RAG Observability Dashboard
+  ragDashboard: () =>
+    api.get<{
+      success: boolean
+      timestamp: string
+      document_inventory: {
+        total_documents: number
+        total_active: number
+        total_critical: number
+        by_risk_level: Record<string, number>
+        by_document_class: Record<string, number>
+        critical_by_class: Record<string, number>
+        high_risk_by_class: Record<string, number>
+        avg_age_days: number
+        newest_doc_age_days: number
+        oldest_critical_age_days: number
+      }
+      retrieval_channels: {
+        total_retrievals: number
+        semantic_channel_count: number
+        critical_channel_count: number
+        incident_channel_count: number
+        constraint_channel_count: number
+        semantic_pct: number
+        critical_pct: number
+        incident_pct: number
+        constraint_pct: number
+      }
+      risk_boost: {
+        total_results_boosted: number
+        total_results_unboosted: number
+        avg_boost_applied: number
+        max_boost_applied: number
+        boost_by_risk_level: Record<string, { count: number; boost: number; total_boost_potential: number }>
+        boost_by_document_class: Record<string, { count: number; boost: number; total_boost_potential: number }>
+      }
+      context_budget: {
+        total_budget: number
+        total_used: number
+        utilization_pct: number
+        critical_tier_tokens: number
+        reserved_tier_tokens: number
+        high_tier_tokens: number
+        medium_tier_tokens: number
+        low_tier_tokens: number
+        critical_docs_tokens: number
+        incident_docs_tokens: number
+        audit_findings_tokens: number
+        section_usage: Record<string, { max_tokens: number; priority: string; status: string }>
+        is_over_budget: boolean
+        sections_truncated: string[]
+        sections_skipped: string[]
+      }
+      health_indicators: Array<{
+        level: 'success' | 'warning' | 'info'
+        message: string
+        recommendation?: string
+      }>
+      summary: {
+        total_documents: number
+        critical_documents: number
+        classified_documents: number
+        high_risk_documents: number
+        budget_utilization: number
+        reserved_tier_tokens: number
+      }
+    }>('/rag/observability/dashboard/'),
+
+  ragCriticalDocs: () =>
+    api.get<{
+      success: boolean
+      critical_docs: Array<{
+        id: string
+        title: string
+        path: string
+        document_class: string
+        risk_level: string
+        updated_at: string
+        age_days: number
+        retrieval_boost: number
+      }>
+      count: number
+    }>('/rag/observability/critical-docs/'),
+
+  ragRiskDistribution: () =>
+    api.get<{
+      success: boolean
+      distribution: {
+        risk_matrix: Record<string, Record<string, number>>
+        coverage_gaps: Array<{
+          type: string
+          message: string
+          impact: string
+        }>
+        recommendations: Array<{
+          priority: string
+          action: string
+          command?: string
+          reason?: string
+        }>
+      }
+    }>('/rag/observability/risk-distribution/'),
+
+  ragRunClassification: (params?: { limit?: number; force?: boolean }) =>
+    api.post<{
+      success: boolean
+      classified_count: number
+      results: {
+        by_class: Record<string, number>
+        by_risk: Record<string, number>
+      }
+    }>('/rag/observability/classify/', params || {}),
 }
 
 // Session 833: Blogs API for approval workflow

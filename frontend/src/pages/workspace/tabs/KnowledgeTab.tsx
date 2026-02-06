@@ -3,10 +3,11 @@
 // Session 833: Document viewer with markdown rendering
 // Session 840: Enhanced cards with metadata and onClick handlers for all sections
 // Session 840: Replaced static audits with Audit Dashboard showing actionable findings
+// Session 957: Added RAG Observability Dashboard section
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, FileText, ClipboardList, Loader2, X, AlertCircle, Calendar, FileCode, Shield, CheckCircle, Clock, XCircle, ChevronDown } from 'lucide-react'
+import { BookOpen, FileText, ClipboardList, Loader2, X, AlertCircle, Calendar, FileCode, Shield, CheckCircle, Clock, XCircle, ChevronDown, Database, Zap, Activity, RefreshCw, AlertTriangle, Info, Target, Layers } from 'lucide-react'
 import { platformApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import ReactMarkdown from 'react-markdown'
@@ -131,12 +132,39 @@ export function KnowledgeTab() {
     },
   })
 
+  // Session 957: RAG Observability Dashboard
+  const [showRagDetails, setShowRagDetails] = useState(false)
+  const {
+    data: ragData,
+    isLoading: loadingRag,
+    isError: ragError,
+    refetch: refetchRag,
+  } = useQuery({
+    queryKey: ['rag-observability-dashboard'],
+    queryFn: async () => {
+      const res = await platformApi.ragDashboard()
+      return res.data
+    },
+  })
+
+  const runClassificationMutation = useMutation({
+    mutationFn: async (params?: { limit?: number; force?: boolean }) => {
+      const res = await platformApi.ragRunClassification(params)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rag-observability-dashboard'] })
+    },
+  })
+
   // Session 833: Combined error handling
-  const hasError = canonError || playbooksError || findingsError
+  // Session 957: Added ragError to error handling
+  const hasError = canonError || playbooksError || findingsError || ragError
   const handleRetry = () => {
     if (canonError) refetchCanon()
     if (playbooksError) refetchPlaybooks()
     if (findingsError) refetchFindings()
+    if (ragError) refetchRag()
   }
 
   if (hasError) {
@@ -376,6 +404,227 @@ export function KnowledgeTab() {
         {auditFindings?.count && (
           <div className="mt-3 pt-3 border-t border-dark-border text-xs text-gray-500 text-center">
             Showing {auditFindings.findings?.length || 0} of {auditFindings.count} findings
+          </div>
+        )}
+      </div>
+
+      {/* Session 957: RAG Observability Dashboard */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Database className="text-purple-400" size={18} />
+            <h3 className="text-md font-semibold uppercase">RAG System Health</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetchRag()}
+              disabled={loadingRag}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+              title="Refresh"
+            >
+              <RefreshCw size={14} className={loadingRag ? 'animate-spin' : ''} />
+            </button>
+            <button
+              onClick={() => setShowRagDetails(!showRagDetails)}
+              className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+            >
+              {showRagDetails ? 'Hide Details' : 'Show Details'}
+            </button>
+          </div>
+        </div>
+
+        {loadingRag ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="animate-spin text-primary-400" size={24} />
+          </div>
+        ) : ragData ? (
+          <div className="space-y-4">
+            {/* Summary Stats Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-3 bg-gray-800/50 rounded-lg">
+                <div className="text-2xl font-bold text-white">{ragData.summary?.total_documents || 0}</div>
+                <div className="text-xs text-gray-400">Total Documents</div>
+              </div>
+              <div className="p-3 bg-gray-800/50 rounded-lg">
+                <div className="text-2xl font-bold text-red-400">{ragData.summary?.critical_documents || 0}</div>
+                <div className="text-xs text-gray-400">Critical Docs</div>
+              </div>
+              <div className="p-3 bg-gray-800/50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-400">{ragData.summary?.classified_documents || 0}</div>
+                <div className="text-xs text-gray-400">Classified</div>
+              </div>
+              <div className="p-3 bg-gray-800/50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-400">{ragData.summary?.budget_utilization?.toFixed(1) || 0}%</div>
+                <div className="text-xs text-gray-400">Budget Used</div>
+              </div>
+            </div>
+
+            {/* Health Indicators */}
+            {ragData.health_indicators && ragData.health_indicators.length > 0 && (
+              <div className="space-y-2">
+                {ragData.health_indicators.map((indicator, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-start gap-2 p-2 rounded text-sm ${
+                      indicator.level === 'success' ? 'bg-green-500/10 text-green-400' :
+                      indicator.level === 'warning' ? 'bg-amber-500/10 text-amber-400' :
+                      'bg-blue-500/10 text-blue-400'
+                    }`}
+                  >
+                    {indicator.level === 'success' ? <CheckCircle size={16} className="shrink-0 mt-0.5" /> :
+                     indicator.level === 'warning' ? <AlertTriangle size={16} className="shrink-0 mt-0.5" /> :
+                     <Info size={16} className="shrink-0 mt-0.5" />}
+                    <div>
+                      <span>{indicator.message}</span>
+                      {indicator.recommendation && (
+                        <span className="text-xs opacity-70 ml-2">→ {indicator.recommendation}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Detailed Sections (collapsible) */}
+            {showRagDetails && (
+              <div className="space-y-4 pt-4 border-t border-dark-border">
+                {/* Context Budget Breakdown */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers size={14} className="text-purple-400" />
+                    <h4 className="text-sm font-medium">Context Budget Allocation</h4>
+                    <span className="text-xs text-gray-500">({ragData.context_budget?.total_budget || 4000} tokens)</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Reserved Tier', value: ragData.context_budget?.reserved_tier_tokens || 0, color: 'bg-red-500', pct: ((ragData.context_budget?.reserved_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
+                      { label: 'Critical Tier', value: ragData.context_budget?.critical_tier_tokens || 0, color: 'bg-orange-500', pct: ((ragData.context_budget?.critical_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
+                      { label: 'High Tier', value: ragData.context_budget?.high_tier_tokens || 0, color: 'bg-yellow-500', pct: ((ragData.context_budget?.high_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
+                      { label: 'Medium Tier', value: ragData.context_budget?.medium_tier_tokens || 0, color: 'bg-blue-500', pct: ((ragData.context_budget?.medium_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
+                      { label: 'Low Tier', value: ragData.context_budget?.low_tier_tokens || 0, color: 'bg-gray-500', pct: ((ragData.context_budget?.low_tier_tokens || 0) / (ragData.context_budget?.total_budget || 4000)) * 100 },
+                    ].map(tier => (
+                      <div key={tier.label} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 w-24">{tier.label}</span>
+                        <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                          <div className={`h-full ${tier.color}`} style={{ width: `${tier.pct}%` }} />
+                        </div>
+                        <span className="text-xs text-gray-500 w-20 text-right">{tier.value} ({tier.pct.toFixed(1)}%)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Document Inventory by Risk Level */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target size={14} className="text-red-400" />
+                    <h4 className="text-sm font-medium">Documents by Risk Level</h4>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {Object.entries(ragData.document_inventory?.by_risk_level || {}).map(([level, count]) => (
+                      <div key={level} className={`p-2 rounded text-center ${
+                        level === 'critical' ? 'bg-red-500/20 text-red-400' :
+                        level === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                        level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        <div className="text-lg font-bold">{count as number}</div>
+                        <div className="text-xs capitalize">{level}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Document Inventory by Class */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText size={14} className="text-blue-400" />
+                    <h4 className="text-sm font-medium">Documents by Classification</h4>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(ragData.document_inventory?.by_document_class || {}).slice(0, 8).map(([docClass, count]) => (
+                      <span key={docClass} className="px-2 py-1 bg-gray-700 rounded text-xs">
+                        {docClass}: <span className="text-white font-medium">{count as number}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Risk Boost Stats */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap size={14} className="text-yellow-400" />
+                    <h4 className="text-sm font-medium">Risk Boost Effectiveness</h4>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 bg-gray-800/50 rounded">
+                      <div className="text-lg font-bold text-green-400">{ragData.risk_boost?.total_results_boosted || 0}</div>
+                      <div className="text-xs text-gray-400">Boosted Docs</div>
+                    </div>
+                    <div className="p-2 bg-gray-800/50 rounded">
+                      <div className="text-lg font-bold text-white">{((ragData.risk_boost?.avg_boost_applied || 0) * 100).toFixed(0)}%</div>
+                      <div className="text-xs text-gray-400">Avg Boost</div>
+                    </div>
+                    <div className="p-2 bg-gray-800/50 rounded">
+                      <div className="text-lg font-bold text-purple-400">{((ragData.risk_boost?.max_boost_applied || 0) * 100).toFixed(0)}%</div>
+                      <div className="text-xs text-gray-400">Max Boost</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Retrieval Channels */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity size={14} className="text-green-400" />
+                    <h4 className="text-sm font-medium">Retrieval Channels</h4>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="p-2 bg-gray-800/50 rounded">
+                      <div className="text-sm font-bold text-blue-400">{ragData.retrieval_channels?.semantic_channel_count || 0}</div>
+                      <div className="text-xs text-gray-400">Semantic</div>
+                    </div>
+                    <div className="p-2 bg-gray-800/50 rounded">
+                      <div className="text-sm font-bold text-red-400">{ragData.retrieval_channels?.critical_channel_count || 0}</div>
+                      <div className="text-xs text-gray-400">Critical</div>
+                    </div>
+                    <div className="p-2 bg-gray-800/50 rounded">
+                      <div className="text-sm font-bold text-orange-400">{ragData.retrieval_channels?.incident_channel_count || 0}</div>
+                      <div className="text-xs text-gray-400">Incident</div>
+                    </div>
+                    <div className="p-2 bg-gray-800/50 rounded">
+                      <div className="text-sm font-bold text-purple-400">{ragData.retrieval_channels?.constraint_channel_count || 0}</div>
+                      <div className="text-xs text-gray-400">Constraint</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Run Classification Button */}
+                <div className="pt-2 border-t border-dark-border">
+                  <button
+                    onClick={() => runClassificationMutation.mutate({ limit: 100 })}
+                    disabled={runClassificationMutation.isPending}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded text-sm transition-colors disabled:opacity-50"
+                  >
+                    {runClassificationMutation.isPending ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={14} />
+                    )}
+                    Run Document Classification
+                  </button>
+                  {runClassificationMutation.data && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      Classified {runClassificationMutation.data.classified_count} documents
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400">
+            <Database size={32} className="mx-auto mb-2 opacity-50" />
+            <p>No RAG data available</p>
           </div>
         )}
       </div>
