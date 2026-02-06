@@ -587,6 +587,72 @@ def auto_create_gate_for_decision(decision) -> Optional['PilotReadinessGate']:
 # Session 849: Auto-Initiative Creation for Decisions with Proposed Features
 # =============================================================================
 
+
+def _is_valid_initiative_name(name: str) -> bool:
+    """
+    Session 954: Validate that a name is suitable for an initiative.
+
+    Prevents junk initiative creation by checking for:
+    - Too short (< 10 chars)
+    - Starts with lowercase (sentence fragment)
+    - Starts with junk patterns
+    - Contains certain marker patterns
+
+    Returns:
+        True if the name is valid for an initiative
+    """
+    if not name or len(name.strip()) < 10:
+        return False
+
+    name = name.strip()
+
+    # Check for lowercase start (sentence fragment)
+    if name[0].islower():
+        return False
+
+    # Check for junk patterns
+    junk_starts = [
+        'driven ',
+        'plan ',
+        'of-',
+        'analysis ',
+        'Auto-created',
+        "A '",
+        "An '",
+        'stage ',
+        'type/',
+        'offs,',
+        'that ',
+        'which ',
+        'to ',
+        'for ',
+        'with ',
+        'from ',
+        'and ',
+        'the ',
+    ]
+    name_lower = name.lower()
+    for pattern in junk_starts:
+        if name_lower.startswith(pattern.lower()):
+            return False
+
+    # Check for junk contains patterns
+    junk_contains = [
+        '[Learned]',
+        '[Synthesis]',
+        'Feature name:',
+    ]
+    for pattern in junk_contains:
+        if pattern.lower() in name_lower:
+            return False
+
+    # Must start with a capital letter or number
+    if not (name[0].isupper() or name[0].isdigit()):
+        return False
+
+    return True
+
+
 def auto_link_initiative_for_decision(decision) -> Optional['Initiative']:
     """
     Session 849: Auto-create and link an Initiative when a decision has a suggested_feature.
@@ -640,6 +706,12 @@ def auto_link_initiative_for_decision(decision) -> Optional['Initiative']:
         # Leave room for normalization in the service
         if len(feature_name) > 150:
             feature_name = feature_name[:147] + '...'
+
+        # Session 954: Validate feature name is a proper title before creating initiative
+        # Prevents junk initiatives from being created with fragment names
+        if not _is_valid_initiative_name(feature_name):
+            logger.debug(f"Session 954: Skipping initiative creation - invalid name: '{feature_name[:50]}...'")
+            return None
 
         # Create/get the initiative
         initiative, created = service.get_or_create_initiative(
