@@ -143,18 +143,75 @@ class VoiceProfile:
 
 class NarrativeInjectionService:
     """
+    Session 951: Enhanced with topic relevance, diversity constraints, and fallbacks.
+
     Pulls real incidents from system logs to inject into content.
 
     These are the concrete examples that make content memorable:
     "Last week, Agent X noticed Y, triggered Z, and within 14 minutes the system rerouted..."
+
+    Improvements (Session 951):
+    - Topic relevance gating: Only inject incidents matching post topic/domain
+    - Diversity constraints: Max 1 incident per type to prevent dominance
+    - Fallback incidents: Generic "build in public" moments when DB is empty
+    - Domain tagging: Each incident tagged with relevant domains
     """
+
+    # Domain keywords for topic matching
+    DOMAIN_KEYWORDS = {
+        'ai': ['ai', 'agent', 'llm', 'gpt', 'machine learning', 'neural', 'model', 'automation'],
+        'finance': ['stock', 'market', 'trading', 'investment', 'crypto', 'bitcoin', 'portfolio'],
+        'sports': ['sports', 'betting', 'odds', 'nba', 'nfl', 'mlb', 'game', 'team', 'player'],
+        'tech': ['software', 'code', 'developer', 'api', 'infrastructure', 'system', 'platform'],
+        'content': ['blog', 'content', 'writing', 'podcast', 'video', 'media', 'publish'],
+        'business': ['startup', 'revenue', 'growth', 'customer', 'product', 'market'],
+    }
+
+    # Fallback incidents when database has no real ones
+    FALLBACK_INCIDENTS = [
+        {
+            'type': 'learning',
+            'title': 'System Evolution',
+            'narrative': "Every week, the system processes thousands of decisions. Each one teaches "
+                        "something - which patterns work, which fail, what users actually need. "
+                        "This isn't static software; it's a learning organism.",
+            'domain': ['ai', 'tech'],
+            'is_fallback': True,
+        },
+        {
+            'type': 'decision',
+            'title': 'Autonomous Decision-Making',
+            'narrative': "When faced with ambiguous data, the system doesn't freeze. It weighs options, "
+                        "considers confidence levels, and makes a call. Sometimes wrong, always learning.",
+            'domain': ['ai', 'tech'],
+            'is_fallback': True,
+        },
+        {
+            'type': 'recovery',
+            'title': 'Resilience by Design',
+            'narrative': "Failures happen - APIs timeout, models hallucinate, data gets messy. "
+                        "The difference is what happens next: automatic retry, graceful degradation, "
+                        "and a learning record so it doesn't happen the same way twice.",
+            'domain': ['tech', 'ai'],
+            'is_fallback': True,
+        },
+    ]
 
     def __init__(self):
         self.cache = {}
         self.cache_ttl = timedelta(minutes=30)
 
-    def get_recent_incidents(self, limit: int = 5) -> List[Dict[str, Any]]:
-        """Get recent notable incidents from the system."""
+    def get_recent_incidents(self, limit: int = 5, topic: str = None) -> List[Dict[str, Any]]:
+        """
+        Get recent notable incidents from the system.
+
+        Args:
+            limit: Maximum incidents to return
+            topic: Optional topic for relevance filtering
+
+        Returns:
+            List of incidents, filtered by topic relevance if provided
+        """
         incidents = []
 
         try:
@@ -170,19 +227,128 @@ class NarrativeInjectionService:
             # Get decision outcomes
             incidents.extend(self._get_decision_outcomes(limit=2))
 
-            # Session 951: Removed spider discoveries from incidents
-            # Spider data collection is routine operation, not an interesting incident
-            # The "kalshi spider pulled 500 items" was dominating all blog content
-            # regardless of topic relevance. Other incident types (recoveries, dreams,
-            # learning moments, decisions) are more meaningful for content.
-            # incidents.extend(self._get_spider_discoveries(limit=2))
+            # Session 951: Spider discoveries removed - they're routine telemetry, not incidents
 
         except Exception as e:
             logger.warning(f"Error fetching incidents: {e}")
 
-        # Shuffle and return top incidents
+        # Session 951: Apply topic relevance filtering if topic provided
+        if topic and incidents:
+            incidents = self._filter_by_topic_relevance(incidents, topic)
+
+        # Session 951: Apply diversity constraints - max 1 per type
+        incidents = self._apply_diversity_constraints(incidents)
+
+        # Session 951: Add fallback incidents if we have none
+        if not incidents:
+            incidents = self._get_fallback_incidents(topic, limit)
+
+        # Shuffle and return
         random.shuffle(incidents)
         return incidents[:limit]
+
+    def _detect_topic_domain(self, topic: str) -> List[str]:
+        """Detect which domains a topic belongs to."""
+        if not topic:
+            return []
+
+        topic_lower = topic.lower()
+        matched_domains = []
+
+        for domain, keywords in self.DOMAIN_KEYWORDS.items():
+            if any(kw in topic_lower for kw in keywords):
+                matched_domains.append(domain)
+
+        return matched_domains if matched_domains else ['general']
+
+    def _filter_by_topic_relevance(
+        self,
+        incidents: List[Dict[str, Any]],
+        topic: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Filter incidents to only those relevant to the topic.
+
+        If no incidents match, returns all incidents (better than empty).
+        """
+        topic_domains = self._detect_topic_domain(topic)
+
+        if not topic_domains or topic_domains == ['general']:
+            return incidents  # No filtering if we can't detect domain
+
+        relevant = []
+        for incident in incidents:
+            incident_domains = incident.get('domain', [])
+            if not incident_domains:
+                # Infer domain from agent name or title
+                incident_domains = self._infer_incident_domain(incident)
+
+            # Check for domain overlap
+            if any(d in topic_domains for d in incident_domains):
+                relevant.append(incident)
+
+        # Return relevant if we have any, otherwise return all
+        return relevant if relevant else incidents
+
+    def _infer_incident_domain(self, incident: Dict[str, Any]) -> List[str]:
+        """Infer domain from incident content."""
+        text = f"{incident.get('title', '')} {incident.get('narrative', '')} {incident.get('agent', '')}".lower()
+
+        domains = []
+        for domain, keywords in self.DOMAIN_KEYWORDS.items():
+            if any(kw in text for kw in keywords):
+                domains.append(domain)
+
+        return domains if domains else ['general']
+
+    def _apply_diversity_constraints(
+        self,
+        incidents: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply diversity constraints: max 1 incident per type.
+
+        This prevents "5 recovery stories" or "3 decision stories" dominating.
+        """
+        seen_types = set()
+        diverse_incidents = []
+
+        for incident in incidents:
+            incident_type = incident.get('type', 'unknown')
+            if incident_type not in seen_types:
+                seen_types.add(incident_type)
+                diverse_incidents.append(incident)
+
+        return diverse_incidents
+
+    def _get_fallback_incidents(
+        self,
+        topic: str = None,
+        limit: int = 3
+    ) -> List[Dict[str, Any]]:
+        """
+        Get fallback incidents when database has no real ones.
+
+        These are generic "build in public" style nuggets that are
+        always true and relevant.
+        """
+        fallbacks = self.FALLBACK_INCIDENTS.copy()
+
+        # Filter by topic if provided
+        if topic:
+            topic_domains = self._detect_topic_domain(topic)
+            if topic_domains and topic_domains != ['general']:
+                fallbacks = [
+                    f for f in fallbacks
+                    if any(d in topic_domains for d in f.get('domain', []))
+                ]
+
+        # If no topic-matched fallbacks, use all
+        if not fallbacks:
+            fallbacks = self.FALLBACK_INCIDENTS.copy()
+
+        random.shuffle(fallbacks)
+        return fallbacks[:limit]
 
     def _get_agent_recoveries(self, limit: int = 2) -> List[Dict[str, Any]]:
         """Get stories of agents recovering from failures."""
@@ -662,10 +828,12 @@ class FlagshipBlogTemplate:
 
         This is added to the ContentWriterAgent's prompt to guide
         the content toward the flagship pattern.
+
+        Session 951: Now passes topic to get_recent_incidents for relevance filtering.
         """
 
-        # Get real incidents
-        incidents = self.narrative_service.get_recent_incidents(limit=3)
+        # Get real incidents - Session 951: filtered by topic relevance
+        incidents = self.narrative_service.get_recent_incidents(limit=3, topic=topic)
         incident_stories = []
         for incident in incidents:
             formatted = self.narrative_service.format_incident_for_content(incident)
