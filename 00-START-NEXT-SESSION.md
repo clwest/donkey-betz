@@ -1,59 +1,51 @@
-# Session 945 - Start Here
+# Session 946 - Start Here
 
-**Previous Session:** 944 (Operations Tab Fix + PA Boardroom Listing + ConceptForge Dedupe)
+**Previous Session:** 945 (Stale Initiative Cleanup)
 **Date:** February 5, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **373 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: ENHANCED** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED** | **Experiment Cleanup: SCHEDULED** | **Bulk Actions: COMPLETE** | **Stage Distribution: FIXED** | **Operations Tab: FIXED** | **ConceptForge Plan: COMPLETE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: ENHANCED** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED** | **Experiment Cleanup: SCHEDULED** | **Bulk Actions: COMPLETE** | **Stage Distribution: FIXED** | **Operations Tab: FIXED** | **ConceptForge Plan: COMPLETE** | **Stale Cleanup: ENHANCED**
 
 ---
 
-## Session 944 Summary (Just Completed)
+## Session 945 Summary (Just Completed)
 
-### Operations Tab Fix (PR #897)
+### Stale Initiative Cleanup (PR #901)
 
-Stock/blockchain agents weren't appearing in the Operations Tab despite running successfully.
+Addressed the 240 stale/junk initiatives clogging the system.
 
-**Root Cause:** Scheduled agent tasks (`run_stock_financial_agents`, `run_blockchain_monitoring_agents`, `run_market_monitoring_agents`) used `router.route()` directly instead of `universal_agent_workspace_output()`.
+**Investigation Findings:**
+- 240 ACTIVE initiatives, only 3 ARCHIVED
+- 207 without Stage 1 doc (stuck at beginning)
+- 71 "Auto-created From Conversation Decision..." junk items
+- Existing junk patterns weren't catching new junk types
 
-**Fix:** Updated `_run_agent_group` helper and both direct tasks to use `universal_agent_workspace_output()`, which creates WorkspaceOperation records that appear in the Operations Tab.
+**Root Cause:** Initiatives auto-created from conversations had junk names that escaped cleanup filters. The name-fixing logic was just renaming them with new UUIDs instead of deleting.
 
-**Files Changed:**
-- `core/tasks.py` - Updated `_run_agent_group`, `run_blockchain_monitoring_agents`, `run_market_monitoring_agents`
+**Fixes:**
 
-### PA Boardroom Listing Fix (PR #898)
+1. **New junk patterns** added to `cleanup_junk_initiatives`:
+   - `Auto-created From` prefix
+   - `A '` and `An '` prefixes (fragments)
 
-PA was telling users "I can't access boardroom items from this chat sandbox" when it actually has tools to do so.
+2. **Delete junk that can't be fixed**: If generated title is still junk, delete instead of rename
 
-**Root Cause:**
-1. Tool description didn't emphasize it returns actual items
-2. No dedicated tool for listing large numbers of boardroom decisions
+3. **Activity-aware archiving**:
+   - Skip if `founder_intent_set=True`
+   - Skip if `last_activity_at` within 3 days
+   - Skip if recent HiveMindSession conversations exist
 
-**Fix:**
-1. Updated `get_system_status` tool description to emphasize "returns ACTUAL ITEMS"
-2. Added new `list_boardroom_decisions` tool with pagination support (up to 100 items per request)
+4. **New `Initiative.last_activity_at` field**:
+   - Tracks meaningful activity (conversations, action items)
+   - `update_activity()` method called when conversations complete
+   - More accurate than `updated_at` for staleness detection
 
-**Files Changed:**
-- `core/agents/personal_assistant_agent.py` - Updated tool description + added `list_boardroom_decisions` tool and `_list_boardroom_decisions` handler
-
-### ConceptForge Plan Completion (PR #899)
-
-Reviewed the plan at `valiant-discovering-sedgewick.md` - found most items were already implemented in prior sessions:
-
-| Phase | Item | Status |
-|-------|------|--------|
-| 1A | Dedupe method | Already existed |
-| 1A | Integration | **Added this session** |
-| 1B | Provenance headers | Already in orchestrator.py |
-| 1C | Placeholder validation | Already in orchestrator.py |
-| 2A | Decision/risk/why_now parsing | Already implemented |
-| 2B | Validation requires decision/risk | Already implemented |
-| 2C | Estimate labeling | validate_estimates() exists |
-| 3A | Operating Constraints parsing | Already implemented |
-| 3B | Experiment Collision Service | Fully implemented |
-
-**Fix:** Wired `dedupe_decision_summary_blocks()` into `extract_decision_summary()` to remove duplicate DecisionSummary blocks before parsing.
+**Results:**
+- Before: 240 ACTIVE initiatives (71 junk)
+- After: 166 ACTIVE initiatives (74 junk items properly deleted)
 
 **Files Changed:**
-- `core/conversation_roles.py` - Added dedupe call at start of `extract_decision_summary()`
+- `core/tasks.py` - Enhanced `cleanup_junk_initiatives` with new patterns and activity checks
+- `core/models_document_registry.py` - Added `last_activity_at` field and `update_activity()` method
+- `core/migrations/0229_initiative_last_activity_at.py` - New field migration
 
 ---
 
@@ -77,11 +69,11 @@ Improve ML recommendations for boardroom items:
 - Better confidence scoring
 - Recommendations based on item content, not just type
 
-### Option D: Stale Initiative Cleanup
-Address the 236 stale initiatives:
-- Create automated cleanup for initiatives with no activity in X days
-- Add "archive stale" scheduled task
-- Investigate why so many initiatives are stalled
+### Option D: Initiative Source Cleanup
+Investigate why so many junk initiatives are being created:
+- Find where "Auto-created From Conversation Decision" comes from
+- Add validation before initiative creation
+- Consider gating initiative creation on founder intent
 
 ### Option E: Typography/UI Polish
 Continue modernizing markdown rendering:
@@ -95,24 +87,30 @@ Continue modernizing markdown rendering:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **945** | Stale Initiative Cleanup - New junk patterns, activity tracking, last_activity_at field | #901 |
 | **944** | Operations Tab Fix + PA Boardroom Listing + ConceptForge Dedupe | #897, #898, #899 |
 | **943** | Stage Distribution Fix + Stale Investigation | #876 |
 | **942** | Integrity Anomaly Investigation + Halted Experiment Cleanup + Bulk Boardroom Actions | #874, #875 |
 | **941** | Boardroom Auto-Approve Scheduled | #871 |
 | **940** | PA Boardroom Complete (Awareness + Tools + Triage + Learning) | #866-#869 |
 | **939** | Boardroom Tab + Cleanup Automation | #862-#864 |
-| **937** | Content Quality Verification + Spider Fixes | #855, #857 |
 
 ---
 
 ## Key Files Reference
 
-### Session 944 Fixes
+### Session 945 Fixes
 | File | Purpose |
 |------|---------|
-| `core/tasks.py` | `_run_agent_group`, `run_blockchain_monitoring_agents`, `run_market_monitoring_agents` - now use `universal_agent_workspace_output` |
-| `core/agents/personal_assistant_agent.py` | `list_boardroom_decisions` tool + `_list_boardroom_decisions` handler |
-| `core/conversation_roles.py` | `extract_decision_summary()` - now calls dedupe before parsing |
+| `core/tasks.py` | `cleanup_junk_initiatives` - Enhanced with new patterns and activity checks |
+| `core/models_document_registry.py` | `Initiative.last_activity_at` field + `update_activity()` method |
+
+### Initiative Pipeline
+| File | Purpose |
+|------|---------|
+| `core/models_document_registry.py` | `Initiative`, `InitiativeStage` models |
+| `core/tasks.py` | `cleanup_junk_initiatives` - daily at 4 AM |
+| `core/models_unified_system.py` | `HiveMindSession` - conversations linked to initiatives |
 
 ### SKIN Layer / Operations Tab
 | File | Purpose |
@@ -131,4 +129,4 @@ Continue modernizing markdown rendering:
 
 ---
 
-**Session 945 Focus: Choose priority option above and continue building!**
+**Session 946 Focus: Choose priority option above and continue building!**
