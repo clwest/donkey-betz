@@ -609,11 +609,11 @@ export default function AssistantPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-4">
+    <div className="flex h-[calc(100vh-7.5rem)] gap-4 overflow-hidden">
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary-600/20 flex items-center justify-center">
               <Bot size={20} className="text-primary-400" />
@@ -746,8 +746,8 @@ export default function AssistantPage() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-auto space-y-4 pb-4">
+        {/* Messages - Session 947: Added min-h-0 to fix flex overflow */}
+        <div className="flex-1 overflow-auto space-y-4 pb-4 min-h-0">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <Bot size={48} className="mb-4 opacity-50" />
@@ -1051,9 +1051,9 @@ export default function AssistantPage() {
         </div>
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar - Session 947: Added min-h-0 to fix flex overflow */}
       {showSidebar && (
-        <div className="w-80 flex flex-col overflow-hidden">
+        <div className="w-80 flex flex-col overflow-hidden min-h-0">
           {/* Sidebar Tabs */}
           <div className="flex gap-1 mb-4 p-1 bg-dark-bg rounded-lg">
             <button
