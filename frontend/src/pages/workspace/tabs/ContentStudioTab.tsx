@@ -2300,29 +2300,9 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
                   <span className="ml-2 text-gray-400">Loading content...</span>
                 </div>
               ) : displayContent.full_text ? (
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown
-                    components={{
-                      h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-lg font-semibold text-white mt-5 mb-2">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-base font-medium text-white mt-4 mb-2">{children}</h3>,
-                      p: ({ children }) => <p className="text-gray-300 mb-3 leading-relaxed">{children}</p>,
-                      ul: ({ children }) => <ul className="list-disc list-inside mb-3 text-gray-300">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal list-inside mb-3 text-gray-300">{children}</ol>,
-                      li: ({ children }) => <li className="mb-1">{children}</li>,
-                      blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-primary-500 pl-4 italic text-gray-400 my-4">
-                          {children}
-                        </blockquote>
-                      ),
-                      code: ({ children }) => (
-                        <code className="bg-gray-800 px-1.5 py-0.5 rounded text-sm text-primary-300">{children}</code>
-                      ),
-                      pre: ({ children }) => (
-                        <pre className="bg-gray-800 p-4 rounded-lg overflow-x-auto my-4">{children}</pre>
-                      ),
-                    }}
-                  >
+                /* Session 943: Unified prose styling */
+                <div className="prose prose-invert prose-dark prose-sm max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {displayContent.full_text}
                   </ReactMarkdown>
                 </div>
@@ -2610,17 +2590,9 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
                 </div>
               ) : scriptData?.script ? (
                 <div className="space-y-4">
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>,
-                        h2: ({ children }) => <h2 className="text-lg font-semibold text-white mt-5 mb-2">{children}</h2>,
-                        h3: ({ children }) => <h3 className="text-base font-medium text-white mt-4 mb-2">{children}</h3>,
-                        p: ({ children }) => <p className="text-gray-300 mb-3 leading-relaxed">{children}</p>,
-                        strong: ({ children }) => <strong className="text-primary-300 font-semibold">{children}</strong>,
-                        em: ({ children }) => <em className="text-gray-400 italic">{children}</em>,
-                      }}
-                    >
+                  {/* Session 943: Unified prose styling */}
+                  <div className="prose prose-invert prose-dark prose-sm max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {scriptData.script}
                     </ReactMarkdown>
                   </div>

@@ -587,23 +587,9 @@ function DocumentViewerModal({
                 </div>
               )}
 
-              {/* Session 906: Proper markdown rendering */}
-              <div className="text-sm leading-relaxed markdown-content">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-6 mb-3 pb-2 border-b border-dark-border">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-lg font-semibold text-gray-200 mt-5 mb-2">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-base font-medium text-gray-300 mt-4 mb-2">{children}</h3>,
-                    p: ({ children }) => <p className="text-gray-300 mb-3">{children}</p>,
-                    ul: ({ children }) => <ul className="list-disc list-inside text-gray-300 mb-3 space-y-1">{children}</ul>,
-                    ol: ({ children }) => <ol className="list-decimal list-inside text-gray-300 mb-3 space-y-1">{children}</ol>,
-                    li: ({ children }) => <li className="text-gray-300">{children}</li>,
-                    code: ({ children }) => <code className="px-1.5 py-0.5 rounded bg-dark-bg text-primary-400 text-xs font-mono">{children}</code>,
-                    strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
-                    hr: () => <hr className="border-dark-border my-4" />,
-                  }}
-                >
+              {/* Session 943: Unified prose styling */}
+              <div className="prose prose-invert prose-dark prose-sm max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {data.full_text || data.content || 'No content available'}
                 </ReactMarkdown>
               </div>

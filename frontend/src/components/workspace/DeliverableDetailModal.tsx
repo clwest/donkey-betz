@@ -274,7 +274,8 @@ export function DeliverableDetailModal({
                   />
                 )}
               </div>
-              <div className="bg-zinc-800/50 rounded-lg p-4 prose prose-invert prose-sm max-w-none">
+              {/* Session 943: Unified prose styling */}
+              <div className="bg-zinc-800/50 rounded-lg p-4 prose prose-invert prose-dark prose-sm max-w-none">
                 {deliverable.content_format === 'markdown' ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {deliverable.content || deliverable.preview_content}

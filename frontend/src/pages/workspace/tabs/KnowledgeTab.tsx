@@ -477,7 +477,8 @@ function DocumentViewerModal({ doc, onClose }: { doc: Document; onClose: () => v
               </p>
             </div>
           ) : docData?.content ? (
-            <div className="prose prose-invert prose-sm max-w-none">
+            /* Session 943: Unified prose styling */
+            <div className="prose prose-invert prose-dark prose-sm max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {docData.content}
               </ReactMarkdown>
