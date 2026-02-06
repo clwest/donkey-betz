@@ -135,6 +135,9 @@ class ToolDispatcher:
         # Session 940: Boardroom tools for PA to act on pending items
         self.register("boardroom_tool", self._handle_boardroom)
 
+        # Session 943: Brainstorm search tool for accessing Discussion/Panel insights
+        self.register("brainstorm_tool", self._handle_brainstorm)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)
@@ -1378,6 +1381,96 @@ class ToolDispatcher:
 
         else:
             raise ValueError(f"Unknown action: {action}. Valid actions: stats, list_attention, list_decisions, approve_attention, ignore_attention, promote_decision, reject_decision, get_triage_batch")
+
+    def _handle_brainstorm(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 943: Brainstorm search tool for accessing Discussion/Panel insights.
+
+        Allows PA and Boardroom to search through past brainstorming conversations
+        without creating pending action items.
+
+        Actions:
+        - search: Search brainstorming content by query
+        - recent: Get recent brainstorming summaries
+        - details: Get details of a specific conversation
+        - by_category: Get ideas filtered by category
+        - stats: Get brainstorming activity statistics
+        """
+        from core.services.brainstorm_search_service import brainstorm_search_service
+
+        action = payload.get('action', 'search')
+
+        if action == 'search':
+            query = payload.get('query', '')
+            if not query:
+                raise ValueError("query is required for search action")
+
+            days_back = payload.get('days_back', 30)
+            limit = payload.get('limit', 10)
+            conv_type = payload.get('type')  # 'discussion', 'panel', or None
+
+            result = brainstorm_search_service.search(
+                query=query,
+                days_back=days_back,
+                limit=limit,
+                conversation_type=conv_type
+            )
+            return {'action': 'search', **result}
+
+        elif action == 'recent':
+            days = payload.get('days', 7)
+            limit = payload.get('limit', 20)
+
+            result = brainstorm_search_service.get_recent_summaries(
+                days=days,
+                limit=limit
+            )
+            return {'action': 'recent', **result}
+
+        elif action == 'details':
+            conversation_id = payload.get('conversation_id')
+            if not conversation_id:
+                raise ValueError("conversation_id is required for details action")
+
+            include_full = payload.get('include_full_content', False)
+
+            result = brainstorm_search_service.get_conversation_insights(
+                conversation_id=conversation_id,
+                include_full_content=include_full
+            )
+            return {'action': 'details', **result}
+
+        elif action == 'by_category':
+            category = payload.get('category', '')
+            if not category:
+                raise ValueError("category is required for by_category action")
+
+            days_back = payload.get('days_back', 30)
+            limit = payload.get('limit', 10)
+
+            result = brainstorm_search_service.get_ideas_by_category(
+                category=category,
+                days_back=days_back,
+                limit=limit
+            )
+            return {'action': 'by_category', **result}
+
+        elif action == 'stats':
+            days = payload.get('days', 30)
+
+            result = brainstorm_search_service.get_stats(days=days)
+            return {'action': 'stats', **result}
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: search, recent, details, by_category, stats"
+            )
 
 
 # Singleton instance
