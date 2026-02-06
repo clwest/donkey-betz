@@ -170,6 +170,29 @@ Alert on:
                     "required": ["ticker"]
                 }
             }
+        },
+        # Session 957: Added market overview tool for broad market analysis
+        {
+            "type": "function",
+            "function": {
+                "name": "get_market_overview",
+                "description": "Get broad market overview including news, top movers, and sentiment from spider network. Use when no specific ticker is provided.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "categories": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Market categories to include (stocks, crypto, forex, commodities, economy)"
+                        },
+                        "max_items": {
+                            "type": "integer",
+                            "description": "Maximum number of news items to retrieve (default 20)"
+                        }
+                    },
+                    "required": []
+                }
+            }
         }
     ]
 
@@ -563,6 +586,74 @@ Alert on:
             logger.error(f"Error fetching fundamental data: {e}")
             return {'error': str(e)}, source_info
 
+    def _get_market_overview_data(self, categories: List[str] = None, max_items: int = 20) -> tuple:
+        """
+        Session 957: Fetch broad market overview from spider network.
+
+        Uses MarketDataSpider data to get news, sentiment, and top movers.
+        Returns tuple of (data, source_info) for provenance.
+        """
+        categories = categories or ['stocks', 'economy']
+        source_info = {
+            'name': 'MarketDataSpider',
+            'endpoint': 'market/overview',
+            'retrieved_at': None,
+            'record_count': 0,
+        }
+
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone as dj_timezone
+
+            cutoff = dj_timezone.now() - timedelta(hours=6)
+
+            # Query for market spider data
+            market_data = SpiderData.objects.filter(
+                spider_name__in=['market', 'market_data', 'yahoo_finance', 'bloomberg'],
+                created_at__gte=cutoff
+            ).order_by('-created_at')[:max_items]
+
+            items = []
+            latest_timestamp = None
+            tickers_found = set()
+
+            for entry in market_data:
+                raw = entry.raw_data or {}
+                # Check if data matches requested categories
+                item_category = raw.get('category', raw.get('market_category', 'general'))
+                if item_category in categories or 'all' in categories:
+                    items.append({
+                        'title': raw.get('title', ''),
+                        'summary': raw.get('summary', raw.get('description', '')),
+                        'category': item_category,
+                        'sentiment': raw.get('sentiment', 'neutral'),
+                        'tickers': raw.get('tickers', []),
+                        'source': raw.get('source', ''),
+                        'published': raw.get('published', raw.get('timestamp', '')),
+                    })
+                    # Collect tickers
+                    for ticker in raw.get('tickers', []):
+                        tickers_found.add(ticker)
+
+                if latest_timestamp is None or entry.created_at > latest_timestamp:
+                    latest_timestamp = entry.created_at
+
+            if latest_timestamp:
+                source_info['retrieved_at'] = latest_timestamp.isoformat()
+            source_info['record_count'] = len(items)
+
+            return {
+                'items': items,
+                'count': len(items),
+                'categories': categories,
+                'tickers_mentioned': list(tickers_found)[:20],
+                'data_age_hours': (dj_timezone.now() - latest_timestamp).total_seconds() / 3600 if latest_timestamp else None,
+            }, source_info
+
+        except Exception as e:
+            logger.error(f"Error fetching market overview: {e}")
+            return {'items': [], 'count': 0, 'error': str(e)}, source_info
+
     def _build_analysis_prompt(self, task: str, filing_data: Dict,
                                 fundamental_data: Dict, context: Dict,
                                 intelligent_context: str = "",
@@ -937,6 +1028,22 @@ Provide:
                 'ticker': ticker,
                 'risk_categories': risk_categories,
                 'analysis': f"Risk assessment for {ticker} covering {', '.join(risk_categories)}"
+            }
+
+        # Session 957: Market overview tool for broad market analysis
+        elif tool_name == 'get_market_overview':
+            market_data, source_info = self._get_market_overview_data(
+                categories=arguments.get('categories', ['stocks', 'economy']),
+                max_items=arguments.get('max_items', 20)
+            )
+            self._collected_sources.append(source_info)
+            return {
+                'success': True,
+                'market_data': market_data,
+                'categories': arguments.get('categories', ['stocks', 'economy']),
+                'item_count': len(market_data.get('items', [])),
+                'analysis': 'Market overview from spider network',
+                'source_info': source_info,
             }
 
         elif tool_name == "delegate_to_specialist":
