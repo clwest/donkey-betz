@@ -30083,8 +30083,10 @@ def run_stock_financial_agents():
     ]
 
     def task_gen(agent):
+        # Session 957: StockAnalystAgent needs specific tickers to use its tools effectively
+        # Generic "market conditions" tasks should go to MarketIntelligenceCoordinator
         tasks = {
-            'StockAnalystAgent': 'Analyze market conditions and identify notable stock movements',
+            'StockAnalystAgent': 'Analyze SPY, QQQ, NVDA, AAPL, MSFT - check valuations, recent SEC filings, and assess risk levels for each ticker',
             'StockAuditCoordinator': 'Coordinate a brief market health check across all stock agents',
             'BullCaseAgent': 'Identify the strongest bullish opportunities from current market data',
             'BearCaseAgent': 'Identify key risks and bearish signals in current market data',
