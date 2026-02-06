@@ -791,18 +791,18 @@ def auto_process_extracted_artifacts(
 
 
 @shared_task
-def cleanup_discussion_artifacts(batch_size: int = 5000):
+def cleanup_automated_conversation_artifacts(batch_size: int = 5000, prefix: str = None):
     """
-    Session 943: Bulk-reject all pending artifacts from Discussion conversations.
+    Session 943: Bulk-reject pending artifacts from automated conversations.
 
-    Discussion conversations are automated multi-agent brainstorming sessions.
-    Their artifacts are hypothetical ideas, not actionable items requiring human review.
-
-    This is a ONE-TIME cleanup task to clear the existing backlog.
-    Going forward, the extraction service will skip Discussion conversations entirely.
+    Automated conversations (Discussion:, Panel:) are multi-agent brainstorming
+    sessions. Their artifacts are hypothetical ideas, not actionable items
+    requiring human review.
 
     Args:
         batch_size: Max items to process per run (default: 5000)
+        prefix: Topic prefix to filter (e.g., 'Discussion:', 'Panel:')
+                If None, cleans both Discussion: and Panel: artifacts
 
     Returns:
         Dict with cleanup statistics
@@ -811,45 +811,56 @@ def cleanup_discussion_artifacts(batch_size: int = 5000):
     from django.db.models import Q
     from core.models_conversation_artifacts import ExtractedArtifact
 
-    logger.info("🧹 [DISCUSSION-CLEANUP] Starting Discussion artifact cleanup...")
+    prefixes = [prefix] if prefix else ['Discussion:', 'Panel:']
+    prefix_label = prefix or 'Discussion/Panel'
+
+    logger.info(f"🧹 [AUTO-CONV-CLEANUP] Starting cleanup for {prefix_label} artifacts...")
 
     now = timezone.now()
 
-    # Find all pending artifacts from Discussion conversations
-    discussion_artifacts = ExtractedArtifact.objects.filter(
-        status='pending',
-        conversation__topic__startswith='Discussion:'
-    )[:batch_size]
+    # Build query for specified prefixes
+    query = Q()
+    for p in prefixes:
+        query |= Q(conversation__topic__startswith=p)
+
+    # Find all pending artifacts from automated conversations
+    auto_artifacts = ExtractedArtifact.objects.filter(
+        status='pending'
+    ).filter(query)[:batch_size]
 
     total_count = ExtractedArtifact.objects.filter(
-        status='pending',
-        conversation__topic__startswith='Discussion:'
-    ).count()
+        status='pending'
+    ).filter(query).count()
 
     rejected_count = 0
-    for artifact in discussion_artifacts:
+    for artifact in auto_artifacts:
         artifact.status = 'rejected'
         artifact.decided_at = now
-        artifact.decision_notes = 'Auto-rejected: Discussion conversation artifact (brainstorming, not actionable)'
+        artifact.decision_notes = f'Auto-rejected: Automated conversation artifact (brainstorming, not actionable)'
         artifact.save(update_fields=['status', 'decided_at', 'decision_notes'])
         rejected_count += 1
 
     still_pending = ExtractedArtifact.objects.filter(
-        status='pending',
-        conversation__topic__startswith='Discussion:'
-    ).count()
+        status='pending'
+    ).filter(query).count()
 
     logger.info(
-        f"🧹 [DISCUSSION-CLEANUP] Complete - rejected {rejected_count} of {total_count} "
-        f"Discussion artifacts. Still pending: {still_pending}"
+        f"🧹 [AUTO-CONV-CLEANUP] Complete - rejected {rejected_count} of {total_count} "
+        f"{prefix_label} artifacts. Still pending: {still_pending}"
     )
 
     return {
         'rejected': rejected_count,
-        'total_discussion_pending': total_count,
+        'total_auto_pending': total_count,
         'still_pending': still_pending,
         'all_pending': ExtractedArtifact.objects.filter(status='pending').count(),
     }
+
+
+# Backwards compatibility alias
+def cleanup_discussion_artifacts(batch_size: int = 5000):
+    """Alias for cleanup_automated_conversation_artifacts with Discussion prefix."""
+    return cleanup_automated_conversation_artifacts(batch_size=batch_size, prefix='Discussion:')
 
 
 @shared_task
