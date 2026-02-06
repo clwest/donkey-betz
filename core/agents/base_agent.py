@@ -390,6 +390,30 @@ class BaseAgent(ABC, TimeTravelMixin):
             logger.warning(f"Prompt sharpening failed: {e}")
             return self.system_prompt
 
+    def _get_system_learnings_section(self, max_learnings: int = 3) -> str:
+        """
+        Session 946: Get system learnings formatted for prompt injection.
+
+        Retrieves recent learnings from the LearningLoopOrchestrator that
+        apply to this agent. These learnings are derived from:
+        - Tool execution outcomes (success/failure patterns)
+        - Decision record analysis
+        - Cross-agent performance patterns
+
+        Args:
+            max_learnings: Maximum learnings to include
+
+        Returns:
+            Formatted string for prompt injection, or empty string if none
+        """
+        try:
+            from core.agent_context_middleware import get_system_learnings_for_agent
+            learnings = get_system_learnings_for_agent(self.name, max_learnings)
+            return learnings if learnings else ""
+        except Exception as e:
+            logger.debug(f"Could not get system learnings for {self.name}: {e}")
+            return ""
+
     @property
     def mythology_enforcer(self):
         """
@@ -1162,6 +1186,11 @@ Use delegation when you need expertise outside your specialty. For example:
                     sources_str = ', '.join(spider_sources[:3])
                     parts.append(f"   (from: {sources_str})")
 
+        # Session 946: Add system learnings from execution data
+        system_learnings = self._get_system_learnings_section()
+        if system_learnings:
+            parts.append(f"\n\n{system_learnings}")
+
         # Add mood modifier if available - Session 497: Now affects behavior
         if scifi_context:
             mood = scifi_context.get('mood')
@@ -1332,6 +1361,11 @@ Use delegation when you need expertise outside your specialty. For example:
                 parts.append(policy_context)
         except Exception as e:
             logger.debug(f"Could not get policy context for {self.name}: {e}")
+
+        # Session 946: Add system learnings from execution data
+        system_learnings = self._get_system_learnings_section()
+        if system_learnings:
+            parts.append(f"\n\n{system_learnings}")
 
         # Add mood modifier if available - Session 497: Now affects behavior
         if scifi_context:
@@ -1739,6 +1773,13 @@ Consider these trends when crafting the response to maximize relevance and engag
                 prompt_parts.append(policy_context)
         except Exception:
             pass
+
+        # 9.5 Session 946: Add System Learnings from execution data
+        # These learnings come from analyzing ToolCallRecord and DecisionRecord
+        # to identify patterns (tool reliability, agent performance, confidence calibration)
+        system_learnings = self._get_system_learnings_section()
+        if system_learnings:
+            prompt_parts.append(f"\n\n{system_learnings}")
 
         # 10. Add Agent-specific context if provided
         if additional_context:
