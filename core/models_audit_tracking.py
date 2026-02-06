@@ -178,6 +178,17 @@ class AuditFinding(models.Model):
     raw_text = models.TextField(blank=True)  # Original text from audit
     metadata = models.JSONField(default=dict)
 
+    # Session 949: Link findings to documents for RAG retrieval
+    # This enables the RAG system to find related docs when incidents occur
+    linked_document = models.ForeignKey(
+        'content.Document',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='audit_findings',
+        help_text="Document describing or related to this finding"
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
