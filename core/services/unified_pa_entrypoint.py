@@ -567,6 +567,15 @@ class UnifiedPAEntrypoint:
         ]):
             return ('learning_patterns', 'learning_patterns_tool')
 
+        # Session 948: View feedback queue
+        if any(kw in message_lower for kw in [
+            'feedback queue', 'feedback items', 'open feedback',
+            'user feedback', 'reported issues', 'bug reports',
+            'feature requests', 'what feedback', 'show feedback',
+            'list feedback', 'feedback stats'
+        ]):
+            return ('feedback', 'feedback_tool')
+
         # Default: no tool, direct response
         return ('general', None)
 
@@ -791,6 +800,19 @@ class UnifiedPAEntrypoint:
                 if program in msg_lower:
                     payload['program'] = program
                     break
+
+        # Session 948: Feedback tool payload
+        elif intent == 'feedback':
+            msg_lower = message.lower()
+
+            if 'stats' in msg_lower or 'summary' in msg_lower or 'how many' in msg_lower:
+                payload['action'] = 'stats'
+            elif 'all' in msg_lower:
+                payload['action'] = 'list'
+                payload['status'] = None  # Show all statuses
+            else:
+                payload['action'] = 'list'
+                # Default to open items
 
         # Add any context
         payload['context'] = context
@@ -1508,6 +1530,59 @@ Address the user by name occasionally."""
                         response += "**By type:**\n"
                         for ptype, cnt in by_type.items():
                             response += f"- {ptype}: {cnt} patterns\n"
+
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 948: Feedback tool response formatting
+            elif intent == 'feedback':
+                action = tool_result.get('action', 'list')
+
+                if action == 'list':
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+                    status_filter = tool_result.get('status_filter', 'open')
+
+                    if count == 0:
+                        return f"No {status_filter} feedback items, {user_name}. The queue is clear!"
+
+                    type_icons = {
+                        'ui_ux_issue': '🎨',
+                        'bug': '🐛',
+                        'feature_request': '✨',
+                        'feedback': '💬'
+                    }
+
+                    response = f"**User Feedback Queue** ({count} {status_filter}):\n\n"
+                    for item in items[:10]:
+                        ftype = item.get('feedback_type', 'feedback')
+                        icon = type_icons.get(ftype, '📝')
+                        msg = item.get('message', '')[:80]
+                        created = item.get('created_at', '')[:10]
+                        response += f"{icon} [{ftype.upper()}] {created}: {msg}...\n"
+
+                    return response
+
+                elif action == 'stats':
+                    total_open = tool_result.get('total_open', 0)
+                    by_type = tool_result.get('by_type', {})
+                    by_status = tool_result.get('by_status', {})
+
+                    response = f"Feedback Stats, {user_name}:\n\n"
+                    response += f"**Open items:** {total_open}\n\n"
+
+                    if by_type:
+                        response += "**By type:**\n"
+                        for ftype, cnt in by_type.items():
+                            response += f"- {ftype}: {cnt}\n"
+                        response += "\n"
+
+                    if by_status:
+                        response += "**By status:**\n"
+                        for status, cnt in by_status.items():
+                            response += f"- {status}: {cnt}\n"
 
                     return response
 
