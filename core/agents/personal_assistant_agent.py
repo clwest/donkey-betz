@@ -698,6 +698,11 @@ USE THIS for questions like:
 - "What decisions are pending?"
 - "Show me action items"
 - "What should I focus on?"
+- "List them" or "List all items" - USE max_items=100 to get full lists
+
+IMPORTANT: This tool returns ACTUAL ITEMS with titles, IDs, and details - not just counts.
+When user asks to "list" items, CALL THIS TOOL with max_items=100 to get the items.
+DO NOT say you cannot access items - you CAN by calling this tool.
 
 Returns pending boardroom decisions, failed cycles, stale concerns, and overdue content.""",
                 "parameters": {
@@ -710,7 +715,7 @@ Returns pending boardroom decisions, failed cycles, stale concerns, and overdue 
                         },
                         "max_items": {
                             "type": "integer",
-                            "description": "Maximum items to return (default: 10)"
+                            "description": "Maximum items to return. Use 100 for 'list all' requests. Default: 10"
                         }
                     }
                 }
@@ -1119,6 +1124,46 @@ Creates structured decisions that can be promoted to canonical policies.""",
                         }
                     },
                     "required": ["title", "description"]
+                }
+            }
+        },
+        # Session 944: List Boardroom Decisions Tool
+        {
+            "type": "function",
+            "function": {
+                "name": "list_boardroom_decisions",
+                "description": """List pending boardroom decisions with full details.
+USE THIS when user says:
+- "List them" (when context is about boardroom items)
+- "Show me all decisions"
+- "List pending decisions"
+- "Show draft decisions"
+- "What are the 418 product decisions?"
+
+IMPORTANT: This returns ACTUAL DECISIONS with titles, types, and details.
+Use this to list items - DO NOT say you cannot access them.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["draft", "review", "all"],
+                            "description": "Filter by status (default: draft)"
+                        },
+                        "decision_type": {
+                            "type": "string",
+                            "enum": ["all", "product", "experiment", "pipeline", "policy", "architecture", "guideline"],
+                            "description": "Filter by type (default: all)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum items to return (default: 50, max: 100)"
+                        },
+                        "offset": {
+                            "type": "integer",
+                            "description": "Offset for pagination (default: 0)"
+                        }
+                    }
                 }
             }
         },
@@ -4839,6 +4884,10 @@ Actions:
         if tool_name == "create_boardroom_decision":
             return self._create_boardroom_decision(arguments)
 
+        # Session 944: List boardroom decisions
+        if tool_name == "list_boardroom_decisions":
+            return self._list_boardroom_decisions(arguments)
+
         if tool_name == "query_dreams":
             return self._query_dreams(arguments)
 
@@ -6334,6 +6383,102 @@ Actions:
 
         except Exception as e:
             logger.error(f"Error creating boardroom decision: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _list_boardroom_decisions(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 944: List boardroom decisions with pagination support.
+        Returns actual items from AgentDecisionSummary.
+        """
+        try:
+            from core.models_unified_system import AgentDecisionSummary
+
+            status_filter = arguments.get('status', 'draft')
+            decision_type = arguments.get('decision_type', 'all')
+            limit = min(arguments.get('limit', 50), 100)  # Cap at 100
+            offset = arguments.get('offset', 0)
+
+            # Build query
+            query = AgentDecisionSummary.objects.all()
+
+            # Filter by status
+            if status_filter == 'draft':
+                query = query.filter(status='draft')
+            elif status_filter == 'review':
+                query = query.filter(status='review')
+            # 'all' shows both draft and review
+
+            # Filter by decision type
+            if decision_type and decision_type != 'all':
+                query = query.filter(decision_type=decision_type)
+
+            # Get total count
+            total_count = query.count()
+
+            # Get paginated results
+            decisions = query.order_by('-created_at')[offset:offset + limit]
+
+            # Build items list
+            items = []
+            for d in decisions:
+                items.append({
+                    'id': str(d.id),
+                    'topic': d.topic,
+                    'decision_type': d.decision_type,
+                    'impact_area': d.impact_area,
+                    'status': d.status,
+                    'recommended_stance': d.recommended_stance[:200] if d.recommended_stance else '',
+                    'created_at': d.created_at.isoformat() if d.created_at else None,
+                })
+
+            # Build summary
+            summary_lines = [f"**Boardroom Decisions** ({total_count} total)\n"]
+
+            if not items:
+                summary_lines.append("No decisions found matching criteria.")
+            else:
+                # Group by type for display
+                by_type = {}
+                for item in items:
+                    t = item['decision_type']
+                    if t not in by_type:
+                        by_type[t] = []
+                    by_type[t].append(item)
+
+                type_icons = {
+                    'product': '🎯',
+                    'experiment': '🧪',
+                    'pipeline': '⚡',
+                    'policy': '📜',
+                    'architecture': '🏗️',
+                    'guideline': '📋',
+                }
+
+                for dtype, dtype_items in by_type.items():
+                    icon = type_icons.get(dtype, '📌')
+                    summary_lines.append(f"\n{icon} **{dtype.title()}** ({len(dtype_items)}):")
+                    for item in dtype_items[:10]:  # Show up to 10 per type in summary
+                        summary_lines.append(f"  • {item['topic'][:60]}")
+                        summary_lines.append(f"    ID: {item['id'][:8]}...")
+
+                if total_count > offset + limit:
+                    summary_lines.append(f"\n... and {total_count - offset - limit} more. Use offset={offset + limit} for next page.")
+
+            return {
+                'success': True,
+                'total_count': total_count,
+                'returned_count': len(items),
+                'offset': offset,
+                'limit': limit,
+                'items': items,
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error listing boardroom decisions: {e}")
             return {
                 'success': False,
                 'error': str(e)
