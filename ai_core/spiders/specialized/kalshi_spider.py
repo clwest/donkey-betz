@@ -32,12 +32,14 @@ class KalshiSpider:
     base_url = "https://api.elections.kalshi.com/trade-api/v2"
 
     # Market categories available on Kalshi
+    # Session 950: Added 'sports' as dedicated category
     CATEGORIES = [
+        'sports',         # NBA, NFL, MLB, esports, player props, parlays
         'economics',      # Jobs reports, inflation, GDP
         'politics',       # Elections, policy decisions
         'weather',        # Temperature records, hurricanes
         'tech',           # Product launches, company events
-        'entertainment',  # Awards, sports
+        'entertainment',  # Awards, movies, TV
         'finance',        # Stock prices, crypto
         'science',        # Space, discoveries
     ]
@@ -300,6 +302,9 @@ class KalshiSpider:
         no_bid = market.get('no_bid', 0) or 0
         no_ask = market.get('no_ask', 0) or 0
 
+        # Session 950: Also check last_price as fallback for probability
+        last_price = market.get('last_price', 0) or 0
+
         # Mid price as probability estimate (prices are in cents, 0-100)
         if yes_bid and yes_ask:
             implied_probability = (yes_bid + yes_ask) / 2 / 100
@@ -307,15 +312,26 @@ class KalshiSpider:
             implied_probability = yes_bid / 100
         elif yes_ask:
             implied_probability = yes_ask / 100
+        elif last_price:
+            # Use last traded price as probability indicator
+            implied_probability = last_price / 100
         else:
             implied_probability = 0.5  # Default to 50%
 
         # Extract category from series or title
         category = self._extract_category(market)
 
+        # Session 950: Clean up multi-leg/parlay titles for readability
+        raw_title = market.get('title', '') or ''
+        cleaned_title = self._clean_title(raw_title, market)
+
+        # Session 950: Get volume from multiple possible fields
+        volume = market.get('volume') or market.get('volume_24h') or market.get('dollar_volume') or 0
+
         return {
             'ticker': ticker,
-            'title': market.get('title'),
+            'title': cleaned_title,
+            'raw_title': raw_title,  # Keep original for debugging
             'subtitle': market.get('subtitle'),
             'event_ticker': market.get('event_ticker'),
             'series_ticker': market.get('series_ticker'),
@@ -325,12 +341,12 @@ class KalshiSpider:
             'yes_ask': yes_ask,
             'no_bid': no_bid,
             'no_ask': no_ask,
-            'last_price': market.get('last_price'),
+            'last_price': last_price,
             'implied_probability': round(implied_probability, 4),
             'implied_probability_pct': round(implied_probability * 100, 2),
-            'volume': market.get('volume'),
-            'volume_24h': market.get('volume_24h'),
-            'open_interest': market.get('open_interest'),
+            'volume': volume,
+            'volume_24h': market.get('volume_24h') or 0,
+            'open_interest': market.get('open_interest') or 0,
             'close_time': market.get('close_time'),
             'expiration_time': market.get('expiration_time'),
             'result': market.get('result'),
@@ -344,26 +360,102 @@ class KalshiSpider:
             'timestamp': datetime.now().isoformat(),
         }
 
+    def _clean_title(self, title: str, market: Dict) -> str:
+        """
+        Clean up market titles, especially multi-leg/parlay-style bets.
+
+        Session 950: Handles concatenated bet legs like:
+        "yes Kawhi Leonard: 1+,yes Zach LaVine: 1+,..."
+        """
+        if not title:
+            return market.get('subtitle', '') or market.get('ticker', 'Unknown Market')
+
+        # Detect multi-leg pattern (comma-separated "yes/no Name: value" format)
+        if title.count(',yes ') >= 2 or title.count(',no ') >= 2:
+            # This is a multi-leg parlay, create a summary title
+            legs = [leg.strip() for leg in title.split(',') if leg.strip()]
+            leg_count = len(legs)
+
+            # Extract player/team names from first few legs
+            names = []
+            for leg in legs[:3]:
+                # Remove "yes " or "no " prefix
+                name_part = leg.replace('yes ', '').replace('no ', '')
+                # Extract name (before the colon)
+                if ':' in name_part:
+                    name = name_part.split(':')[0].strip()
+                    names.append(name)
+
+            if names:
+                if leg_count <= 3:
+                    return f"{' + '.join(names)} Parlay ({leg_count} legs)"
+                else:
+                    return f"{names[0]} + {leg_count - 1} others Parlay ({leg_count} legs)"
+            else:
+                return f"Multi-Leg Parlay ({leg_count} legs)"
+
+        # Clean up excessively long titles
+        if len(title) > 120:
+            return title[:117] + '...'
+
+        return title
+
     def _extract_category(self, market: Dict) -> str:
         """Extract category from market data."""
         # Try to get from series ticker or event ticker
         series_ticker = market.get('series_ticker', '').lower()
         title = market.get('title', '').lower()
+        event_ticker = market.get('event_ticker', '').lower()
+
+        # Combine all text for pattern matching
+        full_text = f"{series_ticker} {title} {event_ticker}"
 
         # Category mapping based on common patterns
+        # Session 950: Sports/betting category added with comprehensive patterns
         category_patterns = {
-            'economics': ['inflation', 'gdp', 'jobs', 'unemployment', 'fed', 'interest', 'cpi', 'ppi'],
-            'politics': ['election', 'president', 'congress', 'senate', 'vote', 'trump', 'biden'],
-            'weather': ['temperature', 'hurricane', 'storm', 'climate', 'heat', 'cold'],
-            'tech': ['apple', 'google', 'tesla', 'ai', 'tech', 'launch', 'iphone'],
-            'finance': ['stock', 'crypto', 'bitcoin', 'ethereum', 'market', 's&p', 'nasdaq'],
-            'entertainment': ['oscar', 'emmy', 'grammy', 'super bowl', 'nfl', 'nba', 'movie'],
-            'science': ['space', 'nasa', 'spacex', 'discovery', 'research'],
+            # Sports and betting FIRST (most specific patterns)
+            'sports': [
+                # Major leagues
+                'nba', 'nfl', 'mlb', 'nhl', 'mls', 'wnba', 'ncaa', 'pga', 'ufc', 'mma',
+                # Esports
+                'esports', 'league of legends', 'valorant', 'counter-strike', 'dota',
+                'overwatch', 'call of duty', 'fortnite', 'csgo', 'cs2',
+                # Player names (common in prop bets) - detect via patterns
+                'points', 'assists', 'rebounds', 'touchdowns', 'yards', 'goals',
+                'strikeouts', 'home runs', 'hits', 'saves', 'kills', 'deaths',
+                # Betting terms
+                'parlay', 'spread', 'over', 'under', 'moneyline', 'prop bet',
+                'winner', 'wins by', 'total score', 'first to', 'last to',
+                # Team identifiers
+                'lakers', 'celtics', 'warriors', 'bulls', 'heat', 'nets', 'knicks',
+                'cowboys', 'patriots', 'chiefs', 'eagles', '49ers', 'packers',
+                'yankees', 'dodgers', 'red sox', 'cubs', 'mets',
+                # Player name patterns (common NBA/NFL players in prop bets)
+                'lebron', 'curry', 'durant', 'giannis', 'jokic', 'tatum', 'kawhi',
+                'mahomes', 'allen', 'burrow', 'kelce', 'hill', 'diggs',
+                # Sport-related terms
+                'game', 'match', 'playoff', 'championship', 'finals', 'series',
+                'super bowl', 'world series', 'stanley cup', 'march madness',
+            ],
+            'economics': ['inflation', 'gdp', 'jobs', 'unemployment', 'fed', 'interest', 'cpi', 'ppi',
+                         'payroll', 'labor', 'recession', 'rate cut', 'rate hike', 'fomc'],
+            'politics': ['election', 'president', 'congress', 'senate', 'vote', 'trump', 'biden',
+                        'governor', 'mayor', 'democrat', 'republican', 'poll', 'primary'],
+            'weather': ['temperature', 'hurricane', 'storm', 'climate', 'heat', 'cold',
+                       'tornado', 'flood', 'drought', 'wildfire', 'snow'],
+            'tech': ['apple', 'google', 'tesla', 'ai', 'launch', 'iphone', 'android',
+                    'microsoft', 'amazon', 'meta', 'nvidia', 'openai', 'product'],
+            'finance': ['stock', 'crypto', 'bitcoin', 'ethereum', 'market', 's&p', 'nasdaq',
+                       'dow', 'treasury', 'bond', 'yield', 'ipo'],
+            'entertainment': ['oscar', 'emmy', 'grammy', 'golden globe', 'movie', 'film',
+                            'tv show', 'streaming', 'netflix', 'box office', 'album'],
+            'science': ['space', 'nasa', 'spacex', 'discovery', 'research', 'mars',
+                       'moon', 'satellite', 'rocket', 'asteroid'],
         }
 
         for category, patterns in category_patterns.items():
             for pattern in patterns:
-                if pattern in series_ticker or pattern in title:
+                if pattern in full_text:
                     return category
 
         return 'general'
