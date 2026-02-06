@@ -1,84 +1,42 @@
-# Session 954 - Start Here
+# Session 956 - Start Here
 
-**Previous Session:** 953 (Agent Provenance Expansion)
+**Previous Session:** 954/955 (Boardroom ML + Initiative Cleanup + Learning Loop)
 **Date:** February 6, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Dual-Channel Retrieval: ACTIVE** | **Risk Re-Ranking: ACTIVE** | **RESERVED Budget Tier: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: ACTIVE** | **PA Platform Query: ACTIVE** | **Agent Provenance: 18 AGENTS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 18 AGENTS**
 
 ---
 
-## Session 953 Summary (Just Completed)
+## Session 954/955 Summary (Just Completed)
 
-### Agent Provenance Expansion - Extends Session 918
+### Option A: Document Classification - COMPLETE
+Ran document classification for Risk-Aware RAG on Railway production.
+**Results:** 562 documents classified (critical: 2, high_risk: 66, architecture: 8, etc.)
 
-Added provenance tracking to 18 additional data-driven agents, building on the Session 918 foundation.
+### Option B: Boardroom ML Improvements - COMPLETE
+Created content-aware ML prediction system for boardroom attention items.
+- `core/services/boardroom_ml_service.py` - Content similarity, Wilson score confidence
+- Multi-signal predictions (content 50%, type 20%, source 20%, urgency 10%)
+- `python manage.py enrich_boardroom_ml --stats/--pending`
 
-**Stock Agents (24h stale threshold):**
-- BullCaseAgent, BearCaseAgent
-- MarketIntelligenceCoordinator, StockAuditCoordinator
-- MarketAnomalyDetectorAgent, SignalScannerAgent
-- InstitutionalWatcherAgent, MarketMovementMonitorAgent
+### Option C: Initiative Source Cleanup - COMPLETE
+Added `_is_valid_initiative_name()` validation to prevent junk initiatives.
+- Validates minimum length, proper capitalization, no junk patterns
+- Applied in `decision_extractor.py` and `conversation_initiative_pipeline.py`
 
-**Blockchain Agents (4h stale threshold):**
-- BlockchainAuditCoordinator, WhaleWatcherAgent
-- TransactionMonitorAgent, ExploitDetectorAgent
-- SmartContractAuditorAgent
-
-**Analysis Agents (24h stale threshold):**
-- TrendAnalysisAgent, MarketIntelligenceAgent, OpportunityScoringAgent
-
-**Standalone Agents (LearningMixin pattern):**
-- BookmakerAgent (2h - sports data)
-- CreationAgent (24h - generated content)
-
-**Pattern Applied:**
-```python
-from core.agents.report_schemas import build_provenance, format_disclaimer
-
-# Build provenance from tool calls
-provenance = build_provenance(
-    report_type='stock_analysis',  # category-specific
-    agent_name=self.name,
-    sources=sources,
-    stale_threshold_hours=24.0,  # varies by category
-)
-
-# Add to result
-result.data['provenance'] = provenance.to_dict()
-result.data['publishable'] = provenance.publishable
-result.data['validation_status'] = provenance.validation_status
-```
-
-**Files Changed:** 18 agent files in `core/agents/`
+### Option D: Learning Loop Refinement - COMPLETE
+Expanded learning loop system with:
+- **15+ SuccessSignal definitions** (was 3) - image gen, content writing, agents, etc.
+- **User feedback integration** - `analyze_user_feedback()` connects boardroom decisions to learning
+- **Effectiveness tracking** - `track_learning_application()`, `get_learning_effectiveness_stats()`
+- **Dashboard API** - 4 new endpoints:
+  - `GET /api/learning/loop/stats/` - Learning effectiveness stats
+  - `POST /api/learning/loop/track/` - Track learning outcomes
+  - `POST /api/learning/loop/run/` - Trigger learning cycle
+  - `GET /api/learning/loop/agent/?agent_name=X` - Get learnings for agent
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
-
-### Option A: Run Document Classification
-Run the new classification command to tag existing documents:
-```bash
-python manage.py classify_docs_for_rag --dry-run  # Preview
-python manage.py classify_docs_for_rag            # Execute
-```
-
-### Option B: Boardroom ML Improvements
-Improve ML recommendations for boardroom items:
-- Train on actual user decisions
-- Better confidence scoring
-- Recommendations based on item content, not just type
-
-### Option C: Initiative Source Cleanup
-Investigate why so many junk initiatives are being created:
-- Find where "Auto-created From Conversation Decision" comes from
-- Add validation before initiative creation
-- Consider gating initiative creation on founder intent
-
-### Option D: Learning Loop Refinement
-Build on the learning loop with:
-- More success signals for other tools
-- User feedback integration
-- Learning effectiveness tracking
-- Dashboard for viewing active learnings
 
 ### Option E: RAG Observability Dashboard
 Create visibility into the new risk-aware RAG system:
@@ -92,12 +50,25 @@ Add provenance to additional agent categories:
 - Executive agents (CTOAgent, COOAgent)
 - Development agents (FullStackDeveloperAgent)
 
+### Option G: Boardroom ML UI Integration
+Show ML predictions to users in the boardroom UI:
+- Display prediction and confidence on attention items
+- Show similar past decisions
+- Track prediction accuracy over time
+
+### Option H: Learning Loop Frontend
+Build UI components to display learning effectiveness:
+- LearningInsightsPanel enhancement
+- Show most/least effective learnings
+- Visualize learning cycle results
+
 ---
 
 ## Recent Session History
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **954/955** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop Refinement | #935 |
 | **953** | Agent Provenance Expansion - 18 agents with provenance tracking | - |
 | **952** | Narrative Injection Enhancement - Topic filtering, diversity, fallbacks | #929, #930 |
 | **951** | PA Platform Query Tool - Query deliverables, reports, initiatives | #929 |
@@ -105,11 +76,24 @@ Add provenance to additional agent categories:
 | **949** | Risk-Aware RAG - Dual-channel retrieval, RESERVED budget, risk re-ranking | #920, #921, #922 |
 | **947** | Spider Context Extension - CreativeOrchestrator (13) + ResearchOrchestrator (5) | - |
 | **946** | Learning Loop Backend - LearningLoopOrchestrator, prompt injection, scheduled extraction | #903 |
-| **945** | Stale Initiative Cleanup - New junk patterns, activity tracking, last_activity_at field | #901 |
 
 ---
 
 ## Key Files Reference
+
+### Session 954/955 - Learning Loop Refinement
+| File | Purpose |
+|------|---------|
+| `core/services/learning_loop_orchestrator.py` | +15 SuccessSignals, +analyze_user_feedback(), +effectiveness tracking |
+| `core/views_learning_loop.py` | +4 new API endpoints for learning loop |
+| `core/urls.py` | +4 URL patterns for learning loop APIs |
+
+### Session 954 - Boardroom ML + Initiative Cleanup
+| File | Purpose |
+|------|---------|
+| `core/services/boardroom_ml_service.py` | Content-aware ML predictions |
+| `core/services/decision_extractor.py` | +_is_valid_initiative_name() validation |
+| `core/management/commands/enrich_boardroom_ml.py` | Backfill command |
 
 ### Session 953 - Agent Provenance Expansion
 | File | Purpose |
@@ -117,29 +101,7 @@ Add provenance to additional agent categories:
 | `core/agents/report_schemas.py` | `build_provenance()`, `format_disclaimer()` |
 | `core/agents/stocks/*.py` | 8 stock agents with provenance |
 | `core/agents/blockchain/*.py` | 5 blockchain agents with provenance |
-| `core/agents/analysis/*.py` | 3 analysis agents with provenance |
-| `core/agents/bookmaker_agent.py` | Standalone with provenance |
-| `core/agents/creation_agent.py` | Standalone with provenance |
-
-### Session 952 - Narrative Injection Enhancement
-| File | Purpose |
-|------|---------|
-| `core/services/content_voice_system.py` | DOMAIN_KEYWORDS, FALLBACK_INCIDENTS, topic filtering, diversity constraints |
-
-### Session 949 - Risk-Aware RAG
-| File | Purpose |
-|------|---------|
-| `core/services/scoped_retrieval.py` | Dual-channel search, risk re-ranking, document class filtering |
-| `core/services/context_budget_manager.py` | RESERVED priority tier for risk-aware docs |
-| `core/agent_router.py` | `_get_risk_aware_context()` + injection |
-
-### Initiative Pipeline
-| File | Purpose |
-|------|---------|
-| `core/models_document_registry.py` | `Initiative`, `InitiativeStage` models |
-| `core/tasks.py` | `cleanup_junk_initiatives` - daily at 4 AM |
-| `core/models_unified_system.py` | `HiveMindSession` - conversations linked to initiatives |
 
 ---
 
-**Session 954 Focus: Choose priority option above and continue building!**
+**Session 956 Focus: Choose priority option above and continue building!**
