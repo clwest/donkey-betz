@@ -721,9 +721,19 @@ class UnifiedPAEntrypoint:
         trace_id: str
     ) -> str:
         """Generate natural language response from tool result."""
-        # Build prompt for LLM to interpret tool result
         user_name = context.get('user_name', 'there')
 
+        # Session 943: Use structured formatting directly for these intents
+        # (they have custom formatters that produce better output than LLM summarization)
+        structured_format_intents = [
+            'initiatives', 'brainstorming', 'content_review',
+            'boardroom', 'decision_management'
+        ]
+
+        if intent in structured_format_intents:
+            return self._format_tool_result(tool_result, intent, user_name)
+
+        # For other intents, use LLM to interpret results
         system_prompt = f"""You are a helpful AI assistant.
 The user asked: "{message}"
 You executed a tool and got this result:
