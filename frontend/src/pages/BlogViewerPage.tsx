@@ -246,8 +246,9 @@ export default function BlogViewerPage() {
       {/* Content */}
       <div className="card space-y-6">
         {/* Primary: Show full_text as markdown if available (it's the complete blog) */}
+        {/* Session 943: Unified prose styling */}
         {blog.full_text ? (
-          <div className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-gray-300 prose-li:text-gray-300 prose-strong:text-white prose-code:text-primary-400 prose-code:bg-dark-bg prose-code:px-1 prose-code:rounded prose-pre:bg-dark-bg prose-pre:border prose-pre:border-dark-border">
+          <div className="prose prose-invert prose-dark max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {blog.full_text}
             </ReactMarkdown>

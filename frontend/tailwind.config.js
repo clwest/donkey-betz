@@ -39,7 +39,80 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'monospace'],
       },
+      // Session 943: Unified typography for dark theme
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: 'none',
+          },
+        },
+        // Custom dark theme prose - used with prose-dark class
+        dark: {
+          css: {
+            '--tw-prose-body': '#e5e5e5',           // gray-200
+            '--tw-prose-headings': '#ffffff',
+            '--tw-prose-lead': '#d4d4d4',           // gray-300
+            '--tw-prose-links': '#a78bfa',          // primary-400
+            '--tw-prose-bold': '#ffffff',
+            '--tw-prose-counters': '#a78bfa',       // primary-400
+            '--tw-prose-bullets': '#a78bfa',        // primary-400
+            '--tw-prose-hr': '#404040',             // gray-700
+            '--tw-prose-quotes': '#d4d4d4',         // gray-300
+            '--tw-prose-quote-borders': '#7c3aed',  // primary-600
+            '--tw-prose-captions': '#a3a3a3',       // gray-400
+            '--tw-prose-code': '#c4b5fd',           // primary-300
+            '--tw-prose-pre-code': '#e5e5e5',       // gray-200
+            '--tw-prose-pre-bg': '#171717',         // gray-900
+            '--tw-prose-th-borders': '#525252',     // gray-600
+            '--tw-prose-td-borders': '#404040',     // gray-700
+            // Additional customizations
+            'code': {
+              backgroundColor: '#262626',           // gray-800
+              padding: '0.25rem 0.375rem',
+              borderRadius: '0.375rem',
+              fontWeight: '400',
+            },
+            'code::before': {
+              content: '""',
+            },
+            'code::after': {
+              content: '""',
+            },
+            'pre': {
+              backgroundColor: '#171717',           // gray-900
+              border: '1px solid #404040',          // gray-700
+              borderRadius: '0.5rem',
+            },
+            'a': {
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+              '&:hover': {
+                color: '#c4b5fd',                   // primary-300
+              },
+            },
+            'blockquote': {
+              borderLeftColor: '#7c3aed',           // primary-600
+              fontStyle: 'normal',
+            },
+            'h1, h2, h3, h4': {
+              fontWeight: '600',
+            },
+            'table': {
+              fontSize: '0.875rem',
+            },
+            'thead th': {
+              color: '#d4d4d4',                     // gray-300
+              fontWeight: '500',
+            },
+            'tbody tr': {
+              borderBottomColor: '#404040',         // gray-700
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }
