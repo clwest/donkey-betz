@@ -28378,6 +28378,7 @@ def _extract_agent_output_content(result, task_description: str) -> str:
     """
     Session 813: Extract meaningful content from agent results.
     Session 887: Improved to prefer message over sparse metadata dicts.
+    Session 952: Prefer result.message for coordinator agents; add more keys.
 
     Agents return structured data with various keys. This function extracts
     the actual content to write to workspace files.
@@ -28396,20 +28397,49 @@ def _extract_agent_output_content(result, task_description: str) -> str:
     """
     import json
 
+    # Session 952: FIRST check if result.message has substantial markdown content
+    # Many agents (especially coordinators) put their formatted report in message
+    # while data contains machine-readable structured output
+    if hasattr(result, 'message') and result.message:
+        msg = result.message
+        # Check for markdown indicators suggesting formatted content
+        has_markdown = any(indicator in msg for indicator in [
+            '##', '**', '- ', '* ', '1.', '---', '```', '|', '\n\n'
+        ])
+        # If message is substantial (>200 chars) OR has markdown formatting, prefer it
+        if len(msg) > 200 or (len(msg) > 50 and has_markdown):
+            return msg
+
     # Priority order of keys to check for text content
     # Session 848: 'text' moved higher for podcast agents (ModeratorAgent, etc.)
+    # Session 952: Added more coordinator/analyst output keys
     CONTENT_KEYS = [
         'content', 'output', 'text', 'analysis', 'code', 'research',
         'report', 'response', 'summary', 'recommendation',
         'strategy', 'plan', 'document', 'article', 'script',
         'memo', 'brief', 'findings', 'insights',
         'thesis', 'conclusion', 'explanation', 'narrative',  # Session 839: More content keys
+        'executive_summary', 'overview', 'assessment', 'evaluation',  # Session 952
+        'market_analysis', 'audit_summary', 'risk_assessment',  # Session 952
     ]
 
     # Keys that contain arrays of results
     # Session 839: Added tool_results, opportunities, top_opportunities
+    # Session 952: Added more coordinator/audit output keys
     ARRAY_KEYS = ['results', 'items', 'data', 'entries', 'records',
-                  'tool_results', 'opportunities', 'top_opportunities', 'scored_items']
+                  'tool_results', 'opportunities', 'top_opportunities', 'scored_items',
+                  'alerts', 'unified_alerts', 'signals', 'events', 'games',  # Session 952
+                  'matchups', 'predictions', 'recommendations', 'action_items',  # Session 952
+                  'bull_cases', 'bear_cases', 'key_claims', 'risk_flags',  # Session 952
+                  'correlated_findings', 'anomalies', 'violations', 'issues']  # Session 952
+
+    # Session 952: Keys that indicate coordinator results with nested agent outputs
+    # These need special formatting to avoid raw JSON dumps
+    COORDINATOR_RESULT_KEYS = [
+        'analyst_results', 'movement_results', 'institutional_results',
+        'anomaly_results', 'scanner_results', 'audit_results',
+        'research_results', 'strategy_results', 'advisor_consultations',
+    ]
 
     # Session 887: Metadata-only keys that indicate data dict is just counts/metrics
     # If data only contains these keys, prefer result.message instead
@@ -28737,19 +28767,94 @@ def _extract_agent_output_content(result, task_description: str) -> str:
         if ml_parts:
             output_parts.append(f"## ML Analysis\n\n" + '\n'.join(ml_parts))
 
+    # Session 952: Handle coordinator agent results (nested agent outputs)
+    for coord_key in COORDINATOR_RESULT_KEYS:
+        if coord_key in data and isinstance(data[coord_key], dict):
+            coord_data = data[coord_key]
+            section_title = coord_key.replace('_', ' ').title()
+            output_parts.append(f"## {section_title}\n")
+
+            # Extract key information from coordinator results
+            if coord_data.get('success') is not None:
+                status = '✅' if coord_data.get('success') else '❌'
+                output_parts.append(f"**Status:** {status}\n")
+
+            # Look for summary/message in the result
+            for summary_key in ['message', 'summary', 'analysis', 'report', 'conclusion']:
+                if summary_key in coord_data and coord_data[summary_key]:
+                    val = coord_data[summary_key]
+                    if isinstance(val, str) and len(val) > 20:
+                        output_parts.append(f"{val}\n")
+                        break
+
+            # Look for structured data to format
+            for sub_key in ['findings', 'alerts', 'signals', 'recommendations', 'items']:
+                if sub_key in coord_data and isinstance(coord_data[sub_key], list):
+                    items = coord_data[sub_key]
+                    if items:
+                        output_parts.append(f"**{sub_key.title()} ({len(items)}):**\n")
+                        for idx, item in enumerate(items[:5], 1):
+                            if isinstance(item, dict):
+                                item_title = (item.get('title') or item.get('ticker') or
+                                              item.get('name') or item.get('type') or f'Item {idx}')
+                                item_severity = item.get('severity') or item.get('priority', '')
+                                sev_str = f" [{item_severity}]" if item_severity else ""
+                                output_parts.append(f"  {idx}. {item_title}{sev_str}\n")
+                            elif isinstance(item, str):
+                                output_parts.append(f"  {idx}. {item[:100]}\n")
+
+    # Session 952: Handle structured_report and provenance from Session 918 agents
+    if 'structured_report' in data and isinstance(data['structured_report'], dict):
+        report = data['structured_report']
+        if report.get('total_games_analyzed'):
+            output_parts.append(f"**Games Analyzed:** {report['total_games_analyzed']}\n")
+        if report.get('sports_covered'):
+            output_parts.append(f"**Sports:** {', '.join(report['sports_covered'])}\n")
+
+    if 'provenance' in data and isinstance(data['provenance'], dict):
+        prov = data['provenance']
+        if prov.get('validation_status'):
+            status_emoji = '✅' if prov.get('publishable') else '⚠️'
+            output_parts.append(f"\n**Data Status:** {status_emoji} {prov['validation_status'].upper()}\n")
+
     # 4. If we found substantial content, use it
     if output_parts:
         return '\n\n'.join(output_parts)
 
-    # 5. Check message as backup
-    if hasattr(result, 'message') and result.message and len(result.message) > 50:
-        return result.message
+    # 5. Session 952: Prefer message even if short - it's usually more readable than raw JSON
+    if hasattr(result, 'message') and result.message:
+        msg = result.message
+        # If message exists and has some content, use it (lowered threshold from 50 to 20)
+        if len(msg) > 20:
+            return msg
 
-    # 6. Final fallback: serialize the entire data dict as formatted output
-    # This ensures we never lose agent output
+    # 6. Session 952: Format data more readably before falling back to JSON
+    # Try to create a summary from common metadata keys
     if data:
+        summary_parts = []
+
+        # Count-based summaries
+        for count_key in ['events_analyzed', 'items_count', 'total_alerts', 'games_analyzed',
+                          'stocks_analyzed', 'transactions_analyzed']:
+            if count_key in data:
+                label = count_key.replace('_', ' ').title()
+                summary_parts.append(f"**{label}:** {data[count_key]}")
+
+        # Status summaries
+        for status_key in ['critical_count', 'warning_count', 'info_count',
+                           'success_count', 'error_count']:
+            if status_key in data and data[status_key]:
+                label = status_key.replace('_', ' ').title()
+                summary_parts.append(f"**{label}:** {data[status_key]}")
+
+        if summary_parts:
+            summary_text = '\n'.join(summary_parts)
+            return f"## Execution Summary\n\n{summary_text}\n\n*Agent completed task: {task_description}*"
+
+        # Final fallback: serialize the entire data dict as formatted output
         # Filter out internal/meta keys
-        skip_keys = {'type', 'content_type', 'query', 'topic', 'timestamp', 'agent_name'}
+        skip_keys = {'type', 'content_type', 'query', 'topic', 'timestamp', 'agent_name',
+                     'execution_time', 'run_mode', 'trigger_source'}
         filtered_data = {k: v for k, v in data.items() if k not in skip_keys and v}
 
         if filtered_data:
