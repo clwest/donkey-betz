@@ -83,7 +83,7 @@ Build UI dashboard for RAG system monitoring:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
-| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance Extension (26+ agents) | #935 |
+| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance Extension + ML UI + Learning UI | #935-#941 |
 | **953** | Agent Provenance Expansion - 18 agents with provenance tracking | - |
 | **952** | Narrative Injection Enhancement - Topic filtering, diversity, fallbacks | #929, #930 |
 | **951** | PA Platform Query Tool - Query deliverables, reports, initiatives | #929 |
@@ -110,6 +110,17 @@ Build UI dashboard for RAG system monitoring:
 | `core/services/decision_extractor.py` | +_is_valid_initiative_name() validation |
 | `core/management/commands/enrich_boardroom_ml.py` | Backfill command |
 
+### Session 956 - Provenance + ML UI + Learning UI
+| File | Purpose |
+|------|---------|
+| `core/agents/content_writer_agent.py` | +provenance tracking (72h) |
+| `core/agents/podcast/podcast_coordinator_agent.py` | +provenance tracking (48h) |
+| `core/agents/executive/cto_agent.py` | +provenance tracking (24h) |
+| `core/agents/executive/coo_agent.py` | +provenance tracking (24h) |
+| `core/agents/fullstack_developer_agent.py` | +provenance tracking (168h) |
+| `frontend/src/pages/workspace/tabs/BoardroomTab.tsx` | +MLPredictionPanel component |
+| `frontend/src/pages/workspace/tabs/LearningJourneyTab.tsx` | +EffectivenessSubTab, AI Learning tab |
+
 ### Session 953 - Agent Provenance Expansion
 | File | Purpose |
 |------|---------|
@@ -119,4 +130,4 @@ Build UI dashboard for RAG system monitoring:
 
 ---
 
-**Session 956 Focus: Choose priority option above and continue building!**
+**Session 957 Focus: Option I (RAG Observability Frontend) is the priority - or choose another direction!**
