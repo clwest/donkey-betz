@@ -57,7 +57,9 @@ class LearningLoopOrchestrator:
     """
 
     # Default success signals for common tools
+    # Session 954: Expanded from 3 to 15+ tools for comprehensive learning
     DEFAULT_SUCCESS_SIGNALS = {
+        # Research & Search Tools
         'web_search': SuccessSignal(
             tool_name='web_search',
             success_indicators=['results', 'found', 'matches'],
@@ -74,6 +76,100 @@ class LearningLoopOrchestrator:
             tool_name='get_stock_data',
             success_indicators=['price', 'volume', 'data'],
             failure_indicators=['invalid ticker', 'no data'],
+            latency_threshold_ms=5000,
+        ),
+        # Content Creation Tools
+        'image_generation_agent': SuccessSignal(
+            tool_name='image_generation_agent',
+            success_indicators=['image_id', 'generated', 'url', 'created'],
+            failure_indicators=['failed', 'error', 'quota exceeded', 'invalid prompt'],
+            latency_threshold_ms=60000,  # Image gen can be slow
+            weight=1.2,  # High-value tool
+        ),
+        'content_writer_agent': SuccessSignal(
+            tool_name='content_writer_agent',
+            success_indicators=['content', 'article', 'blog', 'written', 'draft'],
+            failure_indicators=['failed', 'error', 'empty content'],
+            latency_threshold_ms=45000,
+            weight=1.2,
+        ),
+        'video_generation_agent': SuccessSignal(
+            tool_name='video_generation_agent',
+            success_indicators=['video_id', 'generated', 'url', 'rendering'],
+            failure_indicators=['failed', 'error', 'quota exceeded'],
+            latency_threshold_ms=120000,  # Videos take longer
+            weight=1.5,  # High-value tool
+        ),
+        # Agent Orchestration Tools
+        'universal_agent_tool': SuccessSignal(
+            tool_name='universal_agent_tool',
+            success_indicators=['result', 'response', 'completed', 'executed'],
+            failure_indicators=['agent not found', 'execution failed', 'timeout'],
+            latency_threshold_ms=60000,
+            weight=1.0,
+        ),
+        'reasoning_engine_tool': SuccessSignal(
+            tool_name='reasoning_engine_tool',
+            success_indicators=['conclusion', 'analysis', 'reasoning', 'thought'],
+            failure_indicators=['failed', 'error', 'no conclusion'],
+            latency_threshold_ms=30000,
+            weight=1.3,  # Strategic tool
+        ),
+        # System Health Tools
+        'body_vitals_tool': SuccessSignal(
+            tool_name='body_vitals_tool',
+            success_indicators=['vitals', 'status', 'healthy', 'metrics'],
+            failure_indicators=['error', 'unreachable', 'timeout'],
+            latency_threshold_ms=5000,
+            min_result_size=5,
+        ),
+        'system_alerts_tool': SuccessSignal(
+            tool_name='system_alerts_tool',
+            success_indicators=['alerts', 'status', 'notifications'],
+            failure_indicators=['error', 'failed'],
+            latency_threshold_ms=3000,
+        ),
+        # Intelligence Tools
+        'predictions_tool': SuccessSignal(
+            tool_name='predictions_tool',
+            success_indicators=['prediction', 'confidence', 'forecast'],
+            failure_indicators=['no predictions', 'error', 'insufficient data'],
+            latency_threshold_ms=10000,
+            weight=1.1,
+        ),
+        'gates_tool': SuccessSignal(
+            tool_name='gates_tool',
+            success_indicators=['gate', 'passed', 'ready', 'status'],
+            failure_indicators=['failed', 'blocked', 'error'],
+            latency_threshold_ms=5000,
+        ),
+        # Business Research Tools
+        'competitor_analysis_agent': SuccessSignal(
+            tool_name='competitor_analysis_agent',
+            success_indicators=['competitors', 'analysis', 'market', 'insights'],
+            failure_indicators=['not found', 'error', 'empty'],
+            latency_threshold_ms=45000,
+            weight=1.2,
+        ),
+        'customer_research_agent': SuccessSignal(
+            tool_name='customer_research_agent',
+            success_indicators=['customers', 'personas', 'research', 'segments'],
+            failure_indicators=['not found', 'error', 'empty'],
+            latency_threshold_ms=45000,
+            weight=1.2,
+        ),
+        # Workspace & Execution Tools
+        'workspace_tool': SuccessSignal(
+            tool_name='workspace_tool',
+            success_indicators=['created', 'updated', 'workspace', 'file'],
+            failure_indicators=['error', 'failed', 'permission denied'],
+            latency_threshold_ms=10000,
+        ),
+        # Human Decision Tools
+        'human_decisions_tool': SuccessSignal(
+            tool_name='human_decisions_tool',
+            success_indicators=['decisions', 'pending', 'resolved', 'items'],
+            failure_indicators=['error', 'failed'],
             latency_threshold_ms=5000,
         ),
     }
@@ -174,6 +270,91 @@ class LearningLoopOrchestrator:
             'total_pending': query.filter(was_successful__isnull=True).count(),
             'high_confidence_accuracy': high_conf_success / high_conf_total if high_conf_total > 0 else 0,
             'low_confidence_accuracy': low_conf_success / low_conf_total if low_conf_total > 0 else 0,
+        }
+
+    def analyze_user_feedback(self, user=None) -> Dict[str, Any]:
+        """
+        Session 954: Analyze human attention item decisions as user feedback.
+
+        User decisions on attention items are explicit feedback that can inform
+        learning patterns. This connects the boardroom to the learning loop.
+
+        Args:
+            user: Optional user to filter by
+
+        Returns:
+            Dict with analysis results including agent/type approval rates
+        """
+        from core.models_human_interface import HumanAttentionItem
+
+        # Get decided items within lookback period
+        query = HumanAttentionItem.objects.filter(
+            decided_at__gte=self.cutoff,
+            decision__isnull=False,
+        ).exclude(decision='')
+
+        if user:
+            query = query.filter(user=user)
+
+        # Map decisions to approval/rejection
+        APPROVAL_DECISIONS = ['approve', 'watch', 'act', 'verify']
+        REJECTION_DECISIONS = ['ignore', 'dismiss', 'auto_dismiss', 'reject']
+
+        # Approval rates by source agent
+        agent_stats = []
+        for stat in query.values('source_agent').annotate(
+            total=Count('id'),
+            approvals=Count('id', filter=Q(decision__in=APPROVAL_DECISIONS)),
+            rejections=Count('id', filter=Q(decision__in=REJECTION_DECISIONS)),
+        ).filter(total__gte=3).order_by('-total'):
+            approval_rate = stat['approvals'] / stat['total'] if stat['total'] > 0 else 0
+            agent_stats.append({
+                'source_agent': stat['source_agent'],
+                'total': stat['total'],
+                'approval_rate': approval_rate,
+                'approvals': stat['approvals'],
+                'rejections': stat['rejections'],
+            })
+
+        # Approval rates by item type
+        type_stats = []
+        for stat in query.values('item_type').annotate(
+            total=Count('id'),
+            approvals=Count('id', filter=Q(decision__in=APPROVAL_DECISIONS)),
+        ).filter(total__gte=3).order_by('-total'):
+            approval_rate = stat['approvals'] / stat['total'] if stat['total'] > 0 else 0
+            type_stats.append({
+                'item_type': stat['item_type'],
+                'total': stat['total'],
+                'approval_rate': approval_rate,
+            })
+
+        # Approval rates by urgency level
+        urgency_stats = []
+        for stat in query.values('urgency').annotate(
+            total=Count('id'),
+            approvals=Count('id', filter=Q(decision__in=APPROVAL_DECISIONS)),
+        ).filter(total__gte=2).order_by('-total'):
+            approval_rate = stat['approvals'] / stat['total'] if stat['total'] > 0 else 0
+            urgency_stats.append({
+                'urgency': stat['urgency'],
+                'total': stat['total'],
+                'approval_rate': approval_rate,
+            })
+
+        # Overall stats
+        total_decided = query.count()
+        total_approved = query.filter(decision__in=APPROVAL_DECISIONS).count()
+        total_rejected = query.filter(decision__in=REJECTION_DECISIONS).count()
+
+        return {
+            'agent_stats': agent_stats,
+            'type_stats': type_stats,
+            'urgency_stats': urgency_stats,
+            'total_decided': total_decided,
+            'total_approved': total_approved,
+            'total_rejected': total_rejected,
+            'overall_approval_rate': total_approved / total_decided if total_decided > 0 else 0,
         }
 
     def extract_learnings(self) -> List[ExtractedLearning]:
@@ -280,6 +461,67 @@ class LearningLoopOrchestrator:
                 source_records=decision_analysis['total_evaluated'],
             ))
 
+        # Session 954: Extract learnings from user feedback (boardroom decisions)
+        try:
+            feedback_analysis = self.analyze_user_feedback()
+
+            # Learn from agent approval rates
+            for stat in feedback_analysis.get('agent_stats', []):
+                if stat['total'] >= 5:
+                    approval_rate = stat['approval_rate']
+                    agent_name = stat['source_agent'] or 'unknown'
+
+                    if approval_rate < 0.3:  # User often ignores this agent's items
+                        learnings.append(ExtractedLearning(
+                            pattern_type='user_feedback_agent',
+                            description=f"Agent '{agent_name}' items are often ignored by users ({approval_rate:.0%} approval rate)",
+                            confidence=min(0.85, stat['total'] / 20),
+                            applies_to_agents=[agent_name] if agent_name != 'unknown' else [],
+                            pattern_data={
+                                'source_agent': agent_name,
+                                'approval_rate': approval_rate,
+                                'total_items': stat['total'],
+                                'recommendation': 'improve_relevance_filtering',
+                            },
+                            source_records=stat['total'],
+                        ))
+                    elif approval_rate >= 0.8:  # User trusts this agent
+                        learnings.append(ExtractedLearning(
+                            pattern_type='user_feedback_agent',
+                            description=f"Agent '{agent_name}' items are highly valued by users ({approval_rate:.0%} approval rate)",
+                            confidence=min(0.85, stat['total'] / 20),
+                            applies_to_agents=[agent_name] if agent_name != 'unknown' else [],
+                            pattern_data={
+                                'source_agent': agent_name,
+                                'approval_rate': approval_rate,
+                                'total_items': stat['total'],
+                                'recommendation': 'prioritize_this_agent',
+                            },
+                            source_records=stat['total'],
+                        ))
+
+            # Learn from item type approval rates
+            for stat in feedback_analysis.get('type_stats', []):
+                if stat['total'] >= 5:
+                    approval_rate = stat['approval_rate']
+                    item_type = stat['item_type']
+
+                    if approval_rate < 0.2:  # Users rarely approve this type
+                        learnings.append(ExtractedLearning(
+                            pattern_type='user_feedback_type',
+                            description=f"Item type '{item_type}' is rarely approved by users ({approval_rate:.0%})",
+                            confidence=min(0.8, stat['total'] / 15),
+                            applies_to_agents=[],
+                            pattern_data={
+                                'item_type': item_type,
+                                'approval_rate': approval_rate,
+                                'recommendation': 'reconsider_item_generation',
+                            },
+                            source_records=stat['total'],
+                        ))
+        except Exception as e:
+            logger.warning(f"Failed to analyze user feedback: {e}")
+
         return learnings
 
     def persist_learnings(self, learnings: List[ExtractedLearning]) -> int:
@@ -361,9 +603,133 @@ class LearningLoopOrchestrator:
                 'confidence': p.confidence,
                 'data': p.pattern_data,
                 'effectiveness': p.effectiveness_rate(),
+                'id': str(p.id),  # Session 954: Include ID for tracking
             }
             for p in patterns
         ]
+
+    def track_learning_application(
+        self,
+        pattern_id: str,
+        was_successful: bool,
+    ) -> bool:
+        """
+        Session 954: Track when a learning is applied and its outcome.
+
+        This updates the times_applied and success_when_applied counters
+        on LearningPattern to measure effectiveness.
+
+        Args:
+            pattern_id: UUID of the LearningPattern that was applied
+            was_successful: Whether the outcome was successful
+
+        Returns:
+            True if tracking was successful
+        """
+        from core.models_unified_system import LearningPattern
+        import uuid
+
+        try:
+            pattern_uuid = uuid.UUID(pattern_id) if isinstance(pattern_id, str) else pattern_id
+            pattern = LearningPattern.objects.get(id=pattern_uuid)
+
+            pattern.times_applied = (pattern.times_applied or 0) + 1
+            if was_successful:
+                pattern.success_when_applied = (pattern.success_when_applied or 0) + 1
+            pattern.save(update_fields=['times_applied', 'success_when_applied', 'updated_at'])
+
+            logger.info(f"📈 Tracked learning application: {pattern_id}, success={was_successful}")
+            return True
+        except LearningPattern.DoesNotExist:
+            logger.warning(f"Learning pattern not found: {pattern_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to track learning application: {e}")
+            return False
+
+    def get_learning_effectiveness_stats(self) -> Dict[str, Any]:
+        """
+        Session 954: Get comprehensive stats on learning effectiveness.
+
+        Returns stats for dashboard display including:
+        - Total active learnings
+        - Average effectiveness rate
+        - Most/least effective learnings
+        - Recent learnings extracted
+        """
+        from core.models_unified_system import LearningPattern
+
+        active_patterns = LearningPattern.objects.filter(is_active=True)
+        total_active = active_patterns.count()
+
+        # Patterns that have been applied at least once
+        applied_patterns = active_patterns.filter(times_applied__gt=0)
+        applied_count = applied_patterns.count()
+
+        # Calculate overall effectiveness
+        if applied_count > 0:
+            total_applied = sum(p.times_applied for p in applied_patterns)
+            total_successful = sum(p.success_when_applied for p in applied_patterns)
+            overall_effectiveness = total_successful / total_applied if total_applied > 0 else 0
+        else:
+            overall_effectiveness = 0
+            total_applied = 0
+            total_successful = 0
+
+        # Most effective learnings (at least 5 applications)
+        most_effective = []
+        for p in applied_patterns.filter(times_applied__gte=5).order_by('-times_applied')[:5]:
+            most_effective.append({
+                'id': str(p.id),
+                'description': p.description[:100],
+                'effectiveness': p.effectiveness_rate(),
+                'times_applied': p.times_applied,
+                'pattern_type': p.pattern_type,
+            })
+
+        # Least effective (might need review)
+        least_effective = []
+        for p in applied_patterns.filter(times_applied__gte=3):
+            eff = p.effectiveness_rate()
+            if eff < 0.5:
+                least_effective.append({
+                    'id': str(p.id),
+                    'description': p.description[:100],
+                    'effectiveness': eff,
+                    'times_applied': p.times_applied,
+                    'pattern_type': p.pattern_type,
+                })
+        least_effective = sorted(least_effective, key=lambda x: x['effectiveness'])[:5]
+
+        # Recently extracted learnings
+        recent_learnings = []
+        for p in active_patterns.order_by('-created_at')[:10]:
+            recent_learnings.append({
+                'id': str(p.id),
+                'description': p.description[:100],
+                'pattern_type': p.pattern_type,
+                'confidence': p.confidence,
+                'created_at': p.created_at.isoformat(),
+            })
+
+        # Stats by pattern type
+        type_stats = active_patterns.values('pattern_type').annotate(
+            count=Count('id'),
+            avg_confidence=Avg('confidence'),
+        ).order_by('-count')
+
+        return {
+            'total_active_learnings': total_active,
+            'total_applied': total_applied,
+            'total_successful': total_successful,
+            'overall_effectiveness': overall_effectiveness,
+            'applied_patterns_count': applied_count,
+            'most_effective': most_effective,
+            'least_effective': least_effective,
+            'recent_learnings': recent_learnings,
+            'by_pattern_type': list(type_stats),
+            'timestamp': timezone.now().isoformat(),
+        }
 
     def format_learnings_for_prompt(
         self,

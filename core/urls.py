@@ -798,6 +798,11 @@ from core.views_learning_loop import (
     dismiss_insight,
     get_performance_comparison,
     learning_dashboard,
+    # Session 954: Learning Loop Effectiveness
+    learning_loop_stats,
+    track_learning_outcome,
+    run_learning_cycle,
+    get_agent_learnings,
 )
 
 # Session 449: Import Pipeline Learning views (Learning Loops for AI Series)
@@ -1825,6 +1830,12 @@ urlpatterns = [
     path('api/learning/insights/<uuid:insight_id>/read/', mark_insight_read, name='learning-insight-read'),
     path('api/learning/insights/<uuid:insight_id>/dismiss/', dismiss_insight, name='learning-insight-dismiss'),
     path('api/learning/compare/', get_performance_comparison, name='learning-compare'),
+
+    # Session 954: Learning Loop Effectiveness APIs
+    path('api/learning/loop/stats/', learning_loop_stats, name='learning-loop-stats'),
+    path('api/learning/loop/track/', track_learning_outcome, name='learning-loop-track'),
+    path('api/learning/loop/run/', run_learning_cycle, name='learning-loop-run'),
+    path('api/learning/loop/agent/', get_agent_learnings, name='learning-loop-agent'),
 
     # Session 449: Pipeline Learning APIs (Learning Loops for AI Content Pipeline)
     path('api/pipeline-learning/feedback/', pipeline_record_feedback, name='pipeline-learning-feedback'),
