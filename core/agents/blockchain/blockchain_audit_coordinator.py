@@ -15,11 +15,12 @@ This coordinator:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from typing import Any, Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from ..base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 # Session 895: Timeout for sub-agent executions to prevent coordinator hangs
@@ -426,10 +427,55 @@ You have access to:
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 953: Build provenance from sub-agent results
+                        sources = []
+                        for res in all_results:
+                            source_name = res.get('source', 'UnknownAgent')
+                            result_data = res.get('data', {})
+                            # Try to get record count from sub-agent result
+                            sub_result = result_data.get('result', {})
+                            record_count = 1
+                            if isinstance(sub_result, dict):
+                                # Check common data fields for counts
+                                for key in ['alerts', 'findings', 'transactions', 'movements', 'audits']:
+                                    if key in sub_result.get('data', {}):
+                                        data_items = sub_result['data'][key]
+                                        if isinstance(data_items, list):
+                                            record_count = len(data_items)
+                                            break
+                            sources.append({
+                                'name': source_name,
+                                'endpoint': 'blockchain_audit',
+                                'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                                'record_count': record_count,
+                            })
+
+                        # Blockchain data stale threshold: 4 hours
+                        provenance = build_provenance(
+                            report_type='blockchain_audit',
+                            agent_name=self.name,
+                            sources=sources if sources else [{
+                                'name': 'BlockchainAuditCoordinator',
+                                'endpoint': 'blockchain_audit',
+                                'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                                'record_count': len(all_results),
+                            }],
+                            stale_threshold_hours=4.0,
+                        )
+                        provenance.disclaimer = format_disclaimer('blockchain_audit')
+
+                        message = provenance.to_markdown_block() + "\n" + "Blockchain audit coordination completed"
+
                         result = AgentResult(
                             success=True,
-                            message=f"Blockchain audit coordination completed",
-                            data={'results': all_results, 'query': task},
+                            message=message,
+                            data={
+                                'results': all_results,
+                                'query': task,
+                                'provenance': provenance.to_dict(),
+                                'publishable': provenance.publishable,
+                                'validation_status': provenance.validation_status,
+                            },
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,

@@ -5,12 +5,16 @@ This agent thinks like a Vegas bookmaker, analyzing games to predict line moveme
 identify value, and provide professional betting insights.
 
 Session 306: Added learning infrastructure hooks for cross-agent knowledge sharing.
+Session 953: Added provenance tracking for data source transparency.
 """
 
 import json
 import logging
+from datetime import datetime, timezone as dt_timezone
 from typing import Dict, List, Any
 from django.utils import timezone
+
+from core.agents.report_schemas import build_provenance, format_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -333,6 +337,37 @@ class BookmakerAgent(LearningMixin):
                         knowledge_value=bet,
                         confidence=0.8 if bet.get('confidence') == 'HIGH' else 0.6
                     )
+
+            # Session 953: Build provenance from game data sources
+            markets = game.markets.filter(is_active=True)
+            sources = []
+            for market in markets[:5]:  # Top 5 markets as sources
+                sources.append({
+                    'name': f"{market.market_type}_{market.sportsbook.name if hasattr(market, 'sportsbook') else 'unknown'}",
+                    'endpoint': 'game_markets',
+                    'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                    'record_count': market.odds_lines.filter(is_current=True).count(),
+                })
+            if not sources:
+                sources = [{
+                    'name': 'game_analysis',
+                    'endpoint': 'sports_database',
+                    'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                    'record_count': 0,
+                }]
+
+            provenance = build_provenance(
+                report_type='sports_analysis',
+                agent_name=self.name,
+                sources=sources,
+                stale_threshold_hours=2.0,  # Sports data: 2 hour threshold
+            )
+            provenance.disclaimer = format_disclaimer('sports_analysis')
+
+            # Add provenance to the analysis result
+            analysis['provenance'] = provenance.to_dict()
+            analysis['publishable'] = provenance.publishable
+            analysis['validation_status'] = provenance.validation_status
 
             return analysis
 

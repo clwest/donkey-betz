@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 4, 2026 - Session 928
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE**
+**Last Updated:** February 6, 2026 - Session 953
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS**
 
 ## System Stats
 | Component | Count | Details |
@@ -20,6 +20,7 @@
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Agent Provenance Expansion (953):** Extended Session 918 provenance tracking to 18 additional data-driven agents. Stock agents (8): BullCase, BearCase, MarketIntelligenceCoordinator, StockAuditCoordinator, MarketAnomalyDetector, SignalScanner, InstitutionalWatcher, MarketMovementMonitor (24h stale). Blockchain agents (5): BlockchainAuditCoordinator, WhaleWatcher, TransactionMonitor, ExploitDetector, SmartContractAuditor (4h stale). Analysis agents (3): TrendAnalysis, MarketIntelligence, OpportunityScoring (24h stale). Standalone agents (2): BookmakerAgent (2h), CreationAgent (24h). All agents now include provenance, publishable, and validation_status in output.
 - **Initiative Conversations (928):** "Discuss with Agents" button in Initiative modal creates HiveMindSession linked to initiative via FK. Injects full context (origin, stages, action items, signals). Auto-selects relevant agents via AgentRouter. HiveMind sessions show linked initiative with clickable link. Endpoint: `POST /api/initiatives/<uuid>/start-conversation/`. Also fixed founder_intent blocker for 50 initiatives and reset 286 stub documents. PRs #828, #830, #831, #832.
 - **Universal Agent Voice (927):** ListenButton throughout platform converts agent content to speech via ElevenLabs TTS. AudioCache model for content-based caching. 12 voices mapped to agent categories (Rachel=Research, Antoni=Financial, Bella=Creative, etc.). ListenAllButton for podcast-style sequential playback. Cost warning for content >2000 chars. Management command: `assign_agent_voices --apply`.
 - **Panel/Advisor System Improvements (920):** Enhanced panel output quality with 7 improvements: (1) Dedupe post-processor removes repeated DecisionSummary blocks, (2) Provenance headers track generation metadata (generated_at, inputs_used, freshness_window, publishable), (3) Placeholder validation detects invalid topics like "target"/"[learned]" and auto-generates valid ones, (4) Extended DecisionSummary with Decision (chosen/rejected), Why Now, Risk Assessment, Operating Constraints sections, (5) Enhanced validation requires has_decision and has_risk, (6) Estimate labeling validates numeric estimates are cited or labeled, (7) ExperimentCollisionService prevents A/B test collisions on same target. PR #804.
@@ -155,6 +156,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **953** | Agent Provenance Expansion - Added provenance tracking to 18 data-driven agents (stocks, blockchain, analysis, standalone) | `SESSION_953_AGENT_PROVENANCE.md` |
 | **928** | Initiative Conversations - "Discuss with Agents" button, HiveMind initiative FK, founder_intent fix, stub doc reset | `SESSION_928_INITIATIVE_CONVERSATIONS.md` |
 | **927** | Universal Agent Voice - ListenButton for TTS, AudioCache model, 12 voice mappings, cost warnings | `SESSION_926_UNIVERSAL_AGENT_VOICE.md` |
 | **920** | Panel/Advisor System Improvements - Dedupe, provenance headers, placeholder validation, extended DecisionSummary, estimate labeling, ExperimentCollisionService | `SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
@@ -169,8 +171,6 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
 | **886** | Content Feedback Loop + Experiment Audit - BlogPerformanceContextBuilder, cleaned 81 junk experiments, 87.5% success rate | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
 | **885** | Celery Content Pipeline + Operations Tab Fix - dedicated celery-content worker | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
-| **884** | AI OS Boot Experience - Home Page with greeting, while-away stats, projects, NL input | `SESSION_884_HOME_PAGE_BOOT.md` |
-| **872** | Executive Function - DecisionEnforcerAgent, 3 Contracts, AutoSpawner, Prompt Sharpening | `SESSION_872_COMPLETE.md` |
 
 **Older sessions:** See `docs/handoffs/` directory (Sessions 197-901)
 

@@ -15,9 +15,10 @@ Key capabilities:
 import json
 import logging
 from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -279,14 +280,43 @@ Focus on stocks without corresponding news explanations for moves."""
 
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
+            # Session 953: Build provenance from analysis results
+            sources = []
+            for tc in tool_calls_made:
+                sources.append({
+                    'name': tc.get('tool', 'market_movement'),
+                    'endpoint': 'market_data_api',
+                    'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                    'record_count': 1,
+                })
+
+            # Stock data stale threshold: 24 hours
+            provenance = build_provenance(
+                report_type='stock_analysis',
+                agent_name=self.name,
+                sources=sources if sources else [{
+                    'name': 'MarketMovementMonitorAgent',
+                    'endpoint': 'market_data_api',
+                    'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                    'record_count': 1,
+                }],
+                stale_threshold_hours=24.0,
+            )
+            provenance.disclaimer = format_disclaimer('stock_analysis')
+
+            message = provenance.to_markdown_block() + "\n" + analysis
+
             result = AgentResult(
                 success=True,
-                message=analysis,
+                message=message,
                 data={
                     'analysis': analysis,
                     'ticker': ticker,
                     'tool_calls': tool_calls_made,
                     'collected_data': collected_data,
+                    'provenance': provenance.to_dict(),
+                    'publishable': provenance.publishable,
+                    'validation_status': provenance.validation_status,
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time,
