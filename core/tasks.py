@@ -209,6 +209,7 @@ def cleanup_junk_initiatives(stale_days: int = 7):
 
         # 1. FIX or DELETE junk name patterns
         # Session 943: Try to fix names before deleting
+        # Session 945: Added Auto-created and other common junk patterns
         junk_patterns = Q(name__icontains='[Learned]') | \
                        Q(name__icontains='[Synthesis]') | \
                        Q(name__startswith='driven ') | \
@@ -216,6 +217,9 @@ def cleanup_junk_initiatives(stale_days: int = 7):
                        Q(name__startswith='of-') | \
                        Q(name__startswith='analysis ') | \
                        Q(name__startswith="Feature name:") | \
+                       Q(name__startswith="Auto-created From") | \
+                       Q(name__startswith="A '") | \
+                       Q(name__startswith="An '") | \
                        Q(name__regex=r'^[a-z]')  # Starts with lowercase (fragment)
 
         junk_initiatives = Initiative.objects.filter(
@@ -242,8 +246,18 @@ def cleanup_junk_initiatives(stale_days: int = 7):
                 use_llm=False  # Use heuristics only for speed
             )
 
-            # Check if the new title is valid and different
-            if new_title and _is_valid_title(new_title) and new_title != init.name:
+            # Session 945: Check if new title is still junk (Auto-created, etc.)
+            new_title_is_junk = (
+                new_title and (
+                    new_title.startswith("Auto-created") or
+                    new_title.startswith("A '") or
+                    new_title.startswith("An '") or
+                    new_title[0].islower()  # Starts lowercase
+                )
+            )
+
+            # Check if the new title is valid, different, and NOT still junk
+            if new_title and _is_valid_title(new_title) and new_title != init.name and not new_title_is_junk:
                 # Session 943: Check for duplicate name before saving
                 if Initiative.objects.filter(name=new_title).exclude(id=init.id).exists():
                     # Add unique suffix to avoid duplicate
@@ -260,7 +274,7 @@ def cleanup_junk_initiatives(stale_days: int = 7):
                     logger.warning(f"⚠️ Could not fix name '{old_name}': {save_err}")
                     continue  # Skip deletion, leave as-is
             else:
-                # Cannot fix - delete it
+                # Cannot fix or new title still junk - delete it
                 init.delete()
                 stats['junk_deleted'] += 1
                 logger.info(f"🗑️ [INITIATIVE-CLEANUP] Deleted unfixable: {old_name}")
@@ -282,6 +296,9 @@ def cleanup_junk_initiatives(stale_days: int = 7):
 
         # 3. ARCHIVE stale initiatives (no Stage 1 doc after X days)
         # These might be legitimate, just slow - archive instead of delete
+        # Session 945: Skip if founder_intent_set or has recent conversation activity
+        from core.models_unified_system import HiveMindSession
+
         stale_initiatives = Initiative.objects.filter(
             status='ACTIVE',
             created_at__lt=cutoff
@@ -292,7 +309,35 @@ def cleanup_junk_initiatives(stale_days: int = 7):
             ).values_list('initiative_id', flat=True)
         )
 
+        stats['skipped_with_activity'] = 0
+
         for init in stale_initiatives:
+            # Session 945: Don't archive if founder has explicitly set intent
+            if init.founder_intent_set:
+                stats['skipped_with_activity'] += 1
+                logger.debug(f"⏭️ [INITIATIVE-CLEANUP] Skipped (founder intent): {init.name[:40]}")
+                continue
+
+            # Session 945: Don't archive if there's recent activity
+            recent_activity_cutoff = now - timedelta(days=3)
+
+            # Check last_activity_at field first (most accurate)
+            if init.last_activity_at and init.last_activity_at >= recent_activity_cutoff:
+                stats['skipped_with_activity'] += 1
+                logger.debug(f"⏭️ [INITIATIVE-CLEANUP] Skipped (recent activity): {init.name[:40]}")
+                continue
+
+            # Fallback: check for recent conversations
+            has_recent_convo = HiveMindSession.objects.filter(
+                initiative_id=init.id,
+                created_at__gte=recent_activity_cutoff
+            ).exists()
+
+            if has_recent_convo:
+                stats['skipped_with_activity'] += 1
+                logger.debug(f"⏭️ [INITIATIVE-CLEANUP] Skipped (recent convo): {init.name[:40]}")
+                continue
+
             init.status = 'ARCHIVED'
             init.save(skip_invariant_check=True)
             stats['stale_archived'] += 1
@@ -303,6 +348,7 @@ def cleanup_junk_initiatives(stale_days: int = 7):
             f"fixed {stats['names_fixed']} names, "
             f"deleted {stats['junk_deleted']} junk, "
             f"archived {stats['stale_archived']} stale, "
+            f"skipped {stats.get('skipped_with_activity', 0)} with activity, "
             f"fixed {stats['stage_invariant_fixed']} stage violations"
         )
 
@@ -11653,6 +11699,14 @@ Include this DecisionSummary block NOW."""
         session.contribution_count = completed_count
         session.total_thinking_time = total_thinking_time
         session.save()
+
+        # Session 945: Update initiative's last_activity_at if linked
+        if session.initiative_id:
+            try:
+                session.initiative.update_activity()
+                logger.debug(f"📊 [ACTIVITY] Updated last_activity_at for initiative {session.initiative_id}")
+            except Exception as act_err:
+                logger.warning(f"📊 [ACTIVITY] Failed to update initiative activity: {act_err}")
 
         # Broadcast completion
         broadcast_hive_mind_status(session, 'completed')
@@ -31396,6 +31450,13 @@ def run_triggered_conversation(
                     session.status = 'completed'
                     session.save(update_fields=['status'])
                     logger.info(f"✅ [TRIGGERED-CONVO] Updated HiveMindSession {hive_session_id} to completed")
+
+                    # Session 945: Update initiative's last_activity_at if linked
+                    if session.initiative_id:
+                        try:
+                            session.initiative.update_activity()
+                        except Exception:
+                            pass  # Non-critical
             except Exception as e:
                 logger.warning(f"Could not update HiveMindSession: {e}")
 

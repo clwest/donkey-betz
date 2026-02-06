@@ -122,6 +122,14 @@ class Initiative(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.CharField(max_length=100, blank=True, default='system')
 
+    # Session 945: Track last meaningful activity (conversations, action items, etc.)
+    # More accurate than updated_at for staleness detection
+    last_activity_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Session 945: Last meaningful activity (conversation, action item, etc.)'
+    )
+
     # Optional: Link to parent research topic or decision
     parent_topic = models.CharField(max_length=200, blank=True)
     source_decision_id = models.UUIDField(null=True, blank=True)
@@ -596,6 +604,19 @@ class Initiative(models.Model):
                 pass  # New record being created
 
         super().save(*args, **kwargs)
+
+    def update_activity(self):
+        """
+        Session 945: Update last_activity_at timestamp.
+
+        Call this when meaningful activity happens:
+        - Conversation completed
+        - Action item created/updated
+        - Stage document attached
+        """
+        from django.utils import timezone
+        self.last_activity_at = timezone.now()
+        self.save(update_fields=['last_activity_at'], skip_invariant_check=True)
 
     def is_complete(self):
         """Check if all 5 stages are approved."""
