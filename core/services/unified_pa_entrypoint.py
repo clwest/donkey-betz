@@ -32,11 +32,14 @@ import logging
 import time
 import uuid
 import asyncio
+import os
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict, field
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -1516,6 +1519,123 @@ Address the user by name occasionally."""
         else:
             return str(tool_result)
 
+    def _log_user_feedback_to_docs(
+        self,
+        message: str,
+        feedback_type: str,
+        trace_id: str
+    ) -> bool:
+        """
+        Session 948: Actually log user feedback for persistence across sessions.
+
+        Writes to a configurable location (via PA_FEEDBACK_FILE setting) or
+        falls back to database storage if file system isn't available.
+
+        Returns True if logged successfully.
+        """
+        # Try to log to file first (for Claude Code visibility)
+        file_logged = self._log_feedback_to_file(message, feedback_type, trace_id)
+
+        # Always log to database as backup (works in any deployment)
+        db_logged = self._log_feedback_to_database(message, feedback_type, trace_id)
+
+        return file_logged or db_logged
+
+    def _log_feedback_to_file(
+        self,
+        message: str,
+        feedback_type: str,
+        trace_id: str
+    ) -> bool:
+        """Log feedback to file system (for Claude Code visibility)."""
+        try:
+            # Configurable feedback file location
+            # Default: docs/USER_FEEDBACK_QUEUE.md in project root
+            feedback_path = getattr(settings, 'PA_FEEDBACK_FILE', None)
+
+            if not feedback_path:
+                base_dir = getattr(settings, 'BASE_DIR', None)
+                if not base_dir:
+                    return False
+                feedback_path = Path(base_dir) / 'docs' / 'USER_FEEDBACK_QUEUE.md'
+            else:
+                feedback_path = Path(feedback_path)
+
+            # Create parent dir if needed
+            feedback_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Format the entry
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+            user_name = self.user.username if hasattr(self.user, 'username') else 'unknown'
+
+            entry = f"""
+## [{feedback_type.upper()}] {timestamp}
+**User:** {user_name}
+**Trace:** {trace_id}
+
+> {message}
+
+**Status:** 🔴 OPEN
+
+---
+"""
+
+            # Check if file exists and has header
+            if not feedback_path.exists():
+                header = """# User Feedback Queue
+
+This file is auto-populated by the PA when users report issues, bugs, or feature requests.
+The next session should review and address these items.
+
+**How to use:**
+1. Review each item below
+2. Implement fixes or document why not feasible
+3. Change status from 🔴 OPEN to ✅ ADDRESSED
+4. Delete addressed items after confirming with user
+
+---
+"""
+                feedback_path.write_text(header + entry)
+            else:
+                # Append to existing file
+                with open(feedback_path, 'a') as f:
+                    f.write(entry)
+
+            logger.info(f"Logged user feedback to file {feedback_path}: {feedback_type}")
+            return True
+
+        except Exception as e:
+            logger.warning(f"Could not log feedback to file: {e}")
+            return False
+
+    def _log_feedback_to_database(
+        self,
+        message: str,
+        feedback_type: str,
+        trace_id: str
+    ) -> bool:
+        """Log feedback to database (works in any deployment)."""
+        try:
+            from core.models_user_feedback import UserFeedback
+
+            UserFeedback.objects.create(
+                user=self.user,
+                feedback_type=feedback_type,
+                message=message,
+                trace_id=trace_id,
+                status='open'
+            )
+            logger.info(f"Logged user feedback to database: {feedback_type}")
+            return True
+
+        except ImportError:
+            # UserFeedback model doesn't exist yet - that's ok
+            logger.debug("UserFeedback model not available, skipping DB log")
+            return False
+        except Exception as e:
+            logger.warning(f"Could not log feedback to database: {e}")
+            return False
+
     async def _generate_honest_feedback_response(
         self,
         message: str,
@@ -1526,68 +1646,72 @@ Address the user by name occasionally."""
         Session 948: Generate honest response for user feedback/issues.
 
         Instead of triggering random tools and pretending they solve the problem,
-        acknowledge the limitation honestly and explain what would actually help.
+        acknowledge the limitation honestly, LOG IT TO DOCS, and explain what would help.
         """
         user_name = context.get('user_name', 'there')
 
         # Categorize the type of feedback
         message_lower = message.lower()
+        feedback_type = 'feedback'  # default
 
         if any(phrase in message_lower for phrase in [
             'not available', 'can\'t access', 'cannot access', 'losing context',
             'context lost', 'context loss', 'spread out', 'fragmented', 'disconnect'
         ]):
-            # UI/UX issue - needs code changes
-            return (
-                f"I hear you, {user_name}. You're describing a **UI/UX limitation** - "
-                f"something that requires actual code changes to fix, not something I can solve through my tools.\n\n"
-                f"**What I can do:**\n"
-                f"- Log this feedback for the development team\n"
-                f"- Help you work around it with current capabilities\n"
-                f"- Explain what exists today\n\n"
-                f"**What would actually fix it:**\n"
-                f"- Code changes to the frontend/backend\n"
-                f"- A developer session to implement the fix\n\n"
-                f"Would you like me to help you work within current limitations, or should we log this as a feature request?"
-            )
-
+            feedback_type = 'ui_ux_issue'
         elif any(phrase in message_lower for phrase in [
             'not working', 'doesn\'t work', 'broken', 'bug'
         ]):
-            # Bug report
-            return (
-                f"Thanks for reporting this, {user_name}. This sounds like a **bug or broken functionality**.\n\n"
-                f"I want to be honest: I don't have tools to fix code bugs - that requires a developer.\n\n"
-                f"**What I can do:**\n"
-                f"- Help you describe the issue clearly\n"
-                f"- Check if there's a known workaround\n"
-                f"- Suggest what information would help debug it\n\n"
-                f"Can you tell me more about what you expected vs what happened?"
-            )
-
+            feedback_type = 'bug'
         elif any(phrase in message_lower for phrase in [
             'should be', 'need to be', 'would be better', 'wish', 'why can\'t', 'why isn\'t'
         ]):
-            # Feature request
+            feedback_type = 'feature_request'
+
+        # Actually log the feedback to docs
+        logged = self._log_user_feedback_to_docs(message, feedback_type, trace_id)
+        log_status = "✅ **Logged to `docs/USER_FEEDBACK_QUEUE.md`** - the next Claude session will see this." if logged else "⚠️ Could not log feedback (file write error)."
+
+        if feedback_type == 'ui_ux_issue':
             return (
-                f"I understand, {user_name}. You're suggesting an **improvement or feature request**.\n\n"
-                f"I can't implement code changes myself, but I can:\n"
-                f"- Acknowledge your idea\n"
-                f"- Help clarify the use case\n"
-                f"- Note it for future development\n\n"
-                f"What specific workflow would this improvement help with?"
+                f"I hear you, {user_name}. You're describing a **UI/UX limitation** - "
+                f"something that requires actual code changes to fix.\n\n"
+                f"{log_status}\n\n"
+                f"**What I can do now:**\n"
+                f"- Help you work around it with current capabilities\n"
+                f"- Explain what exists today\n\n"
+                f"**What would actually fix it:**\n"
+                f"- Code changes in a developer session\n\n"
+                f"Is there anything else you'd like me to note about this issue?"
+            )
+
+        elif feedback_type == 'bug':
+            return (
+                f"Thanks for reporting this, {user_name}. This sounds like a **bug**.\n\n"
+                f"{log_status}\n\n"
+                f"I can't fix code bugs - that requires a developer - but I've recorded this.\n\n"
+                f"To help the next session fix this faster:\n"
+                f"- What did you expect to happen?\n"
+                f"- What actually happened?\n"
+                f"- Any error messages?"
+            )
+
+        elif feedback_type == 'feature_request':
+            return (
+                f"I understand, {user_name}. You're suggesting an **improvement**.\n\n"
+                f"{log_status}\n\n"
+                f"I can't implement code changes myself, but I've recorded this for future development.\n\n"
+                f"Any additional context about the use case?"
             )
 
         else:
-            # General feedback
             return (
-                f"I appreciate the feedback, {user_name}. I want to be transparent: "
-                f"some issues require code changes that I can't make through my tools.\n\n"
-                f"Could you help me understand:\n"
+                f"I appreciate the feedback, {user_name}.\n\n"
+                f"{log_status}\n\n"
+                f"To help address this:\n"
                 f"1. What were you trying to do?\n"
                 f"2. What happened instead?\n"
-                f"3. What would success look like?\n\n"
-                f"This helps determine if I can help now or if it needs development work."
+                f"3. What would success look like?"
             )
 
     async def _generate_direct_response(
