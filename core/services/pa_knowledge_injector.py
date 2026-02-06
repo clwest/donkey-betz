@@ -210,6 +210,7 @@ class PAKnowledgeInjector:
                 count=Count('id')
             ).order_by('-count')[:10]
 
+            # Session 957: Clarify Core Agents vs Persona Agents
             summary = {
                 'total_executions_24h': total_executions,
                 'success_rate': success_rate,
@@ -217,7 +218,12 @@ class PAKnowledgeInjector:
                     {'name': a['agent_name'], 'executions': a['count']}
                     for a in top_agents
                 ],
-                'total_agents': 72,  # Static count from CLAUDE.md
+                # Core Agents: Specialized agents with dedicated Python code (76 total)
+                'core_agents': 76,
+                # Persona Agents: ConceptForge think-tank personas for brainstorming (139 total)
+                'persona_agents': 139,
+                # Total: 76 core + 139 personas = 215 AI entities
+                'total_ai_entities': 215,
             }
 
             # Update cache
@@ -228,11 +234,14 @@ class PAKnowledgeInjector:
 
         except Exception as e:
             logger.warning(f"Failed to get agent activity: {e}")
+            # Session 957: Clarify Core Agents vs Persona Agents
             return {
                 'total_executions_24h': 0,
                 'success_rate': 0,
                 'top_agents': [],
-                'total_agents': 72,
+                'core_agents': 76,
+                'persona_agents': 139,
+                'total_ai_entities': 215,
                 'error': str(e)
             }
 
@@ -463,9 +472,12 @@ class PAKnowledgeInjector:
 
         if triggers['needs_capabilities'] or triggers['needs_agents']:
             # Include agent roster for capability questions
+            # Session 957: Clarify Core Agents vs Persona Agents
             context['agent_roster'] = {
-                'total_agents': 72,
-                'routable_agents': 48,
+                'core_agents': 76,  # Specialized agents with Python code
+                'persona_agents': 139,  # ConceptForge think-tank personas
+                'total_ai_entities': 215,  # 76 + 139
+                'routable_agents': 49,  # Agents accessible via AgentRouter
                 'categories': {
                     'Creation': ['ImageAgent', 'VideoAgent', 'AudioAgent', 'ThreeDAgent'],
                     'Editing': ['ImageEditingAgent', 'VideoEditingAgent'],
@@ -551,10 +563,13 @@ class PAKnowledgeInjector:
                     parts.append(f"  ⚠️ {alert.get('message', '')}")
 
         # Agent activity section
+        # Session 957: Clarify Core Agents vs Persona Agents
         if 'agent_activity' in context:
             activity = context['agent_activity']
-            parts.append(f"\n### Agent Activity (Last 24h)")
-            parts.append(f"Total Agents: {activity.get('total_agents', 72)}")
+            parts.append(f"\n### AI Entities (Last 24h)")
+            parts.append(f"Core Agents: {activity.get('core_agents', 76)} (specialized Python agents)")
+            parts.append(f"Persona Agents: {activity.get('persona_agents', 139)} (ConceptForge think-tank)")
+            parts.append(f"Total AI Entities: {activity.get('total_ai_entities', 215)}")
             parts.append(f"Executions: {activity.get('total_executions_24h', 0)}")
             parts.append(f"Success Rate: {activity.get('success_rate', 0)}%")
 
@@ -574,9 +589,16 @@ class PAKnowledgeInjector:
                 parts.append(f"Latest Data: {spider['latest_data_minutes_ago']} minutes ago")
 
         # Agent roster section
+        # Session 957: Clarify Core Agents vs Persona Agents
         if 'agent_roster' in context:
             roster = context['agent_roster']
-            parts.append(f"\n### Agent Roster ({roster.get('total_agents', 72)} agents)")
+            core = roster.get('core_agents', 76)
+            personas = roster.get('persona_agents', 139)
+            total = roster.get('total_ai_entities', 215)
+            parts.append(f"\n### Agent Roster ({core} Core + {personas} Personas = {total} AI Entities)")
+            parts.append(f"Core Agents: {core} (specialized agents with Python code)")
+            parts.append(f"Persona Agents: {personas} (ConceptForge think-tank personas for brainstorming)")
+            parts.append(f"Routable: {roster.get('routable_agents', 49)} (accessible via AgentRouter)")
             for category, agents in roster.get('categories', {}).items():
                 parts.append(f"**{category}**: {', '.join(agents)}")
 
