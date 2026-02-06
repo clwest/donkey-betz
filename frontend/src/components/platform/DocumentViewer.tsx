@@ -9,6 +9,8 @@ import { useState, useEffect } from 'react'
 import { X, ExternalLink, Clock, FileText, Copy, Check, ChevronLeft, Maximize2, Minimize2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import axios from 'axios'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface DocumentMetadata {
   path: string
@@ -51,47 +53,7 @@ function formatDate(dateStr: string): string {
   })
 }
 
-// Simple markdown to HTML conversion
-function renderMarkdown(text: string): string {
-  let html = text
-    // Tables
-    .replace(/^\|(.+)\|$/gim, (_match, content) => {
-      const cells = content.split('|').map((c: string) => c.trim())
-      const isHeader = cells.some((c: string) => c.match(/^-+$/))
-      if (isHeader) return ''
-      return `<tr>${cells.map((c: string) => `<td class="border border-gray-700 px-3 py-2">${c}</td>`).join('')}</tr>`
-    })
-    // Headers
-    .replace(/^#### (.*$)/gim, '<h4 class="text-md font-semibold mt-4 mb-2 text-white">$1</h4>')
-    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-5 mb-2 text-white">$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-white border-b border-gray-700 pb-2">$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-4 text-white">$1</h1>')
-    // Text formatting
-    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/~~(.*?)~~/g, '<del>$1</del>')
-    // Code
-    .replace(/`([^`]+)`/g, '<code class="bg-gray-800 px-1.5 py-0.5 rounded text-primary-400 text-sm font-mono">$1</code>')
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-gray-900 p-4 rounded-lg my-4 overflow-x-auto text-sm border border-gray-700"><code class="text-gray-300 font-mono">$2</code></pre>')
-    // Lists
-    .replace(/^\s*[-*]\s+(.*)$/gim, '<li class="ml-4 list-disc text-gray-300 my-1">$1</li>')
-    .replace(/^\s*(\d+)\.\s+(.*)$/gim, '<li class="ml-4 list-decimal text-gray-300 my-1">$2</li>')
-    // Blockquotes
-    .replace(/^>\s+(.*)$/gim, '<blockquote class="border-l-4 border-primary-500 pl-4 my-4 text-gray-400 italic">$1</blockquote>')
-    // Horizontal rules
-    .replace(/^---+$/gim, '<hr class="border-gray-700 my-6" />')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-400 hover:text-primary-300 hover:underline" target="_blank" rel="noopener">$1</a>')
-    // Checkboxes
-    .replace(/^\s*-\s+\[x\]\s+(.*)$/gim, '<li class="ml-4 list-none text-gray-300 my-1"><span class="text-accent-green mr-2">&#10003;</span>$1</li>')
-    .replace(/^\s*-\s+\[\s*\]\s+(.*)$/gim, '<li class="ml-4 list-none text-gray-300 my-1"><span class="text-gray-500 mr-2">&#9633;</span>$1</li>')
-    // Paragraphs
-    .replace(/\n\n/g, '</p><p class="my-3 text-gray-300">')
-    .replace(/\n/g, '<br />')
-
-  return `<p class="my-3 text-gray-300">${html}</p>`
-}
+// Session 943: Removed custom renderMarkdown in favor of ReactMarkdown with unified prose-dark styling
 
 export function DocumentViewer({
   documentPath,
@@ -271,11 +233,13 @@ export function DocumentViewer({
               </div>
             </div>
           ) : content ? (
+            /* Session 943: Unified prose styling with ReactMarkdown */
             <div className="p-6">
-              <article
-                className="prose prose-invert prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-              />
+              <article className="prose prose-invert prose-dark prose-sm max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {content}
+                </ReactMarkdown>
+              </article>
             </div>
           ) : (
             <div className="flex items-center justify-center h-64 text-gray-500">
