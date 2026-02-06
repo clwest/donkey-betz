@@ -154,6 +154,11 @@ class ToolDispatcher:
         # Legal tools
         self.register("legal_doc_drafter_agent", self._handle_agent_tool)
 
+        # Session 948: New PA enhancement tools
+        self.register("spider_data_tool", self._handle_spider_data)
+        self.register("execution_history_tool", self._handle_execution_history)
+        self.register("learning_patterns_tool", self._handle_learning_patterns)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -1867,6 +1872,454 @@ class ToolDispatcher:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, action_items"
+            )
+
+    # =========================================================================
+    # Session 948: New PA Enhancement Tools
+    # =========================================================================
+
+    def _handle_spider_data(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 948: Spider data tool for querying collected intelligence.
+
+        Provides PA access to data collected by the 77 spiders.
+
+        Actions:
+        - recent: Get recent spider data (default)
+        - by_spider: Get data from a specific spider
+        - by_category: Get data by spider category
+        - search: Search spider data by keyword
+        - stats: Get spider collection statistics
+        """
+        from core.models_unified_system import SpiderData
+        from django.db.models import Count
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'recent')
+        limit = payload.get('limit', 20)
+        spider_name = payload.get('spider_name')
+        category = payload.get('category')
+        keyword = payload.get('keyword', payload.get('query', ''))
+        days = payload.get('days', 7)
+
+        cutoff = timezone.now() - timedelta(days=days)
+
+        if action == 'recent':
+            # Get recent spider data across all spiders
+            qs = SpiderData.objects.filter(created_at__gte=cutoff)
+
+            if spider_name:
+                qs = qs.filter(spider_name__icontains=spider_name)
+            if category:
+                qs = qs.filter(category__icontains=category)
+
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'spider_name', 'category', 'title', 'url',
+                    'relevance_score', 'created_at'
+                )
+            )
+
+            return {
+                'action': 'recent',
+                'count': len(items),
+                'items': items,
+                'days_back': days,
+            }
+
+        elif action == 'by_spider':
+            if not spider_name:
+                # List available spiders with counts
+                spider_counts = dict(
+                    SpiderData.objects.filter(created_at__gte=cutoff)
+                    .values('spider_name')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:30]
+                    .values_list('spider_name', 'count')
+                )
+                return {
+                    'action': 'by_spider',
+                    'available_spiders': spider_counts,
+                    'message': 'Specify spider_name to get data from a specific spider'
+                }
+
+            items = list(
+                SpiderData.objects.filter(
+                    spider_name__icontains=spider_name,
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:limit].values(
+                    'id', 'spider_name', 'category', 'title', 'url',
+                    'content', 'relevance_score', 'created_at'
+                )
+            )
+
+            return {
+                'action': 'by_spider',
+                'spider_name': spider_name,
+                'count': len(items),
+                'items': items,
+            }
+
+        elif action == 'by_category':
+            if not category:
+                # List available categories
+                category_counts = dict(
+                    SpiderData.objects.filter(created_at__gte=cutoff)
+                    .values('category')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:20]
+                    .values_list('category', 'count')
+                )
+                return {
+                    'action': 'by_category',
+                    'available_categories': category_counts,
+                    'message': 'Specify category to get data from that category'
+                }
+
+            items = list(
+                SpiderData.objects.filter(
+                    category__icontains=category,
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:limit].values(
+                    'id', 'spider_name', 'category', 'title', 'url',
+                    'relevance_score', 'created_at'
+                )
+            )
+
+            return {
+                'action': 'by_category',
+                'category': category,
+                'count': len(items),
+                'items': items,
+            }
+
+        elif action == 'search':
+            if not keyword:
+                return {
+                    'action': 'search',
+                    'error': 'keyword is required for search',
+                }
+
+            from django.db.models import Q
+            items = list(
+                SpiderData.objects.filter(
+                    Q(title__icontains=keyword) | Q(content__icontains=keyword),
+                    created_at__gte=cutoff
+                ).order_by('-relevance_score', '-created_at')[:limit].values(
+                    'id', 'spider_name', 'category', 'title', 'url',
+                    'relevance_score', 'created_at'
+                )
+            )
+
+            return {
+                'action': 'search',
+                'keyword': keyword,
+                'count': len(items),
+                'items': items,
+            }
+
+        elif action == 'stats':
+            total = SpiderData.objects.filter(created_at__gte=cutoff).count()
+            by_spider = dict(
+                SpiderData.objects.filter(created_at__gte=cutoff)
+                .values('spider_name')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:10]
+                .values_list('spider_name', 'count')
+            )
+            by_category = dict(
+                SpiderData.objects.filter(created_at__gte=cutoff)
+                .values('category')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:10]
+                .values_list('category', 'count')
+            )
+
+            return {
+                'action': 'stats',
+                'total_items': total,
+                'days_back': days,
+                'by_spider': by_spider,
+                'by_category': by_category,
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: recent, by_spider, by_category, search, stats"
+            )
+
+    def _handle_execution_history(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 948: Execution history tool for viewing agent activity.
+
+        Provides PA access to recent agent executions.
+
+        Actions:
+        - recent: Get recent executions (default)
+        - by_agent: Get executions for a specific agent
+        - stats: Get execution statistics
+        - failures: Get recent failures for debugging
+        """
+        from core.models import AgentExecution
+        from django.db.models import Count, Avg
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'recent')
+        limit = payload.get('limit', 20)
+        agent_name = payload.get('agent_name')
+        hours = payload.get('hours', 24)
+
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        if action == 'recent':
+            qs = AgentExecution.objects.filter(created_at__gte=cutoff)
+
+            if agent_name:
+                qs = qs.filter(agent_name__icontains=agent_name)
+
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'agent_name', 'task', 'status', 'success',
+                    'execution_time_ms', 'created_at'
+                )
+            )
+
+            return {
+                'action': 'recent',
+                'count': len(items),
+                'items': items,
+                'hours_back': hours,
+            }
+
+        elif action == 'by_agent':
+            if not agent_name:
+                # List active agents with execution counts
+                agent_counts = dict(
+                    AgentExecution.objects.filter(created_at__gte=cutoff)
+                    .values('agent_name')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:30]
+                    .values_list('agent_name', 'count')
+                )
+                return {
+                    'action': 'by_agent',
+                    'active_agents': agent_counts,
+                    'message': 'Specify agent_name to see executions for a specific agent'
+                }
+
+            items = list(
+                AgentExecution.objects.filter(
+                    agent_name__icontains=agent_name,
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:limit].values(
+                    'id', 'agent_name', 'task', 'status', 'success',
+                    'execution_time_ms', 'error_message', 'created_at'
+                )
+            )
+
+            # Calculate success rate for this agent
+            total = AgentExecution.objects.filter(
+                agent_name__icontains=agent_name,
+                created_at__gte=cutoff
+            ).count()
+            successes = AgentExecution.objects.filter(
+                agent_name__icontains=agent_name,
+                created_at__gte=cutoff,
+                success=True
+            ).count()
+
+            return {
+                'action': 'by_agent',
+                'agent_name': agent_name,
+                'count': len(items),
+                'items': items,
+                'success_rate': successes / total if total > 0 else 0,
+            }
+
+        elif action == 'stats':
+            total = AgentExecution.objects.filter(created_at__gte=cutoff).count()
+            successes = AgentExecution.objects.filter(
+                created_at__gte=cutoff, success=True
+            ).count()
+            failures = total - successes
+
+            by_agent = list(
+                AgentExecution.objects.filter(created_at__gte=cutoff)
+                .values('agent_name')
+                .annotate(
+                    count=Count('id'),
+                    avg_time=Avg('execution_time_ms')
+                )
+                .order_by('-count')[:15]
+            )
+
+            return {
+                'action': 'stats',
+                'total_executions': total,
+                'successes': successes,
+                'failures': failures,
+                'success_rate': successes / total if total > 0 else 0,
+                'hours_back': hours,
+                'by_agent': by_agent,
+            }
+
+        elif action == 'failures':
+            items = list(
+                AgentExecution.objects.filter(
+                    created_at__gte=cutoff,
+                    success=False
+                ).order_by('-created_at')[:limit].values(
+                    'id', 'agent_name', 'task', 'status', 'error_message',
+                    'created_at'
+                )
+            )
+
+            return {
+                'action': 'failures',
+                'count': len(items),
+                'items': items,
+                'hours_back': hours,
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: recent, by_agent, stats, failures"
+            )
+
+    def _handle_learning_patterns(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 948: Learning patterns tool for viewing system learnings.
+
+        Provides PA access to patterns the system has learned from execution data.
+
+        Actions:
+        - list: List active learning patterns (default)
+        - by_type: Get patterns by type (tool_reliability, agent_performance, etc.)
+        - stats: Get learning statistics
+        """
+        from core.models_unified_system import LearningPattern
+        from django.db.models import Count
+
+        action = payload.get('action', 'list')
+        limit = payload.get('limit', 20)
+        pattern_type = payload.get('pattern_type')
+        min_confidence = payload.get('min_confidence', 0.5)
+
+        if action == 'list':
+            qs = LearningPattern.objects.filter(
+                is_active=True,
+                confidence__gte=min_confidence
+            )
+
+            if pattern_type:
+                qs = qs.filter(pattern_type=pattern_type)
+
+            items = list(
+                qs.order_by('-confidence', '-updated_at')[:limit].values(
+                    'id', 'pattern_type', 'description', 'confidence',
+                    'pattern_data', 'applies_to_agents', 'times_applied',
+                    'times_successful', 'updated_at'
+                )
+            )
+
+            # Calculate effectiveness for each
+            for item in items:
+                applied = item.get('times_applied', 0)
+                successful = item.get('times_successful', 0)
+                item['effectiveness'] = successful / applied if applied > 0 else 0
+
+            return {
+                'action': 'list',
+                'count': len(items),
+                'items': items,
+                'min_confidence': min_confidence,
+            }
+
+        elif action == 'by_type':
+            if not pattern_type:
+                # List available pattern types
+                type_counts = dict(
+                    LearningPattern.objects.filter(is_active=True)
+                    .values('pattern_type')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')
+                    .values_list('pattern_type', 'count')
+                )
+                return {
+                    'action': 'by_type',
+                    'available_types': type_counts,
+                    'message': 'Specify pattern_type to filter by type'
+                }
+
+            items = list(
+                LearningPattern.objects.filter(
+                    is_active=True,
+                    pattern_type=pattern_type,
+                    confidence__gte=min_confidence
+                ).order_by('-confidence')[:limit].values(
+                    'id', 'pattern_type', 'description', 'confidence',
+                    'pattern_data', 'applies_to_agents', 'times_applied',
+                    'times_successful', 'updated_at'
+                )
+            )
+
+            return {
+                'action': 'by_type',
+                'pattern_type': pattern_type,
+                'count': len(items),
+                'items': items,
+            }
+
+        elif action == 'stats':
+            total = LearningPattern.objects.filter(is_active=True).count()
+            by_type = dict(
+                LearningPattern.objects.filter(is_active=True)
+                .values('pattern_type')
+                .annotate(count=Count('id'))
+                .order_by('-count')
+                .values_list('pattern_type', 'count')
+            )
+
+            # Top performing patterns
+            top_patterns = list(
+                LearningPattern.objects.filter(
+                    is_active=True,
+                    times_applied__gt=0
+                ).order_by('-confidence')[:5].values(
+                    'description', 'confidence', 'pattern_type'
+                )
+            )
+
+            return {
+                'action': 'stats',
+                'total_patterns': total,
+                'by_type': by_type,
+                'top_patterns': top_patterns,
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: list, by_type, stats"
             )
 
 
