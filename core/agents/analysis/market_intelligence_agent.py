@@ -35,10 +35,11 @@ import json
 import logging
 import time
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from dataclasses import dataclass, field
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -378,14 +379,42 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                 # Build result
                 execution_time = int((time.time() - start_time) * 1000)
 
+                # Session 953: Build provenance from analysis results
+                sources = []
+                for tc in tool_calls_made:
+                    sources.append({
+                        'name': tc.get('tool', 'market_intelligence'),
+                        'endpoint': tc.get('args', {}).get('form_types', ['SEC_EDGAR'])[0] if tc.get('args') else 'market_data',
+                        'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                        'record_count': 1,
+                    })
+                if not sources:
+                    sources = [{
+                        'name': 'market_intelligence',
+                        'endpoint': 'sec_edgar',
+                        'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                        'record_count': 0,
+                    }]
+                provenance = build_provenance(
+                    report_type='financial_analysis',
+                    agent_name=self.name,
+                    sources=sources,
+                    stale_threshold_hours=24.0,
+                )
+                provenance.disclaimer = format_disclaimer('financial_analysis')
+                provenance_block = provenance.to_markdown_block()
+
                 result = AgentResult(
                     success=True,
-                    message=analysis,
+                    message=provenance_block + "\n\n" + analysis,
                     data={
                         'analysis': analysis,
                         'collected_data': collected_data,
                         'tool_calls': tool_calls_made,
                         'ml_analysis': ml_insights,  # Session 683: Add ML analysis to data
+                        'provenance': provenance.to_dict(),
+                        'publishable': provenance.publishable,
+                        'validation_status': provenance.validation_status,
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time,

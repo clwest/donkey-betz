@@ -22,10 +22,12 @@ Architecture:
 
 import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
+
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 
 # Session 895: Timeout for sub-agent executions to prevent coordinator hangs
 # Extended to accommodate thinking models (GPT-5.1, o1, o3)
@@ -199,9 +201,53 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
 
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
+            # Session 953: Build provenance from aggregated sources
+            sources = []
+            # Track sources from sub-agents
+            if bull_results and not bull_results.get('error'):
+                sources.append({
+                    'name': 'BullCaseAgent',
+                    'endpoint': 'MarketDataService',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': len(bull_results.get('bull_cases', [])),
+                })
+            if bear_results and not bear_results.get('error'):
+                sources.append({
+                    'name': 'BearCaseAgent',
+                    'endpoint': 'MarketDataService',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': len(bear_results.get('bear_cases', [])),
+                })
+            if risk_results and not risk_results.get('error'):
+                sources.append({
+                    'name': 'StockAuditCoordinator',
+                    'endpoint': 'risk_assessment',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': len(risk_results.get('unified_alerts', [])),
+                })
+            if prediction_market_signals and prediction_market_signals.get('total_markets_analyzed', 0) > 0:
+                sources.append({
+                    'name': 'KalshiSpider',
+                    'endpoint': 'kalshi.com/v2/markets',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': prediction_market_signals.get('total_markets_analyzed', 0),
+                })
+
+            provenance = build_provenance(
+                report_type='market_report',
+                agent_name=self.name,
+                sources=sources,
+                stale_threshold_hours=24.0,
+            )
+            provenance.disclaimer = format_disclaimer('market_report')
+
+            # Session 953: Build message with provenance
+            base_message = f"Market Intelligence Brief generated for {len(tickers)} stocks"
+            message_with_provenance = provenance.to_markdown_block() + "\n" + base_message
+
             result = AgentResult(
                 success=True,
-                message=f"Market Intelligence Brief generated for {len(tickers)} stocks",
+                message=message_with_provenance,
                 data={
                     'brief': brief,
                     'bull_analysis': bull_results,
@@ -213,6 +259,10 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                     'delivery_ready': delivery_ready,
                     'next_cycle_scheduled': True,
                     'autonomous_situation_metrics': self._get_situation_metrics(brief),
+                    # Session 953: Include provenance
+                    'provenance': provenance.to_dict(),
+                    'publishable': provenance.publishable,
+                    'validation_status': provenance.validation_status,
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time
