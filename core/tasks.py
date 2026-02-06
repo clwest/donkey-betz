@@ -28817,6 +28817,40 @@ def _extract_agent_output_content(result, task_description: str) -> str:
             status_emoji = '✅' if prov.get('publishable') else '⚠️'
             output_parts.append(f"\n**Data Status:** {status_emoji} {prov['validation_status'].upper()}\n")
 
+    # Session 952: Handle 'brief' from MarketIntelligenceCoordinator and similar
+    # The brief contains executive_summary which is the actual formatted content
+    if 'brief' in data and isinstance(data['brief'], dict):
+        brief = data['brief']
+        # First check for executive_summary - this is the main content
+        if brief.get('executive_summary') and isinstance(brief['executive_summary'], str):
+            output_parts.insert(0, brief['executive_summary'])  # Put at top
+        # Then add key sections
+        if brief.get('debate_zone') and isinstance(brief['debate_zone'], list):
+            output_parts.append(f"\n## Debate Zone ({len(brief['debate_zone'])} stocks)")
+            for item in brief['debate_zone'][:5]:
+                if isinstance(item, dict):
+                    ticker = item.get('ticker', 'Unknown')
+                    confidence = item.get('confidence', '')
+                    output_parts.append(f"- **{ticker}** [{confidence}]")
+        if brief.get('risk_alerts') and isinstance(brief['risk_alerts'], list):
+            output_parts.append(f"\n## Risk Alerts ({len(brief['risk_alerts'])})")
+            for alert in brief['risk_alerts'][:5]:
+                if isinstance(alert, dict):
+                    title = alert.get('title') or alert.get('ticker', 'Alert')
+                    severity = alert.get('severity', '')
+                    output_parts.append(f"- **{title}** [{severity}]")
+
+    # Session 952: Handle 'synthesis' from coordinator agents
+    if 'synthesis' in data and isinstance(data['synthesis'], dict):
+        synth = data['synthesis']
+        if synth.get('high_conviction_opportunities'):
+            output_parts.append(f"\n## High Conviction ({len(synth['high_conviction_opportunities'])})")
+            for opp in synth['high_conviction_opportunities'][:5]:
+                if isinstance(opp, dict):
+                    ticker = opp.get('ticker', 'Unknown')
+                    rec = opp.get('recommendation', '')
+                    output_parts.append(f"- **{ticker}**: {rec}")
+
     # 4. If we found substantial content, use it
     if output_parts:
         return '\n\n'.join(output_parts)
