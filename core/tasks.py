@@ -28466,11 +28466,13 @@ def _extract_agent_output_content(result, task_description: str) -> str:
 
                         if isinstance(source_data, dict):
                             # Session 843: Extended content keys for various agent output types
+                            # Session 943: Added topics, discussions, projects for ResearchAgent analyze_trends
                             content_keys = [
                                 'prompt_library', 'prompt_template', 'optimized_result',
                                 'system_prompt', 'analysis', 'code', 'review', 'output',
                                 'research', 'findings', 'recommendations', 'report',
-                                'content', 'document', 'summary', 'result'
+                                'content', 'document', 'summary', 'result',
+                                'topics', 'discussions', 'projects', 'trends', 'insights'
                             ]
                             found_content = False
                             for content_key in content_keys:
@@ -28480,6 +28482,32 @@ def _extract_agent_output_content(result, task_description: str) -> str:
                                         output_parts.append(f"{val}\n")
                                         found_content = True
                                         break  # Use first substantial content found
+                                    # Session 943: Handle array content (topics, discussions, projects)
+                                    elif isinstance(val, list) and val:
+                                        output_parts.append(f"**{content_key.replace('_', ' ').title()}:**\n")
+                                        for idx, list_item in enumerate(val[:10], 1):  # Limit to 10
+                                            if isinstance(list_item, dict):
+                                                # Extract title/topic from dict
+                                                item_title = (
+                                                    list_item.get('title') or
+                                                    list_item.get('topic') or
+                                                    list_item.get('name') or
+                                                    list_item.get('keyword') or
+                                                    list_item.get('headline') or
+                                                    str(list_item)[:100]
+                                                )
+                                                # Get count/score if available
+                                                count = list_item.get('count') or list_item.get('score') or list_item.get('points', '')
+                                                count_str = f" ({count})" if count else ""
+                                                # Get URL if available
+                                                url = list_item.get('url') or list_item.get('link', '')
+                                                if url:
+                                                    output_parts.append(f"  {idx}. [{item_title}]({url}){count_str}\n")
+                                                else:
+                                                    output_parts.append(f"  {idx}. {item_title}{count_str}\n")
+                                            elif isinstance(list_item, str):
+                                                output_parts.append(f"  {idx}. {list_item}\n")
+                                        found_content = True
 
                             # If no main content found, show key metadata
                             if not found_content:
