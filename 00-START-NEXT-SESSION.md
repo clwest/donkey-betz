@@ -1,12 +1,35 @@
-# Session 951 - Start Here
+# Session 952 - Start Here
 
-**Previous Session:** 950 (Kalshi Sports Categorization + Workspace Scroll Fix)
+**Previous Session:** 951 (PA Platform Query Tool)
 **Date:** February 6, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Dual-Channel Retrieval: ACTIVE** | **Risk Re-Ranking: ACTIVE** | **RESERVED Budget Tier: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: ACTIVE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Dual-Channel Retrieval: ACTIVE** | **Risk Re-Ranking: ACTIVE** | **RESERVED Budget Tier: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: ACTIVE** | **PA Platform Query: ACTIVE**
 
 ---
 
-## Session 950 Summary (Just Completed)
+## Session 951 Summary (Just Completed)
+
+### PA Platform Query Tool
+
+Fixed PA's inability to query platform data when asked questions like "what reports have been written by agents".
+
+**Problem:** PA had 29 tools for creative/research tasks but NO tool for querying:
+- Deliverables (355 in last 30 days)
+- Audit Reports (61 in last 30 days)
+- Initiatives (169 in last 30 days)
+
+**Solution:** Added `platform_query_tool` with 5 query types:
+- `deliverables` - Blog posts, reports, analyses with filters
+- `audit_reports` - Agent audit findings
+- `initiatives` - Tracked initiatives
+- `agent_outputs` - Outputs by specific agent or summary
+- `content_summary` - Overview of all platform content
+
+**Files Changed:**
+- `core/personal_ai_assistant_enhanced.py` - Added tool definition + handler
+
+---
+
+## Session 950 Summary
 
 ### Kalshi Sports Betting Market Categorization Fix - PR #926
 
@@ -89,6 +112,7 @@ Create visibility into the new risk-aware RAG system:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **951** | PA Platform Query Tool - Query deliverables, reports, initiatives | #929 |
 | **950** | Kalshi Sports Categorization + Workspace Scroll + Stock Analysis Fix | #924, #926, #927 |
 | **949** | Risk-Aware RAG - Dual-channel retrieval, RESERVED budget, risk re-ranking | #920, #921, #922 |
 | **947** | Spider Context Extension - CreativeOrchestrator (13) + ResearchOrchestrator (5) | - |
@@ -100,6 +124,11 @@ Create visibility into the new risk-aware RAG system:
 ---
 
 ## Key Files Reference
+
+### Session 951 - PA Platform Query Tool
+| File | Purpose |
+|------|---------|
+| `core/personal_ai_assistant_enhanced.py` | Added platform_query_tool definition + handler |
 
 ### Session 950 - Kalshi Sports + Stock Analysis Fix
 | File | Purpose |
