@@ -189,4 +189,30 @@ python manage.py enrich_boardroom_ml --stats
 
 ---
 
-**Session 954 adds content-aware ML predictions to the boardroom system, replacing simple type-based learning with embedding-based similarity and proper statistical confidence.**
+## Part 2: Initiative Source Cleanup (Option C)
+
+### Problem
+DecisionExtractor was creating 441+ junk initiatives from any decision with a `suggested_feature`, regardless of quality. Initiative names were often sentence fragments like "driven module that ingests..." or started with junk patterns.
+
+### Solution
+Added `_is_valid_initiative_name()` validation function that checks:
+- Minimum length (10 chars)
+- Doesn't start lowercase (sentence fragment)
+- Doesn't start with junk patterns: `driven`, `plan`, `of-`, `Auto-created`, `A '`, `stage`, `type/`, etc.
+- Doesn't contain markers like `[Learned]`, `[Synthesis]`
+- Must start with capital letter or number
+
+### Files Changed
+| File | Changes |
+|------|---------|
+| `core/services/decision_extractor.py` | +`_is_valid_initiative_name()`, validation before initiative creation |
+| `core/services/conversation_initiative_pipeline.py` | +validation with topic fallback |
+
+### Effect
+- Prevents junk initiatives from being created at the source
+- Existing cleanup task (`cleanup_junk_initiatives`) still handles legacy junk
+- New initiatives will have proper, actionable names
+
+---
+
+**Session 954 adds content-aware ML predictions to the boardroom system AND prevents junk initiative creation at the source.**
