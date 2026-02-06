@@ -768,13 +768,14 @@ Be concise but informative. Use bullet points for lists.
 Address the user by name occasionally."""
 
         try:
+            # Session 948: Increased max_tokens from 400 to 2000 for comprehensive responses
             result = await asyncio.to_thread(
                 self.llm_enforcer.enforce_real_ai,
                 prompt=f"Summarize this tool result for the user: {tool_result}",
                 context=system_prompt,
                 agent_name="UnifiedPA",
                 task_type="conversation",
-                max_tokens=400
+                max_tokens=2000
             )
 
             if result.get('success'):
@@ -1218,13 +1219,14 @@ Be helpful, conversational, and personalized. Address the user by name."""
             system_prompt += f"\n\nRECENT CONVERSATION:\n{history_text}"
 
         try:
+            # Session 948: Increased max_tokens from 400 to 2000 for comprehensive responses
             result = await asyncio.to_thread(
                 self.llm_enforcer.enforce_real_ai,
                 prompt=message,
                 context=system_prompt,
                 agent_name="UnifiedPA",
                 task_type="conversation",
-                max_tokens=400
+                max_tokens=2000
             )
 
             if result.get('success'):
