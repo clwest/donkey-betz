@@ -1,79 +1,52 @@
-# Session 947 - Start Here
+# Session 948 - Start Here
 
-**Previous Session:** 946 (Learning Loop Backend)
+**Previous Session:** 947 (Spider Context Extension)
 **Date:** February 5, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: EXTENDED** | **Boardroom Tab: LIVE** | **PA Boardroom: ENHANCED** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED** | **Experiment Cleanup: SCHEDULED** | **Bulk Actions: COMPLETE** | **Stage Distribution: FIXED** | **Operations Tab: FIXED** | **ConceptForge Plan: COMPLETE** | **Stale Cleanup: ENHANCED** | **Learning Loop: ACTIVE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **User Learning UI: COMPLETE** | **Spider Context: COMPLETE** | **Boardroom Tab: LIVE** | **PA Boardroom: ENHANCED** | **Boardroom Learning: ACTIVE** | **Auto-Approve: SCHEDULED** | **Experiment Cleanup: SCHEDULED** | **Bulk Actions: COMPLETE** | **Stage Distribution: FIXED** | **Operations Tab: FIXED** | **ConceptForge Plan: COMPLETE** | **Stale Cleanup: ENHANCED** | **Learning Loop: ACTIVE**
 
 ---
 
-## Session 946 Summary (Just Completed)
+## Session 947 Summary (Just Completed)
 
-### Learning Loop Backend - Full Implementation
+### Spider Context Extension - Orchestrators Now Get Real Data
 
-Implemented the unified learning feedback loop that connects execution outcomes to agent prompts.
+Extended SpiderContextBuilder to CreativeOrchestrator and ResearchOrchestrator, replacing 18 empty `spider_context={}` calls with real spider data injection.
 
-**Components Built:**
+**Changes Made:**
 
-1. **LearningLoopOrchestrator** (`core/services/learning_loop_orchestrator.py`)
-   - Central service unifying scattered learning infrastructure
-   - Analyzes ToolCallRecord outcomes (success rates, latency, problem combinations)
-   - Analyzes DecisionRecord outcomes (confidence calibration, type success rates)
-   - Extracts actionable learnings with confidence scores
-   - Persists learnings to LearningPattern model
+1. **CreativeOrchestrator** (`core/services/creative_orchestrator.py`)
+   - Added `spider_context_builder` property (lazy-loaded)
+   - Added `_build_spider_context()` helper method
+   - Replaced 13 `spider_context={}` calls with real spider context:
+     - CreativeDirectorAgent, ContentAuditAgent, TrainedCreationAgent
+     - ImageAgent (logo, thumbnail, banner)
+     - VideoAgent (promo_video, logo_animation)
+     - AudioAgent (voiceover, jingle)
+     - ThreeDAgent (product_mockup)
+     - ImageEditingAgent (upscale)
+     - SEOOptimizerAgent
 
-2. **Success Signals** defined for common tools:
-   - `web_search`: 10s latency threshold, success indicators
-   - `analyze_filing`: 30s threshold, parsing error detection
-   - `get_stock_data`: 5s threshold, data validation
+2. **ResearchOrchestrator** (`core/services/research_orchestrator.py`)
+   - Added `spider_context_builder` property (lazy-loaded)
+   - Added `_build_spider_context()` helper method
+   - Replaced 5 `spider_context={}` calls with real spider context:
+     - ResearchAgent
+     - TrendAnalysisAgent
+     - CompetitorAnalysisAgent
+     - CustomerResearchAgent
+     - BrandStrategyAgent
 
-3. **Learning Extraction Patterns:**
-   - `tool_reliability`: Tools with <70% or >95% success rates
-   - `agent_performance`: Agents struggling with tool usage
-   - `agent_tool_mismatch`: Specific agent-tool combinations failing
-   - `confidence_calibration`: When high-confidence decisions fail
-
-4. **Prompt Injection:**
-   - `_get_system_learnings_section()` method added to BaseAgent
-   - Integrated into all 3 prompt builders:
-     - `_build_prompt_with_attribution`
-     - `_build_prompt`
-     - `_build_intelligent_prompt` (preferred method)
-   - Learnings appear as "## System Learnings" section in prompts
-
-5. **Celery Scheduled Task:**
-   - `run_learning_loop_cycle` runs every 6 hours
-   - Analyzes last 7 days of execution data
-   - Extracts and persists learnings automatically
+**Configuration:**
+- Creative agents: `include_market_data=False`, `max_trends=5`
+- Research agents: `include_market_data=True`, `max_trends=10`
 
 **Files Changed:**
-- `core/services/learning_loop_orchestrator.py` - **NEW** - Central orchestrator
-- `core/agent_context_middleware.py` - Added `get_system_learnings_for_agent()` function
-- `core/agents/base_agent.py` - Added `_get_system_learnings_section()` + injection in 3 builders
-- `core/tasks.py` - Added `run_learning_loop_cycle` Celery task
-- `core/celery.py` - Scheduled learning loop every 6 hours
-
-**How It Works:**
-```
-ToolCallRecord / DecisionRecord
-         ↓
-  LearningLoopOrchestrator.extract_learnings()
-         ↓
-  LearningPattern (persisted)
-         ↓
-  BaseAgent._get_system_learnings_section()
-         ↓
-  Agent prompts include "## System Learnings"
-```
+- `core/services/creative_orchestrator.py` - Added spider context builder + replaced 13 calls
+- `core/services/research_orchestrator.py` - Added spider context builder + replaced 5 calls
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
-
-### Option B: Spider Context for Remaining Paths
-Extend SpiderContextBuilder to:
-- `creative_orchestrator.py` (13 locations)
-- `research_orchestrator.py` (5 locations)
-- Other content generation tasks
 
 ### Option C: Boardroom ML Improvements
 Improve ML recommendations for boardroom items:
@@ -100,23 +73,35 @@ Build on the learning loop with:
 - Learning effectiveness tracking
 - Dashboard for viewing active learnings
 
+### Option G: Spider Context for Other Paths
+Extend spider context to remaining locations:
+- Check other orchestrators and services
+- Audit all `spider_context={}` patterns in codebase
+
 ---
 
 ## Recent Session History
 
 | Session | Focus | PRs |
 |---------|-------|-----|
-| **946** | Learning Loop Backend - LearningLoopOrchestrator, prompt injection, scheduled extraction | - |
+| **947** | Spider Context Extension - CreativeOrchestrator (13) + ResearchOrchestrator (5) | - |
+| **946** | Learning Loop Backend - LearningLoopOrchestrator, prompt injection, scheduled extraction | #903 |
 | **945** | Stale Initiative Cleanup - New junk patterns, activity tracking, last_activity_at field | #901 |
 | **944** | Operations Tab Fix + PA Boardroom Listing + ConceptForge Dedupe | #897, #898, #899 |
 | **943** | Stage Distribution Fix + Stale Investigation | #876 |
 | **942** | Integrity Anomaly Investigation + Halted Experiment Cleanup + Bulk Boardroom Actions | #874, #875 |
 | **941** | Boardroom Auto-Approve Scheduled | #871 |
-| **940** | PA Boardroom Complete (Awareness + Tools + Triage + Learning) | #866-#869 |
 
 ---
 
 ## Key Files Reference
+
+### Session 947 - Spider Context Extension
+| File | Purpose |
+|------|---------|
+| `core/services/creative_orchestrator.py` | 13 agent calls now get real spider data |
+| `core/services/research_orchestrator.py` | 5 agent calls now get real spider data |
+| `core/services/spider_context_builder.py` | Central spider context builder service |
 
 ### Session 946 - Learning Loop
 | File | Purpose |
@@ -134,13 +119,6 @@ Build on the learning loop with:
 | `core/tasks.py` | `cleanup_junk_initiatives` - daily at 4 AM |
 | `core/models_unified_system.py` | `HiveMindSession` - conversations linked to initiatives |
 
-### SKIN Layer / Operations Tab
-| File | Purpose |
-|------|---------|
-| `core/tasks.py` | `universal_agent_workspace_output()` - creates WorkspaceOperations |
-| `core/models_skin_layer.py` | `WorkspaceOperation` model |
-| `frontend/src/pages/workspace/tabs/OperationsTab.tsx` | Operations Tab UI |
-
 ### Boardroom System
 | File | Purpose |
 |------|---------|
@@ -151,4 +129,4 @@ Build on the learning loop with:
 
 ---
 
-**Session 947 Focus: Choose priority option above and continue building!**
+**Session 948 Focus: Choose priority option above and continue building!**

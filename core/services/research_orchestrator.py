@@ -139,6 +139,8 @@ class ResearchOrchestrator:
         self._brand_agent = None
         self._opportunity_agent = None
         self._openai_client = None
+        # Session 946: Spider context for real-world data injection
+        self._spider_context_builder = None
 
     # ==================== Lazy-Loaded Agents ====================
 
@@ -207,6 +209,43 @@ class ResearchOrchestrator:
             from openai import OpenAI
             self._openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
         return self._openai_client
+
+    @property
+    def spider_context_builder(self):
+        """Session 946: Lazy-load SpiderContextBuilder for real-world data injection."""
+        if self._spider_context_builder is None:
+            try:
+                from core.services.spider_context_builder import get_spider_context_builder
+                self._spider_context_builder = get_spider_context_builder()
+            except ImportError:
+                logger.warning("SpiderContextBuilder not available")
+        return self._spider_context_builder
+
+    def _build_spider_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 946: Build spider context for an agent execution.
+
+        Args:
+            agent_name: Name of the agent (e.g., 'ResearchAgent')
+            task: The task being performed
+
+        Returns:
+            Dict with spider context, or empty dict if unavailable
+        """
+        if not self.spider_context_builder:
+            return {}
+
+        try:
+            return self.spider_context_builder.build_context_for_agent(
+                agent_name=agent_name,
+                task=task,
+                hours=48,
+                max_trends=10,
+                include_market_data=True  # Research agents benefit from market data
+            )
+        except Exception as e:
+            logger.warning(f"Failed to build spider context for {agent_name}: {e}")
+            return {}
 
     # ==================== Main Entry Point ====================
 
@@ -495,7 +534,7 @@ You MUST call all three tools. Return actionable insights that inform competitiv
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('ResearchAgent', task)
             )
 
             return ResearchPhaseResult(
@@ -595,7 +634,7 @@ Focus on:
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('TrendAnalysisAgent', task)
             )
 
             return ResearchPhaseResult(
@@ -633,7 +672,7 @@ Focus on:
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('CompetitorAnalysisAgent', task)
             )
 
             return ResearchPhaseResult(
@@ -671,7 +710,7 @@ Focus on:
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('CustomerResearchAgent', task)
             )
 
             return ResearchPhaseResult(
@@ -709,7 +748,7 @@ Focus on:
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('BrandStrategyAgent', task)
             )
 
             return ResearchPhaseResult(
