@@ -20526,7 +20526,14 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
         thought.concerns = result.get('concerns', [])
         thought.decisions = result.get('decisions', [])
         thought.actions_planned = result.get('decisions', [])
-        thought.priority_score = float(result.get('priority_score', 0.0))
+        # Session 957: Handle "not available" or other non-numeric priority_score values
+        # The LLM prompt instructs to say "not available" for missing metrics, but the model
+        # field is a FloatField, so we need to safely convert or default to 0.0
+        priority_val = result.get('priority_score', 0.0)
+        try:
+            thought.priority_score = float(priority_val) if priority_val not in ['not available', 'N/A', None, ''] else 0.0
+        except (ValueError, TypeError):
+            thought.priority_score = 0.0
         thought.execution_status = 'deciding'
         thought.save()
 
