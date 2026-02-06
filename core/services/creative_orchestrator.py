@@ -187,6 +187,8 @@ class CreativeOrchestrator:
         # Session 341: Training agents
         self._character_training_agent = None
         self._trained_creation_agent = None
+        # Session 946: Spider context for real-world data injection
+        self._spider_context_builder = None
 
     # ==================== Lazy-Loaded Agents ====================
 
@@ -340,6 +342,43 @@ class CreativeOrchestrator:
             except ImportError:
                 logger.warning("TrainedCreationAgent not available")
         return self._trained_creation_agent
+
+    @property
+    def spider_context_builder(self):
+        """Session 946: Lazy-load SpiderContextBuilder for real-world data injection."""
+        if self._spider_context_builder is None:
+            try:
+                from core.services.spider_context_builder import get_spider_context_builder
+                self._spider_context_builder = get_spider_context_builder()
+            except ImportError:
+                logger.warning("SpiderContextBuilder not available")
+        return self._spider_context_builder
+
+    def _build_spider_context(self, agent_name: str, task: str) -> Dict[str, Any]:
+        """
+        Session 946: Build spider context for an agent execution.
+
+        Args:
+            agent_name: Name of the agent (e.g., 'ImageAgent')
+            task: The task being performed
+
+        Returns:
+            Dict with spider context, or empty dict if unavailable
+        """
+        if not self.spider_context_builder:
+            return {}
+
+        try:
+            return self.spider_context_builder.build_context_for_agent(
+                agent_name=agent_name,
+                task=task,
+                hours=48,
+                max_trends=5,
+                include_market_data=False  # Creative agents don't need market data
+            )
+        except Exception as e:
+            logger.warning(f"Failed to build spider context for {agent_name}: {e}")
+            return {}
 
     # ==================== Main Entry Point ====================
 
@@ -721,7 +760,7 @@ Keep suggestions concise and actionable."""
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('CreativeDirectorAgent', task)
             )
 
             if result.success and result.data:
@@ -780,7 +819,7 @@ If all looks good, confirm as "passed". If issues found, provide brief recommend
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('ContentAuditAgent', task)
             )
 
             if result.success:
@@ -833,7 +872,7 @@ If no trained character exists, return a message suggesting training one."""
                 task=task,
                 context={'project_id': str(self.project.id) if self.project else None},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('TrainedCreationAgent', task)
             )
 
             if result.success:
@@ -906,7 +945,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('ImageAgent', task)
             )
 
             images = agent_result.data.get('images', []) if agent_result.success else []
@@ -1005,7 +1044,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('ImageAgent', task)
             )
 
             images = agent_result.data.get('images', []) if agent_result.success else []
@@ -1078,7 +1117,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('ImageAgent', task)
             )
 
             images = agent_result.data.get('images', []) if agent_result.success else []
@@ -1146,7 +1185,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('VideoAgent', task)
             )
 
             videos = agent_result.data.get('videos', []) if agent_result.success else []
@@ -1213,7 +1252,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('VideoAgent', task)
             )
 
             videos = agent_result.data.get('videos', []) if agent_result.success else []
@@ -1282,7 +1321,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('AudioAgent', task)
             )
 
             audio_files = agent_result.data.get('audio', []) if agent_result.success else []
@@ -1346,7 +1385,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('AudioAgent', task)
             )
 
             audio_files = agent_result.data.get('audio', []) if agent_result.success else []
@@ -1410,7 +1449,7 @@ Requirements:
                     'project_id': str(self.project.id) if self.project else None
                 },
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('ThreeDAgent', task)
             )
 
             models = agent_result.data.get('models', []) if agent_result.success else []
@@ -1466,7 +1505,7 @@ Requirements:
                         'scale': 2
                     },
                     scifi_context={},
-                    spider_context={}
+                    spider_context=self._build_spider_context('ImageEditingAgent', task)
                 )
 
                 if result.success:
@@ -1516,7 +1555,7 @@ Include:
                 task=task,
                 context={'brand': brand_name, 'industry': industry},
                 scifi_context={},
-                spider_context={}
+                spider_context=self._build_spider_context('SEOOptimizerAgent', task)
             )
 
             if result.success:
