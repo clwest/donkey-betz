@@ -618,6 +618,7 @@ class AgentRouter:
         workspace_context = self._get_workspace_context(agent_name, task)  # Session 798
         docs_context = self._get_docs_context(agent_name, task)  # Session 798
         user_context = self._get_user_context(agent_name, task)  # Session 858
+        risk_context = self._get_risk_aware_context(task)  # Session 949
 
         # Merge contexts (same logic as in route())
         if learning_context and learning_context.get('has_patterns'):
@@ -663,6 +664,16 @@ class AgentRouter:
             spider_context['relevant_docs'] = docs_context.get('relevant_docs', [])
             spider_context['recent_sessions'] = docs_context.get('recent_sessions', [])
 
+        # Session 949: Merge risk-aware RAG context into spider context
+        if risk_context and risk_context.get('has_risk_context'):
+            spider_context['risk_context'] = risk_context
+            spider_context['critical_docs'] = risk_context.get('critical_docs', [])
+            spider_context['incident_docs'] = risk_context.get('incident_docs', [])
+            spider_context['audit_findings'] = risk_context.get('audit_findings', [])
+            spider_context['critical_docs_text'] = risk_context.get('critical_docs_text', '')
+            spider_context['incident_docs_text'] = risk_context.get('incident_docs_text', '')
+            spider_context['audit_findings_text'] = risk_context.get('audit_findings_text', '')
+
         return {
             'scifi_context': scifi_context,
             'spider_context': spider_context,
@@ -673,6 +684,7 @@ class AgentRouter:
             'workspace_context': workspace_context,  # Session 798
             'docs_context': docs_context,  # Session 798
             'user_context': user_context,  # Session 858
+            'risk_context': risk_context,  # Session 949
             'gathered': True,
         }
 
@@ -766,6 +778,8 @@ class AgentRouter:
             docs_context = self._get_docs_context(agent_name, task)
             # Session 858: Get user context for personalization
             user_context = self._get_user_context(agent_name, task)
+            # Session 949: Get risk-aware RAG context (critical docs, incidents, findings)
+            risk_context = self._get_risk_aware_context(task)
 
         # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
         # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
@@ -911,6 +925,23 @@ class AgentRouter:
                 f"{len(docs_context.get('relevant_docs', []))} docs"
             )
 
+        # Session 949: Merge risk-aware RAG context into spider context
+        # This ensures critical docs, incidents, and audit findings are always available
+        if risk_context and risk_context.get('has_risk_context'):
+            spider_context['risk_context'] = risk_context
+            spider_context['critical_docs'] = risk_context.get('critical_docs', [])
+            spider_context['incident_docs'] = risk_context.get('incident_docs', [])
+            spider_context['audit_findings'] = risk_context.get('audit_findings', [])
+            spider_context['critical_docs_text'] = risk_context.get('critical_docs_text', '')
+            spider_context['incident_docs_text'] = risk_context.get('incident_docs_text', '')
+            spider_context['audit_findings_text'] = risk_context.get('audit_findings_text', '')
+            logger.debug(
+                f"🚨 [Session 949] Injected risk-aware context for {agent_name}: "
+                f"critical={len(risk_context.get('critical_docs', []))}, "
+                f"incidents={len(risk_context.get('incident_docs', []))}, "
+                f"findings={len(risk_context.get('audit_findings', []))}"
+            )
+
         # Session 858: Inject user context into context dict
         # This makes user data available to ALL agents without changing execute() signature
         if user_context and user_context.get('has_user_context'):
@@ -940,6 +971,7 @@ class AgentRouter:
             'knowledge_state': bool(spider_context.get('knowledge_state')),
             'workspace': bool(spider_context.get('workspace')),  # Session 798
             'docs': bool(spider_context.get('docs')),  # Session 798
+            'risk_context': bool(spider_context.get('risk_context')),  # Session 949
             'scifi_context': bool(scifi_context),
             'user_context': bool(context.get('user')),  # Session 858
         }
@@ -951,6 +983,7 @@ class AgentRouter:
             f"feedback={context_summary['performance_feedback']}, "
             f"workspace={context_summary['workspace']}, "
             f"docs={context_summary['docs']}, "
+            f"risk={context_summary['risk_context']}, "  # Session 949
             f"user={context_summary['user_context']}, "  # Session 858
             f"scifi={context_summary['scifi_context']}"
         )
@@ -1434,6 +1467,100 @@ class AgentRouter:
         except Exception as e:
             logger.warning(f"Failed to get docs context: {e}")
             return {}
+
+    # ==================== Session 949: Risk-Aware RAG Context ====================
+
+    def _get_risk_aware_context(self, task: str) -> Dict[str, Any]:
+        """
+        Session 949: Get risk-aware RAG context using dual-channel retrieval.
+
+        This provides agents with:
+        - Critical docs that should never be missed
+        - Recent incident reports and postmortems
+        - Open audit findings (P0/P1)
+
+        These are protected sections that won't be truncated during budget enforcement.
+
+        Args:
+            task: The task being performed (used for semantic search)
+
+        Returns:
+            Dict with 'critical_docs', 'incident_docs', 'audit_findings'
+        """
+        try:
+            from core.services.scoped_retrieval import get_scoped_retrieval_service
+
+            service = get_scoped_retrieval_service()
+
+            # Get dual-channel results
+            result = service.dual_channel_search(
+                query=task,
+                include_critical=True,
+                include_incidents=True,
+                include_findings=True,
+                limit=10
+            )
+
+            # Format critical docs for context injection
+            critical_docs_text = ""
+            if result.get('critical_docs'):
+                docs_list = [
+                    f"- [{doc.document_class.upper()}] {doc.title}"
+                    for doc in result['critical_docs'][:3]
+                ]
+                critical_docs_text = "CRITICAL DOCS (always review):\n" + "\n".join(docs_list)
+
+            # Format incident docs
+            incident_docs_text = ""
+            if result.get('incident_docs'):
+                docs_list = [
+                    f"- [{doc.risk_level.upper()}] {doc.title}"
+                    for doc in result['incident_docs'][:3]
+                ]
+                incident_docs_text = "RECENT INCIDENTS/CONSTRAINTS:\n" + "\n".join(docs_list)
+
+            # Format audit findings
+            audit_findings_text = ""
+            if result.get('audit_findings'):
+                findings_list = [
+                    f"- [{f['priority']}] {f['title']}: {f['description'][:100]}..."
+                    for f in result['audit_findings'][:3]
+                ]
+                audit_findings_text = "OPEN AUDIT FINDINGS:\n" + "\n".join(findings_list)
+
+            risk_context = {
+                'has_risk_context': bool(
+                    result.get('critical_docs') or
+                    result.get('incident_docs') or
+                    result.get('audit_findings')
+                ),
+                'critical_docs': result.get('critical_docs', []),
+                'incident_docs': result.get('incident_docs', []),
+                'audit_findings': result.get('audit_findings', []),
+                'critical_docs_text': critical_docs_text,
+                'incident_docs_text': incident_docs_text,
+                'audit_findings_text': audit_findings_text,
+                'merged_results': result.get('merged_results', []),
+            }
+
+            if risk_context['has_risk_context']:
+                logger.info(
+                    f"🛡️ [Session 949] Risk-aware context: "
+                    f"{len(result.get('critical_docs', []))} critical, "
+                    f"{len(result.get('incident_docs', []))} incidents, "
+                    f"{len(result.get('audit_findings', []))} findings"
+                )
+
+            return risk_context
+
+        except Exception as e:
+            logger.warning(f"Failed to get risk-aware context: {e}")
+            return {
+                'has_risk_context': False,
+                'critical_docs': [],
+                'incident_docs': [],
+                'audit_findings': [],
+            }
 
     # ==================== Session 858: User Context Injection ====================
     # Session 877: Added 'personal_assistant' category for full user context

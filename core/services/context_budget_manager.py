@@ -31,9 +31,11 @@ logger = logging.getLogger(__name__)
 class SectionPriority(Enum):
     """Priority levels for context sections."""
     CRITICAL = 1  # Never truncate, never skip (system_prompt_core, user_message)
-    HIGH = 2      # Truncate if needed, never skip (conversation_history, project_context)
-    MEDIUM = 3    # Truncate or skip if budget exceeded (spider, learning, workspace)
-    LOW = 4       # Skip first when budget is tight (advisor, proactive, operator)
+    # Session 949: Reserved tier for risk-aware RAG - these are protected like CRITICAL
+    RESERVED = 2  # Reserved budget for critical/incident docs - never skip
+    HIGH = 3      # Truncate if needed, never skip (conversation_history, project_context)
+    MEDIUM = 4    # Truncate or skip if budget exceeded (spider, learning, workspace)
+    LOW = 5       # Skip first when budget is tight (advisor, proactive, operator)
 
 
 @dataclass
@@ -91,6 +93,12 @@ class ContextBudgetManager:
     DEFAULT_BUDGETS: Dict[str, SectionConfig] = {
         'system_prompt_core': SectionConfig(SectionPriority.CRITICAL, 500),
         'user_message': SectionConfig(SectionPriority.CRITICAL, 500),
+        # Session 949: Reserved sections for risk-aware RAG
+        # These are protected - critical docs that should never be missed
+        'critical_docs': SectionConfig(SectionPriority.RESERVED, 300),
+        'incident_docs': SectionConfig(SectionPriority.RESERVED, 200),
+        'audit_findings': SectionConfig(SectionPriority.RESERVED, 150),
+        # Standard sections
         'conversation_history': SectionConfig(SectionPriority.HIGH, 800),
         'project_context': SectionConfig(SectionPriority.HIGH, 400),
         'spider_intelligence': SectionConfig(SectionPriority.MEDIUM, 600),
@@ -323,6 +331,11 @@ class ContextBudgetManager:
 
             if section.priority == SectionPriority.CRITICAL:
                 # Never cut critical sections
+                continue
+
+            if section.priority == SectionPriority.RESERVED:
+                # Session 949: Never cut reserved sections (risk-aware RAG)
+                # These contain critical docs, incident reports, and audit findings
                 continue
 
             if section.priority == SectionPriority.LOW:
