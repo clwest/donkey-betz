@@ -141,6 +141,9 @@ class ToolDispatcher:
         # Session 943: Content review tool for accessing Deliverables awaiting human review
         self.register("content_review_tool", self._handle_content_review)
 
+        # Session 943: Initiative tool for PA access to project pipeline
+        self.register("initiative_tool", self._handle_initiative)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)
@@ -1637,6 +1640,223 @@ class ToolDispatcher:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, publish, archive"
+            )
+
+    def _handle_initiative(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 943: Initiative tool for PA access to project pipeline.
+
+        Provides visibility into the 5-stage initiative pipeline.
+
+        Actions:
+        - list: List initiatives (with filters for status, stage, purpose, program)
+        - stats: Get pipeline overview statistics
+        - details: Get full details of a specific initiative
+        - action_items: List pending action items across initiatives
+        """
+        from core.models_document_registry import Initiative, InitiativeActionItem
+        from django.db.models import Count, Q
+
+        action = payload.get('action', 'list')
+        limit = payload.get('limit', 10)
+
+        if action == 'list':
+            # Build queryset with filters
+            qs = Initiative.objects.all()
+
+            # Filter by status (default to ACTIVE)
+            status_filter = payload.get('status', 'ACTIVE')
+            if status_filter and status_filter != 'all':
+                qs = qs.filter(status=status_filter.upper())
+
+            # Filter by stage
+            stage_filter = payload.get('stage')
+            if stage_filter:
+                qs = qs.filter(current_stage=int(stage_filter))
+
+            # Filter by purpose
+            purpose_filter = payload.get('purpose')
+            if purpose_filter:
+                qs = qs.filter(purpose=purpose_filter.lower())
+
+            # Filter by program
+            program_filter = payload.get('program')
+            if program_filter:
+                qs = qs.filter(program=program_filter.lower())
+
+            # Order by priority score (impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2)
+            items = list(
+                qs.order_by('-impact_score', '-urgency', '-created_at')[:limit].values(
+                    'id', 'name', 'description', 'status', 'current_stage',
+                    'purpose', 'program', 'impact_score', 'urgency',
+                    'confidence', 'revenue_potential', 'created_at'
+                )
+            )
+
+            # Add action item counts
+            for item in items:
+                item['pending_actions'] = InitiativeActionItem.objects.filter(
+                    initiative_id=item['id'],
+                    status='pending'
+                ).count()
+
+            return {
+                'action': 'list',
+                'count': len(items),
+                'items': items,
+                'filters_applied': {
+                    'status': status_filter,
+                    'stage': stage_filter,
+                    'purpose': purpose_filter,
+                    'program': program_filter,
+                }
+            }
+
+        elif action == 'stats':
+            # Get pipeline overview
+            total = Initiative.objects.count()
+            active = Initiative.objects.filter(status='ACTIVE').count()
+            completed = Initiative.objects.filter(status='COMPLETED').count()
+            on_hold = Initiative.objects.filter(status='ON_HOLD').count()
+
+            # By stage
+            by_stage = {}
+            for stage in range(1, 6):
+                by_stage[f'stage_{stage}'] = Initiative.objects.filter(
+                    status='ACTIVE',
+                    current_stage=stage
+                ).count()
+
+            # By purpose
+            by_purpose = dict(
+                Initiative.objects.filter(status='ACTIVE')
+                .values('purpose')
+                .annotate(count=Count('id'))
+                .values_list('purpose', 'count')
+            )
+
+            # By program
+            by_program = dict(
+                Initiative.objects.filter(status='ACTIVE')
+                .values('program')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:5]
+                .values_list('program', 'count')
+            )
+
+            # Action items
+            pending_actions = InitiativeActionItem.objects.filter(status='pending').count()
+            critical_actions = InitiativeActionItem.objects.filter(
+                status='pending',
+                priority='critical'
+            ).count()
+
+            return {
+                'action': 'stats',
+                'total': total,
+                'active': active,
+                'completed': completed,
+                'on_hold': on_hold,
+                'by_stage': by_stage,
+                'by_purpose': by_purpose,
+                'by_program': by_program,
+                'pending_action_items': pending_actions,
+                'critical_action_items': critical_actions,
+            }
+
+        elif action == 'details':
+            initiative_id = payload.get('id')
+            name_query = payload.get('name')
+
+            if not initiative_id and not name_query:
+                raise ValueError("id or name is required for details action")
+
+            if initiative_id:
+                initiative = Initiative.objects.filter(id=initiative_id).first()
+            else:
+                initiative = Initiative.objects.filter(name__icontains=name_query).first()
+
+            if not initiative:
+                raise ValueError(f"Initiative not found")
+
+            # Get action items
+            action_items = list(
+                InitiativeActionItem.objects.filter(initiative=initiative)
+                .order_by('-priority', 'status', '-created_at')[:10]
+                .values('id', 'title', 'status', 'priority', 'due_date', 'assigned_agent')
+            )
+
+            # Get stage info
+            stages = list(
+                initiative.stages.all()
+                .order_by('stage_number')
+                .values('stage_number', 'status', 'completed_at')
+            )
+
+            return {
+                'action': 'details',
+                'id': str(initiative.id),
+                'name': initiative.name,
+                'description': initiative.description,
+                'status': initiative.status,
+                'current_stage': initiative.current_stage,
+                'purpose': initiative.purpose,
+                'program': initiative.program,
+                'impact_score': initiative.impact_score,
+                'urgency': initiative.urgency,
+                'confidence': initiative.confidence,
+                'revenue_potential': initiative.revenue_potential,
+                'created_at': initiative.created_at.isoformat() if initiative.created_at else None,
+                'stages': stages,
+                'action_items': action_items,
+                'action_item_count': len(action_items),
+            }
+
+        elif action == 'action_items':
+            # List pending action items across all initiatives
+            status_filter = payload.get('item_status', 'pending')
+            priority_filter = payload.get('priority')
+
+            qs = InitiativeActionItem.objects.select_related('initiative')
+
+            if status_filter and status_filter != 'all':
+                qs = qs.filter(status=status_filter)
+
+            if priority_filter:
+                qs = qs.filter(priority=priority_filter)
+
+            items = []
+            for item in qs.order_by('-priority', '-created_at')[:limit]:
+                items.append({
+                    'id': str(item.id),
+                    'title': item.title,
+                    'status': item.status,
+                    'priority': item.priority,
+                    'due_date': item.due_date.isoformat() if item.due_date else None,
+                    'assigned_agent': item.assigned_agent,
+                    'initiative_id': str(item.initiative_id),
+                    'initiative_name': item.initiative.name if item.initiative else 'Unknown',
+                })
+
+            return {
+                'action': 'action_items',
+                'count': len(items),
+                'items': items,
+                'filters_applied': {
+                    'status': status_filter,
+                    'priority': priority_filter,
+                }
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: list, stats, details, action_items"
             )
 
 

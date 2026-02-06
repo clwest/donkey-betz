@@ -504,6 +504,14 @@ class UnifiedPAEntrypoint:
         ]):
             return ('content_review', 'content_review_tool')
 
+        # Session 943: Initiative/project patterns
+        if any(word in message_lower for word in [
+            'initiative', 'initiatives', 'project', 'projects',
+            'pipeline', 'stage', 'action item', 'action items',
+            'what are we working on', 'active projects', 'current projects'
+        ]):
+            return ('initiatives', 'initiative_tool')
+
         # Default: no tool, direct response
         return ('general', None)
 
@@ -640,6 +648,63 @@ class UnifiedPAEntrypoint:
             for content_type in ['document', 'report', 'analysis', 'image', 'video', 'audio', 'code']:
                 if content_type in msg_lower:
                     payload['type'] = content_type
+                    break
+
+        # Session 943: Initiative tool payload
+        elif intent == 'initiatives':
+            msg_lower = message.lower()
+
+            # Determine action based on message
+            if 'stats' in msg_lower or 'overview' in msg_lower or 'pipeline' in msg_lower:
+                payload['action'] = 'stats'
+            elif 'action item' in msg_lower or 'next step' in msg_lower or 'todo' in msg_lower:
+                payload['action'] = 'action_items'
+                # Check for priority filter
+                if 'critical' in msg_lower:
+                    payload['priority'] = 'critical'
+                elif 'high' in msg_lower:
+                    payload['priority'] = 'high'
+            elif 'detail' in msg_lower or 'about' in msg_lower or 'status of' in msg_lower:
+                payload['action'] = 'details'
+                # Try to extract name or ID
+                import re
+                id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
+                else:
+                    # Try to extract initiative name from quotes or after "about"
+                    name_match = re.search(r'(?:about|status of|details on)\s+["\']?([^"\']+)["\']?', msg_lower)
+                    if name_match:
+                        payload['name'] = name_match.group(1).strip()
+            else:
+                # Default to list
+                payload['action'] = 'list'
+
+            # Extract stage filter
+            import re
+            stage_match = re.search(r'stage\s*(\d)', msg_lower)
+            if stage_match:
+                payload['stage'] = stage_match.group(1)
+
+            # Extract status filter
+            if 'completed' in msg_lower:
+                payload['status'] = 'COMPLETED'
+            elif 'on hold' in msg_lower or 'paused' in msg_lower:
+                payload['status'] = 'ON_HOLD'
+            elif 'all' in msg_lower:
+                payload['status'] = 'all'
+            # Default is ACTIVE (handled by tool)
+
+            # Extract purpose filter
+            for purpose in ['revenue', 'stability', 'learning', 'expansion', 'maintenance']:
+                if purpose in msg_lower:
+                    payload['purpose'] = purpose
+                    break
+
+            # Extract program filter
+            for program in ['growth', 'monetization', 'content', 'infrastructure', 'research']:
+                if program in msg_lower:
+                    payload['program'] = program
                     break
 
         # Add any context
@@ -930,6 +995,108 @@ Address the user by name occasionally."""
                         return f"Archived: **{title}**"
                     else:
                         return f"Failed to archive: {tool_result}"
+
+                else:
+                    return str(tool_result)
+
+            # Session 943: Initiative results formatting
+            elif intent == 'initiatives':
+                action = tool_result.get('action', '')
+
+                if action == 'list':
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No initiatives found matching your criteria, {user_name}."
+
+                    response = f"Found {count} initiatives:\n\n"
+                    for item in items[:7]:
+                        name = item.get('name', 'Untitled')[:40]
+                        stage = item.get('current_stage', 1)
+                        purpose = item.get('purpose', 'unknown')
+                        pending = item.get('pending_actions', 0)
+                        status_icon = '🟢' if item.get('status') == 'ACTIVE' else '⏸️'
+                        response += f"{status_icon} **{name}** (Stage {stage}/5, {purpose})"
+                        if pending > 0:
+                            response += f" - {pending} action items"
+                        response += "\n"
+
+                    if count > 7:
+                        response += f"\n...and {count - 7} more."
+
+                    return response
+
+                elif action == 'stats':
+                    active = tool_result.get('active', 0)
+                    completed = tool_result.get('completed', 0)
+                    on_hold = tool_result.get('on_hold', 0)
+                    by_stage = tool_result.get('by_stage', {})
+                    pending_actions = tool_result.get('pending_action_items', 0)
+                    critical_actions = tool_result.get('critical_action_items', 0)
+
+                    response = f"Initiative Pipeline Overview, {user_name}:\n\n"
+                    response += f"**Status:**\n"
+                    response += f"- 🟢 Active: {active}\n"
+                    response += f"- ✅ Completed: {completed}\n"
+                    response += f"- ⏸️ On Hold: {on_hold}\n\n"
+
+                    response += f"**By Stage:**\n"
+                    for stage_key, count in by_stage.items():
+                        stage_num = stage_key.replace('stage_', '')
+                        response += f"- Stage {stage_num}: {count}\n"
+
+                    response += f"\n**Action Items:**\n"
+                    response += f"- Pending: {pending_actions}\n"
+                    if critical_actions > 0:
+                        response += f"- 🚨 Critical: {critical_actions}\n"
+
+                    return response
+
+                elif action == 'details':
+                    name = tool_result.get('name', 'Unknown')
+                    description = tool_result.get('description', '')[:200]
+                    status = tool_result.get('status', 'unknown')
+                    stage = tool_result.get('current_stage', 1)
+                    purpose = tool_result.get('purpose', 'unknown')
+                    program = tool_result.get('program', 'unknown')
+                    action_items = tool_result.get('action_items', [])
+
+                    status_icon = '🟢' if status == 'ACTIVE' else ('✅' if status == 'COMPLETED' else '⏸️')
+
+                    response = f"{status_icon} **{name}**\n\n"
+                    response += f"- Status: {status}\n"
+                    response += f"- Stage: {stage}/5\n"
+                    response += f"- Purpose: {purpose}\n"
+                    response += f"- Program: {program}\n"
+
+                    if description:
+                        response += f"\n**Description:** {description}...\n"
+
+                    if action_items:
+                        response += f"\n**Action Items ({len(action_items)}):**\n"
+                        for item in action_items[:5]:
+                            priority_icon = '🔴' if item.get('priority') == 'critical' else ('🟠' if item.get('priority') == 'high' else '⚪')
+                            response += f"{priority_icon} {item.get('title', 'Untitled')[:50]} ({item.get('status', 'pending')})\n"
+
+                    return response
+
+                elif action == 'action_items':
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No pending action items found, {user_name}. Great job!"
+
+                    response = f"Found {count} action items:\n\n"
+                    for item in items[:10]:
+                        priority_icon = '🔴' if item.get('priority') == 'critical' else ('🟠' if item.get('priority') == 'high' else '⚪')
+                        initiative = item.get('initiative_name', 'Unknown')[:25]
+                        title = item.get('title', 'Untitled')[:40]
+                        response += f"{priority_icon} **{title}**\n"
+                        response += f"   └─ {initiative} ({item.get('status', 'pending')})\n"
+
+                    return response
 
                 else:
                     return str(tool_result)
