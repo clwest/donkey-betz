@@ -395,6 +395,29 @@ class AgentContextMiddleware:
 
         return min(score, 100.0)  # Cap at 100
 
+    def get_system_learnings_for_agent(self, agent_name: str, max_learnings: int = 3) -> str:
+        """
+        Session 945: Get system learnings relevant to a specific agent.
+
+        Fetches patterns from the learning loop orchestrator that are
+        applicable to this agent.
+
+        Args:
+            agent_name: Name of the agent
+            max_learnings: Maximum number of learnings to include
+
+        Returns:
+            Formatted string for prompt injection
+        """
+        try:
+            from core.services.learning_loop_orchestrator import get_learning_loop_orchestrator
+
+            orchestrator = get_learning_loop_orchestrator()
+            return orchestrator.format_learnings_for_prompt(agent_name, max_learnings)
+        except Exception as e:
+            logger.warning(f"Could not get system learnings for {agent_name}: {e}")
+            return ""
+
 
 # Global middleware instance
 _agent_context_middleware = AgentContextMiddleware()
@@ -440,6 +463,23 @@ def calculate_opportunity_fit_score(user: User, opportunity: Dict[str, Any]) -> 
     """
     context = _agent_context_middleware.get_user_context(user)
     return _agent_context_middleware._calculate_opportunity_fit(context, opportunity)
+
+
+def get_system_learnings_for_agent(agent_name: str, max_learnings: int = 3) -> str:
+    """
+    Session 945: Public function to get system learnings for an agent.
+
+    This is the main entry point for agents to get learnings from the
+    learning loop orchestrator.
+
+    Args:
+        agent_name: Name of the agent requesting learnings
+        max_learnings: Maximum number of learnings to include
+
+    Returns:
+        Formatted string ready for prompt injection
+    """
+    return _agent_context_middleware.get_system_learnings_for_agent(agent_name, max_learnings)
 
 
 class UserContextualAgent:
