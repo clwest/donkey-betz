@@ -84,9 +84,11 @@ def assistant_chat_bypass(request):
         if project_id:
             logger.info(f"  With project context: {project_id}")
 
-        # Session 125: Use EnhancedPersonalAIAssistant (has tool definitions!)
-        from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-        assistant = EnhancedPersonalAIAssistant(user)
+        # Session 943: Use UnifiedPAEntrypoint (has all new tools: brainstorm, content_review, initiative)
+        from core.services.unified_pa_entrypoint import get_unified_pa
+        from asgiref.sync import async_to_sync
+
+        pa = get_unified_pa(user)
 
         # Build context with project_id and conversation history
         context = {}
@@ -96,7 +98,31 @@ def assistant_chat_bypass(request):
             context['conversation_history'] = conversation_history
             logger.info(f"  With conversation context: {len(conversation_history)} messages")
 
-        response_data = assistant.process_message(message, context)
+        # Call async PA with async_to_sync wrapper
+        pa_response = async_to_sync(pa.process_message)(message, context)
+
+        # Map PAResponse to expected format
+        response_data = {
+            'response': pa_response.content,
+            'text': pa_response.content,
+            'message': pa_response.content,
+            'trace_id': pa_response.trace_id,
+            'intent': pa_response.intent,
+            'tool_runs': pa_response.tool_runs,
+            'ai_generated': True,
+            'model': 'unified-pa',
+            'suggestions': [],
+            'actions': [],
+            'quick_actions': [],
+            'smart_suggestions': [],
+            'smart_suggestions_formatted': '',
+            'reference_context': '',
+            'confidence': 0.9,
+        }
+
+        # Add audio URL if present
+        if pa_response.audio_url:
+            response_data['audio_url'] = pa_response.audio_url
 
         # Session 483: Debug logging for quick_actions
         if isinstance(response_data, dict):
