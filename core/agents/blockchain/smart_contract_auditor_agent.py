@@ -17,10 +17,11 @@ This agent specializes in:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from typing import Any, Dict, List, Optional
 
 from ..base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -398,12 +399,43 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 953: Build provenance from audit results
+                        sources = []
+                        for res in all_results:
+                            source_name = res.get('source', 'contract_audit')
+                            data = res.get('data', {})
+                            sources.append({
+                                'name': source_name,
+                                'endpoint': data.get('audit_type', data.get('check_type', 'smart_contract_audit')),
+                                'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                                'record_count': data.get('lines_audited', 1),
+                            })
+
+                        # Blockchain data stale threshold: 4 hours
+                        provenance = build_provenance(
+                            report_type='blockchain_audit',
+                            agent_name=self.name,
+                            sources=sources if sources else [{
+                                'name': 'SmartContractAuditorAgent',
+                                'endpoint': 'smart_contract_audit',
+                                'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                                'record_count': len(all_results),
+                            }],
+                            stale_threshold_hours=4.0,
+                        )
+                        provenance.disclaimer = format_disclaimer('blockchain_audit')
+
+                        message = provenance.to_markdown_block() + "\n" + f"Smart contract audit completed using {len(all_results)} tool(s)"
+
                         result = AgentResult(
                             success=True,
-                            message=f"Smart contract audit completed using {len(all_results)} tool(s)",
+                            message=message,
                             data={
                                 'results': all_results,
-                                'query': task
+                                'query': task,
+                                'provenance': provenance.to_dict(),
+                                'publishable': provenance.publishable,
+                                'validation_status': provenance.validation_status,
                             },
                             agent_name=self.name,
                             execution_time_ms=execution_time,

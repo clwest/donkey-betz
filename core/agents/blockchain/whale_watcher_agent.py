@@ -15,10 +15,11 @@ This agent specializes in:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from typing import Any, Dict
 
 from ..base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -305,13 +306,44 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                         # Session 683: Run ML analysis on wallet transaction data
                         ml_insights = self._analyze_wallet_network_with_ml(all_results)
 
+                        # Session 953: Build provenance from analysis results
+                        sources = []
+                        for res in all_results:
+                            source_name = res.get('source', 'whale_analysis')
+                            data = res.get('data', {})
+                            sources.append({
+                                'name': source_name,
+                                'endpoint': data.get('analysis_type', 'blockchain_api'),
+                                'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                                'record_count': 1,
+                            })
+
+                        # Blockchain data stale threshold: 4 hours
+                        provenance = build_provenance(
+                            report_type='blockchain_audit',
+                            agent_name=self.name,
+                            sources=sources if sources else [{
+                                'name': 'WhaleWatcherAgent',
+                                'endpoint': 'blockchain_api',
+                                'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                                'record_count': len(all_results),
+                            }],
+                            stale_threshold_hours=4.0,
+                        )
+                        provenance.disclaimer = format_disclaimer('blockchain_audit')
+
+                        message = provenance.to_markdown_block() + "\n" + f"Whale monitoring completed with {len(all_results)} analysis(es)"
+
                         result = AgentResult(
                             success=True,
-                            message=f"Whale monitoring completed with {len(all_results)} analysis(es)",
+                            message=message,
                             data={
                                 'results': all_results,
                                 'query': task,
-                                'ml_analysis': ml_insights  # Session 683: Add ML analysis
+                                'ml_analysis': ml_insights,  # Session 683: Add ML analysis
+                                'provenance': provenance.to_dict(),
+                                'publishable': provenance.publishable,
+                                'validation_status': provenance.validation_status,
                             },
                             agent_name=self.name,
                             execution_time_ms=execution_time,

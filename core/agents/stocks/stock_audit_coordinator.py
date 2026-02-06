@@ -14,10 +14,12 @@ Key capabilities:
 
 import logging
 from typing import Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
+
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+from core.agents.report_schemas import build_provenance, format_disclaimer
 
 # Session 895: Timeout for sub-agent executions to prevent coordinator hangs
 # Extended to 5 min to accommodate thinking models (GPT-5.1, o1, o3)
@@ -176,9 +178,52 @@ Always prioritize:
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
             summary = self._generate_summary(unified_alerts)
 
+            # Session 953: Build provenance from sub-agent sources
+            sources = []
+            if analyst_results and not analyst_results.get('error'):
+                sources.append({
+                    'name': 'StockAnalystAgent',
+                    'endpoint': 'SEC/MarketData',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': 1,
+                })
+            if movement_results and not movement_results.get('error'):
+                sources.append({
+                    'name': 'MarketMovementMonitorAgent',
+                    'endpoint': 'price_volume_data',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': 1,
+                })
+            if institutional_results and not institutional_results.get('error'):
+                sources.append({
+                    'name': 'InstitutionalWatcherAgent',
+                    'endpoint': 'institutional_filings',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': 1,
+                })
+            if anomaly_results and not anomaly_results.get('error'):
+                sources.append({
+                    'name': 'MarketAnomalyDetectorAgent',
+                    'endpoint': 'anomaly_detection',
+                    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                    'record_count': 1,
+                })
+
+            provenance = build_provenance(
+                report_type='stock_analysis',
+                agent_name=self.name,
+                sources=sources,
+                stale_threshold_hours=24.0,
+            )
+            provenance.disclaimer = format_disclaimer('stock_analysis')
+
+            # Session 953: Build message with provenance
+            base_message = f"Stock audit complete. {len(unified_alerts)} alerts generated."
+            message_with_provenance = provenance.to_markdown_block() + "\n" + base_message
+
             result = AgentResult(
                 success=True,
-                message=f"Stock audit complete. {len(unified_alerts)} alerts generated.",
+                message=message_with_provenance,
                 data={
                     'analyst_results': analyst_results,
                     'movement_results': movement_results,
@@ -189,6 +234,10 @@ Always prioritize:
                     'advisor_consultations': advisor_consultations,  # Session 461
                     'discord_sent': discord_sent,
                     'summary': summary,
+                    # Session 953: Include provenance
+                    'provenance': provenance.to_dict(),
+                    'publishable': provenance.publishable,
+                    'validation_status': provenance.validation_status,
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time

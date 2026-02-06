@@ -17,9 +17,10 @@ Key capabilities:
 
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -333,10 +334,34 @@ Always provide:
 
             logger.info(f"📡 [SESSION 465] SignalScannerAgent found {signals_found} signals")
 
+            # Session 953: Build provenance from signal scan results
+            sources = [{
+                'name': 'SignalScannerAgent',
+                'endpoint': 'technical_analysis',
+                'retrieved_at': datetime.now(dt_timezone.utc).isoformat(),
+                'record_count': signals_found,
+            }]
+
+            # Stock data stale threshold: 24 hours
+            provenance = build_provenance(
+                report_type='stock_analysis',
+                agent_name=self.name,
+                sources=sources,
+                stale_threshold_hours=24.0,
+            )
+            provenance.disclaimer = format_disclaimer('stock_analysis')
+
+            message = provenance.to_markdown_block() + "\n" + f"Scanned and found {signals_found} technical signals"
+
             result = AgentResult(
                 success=True,
-                data=gpt_result,
-                message=f"Scanned and found {signals_found} technical signals",
+                data={
+                    **gpt_result,
+                    'provenance': provenance.to_dict(),
+                    'publishable': provenance.publishable,
+                    'validation_status': provenance.validation_status,
+                },
+                message=message,
                 agent_name=self.name,
                 execution_time_ms=execution_time_ms
             )
