@@ -360,6 +360,41 @@ def cleanup_junk_initiatives(stale_days: int = 7):
 
 
 @shared_task
+def run_learning_loop_cycle(lookback_days: int = 7):
+    """
+    Session 945: Run the learning loop cycle to extract patterns from execution data.
+
+    Analyzes ToolCallRecord and DecisionRecord data to extract actionable learnings
+    that are then persisted to LearningPattern for injection into agent prompts.
+
+    Args:
+        lookback_days: How many days of data to analyze
+
+    Returns:
+        Dict with cycle statistics
+    """
+    from core.services.learning_loop_orchestrator import LearningLoopOrchestrator
+
+    logger.info(f"🧠 [LEARNING-LOOP] Starting learning cycle (lookback={lookback_days}d)...")
+
+    try:
+        orchestrator = LearningLoopOrchestrator(lookback_days=lookback_days)
+        result = orchestrator.run_learning_cycle()
+
+        logger.info(
+            f"🧠 [LEARNING-LOOP] Complete - "
+            f"extracted {result['learnings_extracted']} learnings, "
+            f"persisted {result['patterns_persisted']} patterns"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"🧠 [LEARNING-LOOP] Failed: {e}", exc_info=True)
+        raise
+
+
+@shared_task
 def cleanup_boardroom_junk(spider_action_hours: int = 24):
     """
     Session 927: Clean up boardroom junk to prevent backlog accumulation.

@@ -2401,6 +2401,17 @@ app.conf.beat_schedule = {
         }
     },
 
+    # Session 945: Learning Loop - Extract patterns from execution data
+    # Runs every 6 hours to keep learning patterns fresh
+    'run-learning-loop': {
+        'task': 'core.tasks.run_learning_loop_cycle',
+        'schedule': crontab(hour='*/6', minute=45),  # Every 6 hours at :45
+        'kwargs': {'lookback_days': 7},  # Analyze last 7 days of data
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+
     # Session 943: Auto-process ExtractedArtifacts to prevent 42K+ backlog
     # Runs every 6 hours with AGGRESSIVE mode to clear backlog faster
     'auto-process-extracted-artifacts': {
