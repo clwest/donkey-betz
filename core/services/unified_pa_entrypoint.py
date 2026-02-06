@@ -456,6 +456,14 @@ class UnifiedPAEntrypoint:
         ]):
             return ('brainstorming', 'brainstorm_tool')
 
+        # Session 943: Content review patterns (blogs, deliverables, content ready for review)
+        if any(word in message_lower for word in [
+            'blog', 'deliverable', 'content ready', 'ready for review',
+            'ready to publish', 'publish content', 'archive content',
+            'content stats', 'what content', 'review content'
+        ]):
+            return ('content_review', 'content_review_tool')
+
         # Default: no tool, direct response
         return ('general', None)
 
@@ -557,6 +565,42 @@ class UnifiedPAEntrypoint:
                     '', msg_lower
                 ).strip()
                 payload['query'] = search_terms if search_terms else message
+
+        # Session 943: Content review tool payload
+        elif intent == 'content_review':
+            msg_lower = message.lower()
+
+            # Determine action based on message
+            if 'stats' in msg_lower or 'statistics' in msg_lower or 'how many' in msg_lower:
+                payload['action'] = 'stats'
+            elif 'publish' in msg_lower:
+                payload['action'] = 'publish'
+                # Try to extract ID if present
+                import re
+                id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
+            elif 'archive' in msg_lower or 'reject' in msg_lower:
+                payload['action'] = 'archive'
+                import re
+                id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
+            elif 'detail' in msg_lower or 'show' in msg_lower:
+                payload['action'] = 'details'
+                import re
+                id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
+            else:
+                # Default to list
+                payload['action'] = 'list'
+
+            # Extract type filter if mentioned
+            for content_type in ['document', 'report', 'analysis', 'image', 'video', 'audio', 'code']:
+                if content_type in msg_lower:
+                    payload['type'] = content_type
+                    break
 
         # Add any context
         payload['context'] = context
@@ -767,6 +811,85 @@ Address the user by name occasionally."""
                         response += f"- {topic[:60]}\n"
 
                     return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 943: Content review results formatting
+            elif intent == 'content_review':
+                action = tool_result.get('action', '')
+
+                if action == 'list':
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No content awaiting review, {user_name}. Everything is either published or archived."
+
+                    response = f"Found {count} content items ready for review:\n\n"
+                    for item in items[:5]:
+                        title = item.get('title', 'Untitled')[:50]
+                        content_type = item.get('deliverable_type', 'document')
+                        quality = item.get('quality_score', 0)
+                        response += f"- **{title}** ({content_type}, quality: {quality:.0%})\n"
+
+                    if count > 5:
+                        response += f"\n...and {count - 5} more."
+
+                    response += "\n\nSay 'show details [id]' to view, or 'publish [id]' to publish."
+                    return response
+
+                elif action == 'stats':
+                    ready = tool_result.get('ready_for_review', 0)
+                    drafts = tool_result.get('drafts', 0)
+                    published = tool_result.get('published', 0)
+                    by_type = tool_result.get('by_type', {})
+
+                    response = f"Content statistics, {user_name}:\n\n"
+                    response += f"- **Ready for review:** {ready}\n"
+                    response += f"- **Drafts:** {drafts}\n"
+                    response += f"- **Published:** {published}\n"
+
+                    if by_type:
+                        response += "\n**Ready by type:**\n"
+                        for t, c in by_type.items():
+                            response += f"- {t}: {c}\n"
+
+                    return response
+
+                elif action == 'details':
+                    title = tool_result.get('title', 'Untitled')
+                    content_type = tool_result.get('type', 'document')
+                    status = tool_result.get('status', 'unknown')
+                    quality = tool_result.get('quality_score', 0)
+                    preview = tool_result.get('content_preview', '')[:300]
+                    item_id = tool_result.get('id', '')
+
+                    response = f"**{title}**\n\n"
+                    response += f"- Type: {content_type}\n"
+                    response += f"- Status: {status}\n"
+                    response += f"- Quality: {quality:.0%}\n"
+                    response += f"- Agent: {tool_result.get('agent_name', 'Unknown')}\n"
+                    response += f"\n**Preview:**\n{preview}..."
+
+                    if status == 'ready':
+                        response += f"\n\nSay 'publish {item_id[:8]}' to publish or 'archive {item_id[:8]}' to reject."
+
+                    return response
+
+                elif action == 'publish':
+                    if tool_result.get('success'):
+                        title = tool_result.get('title', 'Content')
+                        return f"Published: **{title}**"
+                    else:
+                        return f"Failed to publish: {tool_result}"
+
+                elif action == 'archive':
+                    if tool_result.get('success'):
+                        title = tool_result.get('title', 'Content')
+                        return f"Archived: **{title}**"
+                    else:
+                        return f"Failed to archive: {tool_result}"
 
                 else:
                     return str(tool_result)
