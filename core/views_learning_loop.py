@@ -968,3 +968,125 @@ def learning_dashboard(request):
             'recent_predictions_count': predictions.count(),
         }
     })
+
+
+# ============================================================
+# Session 954: Learning Loop Effectiveness API
+# ============================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def learning_loop_stats(request):
+    """
+    GET /api/learning/loop/stats/
+    Get comprehensive learning loop effectiveness statistics.
+
+    Returns stats on active learnings, effectiveness rates, and recent patterns.
+    """
+    if not request.user.is_authenticated:
+        return api_error("Authentication required", status_code=401)
+
+    from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
+
+    orchestrator = get_learning_loop_orchestrator()
+    stats = orchestrator.get_learning_effectiveness_stats()
+
+    return api_success({
+        'learning_loop': stats,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def track_learning_outcome(request):
+    """
+    POST /api/learning/loop/track/
+    Track when a learning pattern is applied and its outcome.
+
+    Body:
+        pattern_id: UUID of the learning pattern
+        was_successful: boolean indicating outcome
+    """
+    if not request.user.is_authenticated:
+        return api_error("Authentication required", status_code=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return api_error("Invalid JSON")
+
+    pattern_id = data.get('pattern_id')
+    was_successful = data.get('was_successful', False)
+
+    if not pattern_id:
+        return api_error("pattern_id is required")
+
+    from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
+
+    orchestrator = get_learning_loop_orchestrator()
+    success = orchestrator.track_learning_application(pattern_id, was_successful)
+
+    if success:
+        return api_success({
+            'message': 'Learning outcome tracked successfully',
+            'pattern_id': pattern_id,
+            'was_successful': was_successful,
+        })
+    else:
+        return api_error("Failed to track learning outcome", status_code=400)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def run_learning_cycle(request):
+    """
+    POST /api/learning/loop/run/
+    Trigger a learning cycle to extract and persist learnings.
+
+    This analyzes tool outcomes, decision records, and user feedback
+    to extract actionable learning patterns.
+    """
+    if not request.user.is_authenticated:
+        return api_error("Authentication required", status_code=401)
+
+    from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
+
+    orchestrator = get_learning_loop_orchestrator()
+    result = orchestrator.run_learning_cycle()
+
+    return api_success({
+        'cycle_result': result,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_agent_learnings(request):
+    """
+    GET /api/learning/loop/agent/<agent_name>/
+    Get learnings formatted for a specific agent.
+
+    Query params:
+        agent_name: Name of the agent (required)
+        max_learnings: Maximum number of learnings (default 5)
+    """
+    if not request.user.is_authenticated:
+        return api_error("Authentication required", status_code=401)
+
+    agent_name = request.GET.get('agent_name')
+    if not agent_name:
+        return api_error("agent_name query parameter is required")
+
+    max_learnings = int(request.GET.get('max_learnings', 5))
+
+    from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
+
+    orchestrator = get_learning_loop_orchestrator()
+    learnings = orchestrator.get_learnings_for_agent(agent_name, max_learnings)
+    formatted = orchestrator.format_learnings_for_prompt(agent_name, max_learnings)
+
+    return api_success({
+        'agent_name': agent_name,
+        'learnings': learnings,
+        'formatted_for_prompt': formatted,
+    })

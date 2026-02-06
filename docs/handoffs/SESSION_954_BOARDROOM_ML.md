@@ -215,4 +215,70 @@ Added `_is_valid_initiative_name()` validation function that checks:
 
 ---
 
-**Session 954 adds content-aware ML predictions to the boardroom system AND prevents junk initiative creation at the source.**
+## Part 3: Learning Loop Refinement (Option D)
+
+### Problem
+The existing LearningLoopOrchestrator (Session 945) only had 3 success signals defined and lacked:
+1. Signals for commonly-used tools (image generation, content writing, etc.)
+2. User feedback integration from boardroom decisions
+3. Learning effectiveness tracking
+4. Dashboard API for viewing active learnings
+
+### Solution
+
+#### 1. Expanded SuccessSignal Definitions
+Extended `DEFAULT_SUCCESS_SIGNALS` from 3 to 15+ tools:
+- Research tools: `web_search`, `analyze_filing`, `get_stock_data`
+- Content tools: `image_generation_agent`, `content_writer_agent`, `video_generation_agent`
+- Agent tools: `universal_agent_tool`, `reasoning_engine_tool`
+- System tools: `body_vitals_tool`, `system_alerts_tool`
+- Intelligence tools: `predictions_tool`, `gates_tool`
+- Business tools: `competitor_analysis_agent`, `customer_research_agent`
+- Execution tools: `workspace_tool`, `human_decisions_tool`
+
+#### 2. User Feedback Integration
+New `analyze_user_feedback()` method connects HumanAttentionItem decisions to learning:
+- Analyzes approval rates by source agent
+- Tracks item type effectiveness
+- Learns from urgency level patterns
+- Extracts learnings: "Agent X items often ignored" or "Agent Y items highly valued"
+
+#### 3. Learning Effectiveness Tracking
+New methods to track and measure learning effectiveness:
+- `track_learning_application(pattern_id, was_successful)` - Updates times_applied/success_when_applied
+- `get_learning_effectiveness_stats()` - Returns comprehensive stats:
+  - Total active learnings
+  - Overall effectiveness rate
+  - Most/least effective learnings
+  - Recent patterns
+  - Stats by pattern type
+
+#### 4. Dashboard API Endpoints
+New API endpoints in `views_learning_loop.py`:
+- `GET /api/learning/loop/stats/` - Get learning loop effectiveness stats
+- `POST /api/learning/loop/track/` - Track learning outcome
+- `POST /api/learning/loop/run/` - Trigger learning cycle
+- `GET /api/learning/loop/agent/?agent_name=X` - Get learnings for specific agent
+
+### Files Changed
+| File | Changes |
+|------|---------|
+| `core/services/learning_loop_orchestrator.py` | +12 SuccessSignals, +analyze_user_feedback(), +track_learning_application(), +get_learning_effectiveness_stats() |
+| `core/views_learning_loop.py` | +4 new API endpoints for learning loop |
+| `core/urls.py` | +4 URL patterns for new endpoints |
+
+### Usage
+```bash
+# Test learning loop stats
+curl http://localhost:8000/api/learning/loop/stats/ -H "Authorization: Token $TOKEN"
+
+# Trigger learning cycle
+curl -X POST http://localhost:8000/api/learning/loop/run/ -H "Authorization: Token $TOKEN"
+
+# Get learnings for an agent
+curl http://localhost:8000/api/learning/loop/agent/?agent_name=ResearchAgent -H "Authorization: Token $TOKEN"
+```
+
+---
+
+**Session 954 adds content-aware ML predictions to the boardroom system, prevents junk initiative creation, AND refines the learning loop with more signals, user feedback integration, and effectiveness tracking.**
