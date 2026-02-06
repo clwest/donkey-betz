@@ -28,21 +28,19 @@ Expanded learning loop system with:
 - **15+ SuccessSignal definitions** (was 3) - image gen, content writing, agents, etc.
 - **User feedback integration** - `analyze_user_feedback()` connects boardroom decisions to learning
 - **Effectiveness tracking** - `track_learning_application()`, `get_learning_effectiveness_stats()`
-- **Dashboard API** - 4 new endpoints:
-  - `GET /api/learning/loop/stats/` - Learning effectiveness stats
-  - `POST /api/learning/loop/track/` - Track learning outcomes
-  - `POST /api/learning/loop/run/` - Trigger learning cycle
-  - `GET /api/learning/loop/agent/?agent_name=X` - Get learnings for agent
+- **Dashboard API** - 4 new endpoints for learning loop
+
+### Option E: RAG Observability Dashboard - COMPLETE
+Created visibility into the risk-aware RAG system:
+- **Document inventory** - 562 docs, 18 critical, by risk level/class
+- **Context budget** - 650 tokens reserved tier (16.2% of 4000)
+- **Risk boost stats** - Boost effectiveness by document type
+- **Health indicators** - Critical coverage, classification coverage
+- **8 API endpoints** - `/api/rag/observability/*`
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
-
-### Option E: RAG Observability Dashboard
-Create visibility into the new risk-aware RAG system:
-- Show which critical docs are being retrieved
-- Track risk re-ranking effectiveness
-- Monitor dual-channel usage stats
 
 ### Option F: Extend Provenance to Remaining Agents
 Add provenance to additional agent categories:
