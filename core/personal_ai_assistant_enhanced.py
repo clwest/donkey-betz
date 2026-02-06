@@ -1254,6 +1254,35 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     },
                     "required": ["topic"]
                 }
+            },
+
+            # Session 951: Platform Query Tool - Query platform data (reports, deliverables, initiatives)
+            {
+                "type": "function",
+                "name": "platform_query_tool",
+                "description": "Query platform data including reports, deliverables, initiatives, and agent executions. Use when user asks: 'what reports have been written', 'show me deliverables', 'list initiatives', 'what has agent X produced', 'show recent blog posts', 'audit reports', 'what content exists'. This tool provides ACTUAL database access to platform data - not conceptual descriptions.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["deliverables", "audit_reports", "initiatives", "agent_outputs", "content_summary"],
+                            "description": "Type of data to query: 'deliverables' (blog posts, reports, analyses), 'audit_reports' (agent audit findings), 'initiatives' (tracked initiatives), 'agent_outputs' (what specific agents produced), 'content_summary' (overview of all content)"
+                        },
+                        "filters": {
+                            "type": "object",
+                            "description": "Optional filters for the query",
+                            "properties": {
+                                "agent_name": {"type": "string", "description": "Filter by agent name (e.g., 'ContentWriterAgent', 'MarketIntelligenceAgent')"},
+                                "deliverable_type": {"type": "string", "description": "Filter deliverables by type: document, report, analysis, research, strategy, script"},
+                                "category": {"type": "string", "description": "Filter by category (e.g., 'Marketing', 'Research', 'Technical')"},
+                                "days": {"type": "integer", "default": 30, "description": "Look back period in days (default 30)"},
+                                "limit": {"type": "integer", "default": 20, "description": "Maximum results to return (default 20)"}
+                            }
+                        }
+                    },
+                    "required": ["query_type"]
+                }
             }
         ]
 
@@ -1447,6 +1476,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Session 800: Reasoning Engine - Connect PA to ThinkingAgent
             elif function_name == 'reasoning_engine_tool':
                 result = self._handle_reasoning_engine_tool(arguments)
+            # Session 951: Platform Query Tool - Query platform data
+            elif function_name == 'platform_query_tool':
+                result = self._handle_platform_query_tool(arguments)
             else:
                 result = {
                     'success': False,
@@ -13729,6 +13761,218 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"Error in reasoning_engine_tool: {e}", exc_info=True)
             return {'success': False, 'error': str(e), 'tool': 'reasoning_engine_tool'}
+
+    def _handle_platform_query_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 951: Handle platform_query_tool - Query platform data including reports,
+        deliverables, initiatives, and agent outputs.
+
+        This tool provides the PA with actual database access to answer questions
+        like "what reports have been written by agents" with real data.
+        """
+        try:
+            from core.models_deliverables import Deliverable
+            from core.models_audit_tracking import AuditReport
+            from core.models_document_registry import Initiative
+            from django.utils import timezone
+            from datetime import timedelta
+
+            query_type = arguments.get('query_type', 'content_summary')
+            filters = arguments.get('filters', {})
+
+            days = filters.get('days', 30)
+            limit = filters.get('limit', 20)
+            cutoff = timezone.now() - timedelta(days=days)
+
+            if query_type == 'deliverables':
+                # Query deliverables (blog posts, reports, analyses)
+                queryset = Deliverable.objects.filter(
+                    created_at__gte=cutoff
+                ).order_by('-created_at')
+
+                # Apply optional filters
+                if filters.get('agent_name'):
+                    queryset = queryset.filter(agent_name__icontains=filters['agent_name'])
+                if filters.get('deliverable_type'):
+                    queryset = queryset.filter(deliverable_type=filters['deliverable_type'])
+                if filters.get('category'):
+                    queryset = queryset.filter(category__icontains=filters['category'])
+
+                deliverables = queryset[:limit]
+
+                items = []
+                for d in deliverables:
+                    items.append({
+                        'id': str(d.id),
+                        'title': d.title,
+                        'type': d.deliverable_type,
+                        'category': d.category or 'Uncategorized',
+                        'agent': d.agent_name,
+                        'created_at': d.created_at.strftime('%Y-%m-%d %H:%M'),
+                        'preview': d.content[:200] + '...' if d.content and len(d.content) > 200 else (d.content or ''),
+                    })
+
+                return {
+                    'success': True,
+                    'tool': 'platform_query_tool',
+                    'query_type': 'deliverables',
+                    'count': len(items),
+                    'total_in_period': queryset.count(),
+                    'message': f"Found {queryset.count()} deliverable(s) in the last {days} days:",
+                    'items': items
+                }
+
+            elif query_type == 'audit_reports':
+                # Query audit reports
+                queryset = AuditReport.objects.filter(
+                    created_at__gte=cutoff
+                ).order_by('-created_at')
+
+                reports = queryset[:limit]
+
+                items = []
+                for r in reports:
+                    items.append({
+                        'id': str(r.id),
+                        'title': r.title,
+                        'type': r.audit_type,
+                        'auditor': r.auditor,
+                        'session': r.session_number,
+                        'total_findings': r.total_findings,
+                        'p0_findings': r.p0_findings,
+                        'open_findings': r.open_findings,
+                        'created_at': r.created_at.strftime('%Y-%m-%d'),
+                    })
+
+                return {
+                    'success': True,
+                    'tool': 'platform_query_tool',
+                    'query_type': 'audit_reports',
+                    'count': len(items),
+                    'message': f"Found {queryset.count()} audit report(s) in the last {days} days:",
+                    'items': items
+                }
+
+            elif query_type == 'initiatives':
+                # Query initiatives
+                queryset = Initiative.objects.filter(
+                    created_at__gte=cutoff
+                ).order_by('-created_at')
+
+                initiatives = queryset[:limit]
+
+                items = []
+                for i in initiatives:
+                    items.append({
+                        'id': str(i.id),
+                        'name': i.name,
+                        'stage': i.stage,
+                        'status': i.status if hasattr(i, 'status') else None,
+                        'priority': getattr(i, 'priority', None),
+                        'created_at': i.created_at.strftime('%Y-%m-%d'),
+                        'source': i.source_type if hasattr(i, 'source_type') else None,
+                    })
+
+                return {
+                    'success': True,
+                    'tool': 'platform_query_tool',
+                    'query_type': 'initiatives',
+                    'count': len(items),
+                    'message': f"Found {queryset.count()} initiative(s) in the last {days} days:",
+                    'items': items
+                }
+
+            elif query_type == 'agent_outputs':
+                # Query deliverables grouped by agent
+                agent_name = filters.get('agent_name')
+
+                if agent_name:
+                    queryset = Deliverable.objects.filter(
+                        created_at__gte=cutoff,
+                        agent_name__icontains=agent_name
+                    ).order_by('-created_at')[:limit]
+
+                    items = []
+                    for d in queryset:
+                        items.append({
+                            'title': d.title,
+                            'type': d.deliverable_type,
+                            'category': d.category or 'Uncategorized',
+                            'created_at': d.created_at.strftime('%Y-%m-%d %H:%M'),
+                        })
+
+                    return {
+                        'success': True,
+                        'tool': 'platform_query_tool',
+                        'query_type': 'agent_outputs',
+                        'agent': agent_name,
+                        'count': len(items),
+                        'message': f"Found {len(items)} output(s) from {agent_name}:",
+                        'items': items
+                    }
+                else:
+                    # Summary by agent
+                    from django.db.models import Count
+                    agent_summary = Deliverable.objects.filter(
+                        created_at__gte=cutoff
+                    ).values('agent_name').annotate(
+                        count=Count('id')
+                    ).order_by('-count')[:20]
+
+                    return {
+                        'success': True,
+                        'tool': 'platform_query_tool',
+                        'query_type': 'agent_outputs',
+                        'message': f"Agent output summary for last {days} days:",
+                        'by_agent': list(agent_summary)
+                    }
+
+            elif query_type == 'content_summary':
+                # Overview of all content
+                from django.db.models import Count
+
+                deliverable_count = Deliverable.objects.filter(created_at__gte=cutoff).count()
+                audit_count = AuditReport.objects.filter(created_at__gte=cutoff).count()
+                initiative_count = Initiative.objects.filter(created_at__gte=cutoff).count()
+
+                # Type breakdown
+                type_breakdown = Deliverable.objects.filter(
+                    created_at__gte=cutoff
+                ).values('deliverable_type').annotate(
+                    count=Count('id')
+                ).order_by('-count')
+
+                # Top agents
+                top_agents = Deliverable.objects.filter(
+                    created_at__gte=cutoff
+                ).values('agent_name').annotate(
+                    count=Count('id')
+                ).order_by('-count')[:5]
+
+                return {
+                    'success': True,
+                    'tool': 'platform_query_tool',
+                    'query_type': 'content_summary',
+                    'period_days': days,
+                    'summary': {
+                        'deliverables': deliverable_count,
+                        'audit_reports': audit_count,
+                        'initiatives': initiative_count,
+                    },
+                    'by_type': list(type_breakdown),
+                    'top_agents': list(top_agents),
+                    'message': f"Platform content summary for last {days} days: {deliverable_count} deliverables, {audit_count} audit reports, {initiative_count} initiatives."
+                }
+
+            else:
+                return {
+                    'success': False,
+                    'error': f"Unknown query_type: {query_type}. Valid types: deliverables, audit_reports, initiatives, agent_outputs, content_summary"
+                }
+
+        except Exception as e:
+            logger.error(f"Error in platform_query_tool: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'tool': 'platform_query_tool'}
 
     # Session 796 Phase 3: Consultation Response Detection
     def _check_consultation_response(self, message: str) -> Optional[Dict[str, Any]]:
