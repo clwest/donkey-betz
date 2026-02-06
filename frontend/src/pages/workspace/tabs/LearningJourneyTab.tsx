@@ -1,4 +1,5 @@
 // Session 870: Learning Journey Dashboard Tab
+// Session 956: Added Learning Loop Effectiveness sub-tab
 // Shows user's learning journeys, progress, achievements, and available templates
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -22,17 +23,24 @@ import {
   Zap,
   Award,
   TrendingUp,
+  Brain,
+  Activity,
+  BarChart3,
+  ThumbsUp,
+  ThumbsDown,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
 
 // Sub-tab configuration
-type LearningSubTab = 'dashboard' | 'journeys' | 'templates'
+type LearningSubTab = 'dashboard' | 'journeys' | 'templates' | 'effectiveness'
 
 const subTabs: Array<{ id: LearningSubTab; label: string; icon: typeof GraduationCap }> = [
   { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
   { id: 'journeys', label: 'My Journeys', icon: BookOpen },
   { id: 'templates', label: 'Templates', icon: Target },
+  { id: 'effectiveness', label: 'AI Learning', icon: Brain },
 ]
 
 // Types
@@ -95,6 +103,36 @@ interface Analytics {
   achievements_earned: number
 }
 
+// Session 956: Learning Loop Effectiveness Types
+interface LearningPattern {
+  id: string
+  description: string
+  effectiveness: number
+  times_applied: number
+  pattern_type: string
+  confidence?: number
+  created_at?: string
+}
+
+interface PatternTypeStats {
+  pattern_type: string
+  count: number
+  avg_confidence: number
+}
+
+interface LearningLoopStats {
+  total_active_learnings: number
+  total_applied: number
+  total_successful: number
+  overall_effectiveness: number
+  applied_patterns_count: number
+  most_effective: LearningPattern[]
+  least_effective: LearningPattern[]
+  recent_learnings: LearningPattern[]
+  by_pattern_type: PatternTypeStats[]
+  timestamp: string
+}
+
 export function LearningJourneyTab() {
   const [activeSubTab, setActiveSubTab] = useState<LearningSubTab>('dashboard')
 
@@ -123,6 +161,7 @@ export function LearningJourneyTab() {
       {activeSubTab === 'dashboard' && <DashboardSubTab />}
       {activeSubTab === 'journeys' && <JourneysSubTab />}
       {activeSubTab === 'templates' && <TemplatesSubTab />}
+      {activeSubTab === 'effectiveness' && <EffectivenessSubTab />}
     </div>
   )
 }
@@ -1081,6 +1120,336 @@ function TemplateDetailModal({
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ============ Session 956: AI Learning Effectiveness Sub-Tab ============
+
+function EffectivenessSubTab() {
+  const queryClient = useQueryClient()
+
+  // Fetch learning loop stats
+  const { data: stats, isLoading, isError, refetch } = useQuery({
+    queryKey: ['learning-loop-stats'],
+    queryFn: async () => {
+      const res = await platformApi.get('/api/learning/loop/stats/')
+      return res.data as LearningLoopStats
+    },
+    refetchInterval: 60000, // Refresh every minute
+  })
+
+  // Track learning outcome mutation
+  const trackMutation = useMutation({
+    mutationFn: async ({ patternId, wasSuccessful }: { patternId: string; wasSuccessful: boolean }) => {
+      const res = await platformApi.post('/api/learning/loop/track/', {
+        pattern_id: patternId,
+        was_successful: wasSuccessful,
+      })
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['learning-loop-stats'] })
+    },
+  })
+
+  // Run learning cycle mutation
+  const runCycleMutation = useMutation({
+    mutationFn: async () => {
+      const res = await platformApi.post('/api/learning/loop/run/')
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['learning-loop-stats'] })
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-primary-400" size={24} />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-dark-card border border-red-500/30 rounded-lg p-8 text-center">
+        <AlertTriangle size={32} className="mx-auto mb-3 text-red-400" />
+        <p className="text-gray-400">Failed to load AI learning data</p>
+        <button
+          onClick={() => refetch()}
+          className="mt-3 px-4 py-2 bg-primary-500/20 text-primary-400 rounded-lg text-sm hover:bg-primary-500/30 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    )
+  }
+
+  const effectivenessPercent = Math.round((stats?.overall_effectiveness ?? 0) * 100)
+  const mostEffective = stats?.most_effective ?? []
+  const leastEffective = stats?.least_effective ?? []
+  const recentLearnings = stats?.recent_learnings ?? []
+  const byPatternType = stats?.by_pattern_type ?? []
+
+  const getEffectivenessColor = (rate: number) => {
+    if (rate >= 0.7) return 'text-green-400'
+    if (rate >= 0.4) return 'text-amber-400'
+    return 'text-red-400'
+  }
+
+  const getEffectivenessBarColor = (rate: number) => {
+    if (rate >= 0.7) return 'bg-green-500'
+    if (rate >= 0.4) return 'bg-amber-500'
+    return 'bg-red-500'
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary-500/20 rounded-lg">
+            <Brain className="text-primary-400" size={24} />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">AI Learning Effectiveness</h2>
+            <p className="text-sm text-gray-400">Track how well the AI learns from your decisions</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => runCycleMutation.mutate()}
+            disabled={runCycleMutation.isPending}
+            className="flex items-center gap-2 px-3 py-2 bg-primary-500/20 text-primary-400 rounded-lg text-sm hover:bg-primary-500/30 transition-colors disabled:opacity-50"
+            title="Run learning cycle"
+          >
+            {runCycleMutation.isPending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Sparkles size={14} />
+            )}
+            Run Cycle
+          </button>
+          <button
+            onClick={() => refetch()}
+            className="p-2 hover:bg-dark-hover rounded-lg transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity size={16} className="text-primary-400" />
+            <span className="text-xs text-gray-400">Active Learnings</span>
+          </div>
+          <p className="text-2xl font-bold">{stats?.total_active_learnings ?? 0}</p>
+        </div>
+
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 size={16} className="text-blue-400" />
+            <span className="text-xs text-gray-400">Times Applied</span>
+          </div>
+          <p className="text-2xl font-bold">{stats?.total_applied ?? 0}</p>
+        </div>
+
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 size={16} className="text-green-400" />
+            <span className="text-xs text-gray-400">Successful</span>
+          </div>
+          <p className="text-2xl font-bold text-green-400">{stats?.total_successful ?? 0}</p>
+        </div>
+
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp size={16} className={getEffectivenessColor(stats?.overall_effectiveness ?? 0)} />
+            <span className="text-xs text-gray-400">Effectiveness</span>
+          </div>
+          <p className={cn("text-2xl font-bold", getEffectivenessColor(stats?.overall_effectiveness ?? 0))}>
+            {effectivenessPercent}%
+          </p>
+        </div>
+      </div>
+
+      {/* Most & Least Effective Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Most Effective */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <h3 className="flex items-center gap-2 font-medium mb-4">
+            <ThumbsUp size={16} className="text-green-400" />
+            Most Effective Patterns
+          </h3>
+          {mostEffective.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">No patterns applied yet</p>
+          ) : (
+            <div className="space-y-3">
+              {mostEffective.slice(0, 5).map((pattern) => (
+                <div key={pattern.id} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-300 truncate flex-1 mr-2" title={pattern.description}>
+                      {pattern.description.length > 60 ? `${pattern.description.slice(0, 60)}...` : pattern.description}
+                    </span>
+                    <span className={cn("text-xs font-medium", getEffectivenessColor(pattern.effectiveness))}>
+                      {Math.round(pattern.effectiveness * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-dark-border rounded-full overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full", getEffectivenessBarColor(pattern.effectiveness))}
+                        style={{ width: `${pattern.effectiveness * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500 w-16 text-right">{pattern.times_applied}× used</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-1.5 py-0.5 bg-dark-border rounded text-gray-400">
+                      {pattern.pattern_type}
+                    </span>
+                    <button
+                      onClick={() => trackMutation.mutate({ patternId: pattern.id, wasSuccessful: true })}
+                      disabled={trackMutation.isPending}
+                      className="text-xs text-gray-500 hover:text-green-400 transition-colors"
+                      title="Mark as helpful"
+                    >
+                      <ThumbsUp size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Least Effective */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <h3 className="flex items-center gap-2 font-medium mb-4">
+            <ThumbsDown size={16} className="text-red-400" />
+            Needs Improvement
+          </h3>
+          {leastEffective.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">All patterns performing well!</p>
+          ) : (
+            <div className="space-y-3">
+              {leastEffective.slice(0, 5).map((pattern) => (
+                <div key={pattern.id} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-300 truncate flex-1 mr-2" title={pattern.description}>
+                      {pattern.description.length > 60 ? `${pattern.description.slice(0, 60)}...` : pattern.description}
+                    </span>
+                    <span className={cn("text-xs font-medium", getEffectivenessColor(pattern.effectiveness))}>
+                      {Math.round(pattern.effectiveness * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-dark-border rounded-full overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full", getEffectivenessBarColor(pattern.effectiveness))}
+                        style={{ width: `${pattern.effectiveness * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500 w-16 text-right">{pattern.times_applied}× used</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-1.5 py-0.5 bg-dark-border rounded text-gray-400">
+                      {pattern.pattern_type}
+                    </span>
+                    <button
+                      onClick={() => trackMutation.mutate({ patternId: pattern.id, wasSuccessful: false })}
+                      disabled={trackMutation.isPending}
+                      className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                      title="Mark as not helpful"
+                    >
+                      <ThumbsDown size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Pattern Type Breakdown & Recent Learnings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* By Pattern Type */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <h3 className="flex items-center gap-2 font-medium mb-4">
+            <BarChart3 size={16} className="text-primary-400" />
+            By Pattern Type
+          </h3>
+          {byPatternType.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">No patterns yet</p>
+          ) : (
+            <div className="space-y-3">
+              {byPatternType.map((type) => (
+                <div key={type.pattern_type} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="text-sm text-gray-300 capitalize">
+                      {type.pattern_type.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">{type.count} patterns</span>
+                    <span className="text-xs text-primary-400">{Math.round(type.avg_confidence * 100)}% conf</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Learnings */}
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <h3 className="flex items-center gap-2 font-medium mb-4">
+            <Clock size={16} className="text-amber-400" />
+            Recent Learnings
+          </h3>
+          {recentLearnings.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">No recent learnings</p>
+          ) : (
+            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+              {recentLearnings.slice(0, 10).map((learning) => (
+                <div key={learning.id} className="p-2 bg-dark-bg/50 rounded">
+                  <p className="text-sm text-gray-300 line-clamp-2" title={learning.description}>
+                    {learning.description}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-1.5 py-0.5 bg-dark-border rounded text-gray-400">
+                      {learning.pattern_type}
+                    </span>
+                    {learning.confidence && (
+                      <span className="text-xs text-gray-500">
+                        {Math.round(learning.confidence * 100)}% confidence
+                      </span>
+                    )}
+                    {learning.created_at && (
+                      <span className="text-xs text-gray-600 ml-auto">
+                        {new Date(learning.created_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Last Updated */}
+      {stats?.timestamp && (
+        <p className="text-xs text-gray-600 text-center">
+          Last updated: {new Date(stats.timestamp).toLocaleString()}
+        </p>
+      )}
     </div>
   )
 }

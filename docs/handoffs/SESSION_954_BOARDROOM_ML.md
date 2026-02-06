@@ -475,4 +475,31 @@ Features:
 
 ---
 
-**Session 954-956 adds content-aware ML predictions, prevents junk initiatives, refines the learning loop, provides RAG system observability, extends provenance to 26+ agents, AND provides comprehensive ML prediction UI in the boardroom.**
+## Part 7: Learning Loop Frontend (Option H)
+
+### Problem
+The learning loop backend had comprehensive effectiveness tracking, but no UI to visualize:
+- Overall learning effectiveness
+- Most/least effective patterns
+- Pattern type distribution
+- Recent learnings extracted
+
+### Solution
+Added "AI Learning" sub-tab to LearningJourneyTab with comprehensive visualization.
+
+#### EffectivenessSubTab Features:
+- **Stats Cards:** Active Learnings, Times Applied, Successful, Overall Effectiveness %
+- **Most Effective Patterns:** Top 5 with progress bars, thumbs up to mark helpful
+- **Needs Improvement:** Bottom 5 patterns (< 50% effectiveness)
+- **By Pattern Type:** Distribution with counts and average confidence
+- **Recent Learnings:** Last 10 extracted with details
+- **Interactive Controls:** Run Cycle button, Refresh, Track outcome buttons
+
+### Files Changed
+| File | Changes |
+|------|---------|
+| `frontend/src/pages/workspace/tabs/LearningJourneyTab.tsx` | +EffectivenessSubTab, +LearningLoopStats types, +"AI Learning" sub-tab |
+
+---
+
+**Session 954-956 adds content-aware ML predictions, prevents junk initiatives, refines the learning loop, provides RAG observability, extends provenance to 26+ agents, comprehensive boardroom ML UI, AND a complete learning loop effectiveness dashboard.**
