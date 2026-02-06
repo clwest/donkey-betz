@@ -184,6 +184,8 @@ class DocsContextBuilder:
         'docs/governance/SYSTEM_OWNER.md',
         'docs/missions/CURRENT_MISSION.md',
         'docs/canon/INDEX.md',
+        # Session 948: User feedback queue for issue tracking across sessions
+        'docs/USER_FEEDBACK_QUEUE.md',
     ]
 
     def __init__(self):
@@ -362,6 +364,7 @@ class DocsContextBuilder:
         ('00-START-NEXT-SESSION.md', 200),  # Current session priorities
         ('docs/governance/SYSTEM_OWNER.md', 100),  # Session 814: Human authority framework
         ('docs/missions/CURRENT_MISSION.md', 100),  # Session 814: What agents should focus on
+        ('docs/USER_FEEDBACK_QUEUE.md', 100),  # Session 948: User-reported issues for resolution
     ]
 
     def _get_critical_docs_content(self) -> str:
