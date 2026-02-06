@@ -52,6 +52,11 @@ class RetrievalResult:
     scope: str
     status: str
     is_curated: bool
+    # Session 949: Risk-aware RAG fields
+    is_critical: bool = False
+    risk_level: str = 'medium'
+    document_class: str = 'reference'
+    retrieval_channel: str = 'semantic'  # semantic, critical, incident, constraint
 
 
 class ScopedRetrievalService:
@@ -68,6 +73,10 @@ class ScopedRetrievalService:
         self.default_scope = DocumentScope.DOCS_INDEX_ACTIVE
         self.default_limit = 10
         self.min_similarity = 0.4  # Lowered from 0.7 - embedding similarity scores are typically 0.3-0.6
+        # Session 949: Risk-aware RAG configuration
+        self.include_critical_docs = True  # Always include critical docs
+        self.include_incident_channel = True  # Include incident/postmortem docs
+        self.incident_lookback_days = 30  # How far back to look for incidents
 
     def search(
         self,
@@ -252,6 +261,192 @@ class ScopedRetrievalService:
             DocumentScope.REPO_MARKDOWN: None
         }
         return expansion_order.get(current_scope)
+
+    # =========================================================================
+    # Session 949: Risk-Aware RAG - Dual-Channel Retrieval
+    # =========================================================================
+
+    def get_critical_docs(self, limit: int = 5) -> List[RetrievalResult]:
+        """
+        Get documents marked as critical - always include regardless of query.
+        These are docs that should never be missed in any retrieval.
+        """
+        try:
+            from content.models import Document, ContentStatus
+
+            docs = Document.objects.filter(
+                is_critical=True,
+                status=ContentStatus.PROCESSED
+            ).order_by('-retrieval_boost', '-updated_at')[:limit]
+
+            return [
+                RetrievalResult(
+                    document_id=str(doc.id),
+                    title=doc.title,
+                    path=doc.file_path,
+                    content_snippet=doc.processed_content[:300] if doc.processed_content else '',
+                    similarity_score=1.0,  # Max score for critical docs
+                    scope=doc.extracted_metadata.get('scope', 'unknown') if doc.extracted_metadata else 'unknown',
+                    status=doc.status,
+                    is_curated=True,
+                    is_critical=True,
+                    risk_level=doc.risk_level,
+                    document_class=doc.document_class,
+                    retrieval_channel='critical'
+                )
+                for doc in docs
+            ]
+
+        except Exception as e:
+            logger.error(f"Failed to get critical docs: {e}")
+            return []
+
+    def get_incident_docs(self, lookback_days: int = None, limit: int = 5) -> List[RetrievalResult]:
+        """
+        Get incident reports, postmortems, and constraint docs.
+        These are docs that describe failures, risks, and hard constraints.
+        """
+        try:
+            from content.models import Document, ContentStatus
+            from django.utils import timezone
+            from datetime import timedelta
+
+            lookback = lookback_days or self.incident_lookback_days
+            cutoff_date = timezone.now() - timedelta(days=lookback)
+
+            # Get incident-class docs (postmortems, incident reports, security advisories)
+            incident_classes = ['postmortem', 'incident_report', 'security', 'constraint']
+
+            docs = Document.objects.filter(
+                document_class__in=incident_classes,
+                status=ContentStatus.PROCESSED
+            ).filter(
+                # Either has an incident date in lookback period OR was updated recently
+                Q(incident_date__gte=cutoff_date) | Q(updated_at__gte=cutoff_date)
+            ).order_by('-risk_level', '-incident_date', '-updated_at')[:limit]
+
+            return [
+                RetrievalResult(
+                    document_id=str(doc.id),
+                    title=doc.title,
+                    path=doc.file_path,
+                    content_snippet=doc.processed_content[:300] if doc.processed_content else '',
+                    similarity_score=0.9,  # High score for incident docs
+                    scope=doc.extracted_metadata.get('scope', 'unknown') if doc.extracted_metadata else 'unknown',
+                    status=doc.status,
+                    is_curated=True,
+                    is_critical=doc.is_critical,
+                    risk_level=doc.risk_level,
+                    document_class=doc.document_class,
+                    retrieval_channel='incident'
+                )
+                for doc in docs
+            ]
+
+        except Exception as e:
+            logger.error(f"Failed to get incident docs: {e}")
+            return []
+
+    def get_audit_findings_context(self, priorities: List[str] = None, limit: int = 3) -> List[dict]:
+        """
+        Get open/in-progress audit findings as context for RAG.
+        Returns findings that might be relevant to current queries.
+        """
+        try:
+            from core.models_audit_tracking import AuditFinding
+
+            priorities = priorities or ['P0', 'P1']
+
+            findings = AuditFinding.objects.filter(
+                priority__in=priorities,
+                status__in=['open', 'in_progress']
+            ).order_by('priority', '-updated_at')[:limit]
+
+            return [
+                {
+                    'finding_id': str(f.id),
+                    'title': f.title,
+                    'priority': f.priority,
+                    'category': f.category,
+                    'status': f.status,
+                    'description': f.description[:500],
+                    'recommendation': f.recommendation[:300] if f.recommendation else '',
+                    'affected_components': f.affected_components,
+                    'linked_document_id': str(f.linked_document_id) if f.linked_document_id else None,
+                }
+                for f in findings
+            ]
+
+        except Exception as e:
+            logger.error(f"Failed to get audit findings: {e}")
+            return []
+
+    def dual_channel_search(
+        self,
+        query: str,
+        scope: Optional[DocumentScope] = None,
+        include_critical: bool = True,
+        include_incidents: bool = True,
+        include_findings: bool = True,
+        limit: int = None
+    ) -> dict:
+        """
+        Session 949: Dual-channel retrieval that combines:
+        1. Semantic search results
+        2. Critical docs (always include)
+        3. Incident/postmortem docs
+        4. Open audit findings
+
+        Returns:
+            {
+                'semantic_results': [...],
+                'critical_docs': [...],
+                'incident_docs': [...],
+                'audit_findings': [...],
+                'merged_results': [...]  # Deduplicated and ranked
+            }
+        """
+        limit = limit or self.default_limit
+
+        # Channel 1: Semantic search
+        semantic_results = self.search(query, scope=scope, limit=limit)
+
+        # Channel 2: Critical docs
+        critical_docs = self.get_critical_docs(limit=3) if include_critical else []
+
+        # Channel 3: Incident docs
+        incident_docs = self.get_incident_docs(limit=3) if include_incidents else []
+
+        # Channel 4: Audit findings
+        audit_findings = self.get_audit_findings_context(limit=3) if include_findings else []
+
+        # Merge and deduplicate results
+        seen_ids = set()
+        merged = []
+
+        # Priority order: critical > incident > semantic
+        for doc in critical_docs:
+            if doc.document_id not in seen_ids:
+                seen_ids.add(doc.document_id)
+                merged.append(doc)
+
+        for doc in incident_docs:
+            if doc.document_id not in seen_ids:
+                seen_ids.add(doc.document_id)
+                merged.append(doc)
+
+        for doc in semantic_results:
+            if doc.document_id not in seen_ids:
+                seen_ids.add(doc.document_id)
+                merged.append(doc)
+
+        return {
+            'semantic_results': semantic_results,
+            'critical_docs': critical_docs,
+            'incident_docs': incident_docs,
+            'audit_findings': audit_findings,
+            'merged_results': merged[:limit]
+        }
 
     def get_scope_stats(self) -> dict:
         """Get document counts per scope."""

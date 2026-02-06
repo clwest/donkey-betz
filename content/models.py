@@ -543,7 +543,60 @@ class Document(UnifiedBaseModel):
         default=dict,
         help_text="References to related objects in other systems"
     )
-    
+
+    # Session 949: Risk-Aware RAG Fields
+    # These fields enable defensive retrieval that prioritizes dangerous/critical docs
+    RISK_LEVEL_CHOICES = [
+        ('critical', 'Critical - Must always retrieve'),
+        ('high', 'High - Boost in retrieval'),
+        ('medium', 'Medium - Standard retrieval'),
+        ('low', 'Low - May be skipped under budget pressure'),
+    ]
+
+    DOCUMENT_CLASS_CHOICES = [
+        ('reference', 'Reference Documentation'),
+        ('postmortem', 'Incident Postmortem'),
+        ('incident_report', 'Incident Report'),
+        ('constraint', 'Constraint/Policy Document'),
+        ('security', 'Security Advisory'),
+        ('architecture', 'Architecture Decision'),
+        ('runbook', 'Operational Runbook'),
+        ('changelog', 'Changelog/Release Notes'),
+    ]
+
+    is_critical = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Always include in retrieval regardless of similarity score"
+    )
+
+    risk_level = models.CharField(
+        max_length=20,
+        choices=RISK_LEVEL_CHOICES,
+        default='medium',
+        db_index=True,
+        help_text="Risk level for retrieval prioritization"
+    )
+
+    document_class = models.CharField(
+        max_length=30,
+        choices=DOCUMENT_CLASS_CHOICES,
+        default='reference',
+        db_index=True,
+        help_text="Classification for retrieval channel routing"
+    )
+
+    incident_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date of incident (for postmortems/incident reports)"
+    )
+
+    retrieval_boost = models.FloatField(
+        default=1.0,
+        help_text="Multiplier for retrieval score (1.0 = normal, 2.0 = double priority)"
+    )
+
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
@@ -555,6 +608,10 @@ class Document(UnifiedBaseModel):
             models.Index(fields=['owner']),
             models.Index(fields=['content_hash']),
             models.Index(fields=['-created_at']),
+            # Session 949: Risk-Aware RAG indexes
+            models.Index(fields=['is_critical', 'risk_level']),
+            models.Index(fields=['document_class']),
+            models.Index(fields=['document_class', 'risk_level']),
         ]
     
     def __str__(self):
