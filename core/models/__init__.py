@@ -149,6 +149,9 @@ from ..models_signal_intelligence import (
 # Import audio cache model (Session 926 - Universal Agent Voice System)
 from ..models_audio_cache import AudioCache
 
+# Import user feedback model (Session 948 - PA Feedback Queue)
+from ..models_user_feedback import UserFeedback
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -325,4 +328,7 @@ __all__ = [
 
     # Audio Cache - Universal Agent Voice System (Session 926)
     'AudioCache',
+
+    # User Feedback - PA Feedback Queue (Session 948)
+    'UserFeedback',
 ]
