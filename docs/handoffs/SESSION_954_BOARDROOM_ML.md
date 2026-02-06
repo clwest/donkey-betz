@@ -281,4 +281,79 @@ curl http://localhost:8000/api/learning/loop/agent/?agent_name=ResearchAgent -H 
 
 ---
 
-**Session 954 adds content-aware ML predictions to the boardroom system, prevents junk initiative creation, AND refines the learning loop with more signals, user feedback integration, and effectiveness tracking.**
+---
+
+## Part 4: RAG Observability Dashboard (Option E)
+
+### Problem
+The risk-aware RAG system (Session 949) had no visibility into:
+1. Which critical docs are being used
+2. How documents are classified by risk level and document class
+3. Context budget utilization by priority tier
+4. Risk boost effectiveness
+
+### Solution
+
+#### RAGObservabilityService
+Created `core/services/rag_observability_service.py` with:
+
+**Document Inventory Stats:**
+- Total/critical/classified document counts
+- Breakdown by risk_level: critical (18), high (332), medium (212)
+- Breakdown by document_class: reference, architecture, constraint, security, etc.
+- Freshness metrics (document age)
+
+**Context Budget Stats:**
+- Total budget: 4,000 tokens
+- Reserved tier: 650 tokens (critical_docs: 300, incident_docs: 200, audit_findings: 150)
+- Utilization by priority tier (CRITICAL, RESERVED, HIGH, MEDIUM, LOW)
+
+**Risk Boost Stats:**
+- Boost magnitudes by risk level and document class
+- Expected boost values (is_critical: +0.30, postmortem: +0.20, etc.)
+- Coverage of boostable documents
+
+**Health Indicators:**
+- Critical docs coverage validation
+- Classification coverage check
+- Reserved tier allocation verification
+
+#### API Endpoints
+8 new endpoints in `views_rag_observability.py`:
+- `GET /api/rag/observability/dashboard/` - Full dashboard data
+- `GET /api/rag/observability/inventory/` - Document inventory stats
+- `GET /api/rag/observability/budget/` - Context budget utilization
+- `GET /api/rag/observability/boost/` - Risk boost effectiveness
+- `GET /api/rag/observability/critical-docs/` - Critical docs report
+- `GET /api/rag/observability/risk-distribution/` - Risk matrix + gaps
+- `GET /api/rag/observability/channels/` - Retrieval channel stats
+- `POST /api/rag/observability/classify/` - Trigger classification
+
+### Files Changed
+| File | Changes |
+|------|---------|
+| `core/services/rag_observability_service.py` | **NEW** - RAG metrics service |
+| `core/views_rag_observability.py` | **NEW** - 8 API endpoints |
+| `core/urls.py` | +8 URL patterns |
+
+### Production Data
+```
+Total documents: 562
+Critical documents: 18
+By risk level: critical=18, high=332, medium=212
+By document class: reference=277, architecture=155, constraint=80, security=21
+Reserved tier: 650 tokens (16.2% of budget)
+```
+
+### Usage
+```bash
+# Get full dashboard
+curl http://localhost:8000/api/rag/observability/dashboard/ -H "Authorization: Token $TOKEN"
+
+# Get critical docs report
+curl http://localhost:8000/api/rag/observability/critical-docs/ -H "Authorization: Token $TOKEN"
+```
+
+---
+
+**Session 954 adds content-aware ML predictions, prevents junk initiatives, refines the learning loop, AND provides RAG system observability.**
