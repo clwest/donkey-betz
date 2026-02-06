@@ -170,8 +170,12 @@ class NarrativeInjectionService:
             # Get decision outcomes
             incidents.extend(self._get_decision_outcomes(limit=2))
 
-            # Get spider intelligence hits
-            incidents.extend(self._get_spider_discoveries(limit=2))
+            # Session 951: Removed spider discoveries from incidents
+            # Spider data collection is routine operation, not an interesting incident
+            # The "kalshi spider pulled 500 items" was dominating all blog content
+            # regardless of topic relevance. Other incident types (recoveries, dreams,
+            # learning moments, decisions) are more meaningful for content.
+            # incidents.extend(self._get_spider_discoveries(limit=2))
 
         except Exception as e:
             logger.warning(f"Error fetching incidents: {e}")
