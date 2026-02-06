@@ -531,8 +531,23 @@ class UnifiedPAEntrypoint:
 
         # Intent-specific payload adjustments
         # Session 940: Boardroom tool actions
+        # Session 947: Enhanced to extract urgency filters and handle "list critical" patterns
         if intent == 'boardroom':
             msg_lower = message.lower()
+            import re
+
+            # Session 947: Extract urgency level if present
+            urgency_map = {
+                'critical': 'critical',
+                'high': 'high',
+                'medium': 'medium',
+                'low': 'low',
+            }
+            detected_urgency = None
+            for urgency_word, urgency_value in urgency_map.items():
+                if urgency_word in msg_lower:
+                    detected_urgency = urgency_value
+                    break
 
             # Determine action based on message
             if 'approve' in msg_lower and 'attention' in msg_lower:
@@ -545,7 +560,8 @@ class UnifiedPAEntrypoint:
                 payload['action'] = 'reject_decision'
             elif 'list' in msg_lower and 'decision' in msg_lower:
                 payload['action'] = 'list_decisions'
-            elif 'list' in msg_lower and 'attention' in msg_lower:
+            elif 'list' in msg_lower and ('attention' in msg_lower or detected_urgency):
+                # Session 947: "list attention" OR "list critical/high/medium/low"
                 payload['action'] = 'list_attention'
             elif 'stats' in msg_lower or 'status' in msg_lower:
                 payload['action'] = 'stats'
@@ -553,8 +569,16 @@ class UnifiedPAEntrypoint:
                 # Default: show stats
                 payload['action'] = 'stats'
 
+            # Session 947: Add urgency filter if detected
+            if detected_urgency and payload['action'] == 'list_attention':
+                payload['urgency'] = detected_urgency
+
+            # Session 947: Extract limit if specified (e.g., "show 20", "list 50")
+            limit_match = re.search(r'(?:show|list|top)\s+(\d+)', msg_lower)
+            if limit_match:
+                payload['limit'] = int(limit_match.group(1))
+
             # Extract ID if present (e.g., "approve attention item abc123")
-            import re
             id_match = re.search(r'(?:item|decision|id)\s+([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
             if id_match:
                 payload['id'] = id_match.group(1)
@@ -809,13 +833,44 @@ Address the user by name occasionally."""
                 elif action in ['list_attention', 'list_decisions']:
                     items = tool_result.get('items', [])
                     count = tool_result.get('count', len(items))
+                    filters_applied = tool_result.get('filters_applied', {})
+
                     if count == 0:
-                        return f"No items found matching your criteria, {user_name}."
-                    item_list = "\n".join([
-                        f"- {item.get('title', item.get('topic', 'Untitled'))} ({item.get('urgency', item.get('decision_type', 'unknown'))})"
-                        for item in items[:5]
-                    ])
-                    return f"Found {count} items:\n{item_list}"
+                        filter_desc = ""
+                        if filters_applied.get('urgency'):
+                            filter_desc = f" with {filters_applied['urgency'].upper()} urgency"
+                        return f"No items found{filter_desc}, {user_name}."
+
+                    # Session 947: Show more items (up to 15) with IDs for taking action
+                    item_lines = []
+                    for item in items[:15]:
+                        item_id = str(item.get('id', ''))[:8]  # Short ID for reference
+                        title = item.get('title', item.get('topic', 'Untitled'))[:60]
+                        urgency = item.get('urgency', item.get('decision_type', ''))
+                        source = item.get('source_agent', '')
+                        ml_rec = item.get('ml_recommendation', '')
+
+                        line = f"• **{title}**"
+                        if urgency:
+                            line += f" [{urgency}]"
+                        if source:
+                            line += f" (from {source})"
+                        if ml_rec:
+                            line += f" - ML: {ml_rec}"
+                        line += f" `{item_id}`"
+                        item_lines.append(line)
+
+                    item_list = "\n".join(item_lines)
+
+                    # Build header
+                    filter_desc = ""
+                    if filters_applied.get('urgency'):
+                        filter_desc = f" {filters_applied['urgency'].upper()}"
+
+                    remaining = count - len(items[:15])
+                    more_text = f"\n\n*Showing {min(count, 15)} of {count} items.*" if remaining > 0 else ""
+
+                    return f"Found {count}{filter_desc} items:\n\n{item_list}{more_text}\n\nTo act on an item, say 'approve item [id]' or 'ignore item [id]'."
 
                 elif action in ['approve_attention', 'ignore_attention', 'promote_decision', 'reject_decision']:
                     if tool_result.get('success'):
