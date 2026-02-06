@@ -2,14 +2,15 @@
 
 **Date:** February 5, 2026
 **Status:** Complete
-**PRs:** #879, #880, #881, #882, #883, #884, #886
+**PRs:** #879, #880, #881, #882, #883, #884, #886, #888
 
 ## Summary
 
-Fixed three major issues:
+Fixed four major issues:
 1. **Operations Tab not creating WorkspaceOperations** for financial agent reports
 2. **42K+ pending ExtractedArtifacts backlog** from automated brainstorming conversations
 3. **PA/Boardroom couldn't access brainstorming insights** after disabling extraction
+4. **PA couldn't access content (blogs, reports) awaiting human review**
 
 ## Problem 1: Operations Tab Empty
 
@@ -126,6 +127,34 @@ self.register("brainstorm_tool", self._handle_brainstorm)
 - "Get ideas from panels about customer acquisition"
 - "Brainstorming stats for the last 30 days"
 
+## Problem 4: PA Couldn't Access Content Ready for Review
+
+### Root Cause
+No tool existed for the PA to access Deliverables (blogs, reports, etc.) that are in "ready" status awaiting human review.
+
+### Solution: ContentReviewTool (PR #888)
+
+#### 1. Tool Handler (`core/services/tool_dispatcher.py`)
+```python
+self.register("content_review_tool", self._handle_content_review)
+# Actions: list, stats, details, publish, archive
+```
+
+#### 2. PA Routing
+```python
+# Intent detection keywords:
+'blog', 'deliverable', 'content ready', 'ready for review',
+'ready to publish', 'publish content', 'archive content',
+'content stats', 'what content', 'review content'
+```
+
+### Example PA Queries
+- "What content is ready for review?"
+- "Show me blog stats"
+- "Show details [id]"
+- "Publish [id]"
+- "Archive [id]"
+
 ## Files Changed
 
 | File | Changes |
@@ -135,8 +164,8 @@ self.register("brainstorm_tool", self._handle_brainstorm)
 | `core/tasks.py` | Lower thresholds, add cleanup_automated_conversation_artifacts |
 | `core/celery.py` | Updated schedule with aggressive=True |
 | `core/services/brainstorm_search_service.py` | **NEW** - Search Discussion/Panel conversations |
-| `core/services/tool_dispatcher.py` | Added brainstorm_tool registration and handler |
-| `core/services/unified_pa_entrypoint.py` | Added brainstorming intent routing and response formatting |
+| `core/services/tool_dispatcher.py` | Added brainstorm_tool + content_review_tool handlers |
+| `core/services/unified_pa_entrypoint.py` | Added brainstorming + content_review routing and formatting |
 
 ## Going Forward
 

@@ -138,6 +138,9 @@ class ToolDispatcher:
         # Session 943: Brainstorm search tool for accessing Discussion/Panel insights
         self.register("brainstorm_tool", self._handle_brainstorm)
 
+        # Session 943: Content review tool for accessing Deliverables awaiting human review
+        self.register("content_review_tool", self._handle_content_review)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)
@@ -1470,6 +1473,170 @@ class ToolDispatcher:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: search, recent, details, by_category, stats"
+            )
+
+    def _handle_content_review(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 943: Content review tool for accessing Deliverables awaiting human review.
+
+        Provides PA access to blogs, reports, and other content in 'ready' status.
+
+        Actions:
+        - list: List content ready for review
+        - stats: Get content review statistics
+        - details: Get details of a specific deliverable
+        - publish: Mark content as published
+        - archive: Archive content (reject)
+        """
+        from core.models_deliverables import Deliverable
+        from django.db.models import Count
+
+        action = payload.get('action', 'list')
+        limit = payload.get('limit', 10)
+        content_type = payload.get('type')  # document, report, analysis, etc.
+        category = payload.get('category')  # Marketing, Development, etc.
+
+        # Build base queryset - filter by user if available
+        base_qs = Deliverable.objects.all()
+        if user_id:
+            base_qs = base_qs.filter(user_id=user_id)
+
+        if action == 'list':
+            # List content in 'ready' status awaiting review
+            qs = base_qs.filter(status='ready')
+
+            if content_type:
+                qs = qs.filter(deliverable_type=content_type)
+            if category:
+                qs = qs.filter(category__icontains=category)
+
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'title', 'deliverable_type', 'category',
+                    'agent_name', 'quality_score', 'created_at', 'status'
+                )
+            )
+
+            return {
+                'action': 'list',
+                'count': len(items),
+                'items': items,
+                'filters_applied': {
+                    'type': content_type,
+                    'category': category,
+                    'status': 'ready',
+                }
+            }
+
+        elif action == 'stats':
+            # Get statistics on content requiring review
+            ready_count = base_qs.filter(status='ready').count()
+            draft_count = base_qs.filter(status='draft').count()
+            published_count = base_qs.filter(status='published').count()
+
+            by_type = dict(
+                base_qs.filter(status='ready')
+                .values('deliverable_type')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:10]
+                .values_list('deliverable_type', 'count')
+            )
+
+            by_category = dict(
+                base_qs.filter(status='ready')
+                .values('category')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:10]
+                .values_list('category', 'count')
+            )
+
+            return {
+                'action': 'stats',
+                'ready_for_review': ready_count,
+                'drafts': draft_count,
+                'published': published_count,
+                'by_type': by_type,
+                'by_category': by_category,
+            }
+
+        elif action == 'details':
+            deliverable_id = payload.get('id')
+            if not deliverable_id:
+                raise ValueError("id is required for details action")
+
+            deliverable = base_qs.filter(id=deliverable_id).first()
+            if not deliverable:
+                raise ValueError(f"Deliverable {deliverable_id} not found")
+
+            return {
+                'action': 'details',
+                'id': str(deliverable.id),
+                'title': deliverable.title,
+                'type': deliverable.deliverable_type,
+                'category': deliverable.category,
+                'status': deliverable.status,
+                'agent_name': deliverable.agent_name,
+                'quality_score': deliverable.quality_score,
+                'confidence_score': deliverable.confidence_score,
+                'content_preview': (deliverable.content or '')[:1000],
+                'tags': deliverable.tags or [],
+                'created_at': deliverable.created_at.isoformat() if deliverable.created_at else None,
+            }
+
+        elif action == 'publish':
+            deliverable_id = payload.get('id')
+            if not deliverable_id:
+                raise ValueError("id is required for publish action")
+
+            deliverable = base_qs.filter(id=deliverable_id, status='ready').first()
+            if not deliverable:
+                raise ValueError(f"Deliverable {deliverable_id} not found or not in ready status")
+
+            deliverable.status = 'published'
+            deliverable.save(update_fields=['status', 'updated_at'])
+
+            return {
+                'action': 'publish',
+                'id': str(deliverable_id),
+                'title': deliverable.title,
+                'new_status': 'published',
+                'success': True,
+            }
+
+        elif action == 'archive':
+            deliverable_id = payload.get('id')
+            feedback = payload.get('feedback', 'Archived via PA')
+
+            if not deliverable_id:
+                raise ValueError("id is required for archive action")
+
+            deliverable = base_qs.filter(id=deliverable_id).first()
+            if not deliverable:
+                raise ValueError(f"Deliverable {deliverable_id} not found")
+
+            deliverable.status = 'archived'
+            if deliverable.metadata is None:
+                deliverable.metadata = {}
+            deliverable.metadata['archive_reason'] = feedback
+            deliverable.save(update_fields=['status', 'metadata', 'updated_at'])
+
+            return {
+                'action': 'archive',
+                'id': str(deliverable_id),
+                'title': deliverable.title,
+                'new_status': 'archived',
+                'success': True,
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: list, stats, details, publish, archive"
             )
 
 
