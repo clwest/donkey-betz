@@ -52,7 +52,7 @@ export default function Layout() {
       >
         <Header />
         <main className="flex-1 flex flex-col overflow-hidden p-6">
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-auto">
             <Outlet />
           </div>
         </main>
