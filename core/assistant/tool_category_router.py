@@ -92,6 +92,8 @@ class ToolCategoryRouter:
         'workspace_tool': ToolCategory.SYSTEM,
         'check_budget': ToolCategory.SYSTEM,
         'system_alerts': ToolCategory.SYSTEM,
+        # Session 957: Add platform_query_tool - queries deliverables, reports, initiatives
+        'platform_query_tool': ToolCategory.SYSTEM,
 
         # INTELLIGENCE
         'predictions_tool': ToolCategory.INTELLIGENCE,
@@ -142,6 +144,11 @@ class ToolCategoryRouter:
         ToolCategory.SYSTEM: [
             'health', 'status', 'system', 'vitals', 'workspace',
             'budget', 'cost', 'token', 'alert', 'monitor', 'body',
+            # Session 957: Add data query keywords for platform_query_tool
+            'what has been', 'what have been', 'written by', 'produced by',
+            'list deliverables', 'list reports', 'list blogs', 'list initiatives',
+            'show deliverables', 'show reports', 'show blogs', 'agent outputs',
+            'what agents have', 'what content', 'what blogs', 'what reports',
         ],
         ToolCategory.INTELLIGENCE: [
             'predict', 'prediction', 'gate', 'pilot', 'experiment',
