@@ -609,7 +609,7 @@ export default function AssistantPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-7.5rem)] gap-4 overflow-hidden">
+    <div className="flex h-full gap-4 overflow-hidden">
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Header */}
