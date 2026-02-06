@@ -20,6 +20,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from .base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+from .report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -411,6 +412,30 @@ Provide complete, working code that can be directly used."""
                         if workspace_write_result and workspace_write_result.get('written'):
                             descriptive_msg += f" | 📁 {workspace_write_result.get('total_written', 0)} files written to workspace"
 
+                        # Session 954: Build provenance for development output
+                        from datetime import timezone
+                        import time as time_module
+                        provenance_sources = [{
+                            'name': 'FullStackDevelopment',
+                            'endpoint': 'fullstack/build',
+                            'retrieved_at': time_module.strftime('%Y-%m-%dT%H:%M:%SZ', time_module.gmtime()),
+                            'record_count': len(all_files) if all_files else len(all_results),
+                        }]
+                        if context:
+                            provenance_sources.append({
+                                'name': 'ProjectContext',
+                                'endpoint': 'context/project',
+                                'retrieved_at': time_module.strftime('%Y-%m-%dT%H:%M:%SZ', time_module.gmtime()),
+                                'record_count': 1,
+                            })
+                        provenance = build_provenance(
+                            report_type='code_generation',
+                            agent_name=self.name,
+                            sources=provenance_sources,
+                            stale_threshold_hours=168.0,  # Code valid for 1 week
+                        )
+                        provenance.disclaimer = "Generated code. Review and test before deployment to production."
+
                         # Enrich result data for content review
                         result_data = {
                             'results': all_results,
@@ -420,7 +445,11 @@ Provide complete, working code that can be directly used."""
                             'backend_framework': tool_data.get('backend_framework') or tool_data.get('framework'),
                             'frontend_framework': tool_data.get('frontend_framework'),
                             'file_count': tool_data.get('file_count', len(tool_data.get('files', []))),
-                            'workspace_write': workspace_write_result  # Session 880: Include workspace write info
+                            'workspace_write': workspace_write_result,  # Session 880: Include workspace write info
+                            # Session 954: Add provenance
+                            'provenance': provenance.to_dict(),
+                            'publishable': provenance.publishable,
+                            'validation_status': provenance.validation_status,
                         }
 
                         result = AgentResult(

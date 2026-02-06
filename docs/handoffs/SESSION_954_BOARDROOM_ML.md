@@ -356,4 +356,65 @@ curl http://localhost:8000/api/rag/observability/critical-docs/ -H "Authorizatio
 
 ---
 
-**Session 954 adds content-aware ML predictions, prevents junk initiatives, refines the learning loop, AND provides RAG system observability.**
+## Part 5: Agent Provenance Extension (Option F)
+
+### Problem
+Only 21 agents (stocks, blockchain, analysis) had provenance tracking. Key content and executive agents lacked data source tracking.
+
+### Solution
+Extended provenance tracking to 5 additional agent categories:
+
+| Agent | Report Type | Stale Threshold |
+|-------|-------------|-----------------|
+| ContentWriterAgent | content_generation | 72h |
+| PodcastCoordinatorAgent | podcast_coordination | 48h |
+| CTOAgent | technical_analysis | 24h |
+| COOAgent | operational_analysis | 24h |
+| FullStackDeveloperAgent | code_generation | 168h (1 week) |
+
+### Implementation Pattern
+```python
+# Session 954: Build provenance for content generation
+from core.agents.report_schemas import build_provenance, format_disclaimer
+
+provenance_sources = [{
+    'name': 'ResearchContext',
+    'endpoint': 'input/research',
+    'retrieved_at': datetime.now(timezone.utc).isoformat(),
+    'record_count': len(research.split()),
+}]
+
+provenance = build_provenance(
+    report_type='content_generation',
+    agent_name=self.name,
+    sources=provenance_sources,
+    stale_threshold_hours=72.0,
+)
+
+# Result now includes:
+# 'provenance': provenance.to_dict(),
+# 'publishable': provenance.publishable,
+# 'validation_status': provenance.validation_status,
+```
+
+### Files Changed
+| File | Changes |
+|------|---------|
+| `core/agents/content_writer_agent.py` | +provenance tracking for content generation |
+| `core/agents/podcast/podcast_coordinator_agent.py` | +provenance tracking for podcast coordination |
+| `core/agents/executive/cto_agent.py` | +provenance tracking for technical analysis |
+| `core/agents/executive/coo_agent.py` | +provenance tracking for operational analysis |
+| `core/agents/fullstack_developer_agent.py` | +provenance tracking for code generation |
+
+### Agents with Provenance (Now 26+)
+- **Stocks (8):** BullCaseAgent, BearCaseAgent, SignalScannerAgent, MarketAnomalyDetectorAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent, StockAuditCoordinator, MarketIntelligenceCoordinator
+- **Blockchain (5):** SmartContractAuditorAgent, TransactionMonitorAgent, WhaleWatcherAgent, ExploitDetectorAgent, BlockchainAuditCoordinator
+- **Analysis (3):** TrendAnalysisAgent, OpportunityScoringAgent, MarketIntelligenceAgent
+- **Content (2):** ContentWriterAgent, PodcastCoordinatorAgent
+- **Executive (2):** CTOAgent, COOAgent
+- **Development (1):** FullStackDeveloperAgent
+- **Other (5):** BookmakerAgent, CreationAgent, SportsOddsAnalyst, StockAnalystAgent, etc.
+
+---
+
+**Session 954 adds content-aware ML predictions, prevents junk initiatives, refines the learning loop, provides RAG system observability, AND extends provenance to 26+ agents.**

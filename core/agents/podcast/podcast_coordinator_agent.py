@@ -19,6 +19,7 @@ from django.utils import timezone
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
 # Session 895: Timeout for debate agent executions to prevent coordinator hangs
@@ -427,11 +428,33 @@ Create a structured podcast debate with:
                     result = self._handle_tool_call(tool_name, args)
                     tool_results.append(result)
 
+            # Session 954: Build provenance for podcast coordination
+            import time as time_module
+            provenance_sources = [{
+                'name': 'PodcastCoordination',
+                'endpoint': 'podcast/coordination',
+                'retrieved_at': time_module.strftime('%Y-%m-%dT%H:%M:%SZ', time_module.gmtime()),
+                'record_count': len(tool_results),
+            }]
+            provenance = build_provenance(
+                report_type='podcast_coordination',
+                agent_name=self.name,
+                sources=provenance_sources,
+                stale_threshold_hours=48.0,  # Podcast content valid for 48h
+            )
+            provenance.disclaimer = "AI-generated podcast content. Review for accuracy before publishing."
+
             # Session 735: Use _make_result for automatic cost tracking
             return self._make_result(
                 success=True,
                 message=response.get('content') or "Podcast coordination complete",
-                data={"tool_results": tool_results},
+                data={
+                    "tool_results": tool_results,
+                    # Session 954: Add provenance
+                    "provenance": provenance.to_dict(),
+                    "publishable": provenance.publishable,
+                    "validation_status": provenance.validation_status,
+                },
                 tool_calls=tool_results
             )
 
