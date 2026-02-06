@@ -439,9 +439,12 @@ class SpiderIntelligenceService:
         since = timezone.now() - timedelta(hours=hours)
 
         # Session 272: For design queries, also include creative spiders (Behance, Dribbble)
+        # Session 957: For 3D queries, include creative spiders that may have 3D content
         spider_sources = list(self.CATEGORY_MAPPINGS['tech'])
         if topic_filter == 'design':
             spider_sources.extend(['dribbble', 'behance', 'figma', 'canva', 'unsplash'])
+        elif topic_filter == '3d':
+            spider_sources.extend(['dribbble', 'behance', 'sketchfab', 'blender', 'cgtrader'])
 
         tech_data = self.SpiderData.objects.filter(
             spider_name__in=spider_sources,
@@ -468,6 +471,16 @@ class SpiderIntelligenceService:
                       'dribbble', 'behance', 'color palette', 'layout', 'mockup', 'wireframe',
                       'prototype', 'user interface', 'user experience', 'photoshop', 'canva',
                       'iconography', 'infographic', 'brand identity', 'style guide'],
+            # Session 957: 3D modeling and design keywords
+            '3d': ['3d model', '3d design', '3d print', '3d render', 'blender', 'maya', '3ds max',
+                   'cinema 4d', 'c4d', 'unreal engine', 'unity 3d', 'sketchup', 'zbrush',
+                   'substance painter', 'substance designer', 'houdini', 'rhino 3d', 'rhinoceros',
+                   'solidworks', 'cad ', ' cad', 'autocad', 'fusion 360', 'tinkercad',
+                   'game asset', 'game model', 'character model', 'environment art', 'prop art',
+                   'hard surface', 'sculpting', 'texturing', 'uv mapping', 'rigging', 'animation',
+                   'glb', 'gltf', 'fbx', 'obj file', 'stl file', 'mesh', 'polygon', 'voxel',
+                   'metaverse', 'virtual world', 'ar model', 'vr model', 'spatial computing',
+                   'sketchfab', 'cgtrader', 'turbosquid', 'artstation 3d', 'polycount'],
         }
 
         # Words to filter OUT (shopping/deals content)
