@@ -408,8 +408,9 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             logger.info("🎰 Fetching prediction market signals from Kalshi...")
 
             service = get_kalshi_service()
+            # Session 950: Added 'sports' category for betting markets
             intel = service.get_market_intelligence(
-                categories=['economics', 'politics', 'finance', 'tech']
+                categories=['economics', 'politics', 'finance', 'tech', 'sports']
             )
 
             # Get trending markets (high volume = strong conviction)
@@ -442,6 +443,12 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                 if m.get('category') == 'tech'
             ][:5]
 
+            # Session 950: Add sports/betting signals
+            sports_signals = [
+                m for m in trending
+                if m.get('category') == 'sports'
+            ][:5]
+
             # Build summary insights
             insights = []
 
@@ -466,6 +473,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                 'finance_signals': finance_signals,
                 'politics_signals': politics_signals,
                 'tech_signals': tech_signals,
+                'sports_signals': sports_signals,  # Session 950: Add sports/betting
                 'high_volume_markets': trending,
                 'high_probability_events': high_prob,
                 'uncertain_markets': uncertain,
@@ -488,6 +496,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                 'finance_signals': [],
                 'politics_signals': [],
                 'tech_signals': [],
+                'sports_signals': [],  # Session 950
                 'high_volume_markets': [],
                 'high_probability_events': [],
                 'uncertain_markets': [],
@@ -644,11 +653,13 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             'risk_alerts': synthesis.get('risk_alerts', []),
 
             # Session 558: Prediction Market Signals from Kalshi
+            # Session 950: Added sports category
             'prediction_markets': {
                 'economics': prediction_markets.get('economics_signals', []),
                 'finance': prediction_markets.get('finance_signals', []),
                 'politics': prediction_markets.get('politics_signals', []),
                 'tech': prediction_markets.get('tech_signals', []),
+                'sports': prediction_markets.get('sports_signals', []),
                 'high_volume': prediction_markets.get('high_volume_markets', [])[:5],
                 'high_probability': prediction_markets.get('high_probability_events', []),
                 'uncertain': prediction_markets.get('uncertain_markets', []),
