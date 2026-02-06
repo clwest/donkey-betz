@@ -1,5 +1,6 @@
 // Session 927: Boardroom Tab - Decision Hub
 // Session 942: Added bulk selection and bulk actions
+// Session 956: Enhanced ML prediction display with confidence, reasoning, similar items
 // Displays HumanAttentionItems and AgentDecisionSummary for review/action
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -22,9 +23,29 @@ import {
   ChevronRight,
   CheckSquare,
   Square,
+  Brain,
+  Sparkles,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { humanApi, decisionsApi } from '@/lib/api'
+
+// Session 956: Extended interface for ML prediction data
+interface SimilarItem {
+  id: string
+  title: string
+  decision: string
+  similarity: number
+}
+
+interface MLPrediction {
+  prediction: 'approve' | 'ignore' | 'uncertain'
+  confidence?: number
+  approval_probability?: number
+  reasoning?: string
+  similar_items?: SimilarItem[]
+  predicted_at?: string
+}
 
 interface AttentionItem {
   id: string
@@ -37,6 +58,8 @@ interface AttentionItem {
   status: string
   created_at: string
   ml_recommendation?: string
+  ml_confidence?: number
+  ml_prediction?: MLPrediction
 }
 
 interface Decision {
@@ -256,6 +279,157 @@ export function BoardroomTab() {
     }
   }
 
+  // Session 956: ML Prediction styling helpers
+  const getMLRecommendationStyle = (recommendation: string) => {
+    switch (recommendation) {
+      case 'approve':
+        return 'bg-green-500/20 text-green-400 border-green-500/30'
+      case 'ignore':
+        return 'bg-red-500/20 text-red-400 border-red-500/30'
+      default:
+        return 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+    }
+  }
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.7) return 'bg-green-500'
+    if (confidence >= 0.4) return 'bg-amber-500'
+    return 'bg-gray-500'
+  }
+
+  // Session 956: ML Prediction Panel Component
+  const MLPredictionPanel = ({ item }: { item: AttentionItem }) => {
+    const [showSimilar, setShowSimilar] = useState(false)
+
+    if (!item.ml_recommendation && !item.ml_prediction) return null
+
+    const prediction = item.ml_prediction
+    const confidence = item.ml_confidence ?? prediction?.confidence ?? 0
+    const confidencePercent = Math.round(confidence * 100)
+    const approvalProb = prediction?.approval_probability ?? 0.5
+    const approvalPercent = Math.round(approvalProb * 100)
+    const reasoning = prediction?.reasoning || ''
+    const reasoningParts = reasoning.split(' | ').filter(Boolean)
+    const similarItems = prediction?.similar_items || []
+
+    return (
+      <div className="mt-3 space-y-3">
+        {/* ML Header with recommendation and confidence */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Brain size={16} className="text-primary-400" />
+            <span className="text-sm font-medium text-gray-300">AI Prediction:</span>
+          </div>
+
+          {/* Recommendation badge */}
+          <span className={cn(
+            "px-2 py-0.5 text-xs font-medium rounded-full border capitalize",
+            getMLRecommendationStyle(item.ml_recommendation || prediction?.prediction || 'uncertain')
+          )}>
+            {item.ml_recommendation || prediction?.prediction || 'uncertain'}
+          </span>
+
+          {/* Confidence bar */}
+          {confidence > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Confidence:</span>
+              <div className="w-20 h-2 bg-dark-border rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full rounded-full transition-all", getConfidenceColor(confidence))}
+                  style={{ width: `${confidencePercent}%` }}
+                />
+              </div>
+              <span className="text-xs font-medium text-gray-400">{confidencePercent}%</span>
+            </div>
+          )}
+        </div>
+
+        {/* Approval probability gauge */}
+        {prediction?.approval_probability !== undefined && (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500 w-24">Approval likelihood:</span>
+            <div className="flex-1 h-3 bg-dark-border rounded-full overflow-hidden relative">
+              {/* Red to green gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/30 via-amber-500/30 to-green-500/30" />
+              {/* Approval probability marker */}
+              <div
+                className="absolute top-0 h-full w-1 bg-white rounded-full shadow-lg transition-all"
+                style={{ left: `${approvalPercent}%`, transform: 'translateX(-50%)' }}
+              />
+            </div>
+            <span className={cn(
+              "text-xs font-medium min-w-[3rem] text-right",
+              approvalPercent >= 60 ? "text-green-400" : approvalPercent >= 40 ? "text-amber-400" : "text-red-400"
+            )}>
+              {approvalPercent}%
+            </span>
+          </div>
+        )}
+
+        {/* Reasoning breakdown */}
+        {reasoningParts.length > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-xs text-gray-500 flex items-center gap-1">
+              <Sparkles size={12} /> Signals:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {reasoningParts.map((reason, idx) => (
+                <span
+                  key={idx}
+                  className="px-2 py-1 text-xs bg-dark-border rounded-lg text-gray-400"
+                >
+                  {reason}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Similar items (collapsible) */}
+        {similarItems.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowSimilar(!showSimilar)}
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              <History size={12} />
+              <span>Similar past decisions ({similarItems.length})</span>
+              {showSimilar ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+
+            {showSimilar && (
+              <div className="mt-2 space-y-1.5 pl-4 border-l border-dark-border">
+                {similarItems.slice(0, 5).map((similar, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between text-xs p-2 bg-dark-bg/50 rounded"
+                  >
+                    <span className="text-gray-400 truncate flex-1 mr-2">
+                      {similar.title}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={cn(
+                        "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                        similar.decision === 'approve' || similar.decision === 'approved'
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-red-500/20 text-red-400"
+                      )}>
+                        {similar.decision}
+                      </span>
+                      <span className="text-gray-600">
+                        {Math.round(similar.similarity * 100)}% match
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const isBulkPending = bulkDecideMutation.isPending || bulkPromoteMutation.isPending || bulkRejectMutation.isPending
 
   return (
@@ -452,6 +626,16 @@ export function BoardroomTab() {
                         {item.source_agent && (
                           <span className="text-xs text-gray-500">{item.source_agent}</span>
                         )}
+                        {/* Session 956: ML prediction indicator badge */}
+                        {(item.ml_recommendation || item.ml_prediction) && (
+                          <span className={cn(
+                            "flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border",
+                            getMLRecommendationStyle(item.ml_recommendation || item.ml_prediction?.prediction || 'uncertain')
+                          )}>
+                            <Brain size={10} />
+                            {item.ml_confidence ? `${Math.round(item.ml_confidence * 100)}%` : 'AI'}
+                          </span>
+                        )}
                       </div>
                       <h4 className="font-medium text-sm truncate">{item.title}</h4>
                       <p className="text-xs text-gray-500 mt-1">
@@ -482,12 +666,8 @@ export function BoardroomTab() {
                       {item.summary && (
                         <p className="text-sm text-gray-300 mt-2">{item.summary}</p>
                       )}
-                      {item.ml_recommendation && (
-                        <div className="mt-2 p-2 bg-primary-500/10 rounded text-sm">
-                          <span className="text-primary-400 font-medium">AI Recommendation:</span>{' '}
-                          {item.ml_recommendation}
-                        </div>
-                      )}
+                      {/* Session 956: Enhanced ML Prediction Panel */}
+                      <MLPredictionPanel item={item} />
                     </div>
                   )}
                 </div>
