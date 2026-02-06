@@ -26128,34 +26128,18 @@ def coordinate_body():
 def run_market_monitoring_agents():
     """
     Session 737: Run market monitoring agents on schedule.
+    Session 944: Updated to use universal_agent_workspace_output for SKIN layer integration.
 
     Exercises these dormant agents:
     - MarketMovementMonitorAgent
     - MarketAnomalyDetectorAgent
     - SignalScannerAgent
-    - InstitutionalWatcherAgent
     - ArbitrageDetector
     - SportsOddsAnalyst
     """
-    from core.agent_router import AgentRouter
-    from core.models_unified_system import SpiderData
-    from django.utils import timezone
-    from datetime import timedelta
-
     logger.info("📊 [MARKET MONITOR] Starting market monitoring agents...")
 
-    router = AgentRouter()
     results = []
-
-    # Get recent market data from spiders
-    recent_data = SpiderData.objects.filter(
-        discovered_at__gte=timezone.now().defer('embedding') - timedelta(hours=24)
-    ).order_by('-discovered_at')[:50]
-
-    market_context = {
-        'recent_data_count': recent_data.count(),
-        'sources': list(recent_data.values_list('source', flat=True).distinct()[:10]),
-    }
 
     agents_to_run = [
         ('MarketMovementMonitorAgent', 'Scan for significant market movements in the last 24 hours'),
@@ -26167,18 +26151,20 @@ def run_market_monitoring_agents():
 
     for agent_name, task in agents_to_run:
         try:
-            if agent_name in router.AGENT_MAP:
-                result = router.route(
-                    agent_name=agent_name,
-                    task=task,
-                    context=market_context
-                )
-                results.append({
-                    'agent': agent_name,
-                    'success': result.success if result else False,
-                    'message': result.message[:200] if result and result.message else 'No response'
-                })
-                logger.info(f"📊 [MARKET MONITOR] {agent_name}: {'✅' if result and result.success else '❌'}")
+            # Session 944: Use universal_agent_workspace_output to create WorkspaceOperations
+            result = universal_agent_workspace_output(
+                agent_name=agent_name,
+                topic=task,
+                trigger_source='schedule',
+                force_production=True
+            )
+            success = result.get('success', False) if isinstance(result, dict) else False
+            results.append({
+                'agent': agent_name,
+                'success': success,
+                'file': result.get('file') if isinstance(result, dict) else None,
+            })
+            logger.info(f"📊 [MARKET MONITOR] {agent_name}: {'✅' if success else '❌'}")
         except Exception as e:
             logger.warning(f"📊 [MARKET MONITOR] {agent_name} failed: {e}")
             results.append({'agent': agent_name, 'success': False, 'error': str(e)})
@@ -26191,6 +26177,7 @@ def run_market_monitoring_agents():
 def run_blockchain_monitoring_agents():
     """
     Session 737: Run blockchain monitoring agents on schedule.
+    Session 944: Updated to use universal_agent_workspace_output for SKIN layer integration.
 
     Exercises these dormant agents:
     - BlockchainAuditCoordinator
@@ -26198,28 +26185,9 @@ def run_blockchain_monitoring_agents():
     - ExploitDetectorAgent
     - TransactionMonitorAgent
     """
-    from core.agent_router import AgentRouter
-    from core.models_unified_system import SpiderData
-    from django.utils import timezone
-    from datetime import timedelta
-
     logger.info("🔗 [BLOCKCHAIN MONITOR] Starting blockchain monitoring agents...")
 
-    router = AgentRouter()
     results = []
-
-    # Get recent crypto data from spiders
-    crypto_keywords = ['bitcoin', 'ethereum', 'crypto', 'blockchain', 'defi', 'whale']
-    recent_crypto = SpiderData.objects.filter(
-        discovered_at__gte=timezone.now().defer('embedding') - timedelta(hours=24)
-    ).filter(
-        title__iregex=r'|'.join(crypto_keywords)
-    ).order_by('-discovered_at')[:30]
-
-    crypto_context = {
-        'recent_crypto_data': recent_crypto.count(),
-        'focus_areas': crypto_keywords,
-    }
 
     agents_to_run = [
         ('WhaleWatcherAgent', 'Monitor for large crypto wallet movements and whale activity'),
@@ -26230,18 +26198,20 @@ def run_blockchain_monitoring_agents():
 
     for agent_name, task in agents_to_run:
         try:
-            if agent_name in router.AGENT_MAP:
-                result = router.route(
-                    agent_name=agent_name,
-                    task=task,
-                    context=crypto_context
-                )
-                results.append({
-                    'agent': agent_name,
-                    'success': result.success if result else False,
-                    'message': result.message[:200] if result and result.message else 'No response'
-                })
-                logger.info(f"🔗 [BLOCKCHAIN MONITOR] {agent_name}: {'✅' if result and result.success else '❌'}")
+            # Session 944: Use universal_agent_workspace_output to create WorkspaceOperations
+            result = universal_agent_workspace_output(
+                agent_name=agent_name,
+                topic=task,
+                trigger_source='schedule',
+                force_production=True
+            )
+            success = result.get('success', False) if isinstance(result, dict) else False
+            results.append({
+                'agent': agent_name,
+                'success': success,
+                'file': result.get('file') if isinstance(result, dict) else None,
+            })
+            logger.info(f"🔗 [BLOCKCHAIN MONITOR] {agent_name}: {'✅' if success else '❌'}")
         except Exception as e:
             logger.warning(f"🔗 [BLOCKCHAIN MONITOR] {agent_name} failed: {e}")
             results.append({'agent': agent_name, 'success': False, 'error': str(e)})
@@ -29642,6 +29612,7 @@ def _run_agent_group(group_name: str, agent_names: list, task_generator, emoji: 
     Helper function to run a group of agents with a task.
 
     Session 787: Creates shared project ID for agent group to enable collaboration tracking.
+    Session 944: Updated to use universal_agent_workspace_output for SKIN layer integration.
 
     Args:
         group_name: Name of the agent group for logging
@@ -29649,45 +29620,29 @@ def _run_agent_group(group_name: str, agent_names: list, task_generator, emoji: 
         task_generator: Function that takes agent_name and returns a task string
         emoji: Emoji for logging
     """
-    import uuid
-    from core.agent_router import AgentRouter
-    from core.models_unified_system import SpiderData
     from django.utils import timezone
-    from datetime import timedelta
 
     logger.info(f"{emoji} [{group_name}] Starting scheduled agent group...")
 
-    router = AgentRouter()
     results = []
 
     # Session 787: Create a shared project ID for this agent group run
-    # This enables collaboration tracking across all agents in the group
     shared_project_id = f"{group_name.lower().replace(' ', '_')}_{timezone.now().strftime('%Y%m%d_%H%M')}"
-
-    # Get recent spider data for context
-    recent_data = SpiderData.objects.filter(
-        created_at__gte=timezone.now().defer('embedding') - timedelta(hours=24)
-    ).order_by('-created_at')[:100]
-
-    context = {
-        'scheduled_run': True,
-        'group': group_name,
-        'project_id': shared_project_id,  # Session 787: Shared project for collaboration
-        'recent_spider_data_count': recent_data.count(),
-        'timestamp': timezone.now().isoformat(),
-    }
 
     for agent_name in agent_names:
         try:
             task = task_generator(agent_name)
 
-            result = router.route(
+            # Session 944: Use universal_agent_workspace_output to create WorkspaceOperations
+            # This ensures agent outputs appear in the Operations Tab
+            result = universal_agent_workspace_output(
                 agent_name=agent_name,
-                task=task,
-                context=context
+                topic=task,
+                trigger_source='schedule',
+                force_production=True  # These are real scheduled runs, not warmups
             )
 
-            success = result.success if result else False
+            success = result.get('success', False) if isinstance(result, dict) else False
 
             # Session 787: Track contribution with shared project ID for collaboration
             _track_group_contribution(agent_name, group_name, shared_project_id, success)
@@ -29696,6 +29651,7 @@ def _run_agent_group(group_name: str, agent_names: list, task_generator, emoji: 
                 'agent': agent_name,
                 'success': success,
                 'project_id': shared_project_id,
+                'file': result.get('file') if isinstance(result, dict) else None,
             })
 
             status = '✅' if success else '❌'
