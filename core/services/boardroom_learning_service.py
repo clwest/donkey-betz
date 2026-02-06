@@ -116,11 +116,70 @@ class BoardroomLearningService:
                 f"{item_type} from {source_agent} (via {via})"
             )
 
+            # Session 954: Track ML prediction accuracy
+            self._track_ml_accuracy(item_id, decision)
+
             return True
 
         except Exception as e:
             logger.error(f"Failed to record attention decision: {e}")
             return False
+
+    def _track_ml_accuracy(self, item_id: str, decision: str):
+        """
+        Session 954: Track whether ML prediction was correct.
+        Updates LearningPattern with accuracy stats.
+        """
+        try:
+            from core.models_human_interface import HumanAttentionItem
+            from core.models_unified_system import LearningPattern
+
+            item = HumanAttentionItem.objects.filter(pk=item_id).first()
+            if not item or not item.ml_prediction:
+                return
+
+            prediction = item.ml_prediction.get('prediction')
+            if not prediction or prediction == 'uncertain':
+                return
+
+            # Check if prediction was correct
+            was_correct = (
+                (prediction == 'approve' and decision in ['approved', 'approve', 'promote']) or
+                (prediction == 'ignore' and decision in ['ignored', 'ignore', 'reject'])
+            )
+
+            # Update accuracy pattern
+            pattern, _ = LearningPattern.objects.get_or_create(
+                user=item.user,
+                pattern_type='boardroom_ml_accuracy',
+                defaults={
+                    'description': 'ML prediction accuracy tracking',
+                    'confidence': 0.5,
+                    'pattern_data': {'correct': 0, 'incorrect': 0, 'total': 0, 'accuracy': 0.0},
+                    'applies_to_agents': ['PersonalAssistant'],
+                    'applies_to_query_types': ['boardroom'],
+                }
+            )
+
+            data = pattern.pattern_data or {}
+            data['total'] = data.get('total', 0) + 1
+            if was_correct:
+                data['correct'] = data.get('correct', 0) + 1
+            else:
+                data['incorrect'] = data.get('incorrect', 0) + 1
+            data['accuracy'] = data['correct'] / data['total'] if data['total'] > 0 else 0
+
+            pattern.pattern_data = data
+            pattern.save(update_fields=['pattern_data'])
+
+            logger.debug(
+                f"📊 ML accuracy tracked: {prediction} -> {decision} "
+                f"({'correct' if was_correct else 'incorrect'}), "
+                f"overall: {data['accuracy']:.0%}"
+            )
+
+        except Exception as e:
+            logger.debug(f"Failed to track ML accuracy: {e}")
 
     def _record_by_source(self, user, source_agent: str, decision: str):
         """Record decision pattern by source agent."""

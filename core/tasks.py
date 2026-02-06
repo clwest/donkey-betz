@@ -24928,6 +24928,66 @@ def process_human_attention_lifecycle():
 
 
 # =============================================================================
+# Session 954: Boardroom ML Predictions
+# =============================================================================
+
+@shared_task(name='core.tasks.enrich_boardroom_ml_predictions')
+def enrich_boardroom_ml_predictions():
+    """
+    Session 954: Enrich pending attention items with ML predictions.
+
+    This task runs periodically to:
+    1. Find pending items without ML predictions
+    2. Generate content-aware predictions using embeddings
+    3. Update ml_prediction, ml_confidence, ml_recommendation fields
+
+    Schedule: Every 15 minutes (via Celery Beat)
+    """
+    from core.services.boardroom_ml_service import get_boardroom_ml_service
+    from core.models_human_interface import HumanAttentionItem
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    service = get_boardroom_ml_service()
+
+    logger.info("🤖 [BOARDROOM ML] Starting ML prediction enrichment")
+
+    try:
+        # Get users with pending items that need predictions
+        user_ids = HumanAttentionItem.objects.filter(
+            status__in=['pending', 'viewed'],
+            ml_prediction__isnull=True
+        ).values_list('user_id', flat=True).distinct()
+
+        total_enriched = 0
+        total_failed = 0
+
+        for user_id in user_ids[:10]:  # Process up to 10 users per run
+            user = User.objects.get(pk=user_id)
+            stats = service.batch_enrich_pending_items(user, limit=20)
+            total_enriched += stats['enriched']
+            total_failed += stats['failed']
+
+        logger.info(
+            f"🤖 [BOARDROOM ML] Complete: {total_enriched} enriched, "
+            f"{total_failed} failed"
+        )
+
+        return {
+            'status': 'completed',
+            'enriched': total_enriched,
+            'failed': total_failed,
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [BOARDROOM ML] Enrichment failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+# =============================================================================
 # Session 766: HiveMind Execution Pipeline
 # =============================================================================
 
