@@ -2,16 +2,17 @@
 
 **Date:** February 5, 2026
 **Status:** Complete
-**PRs:** #879, #880, #881, #882, #883, #884, #886, #888, #889
+**PRs:** #879, #880, #881, #882, #883, #884, #886, #888, #889, #890
 
 ## Summary
 
-Fixed five major issues:
+Fixed six major issues:
 1. **Operations Tab not creating WorkspaceOperations** for financial agent reports
 2. **42K+ pending ExtractedArtifacts backlog** from automated brainstorming conversations
 3. **PA/Boardroom couldn't access brainstorming insights** after disabling extraction
 4. **PA couldn't access content (blogs, reports) awaiting human review**
 5. **PA lacked awareness of system docs** (CLAUDE.md, recent sessions, architecture)
+6. **PA had no visibility into initiatives/projects** in the 5-stage pipeline
 
 ## Problem 1: Operations Tab Empty
 
@@ -191,6 +192,39 @@ if docs_context.get('has_docs'):
 - "What are the current priorities?"
 - "How many agents do we have?"
 
+## Problem 6: PA Had No Initiative Visibility
+
+### Root Cause
+The PA had no tool to access the Initiative model. Users couldn't ask about:
+- Active projects and their status
+- Pipeline overview (how many in each stage)
+- Action items needing attention
+- Details of specific initiatives
+
+### Solution: InitiativeTool (PR #890)
+
+#### Tool Actions
+- `list` - List initiatives with filters (status, stage, purpose, program)
+- `stats` - Pipeline overview (by stage, by status, action item counts)
+- `details` - Full details of a specific initiative
+- `action_items` - List pending action items across all initiatives
+
+#### PA Routing
+```python
+# Intent detection keywords:
+'initiative', 'initiatives', 'project', 'projects',
+'pipeline', 'stage', 'action item', 'action items',
+'what are we working on', 'active projects', 'current projects'
+```
+
+### Example PA Queries
+- "What initiatives are active?"
+- "Show me the pipeline overview"
+- "What action items need attention?"
+- "Details about [project name]"
+- "Show stage 3 initiatives"
+- "What's the status of the monetization project?"
+
 ## Files Changed
 
 | File | Changes |
@@ -200,8 +234,8 @@ if docs_context.get('has_docs'):
 | `core/tasks.py` | Lower thresholds, add cleanup_automated_conversation_artifacts |
 | `core/celery.py` | Updated schedule with aggressive=True |
 | `core/services/brainstorm_search_service.py` | **NEW** - Search Discussion/Panel conversations |
-| `core/services/tool_dispatcher.py` | Added brainstorm_tool + content_review_tool handlers |
-| `core/services/unified_pa_entrypoint.py` | Added brainstorming + content_review + docs context injection |
+| `core/services/tool_dispatcher.py` | Added brainstorm, content_review, initiative tool handlers |
+| `core/services/unified_pa_entrypoint.py` | Added all tool routing + docs context injection |
 
 ## Going Forward
 
@@ -212,6 +246,7 @@ if docs_context.get('has_docs'):
 - PA and Boardroom can search brainstorming insights on demand via `brainstorm_tool`
 - PA can access content ready for review via `content_review_tool`
 - PA now has full system awareness via docs injection (CLAUDE.md, sessions, architecture)
+- PA can access initiative pipeline and action items via `initiative_tool`
 
 ## Testing
 
