@@ -158,6 +158,7 @@ class ToolDispatcher:
         self.register("spider_data_tool", self._handle_spider_data)
         self.register("execution_history_tool", self._handle_execution_history)
         self.register("learning_patterns_tool", self._handle_learning_patterns)
+        self.register("feedback_tool", self._handle_feedback)
 
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
@@ -2357,6 +2358,88 @@ class ToolDispatcher:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, by_type, stats"
+            )
+
+    def _handle_feedback(
+        self,
+        payload: Dict[str, Any],
+        user: Optional[Any] = None,
+        context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Session 948: Handle user feedback viewing and management.
+
+        Actions:
+        - list: List feedback items (optionally filtered by status)
+        - stats: Get feedback statistics
+        - update: Update feedback status (admin only)
+        """
+        from core.models_user_feedback import UserFeedback
+
+        action = payload.get('action', 'list')
+        status_filter = payload.get('status')
+        limit = payload.get('limit', 20)
+
+        if action == 'list':
+            qs = UserFeedback.objects.all()
+            if status_filter:
+                qs = qs.filter(status=status_filter)
+            else:
+                # Default to open items
+                qs = qs.filter(status='open')
+
+            items = list(qs[:limit].values(
+                'id', 'feedback_type', 'message', 'status',
+                'created_at', 'trace_id'
+            ))
+
+            for item in items:
+                if item.get('created_at'):
+                    item['created_at'] = item['created_at'].isoformat()
+
+            return {
+                'action': 'list',
+                'status_filter': status_filter or 'open',
+                'count': len(items),
+                'items': items,
+            }
+
+        elif action == 'stats':
+            summary = UserFeedback.get_feedback_summary()
+            return {
+                'action': 'stats',
+                'total_open': summary['total_open'],
+                'by_type': summary['by_type'],
+                'by_status': summary['by_status'],
+            }
+
+        elif action == 'update':
+            feedback_id = payload.get('id')
+            new_status = payload.get('new_status')
+            notes = payload.get('notes', '')
+
+            if not feedback_id or not new_status:
+                raise ValueError("Update requires 'id' and 'new_status'")
+
+            try:
+                feedback = UserFeedback.objects.get(id=feedback_id)
+                feedback.status = new_status
+                if notes:
+                    feedback.resolution_notes = notes
+                feedback.save()
+
+                return {
+                    'action': 'update',
+                    'id': feedback_id,
+                    'new_status': new_status,
+                    'success': True,
+                }
+            except UserFeedback.DoesNotExist:
+                raise ValueError(f"Feedback item {feedback_id} not found")
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: list, stats, update"
             )
 
 
