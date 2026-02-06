@@ -417,4 +417,62 @@ provenance = build_provenance(
 
 ---
 
-**Session 954 adds content-aware ML predictions, prevents junk initiatives, refines the learning loop, provides RAG system observability, AND extends provenance to 26+ agents.**
+---
+
+## Part 6: Boardroom ML UI Integration (Option G)
+
+### Problem
+The BoardroomTab only showed a simple text label for ML recommendations. Users couldn't see:
+- Confidence level
+- Approval probability
+- The reasoning behind predictions
+- Similar past decisions that influenced the prediction
+
+### Solution
+Enhanced the BoardroomTab with a comprehensive ML Prediction Panel:
+
+#### 1. Extended AttentionItem Interface
+```typescript
+interface MLPrediction {
+  prediction: 'approve' | 'ignore' | 'uncertain'
+  confidence?: number
+  approval_probability?: number
+  reasoning?: string
+  similar_items?: SimilarItem[]
+  predicted_at?: string
+}
+
+interface AttentionItem {
+  // ... existing fields ...
+  ml_recommendation?: string
+  ml_confidence?: number
+  ml_prediction?: MLPrediction
+}
+```
+
+#### 2. MLPredictionPanel Component
+Features:
+- **Recommendation badge** - Color-coded (green=approve, red=ignore, amber=uncertain)
+- **Confidence bar** - Visual percentage with color coding (green≥70%, amber≥40%, gray<40%)
+- **Approval probability gauge** - Gradient slider from red→amber→green
+- **Reasoning signals** - Parsed from pipe-separated string into individual badges
+- **Similar past decisions** - Collapsible list showing title, decision, and similarity %
+
+#### 3. Collapsed Row Indicator
+- Added small ML badge in row header showing "AI" with confidence percentage
+- Lets users quickly identify items with predictions without expanding
+
+### Files Changed
+| File | Changes |
+|------|---------|
+| `frontend/src/pages/workspace/tabs/BoardroomTab.tsx` | +MLPredictionPanel component, extended interfaces, ML badge in row |
+
+### Visual Elements
+- Brain icon (🧠) for AI prediction header
+- Sparkles icon (✨) for signals section
+- History icon (⏱️) for similar past decisions
+- Color-coded confidence bars and recommendation badges
+
+---
+
+**Session 954-956 adds content-aware ML predictions, prevents junk initiatives, refines the learning loop, provides RAG system observability, extends provenance to 26+ agents, AND provides comprehensive ML prediction UI in the boardroom.**

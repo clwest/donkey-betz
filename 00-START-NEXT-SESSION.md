@@ -48,15 +48,18 @@ Extended provenance tracking to 5 additional agent categories:
 
 **Total agents with provenance: 26+** (was 18)
 
+### Option G: Boardroom ML UI Integration - COMPLETE
+Enhanced BoardroomTab with comprehensive ML prediction display:
+- **MLPredictionPanel component** - Shows full prediction details
+- **Confidence bar** - Visual percentage (green≥70%, amber≥40%, gray<40%)
+- **Approval probability gauge** - Red→amber→green gradient slider
+- **Reasoning signals** - Parsed breakdown of prediction factors
+- **Similar past decisions** - Collapsible list with similarity scores
+- **ML badge in row header** - Quick indicator without expanding
+
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
-
-### Option G: Boardroom ML UI Integration
-Show ML predictions to users in the boardroom UI:
-- Display prediction and confidence on attention items
-- Show similar past decisions
-- Track prediction accuracy over time
 
 ### Option H: Learning Loop Frontend
 Build UI components to display learning effectiveness:
