@@ -335,6 +335,8 @@ def extract_decision_summary(text: str) -> Optional[Dict]:
     Session 920: Extended to extract Decision (chosen direction, rejected options),
     Why Now, and Risk Assessment fields.
 
+    Session 944: Added dedupe preprocessing to remove repeated DecisionSummary blocks.
+
     Args:
         text: The message text containing DecisionSummary
 
@@ -346,6 +348,13 @@ def extract_decision_summary(text: str) -> Optional[Dict]:
         return None
 
     try:
+        # Session 944: Dedupe repeated DecisionSummary blocks before extraction
+        from core.services.deduplication_service import get_deduplication_service
+        dedup_service = get_deduplication_service()
+        text, was_deduped = dedup_service.dedupe_decision_summary_blocks(text)
+        if was_deduped:
+            logger.info("Deduplication applied to DecisionSummary before extraction")
+
         # Extract the summary section
         summary_start = text.index("=== DecisionSummary ===")
         summary_text = text[summary_start:]
