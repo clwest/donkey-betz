@@ -11,6 +11,7 @@ import {
   Volume2, VolumeX, Settings, Wrench, Timer, Hash
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { ChatMarkdown } from '@/components/ChatMarkdown'
 // Session 935: User Learning Components
 import { GoalProgressDashboard } from '@/components/GoalProgressDashboard'
 import { LearningInsightsPanel } from '@/components/LearningInsightsPanel'
@@ -812,7 +813,12 @@ export default function AssistantPage() {
                         : 'bg-dark-card border border-dark-border'
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    {/* Session 943: Modern markdown rendering for chat messages */}
+                    {message.role === 'assistant' ? (
+                      <ChatMarkdown content={message.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
 
                     {/* Session 934: Enhanced tool runs display */}
                     {message.tool_runs && message.tool_runs.length > 0 && (
