@@ -1552,6 +1552,43 @@ class ToolDispatcher:
                 }
             }
 
+        elif action == 'recent':
+            # Session 948: List recently created content (any status)
+            # For "what content has been created?" type queries
+            from django.utils import timezone
+            from datetime import timedelta
+
+            period_days = payload.get('days', 7)
+            since = timezone.now() - timedelta(days=period_days)
+
+            qs = base_qs.filter(created_at__gte=since)
+
+            if content_type:
+                qs = qs.filter(deliverable_type=content_type)
+            if category:
+                qs = qs.filter(category__icontains=category)
+
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'title', 'deliverable_type', 'category',
+                    'agent_name', 'quality_score', 'created_at', 'status'
+                )
+            )
+
+            # Get counts by status
+            status_counts = {}
+            for item in items:
+                s = item.get('status', 'unknown')
+                status_counts[s] = status_counts.get(s, 0) + 1
+
+            return {
+                'action': 'recent',
+                'count': len(items),
+                'items': items,
+                'period_days': period_days,
+                'by_status': status_counts,
+            }
+
         elif action == 'stats':
             # Get statistics on content requiring review
             ready_count = base_qs.filter(status='ready').count()
