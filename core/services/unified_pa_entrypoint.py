@@ -248,7 +248,11 @@ class UnifiedPAEntrypoint:
                               f"(trace: {tool_result.trace_id})"
             else:
                 # No tool needed - direct LLM response
-                content = await self._generate_direct_response(message, full_context, trace_id)
+                # Session 948: Special handling for user feedback - be honest about limitations
+                if intent == 'user_feedback':
+                    content = await self._generate_honest_feedback_response(message, full_context, trace_id)
+                else:
+                    content = await self._generate_direct_response(message, full_context, trace_id)
 
             # 4. Generate audio if requested
             audio_url = None
@@ -448,9 +452,29 @@ class UnifiedPAEntrypoint:
                 return ('gates', 'gates_tool')
             return ('pilots', 'pilots_tool')
 
-        # Reasoning patterns
+        # Session 948: User feedback/issues/complaints - be honest about limitations
+        # These are things the PA can't fix with tools - requires code changes
+        # IMPORTANT: This must come BEFORE reasoning patterns to avoid false triggers
+        feedback_indicators = [
+            # Problem statements
+            'not working', 'doesn\'t work', 'broken', 'bug', 'issue',
+            'problem with', 'can\'t access', 'cannot access', 'losing context',
+            'context lost', 'context loss', 'disconnect', 'not connected',
+            'spread out', 'fragmented', 'difficult to', 'hard to',
+            # Feature requests disguised as complaints
+            'should be', 'need to be', 'would be better', 'wish',
+            'why can\'t', 'why isn\'t', 'why doesn\'t',
+        ]
+        if any(phrase in message_lower for phrase in feedback_indicators):
+            # Check if this is actually a fixable issue or needs code changes
+            fixable_keywords = ['approve', 'reject', 'list', 'show', 'what', 'how']
+            is_actionable = any(kw in message_lower for kw in fixable_keywords)
+            if not is_actionable:
+                return ('user_feedback', None)  # No tool - direct honest response
+
+        # Reasoning patterns - only for genuine reasoning requests
         if any(word in message_lower for word in [
-            'think', 'reason', 'analyze deeply', 'reflect'
+            'analyze deeply', 'reflect on', 'think about this'
         ]):
             return ('reasoning', 'reasoning_engine_tool')
 
@@ -1491,6 +1515,80 @@ Address the user by name occasionally."""
                 return str(tool_result)
         else:
             return str(tool_result)
+
+    async def _generate_honest_feedback_response(
+        self,
+        message: str,
+        context: Dict[str, Any],
+        trace_id: str
+    ) -> str:
+        """
+        Session 948: Generate honest response for user feedback/issues.
+
+        Instead of triggering random tools and pretending they solve the problem,
+        acknowledge the limitation honestly and explain what would actually help.
+        """
+        user_name = context.get('user_name', 'there')
+
+        # Categorize the type of feedback
+        message_lower = message.lower()
+
+        if any(phrase in message_lower for phrase in [
+            'not available', 'can\'t access', 'cannot access', 'losing context',
+            'context lost', 'context loss', 'spread out', 'fragmented', 'disconnect'
+        ]):
+            # UI/UX issue - needs code changes
+            return (
+                f"I hear you, {user_name}. You're describing a **UI/UX limitation** - "
+                f"something that requires actual code changes to fix, not something I can solve through my tools.\n\n"
+                f"**What I can do:**\n"
+                f"- Log this feedback for the development team\n"
+                f"- Help you work around it with current capabilities\n"
+                f"- Explain what exists today\n\n"
+                f"**What would actually fix it:**\n"
+                f"- Code changes to the frontend/backend\n"
+                f"- A developer session to implement the fix\n\n"
+                f"Would you like me to help you work within current limitations, or should we log this as a feature request?"
+            )
+
+        elif any(phrase in message_lower for phrase in [
+            'not working', 'doesn\'t work', 'broken', 'bug'
+        ]):
+            # Bug report
+            return (
+                f"Thanks for reporting this, {user_name}. This sounds like a **bug or broken functionality**.\n\n"
+                f"I want to be honest: I don't have tools to fix code bugs - that requires a developer.\n\n"
+                f"**What I can do:**\n"
+                f"- Help you describe the issue clearly\n"
+                f"- Check if there's a known workaround\n"
+                f"- Suggest what information would help debug it\n\n"
+                f"Can you tell me more about what you expected vs what happened?"
+            )
+
+        elif any(phrase in message_lower for phrase in [
+            'should be', 'need to be', 'would be better', 'wish', 'why can\'t', 'why isn\'t'
+        ]):
+            # Feature request
+            return (
+                f"I understand, {user_name}. You're suggesting an **improvement or feature request**.\n\n"
+                f"I can't implement code changes myself, but I can:\n"
+                f"- Acknowledge your idea\n"
+                f"- Help clarify the use case\n"
+                f"- Note it for future development\n\n"
+                f"What specific workflow would this improvement help with?"
+            )
+
+        else:
+            # General feedback
+            return (
+                f"I appreciate the feedback, {user_name}. I want to be transparent: "
+                f"some issues require code changes that I can't make through my tools.\n\n"
+                f"Could you help me understand:\n"
+                f"1. What were you trying to do?\n"
+                f"2. What happened instead?\n"
+                f"3. What would success look like?\n\n"
+                f"This helps determine if I can help now or if it needs development work."
+            )
 
     async def _generate_direct_response(
         self,
