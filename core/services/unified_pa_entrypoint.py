@@ -512,6 +512,28 @@ class UnifiedPAEntrypoint:
         ]):
             return ('initiatives', 'initiative_tool')
 
+        # Session 948: Spider data patterns
+        if any(word in message_lower for word in [
+            'spider', 'spiders', 'crawl', 'crawled', 'collected data',
+            'intelligence', 'news feed', 'what have spiders', 'spider data'
+        ]):
+            return ('spider_data', 'spider_data_tool')
+
+        # Session 948: Execution history patterns
+        if any(word in message_lower for word in [
+            'execution', 'executions', 'agent history', 'what agents did',
+            'agent activity', 'recent activity', 'what has been running',
+            'agent failures', 'failed agents'
+        ]):
+            return ('execution_history', 'execution_history_tool')
+
+        # Session 948: Learning patterns
+        if any(word in message_lower for word in [
+            'learning', 'learnings', 'learned', 'patterns',
+            'what has the system learned', 'system learnings'
+        ]):
+            return ('learning_patterns', 'learning_patterns_tool')
+
         # Default: no tool, direct response
         return ('general', None)
 
@@ -1161,6 +1183,254 @@ Address the user by name occasionally."""
                         title = item.get('title', 'Untitled')[:40]
                         response += f"{priority_icon} **{title}**\n"
                         response += f"   └─ {initiative} ({item.get('status', 'pending')})\n"
+
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 948: Spider data results formatting
+            elif intent == 'spider_data':
+                action = tool_result.get('action', '')
+
+                if action == 'recent':
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+                    period = tool_result.get('period_hours', 24)
+
+                    if count == 0:
+                        return f"No spider data collected in the last {period} hours, {user_name}."
+
+                    response = f"Spider intelligence from the last {period} hours ({count} items):\n\n"
+                    for item in items[:8]:
+                        spider = item.get('spider_name', 'Unknown')
+                        title = item.get('title', item.get('url', 'No title'))[:50]
+                        category = item.get('category', '')
+                        response += f"- **{spider}**: {title}"
+                        if category:
+                            response += f" [{category}]"
+                        response += "\n"
+
+                    if count > 8:
+                        response += f"\n...and {count - 8} more items."
+                    return response
+
+                elif action == 'by_spider':
+                    spider = tool_result.get('spider_name', 'Unknown')
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No data from {spider} spider, {user_name}."
+
+                    response = f"Data from **{spider}** spider ({count} items):\n\n"
+                    for item in items[:6]:
+                        title = item.get('title', item.get('url', 'No title'))[:60]
+                        date = item.get('collected_at', '')[:10]
+                        response += f"- {title} ({date})\n"
+
+                    return response
+
+                elif action == 'by_category':
+                    category = tool_result.get('category', 'Unknown')
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No {category} data collected, {user_name}."
+
+                    response = f"**{category.title()}** intelligence ({count} items):\n\n"
+                    for item in items[:6]:
+                        spider = item.get('spider_name', 'Unknown')
+                        title = item.get('title', item.get('url', 'No title'))[:50]
+                        response += f"- {title} (via {spider})\n"
+
+                    return response
+
+                elif action == 'search':
+                    query = tool_result.get('query', '')
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No spider data matching '{query}', {user_name}."
+
+                    response = f"Found {count} items matching '{query}':\n\n"
+                    for item in items[:6]:
+                        spider = item.get('spider_name', 'Unknown')
+                        title = item.get('title', item.get('url', 'No title'))[:50]
+                        response += f"- **{spider}**: {title}\n"
+
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total_items', 0)
+                    by_spider = tool_result.get('by_spider', {})
+                    by_category = tool_result.get('by_category', {})
+                    recent = tool_result.get('items_last_24h', 0)
+
+                    response = f"Spider Network Stats, {user_name}:\n\n"
+                    response += f"- **Total collected:** {total}\n"
+                    response += f"- **Last 24 hours:** {recent}\n\n"
+
+                    if by_spider:
+                        response += "**Top spiders:**\n"
+                        for spider, cnt in list(by_spider.items())[:5]:
+                            response += f"- {spider}: {cnt} items\n"
+
+                    if by_category:
+                        response += "\n**By category:**\n"
+                        for cat, cnt in list(by_category.items())[:5]:
+                            response += f"- {cat}: {cnt} items\n"
+
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 948: Execution history results formatting
+            elif intent == 'execution_history':
+                action = tool_result.get('action', '')
+
+                if action == 'recent':
+                    executions = tool_result.get('executions', [])
+                    count = tool_result.get('count', 0)
+                    period = tool_result.get('period_hours', 24)
+
+                    if count == 0:
+                        return f"No agent executions in the last {period} hours, {user_name}."
+
+                    response = f"Recent agent activity ({count} executions in {period}h):\n\n"
+                    for ex in executions[:8]:
+                        agent = ex.get('agent_name', 'Unknown')
+                        status = ex.get('status', 'unknown')
+                        status_icon = '✅' if status == 'completed' else ('❌' if status == 'failed' else '⏳')
+                        duration = ex.get('duration_seconds', 0)
+                        response += f"{status_icon} **{agent}**"
+                        if duration:
+                            response += f" ({duration:.1f}s)"
+                        response += "\n"
+
+                    if count > 8:
+                        response += f"\n...and {count - 8} more executions."
+                    return response
+
+                elif action == 'by_agent':
+                    agent = tool_result.get('agent_name', 'Unknown')
+                    executions = tool_result.get('executions', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No recent executions from {agent}, {user_name}."
+
+                    response = f"**{agent}** execution history ({count} total):\n\n"
+                    for ex in executions[:6]:
+                        status = ex.get('status', 'unknown')
+                        status_icon = '✅' if status == 'completed' else ('❌' if status == 'failed' else '⏳')
+                        date = ex.get('created_at', '')[:16]
+                        topic = ex.get('topic', '')[:40]
+                        response += f"{status_icon} {date}"
+                        if topic:
+                            response += f" - {topic}"
+                        response += "\n"
+
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total_executions', 0)
+                    successful = tool_result.get('successful', 0)
+                    failed = tool_result.get('failed', 0)
+                    success_rate = tool_result.get('success_rate', 0)
+                    by_agent = tool_result.get('by_agent', {})
+                    avg_duration = tool_result.get('avg_duration_seconds', 0)
+
+                    response = f"Agent Execution Stats, {user_name}:\n\n"
+                    response += f"- **Total executions:** {total}\n"
+                    response += f"- **Successful:** {successful} ✅\n"
+                    response += f"- **Failed:** {failed} ❌\n"
+                    response += f"- **Success rate:** {success_rate:.1f}%\n"
+                    response += f"- **Avg duration:** {avg_duration:.1f}s\n\n"
+
+                    if by_agent:
+                        response += "**Most active agents:**\n"
+                        for agent, cnt in list(by_agent.items())[:5]:
+                            response += f"- {agent}: {cnt} executions\n"
+
+                    return response
+
+                elif action == 'failures':
+                    failures = tool_result.get('failures', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No recent failures, {user_name}. System is running smoothly!"
+
+                    response = f"Recent agent failures ({count}):\n\n"
+                    for f in failures[:6]:
+                        agent = f.get('agent_name', 'Unknown')
+                        error = f.get('error_message', 'Unknown error')[:60]
+                        date = f.get('created_at', '')[:16]
+                        response += f"❌ **{agent}** ({date})\n"
+                        response += f"   └─ {error}\n"
+
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 948: Learning patterns results formatting
+            elif intent == 'learning_patterns':
+                action = tool_result.get('action', '')
+
+                if action == 'list':
+                    patterns = tool_result.get('patterns', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No learning patterns found, {user_name}."
+
+                    response = f"System Learning Patterns ({count} total):\n\n"
+                    for p in patterns[:8]:
+                        pattern_type = p.get('pattern_type', 'unknown')
+                        description = p.get('description', '')[:60]
+                        confidence = p.get('confidence', 0)
+                        response += f"- **{pattern_type}** ({confidence:.0%}): {description}\n"
+
+                    if count > 8:
+                        response += f"\n...and {count - 8} more patterns."
+                    return response
+
+                elif action == 'by_type':
+                    pattern_type = tool_result.get('pattern_type', 'Unknown')
+                    patterns = tool_result.get('patterns', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No {pattern_type} patterns found, {user_name}."
+
+                    response = f"**{pattern_type.title()}** Learning Patterns ({count}):\n\n"
+                    for p in patterns[:6]:
+                        description = p.get('description', '')[:70]
+                        confidence = p.get('confidence', 0)
+                        response += f"- {description} ({confidence:.0%})\n"
+
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total_patterns', 0)
+                    by_type = tool_result.get('by_type', {})
+                    avg_confidence = tool_result.get('avg_confidence', 0)
+                    recent = tool_result.get('recent_patterns', 0)
+
+                    response = f"Learning System Stats, {user_name}:\n\n"
+                    response += f"- **Total patterns:** {total}\n"
+                    response += f"- **Avg confidence:** {avg_confidence:.1f}%\n"
+                    response += f"- **Recent (7 days):** {recent}\n\n"
+
+                    if by_type:
+                        response += "**By type:**\n"
+                        for ptype, cnt in by_type.items():
+                            response += f"- {ptype}: {cnt} patterns\n"
 
                     return response
 
