@@ -2,17 +2,18 @@
 
 **Date:** February 5, 2026
 **Status:** Complete
-**PRs:** #879, #880, #881, #882, #883, #884, #886, #888, #889, #890
+**PRs:** #879, #880, #881, #882, #883, #884, #886, #888, #889, #890, #891, #892
 
 ## Summary
 
-Fixed six major issues:
+Fixed seven major issues:
 1. **Operations Tab not creating WorkspaceOperations** for financial agent reports
 2. **42K+ pending ExtractedArtifacts backlog** from automated brainstorming conversations
 3. **PA/Boardroom couldn't access brainstorming insights** after disabling extraction
 4. **PA couldn't access content (blogs, reports) awaiting human review**
 5. **PA lacked awareness of system docs** (CLAUDE.md, recent sessions, architecture)
 6. **PA had no visibility into initiatives/projects** in the 5-stage pipeline
+7. **Frontend using wrong PA class + LLM reformatting tool results** instead of structured format
 
 ## Problem 1: Operations Tab Empty
 
@@ -225,6 +226,59 @@ The PA had no tool to access the Initiative model. Users couldn't ask about:
 - "Show stage 3 initiatives"
 - "What's the status of the monetization project?"
 
+## Problem 7: Frontend Using Wrong PA Class + LLM Reformatting Tool Results
+
+### Root Cause
+Two issues preventing the new PA tools from working in production:
+1. `views_assistant_bypass.py` was still using `EnhancedPersonalAIAssistant` instead of `UnifiedPAEntrypoint`
+2. Tool results were being passed through LLM for "summarization", producing verbose text instead of structured format
+
+### Solution: Wire Frontend + Structured Formatting (PR #891, #892)
+
+#### 1. Wire Frontend to UnifiedPAEntrypoint
+```python
+# core/views_assistant_bypass.py
+from core.services.unified_pa_entrypoint import get_unified_pa
+from asgiref.sync import async_to_sync
+
+pa = get_unified_pa(user)
+pa_response = async_to_sync(pa.process_message)(message, context)
+
+response_data = {
+    'response': pa_response.content,
+    'trace_id': pa_response.trace_id,
+    'intent': pa_response.intent,
+    'tool_runs': pa_response.tool_runs,
+    # ...
+}
+```
+
+#### 2. Use Structured Formatting Directly for New Tools
+```python
+# core/services/unified_pa_entrypoint.py
+async def _generate_response_from_tool(self, message, intent, tool_result, context, trace_id):
+    # Use structured formatting directly for these intents
+    structured_format_intents = [
+        'initiatives', 'brainstorming', 'content_review',
+        'boardroom', 'decision_management'
+    ]
+
+    if intent in structured_format_intents:
+        return self._format_tool_result(tool_result, intent, user_name)
+
+    # For other intents, use LLM to interpret results
+    # ...
+```
+
+### Example Output After Fix
+```
+📊 **Initiatives Overview**
+
+🟢 **Monetization Strategy** (Stage 3/5, revenue) - 2 action items
+🔵 **Content Pipeline Optimization** (Stage 2/5, stability) - 0 action items
+🟠 **New Agent Development** (Stage 1/5, expansion) - 1 action item
+```
+
 ## Files Changed
 
 | File | Changes |
@@ -235,7 +289,8 @@ The PA had no tool to access the Initiative model. Users couldn't ask about:
 | `core/celery.py` | Updated schedule with aggressive=True |
 | `core/services/brainstorm_search_service.py` | **NEW** - Search Discussion/Panel conversations |
 | `core/services/tool_dispatcher.py` | Added brainstorm, content_review, initiative tool handlers |
-| `core/services/unified_pa_entrypoint.py` | Added all tool routing + docs context injection |
+| `core/services/unified_pa_entrypoint.py` | Added all tool routing + docs context injection + structured formatting bypass |
+| `core/views_assistant_bypass.py` | Wire frontend to UnifiedPAEntrypoint with async_to_sync |
 
 ## Going Forward
 
