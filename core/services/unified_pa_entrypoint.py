@@ -460,7 +460,26 @@ class UnifiedPAEntrypoint:
         ]):
             return ('opportunities', 'opportunity_manager_tool')
 
-        # Content creation patterns
+        # Session 943: Content REVIEW patterns - MUST come before content creation patterns
+        # These are for viewing/reviewing existing content, not creating new
+        if any(phrase in message_lower for phrase in [
+            'what content', 'content created', 'content been created',
+            'show content', 'list content', 'my content', 'created content',
+            'deliverable', 'content ready', 'ready for review',
+            'ready to publish', 'publish content', 'archive content',
+            'content stats', 'review content', 'view content'
+        ]):
+            return ('content_review', 'content_review_tool')
+
+        # Session 943: Brainstorming/Discussion/Panel search patterns
+        if any(word in message_lower for word in [
+            'brainstorm', 'discussion', 'panel', 'ideas from',
+            'what did agents', 'agent ideas', 'think tank',
+            'past conversations', 'previous discussion'
+        ]):
+            return ('brainstorming', 'brainstorm_tool')
+
+        # Content CREATION patterns - come after review patterns
         if any(word in message_lower for word in [
             'create image', 'generate image', 'logo', 'banner'
         ]):
@@ -471,8 +490,11 @@ class UnifiedPAEntrypoint:
         ]):
             return ('video_creation', 'video_generation_agent')
 
-        if any(word in message_lower for word in [
-            'write', 'blog', 'article', 'content'
+        # Content writing - only for actual creation requests
+        # Note: "blog" alone could mean viewing OR creating, so we check for creation verbs
+        if any(phrase in message_lower for phrase in [
+            'write', 'create content', 'create a blog', 'write a blog',
+            'draft', 'compose', 'generate article'
         ]):
             return ('content_writing', 'content_writer_agent')
 
@@ -487,22 +509,6 @@ class UnifiedPAEntrypoint:
             'run agent', 'execute agent', 'use agent', 'ask agent'
         ]):
             return ('agent_execution', 'universal_agent_tool')
-
-        # Session 943: Brainstorming/Discussion/Panel search patterns
-        if any(word in message_lower for word in [
-            'brainstorm', 'discussion', 'panel', 'ideas from',
-            'what did agents', 'agent ideas', 'think tank',
-            'past conversations', 'previous discussion'
-        ]):
-            return ('brainstorming', 'brainstorm_tool')
-
-        # Session 943: Content review patterns (blogs, deliverables, content ready for review)
-        if any(word in message_lower for word in [
-            'blog', 'deliverable', 'content ready', 'ready for review',
-            'ready to publish', 'publish content', 'archive content',
-            'content stats', 'what content', 'review content'
-        ]):
-            return ('content_review', 'content_review_tool')
 
         # Session 943: Initiative/project patterns
         if any(word in message_lower for word in [
@@ -667,6 +673,12 @@ class UnifiedPAEntrypoint:
             # Determine action based on message
             if 'stats' in msg_lower or 'statistics' in msg_lower or 'how many' in msg_lower:
                 payload['action'] = 'stats'
+            # Session 948: "what content has been created" -> recent action
+            elif any(phrase in msg_lower for phrase in [
+                'created', 'been created', 'was created', 'recently created',
+                'my content', 'all content', 'recent content'
+            ]):
+                payload['action'] = 'recent'
             elif 'publish' in msg_lower:
                 payload['action'] = 'publish'
                 # Try to extract ID if present
@@ -687,7 +699,7 @@ class UnifiedPAEntrypoint:
                 if id_match:
                     payload['id'] = id_match.group(1)
             else:
-                # Default to list
+                # Default to list (ready for review)
                 payload['action'] = 'list'
 
             # Extract type filter if mentioned
@@ -1030,6 +1042,44 @@ Address the user by name occasionally."""
                         response += f"\n...and {count - 5} more."
 
                     response += "\n\nSay 'show details [id]' to view, or 'publish [id]' to publish."
+                    return response
+
+                # Session 948: Recently created content (any status)
+                elif action == 'recent':
+                    items = tool_result.get('items', [])
+                    count = tool_result.get('count', 0)
+                    period = tool_result.get('period_days', 7)
+                    by_status = tool_result.get('by_status', {})
+
+                    if count == 0:
+                        return f"No content created in the last {period} days, {user_name}."
+
+                    response = f"Content created in the last {period} days ({count} items):\n\n"
+
+                    for item in items[:8]:
+                        title = item.get('title', 'Untitled')[:45]
+                        content_type = item.get('deliverable_type', 'document')
+                        status = item.get('status', 'unknown')
+                        agent = item.get('agent_name', '')
+                        quality = item.get('quality_score', 0)
+
+                        status_icon = '✅' if status == 'published' else ('🟢' if status == 'ready' else '📝')
+                        response += f"{status_icon} **{title}**\n"
+                        response += f"   {content_type}"
+                        if agent:
+                            response += f" by {agent}"
+                        if quality:
+                            response += f" ({quality:.0%} quality)"
+                        response += f" [{status}]\n"
+
+                    if count > 8:
+                        response += f"\n...and {count - 8} more.\n"
+
+                    # Show status breakdown
+                    if by_status:
+                        status_summary = ', '.join([f"{s}: {c}" for s, c in by_status.items()])
+                        response += f"\n**By status:** {status_summary}"
+
                     return response
 
                 elif action == 'stats':
