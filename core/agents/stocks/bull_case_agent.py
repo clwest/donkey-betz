@@ -217,10 +217,11 @@ Always acknowledge risks but emphasize potential rewards."""
                 scifi_context: Dict[str, Any] = None,
                 spider_context: Dict[str, Any] = None) -> AgentResult:
         """
-        Build the bull case for specified stocks using LLM with tools.
+        Build the bull case for specified stocks.
 
-        Session 761: Rewritten to use LLM tool calling. The LLM decides
-        which analysis tools to use based on the task.
+        Session 761: Uses LLM tool calling for analysis.
+        Session 950: Fixed to iterate over all tickers and return bull_cases list
+                     for compatibility with MarketIntelligenceCoordinator.
 
         Args:
             task: Bull case analysis task
@@ -229,7 +230,7 @@ Always acknowledge risks but emphasize potential rewards."""
             spider_context: News, social sentiment, market data
 
         Returns:
-            AgentResult with bull case arguments and conviction rating
+            AgentResult with bull_cases list containing per-ticker analysis
         """
         start_time = datetime.now()
         context = context or {}
@@ -252,7 +253,7 @@ Always acknowledge risks but emphasize potential rewards."""
 
             self.record_decision(
                 decision_type="analysis",
-                action="Starting bull case analysis with tools",
+                action="Starting bull case analysis",
                 reasoning=f"Processing task: {task[:100] if task else 'No task specified'}",
                 alternatives=["Skip analysis", "Defer to human", "Consult other agents"],
                 confidence=0.8
@@ -262,100 +263,54 @@ Always acknowledge risks but emphasize potential rewards."""
             if spider_intel['has_data']:
                 logger.info(f"🕷️ {self.name} using spider intelligence")
 
-            logger.info(f"BullCaseAgent executing with tools: {task[:100]}...")
+            # Session 950: Get tickers from context - handle both single and multiple
+            tickers = context.get('tickers', [])
+            if not tickers and context.get('ticker'):
+                tickers = [context.get('ticker')]
+            if not tickers:
+                tickers = self._extract_tickers_from_spider_data(spider_context)
+
+            logger.info(f"BullCaseAgent analyzing {len(tickers)} tickers: {tickers[:5]}...")
 
             try:
-                # Build intelligent prompt with full context
-                intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+                # Session 950: Build bull cases for ALL tickers
+                bull_cases = []
+                all_tool_calls = []
 
-                # Session 761: Build messages for tool-enabled LLM call
-                ticker = context.get('ticker', context.get('tickers', [''])[0] if context.get('tickers') else '')
-                ticker_context = f"\n\nTarget ticker: {ticker}" if ticker else ""
-                spider_summary = f"\n\nMarket Intelligence: {spider_intel['summary']}" if spider_intel['summary'] else ""
-
-                messages = [
-                    {"role": "system", "content": self.system_prompt + intelligent_context + ticker_context + spider_summary},
-                    {"role": "user", "content": task}
-                ]
-
-                # Session 761: Call LLM with tools enabled
-                from openai import OpenAI
-                client = OpenAI()
-
-                response = client.chat.completions.create(
-                    model="gpt-5-mini",
-                    messages=messages,
-                    tools=self.tools,
-                    tool_choice="auto",
-                    max_completion_tokens=4000
-                )
-
-                # Process response
-                assistant_message = response.choices[0].message
-                tool_calls_made = []
-                collected_data = {}
-
-                # Session 761: Handle tool calls from LLM
-                if assistant_message.tool_calls:
-                    for tool_call in assistant_message.tool_calls:
-                        tool_name = tool_call.function.name
-                        tool_args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
-
-                        self.record_decision(
-                            decision_type="tool_call",
-                            action=f"Calling tool: {tool_name}",
-                            reasoning=f"LLM requested tool with args: {tool_args}",
-                            confidence=0.9
-                        )
-
-                        logger.info(f"🔧 BullCaseAgent calling tool: {tool_name}({tool_args})")
-
-                        # Execute the tool
-                        tool_result = self._execute_tool_call(tool_name, tool_args)
-                        tool_calls_made.append({
-                            'tool': tool_name,
-                            'args': tool_args,
-                            'result': tool_result
-                        })
-                        collected_data[tool_name] = tool_result
-
-                        # Add tool result to conversation for LLM synthesis
-                        messages.append({
-                            "role": "assistant",
-                            "content": None,
-                            "tool_calls": [tool_call]
-                        })
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": json.dumps(tool_result)[:8000]
-                        })
-
-                    # Get final synthesis from LLM
-                    final_response = client.chat.completions.create(
-                        model="gpt-5-mini",
-                        messages=messages,
-                        max_completion_tokens=3000
-                    )
-                    analysis = final_response.choices[0].message.content
-                else:
-                    analysis = assistant_message.content or "No bull case generated."
+                for ticker in tickers:
+                    try:
+                        bull_case = self._build_bull_case(ticker, context, spider_context)
+                        if bull_case:
+                            bull_cases.append(bull_case)
+                            logger.info(f"📈 {ticker}: {bull_case.get('conviction', 'MEDIUM')} conviction")
+                    except Exception as e:
+                        logger.warning(f"Failed to build bull case for {ticker}: {e}")
 
                 execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
+                # Session 950: Generate summary for the message
+                summary = self._generate_summary(bull_cases)
+                message = (
+                    f"Analyzed {summary['total_analyzed']} stocks. "
+                    f"HIGH conviction: {summary['high_conviction']}, "
+                    f"MEDIUM: {summary['medium_conviction']}, "
+                    f"LOW: {summary['low_conviction']}. "
+                    f"Top opportunities: {', '.join(summary['strongest_tickers'][:3]) or 'None'}"
+                )
+
                 result = AgentResult(
                     success=True,
-                    message=analysis,
+                    message=message,
                     data={
-                        'analysis': analysis,
-                        'ticker': ticker,
-                        'conviction': self._extract_conviction(analysis),
-                        'tool_calls': tool_calls_made,
-                        'collected_data': collected_data,
+                        'bull_cases': bull_cases,  # Session 950: Return list for coordinator
+                        'summary': summary,
+                        'conviction_distribution': self._get_conviction_distribution(bull_cases),
+                        'top_opportunities': self._get_top_opportunities(bull_cases),
+                        'tickers_analyzed': len(bull_cases),
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time,
-                    tool_calls=tool_calls_made
+                    tool_calls=all_tool_calls
                 )
 
                 # Record learning outcome
@@ -367,28 +322,11 @@ Always acknowledge risks but emphasize potential rewards."""
                         context={
                             'agent_type': self.__class__.__name__,
                             'execution_time_ms': execution_time,
-                            'tools_used': [tc['tool'] for tc in tool_calls_made],
+                            'tickers_analyzed': len(bull_cases),
                         }
                     )
                 except Exception as le:
                     logger.warning(f"Failed to record learning outcome: {le}")
-
-                # Session 861: Persist bull case analysis to Deliverable
-                conviction = self._extract_conviction(analysis)
-                self._save_to_deliverable(
-                    title=f"Bull Case: {ticker}" if ticker else f"Bull Case Analysis: {task[:60]}",
-                    content=analysis,
-                    deliverable_type='analysis',
-                    category='Finance',
-                    tags=['stock', 'bull-case', 'analysis', ticker] if ticker else ['stock', 'bull-case', 'analysis'],
-                    content_format='markdown',
-                    metadata={
-                        'ticker': ticker,
-                        'conviction': conviction,
-                        'tools_used': [tc['tool'] for tc in tool_calls_made],
-                        'case_type': 'bullish',
-                    },
-                )
 
                 return result
 
@@ -396,8 +334,9 @@ Always acknowledge risks but emphasize potential rewards."""
                 logger.error(f"BullCaseAgent error: {e}", exc_info=True)
                 result = AgentResult(
                     success=False,
-                    message=f"Error building bull case: {str(e)}",
+                    message=f"Error building bull cases: {str(e)}",
                     error=str(e),
+                    data={'bull_cases': []},  # Session 950: Always return bull_cases key
                     agent_name=self.name,
                     execution_time_ms=int((datetime.now() - start_time).total_seconds() * 1000)
                 )
