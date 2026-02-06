@@ -114,6 +114,14 @@ app.conf.beat_schedule = {
             'expires': 600,
         }
     },
+    # Session 954: Boardroom ML predictions - enrich pending items with content-aware predictions
+    'enrich-boardroom-ml-predictions': {
+        'task': 'core.tasks.enrich_boardroom_ml_predictions',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,
+        }
+    },
     # Session 766: HiveMind synthesis to Orchestration
     'process-hivemind-sessions': {
         'task': 'core.tasks.process_hivemind_sessions',
