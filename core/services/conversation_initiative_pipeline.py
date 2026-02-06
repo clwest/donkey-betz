@@ -342,6 +342,17 @@ class ConversationInitiativePipeline:
                 use_llm=True
             )
 
+            # Session 954: Validate generated title is not junk
+            from core.services.decision_extractor import _is_valid_initiative_name
+            if not _is_valid_initiative_name(initiative_name):
+                logger.warning(f"Session 954: Generated invalid initiative name: '{initiative_name[:50]}', using topic fallback")
+                # Try topic as fallback
+                if topic and _is_valid_initiative_name(topic[:80]):
+                    initiative_name = topic[:80]
+                else:
+                    result.errors.append(f"Could not generate valid initiative name from content")
+                    return result
+
             # Ensure unique name
             base_name = initiative_name
             counter = 1
