@@ -50,8 +50,10 @@ export default function Layout() {
         style={{ paddingTop: bannerHeight > 0 ? `${bannerHeight}px` : undefined }}
       >
         <Header />
-        <main className="flex-1 overflow-auto p-6">
-          <Outlet />
+        <main className="flex-1 flex flex-col overflow-hidden p-6">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
