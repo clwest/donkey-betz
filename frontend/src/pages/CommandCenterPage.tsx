@@ -9,11 +9,12 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   assistantApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi
 } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
+import { useUnifiedStore } from '@/stores/unifiedStore'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
@@ -22,6 +23,7 @@ import {
   Bell, ClipboardList, Play, Check, X, Clock, HelpCircle,
   Volume2, VolumeX, Settings, Moon, Eye, Pause, Sliders,
   Bug, AlertTriangle, Wrench, ChevronDown, ChevronUp,
+  ExternalLink, Workflow, Database, Sparkles as SparklesIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -297,6 +299,16 @@ export default function CommandCenterPage() {
 
   const queryClient = useQueryClient()
   const { isAuthenticated } = useAuthStore()
+  const navigate = useNavigate()
+
+  // Session 948: Navigate to Workspace tabs
+  const goToWorkspace = useCallback((tab?: string) => {
+    if (tab) {
+      navigate(`/workspace?tab=${tab}`)
+    } else {
+      navigate('/workspace')
+    }
+  }, [navigate])
 
   // Auto-send initial message if provided
   useEffect(() => {
@@ -314,6 +326,23 @@ export default function CommandCenterPage() {
   const updateVoiceSetting = useCallback(<K extends keyof VoiceSettings>(key: K, value: VoiceSettings[K]) => {
     setVoiceSettings(prev => ({ ...prev, [key]: value }))
   }, [])
+
+  // ============================================================================
+  // Session 948: Unified Store for shared data with Workspace
+  // ============================================================================
+
+  const fetchAttentionStats = useUnifiedStore((s) => s.fetchAttentionStats)
+  const fetchRunningPilots = useUnifiedStore((s) => s.fetchRunningPilots)
+  const unifiedPendingCount = useUnifiedStore((s) => s.pendingDecisionsCount)
+  const runningPilotsCount = useUnifiedStore((s) => s.runningPilotsCount)
+
+  // Fetch unified store data on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAttentionStats()
+      fetchRunningPilots()
+    }
+  }, [isAuthenticated, fetchAttentionStats, fetchRunningPilots])
 
   // ============================================================================
   // Queries
@@ -1093,6 +1122,44 @@ export default function CommandCenterPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Session 948: Workspace Quick Links */}
+                  <div className="card p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ExternalLink size={14} className="text-primary-400" />
+                      <h3 className="font-medium text-sm">Workspace</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={() => goToWorkspace('initiatives')}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors text-left"
+                      >
+                        <Workflow size={12} className="text-accent-cyan flex-shrink-0" />
+                        <span className="text-xs">Initiatives</span>
+                      </button>
+                      <button
+                        onClick={() => goToWorkspace('boardroom')}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors text-left"
+                      >
+                        <ClipboardList size={12} className="text-accent-amber flex-shrink-0" />
+                        <span className="text-xs">Boardroom</span>
+                      </button>
+                      <button
+                        onClick={() => goToWorkspace('content')}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors text-left"
+                      >
+                        <Palette size={12} className="text-accent-purple flex-shrink-0" />
+                        <span className="text-xs">Content</span>
+                      </button>
+                      <button
+                        onClick={() => goToWorkspace('datasources')}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors text-left"
+                      >
+                        <Database size={12} className="text-accent-green flex-shrink-0" />
+                        <span className="text-xs">Data</span>
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -1177,11 +1244,27 @@ export default function CommandCenterPage() {
                           </div>
                         )
                       })}
+
+                      {/* Session 948: Link to Workspace Boardroom */}
+                      <button
+                        onClick={() => goToWorkspace('boardroom')}
+                        className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 text-xs rounded-lg border border-dark-border hover:border-primary-500 hover:bg-primary-500/10 transition-colors"
+                      >
+                        <ExternalLink size={12} />
+                        View all in Boardroom
+                      </button>
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
                       <CheckCircle size={24} className="mx-auto mb-2 opacity-50" />
                       <p className="text-xs">No pending decisions</p>
+                      <button
+                        onClick={() => goToWorkspace('boardroom')}
+                        className="mt-3 flex items-center justify-center gap-1 mx-auto text-xs text-primary-400 hover:text-primary-300"
+                      >
+                        <ExternalLink size={10} />
+                        Open Boardroom
+                      </button>
                     </div>
                   )}
                 </>

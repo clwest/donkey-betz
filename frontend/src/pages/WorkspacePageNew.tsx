@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import {
   FolderOpen,
   RefreshCw,
@@ -625,8 +626,28 @@ function OperationContentModal({
 }
 
 export default function WorkspacePage() {
-  // Core state
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('command')
+  // Session 948: URL tab routing - support /workspace?tab=initiatives
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlTab = searchParams.get('tab') as WorkspaceTab | null
+
+  // Core state - initialize from URL param if valid
+  const validTabs = tabs.map(t => t.id)
+  const initialTab = urlTab && validTabs.includes(urlTab) ? urlTab : 'command'
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab)
+
+  // Session 948: Sync URL when tab changes
+  const handleTabChange = (tab: WorkspaceTab) => {
+    setActiveTab(tab)
+    setSearchParams({ tab }, { replace: true })
+  }
+
+  // Session 948: Handle external navigation (e.g., from Command Center)
+  useEffect(() => {
+    if (urlTab && validTabs.includes(urlTab) && urlTab !== activeTab) {
+      setActiveTab(urlTab)
+    }
+  }, [urlTab])
+
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
@@ -835,7 +856,7 @@ export default function WorkspacePage() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
                   activeTab === tab.id
@@ -852,7 +873,7 @@ export default function WorkspacePage() {
           {/* Tab Content */}
           {activeTab === 'command' && (
             <CommandTab
-              setActiveTab={setActiveTab}
+              setActiveTab={handleTabChange}
               expandedActivityIds={expandedActivityIds}
               toggleActivityExpanded={toggleActivityExpanded}
             />
