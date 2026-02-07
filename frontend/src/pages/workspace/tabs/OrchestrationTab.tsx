@@ -76,7 +76,10 @@ interface ExecutionItem {
   total_steps?: number | null
   error_message?: string | null
   task?: string | null  // Session 923: Full task for context
+  task_summary?: string | null  // Session 958: Clean task summary
   agent_name?: string | null  // Session 923: Agent name
+  execution_time_ms?: number | null  // Session 958: Execution duration
+  tokens_used?: number | null  // Session 958: Token usage
 }
 
 export function OrchestrationTab() {
@@ -154,18 +157,23 @@ function MonitorSubTab() {
           const rawExecutions = executionsData.data?.executions || []
           // Map to expected format
           // Session 923: Added error_message and task to show in execution details modal
+          // Session 958: Use task_summary for clean display, removed hardcoded steps
           executions = rawExecutions.map((e: any) => ({
             id: e.id,
             workflow_name: e.agent_name,
-            name: e.task?.substring(0, 100) || 'Agent execution',
+            name: e.task_summary || e.task?.substring(0, 100) || 'Agent execution',
             status: e.status || 'completed',
             started_at: e.started_at || e.created_at,
             completed_at: e.completed_at,
-            current_step: 1,
-            total_steps: 1,
+            // Session 958: Don't hardcode steps - only show if we have real step data
+            current_step: e.current_step || null,
+            total_steps: e.total_steps || null,
             agent_name: e.agent_name,
             error_message: e.error_message,  // Session 923: Wire up error message
             task: e.task,  // Session 923: Full task for context
+            task_summary: e.task_summary,  // Session 958: Clean summary
+            execution_time_ms: e.execution_time_ms,
+            tokens_used: e.tokens_used,
           }))
         }
 
@@ -1617,7 +1625,8 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
             </div>
           </div>
 
-          {execution.current_step && execution.total_steps && (
+          {/* Session 958: Only show progress if we have real step data (not hardcoded 1/1) */}
+          {execution.current_step && execution.total_steps && execution.total_steps > 1 && (
             <div>
               <p className="text-xs text-gray-500 mb-2">Progress</p>
               <div className="bg-gray-800 rounded-full h-2 overflow-hidden">
@@ -1627,6 +1636,24 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
                 />
               </div>
               <p className="text-xs text-gray-400 mt-1">Step {execution.current_step} of {execution.total_steps}</p>
+            </div>
+          )}
+
+          {/* Session 958: Show execution metrics if available */}
+          {(execution.execution_time_ms || execution.tokens_used) && (
+            <div className="grid grid-cols-2 gap-4">
+              {execution.execution_time_ms && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Duration</p>
+                  <p className="text-sm">{(execution.execution_time_ms / 1000).toFixed(1)}s</p>
+                </div>
+              )}
+              {execution.tokens_used && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Tokens</p>
+                  <p className="text-sm">{execution.tokens_used.toLocaleString()}</p>
+                </div>
+              )}
             </div>
           )}
 
