@@ -346,6 +346,61 @@ def execute_agent_batch(request):
 
 # Session 760: Agent Execution Detail APIs for Output Modal
 
+
+def _extract_task_summary(task: str) -> str:
+    """
+    Session 958: Extract a clean task summary from the full task text.
+
+    Tasks often contain:
+    - Markdown headers like '## EXISTING CODEBASE CONTEXT'
+    - Bullet points like '- Check if...'
+    - Context sections starting with '**IMPORTANT:**'
+
+    This extracts the first meaningful line that describes the actual task.
+    """
+    if not task:
+        return 'Agent execution'
+
+    # Remove common context markers
+    context_markers = [
+        '## EXISTING CODEBASE CONTEXT',
+        '**IMPORTANT:**',
+        '## Context',
+        '## Background',
+        'IMPORTANT:',
+    ]
+
+    # Find where context section starts and truncate
+    task_clean = task
+    for marker in context_markers:
+        if marker in task_clean:
+            task_clean = task_clean.split(marker)[0]
+
+    # Split into lines and find first meaningful line
+    lines = task_clean.strip().split('\n')
+    for line in lines:
+        line = line.strip()
+        # Skip empty lines, headers, and pure markdown
+        if not line:
+            continue
+        if line.startswith('#'):
+            # Extract text after # header
+            line = line.lstrip('#').strip()
+        if line.startswith('-') or line.startswith('*'):
+            # Extract text after bullet
+            line = line.lstrip('-*').strip()
+
+        # Clean up markdown formatting
+        line = line.replace('`', '').replace('**', '').replace('__', '')
+
+        # Return first substantial line
+        if len(line) > 10:
+            return line[:150] + ('...' if len(line) > 150 else '')
+
+    # Fallback: return truncated original
+    return task[:100] + ('...' if len(task) > 100 else '')
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def unified_execution_history(request):
@@ -380,7 +435,8 @@ def unified_execution_history(request):
                     {
                         'id': str(ex.id),
                         'agent_name': ex.agent.name if ex.agent else 'Unknown',
-                        'task': ex.task[:200] if ex.task else None,
+                        'task': ex.task[:500] if ex.task else None,  # Full task for modal
+                        'task_summary': _extract_task_summary(ex.task),  # Session 958: Clean summary
                         'status': ex.status,
                         'output_data': ex.output_data,
                         'error_message': ex.error_message,
