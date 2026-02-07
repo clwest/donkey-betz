@@ -29,6 +29,7 @@ Usage:
 """
 
 import logging
+import re
 import time
 import uuid
 import asyncio
@@ -75,6 +76,63 @@ class UnifiedPAEntrypoint:
     Into ONE consistent interface.
     """
 
+    # Session 959: Intent-to-enrichment mapping
+    # Determines which intelligence services fire for each intent
+    INTENT_ENRICHMENT_MAP = {
+        'content_review':    ['blog_performance', 'domain_context', 'spider_trends'],
+        'opportunities':     ['spider_trends', 'domain_context', 'advisor'],
+        'predictions':       ['spider_trends', 'domain_context'],
+        'initiatives':       ['intelligence_enricher'],
+        'boardroom':         ['intelligence_enricher'],
+        'system_health':     ['intelligence_enricher'],
+        'spider_data':       ['domain_context'],
+        'execution_history': ['intelligence_enricher'],
+        'learning_patterns': ['spider_trends'],
+        'pilots':            ['intelligence_enricher'],
+        'gates':             ['intelligence_enricher'],
+        'reasoning':         ['intelligence_enricher', 'advisor'],
+    }
+
+    # Alias map: normalize variant intent names to canonical names
+    INTENT_ALIASES = {
+        'content': 'content_review',
+        'blogs': 'content_review',
+        'blog_list': 'content_review',
+        'blog_query': 'content_review',
+        'attention_items': 'boardroom',
+        'decisions': 'boardroom',
+        'decision_management': 'boardroom',
+        'opportunity': 'opportunities',
+        'health': 'system_health',
+        'spider': 'spider_data',
+        'experiments': 'pilots',
+        'pilot': 'pilots',
+        'gate': 'gates',
+    }
+
+    # Intents where spider_trends and domain_context always apply (no relevance gate)
+    DIRECT_RELEVANCE_INTENTS = {
+        'content_review', 'opportunities', 'predictions', 'spider_data',
+    }
+
+    # Per-section character caps to prevent any one source dominating
+    ENRICHMENT_CAPS = {
+        'system_brief':     600,
+        'spider_trends':    600,
+        'blog_performance': 600,
+        'domain_context':   600,
+        'advisor':          300,
+    }
+
+    # Stop words for relevance gating
+    STOP_WORDS = frozenset({
+        'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
+        'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+        'could', 'should', 'may', 'might', 'can', 'what', 'which',
+        'who', 'how', 'when', 'where', 'why', 'my', 'me', 'i',
+        'to', 'for', 'of', 'in', 'on', 'at', 'by', 'with', 'from',
+    })
+
     def __init__(self, user: User):
         self.user = user
         self._execution_count = 0
@@ -86,6 +144,13 @@ class UnifiedPAEntrypoint:
         self._profile_service = None
         self._knowledge_injector = None
         self._docs_context_builder = None  # Session 943: Docs injection for PA
+
+        # Session 959: Intelligence enrichment services
+        self._intelligence_enricher = None
+        self._blog_performance_fn = None
+        self._domain_context_builder = None
+        self._spider_context_builder = None
+        self._advisor_context_builder = None
 
         # Session 940: Triage mode state
         self._triage_mode = False
@@ -158,6 +223,68 @@ class UnifiedPAEntrypoint:
                 logger.warning("DocsContextBuilder not available")
                 self._docs_context_builder = None
         return self._docs_context_builder
+
+    # --- Session 959: Intelligence enrichment properties ---
+
+    @property
+    def intelligence_enricher(self):
+        """Lazy load PAIntelligenceEnricher."""
+        if self._intelligence_enricher is None:
+            try:
+                from core.services.pa_intelligence_enricher import PAIntelligenceEnricher
+                self._intelligence_enricher = PAIntelligenceEnricher()
+            except ImportError:
+                logger.warning("PAIntelligenceEnricher not available")
+                self._intelligence_enricher = None
+        return self._intelligence_enricher
+
+    @property
+    def blog_performance_fn(self):
+        """Lazy load get_blog_performance_context function."""
+        if self._blog_performance_fn is None:
+            try:
+                from core.services.blog_performance_context import get_blog_performance_context
+                self._blog_performance_fn = get_blog_performance_context
+            except ImportError:
+                logger.warning("get_blog_performance_context not available")
+                self._blog_performance_fn = None
+        return self._blog_performance_fn
+
+    @property
+    def domain_context_builder(self):
+        """Lazy load DomainContentContextBuilder."""
+        if self._domain_context_builder is None:
+            try:
+                from core.services.domain_content_context import DomainContentContextBuilder
+                self._domain_context_builder = DomainContentContextBuilder()
+            except ImportError:
+                logger.warning("DomainContentContextBuilder not available")
+                self._domain_context_builder = None
+        return self._domain_context_builder
+
+    @property
+    def spider_context_builder(self):
+        """Lazy load SpiderContextBuilder."""
+        if self._spider_context_builder is None:
+            try:
+                from core.services.spider_context_builder import get_spider_context_builder
+                self._spider_context_builder = get_spider_context_builder()
+            except ImportError:
+                logger.warning("SpiderContextBuilder not available")
+                self._spider_context_builder = None
+        return self._spider_context_builder
+
+    @property
+    def advisor_context_builder(self):
+        """Lazy load AdvisorContextBuilder."""
+        if self._advisor_context_builder is None:
+            try:
+                from core.services.advisor_context_builder import get_advisor_context_builder
+                self._advisor_context_builder = get_advisor_context_builder()
+            except ImportError:
+                logger.warning("AdvisorContextBuilder not available")
+                self._advisor_context_builder = None
+        return self._advisor_context_builder
 
     async def process_message(
         self,
@@ -241,9 +368,14 @@ class UnifiedPAEntrypoint:
                 tool_runs.append(tool_result.to_dict())
 
                 if tool_result.ok:
-                    # Generate response from tool result
+                    # Session 959: Enrich tool result with intelligence context
+                    enrichment_sections = await self._enrich_tool_result(
+                        message, intent, tool_result.result, trace_id
+                    )
+                    # Generate response from tool result + enrichment
                     content = await self._generate_response_from_tool(
-                        message, intent, tool_result.result, full_context, trace_id
+                        message, intent, tool_result.result, full_context, trace_id,
+                        enrichment_sections=enrichment_sections
                     )
                 else:
                     # Tool failed - generate error response
@@ -832,29 +964,249 @@ class UnifiedPAEntrypoint:
 
         return payload
 
+    # --- Session 959: Intelligence enrichment methods ---
+
+    def _tokenize(self, text: str) -> set:
+        """Extract lowercase alphanumeric tokens (handles punctuation properly)."""
+        return set(re.findall(r'[a-z0-9_]+', text.lower()))
+
+    def _passes_relevance_gate(self, message: str, enrichment_text: str, threshold: float = 0.15) -> bool:
+        """Keyword overlap relevance check with regex tokenization."""
+        if not enrichment_text:
+            return False
+        enrich_words = self._tokenize(enrichment_text)
+        if len(enrich_words) < 30:
+            return False  # Too short to be useful
+        msg_words = self._tokenize(message) - self.STOP_WORDS
+        if not msg_words:
+            return True  # Can't filter, include it
+        overlap = len(msg_words & enrich_words)
+        return (overlap / len(msg_words)) >= threshold
+
+    async def _enrich_tool_result(
+        self,
+        message: str,
+        intent: str,
+        tool_result: Any,
+        trace_id: str
+    ) -> Dict[str, str]:
+        """
+        Session 959: Gather intelligence enrichment sections for the current query.
+
+        Returns a dict of named sections (each truncated to its cap).
+        One service failure never blocks others.
+        """
+        sections: Dict[str, str] = {}
+
+        canonical_intent = self.INTENT_ALIASES.get(intent, intent)
+        enrichment_services = self.INTENT_ENRICHMENT_MAP.get(canonical_intent, [])
+
+        if not enrichment_services:
+            return sections
+
+        is_direct = canonical_intent in self.DIRECT_RELEVANCE_INTENTS
+
+        for service_key in enrichment_services:
+            try:
+                if service_key == 'intelligence_enricher' and self.intelligence_enricher:
+                    result = await asyncio.to_thread(
+                        self.intelligence_enricher.enrich_context, message
+                    )
+                    text = result.get('context_text', '') if isinstance(result, dict) else ''
+                    if text:
+                        sections['system_brief'] = text
+
+                elif service_key == 'blog_performance' and self.blog_performance_fn:
+                    text = await asyncio.to_thread(
+                        self.blog_performance_fn,
+                        limit=10, include_learning_rules=True
+                    )
+                    if text:
+                        sections['blog_performance'] = str(text)
+
+                elif service_key == 'domain_context' and self.domain_context_builder:
+                    text = await asyncio.to_thread(
+                        self.domain_context_builder.build_context, topic=message
+                    )
+                    if text:
+                        if is_direct or self._passes_relevance_gate(message, str(text)):
+                            sections['domain_context'] = str(text)
+
+                elif service_key == 'spider_trends' and self.spider_context_builder:
+                    result = await asyncio.to_thread(
+                        self.spider_context_builder.build_context_for_agent,
+                        'personal_assistant', message, hours=48, max_trends=5
+                    )
+                    text = result.get('summary', '') if isinstance(result, dict) else ''
+                    if text:
+                        if is_direct or self._passes_relevance_gate(message, text):
+                            sections['spider_trends'] = text
+
+                elif service_key == 'advisor' and self.advisor_context_builder:
+                    result = await asyncio.to_thread(
+                        self.advisor_context_builder.build_context_for_agent,
+                        'personal_assistant', message
+                    )
+                    if isinstance(result, dict) and result.get('key_principles'):
+                        principles = result['key_principles'][:3]
+                        sections['advisor'] = '\n'.join(
+                            f"- {p}" if isinstance(p, str) else f"- {p}"
+                            for p in principles
+                        )
+
+            except Exception as e:
+                logger.warning(f"[{trace_id}] Enrichment '{service_key}' failed: {e}")
+
+        # Truncate each section to its cap
+        for key, text in sections.items():
+            cap = self.ENRICHMENT_CAPS.get(key, 600)
+            if len(text) > cap:
+                sections[key] = text[:cap] + '...'
+
+        return sections
+
+    def _build_analytical_prompt(
+        self,
+        message: str,
+        intent: str,
+        tool_result: Any,
+        enrichment_sections: Dict[str, str],
+        user_name: str,
+        context: Dict[str, Any]
+    ) -> str:
+        """Session 959: Build analytical system prompt with enrichment context."""
+        base = f"""You are {user_name}'s intelligent personal assistant on a unified AI platform with \
+74 AI agents, 77 data spiders, and 25 legendary advisors.
+
+You are NOT a data listing tool. You are an analytical advisor.
+
+RESPONSE FORMAT:
+1. Start with 1-2 sentences of KEY INSIGHT (the most important finding)
+2. Then your ANALYSIS with patterns, risks, and opportunities - reference specific item IDs
+3. End with RECOMMENDED ACTIONS (1-3 concrete next steps)
+
+IMPORTANT: The raw data listing with IDs is already shown to the user separately.
+Do NOT repeat the full list. Only reference items by ID when analyzing them.
+
+RULES:
+- Lead with insight, not counts
+- Reference item IDs when discussing specific items
+- Highlight risks, opportunities, and anomalies
+- Be direct and decisive, not hedging
+- Do NOT reuse the same trend/incident across unrelated answers - only cite trends if they materially affect the user's question"""
+
+        intent_directives = {
+            'content_review': (
+                "FOCUS: Evaluate content quality. Scores >0.8 are publish-ready, <0.5 need work. "
+                "Compare novelty vs structure scores. Identify best and weakest topics. "
+                "Flag any that need fact-checking against spider data. Recommend a publishing strategy."
+            ),
+            'opportunities': (
+                "FOCUS: Evaluate viability and urgency of each opportunity. "
+                "Cross-reference with spider trends. Prioritize by ROI potential. "
+                "Flag time-sensitive items."
+            ),
+            'initiatives': (
+                "FOCUS: Assess pipeline health. Identify bottlenecks, blockers, and stale items "
+                "(check last_activity_at). Highlight at-risk initiatives and critical action items. "
+                "Recommend which initiatives need attention now."
+            ),
+            'spider_data': (
+                "FOCUS: Identify patterns and clusters in the spider data. "
+                "Highlight emerging trends. Suggest applications and next actions."
+            ),
+            'execution_history': (
+                "FOCUS: Identify declining agents and systemic failures. "
+                "Compare performance to averages. Highlight outliers."
+            ),
+            'system_health': (
+                "FOCUS: Lead with critical issues. Assess trajectory (improving/declining). "
+                "Recommend preventive actions before problems escalate."
+            ),
+            'boardroom': (
+                "FOCUS: Summarize the decision landscape. Highlight urgency levels. "
+                "Recommend triage order. Note any items linked to active initiatives."
+            ),
+        }
+
+        canonical_intent = self.INTENT_ALIASES.get(intent, intent)
+        directive = intent_directives.get(canonical_intent, '')
+
+        parts = [base]
+        if directive:
+            parts.append(f"\n{directive}")
+
+        # Add enrichment sections (only if non-empty)
+        section_labels = {
+            'system_brief': 'SYSTEM BRIEF',
+            'spider_trends': 'REAL-TIME TRENDS',
+            'blog_performance': 'PERFORMANCE CONTEXT',
+            'domain_context': 'DOMAIN CONTEXT',
+            'advisor': 'ADVISOR PRINCIPLES',
+        }
+        for key, label in section_labels.items():
+            text = enrichment_sections.get(key, '')
+            if text:
+                parts.append(f"\n=== {label} ===\n{text}")
+
+        # Add the data to analyze
+        tool_str = str(tool_result)
+        if len(tool_str) > 3000:
+            tool_str = tool_str[:3000] + '...'
+
+        parts.append(f'\n=== DATA TO ANALYZE ===\nUser asked: "{message}"\nTool returned: {tool_str}')
+
+        return '\n'.join(parts)
+
     async def _generate_response_from_tool(
         self,
         message: str,
         intent: str,
         tool_result: Any,
         context: Dict[str, Any],
-        trace_id: str
+        trace_id: str,
+        enrichment_sections: Dict[str, str] = None
     ) -> str:
-        """Generate natural language response from tool result."""
+        """
+        Session 959: Generate response from tool result.
+
+        Always shows structured list first. If enrichment is available,
+        appends LLM analytical insight after a separator.
+        """
         user_name = context.get('user_name', 'there')
+        enrichment_sections = enrichment_sections or {}
+        has_enrichment = any(v for v in enrichment_sections.values())
 
-        # Session 943: Use structured formatting directly for these intents
-        # (they have custom formatters that produce better output than LLM summarization)
-        structured_format_intents = [
-            'initiatives', 'brainstorming', 'content_review',
-            'boardroom', 'decision_management'
-        ]
+        # Always generate the compact structured list (users need IDs to act)
+        structured_output = self._format_tool_result(tool_result, intent, user_name)
 
-        if intent in structured_format_intents:
-            return self._format_tool_result(tool_result, intent, user_name)
+        # If we have enrichment, get LLM analysis and APPEND it to structured output
+        if has_enrichment:
+            system_prompt = self._build_analytical_prompt(
+                message, intent, tool_result, enrichment_sections,
+                user_name, context
+            )
+            try:
+                result = await asyncio.to_thread(
+                    self.llm_enforcer.enforce_real_ai,
+                    prompt=f"Analyze and advise on this data: {tool_result}",
+                    context=system_prompt,
+                    agent_name="UnifiedPA",
+                    task_type="analysis",
+                    max_tokens=2000
+                )
+                if result.get('success'):
+                    llm_analysis = result.get('response', '')
+                    if llm_analysis:
+                        return f"{structured_output}\n\n---\n\n{llm_analysis}"
+            except Exception as e:
+                logger.warning(f"[{trace_id}] LLM analysis failed: {e}")
 
-        # For other intents, use LLM to interpret results
-        system_prompt = f"""You are a helpful AI assistant.
+        # Fallback: no enrichment or LLM failed
+        # For non-structured intents without enrichment, use original LLM summarization
+        if intent not in ['initiatives', 'brainstorming', 'content_review',
+                          'boardroom', 'decision_management']:
+            system_prompt = f"""You are a helpful AI assistant.
 The user asked: "{message}"
 You executed a tool and got this result:
 {tool_result}
@@ -862,27 +1214,21 @@ You executed a tool and got this result:
 Generate a helpful, conversational response summarizing this information for {user_name}.
 Be concise but informative. Use bullet points for lists.
 Address the user by name occasionally."""
+            try:
+                result = await asyncio.to_thread(
+                    self.llm_enforcer.enforce_real_ai,
+                    prompt=f"Summarize this tool result: {tool_result}",
+                    context=system_prompt,
+                    agent_name="UnifiedPA",
+                    task_type="conversation",
+                    max_tokens=2000
+                )
+                if result.get('success'):
+                    return result.get('response', structured_output)
+            except Exception:
+                pass
 
-        try:
-            # Session 948: Increased max_tokens from 400 to 2000 for comprehensive responses
-            result = await asyncio.to_thread(
-                self.llm_enforcer.enforce_real_ai,
-                prompt=f"Summarize this tool result for the user: {tool_result}",
-                context=system_prompt,
-                agent_name="UnifiedPA",
-                task_type="conversation",
-                max_tokens=2000
-            )
-
-            if result.get('success'):
-                return result.get('response', str(tool_result))
-            else:
-                # Fallback to simple formatting
-                return self._format_tool_result(tool_result, intent, user_name)
-
-        except Exception as e:
-            logger.warning(f"[{trace_id}] LLM interpretation failed: {e}")
-            return self._format_tool_result(tool_result, intent, user_name)
+        return structured_output
 
     def _format_tool_result(
         self,
@@ -938,7 +1284,7 @@ Address the user by name occasionally."""
                             filter_desc = f" with {filters_applied['urgency'].upper()} urgency"
                         return f"No items found{filter_desc}, {user_name}."
 
-                    # Session 947: Show more items (up to 15) with IDs for taking action
+                    # Session 947/959: Show items with IDs + new ML/priority fields
                     item_lines = []
                     for item in items[:15]:
                         item_id = str(item.get('id', ''))[:8]  # Short ID for reference
@@ -946,14 +1292,23 @@ Address the user by name occasionally."""
                         urgency = item.get('urgency', item.get('decision_type', ''))
                         source = item.get('source_agent', '')
                         ml_rec = item.get('ml_recommendation', '')
+                        priority = item.get('priority_score') or 0
+                        confidence = item.get('ml_confidence')
+                        impact = item.get('impact_estimate', '')
 
                         line = f"• **{title}**"
                         if urgency:
                             line += f" [{urgency}]"
+                        if priority:
+                            line += f" (priority: {priority:.1f})"
                         if source:
-                            line += f" (from {source})"
+                            line += f" from {source}"
                         if ml_rec:
                             line += f" - ML: {ml_rec}"
+                        if confidence is not None:
+                            line += f" (conf: {confidence:.0%})"
+                        if impact:
+                            line += f" | Impact: {impact}"
                         line += f" `{item_id}`"
                         item_lines.append(line)
 
@@ -1216,10 +1571,14 @@ Address the user by name occasionally."""
                         stage = item.get('current_stage', 1)
                         purpose = item.get('purpose', 'unknown')
                         pending = item.get('pending_actions', 0)
+                        critical = item.get('critical_actions', 0)
                         status_icon = '🟢' if item.get('status') == 'ACTIVE' else '⏸️'
                         response += f"{status_icon} **{name}** (Stage {stage}/5, {purpose})"
                         if pending > 0:
-                            response += f" - {pending} action items"
+                            action_desc = f"{pending} action items"
+                            if critical > 0:
+                                action_desc += f" ({critical} critical)"
+                            response += f" - {action_desc}"
                         response += "\n"
 
                     if count > 7:
