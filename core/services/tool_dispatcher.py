@@ -1518,8 +1518,13 @@ class ToolDispatcher:
 
         action = payload.get('action', 'list')
         limit = payload.get('limit', 10)
-        content_type = payload.get('type')  # document, report, analysis, etc.
+        content_type = payload.get('type')  # blog, document, report, analysis, etc.
         category = payload.get('category')  # Marketing, Development, etc.
+
+        # Session 958: If type is 'blog', query SelfBlog model instead of Deliverable
+        # SelfBlog contains actual blog posts (773+ in production)
+        if content_type == 'blog':
+            return self._handle_blog_query(action, limit, category, payload, user_id)
 
         # Build base queryset - filter by user if available
         base_qs = Deliverable.objects.all()
@@ -1693,6 +1698,139 @@ class ToolDispatcher:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, publish, archive"
+            )
+
+    def _handle_blog_query(
+        self,
+        action: str,
+        limit: int,
+        category: Optional[str],
+        payload: Dict[str, Any],
+        user_id: Optional[int]
+    ) -> Dict[str, Any]:
+        """
+        Session 958: Query SelfBlog model for actual blog content.
+
+        SelfBlog contains:
+        - 773+ blog posts in production
+        - Categories: blog, audit, technical_document, research_brief, etc.
+        - Status: draft, pending_review, approved, published
+
+        This allows the PA to answer "What blogs have been written?" accurately.
+        """
+        from core.models_unified_system import SelfBlog
+        from django.db.models import Count
+
+        # Build base queryset for blogs
+        base_qs = SelfBlog.objects.filter(category='blog')
+
+        if action == 'list':
+            # List blogs ready for review
+            qs = base_qs.filter(status__in=['pending_review', 'approved'])
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'title', 'category', 'status', 'created_at',
+                    'quality_score', 'content_type'
+                )
+            )
+
+            return {
+                'action': 'list',
+                'source': 'SelfBlog',
+                'count': len(items),
+                'items': items,
+                'filters_applied': {
+                    'type': 'blog',
+                    'status': 'pending_review or approved',
+                }
+            }
+
+        elif action == 'recent':
+            # Session 958: List recently created blogs (any status)
+            from django.utils import timezone
+            from datetime import timedelta
+
+            period_days = payload.get('days', 30)
+            since = timezone.now() - timedelta(days=period_days)
+
+            qs = base_qs.filter(created_at__gte=since)
+            items = list(
+                qs.order_by('-created_at')[:limit].values(
+                    'id', 'title', 'category', 'status', 'created_at',
+                    'quality_score', 'content_type'
+                )
+            )
+
+            # Get counts by status
+            status_counts = {}
+            for item in items:
+                s = item.get('status', 'unknown')
+                status_counts[s] = status_counts.get(s, 0) + 1
+
+            return {
+                'action': 'recent',
+                'source': 'SelfBlog',
+                'count': len(items),
+                'items': items,
+                'period_days': period_days,
+                'by_status': status_counts,
+            }
+
+        elif action == 'stats':
+            # Get blog statistics
+            total = base_qs.count()
+            draft_count = base_qs.filter(status='draft').count()
+            pending_count = base_qs.filter(status='pending_review').count()
+            approved_count = base_qs.filter(status='approved').count()
+            published_count = base_qs.filter(status='published').count()
+
+            return {
+                'action': 'stats',
+                'source': 'SelfBlog',
+                'total_blogs': total,
+                'by_status': {
+                    'draft': draft_count,
+                    'pending_review': pending_count,
+                    'approved': approved_count,
+                    'published': published_count,
+                },
+                'ready_for_review': pending_count + approved_count,
+            }
+
+        elif action == 'details':
+            # Get specific blog details
+            blog_id = payload.get('id')
+            if not blog_id:
+                raise ValueError("Blog ID required for details action")
+
+            blog = base_qs.filter(id=blog_id).first()
+            if not blog:
+                raise ValueError(f"Blog {blog_id} not found")
+
+            # Get content preview (first 500 chars) - SelfBlog uses 'full_text' field
+            content_preview = (blog.full_text or '')[:500]
+            if len(blog.full_text or '') > 500:
+                content_preview += '...'
+
+            return {
+                'action': 'details',
+                'source': 'SelfBlog',
+                'blog': {
+                    'id': str(blog.id),
+                    'title': blog.title,
+                    'status': blog.status,
+                    'category': blog.category,
+                    'content_type': blog.content_type,
+                    'quality_score': blog.quality_score,
+                    'created_at': blog.created_at.isoformat() if blog.created_at else None,
+                    'content_preview': content_preview,
+                    'word_count': blog.word_count or 0,
+                }
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details"
             )
 
     def _handle_initiative(
