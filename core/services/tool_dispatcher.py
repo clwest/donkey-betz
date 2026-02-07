@@ -1124,7 +1124,8 @@ class ToolDispatcher:
             items = list(
                 qs.order_by('-priority_score', '-created_at')[:limit].values(
                     'id', 'title', 'summary', 'urgency', 'item_type',
-                    'created_at', 'source_agent', 'ml_recommendation'
+                    'created_at', 'source_agent', 'ml_recommendation',
+                    'priority_score', 'ml_confidence', 'impact_estimate'
                 )
             )
             return {
@@ -1730,7 +1731,8 @@ class ToolDispatcher:
             items = list(
                 qs.order_by('-created_at')[:limit].values(
                     'id', 'title', 'category', 'status', 'created_at',
-                    'quality_score', 'content_type'
+                    'quality_score', 'novelty_score', 'structure_score',
+                    'content_type', 'publish_ready', 'word_count', 'tone'
                 )
             )
 
@@ -1757,7 +1759,8 @@ class ToolDispatcher:
             items = list(
                 qs.order_by('-created_at')[:limit].values(
                     'id', 'title', 'category', 'status', 'created_at',
-                    'quality_score', 'content_type'
+                    'quality_score', 'novelty_score', 'structure_score',
+                    'content_type', 'publish_ready', 'word_count', 'tone'
                 )
             )
 
@@ -1767,6 +1770,19 @@ class ToolDispatcher:
                 s = item.get('status', 'unknown')
                 status_counts[s] = status_counts.get(s, 0) + 1
 
+            # Session 959: Aggregate quality analytics
+            from django.db.models import Avg
+            aggregates = base_qs.filter(
+                created_at__gte=since, quality_score__isnull=False
+            ).aggregate(
+                avg_quality=Avg('quality_score'),
+                avg_novelty=Avg('novelty_score'),
+                avg_structure=Avg('structure_score'),
+            )
+            publish_ready_count = base_qs.filter(
+                created_at__gte=since, publish_ready=True
+            ).count()
+
             return {
                 'action': 'recent',
                 'source': 'SelfBlog',
@@ -1774,15 +1790,28 @@ class ToolDispatcher:
                 'items': items,
                 'period_days': period_days,
                 'by_status': status_counts,
+                'avg_quality': aggregates.get('avg_quality'),
+                'avg_novelty': aggregates.get('avg_novelty'),
+                'avg_structure': aggregates.get('avg_structure'),
+                'publish_ready_count': publish_ready_count,
             }
 
         elif action == 'stats':
             # Get blog statistics
+            from django.db.models import Avg
             total = base_qs.count()
             draft_count = base_qs.filter(status='draft').count()
             pending_count = base_qs.filter(status='pending_review').count()
             approved_count = base_qs.filter(status='approved').count()
             published_count = base_qs.filter(status='published').count()
+            publish_ready_count = base_qs.filter(publish_ready=True).count()
+
+            # Session 959: Aggregate quality averages
+            quality_aggs = base_qs.filter(quality_score__isnull=False).aggregate(
+                avg_quality=Avg('quality_score'),
+                avg_novelty=Avg('novelty_score'),
+                avg_structure=Avg('structure_score'),
+            )
 
             return {
                 'action': 'stats',
@@ -1795,6 +1824,10 @@ class ToolDispatcher:
                     'published': published_count,
                 },
                 'ready_for_review': pending_count + approved_count,
+                'publish_ready_count': publish_ready_count,
+                'avg_quality': quality_aggs.get('avg_quality'),
+                'avg_novelty': quality_aggs.get('avg_novelty'),
+                'avg_structure': quality_aggs.get('avg_structure'),
             }
 
         elif action == 'details':
@@ -1822,6 +1855,11 @@ class ToolDispatcher:
                     'category': blog.category,
                     'content_type': blog.content_type,
                     'quality_score': blog.quality_score,
+                    'novelty_score': blog.novelty_score,
+                    'structure_score': blog.structure_score,
+                    'publish_ready': blog.publish_ready,
+                    'gate_notes': blog.gate_notes or '',
+                    'tone': blog.tone or '',
                     'created_at': blog.created_at.isoformat() if blog.created_at else None,
                     'content_preview': content_preview,
                     'word_count': blog.word_count or 0,
@@ -1886,15 +1924,21 @@ class ToolDispatcher:
                 qs.order_by('-impact_score', '-urgency', '-created_at')[:limit].values(
                     'id', 'name', 'description', 'status', 'current_stage',
                     'purpose', 'program', 'impact_score', 'urgency',
-                    'confidence', 'revenue_potential', 'created_at'
+                    'confidence', 'revenue_potential', 'created_at',
+                    'updated_at', 'last_activity_at'
                 )
             )
 
-            # Add action item counts
+            # Add action item counts (including critical)
             for item in items:
                 item['pending_actions'] = InitiativeActionItem.objects.filter(
                     initiative_id=item['id'],
                     status='pending'
+                ).count()
+                item['critical_actions'] = InitiativeActionItem.objects.filter(
+                    initiative_id=item['id'],
+                    status='pending',
+                    priority='critical'
                 ).count()
 
             return {
