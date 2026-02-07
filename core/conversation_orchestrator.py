@@ -948,6 +948,41 @@ class ConversationOrchestrator:
             except Exception as e:
                 logger.warning(f"[Session 873] Decision enforcement failed: {e}")
 
+        # Session 960 Phase 0: Auto-trigger DecisionEnforcer even when no
+        # decision_summary was extracted (debate/planning/critique often
+        # end without a clean DecisionSummary block). Use last 3 messages
+        # as fallback input so the enforcer can synthesise a decision.
+        if (
+            ENABLE_DECISION_ENFORCEMENT
+            and execution_mandate is None
+            and not decision_summary
+            and conversation_type in ('debate', 'planning', 'critique')
+            and len(messages) >= 3
+        ):
+            try:
+                fallback_summary = {
+                    'decision': '',
+                    'insights': [],
+                    'next_steps': [],
+                    'proposed_feature': topic,
+                    '_fallback': True,
+                }
+                mandate_result = self._enforce_decision(
+                    messages=messages[-3:],
+                    decision_summary=fallback_summary,
+                    topic=topic,
+                    participants=[agent1['name'], agent2['name']],
+                    conversation_type=conversation_type
+                )
+                execution_mandate = mandate_result.get('mandate')
+                if execution_mandate:
+                    logger.info(
+                        f"🎯 [Session 960] Fallback decision enforced: "
+                        f"{execution_mandate.chosen_path[:50]}..."
+                    )
+            except Exception as e:
+                logger.warning(f"[Session 960] Fallback decision enforcement failed: {e}")
+
         # Session 874: Convert to SynthesisContract for debate-like conversations
         synthesis_contract = None
         synthesis_contract_dict = None
