@@ -1955,6 +1955,76 @@ class ToolDispatcher:
                 }
             }
 
+        elif action == 'audit':
+            from datetime import timedelta
+            from django.utils import timezone
+            from core.management.commands.consolidate_duplicate_initiatives import (
+                find_duplicate_clusters,
+            )
+
+            audit_qs = Initiative.objects.all()
+            status_filter = payload.get('status', 'all')
+            if status_filter and status_filter != 'all':
+                audit_qs = audit_qs.filter(status=status_filter.upper())
+
+            total = audit_qs.count()
+            cutoff = timezone.now() - timedelta(days=14)
+
+            init_list = list(audit_qs.only(
+                'id', 'name', 'status', 'current_stage',
+                'last_activity_at', 'created_at', 'purpose', 'program'
+            ))
+
+            # Duplicate clustering via Jaccard similarity + BFS (Session 906)
+            clusters = find_duplicate_clusters(init_list, threshold=0.6)
+            duplicate_ids = set()
+            for cluster in clusters:
+                for init in cluster[1:]:
+                    duplicate_ids.add(init.id)
+
+            # Classify
+            real, stalled, noise = [], [], []
+            for init in init_list:
+                if init.current_stage > 1 or init.last_activity_at:
+                    real.append(init)
+                elif init.created_at < cutoff:
+                    stalled.append(init)
+                else:
+                    noise.append(init)
+
+            return {
+                'action': 'audit',
+                'total': total,
+                'classification': {
+                    'real': {
+                        'count': len(real),
+                        'items': [{'name': i.name, 'stage': i.current_stage,
+                                   'purpose': i.purpose} for i in real[:10]]
+                    },
+                    'stalled': {
+                        'count': len(stalled),
+                        'items': [{'name': i.name, 'created_at': str(i.created_at)[:10],
+                                   'purpose': i.purpose} for i in stalled[:5]]
+                    },
+                    'noise': {
+                        'count': len(noise),
+                        'items': [{'name': i.name} for i in noise[:5]]
+                    },
+                    'duplicates': {
+                        'count': len(duplicate_ids),
+                        'cluster_count': len(clusters),
+                        'clusters': [
+                            {
+                                'primary': cluster[0].name,
+                                'count': len(cluster),
+                                'examples': [c.name[:80] for c in cluster[1:3]]
+                            }
+                            for cluster in clusters[:10]
+                        ]
+                    }
+                }
+            }
+
         elif action == 'stats':
             # Get pipeline overview
             total = Initiative.objects.count()
