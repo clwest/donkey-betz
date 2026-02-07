@@ -1893,7 +1893,7 @@ class ToolDispatcher:
         from django.db.models import Count, Q
 
         action = payload.get('action', 'list')
-        limit = payload.get('limit', 10)
+        limit = payload.get('limit', 50)
 
         if action == 'list':
             # Build queryset with filters
@@ -1920,6 +1920,7 @@ class ToolDispatcher:
                 qs = qs.filter(program=program_filter.lower())
 
             # Order by priority score (impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2)
+            total_count = qs.count()
             items = list(
                 qs.order_by('-impact_score', '-urgency', '-created_at')[:limit].values(
                     'id', 'name', 'description', 'status', 'current_stage',
@@ -1944,6 +1945,7 @@ class ToolDispatcher:
             return {
                 'action': 'list',
                 'count': len(items),
+                'total_count': total_count,
                 'items': items,
                 'filters_applied': {
                     'status': status_filter,
