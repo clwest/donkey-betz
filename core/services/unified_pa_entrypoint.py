@@ -751,7 +751,8 @@ class UnifiedPAEntrypoint:
                 payload['action'] = 'list'
 
             # Extract type filter if mentioned
-            for content_type in ['document', 'report', 'analysis', 'image', 'video', 'audio', 'code']:
+            # Session 958: Added 'blog' type - queries SelfBlog model
+            for content_type in ['blog', 'document', 'report', 'analysis', 'image', 'video', 'audio', 'code']:
                 if content_type in msg_lower:
                     payload['type'] = content_type
                     break
