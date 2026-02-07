@@ -90,7 +90,7 @@ class UnifiedPAEntrypoint:
         'learning_patterns': ['spider_trends'],
         'pilots':            ['intelligence_enricher'],
         'gates':             ['intelligence_enricher'],
-        'reasoning':         ['intelligence_enricher', 'advisor'],
+        'reasoning':         ['intelligence_enricher', 'advisor', 'strategic_memory'],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -122,6 +122,7 @@ class UnifiedPAEntrypoint:
         'blog_performance': 600,
         'domain_context':   600,
         'advisor':          300,
+        'strategic_memory':  400,
     }
 
     # Stop words for relevance gating
@@ -1054,6 +1055,29 @@ class UnifiedPAEntrypoint:
                             for p in principles
                         )
 
+                elif service_key == 'strategic_memory':
+                    # Session 960 Phase 0: Pull learning patterns for PA reasoning
+                    try:
+                        from core.services.learning_pattern_engine import get_learning_pattern_engine
+                        engine = get_learning_pattern_engine()
+                        patterns = await asyncio.to_thread(
+                            engine.get_patterns_for_agent,
+                            'personal_assistant', message, days_back=30, max_patterns=3
+                        )
+                        if isinstance(patterns, dict) and patterns.get('has_patterns'):
+                            parts = []
+                            if patterns.get('summary'):
+                                parts.append(patterns['summary'])
+                            for bp in patterns.get('best_practices', [])[:3]:
+                                if isinstance(bp, str):
+                                    parts.append(f"- {bp}")
+                                elif isinstance(bp, dict):
+                                    parts.append(f"- {bp.get('practice', bp.get('description', ''))}")
+                            if parts:
+                                sections['strategic_memory'] = '\n'.join(parts)
+                    except ImportError:
+                        pass
+
             except Exception as e:
                 logger.warning(f"[{trace_id}] Enrichment '{service_key}' failed: {e}")
 
@@ -1143,6 +1167,7 @@ RULES:
             'blog_performance': 'PERFORMANCE CONTEXT',
             'domain_context': 'DOMAIN CONTEXT',
             'advisor': 'ADVISOR PRINCIPLES',
+            'strategic_memory': 'STRATEGIC MEMORY',
         }
         for key, label in section_labels.items():
             text = enrichment_sections.get(key, '')
