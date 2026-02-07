@@ -1,112 +1,84 @@
-# Session 958 - Start Here
+# Session 960 - Start Here
 
-**Previous Session:** 957 (RAG Observability Frontend)
-**Date:** February 6, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: FULL STACK** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE**
-
----
-
-## Session 957 Summary (Just Completed)
-
-### Option I: RAG Observability Frontend - COMPLETE
-Built comprehensive UI dashboard for monitoring the Risk-Aware RAG system in KnowledgeTab:
-- **Summary stats row** - Total docs, critical docs, classified docs, budget utilization %
-- **Health indicators** - Color-coded (green/amber/blue) status with recommendations
-- **Collapsible detail panels**:
-  - Context budget allocation by tier (Reserved, Critical, High, Medium, Low) with progress bars
-  - Documents by risk level (critical, high, medium, low) with colored cards
-  - Documents by classification (reference, architecture, constraint, etc.)
-  - Risk boost effectiveness (boosted docs, avg/max boost percentages)
-  - Retrieval channel distribution (semantic, critical, incident, constraint)
-- **Run Classification** button to trigger document classification
-- **4 API endpoints** - ragDashboard, ragCriticalDocs, ragRiskDistribution, ragRunClassification
+**Previous Session:** 959 (PA Intelligence Upgrade)
+**Date:** February 7, 2026
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **166 INITIATIVES** | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE**
 
 ---
 
-## Session 954-956 Summary
+## Session 959 Summary (Just Completed)
 
-### Option A: Document Classification - COMPLETE
-Ran document classification for Risk-Aware RAG on Railway production.
-**Results:** 562 documents classified (critical: 2, high_risk: 66, architecture: 8, etc.)
+### PA Intelligence Upgrade - COMPLETE (PR #954)
+Transformed the PA from a data listing tool into an analytical advisor by wiring 5 existing intelligence services into the response pipeline:
 
-### Option B: Boardroom ML Improvements - COMPLETE
-Created content-aware ML prediction system for boardroom attention items.
-- `core/services/boardroom_ml_service.py` - Content similarity, Wilson score confidence
-- Multi-signal predictions (content 50%, type 20%, source 20%, urgency 10%)
-- `python manage.py enrich_boardroom_ml --stats/--pending`
+- **5 enrichment services connected:** PAIntelligenceEnricher, BlogPerformanceContext, DomainContentContext, SpiderContext, AdvisorContext
+- **Intent-to-enrichment mapping:** 12 intents mapped to specific enrichment services, 14 intent aliases for normalization
+- **Relevance gating:** Regex tokenization with keyword overlap threshold prevents irrelevant context injection
+- **Analytical prompt builder:** Intent-specific directives (content_review focuses on quality scores, initiatives on pipeline health, boardroom on triage urgency)
+- **Response restructuring:** Structured list always shown first, LLM analytical insight appended after `---` separator
+- **Expanded data fields:** Blog quality scores (novelty, structure, publish_ready), initiative timestamps + critical actions, boardroom ML confidence/priority/impact
+- **Graceful degradation:** Individual try/except per enrichment service, fallback to structured list
 
-### Option C: Initiative Source Cleanup - COMPLETE
-Added `_is_valid_initiative_name()` validation to prevent junk initiatives.
-- Validates minimum length, proper capitalization, no junk patterns
-- Applied in `decision_extractor.py` and `conversation_initiative_pipeline.py`
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `core/services/unified_pa_entrypoint.py` | +5 enrichment properties, enrichment pipeline, analytical prompt, relevance gating |
+| `core/services/tool_dispatcher.py` | Expanded blog/initiative/boardroom data fields |
 
-### Option D: Learning Loop Refinement - COMPLETE
-Expanded learning loop system with:
-- **15+ SuccessSignal definitions** (was 3) - image gen, content writing, agents, etc.
-- **User feedback integration** - `analyze_user_feedback()` connects boardroom decisions to learning
-- **Effectiveness tracking** - `track_learning_application()`, `get_learning_effectiveness_stats()`
-- **Dashboard API** - 4 new endpoints for learning loop
+---
 
-### Option E: RAG Observability Dashboard - COMPLETE
-Created visibility into the risk-aware RAG system:
-- **Document inventory** - 562 docs, 18 critical, by risk level/class
-- **Context budget** - 650 tokens reserved tier (16.2% of 4000)
-- **Risk boost stats** - Boost effectiveness by document type
-- **Health indicators** - Critical coverage, classification coverage
-- **8 API endpoints** - `/api/rag/observability/*`
+## Deep Dive Findings: Agent Collaboration Architecture
 
-### Option F: Agent Provenance Extension - COMPLETE
-Extended provenance tracking to 5 additional agent categories:
-- **ContentWriterAgent** - content_generation (72h stale threshold)
-- **PodcastCoordinatorAgent** - podcast_coordination (48h)
-- **CTOAgent** - technical_analysis (24h)
-- **COOAgent** - operational_analysis (24h)
-- **FullStackDeveloperAgent** - code_generation (168h/1 week)
+Session 959 also conducted a thorough exploration of the full agent collaboration system:
 
-**Total agents with provenance: 26+** (was 18)
+### Current State (241 AI Entities)
+- **77 code-based agents** - Python implementations in AgentRouter.AGENT_MAP
+- **139 persona agents** - Database-only, 20+ domain categories, mapped to spider data via PersonaAgentContextBuilder
+- **25 legendary advisors** - Used in ConceptForge debate pairs (Buffett vs Wood, Musk vs Harari, etc.)
 
-### Option G: Boardroom ML UI Integration - COMPLETE
-Enhanced BoardroomTab with comprehensive ML prediction display:
-- **MLPredictionPanel component** - Shows full prediction details
-- **Confidence bar** - Visual percentage (green≥70%, amber≥40%, gray<40%)
-- **Approval probability gauge** - Red→amber→green gradient slider
-- **Reasoning signals** - Parsed breakdown of prediction factors
-- **Similar past decisions** - Collapsible list with similarity scores
-- **ML badge in row header** - Quick indicator without expanding
+### Systems Built But Not Fully Connected
+| System | Status | Gap |
+|--------|--------|-----|
+| **PersonaAgentContextBuilder** | Built, maps 139 personas to spider data | Only fires on direct persona invocation, not during content creation |
+| **ConceptForge Pipeline** | Built, 6-stage with debates | Dossier output doesn't feed into ContentWriterAgent |
+| **Conversation Orchestrator** | Built, tension enforcement + banned phrases | Not involved in content review/quality |
+| **DecisionEnforcerAgent** | Built, forces decisions after debate | Never applied to content quality decisions |
+| **Advisor debate pairs** | Built in conceptforge/panels.py | Only fire in ConceptForge, not general content flow |
 
-### Option H: Learning Loop Frontend - COMPLETE
-Added "AI Learning" sub-tab to LearningJourneyTab:
-- **Stats cards** - Active learnings, times applied, successful, effectiveness %
-- **Most effective patterns** - Top 5 with progress bars
-- **Needs improvement** - Bottom 5 low-performing patterns
-- **By pattern type** - Distribution breakdown
-- **Recent learnings** - Last 10 extracted with details
-- **Interactive controls** - Run cycle, refresh, track outcome buttons
+### Content Quality Problem (NFL Draft Blog Case Study)
+Blog content is generic because ContentWriterAgent works alone. Spider data arrives as vague trending topics, not structured claims with URLs/dates/authors. No persona expert review, no multi-agent debate before publishing.
+
+**Current flow:** Spider data → vague summary → ContentWriterAgent (alone) → SelfBlog
+**Needed flow:** Spider data → structured claims → ContentWriterAgent draft → Expert persona review panel → Advisor framework → DecisionEnforcer publish/revise/kill → Final content
 
 ---
 
 ## PRIORITY OPTIONS FOR NEXT SESSION
 
+### Option A: Multi-Agent Content Review Panel (HIGH IMPACT)
+Wire persona agents + advisors into a post-generation content review step:
+- Inject domain-specific spider data into persona review prompts
+- Expert personas challenge weak claims, suggest missing data
+- Advisor frameworks apply quality lenses
+- DecisionEnforcer decides: publish, revise, or kill
+- **Key files:** `content_writer_agent.py`, `persona_agent_context.py`, `conversation_orchestrator.py`
+
+### Option B: ConceptForge → Content Pipeline Connection
+Wire ConceptForge dossier output into ContentWriterAgent prompts:
+- When ConceptForge completes a dossier, feed insights into content generation
+- Structured claims from research stage become content anchors
+- **Key files:** `core/conceptforge/orchestrator.py`, `content_writer_agent.py`
+
+### Option C: Spider Data → Structured Claims
+Transform spider data from vague summaries to structured source claims:
+- Spider results with URLs, dates, authors, specific claims
+- Citation injection at generation time (not just context)
+- Confidence scoring per paragraph based on source count
+- **Key files:** `spider_context_builder.py`, `content_writer_agent.py`
+
 ### Option J: Critical Docs Management UI
-Extend RAG Observability with critical document management:
-- View/edit critical docs list
-- Mark/unmark documents as critical
-- Quick filters for classification status
-- Bulk classification actions
-
 ### Option K: RAG Retrieval Analytics
-Add retrieval logging and analytics:
-- Log each retrieval with query, results, and context used
-- Show retrieval success metrics
-- Query analysis (what topics are frequently searched)
-- Context efficiency metrics
-
 ### Option L: Provenance Dashboard
-Build UI for viewing agent provenance data:
-- Freshness indicators across all agents
-- Stale data warnings
-- Data source traceability
-- Publishability status overview
 
 ---
 
@@ -114,6 +86,7 @@ Build UI for viewing agent provenance data:
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **959** | PA Intelligence Upgrade - Analytical advisor with enrichment pipeline | #954 |
 | **957** | RAG Observability Frontend - Complete UI dashboard for risk-aware RAG system | #943 |
 | **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance Extension + ML UI + Learning UI | #935-#942 |
 | **953** | Agent Provenance Expansion - 18 agents with provenance tracking | - |
@@ -121,51 +94,29 @@ Build UI for viewing agent provenance data:
 | **951** | PA Platform Query Tool - Query deliverables, reports, initiatives | #929 |
 | **950** | Kalshi Sports Categorization + Workspace Scroll + Stock Analysis Fix | #924, #926, #927 |
 | **949** | Risk-Aware RAG - Dual-channel retrieval, RESERVED budget, risk re-ranking | #920, #921, #922 |
-| **947** | Spider Context Extension - CreativeOrchestrator (13) + ResearchOrchestrator (5) | - |
-| **946** | Learning Loop Backend - LearningLoopOrchestrator, prompt injection, scheduled extraction | #903 |
 
 ---
 
 ## Key Files Reference
 
-### Session 954/955 - Learning Loop Refinement
+### Session 959 - PA Intelligence Upgrade
 | File | Purpose |
 |------|---------|
-| `core/services/learning_loop_orchestrator.py` | +15 SuccessSignals, +analyze_user_feedback(), +effectiveness tracking |
-| `core/views_learning_loop.py` | +4 new API endpoints for learning loop |
-| `core/urls.py` | +4 URL patterns for learning loop APIs |
+| `core/services/unified_pa_entrypoint.py` | +5 enrichment properties, _enrich_tool_result(), _build_analytical_prompt(), relevance gating |
+| `core/services/tool_dispatcher.py` | Expanded blog/initiative/boardroom data fields |
+| `docs/handoffs/SESSION_959_PA_INTELLIGENCE_UPGRADE.md` | Full handoff documentation |
 
-### Session 954 - Boardroom ML + Initiative Cleanup
+### Agent Collaboration Architecture (Reference)
 | File | Purpose |
 |------|---------|
-| `core/services/boardroom_ml_service.py` | Content-aware ML predictions |
-| `core/services/decision_extractor.py` | +_is_valid_initiative_name() validation |
-| `core/management/commands/enrich_boardroom_ml.py` | Backfill command |
-
-### Session 957 - RAG Observability Frontend
-| File | Purpose |
-|------|---------|
-| `frontend/src/lib/api.ts` | +4 RAG observability API endpoints |
-| `frontend/src/pages/workspace/tabs/KnowledgeTab.tsx` | +RAG System Health section with full visualization |
-
-### Session 956 - Provenance + ML UI + Learning UI
-| File | Purpose |
-|------|---------|
-| `core/agents/content_writer_agent.py` | +provenance tracking (72h) |
-| `core/agents/podcast/podcast_coordinator_agent.py` | +provenance tracking (48h) |
-| `core/agents/executive/cto_agent.py` | +provenance tracking (24h) |
-| `core/agents/executive/coo_agent.py` | +provenance tracking (24h) |
-| `core/agents/fullstack_developer_agent.py` | +provenance tracking (168h) |
-| `frontend/src/pages/workspace/tabs/BoardroomTab.tsx` | +MLPredictionPanel component |
-| `frontend/src/pages/workspace/tabs/LearningJourneyTab.tsx` | +EffectivenessSubTab, AI Learning tab |
-
-### Session 953 - Agent Provenance Expansion
-| File | Purpose |
-|------|---------|
-| `core/agents/report_schemas.py` | `build_provenance()`, `format_disclaimer()` |
-| `core/agents/stocks/*.py` | 8 stock agents with provenance |
-| `core/agents/blockchain/*.py` | 5 blockchain agents with provenance |
+| `core/services/persona_agent_context.py` | Maps 139 persona agents to spider data via PERSONA_SPIDER_MAPPINGS |
+| `core/conceptforge/orchestrator.py` | 6-stage pipeline with persona + advisor integration |
+| `core/conceptforge/panels.py` | 25 legendary advisor profiles + debate pairs |
+| `core/conversation_orchestrator.py` | Multi-agent debates with tension enforcement |
+| `core/agents/decision_enforcer_agent.py` | Forces decisions after debate (banned hedging phrases) |
+| `core/agents/content_writer_agent.py` | Content generation with 10-layer prompt assembly |
+| `core/services/publish_gate.py` | Quality thresholds: 0.75 quality, 0.6 novelty, 0.55 structure |
 
 ---
 
-**Session 958 Focus: Choose from Options J, K, or L above - or pick a new direction!**
+**Session 960 Focus: Choose from Options A, B, C above (multi-agent content improvement) or J, K, L (UI improvements)!**
