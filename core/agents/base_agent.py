@@ -249,6 +249,18 @@ class BaseAgent(ABC, TimeTravelMixin):
         self._accumulated_tokens = 0
         # Session 768: Health check mode - skip learning/embedding for test interactions
         self._health_check_mode = health_check_mode
+        # Session 960 Phase 0: Track internal docs consumed during execution
+        self._docs_consumed: list = []
+
+    # ==================== Doc Consumption Tracking (Session 960) ====================
+
+    def get_docs_consumed(self) -> list:
+        """
+        Session 960 Phase 0: Return list of SourceInfo dicts for internal docs
+        read during this agent execution. Used by build_provenance() to merge
+        internal doc references into report provenance.
+        """
+        return list(self._docs_consumed)
 
     # ==================== Cost Tracking Helpers (Session 735) ====================
 
@@ -4303,6 +4315,23 @@ Consider this current data when formulating your response."""
             content = full_path.read_text(encoding='utf-8')
 
             logger.info(f"📖 [Session 798] {self.name} read doc: {doc_path}")
+
+            # Session 960 Phase 0: Track internal doc reads for provenance
+            import hashlib
+            content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+            # Deduplicate by path + hash
+            already_tracked = any(
+                d.get('path') == doc_path and d.get('content_hash') == content_hash
+                for d in self._docs_consumed
+            )
+            if not already_tracked:
+                self._docs_consumed.append({
+                    'name': doc_path,
+                    'source_type': 'internal_doc',
+                    'content_hash': content_hash,
+                    'record_count': content.count('\n') + 1,
+                    'freshness_hours': 0.0,
+                })
 
             return {
                 'success': True,
