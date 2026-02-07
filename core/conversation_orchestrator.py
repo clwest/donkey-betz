@@ -373,7 +373,10 @@ class ConversationOrchestrator:
 
         if context_parts:
             logger.debug(f"🧠 [Session 826] Rich context built for {agent_name}: {len(context_parts)} sources")
-            return "\n".join(context_parts)
+            # Session 960: Prepend date anchor so agents know what today is
+            from django.utils import timezone as tz
+            date_header = f"**Current Date:** {tz.now().strftime('%B %d, %Y')}"
+            return date_header + "\n" + "\n".join(context_parts)
 
         return ""
 
@@ -1333,7 +1336,14 @@ SUBSTANCE REQUIREMENT (Session 909 - CRITICAL):
 - Every message MUST include at least one: proposal, framework, critique, or concrete insight
 - If you need clarification, ASK while ALSO providing your current analysis
 - Questions like "What metric should we optimize?" are INVALID unless paired with "Based on X, I recommend Y because Z"
-- Ending with a question is fine, but your message must contain actionable content FIRST""")
+- Ending with a question is fine, but your message must contain actionable content FIRST
+
+DATA GROUNDING REQUIREMENT (Session 960 - CRITICAL):
+- ONLY cite data, sources, dates, and statistics that appear in the intelligence context provided above
+- If no relevant data is provided for this topic, say "no platform data available" - do NOT invent datasets
+- NEVER fabricate source names, collection dates, sample sizes, or confidence scores
+- NEVER reference "Notion spider", data collection dates, or dataset sizes unless they appear verbatim in your context
+- If the spider intelligence above doesn't cover this topic, acknowledge the gap and reason from first principles instead""")
 
         # Session 781: De-duplication - prevent reusing openers from this conversation
         if state.used_openers:
