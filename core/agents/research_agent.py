@@ -987,15 +987,17 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
         # Minimum threshold for "sufficient" data
         # Adjust based on task complexity
-        # Session 957: Lowered default from 5 to 3 - getting any results is useful
-        # for trend research, shouldn't mark as BLOCKED with limited data
+        # Session 957: Lowered thresholds significantly - having ANY results is useful
+        # BLOCKED should only happen when we have literally nothing
         task_lower = task.lower()
         if 'comprehensive' in task_lower or 'detailed' in task_lower:
-            min_items = 8
+            min_items = 5  # Was 8, lowered to 5
         elif 'quick' in task_lower or 'brief' in task_lower:
-            min_items = 2
+            min_items = 1  # Was 2, lowered to 1
+        elif 'trend' in task_lower or 'current' in task_lower:
+            min_items = 1  # Session 957: Trend queries should work with any data
         else:
-            min_items = 3
+            min_items = 2  # Was 3, lowered to 2
 
         is_sufficient = total_items >= min_items
 
@@ -1152,7 +1154,13 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         task_lower = task.lower()
 
         # Check for common data needs
-        if 'trend' in task_lower or 'analysis' in task_lower:
+        # Session 957: Only require temporal data for explicit time-series analysis requests
+        # Simple "current trends" queries don't need temporal data - they just need current info
+        time_series_keywords = ['over time', 'historical', 'timeline', 'progression', 'evolution',
+                                'change over', 'trend analysis', 'time series', 'compare periods']
+        needs_temporal = any(kw in task_lower for kw in time_series_keywords)
+
+        if needs_temporal and all_results:  # Only check if we actually have results to check
             # Check if we have time-series data
             # Session 957: Include 'created' to match 'created_at' fields in spider data
             has_temporal = any(
