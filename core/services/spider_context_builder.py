@@ -644,10 +644,14 @@ class SpiderContextBuilder:
             if not context.get('has_data'):
                 return ""
 
+            # Session 960: Date anchor so agents know data recency
+            from django.utils import timezone as tz
+            date_prefix = f"[Data as of {tz.now().strftime('%b %d, %Y %H:%M UTC')}] "
+
             # Use the built-in summary or compress further
             summary = context.get('summary', '')
-            if summary and len(summary) <= max_chars:
-                return summary
+            if summary and len(summary) + len(date_prefix) <= max_chars:
+                return date_prefix + summary
 
             # Build a more compact summary
             parts = []
@@ -668,7 +672,7 @@ class SpiderContextBuilder:
                     change = top.get('change_24h', 0)
                     parts.append(f"{top.get('symbol', 'BTC')} {'+' if change >= 0 else ''}{change:.1f}%")
 
-            result = " | ".join(parts)
+            result = date_prefix + " | ".join(parts) if parts else ""
 
             # Truncate if still too long
             if len(result) > max_chars:
