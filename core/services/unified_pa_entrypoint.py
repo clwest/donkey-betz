@@ -895,7 +895,9 @@ class UnifiedPAEntrypoint:
             msg_lower = message.lower()
 
             # Determine action based on message
-            if 'stats' in msg_lower or 'overview' in msg_lower or 'pipeline' in msg_lower:
+            if any(w in msg_lower for w in ['audit', 'classify', 'classification', 'triage', 'cleanup']):
+                payload['action'] = 'audit'
+            elif 'stats' in msg_lower or 'overview' in msg_lower or 'pipeline' in msg_lower:
                 payload['action'] = 'stats'
             elif 'action item' in msg_lower or 'next step' in msg_lower or 'todo' in msg_lower:
                 payload['action'] = 'action_items'
@@ -1617,6 +1619,38 @@ Address the user by name occasionally."""
 
                     if count > display_limit:
                         response += f"\n...and {count - display_limit} more."
+
+                    return response
+
+                elif action == 'audit':
+                    total = tool_result.get('total', 0)
+                    c = tool_result.get('classification', {})
+                    real = c.get('real', {})
+                    stalled = c.get('stalled', {})
+                    noise_data = c.get('noise', {})
+                    dupes = c.get('duplicates', {})
+
+                    response = f"Initiative Audit ({total} total), {user_name}:\n\n"
+
+                    response += f"**Real** (progressing or active): {real.get('count', 0)}\n"
+                    for item in real.get('items', [])[:5]:
+                        response += f"  - {item['name'][:80]} (Stage {item.get('stage', 1)}/5)\n"
+
+                    response += f"\n**Stalled** (Stage 1, no activity, >14 days): {stalled.get('count', 0)}\n"
+                    for item in stalled.get('items', [])[:3]:
+                        response += f"  - {item['name'][:80]}\n"
+
+                    response += f"\n**Noise** (recent, no engagement): {noise_data.get('count', 0)}\n"
+
+                    response += f"\n**Duplicates**: {dupes.get('count', 0)} items in {dupes.get('cluster_count', 0)} clusters\n"
+                    for cluster in dupes.get('clusters', [])[:5]:
+                        response += f"  - \"{cluster['primary'][:60]}\" ({cluster['count']} copies)\n"
+
+                    cleanup = stalled.get('count', 0) + noise_data.get('count', 0) + dupes.get('count', 0)
+                    if cleanup > 0:
+                        response += f"\n{cleanup} initiatives are candidates for cleanup."
+                        if dupes.get('count', 0) > 0:
+                            response += f" Run `consolidate_duplicate_initiatives --fix` to merge {dupes['count']} duplicates."
 
                     return response
 
