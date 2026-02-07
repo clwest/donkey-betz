@@ -52,6 +52,7 @@ class SourceInfo:
     Information about a data source used in the report.
 
     Tracks the spider/API that provided data and when it was retrieved.
+    Session 960: Added source_type and content_hash for typed source tracking.
     """
     name: str                       # e.g., "TheOddsSpider", "YahooFinanceSpider"
     endpoint: str = ""              # API endpoint or data path
@@ -59,6 +60,9 @@ class SourceInfo:
     data_timestamp: Optional[str] = None  # Timestamp of the data itself (if different)
     record_count: int = 0           # Number of records from this source
     freshness_hours: float = 0.0    # Hours since data was retrieved
+    # Session 960 Phase 0: Typed sources + content hashing
+    source_type: str = "external_api"  # internal_doc | external_api | spider_data | agent_memory | learning_pattern | user_input
+    content_hash: Optional[str] = None  # SHA-256 of source content, if available
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -142,7 +146,9 @@ class ReportProvenance:
         if self.sources:
             for src in self.sources:
                 freshness = f"{src.freshness_hours:.1f}h ago" if src.freshness_hours else "unknown age"
-                lines.append(f"- **{src.name}**: {src.record_count} records ({freshness})")
+                # Session 960: Show source type for non-default sources
+                type_tag = f" [{src.source_type}]" if src.source_type != "external_api" else ""
+                lines.append(f"- **{src.name}**{type_tag}: {src.record_count} records ({freshness})")
         else:
             lines.append("- No data sources tracked")
 
@@ -189,11 +195,19 @@ class Claim:
     - Confidence calibration over time
     - Accountability for predictions
     - Clear evidence linking
+
+    Session 960: Added claim_id, source_ids, challenged_by, status for
+    evidence pack integration.
     """
     claim: str
     confidence: float = 0.5  # 0.0-1.0
     evidence_source: str = ""  # Which source supports this claim
-    claim_type: str = "observation"  # observation, prediction, recommendation
+    claim_type: str = "observation"  # observation, prediction, recommendation, factual, analytical, speculative
+    # Session 960 Phase 0: Evidence pack fields
+    claim_id: Optional[str] = None  # UUID as string; auto-generated if None
+    source_ids: List[str] = field(default_factory=list)  # refs to SourceInfo identifiers
+    challenged_by: List[str] = field(default_factory=list)  # claim_ids that challenge this
+    status: str = "uncontested"  # uncontested | challenged | refuted | verified
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -471,6 +485,7 @@ def build_provenance(
     agent_name: str,
     sources: List[Dict[str, Any]],
     stale_threshold_hours: float = 4.0,
+    internal_sources: Optional[List['SourceInfo']] = None,
 ) -> ReportProvenance:
     """
     Session 918: Build a provenance block from source data.
@@ -578,6 +593,23 @@ def build_provenance(
     if total_records == 0:
         provenance.publishable = False
         provenance.publish_blockers.append("No data records to analyze")
+
+    # Session 960 Phase 0: Merge internal doc sources (SourceInfo objects or dicts)
+    if internal_sources:
+        for isrc in internal_sources:
+            if isinstance(isrc, SourceInfo):
+                provenance.sources.append(isrc)
+            elif isinstance(isrc, dict):
+                provenance.sources.append(SourceInfo(
+                    name=isrc.get('name', 'unknown_doc'),
+                    source_type=isrc.get('source_type', 'internal_doc'),
+                    content_hash=isrc.get('content_hash'),
+                    record_count=isrc.get('record_count', 0),
+                    freshness_hours=isrc.get('freshness_hours', 0.0),
+                ))
+        provenance.validation_notes.append(
+            f"{len(internal_sources)} internal doc(s) referenced"
+        )
 
     return provenance
 

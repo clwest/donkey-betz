@@ -454,6 +454,33 @@ class PublishGate:
         # Published content stays as-is
         return None
 
+    def _check_envelope(self, blog) -> str:
+        """
+        Session 960 Phase 0: Check for AgentOutputEnvelope in blog metadata.
+        Returns notes string if envelope is found and validated, empty string otherwise.
+        """
+        try:
+            metadata = getattr(blog, 'metadata', None)
+            if not metadata or not isinstance(metadata, dict):
+                return ''
+            envelope_data = metadata.get('envelope')
+            if not envelope_data or not isinstance(envelope_data, dict):
+                return ''
+
+            from core.services.artifact_envelope import AgentOutputEnvelope, validate_envelope
+            envelope = AgentOutputEnvelope.from_dict(envelope_data)
+            result = validate_envelope(envelope, min_citation_ratio=0.0)
+
+            parts = []
+            if result.get('valid'):
+                parts.append(f"Envelope: valid (citations: {result.get('citation_score', 0):.0%})")
+            else:
+                parts.append(f"Envelope: {len(result.get('violations', []))} issue(s)")
+            return '; '.join(parts)
+        except Exception as e:
+            logger.debug(f"Envelope check skipped: {e}")
+            return ''
+
     def apply_to_blog(self, blog, save: bool = True) -> GateResult:
         """
         Evaluate and optionally update blog with scores.
@@ -466,6 +493,11 @@ class PublishGate:
             GateResult
         """
         result = self.evaluate(blog)
+
+        # Session 960 Phase 0: If blog has an envelope in metadata, validate it
+        envelope_notes = self._check_envelope(blog)
+        if envelope_notes:
+            result.notes = (result.notes + '; ' + envelope_notes) if result.notes else envelope_notes
 
         # Update blog fields
         blog.quality_score = result.quality_score
