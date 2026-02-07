@@ -1586,28 +1586,37 @@ Address the user by name occasionally."""
                 if action == 'list':
                     items = tool_result.get('items', [])
                     count = tool_result.get('count', 0)
+                    total_count = tool_result.get('total_count', count)
 
                     if count == 0:
                         return f"No initiatives found matching your criteria, {user_name}."
 
-                    response = f"Found {count} initiatives:\n\n"
-                    for item in items[:7]:
-                        name = item.get('name', 'Untitled')[:40]
+                    if total_count > count:
+                        response = f"Found {total_count} initiatives (showing {count}):\n\n"
+                    else:
+                        response = f"Found {count} initiatives:\n\n"
+
+                    display_limit = 25
+                    for item in items[:display_limit]:
+                        name = item.get('name', 'Untitled')[:80]
                         stage = item.get('current_stage', 1)
                         purpose = item.get('purpose', 'unknown')
                         pending = item.get('pending_actions', 0)
                         critical = item.get('critical_actions', 0)
+                        last_activity = item.get('last_activity_at')
                         status_icon = '🟢' if item.get('status') == 'ACTIVE' else '⏸️'
                         response += f"{status_icon} **{name}** (Stage {stage}/5, {purpose})"
                         if pending > 0:
-                            action_desc = f"{pending} action items"
+                            action_desc = f"{pending} actions"
                             if critical > 0:
                                 action_desc += f" ({critical} critical)"
                             response += f" - {action_desc}"
+                        if not last_activity:
+                            response += " - no activity"
                         response += "\n"
 
-                    if count > 7:
-                        response += f"\n...and {count - 7} more."
+                    if count > display_limit:
+                        response += f"\n...and {count - display_limit} more."
 
                     return response
 
