@@ -640,7 +640,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             result_data['sentiment'] = ml_analysis.get('sentiment', 'unknown')
 
                         # Session 856: Extract key insights for human review
-                        # Build a list of key findings from the results
+                        # Session 958: Fixed to handle nested structures from analyze_trends
+                        # (topics, discussions, projects, results arrays)
                         key_insights = []
                         for r in all_results[:5]:  # Top 5 results
                             # Session 881: Defensive check - r might be a list
@@ -659,6 +660,33 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                                 title = data.get('title') or data.get('headline') or data.get('query', '')
                                 if title:
                                     key_insights.append(str(title)[:200])
+                                else:
+                                    # Session 958: Handle nested arrays from analyze_trends
+                                    # Check for 'topics', 'discussions', 'projects', 'results' arrays
+                                    nested_arrays = ['topics', 'discussions', 'projects', 'results', 'items']
+                                    for array_key in nested_arrays:
+                                        if array_key in data and isinstance(data[array_key], list):
+                                            for nested_item in data[array_key][:3]:  # Top 3 from each array
+                                                if isinstance(nested_item, dict):
+                                                    # Extract title from nested dict
+                                                    nested_title = (
+                                                        nested_item.get('title') or
+                                                        nested_item.get('topic') or
+                                                        nested_item.get('name') or
+                                                        nested_item.get('headline') or
+                                                        nested_item.get('keyword', '')
+                                                    )
+                                                    if nested_title and len(nested_title) > 5:
+                                                        # Add source context
+                                                        source_name = r.get('source', '')
+                                                        url = nested_item.get('url', '')
+                                                        if url:
+                                                            key_insights.append(f"[{nested_title[:150]}]({url})")
+                                                        else:
+                                                            key_insights.append(str(nested_title)[:200])
+                                                elif isinstance(nested_item, str) and len(nested_item) > 5:
+                                                    key_insights.append(nested_item[:200])
+                                            break  # Found content in one array, move to next result
                             elif isinstance(data, str) and data:
                                 key_insights.append(data[:200])
 
@@ -987,15 +1015,17 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
         # Minimum threshold for "sufficient" data
         # Adjust based on task complexity
-        # Session 957: Lowered default from 5 to 3 - getting any results is useful
-        # for trend research, shouldn't mark as BLOCKED with limited data
+        # Session 957: Lowered thresholds significantly - having ANY results is useful
+        # BLOCKED should only happen when we have literally nothing
         task_lower = task.lower()
         if 'comprehensive' in task_lower or 'detailed' in task_lower:
-            min_items = 8
+            min_items = 5  # Was 8, lowered to 5
         elif 'quick' in task_lower or 'brief' in task_lower:
-            min_items = 2
+            min_items = 1  # Was 2, lowered to 1
+        elif 'trend' in task_lower or 'current' in task_lower:
+            min_items = 1  # Session 957: Trend queries should work with any data
         else:
-            min_items = 3
+            min_items = 2  # Was 3, lowered to 2
 
         is_sufficient = total_items >= min_items
 
@@ -1152,7 +1182,13 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         task_lower = task.lower()
 
         # Check for common data needs
-        if 'trend' in task_lower or 'analysis' in task_lower:
+        # Session 957: Only require temporal data for explicit time-series analysis requests
+        # Simple "current trends" queries don't need temporal data - they just need current info
+        time_series_keywords = ['over time', 'historical', 'timeline', 'progression', 'evolution',
+                                'change over', 'trend analysis', 'time series', 'compare periods']
+        needs_temporal = any(kw in task_lower for kw in time_series_keywords)
+
+        if needs_temporal and all_results:  # Only check if we actually have results to check
             # Check if we have time-series data
             # Session 957: Include 'created' to match 'created_at' fields in spider data
             has_temporal = any(
@@ -1226,7 +1262,10 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         all_results: List[Dict[str, Any]],
         ml_analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Extract partial findings when data is insufficient."""
+        """
+        Extract partial findings when data is insufficient.
+        Session 958: Fixed to handle nested structures (topics, discussions, etc.)
+        """
         findings = {
             'status': 'Partial - awaiting additional data',
             'preliminary_observations': []
@@ -1239,6 +1278,18 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     findings['preliminary_observations'].append(
                         data.get('title') or data.get('query', 'Unknown')
                     )
+                else:
+                    # Session 958: Check nested arrays
+                    for array_key in ['topics', 'discussions', 'projects', 'results']:
+                        if array_key in data and isinstance(data[array_key], list):
+                            for item in data[array_key][:2]:
+                                if isinstance(item, dict):
+                                    title = (
+                                        item.get('title') or item.get('topic') or
+                                        item.get('name') or item.get('headline', '')
+                                    )
+                                    if title:
+                                        findings['preliminary_observations'].append(title[:200])
 
         if ml_analysis.get('ml_insights'):
             findings['ml_observation'] = ml_analysis['ml_insights']
@@ -1250,7 +1301,10 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         all_results: List[Dict[str, Any]],
         ml_analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Extract complete findings from results."""
+        """
+        Extract complete findings from results.
+        Session 958: Fixed to handle nested structures (topics, discussions, projects, results).
+        """
         findings = {
             'summary': '',
             'key_points': [],
@@ -1270,6 +1324,32 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                 if title:
                     findings['sources_summary'][source].append(title[:200])
                     findings['key_points'].append(title[:200])
+                else:
+                    # Session 958: Handle nested arrays from analyze_trends and similar tools
+                    nested_arrays = ['topics', 'discussions', 'projects', 'results', 'items']
+                    for array_key in nested_arrays:
+                        if array_key in data and isinstance(data[array_key], list):
+                            for nested_item in data[array_key][:5]:  # Top 5 from each array
+                                if isinstance(nested_item, dict):
+                                    nested_title = (
+                                        nested_item.get('title') or
+                                        nested_item.get('topic') or
+                                        nested_item.get('name') or
+                                        nested_item.get('headline') or
+                                        nested_item.get('keyword', '')
+                                    )
+                                    if nested_title and len(nested_title) > 3:
+                                        # Include URL if available for context
+                                        url = nested_item.get('url', '')
+                                        if url:
+                                            formatted = f"[{nested_title[:150]}]({url})"
+                                        else:
+                                            formatted = nested_title[:200]
+                                        findings['sources_summary'][source].append(formatted)
+                                        findings['key_points'].append(formatted)
+                                elif isinstance(nested_item, str) and len(nested_item) > 3:
+                                    findings['sources_summary'][source].append(nested_item[:200])
+                                    findings['key_points'].append(nested_item[:200])
 
         # Add ML insights
         if ml_analysis.get('ml_insights'):
