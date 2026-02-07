@@ -57,6 +57,9 @@ from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfi
 from core.agents.report_schemas import build_provenance, format_disclaimer
 from ml.auto_selection import TaskType
 
+# Session 961: Multi-agent content review panel
+ENABLE_CONTENT_REVIEW = True
+
 # Session 523: Import Intelligent Prompting System
 try:
     from core.prompts.registry import (
@@ -914,6 +917,56 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
             if tone:
                 tags.append(tone)
 
+            # Session 961: Run through multi-agent review panel
+            review_result = None
+            if ENABLE_CONTENT_REVIEW:
+                try:
+                    from core.services.content_review_panel import ContentReviewPanel
+                    panel = ContentReviewPanel()
+                    review_result = panel.review(
+                        content_data=generated_content,
+                        topic=topic,
+                        tone=tone,
+                        target_audience=target_audience,
+                    )
+                    logger.info(
+                        f"Session 961: Review panel decision={review_result.decision} "
+                        f"confidence={review_result.confidence:.2f} "
+                        f"panel={review_result.panel_composition} "
+                        f"time={review_result.execution_time_ms}ms"
+                    )
+                except Exception as e:
+                    logger.warning(f"Session 961: Review panel failed: {e}")
+
+            # Session 961: Map review decision to SelfBlog fields
+            if review_result and review_result.decision == 'publish':
+                initial_status = 'pending_review'
+                content_type_val = 'public'
+            elif review_result and review_result.decision == 'kill':
+                initial_status = 'draft'
+                content_type_val = 'internal'
+            else:
+                initial_status = 'draft'
+                content_type_val = 'public'
+
+            # Build stats snapshot
+            stats_snapshot: Dict[str, Any] = {
+                'agent_name': self.name,
+                'topic': topic,
+                'tone': tone,
+                'target_audience': target_audience,
+                'generated_by': 'ContentWriterAgent',
+            }
+            if review_result:
+                stats_snapshot['review_panel'] = {
+                    'decision': review_result.decision,
+                    'confidence': review_result.confidence,
+                    'panel': review_result.panel_composition,
+                    'notes': review_result.review_notes[:500],
+                    'spider_data_used': review_result.spider_data_used,
+                    'time_ms': review_result.execution_time_ms,
+                }
+
             # Create the SelfBlog record
             blog = SelfBlog.objects.create(
                 title=content_title,
@@ -922,19 +975,23 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
                 sections=sections if sections else [{'header': 'Content', 'content': full_text}],
                 conclusion=conclusion or "",
                 word_count=word_count,
-                category='blog',  # Mark as blog (not audit/research)
-                status='draft',   # New blogs start as drafts for review
+                category='blog',
+                status=initial_status,
+                content_type=content_type_val,
                 tags=tags,
-                stats_snapshot={
-                    'agent_name': self.name,
-                    'topic': topic,
-                    'tone': tone,
-                    'target_audience': target_audience,
-                    'generated_by': 'ContentWriterAgent',
-                }
+                stats_snapshot=stats_snapshot,
             )
 
-            logger.info(f"📝 Session 860: Saved blog to SelfBlog: {blog.id} - {content_title[:40]}...")
+            logger.info(f"Session 860: Saved blog to SelfBlog: {blog.id} - {content_title[:40]}...")
+
+            # Session 961: Auto-run PublishGate for 'publish' decisions
+            if review_result and review_result.decision == 'publish':
+                try:
+                    from core.services.publish_gate import PublishGate
+                    gate = PublishGate()
+                    gate.evaluate(blog)
+                except Exception as e:
+                    logger.warning(f"Session 961: PublishGate auto-eval failed: {e}")
 
         except Exception as e:
             logger.warning(f"Failed to save blog to SelfBlog: {e}")
