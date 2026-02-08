@@ -85,6 +85,7 @@ def get_agent_memories(request, agent_id):
                     'memory_outcome': m.memory_outcome,
                     'last_accessed_at': m.last_accessed_at.isoformat() if m.last_accessed_at else None,
                     'tags': m.tags or [],
+                    'source_id': m.source_id or '',
                 }
                 for m in memories
             ]
@@ -678,6 +679,8 @@ def list_all_memories(request):
                     'agent_name': m.agent.name if m.agent else 'Unknown',
                     'created_at': m.created_at.isoformat() if m.created_at else None,
                     'memory_outcome': getattr(m, 'memory_outcome', None),
+                    'source_id': m.source_id or '',
+                    'tags': m.tags or [],
                 }
                 for m in memories
             ]
