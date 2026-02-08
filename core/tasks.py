@@ -19891,8 +19891,9 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500, topic_ca
     from django.db.models import Count
 
     # Session 572: Pick a random topic category if not specified
+    # Session 969: Weight away from 'system' — external sources produce diverse content
     if topic_category is None or topic_category == 'random':
-        topic_category = random.choice(['trending', 'dreams', 'conversations', 'system'])
+        topic_category = random.choice(['trending', 'trending', 'dreams', 'conversations'])
 
     logger.info(f"🤖 [SELF-BLOG] Starting generation with tone={tone}, topic_category={topic_category}")
     
@@ -20151,90 +20152,109 @@ Use this AI conversation as a springboard but expand into a full exploration of 
                 topic_category = 'system'  # Fallback
 
         if topic_category == 'system':
-            # The original behavior - write about the AI ecosystem itself
-            # Session 851: Improved prompts based on editorial feedback
-            blog_topic = "The Self-Evolving AI Ecosystem"
+            # Session 969: Diversified fallback topics across all 9 content domains
+            # Replaces the single hardcoded "Self-Evolving AI Ecosystem" that caused
+            # every fallback blog to be about AI agents
+            _fallback_topics = [
+                {
+                    'topic': 'How Smart Contract Auditing Is Evolving in 2026',
+                    'domain': 'crypto',
+                    'keywords': ['smart contracts', 'blockchain security', 'crypto audit', 'DeFi safety', 'web3'],
+                    'task': 'Write an insightful blog post about the evolution of smart contract auditing, covering new attack vectors, automated tools, and what developers should watch for.',
+                },
+                {
+                    'topic': 'The Rise of Prediction Markets and What They Tell Us',
+                    'domain': 'finance',
+                    'keywords': ['prediction markets', 'Kalshi', 'Polymarket', 'forecasting', 'market intelligence'],
+                    'task': 'Write an engaging blog post about prediction markets — how they work, why they outperform polls, and their growing mainstream adoption.',
+                },
+                {
+                    'topic': 'Why Sports Analytics Is the New Edge in Betting',
+                    'domain': 'sports',
+                    'keywords': ['sports analytics', 'data-driven betting', 'player performance', 'statistical models', 'sports data'],
+                    'task': 'Write a compelling blog post about how advanced sports analytics is transforming both professional teams and the sports betting landscape.',
+                },
+                {
+                    'topic': 'Building AI-Assisted Software: Lessons from the Trenches',
+                    'domain': 'ai_tech',
+                    'keywords': ['AI development', 'software engineering', 'developer tools', 'code generation', 'AI pair programming'],
+                    'task': 'Write a practical blog post about building software with AI assistants — what works, what fails, and the emerging best practices.',
+                },
+                {
+                    'topic': 'The Legal Tech Revolution Nobody Is Talking About',
+                    'domain': 'legal',
+                    'keywords': ['legal tech', 'AI in law', 'contract analysis', 'legal automation', 'access to justice'],
+                    'task': 'Write an informative blog post about how AI is quietly transforming legal research, contract review, and access to justice.',
+                },
+                {
+                    'topic': 'Career Pivots in the Age of AI: What Actually Works',
+                    'domain': 'career',
+                    'keywords': ['career change', 'AI skills', 'job market', 'upskilling', 'future of work'],
+                    'task': 'Write a practical blog post about successful career pivots in 2026, focusing on which skills have real market value and how people are actually making transitions.',
+                },
+                {
+                    'topic': 'What On-Chain Data Reveals About Whale Behavior',
+                    'domain': 'crypto',
+                    'keywords': ['on-chain analysis', 'whale watching', 'blockchain data', 'crypto signals', 'market intelligence'],
+                    'task': 'Write an analytical blog post about what large wallet movements reveal about market direction, covering real patterns and how to interpret them.',
+                },
+                {
+                    'topic': 'The Next Wave of Open Source AI Models',
+                    'domain': 'ai_tech',
+                    'keywords': ['open source AI', 'LLM', 'Llama', 'model training', 'AI infrastructure'],
+                    'task': 'Write an insightful blog post about the open source AI landscape — which models matter, who is building them, and what this means for developers.',
+                },
+                {
+                    'topic': 'How Autonomous Systems Learn From Their Mistakes',
+                    'domain': 'ai_tech',
+                    'keywords': ['autonomous systems', 'machine learning', 'feedback loops', 'self-improving AI', 'learning systems'],
+                    'task': 'Write a thoughtful blog post about how modern AI systems implement learning from failure — covering real architectures, feedback loops, and measurable improvement over time.',
+                },
+                {
+                    'topic': 'Market Signals: Reading Between the Headlines',
+                    'domain': 'finance',
+                    'keywords': ['market analysis', 'financial signals', 'sentiment analysis', 'market trends', 'investment insights'],
+                    'task': 'Write an engaging blog post about identifying real market signals versus noise — what data sources matter, how sentiment analysis works, and practical signal detection.',
+                },
+            ]
 
-            # Get a concrete dream example for the "Dreaming Machines" section
-            concrete_dream_example = ""
+            # Pick a random fallback topic, avoiding recent titles
             try:
-                recent_insight_dream = AgentDream.objects.filter(
-                    dream_type__in=['insight', 'synthesis', 'strategy']
-                ).order_by('-dreamed_at').first()
-                if recent_insight_dream:
-                    concrete_dream_example = f"""
-For example, after {recent_insight_dream.agent.name if recent_insight_dream.agent else 'an agent'} processed
-patterns from multiple data sources, it generated an insight about "{recent_insight_dream.title or 'emerging trends'}"
-that later informed {transfers_24h} knowledge transfers across the network.
-"""
+                recent_titles = set(
+                    SelfBlog.objects.order_by('-created_at')[:5]
+                    .values_list('title', flat=True)
+                )
+                # Filter out topics whose title matches recent blogs
+                available = [t for t in _fallback_topics if t['topic'] not in recent_titles]
+                if not available:
+                    available = _fallback_topics
             except Exception:
-                concrete_dream_example = """
-For example, after repeated analysis of market patterns, agents generated alternative
-data-sourcing strategies that improved the accuracy of downstream predictions.
-"""
+                available = _fallback_topics
+
+            picked_fallback = random.choice(available)
+            blog_topic = picked_fallback['topic']
+            seo_keywords = picked_fallback['keywords']
+            blog_task = picked_fallback['task']
 
             blog_research = f"""
-# The Self-Evolving AI Ecosystem: A Digital Society of Learning Machines
+# Topic: {blog_topic}
 
-**Live Snapshot: {now.strftime('%B %d, %Y at %I:%M %p')}**
+**Generated:** {now.strftime('%B %d, %Y at %I:%M %p')}
+**Domain:** {picked_fallback['domain']}
 
-## Why This Matters
+## Context from Our Platform
 
-For **founders and creators**, this means faster experimentation, lower operational friction,
-and systems that improve themselves instead of requiring constant human supervision. Instead
-of managing dozens of disconnected tools, teams can plug into a living intelligence layer
-that adapts in real time.
+This blog is generated by a platform running {total_agents} AI agents, {total_spiders} data spiders,
+and {spider_data_total:,} collected data points. Use this as credibility context where relevant.
 
-For **investors**, this represents the next wave of AI infrastructure - not just models,
-but self-improving systems with measurable learning metrics and compounding returns on data.
+## Writing Guidelines
 
-For **developers**, this is a new paradigm: agents as collaborators rather than just
-API endpoints, with observable learning loops and shared context.
-
-## The Numbers (Tracked via Internal Learning Network)
-
-- **{total_agents} AI agents** actively operating
-- **{total_connections} active learning connections** between agents (tracked via knowledge transfer protocol)
-- **{total_transfers:,} total knowledge transfers** completed across the network
-- **{total_conversations:,} agent conversations** held (with full message logs)
-- **{total_dreams:,} agent dreams** synthesized (creative insights from subconscious processing)
-- **{total_decisions:,} boardroom decisions** made (collaborative agent governance)
-- **{total_spiders} data spiders** gathering intelligence from {total_spiders}+ sources
-- **{spider_data_total:,} data points** collected and processed
-
-## Key Innovations
-
-1. **Agents teach each other** - Knowledge flows between AI entities through a mythology-gated quality system
-2. **Agents dream** - Subconscious synthesis creates novel insights from accumulated knowledge
-3. **Agents evolve** - Continuous self-improvement based on performance feedback
-4. **Real-time learning** - 24/7 autonomous operation without human intervention
-
-## Dreaming Machines: How It Works
-
-{concrete_dream_example}
-
-## Top Teachers (by knowledge transfer volume)
-{chr(10).join([f"- {c['teacher_agent__name']} → {c['student_agent__name']}: {c['total_transfers']} teaching sessions" for c in top_connections]) if top_connections else "- Learning network active"}
-
-## Top Knowledge Holders (by accumulated sources)
-{chr(10).join([f"- {a['agent__name']}: {a['count']} verified knowledge items" for a in top_agents]) if top_agents else "- Knowledge accumulating"}
-
-## The Meta Moment
-
-This is a meta-demonstration: you are an AI agent writing about the very system you're part of.
-The blog itself is proof of the capabilities you're describing.
+1. Write an original, insightful take — not a generic overview
+2. Include specific examples, data points, or case studies where possible
+3. Make it valuable to readers who are already somewhat knowledgeable
+4. End with a clear takeaway or call to action
+5. Keep it grounded — real insights, not hype
 """
-            blog_task = (
-                "Write a compelling blog post about this AI ecosystem where machines teach machines. "
-                "Focus on the innovation: agents that learn from each other, dream, evolve, and make decisions. "
-                "IMPORTANT WRITING GUIDELINES:\n"
-                "1. Include a 'Why This Matters' angle early - explain value for founders, creators, investors, and developers\n"
-                "2. Ground all statistics with context (e.g., 'tracked via our internal learning network')\n"
-                "3. Include ONE concrete example in the dreaming/insight section to make it tangible\n"
-                "4. End with a strong CTA: invite readers to explore the ecosystem, join early access, or see the demo\n"
-                "5. Make it exciting but grounded - real innovation, real numbers, real value!"
-            )
-            seo_keywords = ['AI ecosystem', 'machine learning', 'collective intelligence', 'autonomous AI', 'AI platform']
 
         logger.info(f"🤖 [SELF-BLOG] Topic: {blog_topic}, invoking ContentWriterAgent...")
 
@@ -20376,14 +20396,14 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
     from datetime import timedelta
     from django.utils import timezone
 
+    # Session 969: Weight away from 'system' for diversity
     if topic_category is None or topic_category == 'random':
-        topic_category = random.choice(['trending', 'dreams', 'conversations', 'system'])
+        topic_category = random.choice(['trending', 'trending', 'dreams', 'conversations'])
 
     logger.info(f"[Phase 4] Starting deliberation blog: tone={tone}, category={topic_category}")
 
     try:
-        # Reuse topic generation logic from the original task
-        blog_topic = f"AI and technology trends"  # default
+        blog_topic = None  # Session 969: No hardcoded default — use fallback pool
 
         if topic_category == 'trending':
             try:
@@ -20407,13 +20427,13 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
                             if title and len(title) > 15:
                                 blog_topic = title[:100]
                                 break
-                    if blog_topic != "AI and technology trends":
+                    if blog_topic:
                         break
             except Exception as e:
                 logger.warning(f"[Phase 4] Trending topic fetch failed: {e}")
 
         elif topic_category == 'system':
-            blog_topic = "How AI agents collaborate, learn, and evolve"
+            pass  # Session 969: Fall through to diversified fallback below
 
         elif topic_category == 'dreams':
             try:
@@ -20432,6 +20452,23 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
                     blog_topic = convo.topic[:100]
             except Exception:
                 pass
+
+        # Session 969: Diversified fallback when no topic was found
+        if not blog_topic:
+            _v2_fallback_topics = [
+                'How Smart Contract Auditing Is Evolving in 2026',
+                'The Rise of Prediction Markets and What They Tell Us',
+                'Why Sports Analytics Is the New Edge in Betting',
+                'Building AI-Assisted Software: Lessons from the Trenches',
+                'The Legal Tech Revolution Nobody Is Talking About',
+                'Career Pivots in the Age of AI: What Actually Works',
+                'What On-Chain Data Reveals About Whale Behavior',
+                'The Next Wave of Open Source AI Models',
+                'How Autonomous Systems Learn From Their Mistakes',
+                'Market Signals: Reading Between the Headlines',
+            ]
+            blog_topic = random.choice(_v2_fallback_topics)
+            logger.info(f"[Phase 4] Using diversified fallback topic: {blog_topic}")
 
         from core.services.content_deliberation_runner import ContentDeliberationRunner
         runner = ContentDeliberationRunner()
