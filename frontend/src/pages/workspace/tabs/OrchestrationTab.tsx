@@ -161,7 +161,7 @@ function MonitorSubTab() {
           executions = rawExecutions.map((e: any) => ({
             id: e.id,
             workflow_name: e.agent_name,
-            name: e.task_summary || e.task?.substring(0, 100) || 'Agent execution',
+            name: e.task_summary || e.task || 'Agent execution',
             status: e.status || 'completed',
             started_at: e.started_at || e.created_at,
             completed_at: e.completed_at,
@@ -1604,7 +1604,7 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
           {execution.task && (
             <div className="bg-gray-800/50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Task</p>
-              <p className="text-sm text-gray-300 line-clamp-4">{execution.task}</p>
+              <p className="text-sm text-gray-300 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{execution.task}</p>
             </div>
           )}
 
@@ -1946,23 +1946,21 @@ function ExecutionRow({ execution, onClick }: { execution: ExecutionItem; onClic
   return (
     <div
       className={cn(
-        'flex items-center justify-between py-2 border-b border-gray-800 last:border-0',
+        'flex items-center gap-3 py-2 border-b border-gray-800 last:border-0',
         onClick && 'cursor-pointer hover:bg-gray-800/50 -mx-2 px-2 rounded'
       )}
       onClick={onClick}
     >
-      <div className="flex items-center gap-3">
-        <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center', statusStyle.bg)}>
-          <StatusIcon size={14} className={statusStyle.color} />
-        </div>
-        <div>
-          <div className="text-sm font-medium">{execution.workflow_name || 'Workflow'}</div>
-          <div className="text-xs text-gray-500">
-            {execution.started_at ? new Date(execution.started_at).toLocaleString() : 'Pending'}
-          </div>
+      <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', statusStyle.bg)}>
+        <StatusIcon size={14} className={statusStyle.color} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium truncate">{execution.workflow_name || 'Workflow'}</div>
+        <div className="text-xs text-gray-500">
+          {execution.started_at ? new Date(execution.started_at).toLocaleString() : 'Pending'}
         </div>
       </div>
-      <span className={cn('text-xs px-2 py-0.5 rounded capitalize', statusStyle.bg, statusStyle.color)}>
+      <span className={cn('text-xs px-2 py-0.5 rounded capitalize shrink-0', statusStyle.bg, statusStyle.color)}>
         {execution.status}
       </span>
     </div>
