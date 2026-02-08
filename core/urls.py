@@ -52,6 +52,16 @@ from core.views_conceptforge import (
     get_domain_labs as conceptforge_domain_labs,
 )
 
+# Session 962: Deliberation Persistence API
+from core.views_deliberation import (
+    deliberation_sessions_list,
+    deliberation_session_detail,
+    deliberation_turns,
+    deliberation_contracts,
+    doc_versions_list,
+    doc_version_detail,
+)
+
 # Session 866: ATS Optimization API
 from core.views_ats_optimization import (
     ATSAnalyzeView,
@@ -1550,6 +1560,14 @@ urlpatterns = [
     path('api/conceptforge/artifacts/<uuid:artifact_id>/', conceptforge_artifact_content, name='conceptforge-artifact-content'),
     path('api/conceptforge/stats/', conceptforge_stats, name='conceptforge-stats'),
     path('api/conceptforge/labs/', conceptforge_domain_labs, name='conceptforge-domain-labs'),
+
+    # Session 962 Phase 1: Deliberation Persistence API
+    path('api/deliberation/sessions/', deliberation_sessions_list, name='deliberation-sessions-list'),
+    path('api/deliberation/sessions/<uuid:session_id>/', deliberation_session_detail, name='deliberation-session-detail'),
+    path('api/deliberation/sessions/<uuid:session_id>/turns/', deliberation_turns, name='deliberation-turns'),
+    path('api/deliberation/sessions/<uuid:session_id>/contracts/', deliberation_contracts, name='deliberation-contracts'),
+    path('api/docs/versions/', doc_versions_list, name='doc-versions-list'),
+    path('api/docs/versions/<int:version_id>/', doc_version_detail, name='doc-version-detail'),
 
     # Session 866: ATS Optimization API
     path('api/ats/analyze/', ATSAnalyzeView.as_view(), name='ats-analyze'),
