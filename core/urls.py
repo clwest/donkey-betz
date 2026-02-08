@@ -70,6 +70,7 @@ from core.views_deliberation import (
     deliberation_evidence,
     deliberation_trace,
     deliberation_replay,
+    blog_deliberation_detail,
 )
 
 # Session 866: ATS Optimization API
@@ -1582,6 +1583,8 @@ urlpatterns = [
     path('api/deliberation/sessions/<uuid:session_id>/replay/', deliberation_replay, name='deliberation-replay'),
     path('api/docs/versions/', doc_versions_list, name='doc-versions-list'),
     path('api/docs/versions/<int:version_id>/', doc_version_detail, name='doc-version-detail'),
+    # Phase 4: Blog deliberation detail
+    path('api/blog/<uuid:blog_id>/deliberation/', blog_deliberation_detail, name='blog-deliberation-detail'),
 
     # Session 962 Phase 2: Strategic Memory API
     path('api/memory/precedents/', memory_precedents, name='memory-precedents'),
@@ -2964,6 +2967,8 @@ urlpatterns = [
     path('api/v1/research/self-blog/<uuid:blog_id>/enhance/', views_research_demo.enhance_self_blog_api, name='research-self-blog-enhance'),
     # Session 643: Enabled self-blog generation endpoints
     path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
+    # Phase 4: v2 deliberation pipeline
+    path('api/v1/research/self-blog/generate-v2/', views_research_demo.generate_v2_blog_api, name='generate-v2-blog'),
     path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
     # Session 588: System Insights API
     path('api/v1/research/system-insights/', views_research_demo.system_insights_api, name='research-system-insights'),

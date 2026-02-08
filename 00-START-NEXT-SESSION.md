@@ -1,97 +1,96 @@
-# Session 962 - Start Here
+# Session 965 - Start Here
 
-**Previous Session:** 961c (PA Initiative Audit + Cleanup)
+**Previous Session:** 964 (Phase 4 — Content Deliberation Pipeline)
 **Date:** February 7, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** (cleaned from 568) | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE** | **Phase 0 Connectors: COMPLETE** | **PA Initiative Audit: ACTIVE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** (cleaned from 568) | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE**
 
 ---
 
-## Session 961c Summary (Just Completed)
+## Session 964 Summary (Just Completed)
 
-### PA Initiative Audit + Production Cleanup - COMPLETE (PR #960)
+### Phase 4 — Multi-Agent Content Deliberation Pipeline - COMPLETE
 
-1. **PA Audit Action**: Added `audit` action to initiative tool. Classifies initiatives into real/stalled/noise/duplicates using Jaccard similarity clustering (Session 906). Keywords: audit, classify, triage, cleanup.
-2. **Duplicate Consolidation**: Merged 94 duplicates across 14 clusters (78 were "Auto-created From Conversation Decision" spam).
-3. **Noise Archival**: Archived 420 Stage 1/no-activity initiatives.
-4. **Result**: Active initiatives reduced from 566 to **52** (all Stage 2+ or with real activity).
+Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow untouched):
 
-### Session 961b: PA Initiative Display Fix (PR #959)
-- Raised display limits (10->50 DB, 7->25 UI)
-- Added total count header ("Found 169 initiatives (showing 50)")
-- Full initiative names (40->80 chars)
+**Spider signals -> ClaimsPack -> ContentWriter draft (citing [C-xxxxxxxxxx] claims) -> 3-reviewer panel -> DecisionEnforcer (PUBLISH/REVISE/KILL) -> PublishGate -> SelfBlog with `stats_snapshot['deliberation']`**
 
----
+#### New Files (5)
+| File | Purpose |
+|------|---------|
+| `core/services/content_claims.py` | SpiderClaim + ClaimsPack dataclasses with deterministic claim IDs |
+| `core/services/claims_pack_builder.py` | Queries SpiderData (72h) + SignalCluster (active) for claims |
+| `core/services/content_review_panel_v2.py` | 3 structured reviewers (Skeptic, FactCheck, DomainPersona) |
+| `core/services/content_deliberation_runner.py` | Full pipeline runner with graceful degradation |
+| `core/tests/test_phase4_content_deliberation.py` | 8 tests (all passing) |
 
-## PHASE 1: Persistence Layer (from Surgical Moves Unification Audit)
+#### Modified Files (5)
+| File | Change |
+|------|--------|
+| `core/agents/content_writer_agent.py` | Optional `claims_block` param for citation rules |
+| `core/tasks.py` | `generate_self_blog_deliberation_task` Celery task |
+| `core/urls.py` | 2 new URL routes |
+| `core/views_deliberation.py` | `blog_deliberation_detail()` view |
+| `core/views_research_demo.py` | `generate_v2_blog_api()` view |
 
-**Reference:** `docs/audits/SURGICAL_MOVES_UNIFICATION_AUDIT.md` Section F, Phase 1
+#### Key Endpoints
+- `POST /api/v1/research/self-blog/generate-v2/` — v2 deliberation blog generation
+- `GET /api/blog/<uuid>/deliberation/` — Blog deliberation replay
 
-Phase 0 (connectors) is complete. Phase 1 creates the database models that make sessions, contracts, and doc versions permanent.
-
-### Phase 1 Steps
-
-| Step | File(s) | Change | Risk |
-|------|---------|--------|------|
-| 1 | `core/models_deliberation.py` (NEW) | Create `DeliberationSession` model (UUID PK, session_type, objective, participants, status, evidence_pack JSONField, trace JSONField, parent FK) | Low - new file |
-| 2 | `core/models_deliberation.py` | Create `DeliberationTurn` model (FK to session, turn_number, agent_name, role, content, contract_state, created_at) | Low - new model |
-| 3 | `core/models_deliberation.py` | Create `ContractRecord` model (FK to session, contract_type, contract_data JSONField, trace_id, created_at) | Low - new model |
-| 4 | `core/models_deliberation.py` | Create `DocVersion` model (doc_path, version_number, content_hash, content_snapshot, author_agent, change_reason, created_at) | Low - new model |
-| 5 | `core/models_unified_system.py` | Add nullable `deliberation_session` FK to `HiveMindSession` | Medium - migration, nullable FK |
-| 6 | `core/models_conceptforge.py` | Add nullable `deliberation_session` FK to `ConceptForgeRun` | Medium - migration, nullable FK |
-| 7 | `core/conversation_orchestrator.py` | On session start, create `DeliberationSession`. On each turn, create `DeliberationTurn`. On contract creation, create `ContractRecord`. | Medium - adds DB writes |
-| 8 | `core/agents/base_agent.py` | Modify `_write_doc()` to create `DocVersion` before overwrite | Low - additive |
-
-### Acceptance Criteria
-
-- [ ] `DeliberationSession` created for every HiveMindSession
-- [ ] `DeliberationTurn` count matches conversation turn count
-- [ ] `ContractRecord` persists ResearchContract/SynthesisContract/ExecutionMandate
-- [ ] `DocVersion` created on every `_write_doc()` call with content diff
-- [ ] Migrations run cleanly on Railway (nullable FKs, backward-compatible)
-
-### Key Architecture Decisions
-
-- **4 new models** in a single new file (`models_deliberation.py`) - keeps deliberation concerns isolated
-- **Nullable FKs** on HiveMindSession and ConceptForgeRun - backward compatible, no data migration needed
-- **JSONField** for evidence_pack and trace - flexible schema, matches existing patterns (HiveMindSession.success_criteria)
-- **DeliberationSession as unifying wrapper** - does NOT replace HiveMind/ConceptForge, just wraps them
+#### Testing
+- 8/8 Phase 4 tests pass
+- 45/45 Phase 2 regression tests pass
+- No migrations needed
 
 ---
 
-## Current System State (Post-Cleanup)
+## Current System State
 
 | Metric | Count |
 |--------|-------|
 | Active Initiatives | 52 |
-| Completed Initiatives | 2 |
-| Archived Initiatives | 420 |
-| Total Initiatives | 474 |
-| Duplicate Clusters Merged | 14 (94 items) |
+| Services | 134 |
+| Celery Tasks | 261 |
+| Content Pipeline | v1 (direct) + v2 (deliberation) |
+
+---
+
+## What Could Come Next
+
+### Phase 5 Possibilities (from Surgical Moves Audit)
+
+1. **Frontend Deliberation Viewer** — React component showing deliberation replay (turns, evidence, claims) in Content Studio
+2. **Claim Citation Scoring** — Score blog posts based on percentage of claims cited vs unsourced assertions
+3. **Auto-Revision Loop** — If REVISE decision, loop through reviewer feedback automatically (currently does 1 pass)
+4. **ClaimsPack Enrichment** — Add semantic similarity search to claims (pgvector) instead of keyword matching
+5. **Review Panel Metrics** — Track reviewer agreement rates, common issue types, decision distribution over time
+
+### Other Ideas
+
+- Wire v2 pipeline into the auto-blog Celery Beat schedule alongside v1
+- Add deliberation metadata to frontend blog cards (show review verdicts, claim count)
+- Expose claims data in the PA for "how was this blog reviewed?" queries
 
 ---
 
 ## Key Files Reference
 
-### Phase 0 Connectors (Already Complete - Session 960)
+### Phase 4 Files
 | File | Purpose |
 |------|---------|
-| `core/agents/report_schemas.py` | SourceInfo/Claim extensions, build_provenance with internal_sources |
-| `core/agents/base_agent.py` | _docs_consumed tracking in _read_doc() |
-| `core/services/artifact_envelope.py` | AgentOutputEnvelope schema + validate_envelope() |
-| `core/services/publish_gate.py` | _check_envelope() integration |
-| `core/conversation_orchestrator.py` | DecisionEnforcer fallback auto-trigger |
-| `core/services/unified_pa_entrypoint.py` | Strategic memory enrichment + audit action |
-| `docs/audits/PHASE0_APPLIED_NOTES.md` | Full Phase 0 implementation notes |
-| `docs/audits/SURGICAL_MOVES_UNIFICATION_AUDIT.md` | Master audit document (Phases 0-3) |
+| `core/services/content_claims.py` | SpiderClaim + ClaimsPack dataclasses |
+| `core/services/claims_pack_builder.py` | ClaimsPackBuilder singleton |
+| `core/services/content_review_panel_v2.py` | 3 reviewers + validate_review_payload() |
+| `core/services/content_deliberation_runner.py` | ContentDeliberationRunner.run_blog() |
+| `core/tests/test_phase4_content_deliberation.py` | 8 tests |
 
-### Phase 1 Target Files
+### Phase 0-3 Files (Previous Sessions)
 | File | Purpose |
 |------|---------|
-| `core/models_deliberation.py` | **NEW** - DeliberationSession, DeliberationTurn, ContractRecord, DocVersion |
-| `core/models_unified_system.py` | Add deliberation_session FK to HiveMindSession |
-| `core/models_conceptforge.py` | Add deliberation_session FK to ConceptForgeRun |
-| `core/conversation_orchestrator.py` | Wire session/turn/contract creation |
-| `core/agents/base_agent.py` | Wire DocVersion creation in _write_doc() |
+| `core/models_deliberation.py` | DeliberationSession, DeliberationTurn, ContractRecord, DocVersion |
+| `core/services/evidence_pack_builder.py` | Incremental evidence pack assembly |
+| `core/services/session_trace_builder.py` | Turn timeline + contract snapshots |
+| `core/conversation_orchestrator.py` | Multi-agent conversations with contract enforcement |
+| `core/agents/decision_enforcer_agent.py` | DecisionEnforcerAgent ("Prefrontal Cortex") |
 
 ---
 
@@ -99,14 +98,15 @@ Phase 0 (connectors) is complete. Phase 1 creates the database models that make 
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **964** | Phase 4 Content Deliberation Pipeline - ClaimsPack, 3-reviewer panel, DecisionEnforcer, v2 blog API | - |
 | **961c** | PA Initiative Audit + Cleanup - audit action, merged 94 dupes, archived 420 noise | #960 |
 | **961b** | PA Initiative Display Fix - raised limits, total count, full names | #959 |
-| **960** | Phase 0 Connectors - SourceInfo/Claim extensions, doc tracking, DecisionEnforcer fallback, strategic memory, AgentOutputEnvelope | - |
+| **960** | Phase 0 Connectors - SourceInfo/Claim extensions, doc tracking, DecisionEnforcer fallback | - |
 | **959** | PA Intelligence Upgrade - Analytical advisor with enrichment pipeline | #954 |
-| **957** | RAG Observability Frontend - Complete UI dashboard for risk-aware RAG system | #943 |
-| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability + Provenance Extension | #935-#942 |
+| **957** | RAG Observability Frontend - Complete UI dashboard | #943 |
+| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability | #935-#942 |
 | **953** | Agent Provenance Expansion - 18 agents with provenance tracking | - |
 
 ---
 
-**Session 962 Focus: Phase 1 - Persistence Layer (DeliberationSession, DeliberationTurn, ContractRecord, DocVersion)**
+**Session 965 Focus: Your choice! See "What Could Come Next" above.**

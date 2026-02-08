@@ -1,8 +1,8 @@
 # Services Reference
 
-**Last Updated:** Session 906 (February 1, 2026)
+**Last Updated:** Session 964 (February 7, 2026)
 **Location:** `core/services/`
-**Total Services:** 129 service classes across 98 files
+**Total Services:** 134 service classes across 103 files
 
 ---
 
@@ -17,7 +17,7 @@ The services layer contains business logic separated from views and models. Serv
 | Category | Count | Purpose |
 |----------|-------|---------|
 | AI/Agent Intelligence | 15 | Agent learning, collaboration, context |
-| Content Generation | 8 | Creative orchestration, pipelines |
+| Content Generation | 11 | Creative orchestration, pipelines, deliberation |
 | Research & Analysis | 7 | Research orchestration, PDF processing |
 | Spider/Data Intelligence | 6 | Spider network, semantic search |
 | Scoring & ML | 6 | ML engine, real-time scoring |
@@ -217,6 +217,41 @@ result = orchestrator.generate_full_asset_pack(
 ### WatermarkService
 **File:** `watermark_service.py`
 **Purpose:** Adds watermarks to generated content
+
+### ClaimsPackBuilder (Session 964)
+**File:** `claims_pack_builder.py`
+**Purpose:** Queries SpiderData (72h) and SignalCluster (active) to assemble a ClaimsPack with deterministic claim IDs for LLM citation tracking
+
+```python
+from core.services.claims_pack_builder import get_claims_pack_builder
+
+builder = get_claims_pack_builder()
+pack = builder.build(topic='AI market trends', max_claims=20)
+prompt_block = pack.to_prompt_block()  # [C-xxxxxxxxxx] markers for LLM
+```
+
+### ContentReviewPanelV2 (Session 964)
+**File:** `content_review_panel_v2.py`
+**Purpose:** 3 structured reviewers (Skeptic + FactCheck + DomainPersona) with validated JSON output and synthetic FAIL on validation failure
+
+```python
+from core.services.content_review_panel_v2 import run_reviews
+
+reviews = run_reviews(draft='...', claims_pack=pack, topic='AI trends')
+# Each review: {reviewer, verdict, top_issues, required_changes, suggested_edits, confidence}
+```
+
+### ContentDeliberationRunner (Session 964)
+**File:** `content_deliberation_runner.py`
+**Purpose:** Full deliberation pipeline: ClaimsPack -> Draft -> Review -> DecisionEnforcer -> PublishGate -> SelfBlog with stats_snapshot['deliberation']
+
+```python
+from core.services.content_deliberation_runner import ContentDeliberationRunner
+
+runner = ContentDeliberationRunner()
+result = runner.run_blog(topic='AI market trends', voice='professional')
+# result: {status, selfblog_id, deliberation_session_id, decision, gate_result, summary}
+```
 
 ---
 
