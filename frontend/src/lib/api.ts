@@ -3594,6 +3594,27 @@ export const blogsApi = {
       `/v1/research/self-blog/${blogId}/publish/`,
       { force }
     ),
+
+  related: (blogId: string, limit?: number) =>
+    api.get<{
+      success: boolean
+      blog_id: string
+      blog_title: string
+      related: Array<{
+        id: string
+        title: string
+        category: string
+        status: string
+        intro: string
+        tags: string[]
+        word_count: number
+        created_at: string
+        quality_score: number | null
+        relatedness_score: number
+        relatedness_reason: string
+      }>
+      count: number
+    }>(`/v1/research/self-blog/${blogId}/related/`, { params: { limit: limit || 6 } }),
 }
 
 // =============================================================================
