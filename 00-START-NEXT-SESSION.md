@@ -1,33 +1,30 @@
-# Session 969 - Start Here
+# Session 970 - Start Here
 
-**Previous Session:** 968 (Insight De-dup Bundling + Frontend Data Plumbing)
-**Date:** February 7, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** (cleaned from 568) | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE**
+**Previous Session:** 969 (Orchestration Enrichment + ORM Fix + Blog Diversity)
+**Date:** February 8, 2026
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** (cleaned from 568) | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE** | **Orchestration Enrichment: ACTIVE** | **Blog Diversity: ACTIVE**
 
 ---
 
-## Session 968 Summary (Just Completed)
+## Session 969 Summary (Just Completed)
 
-### Phase 5A — Review Insight De-dup / Bundling - COMPLETE
+### Orchestration Tab Enrichment (PR #971)
+Wired up existing backend APIs the frontend was dropping — single file change to `OrchestrationTab.tsx`:
 
-Memory Palace now bundles duplicate insight memories from the same conversation into a single expandable card.
+- **Monitor: Aggregate metrics bar** — success rate, avg time, tokens (24h), cost (24h) from dashboard API
+- **Monitor: Execution cost** — `cost` field mapped from unified-executions API
+- **ExecutionDetailModal: Full output** — fetches detail endpoint on open, shows untruncated task + full `output_data` + related memory (was completely missing before)
+- **HiveMind: Sessions** — 4 stat cards (Sessions, Agents, Advisors, Coordinators), sessions list with status badges, session detail modal with contributions/synthesis
 
-**Problem:** `ConversationOrchestrator.create_conversation_memories()` creates one `AgentMemory(memory_type='insight')` per participant. A 2-agent review = 2 near-identical cards in Memory Palace.
+### ORM Fix (PR #972)
+- `tool_dispatcher.py` queried `LearningPattern.times_successful` — corrected to `success_when_applied`
+- Fixed "Cannot resolve keyword" PA errors
 
-**Solution:** Bundle by `source_id` (conversation UUID) — no migration, no new model fields.
-
-#### Backend (`core/views_memory_palace.py`, +3 lines)
-- Added `source_id` to `get_agent_memories()` serialization
-- Added `source_id` + `tags` to `list_all_memories()` serialization
-
-#### Frontend (`frontend/src/pages/MemoryPalacePage.tsx`, ~75 lines)
-- `bundleInsights()` utility groups insight memories by `source_id`
-- `InsightBundleCard` component: collapsed = title + "N agents" badge; expanded = individual cards
-- `isBundle()` type guard for render branching
-
-### Also in Session 968
-- **remarkGfm import fix** — `ContentStudioTab` was missing the import (commit `72e802b5`)
-- **Frontend data plumbing audit** — PR #970, unwired visibility layer
+### Blog Diversity Fix (PR #972)
+- Replaced hardcoded "Self-Evolving AI Ecosystem" fallback with 10 diverse topics (crypto, finance, sports, AI tech, legal, career)
+- Fallback checks recent blog titles to avoid repeats
+- Weighted random selection doubles trending probability, removes 'system' from rotation
+- v2 deliberation pipeline gets matching fix
 
 ---
 
@@ -38,25 +35,25 @@ Memory Palace now bundles duplicate insight memories from the same conversation 
 | Active Initiatives | 52 |
 | Services | 134 |
 | Celery Tasks | 261 |
-| Content Pipeline | v1 (direct) + v2 (deliberation) |
+| Content Pipeline | v1 (direct) + v2 (deliberation) — now with diverse fallbacks |
 | PA Tools | 86 |
 
 ---
 
-## PA Self-Awareness Gap (Discovered Session 968)
+## Known Issues / Open Items
 
-The PA was asked "what's been going on the last 2 hours?" and correctly admitted it lacks live telemetry access. However, it then:
-- **Hallucinated agent count** (said 215, actual is 76)
-- **Invented tech stack** (Prometheus, Grafana, ELK, PagerDuty — none exist)
-- **Proposed massive over-engineering** (6-step enterprise observability plan)
-- **Was unaware of its own 86 tools** already in `unified_pa_entrypoint.py`
-
-**What's actually needed:** 2-3 simple PA tools that query recent activity via Django ORM:
+### PA Self-Awareness Gap (Discovered Session 968)
+The PA lacks live telemetry tools. When asked "what's been going on?" it hallucinated stats. Needs 2-3 simple Django ORM query tools:
 1. `get_recent_activity(hours=2)` — recent Celery task results, spider runs, errors
-2. `get_system_health()` — aggregate body system heartbeats (already exist)
-3. `get_recent_errors(hours=2)` — recent log entries or failed tasks
+2. `get_system_health()` — aggregate body system heartbeats
+3. `get_recent_errors(hours=2)` — recent failed tasks
 
-These would be simple additions to the existing PA tool infrastructure, not a new observability platform.
+### Agent Dream: Intent-Driven Highlights Engine (Session 969)
+FullStackDeveloperAgent dreamed about an "editing intent capture" layer for content highlight generation. Researched and rated 7/10 on market grounding:
+- Real gap: no competitor captures creator intent during recording for highlight ML
+- Academic research validates context signals beat raw ML for highlights
+- Most viable as recording-first platform feature, not standalone product
+- See research notes in session transcript
 
 ---
 
@@ -68,26 +65,27 @@ These would be simple additions to the existing PA tool infrastructure, not a ne
 3. **PA Error Summary Tool** — Query recent failed tasks and errors
 
 ### Phase 5 Possibilities (from Surgical Moves Audit)
-1. **Frontend Deliberation Viewer** — React component showing deliberation replay (turns, evidence, claims) in Content Studio
-2. **Claim Citation Scoring** — Score blog posts based on percentage of claims cited vs unsourced assertions
-3. **Auto-Revision Loop** — If REVISE decision, loop through reviewer feedback automatically (currently does 1 pass)
-4. **ClaimsPack Enrichment** — Add semantic similarity search to claims (pgvector) instead of keyword matching
-5. **Review Panel Metrics** — Track reviewer agreement rates, common issue types, decision distribution over time
+1. **Frontend Deliberation Viewer** — React component showing deliberation replay in Content Studio
+2. **Claim Citation Scoring** — Score blog posts based on percentage of claims cited vs unsourced
+3. **Auto-Revision Loop** — If REVISE decision, loop through reviewer feedback automatically
+4. **ClaimsPack Enrichment** — Add semantic similarity search to claims (pgvector)
+5. **Review Panel Metrics** — Track reviewer agreement rates, decision distribution over time
 
 ### Other Ideas
-- Wire v2 pipeline into the auto-blog Celery Beat schedule alongside v1
-- Add deliberation metadata to frontend blog cards (show review verdicts, claim count)
-- Expose claims data in the PA for "how was this blog reviewed?" queries
+- Wire v2 pipeline into auto-blog Celery Beat schedule alongside v1
+- Add deliberation metadata to frontend blog cards (review verdicts, claim count)
+- Expose claims data in PA for "how was this blog reviewed?" queries
 
 ---
 
 ## Key Files Reference
 
-### Session 968 Files
+### Session 969 Files
 | File | Purpose |
 |------|---------|
-| `core/views_memory_palace.py` | Added `source_id` to list API serializers |
-| `frontend/src/pages/MemoryPalacePage.tsx` | `bundleInsights()` + `InsightBundleCard` |
+| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | Metrics bar, cost, HiveMind sessions, execution detail overhaul |
+| `core/services/tool_dispatcher.py` | ORM field fix: `times_successful` → `success_when_applied` |
+| `core/tasks.py` | Diversified blog fallback topics (v1 + v2) |
 
 ### Phase 4 Files
 | File | Purpose |
@@ -109,6 +107,7 @@ These would be simple additions to the existing PA tool infrastructure, not a ne
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **969** | Orchestration enrichment, execution detail fix, ORM fix, blog diversity | #971, #972 |
 | **968** | Insight De-dup Bundling + remarkGfm fix + frontend data plumbing | #970 |
 | **964** | Phase 4 Content Deliberation Pipeline - ClaimsPack, 3-reviewer panel, DecisionEnforcer, v2 blog API | - |
 | **961c** | PA Initiative Audit + Cleanup - audit action, merged 94 dupes, archived 420 noise | #960 |
@@ -121,4 +120,4 @@ These would be simple additions to the existing PA tool infrastructure, not a ne
 
 ---
 
-**Session 969 Focus: Your choice! See "What Could Come Next" above.**
+**Session 970 Focus: Your choice! See "What Could Come Next" above.**
