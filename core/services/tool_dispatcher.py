@@ -160,6 +160,11 @@ class ToolDispatcher:
         self.register("learning_patterns_tool", self._handle_learning_patterns)
         self.register("feedback_tool", self._handle_feedback)
 
+        # Session 969: Live telemetry tools for PA self-awareness
+        self.register("recent_activity_tool", self._handle_recent_activity)
+        self.register("system_health_tool", self._handle_system_health)
+        self.register("error_summary_tool", self._handle_error_summary)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -2695,6 +2700,453 @@ class ToolDispatcher:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, update"
             )
+
+
+    # ------------------------------------------------------------------ #
+    # Session 969: Live telemetry tools for PA self-awareness             #
+    # ------------------------------------------------------------------ #
+
+    def _handle_recent_activity(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 969: Recent activity tool — comprehensive activity snapshot.
+
+        Answers "What's been going on?" across all major subsystems.
+
+        Actions:
+        - summary: High-level counts and latest items (default)
+        - detailed: Same but with more items per section
+        """
+        from django.utils import timezone
+        from django.db.models import Count
+        from datetime import timedelta
+
+        action = payload.get('action', 'summary')
+        hours = payload.get('hours', 2)
+        cutoff = timezone.now() - timedelta(hours=hours)
+        item_limit = 5 if action == 'summary' else 15
+
+        sections = {}
+
+        # 1. Celery tasks
+        try:
+            from django_celery_results.models import TaskResult
+            task_qs = TaskResult.objects.filter(date_done__gte=cutoff)
+            by_status = dict(
+                task_qs.values('status')
+                .annotate(n=Count('id'))
+                .values_list('status', 'n')
+            )
+            sections['celery_tasks'] = {
+                'total': sum(by_status.values()),
+                'by_status': by_status,
+            }
+        except Exception as e:
+            sections['celery_tasks'] = {'error': str(e)}
+
+        # 2. Spider data
+        try:
+            from core.models_unified_system import SpiderData
+            spider_qs = SpiderData.objects.filter(created_at__gte=cutoff)
+            total_spider = spider_qs.count()
+            distinct_spiders = spider_qs.values('spider_name').distinct().count()
+            top_spiders = list(
+                spider_qs.values('spider_name')
+                .annotate(n=Count('id'))
+                .order_by('-n')[:item_limit]
+                .values_list('spider_name', 'n')
+            )
+            sections['spider_data'] = {
+                'total_items': total_spider,
+                'distinct_spiders': distinct_spiders,
+                'top_spiders': dict(top_spiders),
+            }
+        except Exception as e:
+            sections['spider_data'] = {'error': str(e)}
+
+        # 3. Conversations (HiveMindSession)
+        try:
+            from core.models_unified_system import HiveMindSession
+            conv_qs = HiveMindSession.objects.filter(created_at__gte=cutoff)
+            by_status = dict(
+                conv_qs.values('status')
+                .annotate(n=Count('id'))
+                .values_list('status', 'n')
+            )
+            latest = list(
+                conv_qs.order_by('-created_at')[:item_limit]
+                .values('question', 'status', 'created_at')
+            )
+            for item in latest:
+                if item.get('created_at'):
+                    item['created_at'] = item['created_at'].isoformat()
+                # Truncate long questions
+                q = item.get('question', '')
+                if len(q) > 120:
+                    item['question'] = q[:120] + '...'
+            sections['conversations'] = {
+                'total': sum(by_status.values()),
+                'by_status': by_status,
+                'latest': latest,
+            }
+        except Exception as e:
+            sections['conversations'] = {'error': str(e)}
+
+        # 4. Blogs (SelfBlog)
+        try:
+            from core.models_unified_system import SelfBlog
+            blog_qs = SelfBlog.objects.filter(created_at__gte=cutoff)
+            total_blogs = blog_qs.count()
+            published = blog_qs.filter(status='published').count()
+            draft = blog_qs.filter(status='draft').count()
+            latest = list(
+                blog_qs.order_by('-created_at')[:item_limit]
+                .values('title', 'status', 'created_at')
+            )
+            for item in latest:
+                if item.get('created_at'):
+                    item['created_at'] = item['created_at'].isoformat()
+            sections['blogs'] = {
+                'total': total_blogs,
+                'published': published,
+                'draft': draft,
+                'latest': latest,
+            }
+        except Exception as e:
+            sections['blogs'] = {'error': str(e)}
+
+        # 5. Initiative changes
+        try:
+            from core.models_document_registry import Initiative
+            init_qs = Initiative.objects.filter(
+                updated_at__gte=cutoff,
+                status='ACTIVE'
+            )
+            total_updated = init_qs.count()
+            latest = list(
+                init_qs.order_by('-updated_at')[:item_limit]
+                .values('name', 'updated_at')
+            )
+            for item in latest:
+                if item.get('updated_at'):
+                    item['updated_at'] = item['updated_at'].isoformat()
+            sections['initiatives'] = {
+                'recently_updated': total_updated,
+                'latest': latest,
+            }
+        except Exception as e:
+            sections['initiatives'] = {'error': str(e)}
+
+        # 6. Signal clusters
+        try:
+            from core.models_signal_intelligence import SignalCluster
+            sig_qs = SignalCluster.objects.filter(
+                detected_at__gte=cutoff,
+                status='active'
+            )
+            total_signals = sig_qs.count()
+            top_signals = list(
+                sig_qs.order_by('-strength')[:item_limit]
+                .values('name', 'strength', 'pattern_type')
+            )
+            sections['signals'] = {
+                'active_clusters': total_signals,
+                'top_by_strength': top_signals,
+            }
+        except Exception as e:
+            sections['signals'] = {'error': str(e)}
+
+        return {
+            'action': action,
+            'hours_back': hours,
+            'sections': sections,
+        }
+
+    def _handle_system_health(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 969: System health tool — aggregate health snapshot.
+
+        Answers "How's the system?" with heartbeat, component, celery, and spider freshness data.
+
+        Actions:
+        - overview: High-level health assessment (default)
+        - components: Detailed per-component breakdown
+        """
+        from django.utils import timezone
+        from django.db.models import Count
+        from datetime import timedelta, date
+
+        action = payload.get('action', 'overview')
+        now = timezone.now()
+
+        health = {}
+
+        # 1. Latest heartbeat
+        try:
+            from core.models_heart import HeartBeat
+            hb = HeartBeat.objects.order_by('-recorded_at').first()
+            if hb:
+                age_seconds = (now - hb.recorded_at).total_seconds()
+                health['heartbeat'] = {
+                    'overall_status': hb.overall_status,
+                    'health_score': hb.health_score,
+                    'recorded_at': hb.recorded_at.isoformat(),
+                    'age_seconds': int(age_seconds),
+                    'is_alive': hb.is_alive,
+                }
+            else:
+                health['heartbeat'] = {'status': 'no_data'}
+        except Exception as e:
+            health['heartbeat'] = {'error': str(e)}
+
+        # 2. Component statuses
+        try:
+            from core.models_heart import ComponentStatus
+            components = list(
+                ComponentStatus.objects.all().values(
+                    'component_name', 'display_name', 'status', 'is_healthy',
+                    'last_checked_at', 'last_error'
+                )
+            )
+            for c in components:
+                if c.get('last_checked_at'):
+                    c['last_checked_at'] = c['last_checked_at'].isoformat()
+            healthy_count = sum(1 for c in components if c.get('is_healthy'))
+            health['components'] = {
+                'total': len(components),
+                'healthy': healthy_count,
+                'unhealthy': len(components) - healthy_count,
+            }
+            if action == 'components':
+                health['components']['details'] = components
+        except Exception as e:
+            health['components'] = {'error': str(e)}
+
+        # 3. Celery health (last 1 hour)
+        try:
+            from django_celery_results.models import TaskResult
+            one_hour_ago = now - timedelta(hours=1)
+            task_qs = TaskResult.objects.filter(date_done__gte=one_hour_ago)
+            by_status = dict(
+                task_qs.values('status')
+                .annotate(n=Count('id'))
+                .values_list('status', 'n')
+            )
+            total = sum(by_status.values())
+            successes = by_status.get('SUCCESS', 0)
+            success_rate = (successes / total * 100) if total > 0 else None
+            health['celery'] = {
+                'last_hour_total': total,
+                'by_status': by_status,
+                'success_rate_pct': round(success_rate, 1) if success_rate is not None else None,
+            }
+        except Exception as e:
+            health['celery'] = {'error': str(e)}
+
+        # 4. Tool call health (today)
+        try:
+            from core.models_tool_calls import ToolCallAggregate
+            today = date.today()
+            aggs = ToolCallAggregate.objects.filter(date=today)
+            total_calls = sum(a.total_calls for a in aggs)
+            success_calls = sum(a.success_calls for a in aggs)
+            tc_rate = (success_calls / total_calls * 100) if total_calls > 0 else None
+            health['tool_calls'] = {
+                'today_total': total_calls,
+                'today_success': success_calls,
+                'success_rate_pct': round(tc_rate, 1) if tc_rate is not None else None,
+            }
+        except Exception as e:
+            health['tool_calls'] = {'error': str(e)}
+
+        # 5. Spider freshness (last 2 hours)
+        try:
+            from core.models_unified_system import SpiderData
+            two_hours_ago = now - timedelta(hours=2)
+            recent_count = SpiderData.objects.filter(created_at__gte=two_hours_ago).count()
+            latest = SpiderData.objects.order_by('-created_at').first()
+            health['spider_freshness'] = {
+                'items_last_2h': recent_count,
+                'latest_at': latest.created_at.isoformat() if latest else None,
+            }
+        except Exception as e:
+            health['spider_freshness'] = {'error': str(e)}
+
+        # Compute overall assessment
+        assessment = 'healthy'
+        reasons = []
+
+        hb_data = health.get('heartbeat', {})
+        if hb_data.get('status') == 'no_data' or hb_data.get('error'):
+            assessment = 'critical'
+            reasons.append('No heartbeat data')
+        elif hb_data.get('age_seconds', 0) > 600:  # >10 min stale
+            assessment = 'degraded'
+            reasons.append(f"Heartbeat stale ({hb_data['age_seconds']}s ago)")
+        elif hb_data.get('overall_status') not in ('healthy', 'HEALTHY', None):
+            assessment = 'degraded'
+            reasons.append(f"Heartbeat status: {hb_data.get('overall_status')}")
+
+        celery_data = health.get('celery', {})
+        celery_rate = celery_data.get('success_rate_pct')
+        if celery_rate is not None and celery_rate < 80:
+            assessment = 'degraded' if assessment != 'critical' else 'critical'
+            reasons.append(f"Celery success rate low ({celery_rate}%)")
+
+        comp_data = health.get('components', {})
+        if comp_data.get('unhealthy', 0) > 0:
+            if comp_data['unhealthy'] >= comp_data.get('total', 1) / 2:
+                assessment = 'critical'
+            elif assessment == 'healthy':
+                assessment = 'degraded'
+            reasons.append(f"{comp_data['unhealthy']} unhealthy components")
+
+        health['overall_assessment'] = assessment
+        health['assessment_reasons'] = reasons if reasons else ['All systems nominal']
+
+        return {
+            'action': action,
+            'health': health,
+        }
+
+    def _handle_error_summary(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 969: Error summary tool — recent failures and patterns.
+
+        Answers "Any errors?" with failure signatures, detections, failed tool calls, and celery failures.
+
+        Actions:
+        - summary: High-level error counts and top patterns (default)
+        - detailed: Full error details with individual items
+        """
+        from django.utils import timezone
+        from django.db.models import Count
+        from datetime import timedelta
+
+        action = payload.get('action', 'summary')
+        hours = payload.get('hours', 4)
+        cutoff = timezone.now() - timedelta(hours=hours)
+        item_limit = 5 if action == 'summary' else 20
+
+        errors = {}
+        total_errors = 0
+
+        # 1. Active failure signatures
+        try:
+            from core.models_diagnostic_pipeline import FailureSignature
+            sigs = list(
+                FailureSignature.objects.filter(
+                    status='active',
+                    last_seen_at__gte=cutoff
+                ).order_by('-occurrence_count')[:item_limit]
+                .values('signature', 'occurrence_count', 'last_seen_at', 'description')
+            )
+            for item in sigs:
+                if item.get('last_seen_at'):
+                    item['last_seen_at'] = item['last_seen_at'].isoformat()
+            errors['failure_signatures'] = {
+                'count': len(sigs),
+                'items': sigs,
+            }
+            total_errors += len(sigs)
+        except Exception as e:
+            errors['failure_signatures'] = {'error': str(e)}
+
+        # 2. Failure detections grouped by source_type
+        try:
+            from core.models_diagnostic_pipeline import FailureDetection
+            det_qs = FailureDetection.objects.filter(detected_at__gte=cutoff)
+            by_source = dict(
+                det_qs.values('source_type')
+                .annotate(n=Count('id'))
+                .values_list('source_type', 'n')
+            )
+            det_total = sum(by_source.values())
+            errors['failure_detections'] = {
+                'total': det_total,
+                'by_source_type': by_source,
+            }
+            total_errors += det_total
+        except Exception as e:
+            errors['failure_detections'] = {'error': str(e)}
+
+        # 3. Failed tool calls grouped by agent+tool
+        try:
+            from core.models_tool_calls import ToolCallRecord
+            failed_tc = ToolCallRecord.objects.filter(
+                success=False,
+                created_at__gte=cutoff
+            )
+            by_agent_tool = list(
+                failed_tc.values('agent_name', 'tool_name')
+                .annotate(n=Count('id'))
+                .order_by('-n')[:item_limit]
+            )
+            tc_total = failed_tc.count()
+            errors['failed_tool_calls'] = {
+                'total': tc_total,
+                'by_agent_tool': by_agent_tool,
+            }
+            total_errors += tc_total
+        except Exception as e:
+            errors['failed_tool_calls'] = {'error': str(e)}
+
+        # 4. Failed Celery tasks grouped by task name
+        try:
+            from django_celery_results.models import TaskResult
+            failed_tasks = TaskResult.objects.filter(
+                status='FAILURE',
+                date_done__gte=cutoff
+            )
+            by_task = dict(
+                failed_tasks.values('task_name')
+                .annotate(n=Count('id'))
+                .order_by('-n')[:item_limit]
+                .values_list('task_name', 'n')
+            )
+            ft_total = failed_tasks.count()
+            errors['failed_celery_tasks'] = {
+                'total': ft_total,
+                'by_task_name': by_task,
+            }
+            total_errors += ft_total
+        except Exception as e:
+            errors['failed_celery_tasks'] = {'error': str(e)}
+
+        # Compute severity
+        if total_errors == 0:
+            severity = 'none'
+        elif total_errors <= 5:
+            severity = 'low'
+        elif total_errors <= 20:
+            severity = 'moderate'
+        else:
+            severity = 'high'
+
+        return {
+            'action': action,
+            'hours_back': hours,
+            'total_errors': total_errors,
+            'severity': severity,
+            'errors': errors,
+        }
 
 
 # Singleton instance
