@@ -1768,13 +1768,74 @@ function HiveMindSubTab() {
 
 // ============ Detail Modals ============
 
+// Session 969: Helper to render output_data which can be a string, object, or nested structure
+function renderOutputData(data: unknown): string {
+  if (!data) return ''
+  if (typeof data === 'string') return data
+  if (typeof data === 'object') {
+    const obj = data as Record<string, unknown>
+    // Common output_data shapes: { result: "...", response: "...", output: "...", summary: "..." }
+    // Try known text fields first for a clean display
+    for (const key of ['result', 'response', 'output', 'summary', 'content', 'analysis', 'report', 'text']) {
+      if (obj[key] && typeof obj[key] === 'string') return obj[key] as string
+    }
+    // If it has a nested result object with text inside
+    if (obj.result && typeof obj.result === 'object') {
+      const nested = obj.result as Record<string, unknown>
+      for (const key of ['response', 'output', 'summary', 'content', 'text']) {
+        if (nested[key] && typeof nested[key] === 'string') return nested[key] as string
+      }
+    }
+    // Fallback: pretty-print the whole object
+    return JSON.stringify(data, null, 2)
+  }
+  return String(data)
+}
+
 function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem; onClose: () => void }) {
   const statusStyle = statusColors[execution.status] || statusColors.pending
 
+  // Session 969: Fetch full execution detail (untruncated task + output_data + related_memory)
+  const { data: detailData, isLoading: detailLoading } = useQuery({
+    queryKey: ['execution-detail', execution.id],
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/v1/agents/execution/${execution.id}/`)
+        if (!res.ok) return null
+        const json = await res.json()
+        return json.data as {
+          execution: {
+            task: string
+            output_data: unknown
+            input_data: unknown
+            agent_display_name?: string
+          }
+          related_memory?: {
+            id: string
+            title: string
+            content: string
+            valence: string
+            memory_type: string
+            importance_score: number
+          } | null
+        }
+      } catch {
+        return null
+      }
+    },
+    staleTime: 30000,
+  })
+
+  // Use detail data when available, fall back to list data
+  const fullTask = detailData?.execution?.task || execution.task
+  const outputData = detailData?.execution?.output_data
+  const relatedMemory = detailData?.related_memory
+  const outputText = renderOutputData(outputData)
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-lg w-full max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[85vh] overflow-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
           <h3 className="text-lg font-semibold">Execution Details</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X size={20} />
@@ -1786,14 +1847,16 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
             <span className={cn('px-3 py-1 rounded-full text-sm capitalize', statusStyle.bg, statusStyle.color)}>
               {execution.status}
             </span>
-            <span className="text-gray-400">{execution.workflow_name || execution.agent_name || 'Workflow Execution'}</span>
+            <span className="text-gray-400">
+              {detailData?.execution?.agent_display_name || execution.workflow_name || execution.agent_name || 'Workflow Execution'}
+            </span>
           </div>
 
-          {/* Session 923: Show task context for debugging failures */}
-          {execution.task && (
+          {/* Session 969: Show full untruncated task from detail endpoint */}
+          {fullTask && (
             <div className="bg-gray-800/50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Task</p>
-              <p className="text-sm text-gray-300 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{execution.task}</p>
+              <p className="text-sm text-gray-300 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{fullTask}</p>
             </div>
           )}
 
@@ -1860,6 +1923,45 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
                 <span className="text-sm font-medium">Error</span>
               </div>
               <p className="text-sm text-gray-300">{execution.error_message}</p>
+            </div>
+          )}
+
+          {/* Session 969: Show full agent output from detail endpoint */}
+          {detailLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="animate-spin text-primary-400" size={20} />
+              <span className="text-sm text-gray-400 ml-2">Loading full output...</span>
+            </div>
+          ) : outputText ? (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Agent Output</p>
+              <div className="bg-gray-800/50 rounded-lg p-3 max-h-80 overflow-y-auto">
+                <pre className="text-sm text-gray-300 whitespace-pre-wrap break-words font-sans">{outputText}</pre>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Session 969: Show related memory if exists */}
+          {relatedMemory && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Related Memory</p>
+              <div className="bg-primary-500/5 border border-primary-500/20 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-gray-200">{relatedMemory.title}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'text-xs px-1.5 py-0.5 rounded',
+                      relatedMemory.valence === 'positive' ? 'bg-green-500/20 text-green-400' :
+                      relatedMemory.valence === 'negative' ? 'bg-red-500/20 text-red-400' :
+                      'bg-gray-600 text-gray-300'
+                    )}>
+                      {relatedMemory.valence}
+                    </span>
+                    <span className="text-xs text-gray-500">{relatedMemory.memory_type}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-1 whitespace-pre-wrap">{relatedMemory.content}</p>
+              </div>
             </div>
           )}
 
