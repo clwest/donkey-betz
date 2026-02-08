@@ -21,6 +21,7 @@ import {
   Plus,
   Server,
   Workflow,
+  GitBranch,
   Palette,
   Database,
   Sparkles,
@@ -69,27 +70,55 @@ import {
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 
-// Tab configuration - using 'as const' to preserve the icon types
-const tabs = [
-  { id: 'command' as WorkspaceTab, label: 'Command', icon: Target },
-  { id: 'infrastructure' as WorkspaceTab, label: 'Infrastructure', icon: Server },
-  { id: 'orchestration' as WorkspaceTab, label: 'Orchestration', icon: Workflow },
-  { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: Workflow },  // Session 847
-  { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
-  { id: 'datasources' as WorkspaceTab, label: 'Data', icon: Database },
-  { id: 'consciousness' as WorkspaceTab, label: 'AI Mind', icon: Sparkles },
-  { id: 'intelligence' as WorkspaceTab, label: 'Intel', icon: Lightbulb },
-  { id: 'governance' as WorkspaceTab, label: 'Governance', icon: Shield },
-  { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
-  { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
-  { id: 'operations' as WorkspaceTab, label: 'Operations', icon: History },
-  { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },  // Session 861B
-  { id: 'conceptforge' as WorkspaceTab, label: 'Dossiers', icon: FlaskConical },  // Session 865
-  { id: 'career' as WorkspaceTab, label: 'Career', icon: Briefcase },  // Session 866
-  { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },  // Session 869
-  { id: 'learning' as WorkspaceTab, label: 'Learn', icon: GraduationCap },  // Session 870
-  { id: 'boardroom' as WorkspaceTab, label: 'Boardroom', icon: Gavel },  // Session 927
+// Tab groups - 18 tabs in 5 logical clusters
+const tabGroups = [
+  {
+    label: 'Core',
+    tabs: [
+      { id: 'command' as WorkspaceTab, label: 'Command', icon: Target },
+      { id: 'initiatives' as WorkspaceTab, label: 'Initiatives', icon: GitBranch },
+      { id: 'boardroom' as WorkspaceTab, label: 'Boardroom', icon: Gavel },
+    ],
+  },
+  {
+    label: 'Content',
+    tabs: [
+      { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
+      { id: 'conceptforge' as WorkspaceTab, label: 'Dossiers', icon: FlaskConical },
+      { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },
+    ],
+  },
+  {
+    label: 'System',
+    tabs: [
+      { id: 'infrastructure' as WorkspaceTab, label: 'Infra', icon: Server },
+      { id: 'orchestration' as WorkspaceTab, label: 'Orch', icon: Workflow },
+      { id: 'operations' as WorkspaceTab, label: 'Ops', icon: History },
+      { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },
+      { id: 'governance' as WorkspaceTab, label: 'Gov', icon: Shield },
+    ],
+  },
+  {
+    label: 'Data',
+    tabs: [
+      { id: 'datasources' as WorkspaceTab, label: 'Data', icon: Database },
+      { id: 'intelligence' as WorkspaceTab, label: 'Intel', icon: Lightbulb },
+      { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
+      { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
+    ],
+  },
+  {
+    label: 'AI',
+    tabs: [
+      { id: 'consciousness' as WorkspaceTab, label: 'AI Mind', icon: Sparkles },
+      { id: 'learning' as WorkspaceTab, label: 'Learn', icon: GraduationCap },
+      { id: 'career' as WorkspaceTab, label: 'Career', icon: Briefcase },
+    ],
+  },
 ]
+
+// Flat list for URL validation
+const allTabs = tabGroups.flatMap(g => g.tabs)
 
 // Workspace Selector Modal
 function WorkspaceSelectorModal({
@@ -631,7 +660,7 @@ export default function WorkspacePage() {
   const urlTab = searchParams.get('tab') as WorkspaceTab | null
 
   // Core state - initialize from URL param if valid
-  const validTabs = tabs.map(t => t.id)
+  const validTabs = allTabs.map(t => t.id)
   const initialTab = urlTab && validTabs.includes(urlTab) ? urlTab : 'command'
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab)
 
@@ -851,22 +880,31 @@ export default function WorkspacePage() {
       {/* Main content when workspace is selected */}
       {activeWorkspace && (
         <>
-          {/* Tab Navigation */}
-          <div className="flex gap-2 border-b border-dark-border pb-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
-                  activeTab === tab.id
-                    ? 'bg-primary-500/20 text-primary-400'
-                    : 'text-gray-400 hover:text-white hover:bg-dark-border/50'
+          {/* Tab Navigation - 5 grouped clusters */}
+          <div className="flex items-center gap-1 border-b border-dark-border pb-2 flex-wrap">
+            {tabGroups.map((group, gi) => (
+              <div key={group.label} className="flex items-center">
+                {gi > 0 && (
+                  <div className="w-px h-6 bg-dark-border mx-1.5 flex-shrink-0" />
                 )}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
+                <div className="flex items-center gap-0.5">
+                  {group.tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => handleTabChange(tab.id)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap',
+                        activeTab === tab.id
+                          ? 'bg-primary-500/20 text-primary-400'
+                          : 'text-gray-500 hover:text-white hover:bg-dark-border/50'
+                      )}
+                    >
+                      <tab.icon size={14} />
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
 
