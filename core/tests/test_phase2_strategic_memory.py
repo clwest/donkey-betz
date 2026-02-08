@@ -542,3 +542,55 @@ class TestEmbeddingsFlag(TestCase):
             mock_search.return_value = []
             self.svc.format_for_pa('initiative cleanup')
             mock_search.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 9. Phase 3.2: Trigram index + token cap
+# ---------------------------------------------------------------------------
+
+class TestTrigramTokenCap(TestCase):
+    """Tests for trigram GIN indexes and token capping in _search_learning_patterns."""
+
+    def setUp(self):
+        self.svc = StrategicMemoryService()
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+
+    def test_token_cap_limits_or_clauses(self):
+        """Passing >8 tokens still executes without error (capped internally)."""
+        _create_learning_pattern(
+            description='Initiative cleanup strategy for duplicate removal and noise reduction',
+            pattern_type='cleanup_strategy',
+        )
+        # 15 tokens — more than the cap of 8
+        many_tokens = {
+            'initiative', 'cleanup', 'strategy', 'duplicate', 'removal',
+            'noise', 'reduction', 'archive', 'consolidate', 'merge',
+            'stalled', 'pattern', 'confidence', 'threshold', 'optimization',
+        }
+        results = self.svc._search_learning_patterns(many_tokens, top_k=10)
+        # Should not raise and should find our pattern
+        self.assertIsInstance(results, list)
+        self.assertGreaterEqual(len(results), 1)
+
+    def test_learning_pattern_active_found(self):
+        """Active LearningPattern is returned by _search_learning_patterns."""
+        _create_learning_pattern(
+            description='Blockchain whale detection improves alert accuracy',
+            pattern_type='whale_detection',
+            is_active=True,
+        )
+        results = self.svc._search_learning_patterns({'blockchain', 'whale', 'detection'}, top_k=10)
+        self.assertGreaterEqual(len(results), 1)
+        self.assertEqual(results[0]['title'], 'whale_detection')
+
+    def test_learning_pattern_inactive_excluded(self):
+        """Inactive LearningPattern is excluded from _search_learning_patterns."""
+        _create_learning_pattern(
+            description='Deprecated spider monitoring pattern no longer used',
+            pattern_type='deprecated_spider_monitor',
+            is_active=False,
+        )
+        results = self.svc._search_learning_patterns({'deprecated', 'spider', 'monitor'}, top_k=10)
+        ids = [r['title'] for r in results]
+        self.assertNotIn('deprecated_spider_monitor', ids)

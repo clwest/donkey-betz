@@ -4,8 +4,10 @@ These models represent ALL agents, advisors, and system components
 """
 
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.indexes import GinIndex
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
@@ -14128,6 +14130,20 @@ class LearningPattern(models.Model):
     class Meta:
         app_label = 'core'
         ordering = ['-confidence', '-created_at']
+        indexes = [
+            GinIndex(
+                fields=['description'],
+                name='lp_desc_trgm_active',
+                opclasses=['gin_trgm_ops'],
+                condition=Q(is_active=True),
+            ),
+            GinIndex(
+                fields=['pattern_type'],
+                name='lp_type_trgm_active',
+                opclasses=['gin_trgm_ops'],
+                condition=Q(is_active=True),
+            ),
+        ]
 
     def __str__(self):
         return f"{self.pattern_type}: {self.description[:50]}..."
