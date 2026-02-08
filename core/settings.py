@@ -966,6 +966,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_approved_dreams': {'queue': 'long_running'},
     # Session 885: Content generation tasks - dedicated content worker
     'core.tasks.generate_self_blog_task': {'queue': 'content'},
+    'core.tasks.generate_self_blog_deliberation_task': {'queue': 'content'},
     'core.tasks.execute_initiative_stage_task': {'queue': 'content'},
     'core.tasks.advance_initiative_pipeline': {'queue': 'content'},
     'core.tasks.auto_kickstart_stuck_initiatives': {'queue': 'content'},
