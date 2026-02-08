@@ -1,5 +1,5 @@
 """
-Session 962 Phase 2: Strategic Memory Service
+Session 962 Phase 2 + Phase 3.1: Strategic Memory Service
 
 Turns passive memory/logs into an active strategic layer that answers:
 - "Have we tried this before?"
@@ -8,17 +8,26 @@ Turns passive memory/logs into an active strategic layer that answers:
 
 Queries across: AgentMemory (pgvector), LearningPattern, DecisionRecord,
 AgentDecisionSummary, DeliberationSession/Turn/ContractRecord.
+
+Phase 3.1: include_embeddings flag (default off) keeps pgvector off the
+critical path. 120s response cache via Django cache (Redis / LocMem).
 """
 
+import copy
+import hashlib
+import json
 import logging
 import time
 from datetime import timedelta
 from typing import Optional
 
+from django.core.cache import cache as django_cache
 from django.db.models import Q
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+CACHE_TTL = 120  # seconds
 
 # Source weights for ranking
 SOURCE_WEIGHTS = {
@@ -79,6 +88,12 @@ def _tokenize_query(query: str) -> set:
     return tokens
 
 
+def _cache_key(prefix: str, query: str, top_k: int, include_embeddings: bool, scope: dict = None) -> str:
+    """Build a deterministic cache key for strategic memory queries."""
+    raw = f"{prefix}:{query}:{top_k}:{include_embeddings}:{json.dumps(scope or {}, sort_keys=True)}"
+    return f"smem:{hashlib.sha256(raw.encode()).hexdigest()[:24]}"
+
+
 class StrategicMemoryService:
     """Unified strategic memory layer across all system data sources."""
 
@@ -87,6 +102,7 @@ class StrategicMemoryService:
         query: str,
         top_k: int = 10,
         scope: Optional[dict] = None,
+        include_embeddings: bool = False,
     ) -> dict:
         """
         Search across all memory sources for relevant precedents.
@@ -95,6 +111,8 @@ class StrategicMemoryService:
             query: Natural language search query
             top_k: Maximum results to return
             scope: Optional filters (e.g., {'source_types': ['agent_memory']})
+            include_embeddings: If True, search AgentMemory via pgvector (slow).
+                Default False keeps embeddings off the critical path.
 
         Returns:
             Unified result payload with ranked results from multiple sources.
@@ -105,6 +123,14 @@ class StrategicMemoryService:
         stats = {'searched': {}, 'timings_ms': {}}
         scope = scope or {}
         allowed_types = scope.get('source_types')
+
+        # Phase 3.1: Check cache
+        cache_key = _cache_key('prec', query, top_k, include_embeddings, scope)
+        cached = django_cache.get(cache_key)
+        if cached is not None:
+            result = copy.deepcopy(cached)
+            result['stats']['cache_hit'] = True
+            return result
 
         # Build Q filter for icontains text search
         def q_text_filter(field: str) -> Q:
@@ -121,7 +147,8 @@ class StrategicMemoryService:
             }
 
         # --- 1) AgentMemory (embedding similarity if available, else text) ---
-        if not allowed_types or 'agent_memory' in allowed_types:
+        # Phase 3.1: Only search when include_embeddings=True
+        if include_embeddings and (not allowed_types or 'agent_memory' in allowed_types):
             t0 = time.time()
             try:
                 results.extend(self._search_agent_memories(query, tokens, top_k))
@@ -130,6 +157,8 @@ class StrategicMemoryService:
                 logger.warning(f"[Phase 2] AgentMemory search failed: {e}")
                 stats['searched']['agent_memory'] = f'error: {e}'
             stats['timings_ms']['agent_memory'] = round((time.time() - t0) * 1000)
+        else:
+            stats['searched']['agent_memory'] = False
 
         # --- 2) LearningPattern ---
         if not allowed_types or 'learning_pattern' in allowed_types:
@@ -203,13 +232,16 @@ class StrategicMemoryService:
 
         stats['timings_ms']['total'] = round((time.time() - t_start) * 1000)
         stats['result_count'] = len(results)
+        stats['cache_hit'] = False
 
-        return {
+        result = {
             'query': query,
             'top_k': top_k,
             'results': results,
             'stats': stats,
         }
+        django_cache.set(cache_key, result, CACHE_TTL)
+        return result
 
     def get_failure_signatures(
         self,
@@ -299,12 +331,21 @@ class StrategicMemoryService:
         self,
         objective: str,
         top_k: int = 5,
+        include_embeddings: bool = False,
     ) -> dict:
         """
         Recommend strategy for an objective based on historical data.
 
         Returns common blockers, success patterns, and do/don't guidance.
         """
+        # Phase 3.1: Check cache
+        cache_key = _cache_key('strat', objective, top_k, include_embeddings)
+        cached = django_cache.get(cache_key)
+        if cached is not None:
+            result = copy.deepcopy(cached)
+            result['stats']['cache_hit'] = True
+            return result
+
         t_start = time.time()
         tokens = _tokenize_query(objective)
 
@@ -315,6 +356,7 @@ class StrategicMemoryService:
                 'decision_record', 'decision_summary',
                 'deliberation_session', 'learning_pattern',
             ]},
+            include_embeddings=include_embeddings,
         )
 
         # Separate success vs failure patterns
@@ -356,7 +398,7 @@ class StrategicMemoryService:
         for ap in avoid_patterns[:top_k]:
             dont_bullets.append(f"{ap['description']} (success rate: {ap['success_rate']:.0%})")
 
-        return {
+        result = {
             'objective': objective,
             'top_k': top_k,
             'precedents': precedents['results'][:top_k],
@@ -371,8 +413,11 @@ class StrategicMemoryService:
                 'success_patterns_found': len(success_patterns),
                 'avoid_patterns_found': len(avoid_patterns),
                 'timings_ms': round((time.time() - t_start) * 1000),
+                'cache_hit': False,
             },
         }
+        django_cache.set(cache_key, result, CACHE_TTL)
+        return result
 
     # ------------------------------------------------------------------
     # Private search methods for each source
@@ -703,7 +748,7 @@ class StrategicMemoryService:
         Format strategic memory results for PA enrichment injection.
         Compact format with token budget control.
         """
-        precedents = self.query_precedents(query, top_k=top_k)
+        precedents = self.query_precedents(query, top_k=top_k, include_embeddings=False)
         failures = self.get_failure_signatures(top_k=3)
 
         parts = []
