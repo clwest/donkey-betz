@@ -1,45 +1,33 @@
-# Session 965 - Start Here
+# Session 969 - Start Here
 
-**Previous Session:** 964 (Phase 4 — Content Deliberation Pipeline)
+**Previous Session:** 968 (Insight De-dup Bundling + Frontend Data Plumbing)
 **Date:** February 7, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** (cleaned from 568) | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** (cleaned from 568) | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE**
 
 ---
 
-## Session 964 Summary (Just Completed)
+## Session 968 Summary (Just Completed)
 
-### Phase 4 — Multi-Agent Content Deliberation Pipeline - COMPLETE
+### Phase 5A — Review Insight De-dup / Bundling - COMPLETE
 
-Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow untouched):
+Memory Palace now bundles duplicate insight memories from the same conversation into a single expandable card.
 
-**Spider signals -> ClaimsPack -> ContentWriter draft (citing [C-xxxxxxxxxx] claims) -> 3-reviewer panel -> DecisionEnforcer (PUBLISH/REVISE/KILL) -> PublishGate -> SelfBlog with `stats_snapshot['deliberation']`**
+**Problem:** `ConversationOrchestrator.create_conversation_memories()` creates one `AgentMemory(memory_type='insight')` per participant. A 2-agent review = 2 near-identical cards in Memory Palace.
 
-#### New Files (5)
-| File | Purpose |
-|------|---------|
-| `core/services/content_claims.py` | SpiderClaim + ClaimsPack dataclasses with deterministic claim IDs |
-| `core/services/claims_pack_builder.py` | Queries SpiderData (72h) + SignalCluster (active) for claims |
-| `core/services/content_review_panel_v2.py` | 3 structured reviewers (Skeptic, FactCheck, DomainPersona) |
-| `core/services/content_deliberation_runner.py` | Full pipeline runner with graceful degradation |
-| `core/tests/test_phase4_content_deliberation.py` | 8 tests (all passing) |
+**Solution:** Bundle by `source_id` (conversation UUID) — no migration, no new model fields.
 
-#### Modified Files (5)
-| File | Change |
-|------|--------|
-| `core/agents/content_writer_agent.py` | Optional `claims_block` param for citation rules |
-| `core/tasks.py` | `generate_self_blog_deliberation_task` Celery task |
-| `core/urls.py` | 2 new URL routes |
-| `core/views_deliberation.py` | `blog_deliberation_detail()` view |
-| `core/views_research_demo.py` | `generate_v2_blog_api()` view |
+#### Backend (`core/views_memory_palace.py`, +3 lines)
+- Added `source_id` to `get_agent_memories()` serialization
+- Added `source_id` + `tags` to `list_all_memories()` serialization
 
-#### Key Endpoints
-- `POST /api/v1/research/self-blog/generate-v2/` — v2 deliberation blog generation
-- `GET /api/blog/<uuid>/deliberation/` — Blog deliberation replay
+#### Frontend (`frontend/src/pages/MemoryPalacePage.tsx`, ~75 lines)
+- `bundleInsights()` utility groups insight memories by `source_id`
+- `InsightBundleCard` component: collapsed = title + "N agents" badge; expanded = individual cards
+- `isBundle()` type guard for render branching
 
-#### Testing
-- 8/8 Phase 4 tests pass
-- 45/45 Phase 2 regression tests pass
-- No migrations needed
+### Also in Session 968
+- **remarkGfm import fix** — `ContentStudioTab` was missing the import (commit `72e802b5`)
+- **Frontend data plumbing audit** — PR #970, unwired visibility layer
 
 ---
 
@@ -51,13 +39,35 @@ Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow unt
 | Services | 134 |
 | Celery Tasks | 261 |
 | Content Pipeline | v1 (direct) + v2 (deliberation) |
+| PA Tools | 86 |
+
+---
+
+## PA Self-Awareness Gap (Discovered Session 968)
+
+The PA was asked "what's been going on the last 2 hours?" and correctly admitted it lacks live telemetry access. However, it then:
+- **Hallucinated agent count** (said 215, actual is 76)
+- **Invented tech stack** (Prometheus, Grafana, ELK, PagerDuty — none exist)
+- **Proposed massive over-engineering** (6-step enterprise observability plan)
+- **Was unaware of its own 86 tools** already in `unified_pa_entrypoint.py`
+
+**What's actually needed:** 2-3 simple PA tools that query recent activity via Django ORM:
+1. `get_recent_activity(hours=2)` — recent Celery task results, spider runs, errors
+2. `get_system_health()` — aggregate body system heartbeats (already exist)
+3. `get_recent_errors(hours=2)` — recent log entries or failed tasks
+
+These would be simple additions to the existing PA tool infrastructure, not a new observability platform.
 
 ---
 
 ## What Could Come Next
 
-### Phase 5 Possibilities (from Surgical Moves Audit)
+### PA Live Telemetry Tools (from PA self-awareness gap)
+1. **PA Recent Activity Tool** — Simple Django ORM query for recent Celery results, spider data, initiative changes
+2. **PA System Health Tool** — Aggregate existing body system heartbeats into a single health snapshot
+3. **PA Error Summary Tool** — Query recent failed tasks and errors
 
+### Phase 5 Possibilities (from Surgical Moves Audit)
 1. **Frontend Deliberation Viewer** — React component showing deliberation replay (turns, evidence, claims) in Content Studio
 2. **Claim Citation Scoring** — Score blog posts based on percentage of claims cited vs unsourced assertions
 3. **Auto-Revision Loop** — If REVISE decision, loop through reviewer feedback automatically (currently does 1 pass)
@@ -65,7 +75,6 @@ Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow unt
 5. **Review Panel Metrics** — Track reviewer agreement rates, common issue types, decision distribution over time
 
 ### Other Ideas
-
 - Wire v2 pipeline into the auto-blog Celery Beat schedule alongside v1
 - Add deliberation metadata to frontend blog cards (show review verdicts, claim count)
 - Expose claims data in the PA for "how was this blog reviewed?" queries
@@ -74,6 +83,12 @@ Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow unt
 
 ## Key Files Reference
 
+### Session 968 Files
+| File | Purpose |
+|------|---------|
+| `core/views_memory_palace.py` | Added `source_id` to list API serializers |
+| `frontend/src/pages/MemoryPalacePage.tsx` | `bundleInsights()` + `InsightBundleCard` |
+
 ### Phase 4 Files
 | File | Purpose |
 |------|---------|
@@ -81,16 +96,12 @@ Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow unt
 | `core/services/claims_pack_builder.py` | ClaimsPackBuilder singleton |
 | `core/services/content_review_panel_v2.py` | 3 reviewers + validate_review_payload() |
 | `core/services/content_deliberation_runner.py` | ContentDeliberationRunner.run_blog() |
-| `core/tests/test_phase4_content_deliberation.py` | 8 tests |
 
-### Phase 0-3 Files (Previous Sessions)
+### PA Tool System
 | File | Purpose |
 |------|---------|
-| `core/models_deliberation.py` | DeliberationSession, DeliberationTurn, ContractRecord, DocVersion |
-| `core/services/evidence_pack_builder.py` | Incremental evidence pack assembly |
-| `core/services/session_trace_builder.py` | Turn timeline + contract snapshots |
-| `core/conversation_orchestrator.py` | Multi-agent conversations with contract enforcement |
-| `core/agents/decision_enforcer_agent.py` | DecisionEnforcerAgent ("Prefrontal Cortex") |
+| `core/services/unified_pa_entrypoint.py` | 86 PA tools, intent routing, enrichment pipeline |
+| `core/services/pa_intelligence_enricher.py` | 5 enrichment services wired to PA |
 
 ---
 
@@ -98,6 +109,7 @@ Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow unt
 
 | Session | Focus | PRs |
 |---------|-------|-----|
+| **968** | Insight De-dup Bundling + remarkGfm fix + frontend data plumbing | #970 |
 | **964** | Phase 4 Content Deliberation Pipeline - ClaimsPack, 3-reviewer panel, DecisionEnforcer, v2 blog API | - |
 | **961c** | PA Initiative Audit + Cleanup - audit action, merged 94 dupes, archived 420 noise | #960 |
 | **961b** | PA Initiative Display Fix - raised limits, total count, full names | #959 |
@@ -109,4 +121,4 @@ Full deliberation-backed content pipeline as a parallel v2 path (old v1 flow unt
 
 ---
 
-**Session 965 Focus: Your choice! See "What Could Come Next" above.**
+**Session 969 Focus: Your choice! See "What Could Come Next" above.**
