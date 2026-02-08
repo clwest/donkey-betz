@@ -831,6 +831,16 @@ class ConversationOrchestrator:
                 trace_id='',
             )
             logger.info(f"📋 [Session 962] Created DeliberationSession: {deliberation_session.id}")
+
+            # Session 963 Phase 3: Initialize evidence pack and trace
+            try:
+                from core.services.evidence_pack_builder import get_evidence_pack_builder
+                from core.services.session_trace_builder import get_session_trace_builder
+                get_evidence_pack_builder().init_pack(deliberation_session)
+                get_session_trace_builder().init_trace(deliberation_session)
+            except Exception as e3:
+                logger.warning(f"[Session 963] Pack/trace init failed: {e3}")
+
         except Exception as e:
             logger.warning(f"[Session 962] DeliberationSession creation failed: {e}")
 
@@ -953,6 +963,35 @@ class ConversationOrchestrator:
                 except Exception as e:
                     logger.warning(f"[Session 962] DeliberationTurn save failed: {e}")
 
+                # Session 963 Phase 3: Append turn to trace + evidence
+                try:
+                    import hashlib
+                    from core.services.session_trace_builder import get_session_trace_builder
+                    from core.services.evidence_pack_builder import get_evidence_pack_builder
+                    content_hash = hashlib.sha256(response.encode()).hexdigest()[:16]
+                    get_session_trace_builder().append_turn(
+                        deliberation_session,
+                        turn_number=turn + 1,
+                        agent_name=current_agent['name'],
+                        role=turn_type or '',
+                        content_hash=content_hash,
+                        contains_tension=msg_has_tension,
+                        has_grounding=msg_has_grounding,
+                        grounding_refs=get_grounding_refs(response),
+                    )
+                    # Record contradiction if tension detected
+                    if msg_has_tension and turn > 0:
+                        prev_msg = messages[-2] if len(messages) >= 2 else None
+                        get_evidence_pack_builder().append_contradiction(
+                            deliberation_session, {
+                                'nature': 'tension',
+                                'claim_a_text': (prev_msg['content'][:200] if prev_msg else ''),
+                                'claim_b_text': response[:200],
+                            }
+                        )
+                except Exception as e3:
+                    logger.warning(f"[Session 963] Trace/evidence turn append failed: {e3}")
+
             logger.debug(f"Turn {turn + 1}: {current_agent['name']} - tension={msg_has_tension}, grounding={msg_has_grounding}")
 
         # Extract decision summary from final message
@@ -1073,6 +1112,30 @@ class ConversationOrchestrator:
             except Exception as e:
                 logger.warning(f"[Session 962] ContractRecord save failed: {e}")
 
+            # Session 963 Phase 3: Attach contract snapshots to trace
+            try:
+                from core.services.session_trace_builder import get_session_trace_builder
+                from core.services.evidence_pack_builder import get_evidence_pack_builder
+                trace_builder = get_session_trace_builder()
+                evidence_builder = get_evidence_pack_builder()
+                if execution_mandate:
+                    mandate_data = execution_mandate.to_dict() if hasattr(execution_mandate, 'to_dict') else {}
+                    trace_builder.attach_contract_snapshot(
+                        deliberation_session, 'execution', mandate_data,
+                    )
+                if synthesis_contract_dict:
+                    trace_builder.attach_contract_snapshot(
+                        deliberation_session, 'synthesis', synthesis_contract_dict,
+                    )
+                # Record user input as an evidence source
+                evidence_builder.append_source(deliberation_session, {
+                    'source_type': 'user_input',
+                    'name': f'Topic: {topic[:80]}',
+                    'record_count': len(messages),
+                })
+            except Exception as e3:
+                logger.warning(f"[Session 963] Contract trace/evidence attach failed: {e3}")
+
         # Session 811: AI World Enhancement - Create memories and dispatch actions
         ai_world_metadata = {
             'dreams_injected': dreams_injected,
@@ -1157,6 +1220,30 @@ class ConversationOrchestrator:
                     ai_world_metadata['actions_failed'] = dispatch_result.get('failed_count', 0)
                 except Exception as e2:
                     logger.warning(f"Fallback action dispatch also failed: {e2}")
+
+        # Session 963 Phase 3: Finalize evidence pack and trace
+        if deliberation_session:
+            try:
+                from core.services.evidence_pack_builder import get_evidence_pack_builder
+                from core.services.session_trace_builder import get_session_trace_builder
+                trace_builder = get_session_trace_builder()
+                evidence_builder = get_evidence_pack_builder()
+
+                # Attach tool calls and decisions via trace_id
+                if conversation_id:
+                    trace_builder.attach_tool_calls(deliberation_session, conversation_id)
+                    trace_builder.attach_decisions(deliberation_session, conversation_id)
+
+                # Finalize with state metrics
+                state_dict = {
+                    'tension_count': state.tension_count,
+                    'grounding_count': state.grounding_count,
+                    'empty_agreement_count': state.empty_agreement_count,
+                }
+                trace_builder.finalize(deliberation_session, state=state_dict)
+                evidence_builder.finalize(deliberation_session)
+            except Exception as e3:
+                logger.warning(f"[Session 963] Trace/evidence finalize failed: {e3}")
 
         # Session 962 Phase 1: Mark deliberation session completed
         if deliberation_session:
