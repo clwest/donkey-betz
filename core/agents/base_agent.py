@@ -231,7 +231,7 @@ class BaseAgent(ABC, TimeTravelMixin):
         super().__init_subclass__(**kwargs)
         if '_execute_tool_call' in cls.__dict__:
             original = cls.__dict__['_execute_tool_call']
-            def _wrapped_execute_tool_call(self, tool_name, arguments, _orig=original):
+            def _wrapped_execute_tool_call(self, tool_name, arguments, *args, _orig=original, **kwargs):
                 import time as _time
                 _start = _time.time()
                 _success = True
@@ -239,7 +239,7 @@ class BaseAgent(ABC, TimeTravelMixin):
                 _err_msg = ''
                 _err_type = ''
                 try:
-                    _result = _orig(self, tool_name, arguments)
+                    _result = _orig(self, tool_name, arguments, *args, **kwargs)
                     return _result
                 except Exception as _e:
                     _success = False
