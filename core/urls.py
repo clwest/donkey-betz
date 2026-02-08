@@ -52,6 +52,13 @@ from core.views_conceptforge import (
     get_domain_labs as conceptforge_domain_labs,
 )
 
+# Session 962 Phase 2: Strategic Memory API
+from core.views_strategic_memory import (
+    memory_precedents,
+    memory_failures,
+    memory_strategy,
+)
+
 # Session 962: Deliberation Persistence API
 from core.views_deliberation import (
     deliberation_sessions_list,
@@ -1568,6 +1575,11 @@ urlpatterns = [
     path('api/deliberation/sessions/<uuid:session_id>/contracts/', deliberation_contracts, name='deliberation-contracts'),
     path('api/docs/versions/', doc_versions_list, name='doc-versions-list'),
     path('api/docs/versions/<int:version_id>/', doc_version_detail, name='doc-version-detail'),
+
+    # Session 962 Phase 2: Strategic Memory API
+    path('api/memory/precedents/', memory_precedents, name='memory-precedents'),
+    path('api/memory/failures/', memory_failures, name='memory-failures'),
+    path('api/memory/strategy/', memory_strategy, name='memory-strategy'),
 
     # Session 866: ATS Optimization API
     path('api/ats/analyze/', ATSAnalyzeView.as_view(), name='ats-analyze'),
