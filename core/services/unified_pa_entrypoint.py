@@ -919,6 +919,13 @@ class UnifiedPAEntrypoint:
                 id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
                 if id_match:
                     payload['id'] = id_match.group(1)
+            elif 'related' in msg_lower or 'similar' in msg_lower:
+                # Session 971: Related blog discovery
+                payload['action'] = 'related'
+                import re
+                id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
+                if id_match:
+                    payload['id'] = id_match.group(1)
             elif 'detail' in msg_lower or 'show' in msg_lower:
                 payload['action'] = 'details'
                 import re
@@ -1650,6 +1657,32 @@ Address the user by name occasionally."""
                         return f"Archived: **{title}**"
                     else:
                         return f"Failed to archive: {tool_result}"
+
+                # Session 971: Related blogs formatting
+                elif action == 'related':
+                    blog_title = tool_result.get('blog_title', 'Unknown')
+                    related = tool_result.get('related', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No related posts found for **{blog_title}**, {user_name}."
+
+                    response = f"Found {count} posts related to **{blog_title}**:\n\n"
+                    for item in related:
+                        title = item.get('title', 'Untitled')[:60]
+                        reason = item.get('relatedness_reason', '')
+                        score = item.get('relatedness_score', 0)
+                        words = item.get('word_count', 0)
+                        reason_badge = (
+                            '[Same Project]' if reason == 'same_initiative'
+                            else '[Similar Topics]' if reason == 'tag_overlap'
+                            else '[Related]'
+                        )
+                        response += f"- **{title}** {reason_badge} ({words} words, score: {score:.2f})\n"
+
+                    blog_id = tool_result.get('blog_id', '')
+                    response += f"\nView in browser: `/blog/{blog_id}`"
+                    return response
 
                 else:
                     return str(tool_result)
