@@ -26,9 +26,10 @@ import {
   ChevronDown,
   List,
   Server, // Session 924: For Celery workers display
+  MessageSquare, // Session 969: HiveMind sessions icon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { orchestrationApi, adminApi, agentsApi, advisorsApi } from '@/lib/api'
+import { orchestrationApi, adminApi, agentsApi, advisorsApi, hiveMindApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 
 // Sub-tab configuration
@@ -80,6 +81,7 @@ interface ExecutionItem {
   agent_name?: string | null  // Session 923: Agent name
   execution_time_ms?: number | null  // Session 958: Execution duration
   tokens_used?: number | null  // Session 958: Token usage
+  cost?: number | null  // Session 969: Execution cost
 }
 
 export function OrchestrationTab() {
@@ -140,6 +142,7 @@ function MonitorSubTab() {
         ])
 
         let stats = { running: 0, completed: 0, failed: 0 }
+        let metrics = { total_tokens: 0, total_cost: 0, avg_execution_time: 0, success_rate: 0 }
         let executions: any[] = []
 
         if (dashboardRes.ok) {
@@ -149,6 +152,13 @@ function MonitorSubTab() {
             running: summary.active_agents || 0,
             completed: summary.completed || 0,
             failed: summary.failed || 0,
+          }
+          // Session 969: Extract aggregate metrics
+          metrics = {
+            total_tokens: summary.total_tokens || 0,
+            total_cost: summary.total_cost || 0,
+            avg_execution_time: summary.avg_execution_time || 0,
+            success_rate: summary.success_rate || 0,
           }
         }
 
@@ -174,16 +184,18 @@ function MonitorSubTab() {
             task_summary: e.task_summary,  // Session 958: Clean summary
             execution_time_ms: e.execution_time_ms,
             tokens_used: e.tokens_used,
+            cost: e.cost ?? null,  // Session 969: Wire up cost
           }))
         }
 
-        return { executions, count: executions.length, stats }
+        return { executions, count: executions.length, stats, metrics }
       } catch (e) {
         // Fallback: return minimal stats
         return {
           executions: [],
           count: 0,
-          stats: { running: 0, completed: 0, failed: 0 }
+          stats: { running: 0, completed: 0, failed: 0 },
+          metrics: { total_tokens: 0, total_cost: 0, avg_execution_time: 0, success_rate: 0 },
         }
       }
     },
@@ -193,6 +205,7 @@ function MonitorSubTab() {
   const executions = executionsData?.executions || []
   // Use type assertion to handle union type - stats may not exist on API response
   const stats = (executionsData as any)?.stats || {}
+  const metrics = (executionsData as any)?.metrics || {}
   const runningCount = stats.running ?? executions.filter((e: any) => e.status === 'running').length
   const completedCount = stats.completed ?? executions.filter((e: any) => e.status === 'completed').length
   const failedCount = stats.failed ?? executions.filter((e: any) => e.status === 'failed').length
@@ -253,6 +266,42 @@ function MonitorSubTab() {
           isExpanded={expandedSection === 'failed'}
         />
       </div>
+
+      {/* Session 969: Aggregate Metrics Bar */}
+      {(metrics.success_rate > 0 || metrics.total_tokens > 0 || metrics.total_cost > 0) && (
+        <div className="card bg-dark-800/50 p-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Success Rate</span>
+              <span className={cn(
+                'text-sm font-medium',
+                metrics.success_rate >= 90 ? 'text-accent-green' :
+                metrics.success_rate >= 70 ? 'text-accent-amber' : 'text-red-400'
+              )}>
+                {metrics.success_rate.toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Avg Time</span>
+              <span className="text-sm font-medium text-gray-300">
+                {metrics.avg_execution_time.toFixed(1)}s
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Tokens (24h)</span>
+              <span className="text-sm font-medium text-gray-300">
+                {metrics.total_tokens.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Cost (24h)</span>
+              <span className="text-sm font-medium text-gray-300">
+                ${metrics.total_cost.toFixed(4)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Expanded Section */}
       {expandedSection === 'running' && (
@@ -1147,16 +1196,68 @@ interface AdvisorData {
   influence_score?: number
 }
 
+// Session 969: HiveMind session types
+interface HiveMindSessionItem {
+  id: string
+  question: string
+  status: string
+  participant_count: number
+  contribution_count: number
+  created_at: string
+  completed_at: string | null
+}
+
+interface HiveMindContribution {
+  agent_name: string
+  specialization?: string
+  perspective_type?: string
+  confidence?: number
+  key_points?: string[]
+  thinking_time?: number
+}
+
+interface HiveMindSessionDetail {
+  id: string
+  question: string
+  status: string
+  mode?: string
+  conversation_type?: string
+  objective?: string
+  success_criteria?: string[]
+  participant_count: number
+  contribution_count: number
+  contributions: HiveMindContribution[]
+  synthesis?: string
+  synthesis_summary?: string
+  total_thinking_time?: number
+  created_at: string
+  completed_at: string | null
+}
+
 function HiveMindSubTab() {
-  const [expandedSection, setExpandedSection] = useState<'agents' | 'advisors' | 'coordinators' | null>(null)
+  const [expandedSection, setExpandedSection] = useState<'sessions' | 'agents' | 'advisors' | 'coordinators' | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedSession, setSelectedSession] = useState<HiveMindSessionItem | null>(null)
 
   const toggleSection = (section: typeof expandedSection) => {
     setExpandedSection(expandedSection === section ? null : section)
     setVisibleCount(10)
     setSelectedCategory(null)
   }
+
+  // Session 969: Fetch HiveMind sessions
+  const { data: sessionsData, isLoading: loadingSessions } = useQuery({
+    queryKey: ['hivemind-sessions'],
+    queryFn: async () => {
+      try {
+        const response = await hiveMindApi.list(20)
+        return response.data as { sessions: HiveMindSessionItem[]; count: number }
+      } catch {
+        return { sessions: [], count: 0 }
+      }
+    },
+  })
 
   // Session 924: Fetch comprehensive agent data with categories
   const { data: agentsData, isLoading: loadingAgents, refetch: refetchAgents, isFetching: fetchingAgents } = useQuery({
@@ -1231,7 +1332,7 @@ function HiveMindSubTab() {
     },
   })
 
-  const isLoading = loadingAgents || loadingAdvisors
+  const isLoading = loadingAgents || loadingAdvisors || loadingSessions
 
   if (isLoading) {
     return (
@@ -1248,6 +1349,8 @@ function HiveMindSubTab() {
   const coordinators = coordinatorsData?.coordinators || []
   const coordinatorCount = coordinators.length || 5
   const recentExecutions = executionsData?.executions || []
+  const sessions = sessionsData?.sessions || []
+  const sessionCount = sessionsData?.count || sessions.length
 
   // Session 924: Group agents by category
   const agentsByCategory = agents.reduce((acc: Record<string, AgentData[]>, agent) => {
@@ -1318,8 +1421,16 @@ function HiveMindSubTab() {
         </div>
       )}
 
-      {/* HiveMind Overview - Session 857: Inline expandable sections */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* HiveMind Overview - Session 969: Added Sessions stat card */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard
+          label="Sessions"
+          value={sessionCount}
+          icon={MessageSquare}
+          color="text-accent-cyan"
+          onClick={() => toggleSection('sessions')}
+          isExpanded={expandedSection === 'sessions'}
+        />
         <StatCard
           label="Agent Network"
           value={agentCount}
@@ -1345,6 +1456,58 @@ function HiveMindSubTab() {
           isExpanded={expandedSection === 'coordinators'}
         />
       </div>
+
+      {/* Session 969: Sessions expanded section */}
+      {expandedSection === 'sessions' && (
+        <ExpandedListCard
+          title="HiveMind Sessions"
+          count={sessionCount}
+          onClose={() => setExpandedSection(null)}
+        >
+          {sessions.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">
+              <MessageSquare className="mx-auto mb-2" size={20} />
+              <p className="text-sm">No HiveMind sessions recorded</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {sessions.slice(0, visibleCount).map((session) => (
+                <div
+                  key={session.id}
+                  className="flex items-center gap-3 p-2 bg-dark-700/50 rounded text-sm cursor-pointer hover:bg-dark-600/50"
+                  onClick={() => setSelectedSession(session)}
+                >
+                  <span className={cn(
+                    'text-xs px-1.5 py-0.5 rounded shrink-0',
+                    session.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                    session.status === 'active' || session.status === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
+                    session.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  )}>
+                    {session.status}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-gray-200 truncate">{session.question.slice(0, 120)}{session.question.length > 120 ? '...' : ''}</div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                      <span>{session.participant_count} participants</span>
+                      <span>{session.contribution_count} contributions</span>
+                      <span>{formatRelativeTime(session.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {sessions.length > visibleCount && (
+                <button
+                  onClick={() => setVisibleCount(prev => prev + 10)}
+                  className="w-full py-2 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Load more ({sessions.length - visibleCount} remaining)
+                </button>
+              )}
+            </div>
+          )}
+        </ExpandedListCard>
+      )}
 
       {/* Session 924: Enhanced Agents Section with categories and top performers */}
       {expandedSection === 'agents' && (
@@ -1519,22 +1682,40 @@ function HiveMindSubTab() {
         </ExpandedListCard>
       )}
 
-      {/* Session 924: Recent Activity Preview (when no section expanded) */}
-      {!expandedSection && recentExecutions.length > 0 && (
+      {/* Session 969: Recent Sessions Preview (when no section expanded) */}
+      {!expandedSection && sessions.length > 0 && (
         <div className="card">
-          <h4 className="text-sm font-medium text-gray-400 mb-3">Recent Activity</h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-400">Recent Sessions</h4>
+            {sessions.length > 5 && (
+              <button
+                onClick={() => toggleSection('sessions')}
+                className="text-xs text-primary-400 hover:text-primary-300"
+              >
+                View all
+              </button>
+            )}
+          </div>
           <div className="space-y-2">
-            {recentExecutions.slice(0, 3).map((exec, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-xs">
-                <span className="text-gray-300">{exec.agent_name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">{new Date(exec.started_at).toLocaleTimeString()}</span>
-                  <span className={`px-1.5 py-0.5 rounded ${
-                    exec.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
-                    exec.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
-                    exec.status === 'failed' ? 'bg-red-500/20 text-red-400' : 'bg-gray-600 text-gray-300'
-                  }`}>
-                    {exec.status}
+            {sessions.slice(0, 5).map((session) => (
+              <div
+                key={session.id}
+                className="flex items-center justify-between p-2 bg-dark-700/50 rounded text-xs cursor-pointer hover:bg-dark-600/50"
+                onClick={() => setSelectedSession(session)}
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-300 truncate block">{session.question.slice(0, 80)}{session.question.length > 80 ? '...' : ''}</span>
+                </div>
+                <div className="flex items-center gap-2 ml-2 shrink-0">
+                  <span className="text-gray-500">{session.participant_count}p</span>
+                  <span className="text-gray-500">{formatRelativeTime(session.created_at)}</span>
+                  <span className={cn(
+                    'px-1.5 py-0.5 rounded',
+                    session.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                    session.status === 'active' || session.status === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
+                    session.status === 'failed' ? 'bg-red-500/20 text-red-400' : 'bg-gray-600 text-gray-300'
+                  )}>
+                    {session.status}
                   </span>
                 </div>
               </div>
@@ -1573,19 +1754,88 @@ function HiveMindSubTab() {
           </div>
         </div>
       )}
+
+      {/* Session 969: HiveMind Session Detail Modal */}
+      {selectedSession && (
+        <HiveMindSessionDetailModal
+          session={selectedSession}
+          onClose={() => setSelectedSession(null)}
+        />
+      )}
     </div>
   )
 }
 
 // ============ Detail Modals ============
 
+// Session 969: Helper to render output_data which can be a string, object, or nested structure
+function renderOutputData(data: unknown): string {
+  if (!data) return ''
+  if (typeof data === 'string') return data
+  if (typeof data === 'object') {
+    const obj = data as Record<string, unknown>
+    // Common output_data shapes: { result: "...", response: "...", output: "...", summary: "..." }
+    // Try known text fields first for a clean display
+    for (const key of ['result', 'response', 'output', 'summary', 'content', 'analysis', 'report', 'text']) {
+      if (obj[key] && typeof obj[key] === 'string') return obj[key] as string
+    }
+    // If it has a nested result object with text inside
+    if (obj.result && typeof obj.result === 'object') {
+      const nested = obj.result as Record<string, unknown>
+      for (const key of ['response', 'output', 'summary', 'content', 'text']) {
+        if (nested[key] && typeof nested[key] === 'string') return nested[key] as string
+      }
+    }
+    // Fallback: pretty-print the whole object
+    return JSON.stringify(data, null, 2)
+  }
+  return String(data)
+}
+
 function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem; onClose: () => void }) {
   const statusStyle = statusColors[execution.status] || statusColors.pending
 
+  // Session 969: Fetch full execution detail (untruncated task + output_data + related_memory)
+  const { data: detailData, isLoading: detailLoading } = useQuery({
+    queryKey: ['execution-detail', execution.id],
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/v1/agents/execution/${execution.id}/`)
+        if (!res.ok) return null
+        const json = await res.json()
+        return json.data as {
+          execution: {
+            task: string
+            output_data: unknown
+            input_data: unknown
+            agent_display_name?: string
+          }
+          related_memory?: {
+            id: string
+            title: string
+            content: string
+            valence: string
+            memory_type: string
+            importance_score: number
+          } | null
+        }
+      } catch {
+        return null
+      }
+    },
+    staleTime: 30000,
+  })
+
+  // Use detail data when available, fall back to list data
+  const fullTask = detailData?.execution?.task || execution.task
+  const outputData = detailData?.execution?.output_data
+  const relatedMemory = detailData?.related_memory
+  const outputText = renderOutputData(outputData)
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-lg w-full max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[85vh] overflow-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
           <h3 className="text-lg font-semibold">Execution Details</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X size={20} />
@@ -1597,14 +1847,16 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
             <span className={cn('px-3 py-1 rounded-full text-sm capitalize', statusStyle.bg, statusStyle.color)}>
               {execution.status}
             </span>
-            <span className="text-gray-400">{execution.workflow_name || execution.agent_name || 'Workflow Execution'}</span>
+            <span className="text-gray-400">
+              {detailData?.execution?.agent_display_name || execution.workflow_name || execution.agent_name || 'Workflow Execution'}
+            </span>
           </div>
 
-          {/* Session 923: Show task context for debugging failures */}
-          {execution.task && (
+          {/* Session 969: Show full untruncated task from detail endpoint */}
+          {fullTask && (
             <div className="bg-gray-800/50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Task</p>
-              <p className="text-sm text-gray-300 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{execution.task}</p>
+              <p className="text-sm text-gray-300 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{fullTask}</p>
             </div>
           )}
 
@@ -1640,7 +1892,8 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
           )}
 
           {/* Session 958: Show execution metrics if available */}
-          {(execution.execution_time_ms || execution.tokens_used) && (
+          {/* Session 969: Added cost display */}
+          {(execution.execution_time_ms || execution.tokens_used || (execution.cost != null && execution.cost > 0)) && (
             <div className="grid grid-cols-2 gap-4">
               {execution.execution_time_ms && (
                 <div>
@@ -1654,6 +1907,12 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
                   <p className="text-sm">{execution.tokens_used.toLocaleString()}</p>
                 </div>
               )}
+              {execution.cost != null && execution.cost > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Cost</p>
+                  <p className="text-sm">${execution.cost.toFixed(4)}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1664,6 +1923,45 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
                 <span className="text-sm font-medium">Error</span>
               </div>
               <p className="text-sm text-gray-300">{execution.error_message}</p>
+            </div>
+          )}
+
+          {/* Session 969: Show full agent output from detail endpoint */}
+          {detailLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="animate-spin text-primary-400" size={20} />
+              <span className="text-sm text-gray-400 ml-2">Loading full output...</span>
+            </div>
+          ) : outputText ? (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Agent Output</p>
+              <div className="bg-gray-800/50 rounded-lg p-3 max-h-80 overflow-y-auto">
+                <pre className="text-sm text-gray-300 whitespace-pre-wrap break-words font-sans">{outputText}</pre>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Session 969: Show related memory if exists */}
+          {relatedMemory && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Related Memory</p>
+              <div className="bg-primary-500/5 border border-primary-500/20 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-gray-200">{relatedMemory.title}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'text-xs px-1.5 py-0.5 rounded',
+                      relatedMemory.valence === 'positive' ? 'bg-green-500/20 text-green-400' :
+                      relatedMemory.valence === 'negative' ? 'bg-red-500/20 text-red-400' :
+                      'bg-gray-600 text-gray-300'
+                    )}>
+                      {relatedMemory.valence}
+                    </span>
+                    <span className="text-xs text-gray-500">{relatedMemory.memory_type}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-1 whitespace-pre-wrap">{relatedMemory.content}</p>
+              </div>
             </div>
           )}
 
@@ -1865,6 +2163,199 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
       </div>
     </div>
   )
+}
+
+// Session 969: HiveMind Session Detail Modal
+function HiveMindSessionDetailModal({ session, onClose }: { session: HiveMindSessionItem; onClose: () => void }) {
+  const statusStyle = statusColors[session.status] || statusColors.pending
+
+  // Fetch full session detail
+  const { data: detail, isLoading } = useQuery({
+    queryKey: ['hivemind-session-detail', session.id],
+    queryFn: async () => {
+      try {
+        const response = await hiveMindApi.detail(session.id)
+        return response.data as HiveMindSessionDetail
+      } catch {
+        return null
+      }
+    },
+  })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[85vh] overflow-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="text-accent-cyan" size={20} />
+            <h3 className="text-lg font-semibold">HiveMind Session</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Status + Mode */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={cn('px-3 py-1 rounded-full text-sm capitalize', statusStyle.bg, statusStyle.color)}>
+              {session.status}
+            </span>
+            {detail?.mode && (
+              <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300">{detail.mode}</span>
+            )}
+            {detail?.conversation_type && (
+              <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300">{detail.conversation_type}</span>
+            )}
+          </div>
+
+          {/* Question */}
+          <div className="bg-gray-800/50 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Question</p>
+            <p className="text-sm text-gray-200">{detail?.question || session.question}</p>
+          </div>
+
+          {/* Objective & Success Criteria */}
+          {detail?.objective && (
+            <div className="bg-gray-800/50 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Objective</p>
+              <p className="text-sm text-gray-300">{detail.objective}</p>
+              {detail.success_criteria && detail.success_criteria.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-500 mb-1">Success Criteria</p>
+                  <ul className="text-xs text-gray-400 space-y-1">
+                    {detail.success_criteria.map((c, i) => (
+                      <li key={i} className="flex items-start gap-1">
+                        <span className="text-accent-green mt-0.5">-</span>
+                        <span>{c}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Participants</p>
+              <p className="text-sm font-medium">{detail?.participant_count ?? session.participant_count}</p>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Contributions</p>
+              <p className="text-sm font-medium">{detail?.contribution_count ?? session.contribution_count}</p>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Think Time</p>
+              <p className="text-sm font-medium">
+                {detail?.total_thinking_time ? `${detail.total_thinking_time.toFixed(1)}s` : 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          {/* Contributions */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="animate-spin text-primary-400" size={20} />
+            </div>
+          ) : detail?.contributions && detail.contributions.length > 0 ? (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                <Users size={14} />
+                Contributions ({detail.contributions.length})
+              </h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {detail.contributions.map((contrib, idx) => (
+                  <div key={idx} className="bg-gray-800 rounded-lg p-3 border-l-2 border-accent-cyan">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-200">{contrib.agent_name}</span>
+                        {contrib.specialization && (
+                          <span className="text-xs text-gray-500">{contrib.specialization}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {contrib.perspective_type && (
+                          <span className={cn(
+                            'text-xs px-1.5 py-0.5 rounded',
+                            contrib.perspective_type === 'bullish' ? 'bg-green-500/20 text-green-400' :
+                            contrib.perspective_type === 'bearish' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-600 text-gray-300'
+                          )}>
+                            {contrib.perspective_type}
+                          </span>
+                        )}
+                        {contrib.confidence != null && (
+                          <span className="text-xs text-gray-400">{Math.round(contrib.confidence * 100)}%</span>
+                        )}
+                      </div>
+                    </div>
+                    {contrib.key_points && contrib.key_points.length > 0 && (
+                      <ul className="text-xs text-gray-400 space-y-0.5 mt-1">
+                        {contrib.key_points.slice(0, 4).map((point, i) => (
+                          <li key={i} className="flex items-start gap-1">
+                            <span className="text-primary-400 mt-0.5">-</span>
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {contrib.thinking_time != null && (
+                      <div className="text-xs text-gray-500 mt-1">{contrib.thinking_time.toFixed(1)}s thinking</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Synthesis */}
+          {detail?.synthesis && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                <Brain size={14} />
+                Synthesis
+              </h4>
+              <div className="bg-gray-800/50 rounded-lg p-3">
+                {detail.synthesis_summary && (
+                  <p className="text-sm text-gray-200 mb-2 font-medium">{detail.synthesis_summary}</p>
+                )}
+                <p className="text-sm text-gray-300 whitespace-pre-wrap max-h-40 overflow-y-auto">{detail.synthesis}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-700">
+            <span>Created: {new Date(session.created_at).toLocaleString()}</span>
+            {session.completed_at && (
+              <span>Completed: {new Date(session.completed_at).toLocaleString()}</span>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button onClick={onClose} className="btn btn-secondary flex-1">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 969: Relative time formatting helper
+function formatRelativeTime(dateStr: string): string {
+  const now = Date.now()
+  const date = new Date(dateStr).getTime()
+  const diffMs = now - date
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHrs = Math.floor(diffMin / 60)
+  if (diffHrs < 24) return `${diffHrs}h ago`
+  const diffDays = Math.floor(diffHrs / 24)
+  if (diffDays < 7) return `${diffDays}d ago`
+  return new Date(dateStr).toLocaleDateString()
 }
 
 // ============ Helper Components ============

@@ -15,7 +15,7 @@
  * - Session 718: Memory Clusters - semantic grouping via embedding clustering
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Brain,
@@ -49,6 +49,9 @@ import {
   History,
   // Session 754: Phase 2 - Connection Graph icons
   ArrowRight,
+  // Session 968: Insight bundle icons
+  ChevronDown,
+  Users,
 } from 'lucide-react'
 import { memoryPalaceApi, memoryClustersApi } from '@/lib/api'
 // Session 754: Phase 3 - Force-directed graph for cluster visualization
@@ -78,6 +81,8 @@ interface Memory {
   memory_outcome?: 'success' | 'failure' | 'partial' | 'unknown'
   last_accessed_at?: string
   tags?: string[]
+  // Session 968: source_id for insight de-dup bundling
+  source_id?: string
 }
 
 interface Room {
@@ -210,6 +215,53 @@ interface ClusterOverview {
     name: string
     memory_count: number
   }>
+}
+
+// Session 968: Insight de-dup bundling types and utility
+interface InsightBundle {
+  key: string
+  memories: Memory[]
+  representative: Memory
+  agentNames: string[]
+}
+
+function bundleInsights(memories: Memory[]): (Memory | InsightBundle)[] {
+  const insights = memories.filter(m => m.memory_type === 'insight' && m.source_id)
+  const nonInsights = memories.filter(m => m.memory_type !== 'insight' || !m.source_id)
+
+  const groups = new Map<string, Memory[]>()
+  for (const m of insights) {
+    const arr = groups.get(m.source_id!) || []
+    arr.push(m)
+    groups.set(m.source_id!, arr)
+  }
+
+  const result: (Memory | InsightBundle)[] = [...nonInsights]
+  for (const [key, mems] of groups) {
+    if (mems.length === 1) {
+      result.push(mems[0])
+    } else {
+      result.push({
+        key,
+        memories: mems,
+        representative: mems[0],
+        agentNames: mems.map(m => {
+          // Extract agent name from title pattern "Insight from <AgentName>: ..."
+          const match = m.title.match(/^Insight from (.+?):/);
+          return match ? match[1] : m.title.split(':')[0]
+        }),
+      })
+    }
+  }
+  return result.sort((a, b) => {
+    const dateA = 'representative' in a ? a.representative.created_at : a.created_at
+    const dateB = 'representative' in b ? b.representative.created_at : b.created_at
+    return new Date(dateB).getTime() - new Date(dateA).getTime()
+  })
+}
+
+function isBundle(item: Memory | InsightBundle): item is InsightBundle {
+  return 'key' in item
 }
 
 // Memory type icons and colors
@@ -553,11 +605,16 @@ export default function MemoryPalacePage() {
   }
 
   // Current memories to display
-  const displayMemories = searchResults.length > 0
+  const rawMemories = searchResults.length > 0
     ? searchResults
     : selectedRoom
       ? roomMemoriesData?.memories || []
       : memoriesData?.memories || []
+
+  // Session 968: Bundle duplicate insight memories by source_id
+  const displayItems = useMemo(() => bundleInsights(rawMemories), [rawMemories])
+  // Flat count for the "N memories" label
+  const displayMemoryCount = rawMemories.length
 
   return (
     <div className="space-y-6">
@@ -955,7 +1012,7 @@ export default function MemoryPalacePage() {
                     )}
                   </div>
                   <div className="text-sm text-gray-400">
-                    {displayMemories.length} memories
+                    {displayMemoryCount} memories
                   </div>
                 </div>
                 {/* Session 845: Quick filter buttons for failed memories */}
@@ -972,18 +1029,18 @@ export default function MemoryPalacePage() {
                     <XCircle className="h-3.5 w-3.5" />
                     {filterOutcome === 'failure' ? 'Showing Failed' : 'Show Failed'}
                   </button>
-                  {filterOutcome === 'failure' && displayMemories.length > 0 && (
+                  {filterOutcome === 'failure' && rawMemories.length > 0 && (
                     <button
                       onClick={() => {
-                        if (confirm(`Delete all ${displayMemories.length} failed memories?`)) {
-                          displayMemories.forEach(m => deleteMutation.mutate(m.id))
+                        if (confirm(`Delete all ${rawMemories.length} failed memories?`)) {
+                          rawMemories.forEach(m => deleteMutation.mutate(m.id))
                         }
                       }}
                       disabled={deleteMutation.isPending}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors flex items-center gap-1.5"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      Delete All Failed ({displayMemories.length})
+                      Delete All Failed ({rawMemories.length})
                     </button>
                   )}
                   {filterOutcome && (
@@ -1002,7 +1059,7 @@ export default function MemoryPalacePage() {
                   <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                   Loading memories...
                 </div>
-              ) : displayMemories.length === 0 ? (
+              ) : displayItems.length === 0 ? (
                 <div className="p-8 text-center text-gray-400">
                   <Brain className="h-12 w-12 mx-auto mb-3 text-gray-600" />
                   <p>No memories found</p>
@@ -1012,18 +1069,27 @@ export default function MemoryPalacePage() {
                 </div>
               ) : (
                 <div className="divide-y divide-dark-border max-h-[600px] overflow-y-auto">
-                  {displayMemories.map((memory) => (
-                    <MemoryCard
-                      key={memory.id}
-                      memory={memory}
-                      onClick={() => setSelectedMemory(memory.id)}
-                      // Session 754: Phase 2 - Tag click handler
-                      onTagClick={(tag) => setFilterTag(tag)}
-                      // Session 845: Delete handler for removing memories
-                      onDelete={(id) => deleteMutation.mutate(id)}
-                      isDeleting={deleteMutation.isPending}
-                    />
-                  ))}
+                  {displayItems.map((item) =>
+                    isBundle(item) ? (
+                      <InsightBundleCard
+                        key={item.key}
+                        bundle={item}
+                        onMemoryClick={(id) => setSelectedMemory(id)}
+                        onTagClick={(tag) => setFilterTag(tag)}
+                        onDelete={(id) => deleteMutation.mutate(id)}
+                        isDeleting={deleteMutation.isPending}
+                      />
+                    ) : (
+                      <MemoryCard
+                        key={item.id}
+                        memory={item}
+                        onClick={() => setSelectedMemory(item.id)}
+                        onTagClick={(tag) => setFilterTag(tag)}
+                        onDelete={(id) => deleteMutation.mutate(id)}
+                        isDeleting={deleteMutation.isPending}
+                      />
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -1930,6 +1996,77 @@ function MemoryCard({ memory, onClick, onTagClick, onDelete, isDeleting }: {
         </div>
         <ChevronRight className="h-5 w-5 text-gray-600 flex-shrink-0 mt-1" />
       </div>
+    </div>
+  )
+}
+
+// Session 968: Expandable card for bundled insight memories from the same conversation
+function InsightBundleCard({ bundle, onMemoryClick, onTagClick, onDelete, isDeleting }: {
+  bundle: InsightBundle
+  onMemoryClick: (id: string) => void
+  onTagClick?: (tag: string) => void
+  onDelete?: (memoryId: string) => void
+  isDeleting?: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const { representative, memories, agentNames } = bundle
+  const config = MEMORY_TYPE_CONFIG[representative.memory_type] || MEMORY_TYPE_CONFIG.default
+  const Icon = config.icon
+  const maxImportance = Math.max(...memories.map(m => m.importance_score ?? 0))
+
+  return (
+    <div className="border-l-4 border-l-purple-500/50">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setExpanded(!expanded)}
+        onKeyDown={(e) => e.key === 'Enter' && setExpanded(!expanded)}
+        className="w-full p-4 text-left hover:bg-dark-bg transition-colors cursor-pointer"
+      >
+        <div className="flex items-start gap-3">
+          <div className={cn('p-2 rounded-lg flex-shrink-0', config.bgColor)}>
+            <Icon className={cn('h-4 w-4', config.color)} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-medium text-white truncate">{representative.title}</h3>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-cyan-400 bg-cyan-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {memories.length} agents
+                </span>
+                <span className="text-xs text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded">
+                  {(maxImportance * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+            <p className="text-sm text-gray-400 mt-1 line-clamp-2">{representative.content}</p>
+            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+              <span className="capitalize">{representative.memory_type}</span>
+              <span>{new Date(representative.created_at).toLocaleDateString()}</span>
+              <span className="text-gray-600">{agentNames.join(', ')}</span>
+            </div>
+          </div>
+          <ChevronDown className={cn(
+            'h-5 w-5 text-gray-600 flex-shrink-0 mt-1 transition-transform',
+            expanded && 'rotate-180'
+          )} />
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-dark-border bg-dark-bg/50">
+          {memories.map((memory) => (
+            <MemoryCard
+              key={memory.id}
+              memory={memory}
+              onClick={() => onMemoryClick(memory.id)}
+              onTagClick={onTagClick}
+              onDelete={onDelete}
+              isDeleting={isDeleting}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
