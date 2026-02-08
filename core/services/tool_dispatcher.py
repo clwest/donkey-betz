@@ -165,6 +165,9 @@ class ToolDispatcher:
         self.register("system_health_tool", self._handle_system_health)
         self.register("error_summary_tool", self._handle_error_summary)
 
+        # Session 970: Surgical moves verification tool
+        self.register("surgical_moves_status_tool", self._handle_surgical_moves_status)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -3147,6 +3150,107 @@ class ToolDispatcher:
             'severity': severity,
             'errors': errors,
         }
+
+    def _handle_surgical_moves_status(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 970: Surgical moves status tool — deliberation session verification.
+
+        Answers "surgical moves status" / "what deliberations happened" with
+        session details, contract counts, evidence stats, and verdicts.
+
+        Actions:
+        - summary: Recent sessions with key stats (default)
+        - detailed: Full session details including contracts and evidence
+        """
+        import json as _json
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'summary')
+        hours = payload.get('hours', 24)
+        session_id = payload.get('session_id')
+        cutoff = timezone.now() - timedelta(hours=hours)
+        limit = 5 if action == 'summary' else 20
+
+        try:
+            from core.models_deliberation import (
+                DeliberationSession,
+                DeliberationTurn,
+                ContractRecord,
+            )
+        except ImportError:
+            return {
+                'action': action,
+                'error': 'Deliberation models not available',
+            }
+
+        try:
+            if session_id:
+                sessions = DeliberationSession.objects.filter(id=session_id)
+            else:
+                sessions = DeliberationSession.objects.filter(
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:limit]
+
+            runs = []
+            for s in sessions:
+                turns = DeliberationTurn.objects.filter(session=s)
+                contracts = ContractRecord.objects.filter(session=s)
+                turn_count = turns.count()
+                ep = s.evidence_pack or {}
+
+                contract_info = []
+                verdict = None
+                for c in contracts:
+                    cdata = c.contract_data or {}
+                    data_size = len(_json.dumps(cdata))
+                    contract_info.append({
+                        'type': c.contract_type,
+                        'data_size': data_size,
+                    })
+                    if c.contract_type == 'execution':
+                        verdict = cdata.get('chosen_path', cdata.get('decision', ''))
+                        if isinstance(verdict, str):
+                            verdict = verdict[:200]
+
+                runs.append({
+                    'session_id': str(s.id),
+                    'objective': (s.objective or '')[:120],
+                    'status': s.status,
+                    'created_at': s.created_at.isoformat() if s.created_at else None,
+                    'turn_count': turn_count,
+                    'contract_count': len(contract_info),
+                    'contracts': contract_info,
+                    'decision_verdict': verdict,
+                    'evidence_stats': {
+                        'sources': len(ep.get('sources', [])),
+                        'claims': len(ep.get('claims', [])),
+                        'contradictions': len(ep.get('contradictions', [])),
+                        'internal_refs': len(ep.get('internal_refs', [])),
+                    },
+                })
+
+            return {
+                'action': action,
+                'hours_back': hours,
+                'total_sessions': len(runs),
+                'runs': runs,
+            }
+        except Exception as e:
+            logger.error(f"[Session 970] Surgical moves status error: {e}")
+            return {
+                'action': action,
+                'hours_back': hours,
+                'total_sessions': 0,
+                'runs': [],
+                'error': str(e),
+            }
 
 
 # Singleton instance

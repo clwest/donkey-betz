@@ -1,10 +1,12 @@
 """
 Session 962 Phase 1 + Session 963 Phase 3: Deliberation API Endpoints
+Session 970 Phase 5.1: Verification report endpoint
 
 Provides read-only API access to deliberation sessions, turns, contracts,
-doc versions, evidence packs, traces, and replay.
+doc versions, evidence packs, traces, replay, and verification reports.
 """
 
+import json
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
@@ -353,4 +355,183 @@ def blog_deliberation_detail(request, blog_id):
             'trace': s.trace or {},
             'evidence_pack': s.evidence_pack or {},
         },
+    })
+
+
+# ---------------------------------------------------------------------------
+# Session 970 Phase 5.1: Verification Report endpoint
+# ---------------------------------------------------------------------------
+
+@require_GET
+def deliberation_verification_report(request, session_id):
+    """
+    GET /api/deliberation/sessions/<uuid>/verification-report/
+
+    Single-request enriched report combining turns, contracts, evidence stats,
+    and verification checks for Surgical Moves Phases 0-3.
+    """
+    try:
+        s = DeliberationSession.objects.get(id=session_id)
+    except DeliberationSession.DoesNotExist:
+        return JsonResponse({'error': 'Session not found'}, status=404)
+
+    turns = DeliberationTurn.objects.filter(session_id=s.id).order_by('turn_number')
+    contracts = ContractRecord.objects.filter(session_id=s.id).order_by('created_at')
+    ep = s.evidence_pack or {}
+    trace = s.trace or {}
+
+    turn_count = turns.count()
+    agent_names = list(turns.values_list('agent_name', flat=True).distinct())
+
+    contract_list = []
+    has_execution_contract = False
+    for c in contracts:
+        cdata = c.contract_data or {}
+        verdict_summary = None
+        if c.contract_type == 'execution':
+            has_execution_contract = True
+            verdict_summary = cdata.get('chosen_path', cdata.get('decision', ''))
+            if isinstance(verdict_summary, str):
+                verdict_summary = verdict_summary[:200]
+        contract_list.append({
+            'type': c.contract_type,
+            'data_size': len(json.dumps(cdata)),
+            'verdict_summary': verdict_summary,
+        })
+
+    evidence_stats = {
+        'sources': len(ep.get('sources', [])),
+        'claims': len(ep.get('claims', [])),
+        'contradictions': len(ep.get('contradictions', [])),
+        'internal_refs': len(ep.get('internal_refs', [])),
+        'memory_retrievals': len(ep.get('memory_retrievals', [])),
+    }
+
+    trace_turns = trace.get('deliberation', [])
+    trace_decisions = trace.get('decisions', [])
+
+    trace_stats = {
+        'turns_recorded': len(trace_turns),
+        'has_contracts': len(contract_list) > 0,
+        'has_decisions': len(trace_decisions) > 0,
+    }
+
+    # Build verification checks
+    checks = []
+
+    # Phase 0: Contract serialization
+    contract_count = len(contract_list)
+    if contract_count > 0:
+        total_size = sum(c['data_size'] for c in contract_list)
+        checks.append({
+            'phase': 'Phase 0',
+            'name': 'Contract serialization',
+            'status': 'pass',
+            'detail': f'{contract_count} records (total {total_size} bytes)',
+        })
+    else:
+        checks.append({
+            'phase': 'Phase 0',
+            'name': 'Contract serialization',
+            'status': 'warn',
+            'detail': 'No contracts found',
+        })
+
+    # Phase 0: Decision enforcement
+    if has_execution_contract:
+        exec_contracts = [c for c in contract_list if c['type'] == 'execution']
+        verdict = exec_contracts[0]['verdict_summary'] if exec_contracts else ''
+        checks.append({
+            'phase': 'Phase 0',
+            'name': 'Decision enforcement',
+            'status': 'pass',
+            'detail': f'Execution contract with verdict: {verdict or "present"}',
+        })
+    else:
+        checks.append({
+            'phase': 'Phase 0',
+            'name': 'Decision enforcement',
+            'status': 'warn',
+            'detail': 'No execution contract found',
+        })
+
+    # Phase 0: Doc read tracking
+    internal_ref_count = evidence_stats['internal_refs']
+    checks.append({
+        'phase': 'Phase 0',
+        'name': 'Doc read tracking',
+        'status': 'pass' if internal_ref_count > 0 else 'warn',
+        'detail': f'{internal_ref_count} internal_refs in evidence pack',
+    })
+
+    # Phase 1: Session persistence
+    checks.append({
+        'phase': 'Phase 1',
+        'name': 'DeliberationSession created',
+        'status': 'pass' if s.status == 'completed' else 'warn',
+        'detail': f'Status: {s.status}',
+    })
+
+    checks.append({
+        'phase': 'Phase 1',
+        'name': 'DeliberationTurn count',
+        'status': 'pass' if turn_count > 0 else 'fail',
+        'detail': f'{turn_count} turns',
+    })
+
+    checks.append({
+        'phase': 'Phase 1',
+        'name': 'ContractRecord count',
+        'status': 'pass' if contract_count > 0 else 'warn',
+        'detail': f'{contract_count} contracts',
+    })
+
+    # Phase 3: Evidence pack
+    evidence_total = sum(evidence_stats.values())
+    checks.append({
+        'phase': 'Phase 3',
+        'name': 'Evidence pack',
+        'status': 'pass' if evidence_total > 0 else 'warn',
+        'detail': (
+            f'{evidence_stats["sources"]} sources, '
+            f'{evidence_stats["claims"]} claims, '
+            f'{evidence_stats["contradictions"]} contradictions, '
+            f'{evidence_stats["internal_refs"]} internal_refs'
+        ),
+    })
+
+    # Phase 3: Session trace
+    checks.append({
+        'phase': 'Phase 3',
+        'name': 'Session trace',
+        'status': 'pass' if len(trace_turns) > 0 else 'warn',
+        'detail': f'{len(trace_turns)} turns recorded',
+    })
+
+    # Phase 3: Memory retrievals
+    mem_count = evidence_stats['memory_retrievals']
+    checks.append({
+        'phase': 'Phase 3',
+        'name': 'Memory retrievals',
+        'status': 'pass' if mem_count > 0 else 'warn',
+        'detail': f'{mem_count} retrievals',
+    })
+
+    return JsonResponse({
+        'session': {
+            'id': str(s.id),
+            'status': s.status,
+            'objective': s.objective,
+            'created_at': s.created_at.isoformat() if s.created_at else None,
+            'completed_at': s.completed_at.isoformat() if s.completed_at else None,
+            'participant_count': len(s.participants) if s.participants else 0,
+        },
+        'turns': {
+            'count': turn_count,
+            'agents': agent_names,
+        },
+        'contracts': contract_list,
+        'evidence_stats': evidence_stats,
+        'trace_stats': trace_stats,
+        'checks': checks,
     })

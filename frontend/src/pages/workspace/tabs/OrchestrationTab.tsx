@@ -123,6 +123,7 @@ function MonitorSubTab() {
   const [selectedExecution, setSelectedExecution] = useState<ExecutionItem | null>(null)
   const [expandedSection, setExpandedSection] = useState<'running' | 'completed' | 'failed' | 'recent' | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
+  const [selectedDeliberationId, setSelectedDeliberationId] = useState<string | null>(null)
 
   const toggleSection = (section: typeof expandedSection) => {
     setExpandedSection(expandedSection === section ? null : section)
@@ -391,6 +392,9 @@ function MonitorSubTab() {
         </ExpandedListCard>
       )}
 
+      {/* Session 970: Surgical Moves Verification Panel */}
+      <SurgicalMovesPanel onSelectSession={setSelectedDeliberationId} />
+
       {/* Recent Executions - Session 857: Clickable header to expand */}
       <div className="card">
         <div
@@ -467,6 +471,14 @@ function MonitorSubTab() {
         <ExecutionDetailModal
           execution={selectedExecution}
           onClose={() => setSelectedExecution(null)}
+        />
+      )}
+
+      {/* Session 970: Verification Report Modal */}
+      {selectedDeliberationId && (
+        <VerificationReportModal
+          sessionId={selectedDeliberationId}
+          onClose={() => setSelectedDeliberationId(null)}
         />
       )}
     </div>
@@ -1973,6 +1985,234 @@ function ExecutionDetailModal({ execution, onClose }: { execution: ExecutionItem
               Close
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============ Session 970: Surgical Moves Verification Panel ============
+
+function SurgicalMovesPanel({ onSelectSession }: { onSelectSession: (id: string) => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['deliberation-sessions-recent'],
+    queryFn: async () => {
+      const res = await fetch('/api/deliberation/sessions/?limit=5&status=completed')
+      if (!res.ok) return null
+      return res.json() as Promise<{
+        count: number
+        sessions: Array<{
+          id: string
+          objective: string
+          status: string
+          created_at: string | null
+          turn_count: number
+          contract_count: number
+        }>
+      }>
+    },
+    staleTime: 30000,
+  })
+
+  const sessions = data?.sessions || []
+
+  if (isLoading) return null
+  if (sessions.length === 0) return null
+
+  return (
+    <div className="card">
+      <div className="flex items-center gap-2 mb-3">
+        <GitBranch size={14} className="text-primary-400" />
+        <h4 className="text-sm font-medium text-gray-400">Surgical Moves Verification</h4>
+        <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400">
+          {sessions.length}
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {sessions.map((s) => (
+          <div
+            key={s.id}
+            className="flex items-center justify-between p-2 rounded-lg bg-dark-800/50 hover:bg-dark-700/50 cursor-pointer transition-colors"
+            onClick={() => onSelectSession(s.id)}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-300 truncate">{s.objective || 'No objective'}</p>
+              <p className="text-xs text-gray-500">
+                {s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 ml-2 shrink-0">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">
+                {s.turn_count} turns
+              </span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">
+                {s.contract_count} contracts
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ============ Session 970: Verification Report Modal ============
+
+interface VerificationCheck {
+  phase: string
+  name: string
+  status: 'pass' | 'warn' | 'fail'
+  detail: string
+}
+
+interface VerificationReport {
+  session: {
+    id: string
+    status: string
+    objective: string
+    created_at: string | null
+    completed_at: string | null
+    participant_count: number
+  }
+  turns: { count: number; agents: string[] }
+  contracts: Array<{ type: string; data_size: number; verdict_summary: string | null }>
+  evidence_stats: {
+    sources: number
+    claims: number
+    contradictions: number
+    internal_refs: number
+    memory_retrievals: number
+  }
+  trace_stats: { turns_recorded: number; has_contracts: boolean; has_decisions: boolean }
+  checks: VerificationCheck[]
+}
+
+function VerificationReportModal({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
+  const [showRaw, setShowRaw] = useState(false)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['deliberation-verification', sessionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/deliberation/sessions/${sessionId}/verification-report/`)
+      if (!res.ok) return null
+      return res.json() as Promise<VerificationReport>
+    },
+    staleTime: 60000,
+  })
+
+  const statusIcon = (s: string) => {
+    if (s === 'pass') return <CheckCircle size={14} className="text-green-400" />
+    if (s === 'warn') return <AlertCircle size={14} className="text-yellow-400" />
+    return <XCircle size={14} className="text-red-400" />
+  }
+
+  const statusBg = (s: string) => {
+    if (s === 'pass') return 'bg-green-500/10'
+    if (s === 'warn') return 'bg-yellow-500/10'
+    return 'bg-red-500/10'
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[85vh] overflow-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
+          <h3 className="text-lg font-semibold">Verification Report</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="animate-spin text-primary-400" size={24} />
+              <span className="text-sm text-gray-400 ml-2">Loading report...</span>
+            </div>
+          ) : !data ? (
+            <p className="text-sm text-gray-400 text-center py-4">Failed to load report</p>
+          ) : (
+            <>
+              {/* Session info */}
+              <div className="bg-gray-800/50 rounded-lg p-3">
+                <p className="text-sm text-gray-300 mb-1">{data.session.objective || 'No objective'}</p>
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <span className={cn(
+                    'px-2 py-0.5 rounded capitalize',
+                    data.session.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-gray-600 text-gray-300'
+                  )}>
+                    {data.session.status}
+                  </span>
+                  <span>{data.turns.count} turns</span>
+                  <span>{data.turns.agents.join(', ')}</span>
+                  {data.session.created_at && (
+                    <span>{new Date(data.session.created_at).toLocaleString()}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Checks */}
+              <div className="space-y-1.5">
+                {data.checks.map((check, i) => (
+                  <div key={i} className={cn('flex items-center gap-2 p-2 rounded-lg', statusBg(check.status))}>
+                    {statusIcon(check.status)}
+                    <span className="text-xs text-gray-500 w-16 shrink-0">{check.phase}</span>
+                    <span className="text-sm text-gray-300 flex-1">{check.name}</span>
+                    <span className="text-xs text-gray-400 text-right">{check.detail}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Contracts */}
+              {data.contracts.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Contracts</p>
+                  <div className="space-y-1">
+                    {data.contracts.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm bg-gray-800/30 p-2 rounded">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 capitalize">{c.type}</span>
+                        <span className="text-gray-400">{c.data_size}B</span>
+                        {c.verdict_summary && (
+                          <span className="text-gray-300 truncate flex-1">{c.verdict_summary}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Evidence stats */}
+              <div>
+                <p className="text-xs text-gray-500 mb-2">Evidence Stats</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {Object.entries(data.evidence_stats).map(([key, val]) => (
+                    <div key={key} className="text-center bg-gray-800/30 p-2 rounded">
+                      <p className="text-sm font-medium text-gray-300">{val}</p>
+                      <p className="text-xs text-gray-500">{key.replace('_', ' ')}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Raw JSON toggle */}
+              <div>
+                <button
+                  onClick={() => setShowRaw(!showRaw)}
+                  className="text-xs text-primary-400 hover:text-primary-300"
+                >
+                  {showRaw ? 'Hide' : 'Show'} raw JSON
+                </button>
+                {showRaw && (
+                  <pre className="mt-2 text-xs text-gray-400 bg-gray-800/50 p-3 rounded-lg max-h-60 overflow-auto whitespace-pre-wrap">
+                    {JSON.stringify(data, null, 2)}
+                  </pre>
+                )}
+              </div>
+            </>
+          )}
+
+          <button onClick={onClose} className="btn btn-secondary w-full">
+            Close
+          </button>
         </div>
       </div>
     </div>

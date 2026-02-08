@@ -95,6 +95,8 @@ class UnifiedPAEntrypoint:
         'recent_activity':     [],
         'system_health_check': [],
         'error_summary':       [],
+        # Session 970: Surgical moves verification — pure data
+        'surgical_moves_status': [],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -118,6 +120,10 @@ class UnifiedPAEntrypoint:
         'errors': 'error_summary',
         'failures': 'error_summary',
         'platform_health': 'system_health_check',
+        # Session 970: Surgical moves aliases
+        'deliberation_status': 'surgical_moves_status',
+        'verification_status': 'surgical_moves_status',
+        'moves_status': 'surgical_moves_status',
     }
 
     # Intents where spider_trends and domain_context always apply (no relevance gate)
@@ -594,6 +600,13 @@ class UnifiedPAEntrypoint:
         ]):
             return ('system_health_check', 'system_health_tool')
 
+        # Session 970: Surgical moves / deliberation status patterns
+        if any(phrase in message_lower for phrase in [
+            'surgical moves', 'deliberation status', 'deliberation sessions',
+            'verification report', 'moves status', 'what deliberations',
+        ]):
+            return ('surgical_moves_status', 'surgical_moves_status_tool')
+
         # Session 969: Error summary patterns — "any errors?"
         if any(phrase in message_lower for phrase in [
             'any errors', 'what failed', 'what broke', 'error log', 'what went wrong',
@@ -1016,6 +1029,21 @@ class UnifiedPAEntrypoint:
             payload['action'] = 'detailed' if 'detail' in msg_lower else 'summary'
             hours_match = re.search(r'(\d+)\s*(?:hour|hr|h)', msg_lower)
             payload['hours'] = int(hours_match.group(1)) if hours_match else 4
+
+        # Session 970: Surgical moves status tool payload
+        elif intent == 'surgical_moves_status':
+            import re
+            msg_lower = message.lower()
+            payload['action'] = 'detailed' if 'detail' in msg_lower else 'summary'
+            hours_match = re.search(r'(\d+)\s*(?:hour|hr|h)', msg_lower)
+            payload['hours'] = int(hours_match.group(1)) if hours_match else 24
+            # Check for session_id UUID in message
+            uuid_match = re.search(
+                r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+                msg_lower,
+            )
+            if uuid_match:
+                payload['session_id'] = uuid_match.group(0)
 
         # Add any context
         payload['context'] = context
