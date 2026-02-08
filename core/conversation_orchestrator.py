@@ -816,6 +816,24 @@ class ConversationOrchestrator:
         messages = []
         conversation_context = []
 
+        # Session 962 Phase 1: Create deliberation session envelope
+        deliberation_session = None
+        try:
+            from core.models_deliberation import DeliberationSession
+            deliberation_session = DeliberationSession.objects.create(
+                session_type='hivemind',
+                objective=objective or topic,
+                participants=[
+                    {'agent_name': agent1['name'], 'role': 'advocate'},
+                    {'agent_name': agent2['name'], 'role': 'critic'},
+                ],
+                status='active',
+                trace_id='',
+            )
+            logger.info(f"📋 [Session 962] Created DeliberationSession: {deliberation_session.id}")
+        except Exception as e:
+            logger.warning(f"[Session 962] DeliberationSession creation failed: {e}")
+
         # Session 826: Build rich context for both agents (spider/advisor/learning)
         agent1_rich_context = self._get_rich_context(agent1['name'], topic) if ENABLE_RICH_CONTEXT else ""
         agent2_rich_context = self._get_rich_context(agent2['name'], topic) if ENABLE_RICH_CONTEXT else ""
@@ -920,6 +938,21 @@ class ConversationOrchestrator:
             messages.append(msg_data)
             conversation_context.append(msg_data)
 
+            # Session 962 Phase 1: Persist turn
+            if deliberation_session:
+                try:
+                    from core.models_deliberation import DeliberationTurn
+                    DeliberationTurn.objects.create(
+                        session=deliberation_session,
+                        turn_number=turn + 1,
+                        agent_name=current_agent['name'],
+                        role=turn_type or '',
+                        content=response,
+                        trace_id='',
+                    )
+                except Exception as e:
+                    logger.warning(f"[Session 962] DeliberationTurn save failed: {e}")
+
             logger.debug(f"Turn {turn + 1}: {current_agent['name']} - tension={msg_has_tension}, grounding={msg_has_grounding}")
 
         # Extract decision summary from final message
@@ -1019,6 +1052,27 @@ class ConversationOrchestrator:
             except Exception as e:
                 logger.warning(f"[Session 874] SynthesisContract creation failed: {e}")
 
+        # Session 962 Phase 1: Persist contracts
+        if deliberation_session:
+            try:
+                from core.models_deliberation import ContractRecord
+                if execution_mandate:
+                    ContractRecord.objects.create(
+                        session=deliberation_session,
+                        contract_type='execution',
+                        contract_data=execution_mandate.to_dict() if hasattr(execution_mandate, 'to_dict') else {},
+                        trace_id='',
+                    )
+                if synthesis_contract_dict:
+                    ContractRecord.objects.create(
+                        session=deliberation_session,
+                        contract_type='synthesis',
+                        contract_data=synthesis_contract_dict,
+                        trace_id='',
+                    )
+            except Exception as e:
+                logger.warning(f"[Session 962] ContractRecord save failed: {e}")
+
         # Session 811: AI World Enhancement - Create memories and dispatch actions
         ai_world_metadata = {
             'dreams_injected': dreams_injected,
@@ -1030,6 +1084,14 @@ class ConversationOrchestrator:
         # Generate a conversation ID for tracking
         import uuid
         conversation_id = str(uuid.uuid4())
+
+        # Session 962 Phase 1: Set trace_id on session now that we have conversation_id
+        if deliberation_session:
+            try:
+                deliberation_session.trace_id = conversation_id
+                deliberation_session.save(update_fields=['trace_id'])
+            except Exception:
+                pass
 
         # Create cross-agent memories from conversation insights
         if ENABLE_CROSS_AGENT_MEMORY and decision_summary:
@@ -1096,11 +1158,22 @@ class ConversationOrchestrator:
                 except Exception as e2:
                     logger.warning(f"Fallback action dispatch also failed: {e2}")
 
+        # Session 962 Phase 1: Mark deliberation session completed
+        if deliberation_session:
+            try:
+                from django.utils import timezone
+                deliberation_session.status = 'completed'
+                deliberation_session.completed_at = timezone.now()
+                deliberation_session.save(update_fields=['status', 'completed_at', 'updated_at'])
+            except Exception as e:
+                logger.warning(f"[Session 962] DeliberationSession completion failed: {e}")
+
         return {
             'messages': messages,
             'decision_summary': decision_summary,
             'summary_validation': summary_validation,
             'validation': validation,
+            'deliberation_session_id': str(deliberation_session.id) if deliberation_session else None,
             'state': {
                 'total_turns': state.total_turns,
                 'tension_count': state.tension_count,

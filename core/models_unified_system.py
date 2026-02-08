@@ -10016,6 +10016,16 @@ class HiveMindSession(models.Model):
         help_text='Session 928: The initiative this conversation is discussing'
     )
 
+    # Session 962 Phase 1: Deliberation envelope
+    deliberation_session = models.ForeignKey(
+        'core.DeliberationSession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hivemind_sessions',
+        help_text='Session 962: Unifying deliberation session wrapper'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
@@ -12350,6 +12360,16 @@ class AgentSession(models.Model):
     # Replay bookmarks
     is_bookmarked = models.BooleanField(default=False)
     bookmark_note = models.TextField(null=True, blank=True)
+
+    # Session 962 Phase 1: Deliberation envelope
+    deliberation_session = models.ForeignKey(
+        'core.DeliberationSession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agent_sessions',
+        help_text='Session 962: Unifying deliberation session wrapper'
+    )
 
     class Meta:
         app_label = 'core'
