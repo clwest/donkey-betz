@@ -1007,12 +1007,14 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
         tone_description: str,
         target_audience: str,
         word_count: int,
-        keywords: List[str]
+        keywords: List[str],
+        claims_block: str = '',
     ) -> str:
         """
         Build the GPT prompt for content generation.
 
         Session 523: Added source citation requirements.
+        Phase 4: Optional claims_block appends citation rules for [C-xxxxxxxxxx] markers.
         """
         # Content-type specific instructions
         type_instructions = self._get_type_instructions(content_type, content_config)
@@ -1072,6 +1074,18 @@ Plus these additional fields:
 - Make it compelling, valuable, and credible to the reader
 
 Generate the {content_config['name']} now:"""
+
+        # Phase 4: Append claims citation block when claims data is provided
+        if claims_block:
+            prompt += f"""
+
+CLAIMS DATA (cite these using [C-xxxxxxxxxx] inline):
+{claims_block}
+
+CITATION RULES:
+- MUST cite claim IDs inline as [C-xxxxxxxxxx] when referencing data
+- MUST include a 'Sources' section at the end mapping claim IDs to URLs
+- Facts without a claim ID must be labeled [SPECULATION]"""
 
         return prompt
 
