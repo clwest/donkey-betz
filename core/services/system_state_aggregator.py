@@ -154,6 +154,18 @@ class SystemStateAggregator:
         except Exception as e:
             self.logger.error(f"Error getting Body System items: {e}")
 
+        # Session 970: Add deliberation session health
+        try:
+            items.extend(self._get_deliberation_items())
+        except Exception as e:
+            self.logger.error(f"Error getting Deliberation items: {e}")
+
+        # Session 970: Add signal cluster freshness
+        try:
+            items.extend(self._get_signal_cluster_items())
+        except Exception as e:
+            self.logger.error(f"Error getting Signal Cluster items: {e}")
+
         # Deduplicate by hashing title+summary
         seen_hashes = set()
         unique_items = []
@@ -885,6 +897,139 @@ class SystemStateAggregator:
             self.logger.debug(f"Body vitals service not available: {e}")
         except Exception as e:
             self.logger.error(f"Error getting body system items: {e}")
+
+        return items
+
+    def _get_deliberation_items(self, limit: int = 5) -> List[AttentionItem]:
+        """
+        Session 970: Get attention items from deliberation sessions.
+
+        Checks:
+        - Failed or stuck deliberation sessions (status != completed, older than 1h)
+        - Sessions with 0 contracts (decision enforcement gap)
+        """
+        items = []
+        now = timezone.now()
+
+        try:
+            from core.models_deliberation import DeliberationSession, ContractRecord
+
+            # 1. Stuck sessions (not completed after 1 hour)
+            stuck = DeliberationSession.objects.filter(
+                status__in=['in_progress', 'pending'],
+                created_at__lt=now - timedelta(hours=1)
+            ).order_by('-created_at')[:limit]
+
+            for session in stuck:
+                age_hours = (now - session.created_at).total_seconds() / 3600
+                items.append(AttentionItem(
+                    id=f'deliberation_stuck_{session.id}',
+                    section='autonomous',
+                    category='stale_concern',
+                    priority=PRIORITY_SCORES['stale_concern'] + 5,
+                    title=f"Stuck Deliberation ({age_hours:.0f}h)",
+                    summary=f"Session '{(session.objective or '')[:50]}' still {session.status}",
+                    action_url='/ai-studio/?tab=orchestration&subtab=monitor',
+                    explanation="A deliberation session has not completed within the expected timeframe.",
+                    recommended_action="Check orchestration logs. The session may need to be "
+                                      "manually completed or cancelled.",
+                    severity='warning',
+                    location='Workspace > Orchestration > Monitor'
+                ))
+
+            # 2. Completed sessions with no contracts (decision gap)
+            no_contract_sessions = DeliberationSession.objects.filter(
+                status='completed',
+                created_at__gte=now - timedelta(hours=24)
+            ).exclude(
+                id__in=ContractRecord.objects.values_list('session_id', flat=True)
+            ).count()
+
+            if no_contract_sessions > 0:
+                items.append(AttentionItem(
+                    id='deliberation_no_contracts',
+                    section='autonomous',
+                    category='pending_decision',
+                    priority=PRIORITY_SCORES['pending_decision'] + 5,
+                    title=f"Contractless Deliberations: {no_contract_sessions}",
+                    summary=f"{no_contract_sessions} completed session(s) in 24h produced no contracts",
+                    action_url='/ai-studio/?tab=orchestration&subtab=monitor',
+                    explanation="Deliberation sessions completed without generating execution "
+                               "or synthesis contracts, meaning no actionable decisions were captured.",
+                    recommended_action="Review recent sessions in the Orchestration Monitor. "
+                                      "Check if decision enforcement is working correctly.",
+                    severity='info',
+                    location='Workspace > Orchestration > Monitor'
+                ))
+
+        except ImportError:
+            pass
+
+        return items
+
+    def _get_signal_cluster_items(self, limit: int = 5) -> List[AttentionItem]:
+        """
+        Session 970: Get attention items from signal clusters.
+
+        Checks:
+        - Stale active clusters (no update in 48h)
+        - High-strength signals not yet triggering conversations
+        """
+        items = []
+        now = timezone.now()
+
+        try:
+            from core.models_signal_intelligence import SignalCluster
+
+            # 1. Stale active clusters (active but not detected in 48h)
+            stale_threshold = now - timedelta(hours=48)
+            stale_clusters = SignalCluster.objects.filter(
+                status='active',
+                detected_at__lt=stale_threshold
+            ).count()
+
+            if stale_clusters > 0:
+                items.append(AttentionItem(
+                    id='signal_clusters_stale',
+                    section='research',
+                    category='stale_concern',
+                    priority=PRIORITY_SCORES['stale_concern'],
+                    title=f"Stale Signal Clusters: {stale_clusters}",
+                    summary=f"{stale_clusters} active cluster(s) not detected in 48h",
+                    action_url='/ai-studio/?tab=intel&subtab=signals',
+                    explanation="Signal clusters aggregate spider data into actionable patterns. "
+                               "Stale clusters may indicate spider data flow issues.",
+                    recommended_action="Check spider execution status. Run signal aggregation "
+                                      "manually if needed: manage.py run_signal_aggregation.",
+                    severity='info',
+                    location='Intel > Signals'
+                ))
+
+            # 2. High-strength detecting clusters not yet triggered
+            untriggered = SignalCluster.objects.filter(
+                status='detecting',
+                strength__gte=0.7
+            ).count()
+
+            if untriggered >= 3:
+                items.append(AttentionItem(
+                    id='signal_clusters_untriggered',
+                    section='research',
+                    category='opportunity',
+                    priority=PRIORITY_SCORES['opportunity'] + 10,
+                    title=f"Strong Untriggered Signals: {untriggered}",
+                    summary=f"{untriggered} high-strength clusters awaiting conversation trigger",
+                    action_url='/ai-studio/?tab=intel&subtab=signals',
+                    explanation="Multiple signal clusters with strength >= 0.7 are in 'detecting' "
+                               "status but haven't triggered agent conversations yet.",
+                    recommended_action="Review signal clusters and manually trigger conversations "
+                                      "for the strongest patterns, or lower the trigger threshold.",
+                    severity='info',
+                    location='Intel > Signals'
+                ))
+
+        except ImportError:
+            pass
 
         return items
 
