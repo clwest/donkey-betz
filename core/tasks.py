@@ -495,46 +495,31 @@ def auto_approve_boardroom_items():
         }
 
         # 1. Auto-approve insight items (informational)
+        # Session 971: Fixed status='approved' -> 'acted' (valid model status)
         insights = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='insight'
         )
-        for item in insights:
-            item.status = 'approved'
-            item.handled_at = now
-            item.save(update_fields=['status', 'handled_at'])
-            stats['insights_approved'] += 1
+        stats['insights_approved'] = insights.update(status='acted', handled_at=now)
 
         # 2. Auto-approve non-critical review items
         reviews = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='review'
         ).exclude(urgency='critical')
-        for item in reviews:
-            item.status = 'approved'
-            item.handled_at = now
-            item.save(update_fields=['status', 'handled_at'])
-            stats['reviews_approved'] += 1
+        stats['reviews_approved'] = reviews.update(status='acted', handled_at=now)
 
         # 3. Auto-promote experiment decisions
-        experiments = AgentDecisionSummary.objects.filter(
+        stats['experiments_promoted'] = AgentDecisionSummary.objects.filter(
             status='draft',
             decision_type='experiment'
-        )
-        for decision in experiments:
-            decision.status = 'canonical'
-            decision.save(update_fields=['status'])
-            stats['experiments_promoted'] += 1
+        ).update(status='canonical')
 
         # 4. Auto-promote pipeline decisions
-        pipelines = AgentDecisionSummary.objects.filter(
+        stats['pipelines_promoted'] = AgentDecisionSummary.objects.filter(
             status='draft',
             decision_type='pipeline'
-        )
-        for decision in pipelines:
-            decision.status = 'canonical'
-            decision.save(update_fields=['status'])
-            stats['pipelines_promoted'] += 1
+        ).update(status='canonical')
 
         total = sum(stats.values())
         logger.info(f"✅ [BOARDROOM-AUTO-APPROVE] Complete - processed {total} items "
@@ -547,6 +532,51 @@ def auto_approve_boardroom_items():
 
     except Exception as e:
         logger.error(f"✅ [BOARDROOM-AUTO-APPROVE] Failed: {e}", exc_info=True)
+        raise
+
+
+@shared_task
+def cleanup_expired_boardroom_items(days_old: int = 7):
+    """
+    Session 971: Delete expired boardroom items that have been sitting around.
+    Items with status='expired' are already past their useful life —
+    this removes them to prevent indefinite accumulation.
+    Also deletes very old pending items (>30 days) that were never triaged.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_human_interface import HumanAttentionItem
+
+    logger.info("🗑️ [BOARDROOM-EXPIRED-CLEANUP] Starting expired item cleanup...")
+
+    try:
+        now = timezone.now()
+        stats = {
+            'expired_deleted': 0,
+            'stale_pending_deleted': 0,
+        }
+
+        # 1. Delete all items with status='expired'
+        expired = HumanAttentionItem.objects.filter(status='expired')
+        stats['expired_deleted'] = expired.delete()[0]
+
+        # 2. Delete pending items older than 30 days (never triaged = stale)
+        stale_cutoff = now - timedelta(days=30)
+        stale = HumanAttentionItem.objects.filter(
+            status='pending',
+            created_at__lt=stale_cutoff
+        )
+        stats['stale_pending_deleted'] = stale.delete()[0]
+
+        total = sum(stats.values())
+        logger.info(f"🗑️ [BOARDROOM-EXPIRED-CLEANUP] Complete - deleted {total} items "
+                   f"(expired: {stats['expired_deleted']}, "
+                   f"stale_pending: {stats['stale_pending_deleted']})")
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"🗑️ [BOARDROOM-EXPIRED-CLEANUP] Failed: {e}", exc_info=True)
         raise
 
 
