@@ -2530,14 +2530,14 @@ class ToolDispatcher:
                 qs.order_by('-confidence', '-updated_at')[:limit].values(
                     'id', 'pattern_type', 'description', 'confidence',
                     'pattern_data', 'applies_to_agents', 'times_applied',
-                    'times_successful', 'updated_at'
+                    'success_when_applied', 'updated_at'
                 )
             )
 
             # Calculate effectiveness for each
             for item in items:
                 applied = item.get('times_applied', 0)
-                successful = item.get('times_successful', 0)
+                successful = item.get('success_when_applied', 0)
                 item['effectiveness'] = successful / applied if applied > 0 else 0
 
             return {
@@ -2571,7 +2571,7 @@ class ToolDispatcher:
                 ).order_by('-confidence')[:limit].values(
                     'id', 'pattern_type', 'description', 'confidence',
                     'pattern_data', 'applies_to_agents', 'times_applied',
-                    'times_successful', 'updated_at'
+                    'success_when_applied', 'updated_at'
                 )
             )
 
