@@ -37,8 +37,10 @@ import {
   Sparkles,  // Session 865: For Enhance button
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi } from '@/lib/api'
+import { api, contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplaceApi, type Blog } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
+import { PanelStatusBanner } from '@/components/PanelStatusBanner'
+import { PanelDebugDrawer } from '@/components/PanelDebugDrawer'
 
 // Sub-tab configuration
 type ContentSubTab = 'gallery' | 'channels' | 'blogs' | 'documents' | 'podcast' | 'distribution'
@@ -83,6 +85,8 @@ export function ContentStudioTab() {
       {activeSubTab === 'documents' && <DocumentsSubTab />}
       {activeSubTab === 'podcast' && <PodcastSubTab />}
       {activeSubTab === 'distribution' && <DistributionSubTab />}
+
+      <PanelDebugDrawer scope="workspace:content" />
     </div>
   )
 }
@@ -135,17 +139,6 @@ function GallerySubTab() {
   // The /api/v1/gallery/videos/ endpoint queries ContentAsset (empty)
   // while our real videos are in VideoHistory (included in unified gallery)
 
-  // Session 860: Disabled - endpoint /api/v1/gallery/series/ doesn't exist yet
-  // TODO: Create backend endpoint or use sessions/list/ instead
-  const { data: seriesData } = useQuery({
-    queryKey: ['gallery-series-tab'],
-    queryFn: async () => {
-      // Return empty placeholder until backend endpoint is created
-      return { results: [], count: 0 }
-    },
-    enabled: false, // Disabled until endpoint exists
-  })
-
   if (isLoading) {
     return <LoadingState />
   }
@@ -160,7 +153,6 @@ function GallerySubTab() {
   const videos = allItems.filter((item: GalleryItem) => item.type === 'video')
   const audioItems = allItems.filter((item: GalleryItem) => item.type === 'audio')
   const models3d = allItems.filter((item: GalleryItem) => item.type === '3d')
-  const series = seriesData?.results || []
 
   const stats = {
     images: images.length,
@@ -291,70 +283,14 @@ function GallerySubTab() {
         />
       )}
 
-      {/* AI Series - Expandable */}
+      {/* AI Series — endpoint not yet created */}
       <div className="card">
-        <div
-          className="flex items-center justify-between mb-3 cursor-pointer"
-          onClick={() => toggleSection('series')}
-        >
-          <h4 className="text-sm font-medium text-gray-400">AI Series</h4>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-primary-400">{series.length || 44} series</span>
-            {expandedSection === 'series' ? (
-              <ChevronUp size={14} className="text-gray-400" />
-            ) : (
-              <ChevronDown size={14} className="text-gray-400" />
-            )}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div
-            className={cn(
-              'p-3 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors',
-              expandedSection === 'series' && 'ring-1 ring-primary-500/50'
-            )}
-            onClick={() => toggleSection('series')}
-          >
-            <p className="text-xs text-gray-500 mb-1">Total Series</p>
-            <p className="text-xl font-bold">{series.length || 44}</p>
-          </div>
-          <div className="p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">Episodes</p>
-            <p className="text-xl font-bold">49</p>
-          </div>
-        </div>
-
-        {/* Expanded Series List */}
-        {expandedSection === 'series' && series.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
-            {series.slice(0, visibleCount.series).map((s: AISeries) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between py-2 px-2 -mx-2 hover:bg-gray-800/50 rounded cursor-pointer transition-colors"
-                onClick={() => setSelectedSeries(s)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-primary-500/20 flex items-center justify-center">
-                    <Play size={14} className="text-primary-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{s.name}</p>
-                    <p className="text-xs text-gray-500">{s.episode_count} episodes</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-gray-500" />
-              </div>
-            ))}
-            {series.length > visibleCount.series && (
-              <button
-                onClick={() => loadMore('series')}
-                className="w-full py-2 text-sm text-primary-400 hover:text-primary-300"
-              >
-                Load more ({series.length - visibleCount.series} remaining)
-              </button>
-            )}
-          </div>
-        )}
+        <h4 className="text-sm font-medium text-gray-400 mb-3">AI Series</h4>
+        <PanelStatusBanner
+          status="unwired"
+          message="Gallery series endpoint not created"
+          endpoint="/api/v1/gallery/series/"
+        />
       </div>
 
       {/* Gallery Item Detail Modal */}
@@ -541,32 +477,27 @@ function BlogsSubTab() {
   const queryClient = useQueryClient()
 
   // Session 860: Added error handling for API responses
+  // Session 968: Migrated from raw fetch to blogsApi (auth interceptor)
   const { data: blogsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['blogs-tab'],
     queryFn: async () => {
       try {
-        // Session 852: Filter by category=blog to exclude audits/research/technical docs
-        const response = await fetch('/api/v1/research/self-blog/list/?per_page=50&category=blog')
-        if (!response.ok) {
-          return { blogs: [], pagination: { total: 0 } }
-        }
-        return response.json()
+        const response = await blogsApi.list({ per_page: 50, category: 'blog' })
+        return response.data
       } catch {
-        return { blogs: [], pagination: { total: 0 } }
+        return { blogs: [] as Blog[], pagination: { total: 0 }, category_counts: {} as Record<string, number> }
       }
     },
   })
 
   // Session 865: Enhance blog mutation
+  // Session 968: Migrated from raw fetch to api.post (auth interceptor)
   const enhanceMutation = useMutation({
     mutationFn: async (blogId: string) => {
-      const response = await fetch(`/api/v1/research/self-blog/${blogId}/enhance/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ save: true }),
+      const response = await api.post(`/v1/research/self-blog/${blogId}/enhance/`, { save: true }, {
+        headers: { 'X-UI-Scope': 'workspace:content' },
       })
-      if (!response.ok) throw new Error('Enhancement failed')
-      return response.json()
+      return response.data
     },
     onMutate: (blogId) => {
       setEnhancingBlogId(blogId)
@@ -593,12 +524,12 @@ function BlogsSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load blogs data" />
   }
 
-  const blogs = blogsData?.blogs || blogsData?.results || []
+  const blogs = blogsData?.blogs || []
   const total = blogsData?.category_counts?.blog || blogsData?.pagination?.total || 1004
   const publishedCount = blogs.filter((b: BlogPost) => b.status === 'published').length
   const draftCount = blogs.filter((b: BlogPost) => b.status === 'draft' || !b.status).length
   // Session 865: Count blogs that could be enhanced (has scores but not publish-ready)
-  const needsEnhancementCount = blogsData?.needs_enhancement_count ||
+  const needsEnhancementCount = blogsData?.needs_enhancement_count ??
     blogs.filter((b: BlogPost) =>
       b.quality_score !== null &&
       b.quality_score !== undefined &&
@@ -831,20 +762,16 @@ function DocumentsSubTab() {
   const [visibleCount, setVisibleCount] = useState(10)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
+  // Session 968: Migrated from raw fetch to blogsApi (auth interceptor)
   const { data: docsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['documents-tab', categoryFilter],
     queryFn: async () => {
       try {
-        // Fetch documents (non-blog categories)
-        // Session 865: Increased per_page to 500 to show all documents
         const categoryParam = categoryFilter === 'all' ? 'documents' : categoryFilter
-        const response = await fetch(`/api/v1/research/self-blog/list/?per_page=500&category=${categoryParam}`)
-        if (!response.ok) {
-          return { blogs: [], pagination: { total: 0 }, category_counts: {} }
-        }
-        return response.json()
+        const response = await blogsApi.list({ per_page: 500, category: categoryParam })
+        return response.data
       } catch {
-        return { blogs: [], pagination: { total: 0 }, category_counts: {} }
+        return { blogs: [] as Blog[], pagination: { total: 0 }, category_counts: {} as Record<string, number> }
       }
     },
   })
@@ -857,7 +784,7 @@ function DocumentsSubTab() {
     return <ErrorState error={error as Error} onRetry={refetch} message="Failed to load documents" />
   }
 
-  const docs = docsData?.blogs || docsData?.results || []
+  const docs = docsData?.blogs || []
   const categoryCounts = docsData?.category_counts || {}
   const totalDocs = (categoryCounts.all || 0) - (categoryCounts.blog || 0)
 
@@ -2132,26 +2059,21 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
   const queryClient = useQueryClient()
 
   // Fetch full blog content when showing full content
+  // Session 968: Migrated from raw fetch to blogsApi (auth interceptor)
   const { data: fullBlog, isLoading: contentLoading } = useQuery({
     queryKey: ['blog-full', blog.id],
     queryFn: async () => {
-      const response = await fetch(`/api/v1/research/self-blog/${blog.id}/`)
-      if (!response.ok) throw new Error('Failed to fetch blog content')
-      const data = await response.json()
-      return data.blog as BlogPost
+      const response = await blogsApi.get(blog.id)
+      return response.data.blog as BlogPost
     },
     enabled: showFullContent,
   })
 
-  // Approve mutation
+  // Approve mutation — Session 968: Migrated to blogsApi
   const approveMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/v1/research/self-blog/${blog.id}/approve/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (!response.ok) throw new Error('Failed to approve blog')
-      return response.json()
+      const response = await blogsApi.approve(blog.id)
+      return response.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blogs-tab'] })
@@ -2162,16 +2084,11 @@ function BlogDetailModal({ blog, onClose }: { blog: BlogPost; onClose: () => voi
     },
   })
 
-  // Publish mutation - Session 862: Add force=true to allow publishing draft blogs
+  // Publish mutation — Session 968: Migrated to blogsApi
   const publishMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/v1/research/self-blog/${blog.id}/publish/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: true }),
-      })
-      if (!response.ok) throw new Error('Failed to publish blog')
-      return response.json()
+      const response = await blogsApi.publish(blog.id, true)
+      return response.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blogs-tab'] })

@@ -1,6 +1,13 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 
+// Session 968: Extend axios config to carry request-log metadata
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    metadata?: { requestId: number; startTime: number }
+  }
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 export const api = axios.create({
@@ -3564,6 +3571,7 @@ export interface BlogListResponse {
   }
   category_counts: Record<string, number>
   status_counts: Record<string, number>
+  needs_enhancement_count?: number
 }
 
 export const blogsApi = {
@@ -3586,4 +3594,93 @@ export const blogsApi = {
       `/v1/research/self-blog/${blogId}/publish/`,
       { force }
     ),
+}
+
+// =============================================================================
+// Session 968: Request Log — circular buffer + logging interceptors
+// =============================================================================
+
+export interface RequestLogEntry {
+  id: number
+  method: string
+  url: string
+  status: number | null
+  ms: number
+  ts: number
+  scope: string | null
+  error: string | null
+}
+
+let nextId = 1
+const requestLog: RequestLogEntry[] = []
+const MAX_LOG = 200
+const listeners: Set<(entries: RequestLogEntry[]) => void> = new Set()
+
+function notify() {
+  const snapshot = [...requestLog]
+  listeners.forEach((fn) => fn(snapshot))
+}
+
+// Request interceptor — stamp metadata + read X-UI-Scope header
+api.interceptors.request.use((config) => {
+  const entry: RequestLogEntry = {
+    id: nextId++,
+    method: (config.method || 'get').toUpperCase(),
+    url: `${config.baseURL || ''}${config.url || ''}`,
+    status: null,
+    ms: 0,
+    ts: Date.now(),
+    scope: (config.headers?.['X-UI-Scope'] as string) || null,
+    error: null,
+  }
+  config.metadata = { requestId: entry.id, startTime: entry.ts }
+  if (requestLog.length >= MAX_LOG) requestLog.shift()
+  requestLog.push(entry)
+  notify()
+  return config
+})
+
+// Response interceptor — update entry with status + duration
+api.interceptors.response.use(
+  (resp) => {
+    const meta = resp.config?.metadata
+    if (meta) {
+      const entry = requestLog.find((e) => e.id === meta.requestId)
+      if (entry) {
+        entry.status = resp.status
+        entry.ms = Date.now() - meta.startTime
+        notify()
+      }
+    }
+    return resp
+  },
+  (err) => {
+    const meta = err.config?.metadata
+    if (meta) {
+      const entry = requestLog.find((e) => e.id === meta.requestId)
+      if (entry) {
+        entry.status = err.response?.status ?? null
+        entry.ms = Date.now() - meta.startTime
+        entry.error = err.message || 'Unknown error'
+        notify()
+      }
+    }
+    return Promise.reject(err)
+  }
+)
+
+export function getRequestLog(): RequestLogEntry[] {
+  return [...requestLog]
+}
+
+export function subscribeRequestLog(fn: (entries: RequestLogEntry[]) => void): () => void {
+  listeners.add(fn)
+  return () => {
+    listeners.delete(fn)
+  }
+}
+
+export function clearRequestLog() {
+  requestLog.length = 0
+  notify()
 }
