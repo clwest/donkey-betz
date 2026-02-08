@@ -59,7 +59,7 @@ from core.views_strategic_memory import (
     memory_strategy,
 )
 
-# Session 962: Deliberation Persistence API
+# Session 962 + 963: Deliberation Persistence API
 from core.views_deliberation import (
     deliberation_sessions_list,
     deliberation_session_detail,
@@ -67,6 +67,9 @@ from core.views_deliberation import (
     deliberation_contracts,
     doc_versions_list,
     doc_version_detail,
+    deliberation_evidence,
+    deliberation_trace,
+    deliberation_replay,
 )
 
 # Session 866: ATS Optimization API
@@ -1573,6 +1576,10 @@ urlpatterns = [
     path('api/deliberation/sessions/<uuid:session_id>/', deliberation_session_detail, name='deliberation-session-detail'),
     path('api/deliberation/sessions/<uuid:session_id>/turns/', deliberation_turns, name='deliberation-turns'),
     path('api/deliberation/sessions/<uuid:session_id>/contracts/', deliberation_contracts, name='deliberation-contracts'),
+    # Session 963 Phase 3: Evidence, Trace, Replay
+    path('api/deliberation/sessions/<uuid:session_id>/evidence/', deliberation_evidence, name='deliberation-evidence'),
+    path('api/deliberation/sessions/<uuid:session_id>/trace/', deliberation_trace, name='deliberation-trace'),
+    path('api/deliberation/sessions/<uuid:session_id>/replay/', deliberation_replay, name='deliberation-replay'),
     path('api/docs/versions/', doc_versions_list, name='doc-versions-list'),
     path('api/docs/versions/<int:version_id>/', doc_version_detail, name='doc-version-detail'),
 
