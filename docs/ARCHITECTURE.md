@@ -1,7 +1,7 @@
 # System Architecture
 
 **Platform:** Unified Donkey Betz - AI Content Creation Empire
-**Last Updated:** January 28, 2026 (Session 863)
+**Last Updated:** February 8, 2026 (Session 969b)
 **Total Lines of Code:** 200,000+
 
 ---
@@ -359,7 +359,7 @@ The Discord-First platform provides an alternative interface to the web app.
 
 **Location:** `core/agent_router.py`, `core/agent_context_middleware.py`
 
-All 74 agents now receive personalized user context for tailored responses.
+All 76 agents now receive personalized user context for tailored responses.
 
 ### How It Works
 
@@ -749,11 +749,111 @@ See [CONCEPTFORGE.md](CONCEPTFORGE.md) for full documentation.
 
 ---
 
+## Diagnostic Pipeline (Session 856)
+
+Transforms failure noise into actionable root cause analysis:
+
+```
+Failure Event
+    ↓
+FailureDetection (Phase 1: What happened)
+    ↓ [signature grouping]
+FailureSignature (deduplication + tracking)
+    ↓ [evidence gathering]
+FailureDiagnosis (Phase 2: Why it happened, blast radius)
+    ↓ [solution ranking]
+FailurePrescription (Phase 3: What to do, priority scoring)
+    ↓
+Initiative (auto-created remediation project)
+```
+
+**Files:** `core/models_diagnostic_pipeline.py`, `core/services/autonomous_remediation_orchestrator.py`
+
+---
+
+## Signal Intelligence + Initiative Pipeline (Sessions 900-904)
+
+Spider data flows through signal clustering into auto-generated topics that trigger conversations, producing initiatives tracked through a 5-stage pipeline:
+
+```
+SpiderData (77 spiders)
+    ↓ [SignalAggregationService, every 30 min]
+SignalCluster (pattern detection: strength, confidence, novelty)
+    ↓ [auto-topic generation]
+AutoTopic (rationale + domain)
+    ↓ [HiveMindSession creation]
+Goal-Driven Conversation (agent router, objectives, success criteria)
+    ↓ [conclusion parsing]
+Initiative (5 stages) + InitiativeActionItem (next steps)
+```
+
+**Initiative UI:** Stages view (grouped by phase 1-5), List view, Cards view. Priority scoring: `impact*0.4 + urgency*0.2 + confidence*0.2 + revenue*0.2`. 52 active initiatives after Session 961c cleanup (from 568).
+
+**Files:** `core/models_signal_intelligence.py`, `core/services/signal_aggregation_service.py`, `core/models_document_registry.py`
+
+---
+
+## Content Deliberation Pipeline (Session 964)
+
+Multi-agent content review replacing single-agent blog generation:
+
+```
+SpiderData + SignalCluster
+    ↓ [ClaimsPackBuilder]
+ClaimsPack (deterministic IDs: C-xxxxxxxxxx)
+    ↓ [ContentWriterAgent]
+Blog Draft (citing [C-xxx] claims)
+    ↓ [ContentReviewPanelV2]
+3 Reviewers: Skeptic + FactChecker + DomainPersona
+    ↓ [DecisionEnforcer]
+Verdict: PUBLISH / REVISE / KILL
+    ↓ [PublishGate]
+SelfBlog (with stats_snapshot['deliberation'])
+```
+
+**v1 vs v2:** v1 (direct generation) and v2 (deliberation) run side-by-side for A/B testing. API: `POST /api/v1/research/self-blog/generate-v2/`. Replay: `GET /api/blog/<uuid>/deliberation/`.
+
+**Files:** `core/services/claims_pack_builder.py`, `core/services/content_review_panel_v2.py`, `core/services/content_deliberation_runner.py`
+
+---
+
+## PA Intelligence System (Sessions 959-969b)
+
+The Personal Assistant (PA) is an analytical advisor with 89 tools and real-time system awareness:
+
+```
+User Message
+    ↓ [UnifiedPAEntrypoint._detect_intent_and_route()]
+Intent + Tool Name (47 tool handlers)
+    ↓ [INTENT_ENRICHMENT_MAP]
+Enrichment Services (5 available, fired per intent):
+  - PAIntelligenceEnricher
+  - BlogPerformanceContext
+  - DomainContentContext (9 domains)
+  - SpiderContext
+  - AdvisorContext
+    ↓ [ToolDispatcher.execute()]
+Tool Result (ToolResult dataclass)
+    ↓ [Analytical Prompt Builder]
+LLM Analysis (intent-specific directives)
+    ↓
+Structured Response (data first, analysis after)
+```
+
+**Telemetry Tools (969b):** `recent_activity_tool` (system activity snapshot), `system_health_tool` (health assessment: healthy/degraded/critical), `error_summary_tool` (failure patterns: severity none/low/moderate/high).
+
+**Files:** `core/services/unified_pa_entrypoint.py` (89 tools, intent routing), `core/services/tool_dispatcher.py` (47 handlers), `core/services/pa_intelligence_enricher.py`
+
+---
+
 ## Related Documentation
 
-- [AGENTS.md](AGENTS.md) - Detailed agent documentation
-- [SPIDERS.md](SPIDERS.md) - Spider network details
+- [AGENTS.md](AGENTS.md) - Detailed agent documentation (76 agents)
+- [SPIDERS.md](SPIDERS.md) - Spider network details (77 spiders)
+- [DATABASE_MODEL_REFERENCE.md](DATABASE_MODEL_REFERENCE.md) - Complete model reference (386+ models)
+- [SERVICES.md](SERVICES.md) - Services layer (134 services)
 - [CONCEPTFORGE.md](CONCEPTFORGE.md) - Autonomous think tank pipeline
+- [DREAM_INITIATIVE_WORKFLOW.md](DREAM_INITIATIVE_WORKFLOW.md) - Dream -> Initiative 5-stage pipeline
 - [EXTERNAL_APIS.md](EXTERNAL_APIS.md) - API integration details
 - [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) - Learning flow
-- [DAVINCI_RESOLVE.md](DAVINCI_RESOLVE.md) - Unused $300 render node
+- [API_PATH_POLICY.md](API_PATH_POLICY.md) - API path conventions

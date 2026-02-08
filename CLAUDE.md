@@ -80,8 +80,8 @@ open http://localhost:8000/ai-studio/
 ## Project Structure
 
 ### Key Directories
-- `core/agents/` - 74 agents with learning hooks
-- `core/services/` - 120 service classes
+- `core/agents/` - 76 agents with learning hooks
+- `core/services/` - 134 service classes
 - `ai_core/spiders/` - 77 spiders
 - `docs/handoffs/` - Session handoff documents
 
@@ -94,13 +94,15 @@ open http://localhost:8000/ai-studio/
 | `core/conversation_orchestrator.py` | Multi-agent conversations |
 | `core/services/autonomous_remediation_orchestrator.py` | Self-healing system |
 | `core/services/signal_aggregation_service.py` | Signal clustering & auto-topic generation |
+| `core/services/unified_pa_entrypoint.py` | PA: 89 tools, intent routing, enrichment pipeline |
+| `core/services/tool_dispatcher.py` | PA: 47 tool handlers including 3 telemetry tools |
 | `frontend/src/pages/WorkspacePageNew.tsx` | Modular command center |
 
 ---
 
-## Agent Ecosystem (74 Agents)
+## Agent Ecosystem (76 Agents)
 
-**49 routable** | **25 non-routable** (sub-agents/coordinators)
+**49 routable** | **25 non-routable** (sub-agents/coordinators) | **26+ provenance-tracked**
 
 | Category | Count | Examples |
 |----------|-------|----------|
