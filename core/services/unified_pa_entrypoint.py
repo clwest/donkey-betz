@@ -1362,20 +1362,27 @@ Address the user by name occasionally."""
                     if attention.get('count', 0) > 0:
                         att_count = attention['count']
                         by_urgency = attention.get('by_urgency', {})
-                        critical = by_urgency.get('critical', 0)
-                        high = by_urgency.get('high', 0)
                         response += f"**Attention Items:** {att_count}\n"
-                        if critical > 0:
-                            response += f"  - {critical} CRITICAL urgency\n"
-                        if high > 0:
-                            response += f"  - {high} high urgency\n"
+                        # Session 971: Show all urgency levels
+                        for level in ['critical', 'high', 'medium', 'low']:
+                            val = by_urgency.get(level, 0)
+                            if val > 0:
+                                label = level.upper() if level == 'critical' else level
+                                response += f"  - {val} {label} urgency\n"
+                        # Session 971: Show attention type breakdown
+                        att_by_type = attention.get('by_type', {})
+                        if att_by_type:
+                            response += "  **By type:**\n"
+                            for atype, acount in sorted(att_by_type.items(), key=lambda x: x[1], reverse=True):
+                                response += f"    - {atype}: {acount}\n"
 
                     if decisions.get('count', 0) > 0:
                         dec_count = decisions['count']
                         by_type = decisions.get('by_type', {})
                         response += f"\n**Draft Decisions:** {dec_count}\n"
-                        for dtype, count in list(by_type.items())[:3]:
-                            response += f"  - {count} {dtype}\n"
+                        # Session 971: Show all decision types, not just top 3
+                        for dtype, dcount in sorted(by_type.items(), key=lambda x: x[1], reverse=True):
+                            response += f"  - {dcount} {dtype}\n"
 
                     response += "\nI can help you list, approve, ignore, promote, or reject items."
                     return response

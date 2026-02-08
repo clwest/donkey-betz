@@ -1094,7 +1094,7 @@ class ToolDispatcher:
             attention_by_type = dict(
                 attention_qs.values('item_type')
                 .annotate(count=Count('id'))
-                .order_by('-count')[:5]
+                .order_by('-count')[:10]
                 .values_list('item_type', 'count')
             )
 
@@ -1103,7 +1103,7 @@ class ToolDispatcher:
             decisions_by_type = dict(
                 decisions_qs.values('decision_type')
                 .annotate(count=Count('id'))
-                .order_by('-count')[:5]
+                .order_by('-count')[:10]
                 .values_list('decision_type', 'count')
             )
 
