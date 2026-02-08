@@ -1502,6 +1502,14 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour='*/6', minute=30),  # Every 6 hours at :30
     },
     # =========================================================================
+    # Session 971: Expired Boardroom Cleanup
+    # =========================================================================
+    # Delete expired items and stale pending items (>30 days) to prevent indefinite accumulation
+    'cleanup-expired-boardroom-items': {
+        'task': 'core.tasks.cleanup_expired_boardroom_items',
+        'schedule': crontab(hour='*/12', minute=45),  # Every 12 hours at :45
+    },
+    # =========================================================================
     # Session 942: Experiment Cleanup
     # =========================================================================
     # Delete old halted experiments to prevent cluttering system reviews
