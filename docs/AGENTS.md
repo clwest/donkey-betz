@@ -1,18 +1,18 @@
 # Agent Reference
 
-**Last Updated:** Session 858 (January 28, 2026) - User context injection for personalized responses
+**Last Updated:** Session 969b (February 8, 2026) - PA Live Telemetry, Content Deliberation, Agent Provenance
 
 ---
 
 ## Overview
 
-**Total Agents: 74** | **Routable: 49** | **Non-Routable (Sub-agents): 25** | **Workspace-Aware: 22** | **User-Context-Enhanced: 4**
+**Total Agents: 76** | **Routable: 49** | **Non-Routable (Sub-agents): 25** | **Workspace-Aware: 22** | **User-Context-Enhanced: 4** | **Provenance-Tracked: 26+**
 
 The platform uses a **Clean Agent Architecture** where each agent is specialized with isolated tools. Agents cannot call each other's tools directly - they must delegate through the WorkflowAgent.
 
 ### SKIN Layer Integration (Session 695)
 
-**All 72 agents** now inherit workspace methods from BaseAgent, enabling them to write code and content to real project directories:
+**All 76 agents** now inherit workspace methods from BaseAgent, enabling them to write code and content to real project directories:
 
 | Method | Purpose |
 |--------|---------|
@@ -57,7 +57,17 @@ The platform uses a **Clean Agent Architecture** where each agent is specialized
 | Markets | 3 | 3 | Prediction markets, sports odds, arbitrage |
 | Entry Point | 1 | 1 | Personal Assistant routing |
 | Special | 2 | 1 | Thinking/reasoning + system intelligence |
-| **TOTAL** | **72** | **48** | |
+| Decision | 1 | 0 | DecisionEnforcerAgent ("Prefrontal Cortex") |
+| Content Review | 1 | 0 | ContentDeliberationRunner (3-reviewer panel) |
+| **TOTAL** | **76** | **49** | |
+
+**Session 969b Addition:** PA now has 89 tools including 3 live telemetry tools (`recent_activity_tool`, `system_health_tool`, `error_summary_tool`) giving it real-time system self-awareness. 47 tool dispatcher handlers total.
+
+**Session 964 Addition:** Content Deliberation Pipeline adds multi-agent content review: ClaimsPack -> ContentWriter -> 3-reviewer panel (Skeptic + FactCheck + DomainPersona) -> DecisionEnforcer (PUBLISH/REVISE/KILL) -> PublishGate.
+
+**Session 953 Addition:** 26+ agents now include provenance tracking (data sources, timestamps, validation status) in their output. Stock agents (8), Blockchain agents (5), Analysis agents (3), Standalone agents (2), plus the original 8.
+
+**Session 872 Addition:** DecisionEnforcerAgent ("Prefrontal Cortex") forces decisions after debate. ResearchContract, ExecutionMandate, SynthesisContract prevent vague outputs. AutoSpawnerService triggers data gathering reflexes.
 
 **Session 858 Addition:** All agents now receive personalized user context via `context['user']`. Four high-value agents actively use this for enhanced personalization:
 - **ContentWriterAgent**: Uses user's communication style as default tone, includes name/goals in prompt

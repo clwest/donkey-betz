@@ -29,12 +29,17 @@ Intent routing with 30+ natural language phrases, hours extraction from messages
 
 | Metric | Count |
 |--------|-------|
-| Active Initiatives | 52 |
+| Agents | 76 (49 routable, 25 non-routable, 26+ provenance-tracked) |
+| Spiders | 77 (72 working, 5 need API keys) |
+| Advisors | 25 |
+| Active Initiatives | 52 (cleaned from 568 in Session 961c) |
+| Database Models | 386+ |
 | Services | 134 |
 | Celery Tasks | 261 |
 | Content Pipeline | v1 (direct) + v2 (deliberation) — with diverse fallbacks |
 | PA Tools | 89 (was 86, +3 telemetry) |
 | Tool Dispatcher Handlers | 47 |
+| LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 
 ---
 
@@ -67,6 +72,37 @@ The PA's LLM prompt builder could use intent-specific directives for telemetry t
 - Celery Beat schedule monitoring in `system_health_tool`
 - Trend comparison (current vs previous period) in `recent_activity_tool`
 - Auto-surface telemetry warnings in PA greeting
+
+---
+
+## Critical Patterns & Gotchas
+
+**Django settings module:** `core.settings` (NOT `config.settings`). Always use `DJANGO_SETTINGS_MODULE=core.settings`.
+
+**PA entrypoint (`unified_pa_entrypoint.py`):**
+- Intent routing: `_detect_intent_and_route(message)` returns `(intent, tool_name)` tuple
+- Order matters: new intent blocks must go BEFORE existing ones that share keywords (e.g., "system" overlap)
+- `import re` inside elif branches: Python function-level scoping means each branch that uses `re` must have its own `import re`
+- Tool results: `ToolResult` dataclass with `.ok`, `.result`, `.trace_id`
+- Enrichment map: maps intent -> list of enrichment services (empty list = pure data, no LLM overlay)
+
+**Tool dispatcher (`tool_dispatcher.py`):**
+- Registration: `self.register("name", self._handle_method)` in `__init__`
+- Handler signature: `(tool_name, payload, user_id, trace_id) -> Dict`
+- Singleton: `get_tool_dispatcher()` at file end
+- Each data source wrapped in try/except for graceful degradation
+
+**Model field gotchas (verified):**
+- `LearningPattern`: use `success_when_applied` (NOT `times_successful`)
+- `FailureDetection`: use `detected_at` (NOT `created_at`)
+- `SignalCluster`: use `detected_at`, `strength`, `status`
+- `AgentDecisionSummary`: does NOT have a `confidence` field
+- `SelfBlog`: `quality_score`, `novelty_score`, `structure_score`, `publish_ready`, `gate_notes`
+- `Initiative`: `updated_at`, `last_activity_at`, `impact_score`, `urgency`, `confidence`, `revenue_potential`
+
+**Git workflow:** Pre-commit hook blocks direct commits to `main`. Must use feature branches, PRs, then merge.
+
+**Railway deployment:** `railway up --detach` or auto-deploys from main. Verify with `railway run python -c "..."`. Logs: `railway logs -n 30`.
 
 ---
 
