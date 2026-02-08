@@ -1874,9 +1874,98 @@ class ToolDispatcher:
                 }
             }
 
+        elif action == 'related':
+            # Session 971: Find related blogs by initiative, tags, or title keywords
+            blog_id = payload.get('id')
+            if not blog_id:
+                raise ValueError("Blog ID required for related action")
+
+            source = base_qs.filter(id=blog_id).first()
+            if not source:
+                # Try all categories, not just blog
+                source = SelfBlog.objects.filter(id=blog_id).first()
+            if not source:
+                raise ValueError(f"Blog {blog_id} not found")
+
+            import re as _re
+
+            STOP_WORDS = {
+                'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+                'of', 'with', 'by', 'from', 'is', 'it', 'its', 'are', 'was', 'were',
+                'be', 'been', 'has', 'had', 'have', 'how', 'what', 'when', 'where',
+                'who', 'why', 'this', 'that', 'these', 'those', 'not', 'can', 'will',
+                'just', 'more', 'also', 'than', 'into', 'over', 'such', 'our', 'your',
+            }
+
+            def _title_keywords(title):
+                words = _re.findall(r'[a-z]+', (title or '').lower())
+                return {w for w in words if len(w) >= 4 and w not in STOP_WORDS}
+
+            from django.db.models import Q
+            scored = {}
+
+            # Signal 1: Same initiative
+            if source.initiative_id:
+                siblings = SelfBlog.objects.filter(
+                    initiative_id=source.initiative_id
+                ).exclude(id=blog_id)[:20]
+                for b in siblings:
+                    scored[b.id] = (1.0, 'same_initiative', b)
+
+            # Signal 2: Tag overlap (Jaccard > 0.3)
+            source_tags = set(source.tags or [])
+            if source_tags:
+                tag_q = Q()
+                for tag in source_tags:
+                    tag_q |= Q(tags__contains=[tag])
+                for b in SelfBlog.objects.filter(tag_q).exclude(id=blog_id).exclude(id__in=scored.keys())[:50]:
+                    b_tags = set(b.tags or [])
+                    if b_tags:
+                        jaccard = len(source_tags & b_tags) / len(source_tags | b_tags)
+                        if jaccard > 0.3:
+                            scored[b.id] = (jaccard * 0.8, 'tag_overlap', b)
+
+            # Signal 3: Title keyword overlap
+            src_kw = _title_keywords(source.title)
+            if src_kw:
+                kw_q = Q()
+                for kw in list(src_kw)[:5]:
+                    kw_q |= Q(title__icontains=kw)
+                for b in SelfBlog.objects.filter(kw_q).exclude(id=blog_id).exclude(id__in=scored.keys())[:50]:
+                    b_kw = _title_keywords(b.title)
+                    if b_kw:
+                        ratio = len(src_kw & b_kw) / len(src_kw | b_kw)
+                        if ratio > 0.15:
+                            scored[b.id] = (ratio * 0.5, 'title_keywords', b)
+
+            top = sorted(scored.values(), key=lambda x: x[0], reverse=True)[:limit]
+
+            related = []
+            for score, reason, b in top:
+                related.append({
+                    'id': str(b.id),
+                    'title': b.title,
+                    'category': getattr(b, 'category', 'blog'),
+                    'status': getattr(b, 'status', 'draft'),
+                    'word_count': b.word_count or 0,
+                    'created_at': b.created_at.isoformat() if b.created_at else None,
+                    'quality_score': b.quality_score,
+                    'relatedness_score': round(score, 3),
+                    'relatedness_reason': reason,
+                })
+
+            return {
+                'action': 'related',
+                'source': 'SelfBlog',
+                'blog_id': str(source.id),
+                'blog_title': source.title,
+                'count': len(related),
+                'related': related,
+            }
+
         else:
             raise ValueError(
-                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details"
+                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details, related"
             )
 
     def _handle_initiative(

@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle, Trash2, X, Clock, CheckCircle, Eye, Send } from 'lucide-react'
+import { ArrowLeft, FileText, Calendar, Tag, BarChart3, Loader2, AlertCircle, Trash2, X, Clock, CheckCircle, Eye, Send, Link2 } from 'lucide-react'
 import { blogsApi } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -49,6 +49,13 @@ export default function BlogViewerPage() {
       }
       return json.blog as Blog
     },
+    enabled: !!blogId,
+  })
+
+  // Session 971: Related blogs query
+  const { data: relatedData } = useQuery({
+    queryKey: ['blog-related', blogId],
+    queryFn: () => blogsApi.related(blogId!, 6).then(r => r.data),
     enabled: !!blogId,
   })
 
@@ -311,6 +318,52 @@ export default function BlogViewerPage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Session 971: Related Posts */}
+      {relatedData?.related && relatedData.related.length > 0 && (
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Link2 size={18} />
+            Related Posts ({relatedData.count})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {relatedData.related.map((post) => {
+              const badge = post.relatedness_reason === 'same_initiative'
+                ? { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Same Project' }
+                : post.relatedness_reason === 'tag_overlap'
+                  ? { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Similar Topics' }
+                  : { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Related' }
+              return (
+                <Link
+                  key={post.id}
+                  to={`/blog/${post.id}`}
+                  className="block p-4 rounded-lg bg-dark-bg border border-dark-border hover:border-accent-blue/50 transition-colors"
+                >
+                  <h4 className="font-medium text-sm mb-2 line-clamp-2">{post.title}</h4>
+                  {post.intro && (
+                    <p className="text-xs text-gray-500 mb-3 line-clamp-2">{post.intro}</p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{post.word_count.toLocaleString()} words</span>
+                    <span className={`px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  {post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {post.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="px-1.5 py-0.5 text-xs rounded bg-dark-card text-gray-500">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}
