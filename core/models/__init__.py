@@ -152,6 +152,14 @@ from ..models_audio_cache import AudioCache
 # Import user feedback model (Session 948 - PA Feedback Queue)
 from ..models_user_feedback import UserFeedback
 
+# Import deliberation models (Session 962 - Phase 1 Persistence Layer)
+from ..models_deliberation import (
+    DeliberationSession,
+    DeliberationTurn,
+    ContractRecord,
+    DocVersion,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -331,4 +339,10 @@ __all__ = [
 
     # User Feedback - PA Feedback Queue (Session 948)
     'UserFeedback',
+
+    # Deliberation Persistence - Phase 1 (Session 962)
+    'DeliberationSession',
+    'DeliberationTurn',
+    'ContractRecord',
+    'DocVersion',
 ]

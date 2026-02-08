@@ -4389,6 +4389,33 @@ Consider this current data when formulating your response."""
                 backup_path = full_path.with_suffix(f'.backup_{timestamp}.md')
                 backup_path.write_text(full_path.read_text(encoding='utf-8'), encoding='utf-8')
 
+            # Session 962 Phase 1: Create DocVersion before overwriting
+            if full_path.exists():
+                try:
+                    import hashlib
+                    from core.models_deliberation import DocVersion
+                    existing_content = full_path.read_text(encoding='utf-8')
+                    new_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+                    old_hash = hashlib.sha256(existing_content.encode('utf-8')).hexdigest()
+                    if new_hash != old_hash:
+                        # Normalize path relative to repo root
+                        rel_path = str(full_path.resolve().relative_to(Path(settings.BASE_DIR).resolve()))
+                        last_version = DocVersion.objects.filter(
+                            doc_path=rel_path
+                        ).order_by('-version_number').values_list('version_number', flat=True).first()
+                        next_version = (last_version or 0) + 1
+                        DocVersion.objects.create(
+                            doc_path=rel_path,
+                            version_number=next_version,
+                            content_hash=old_hash,
+                            content_snapshot=existing_content,
+                            author_agent=getattr(self, 'name', ''),
+                            change_reason=f"Overwritten by {getattr(self, 'name', 'unknown')}",
+                        )
+                        logger.info(f"📋 [Session 962] DocVersion v{next_version} saved for {rel_path}")
+                except Exception as e:
+                    logger.warning(f"[Session 962] DocVersion creation failed: {e}")
+
             # Write the new content
             full_path.write_text(content, encoding='utf-8')
 

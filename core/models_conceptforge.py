@@ -123,6 +123,16 @@ class ConceptForgeRun(models.Model):
     # Celery task tracking
     celery_task_id = models.CharField(max_length=100, blank=True)
 
+    # Session 962 Phase 1: Deliberation envelope
+    deliberation_session = models.ForeignKey(
+        'core.DeliberationSession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='conceptforge_runs',
+        help_text='Session 962: Unifying deliberation session wrapper'
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
