@@ -505,8 +505,11 @@ class StrategicMemoryService:
         """Search LearningPattern via text search on description."""
         from core.models_unified_system import LearningPattern
 
+        # Cap to 8 longest tokens to limit OR clause explosion
+        capped = sorted(tokens, key=len, reverse=True)[:8]
+
         text_q = Q()
-        for token in tokens:
+        for token in capped:
             text_q |= Q(description__icontains=token) | Q(pattern_type__icontains=token)
 
         patterns = LearningPattern.objects.filter(
