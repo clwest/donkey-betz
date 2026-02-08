@@ -91,6 +91,10 @@ class UnifiedPAEntrypoint:
         'pilots':            ['intelligence_enricher'],
         'gates':             ['intelligence_enricher'],
         'reasoning':         ['intelligence_enricher', 'advisor', 'strategic_memory'],
+        # Session 969: Live telemetry tools — pure data, no enrichment needed
+        'recent_activity':     [],
+        'system_health_check': [],
+        'error_summary':       [],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -108,6 +112,12 @@ class UnifiedPAEntrypoint:
         'experiments': 'pilots',
         'pilot': 'pilots',
         'gate': 'gates',
+        # Session 969: Telemetry aliases
+        'activity': 'recent_activity',
+        'whats_happening': 'recent_activity',
+        'errors': 'error_summary',
+        'failures': 'error_summary',
+        'platform_health': 'system_health_check',
     }
 
     # Intents where spider_trends and domain_context always apply (no relevance gate)
@@ -568,7 +578,30 @@ class UnifiedPAEntrypoint:
         ]):
             return ('boardroom', 'boardroom_tool')  # Session 940: Route to boardroom_tool
 
-        # System health patterns
+        # Session 969: Recent activity patterns — "what's been going on?"
+        if any(phrase in message_lower for phrase in [
+            'what\'s been going on', 'what happened', 'what\'s new', 'catch me up',
+            'while i was away', 'update me', 'what\'s happening', 'what has happened',
+            'bring me up to speed', 'what did i miss',
+        ]):
+            return ('recent_activity', 'recent_activity_tool')
+
+        # Session 969: System health check patterns — "how's the system?"
+        if any(phrase in message_lower for phrase in [
+            'how\'s the system', 'system ok', 'anything down', 'is everything working',
+            'platform health', 'system check', 'are things running', 'is the system',
+            'everything ok', 'how is the platform',
+        ]):
+            return ('system_health_check', 'system_health_tool')
+
+        # Session 969: Error summary patterns — "any errors?"
+        if any(phrase in message_lower for phrase in [
+            'any errors', 'what failed', 'what broke', 'error log', 'what went wrong',
+            'issues today', 'any failures', 'error summary', 'recent errors', 'any problems',
+        ]):
+            return ('error_summary', 'error_summary_tool')
+
+        # System health patterns (body vitals)
         if any(word in message_lower for word in [
             'health', 'status', 'vitals', 'body', 'system health'
         ]):
@@ -961,6 +994,28 @@ class UnifiedPAEntrypoint:
             else:
                 payload['action'] = 'list'
                 # Default to open items
+
+        # Session 969: Recent activity tool payload
+        elif intent == 'recent_activity':
+            import re
+            msg_lower = message.lower()
+            payload['action'] = 'detailed' if 'detail' in msg_lower else 'summary'
+            # Extract hours from message (e.g., "last 6 hours", "past 12h")
+            hours_match = re.search(r'(\d+)\s*(?:hour|hr|h)', msg_lower)
+            payload['hours'] = int(hours_match.group(1)) if hours_match else 2
+
+        # Session 969: System health tool payload
+        elif intent == 'system_health_check':
+            msg_lower = message.lower()
+            payload['action'] = 'components' if 'component' in msg_lower or 'detail' in msg_lower else 'overview'
+
+        # Session 969: Error summary tool payload
+        elif intent == 'error_summary':
+            import re
+            msg_lower = message.lower()
+            payload['action'] = 'detailed' if 'detail' in msg_lower else 'summary'
+            hours_match = re.search(r'(\d+)\s*(?:hour|hr|h)', msg_lower)
+            payload['hours'] = int(hours_match.group(1)) if hours_match else 4
 
         # Add any context
         payload['context'] = context
