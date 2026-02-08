@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-07 21:35
+**Generated:** 2026-02-07 21:40
 **Current Session:** 969
 **Total Documentation:** 1700 files | 606,611 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 137 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/03_Revenue_Generation/README.md` | 59 | 💰 REVENUE GENERATION SYSTEMS - Autonomous Money-Ma |
+| `docs/archive/SYSTEM_CAPABILITIES-original/06_Decision_Systems/README.md` | 59 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
 | `docs/AGENTS.md` | 49 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 34 | Platform Capabilities |
@@ -203,10 +203,10 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 346 | 2026-02-07 21:35 |
 | SESSION_968_INSIGHT_DEDUP_BUNDLING.md | handoffs | 52 | 2026-02-07 21:33 |
 | SESSION_964_CONTENT_DELIBERATION_PIPELINE.md | handoffs | 137 | 2026-02-07 19:26 |
 | SERVICES.md | docs | 829 | 2026-02-07 19:26 |
-| INDEX.md | docs | 346 | 2026-02-07 19:25 |
 | PHASE3_APPLIED_NOTES.md | audits | 100 | 2026-02-07 17:53 |
 | PHASE2_APPLIED_NOTES.md | audits | 95 | 2026-02-07 17:41 |
 | PHASE1_APPLIED_NOTES.md | audits | 98 | 2026-02-07 17:22 |
