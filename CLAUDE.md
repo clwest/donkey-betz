@@ -1,14 +1,14 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 8, 2026 - Session 969b
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **PA Initiative Audit: ACTIVE** | **Initiative Cleanup: 52 ACTIVE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE** | **PA Live Telemetry: ACTIVE**
+**Last Updated:** February 8, 2026 - Session 970
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **PA Initiative Audit: ACTIVE** | **Initiative Cleanup: 52 ACTIVE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE** | **PA Live Telemetry: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
 
 ## System Stats
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Agents** | 76 | All synced + DecisionEnforcerAgent ("Prefrontal Cortex") |
 | **Spiders** | 77 | 72 working, 5 need API keys |
-| **PA Tools** | 89 | +body tools for all 9 systems, +3 live telemetry tools |
+| **PA Tools** | 90 | +body tools for all 9 systems, +3 live telemetry tools, +surgical_moves_status |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **LLM Models** | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
 | **Database Models** | 386+ | Including Deliverable, AuditReport, SignalCluster, AutoTopic, InitiativeActionItem, ToolCallRecord, DecisionRecord, ResearchResult |
@@ -20,6 +20,7 @@
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Surgical Moves Verification + ToolCallRecord + Attention Coverage (970):** Three deliverables. (1) Verification CLI (`manage.py verify_surgical_moves`) runs real 4-turn debate then prints structured pass/warn/fail report for Phases 0-3; `--mode=report-only` checks existing sessions without LLM spend. PA tool `surgical_moves_status_tool` with intent routing ("deliberation status", "what deliberations"). API endpoint `GET /api/deliberation/sessions/<uuid>/verification-report/`. Frontend `SurgicalMovesPanel` + `VerificationReportModal` in Orchestration Monitor tab. (2) ToolCallRecord activation: `__init_subclass__` in BaseAgent auto-wraps every subclass `_execute_tool_call` with recording — all 50+ agents now produce audit trail, zero agent files changed. Verified on Railway: 6 rows in first 3 minutes. (3) Expanded SystemStateAggregator attention surface: deliberation health (stuck sessions, contractless completions) + signal cluster freshness (stale active, untriggered high-strength). 7 attention sections total. PRs #977, #978.
 - **PA Live Telemetry (969b):** 3 new PA tools for real-time system self-awareness. `recent_activity_tool` queries Celery tasks, SpiderData, HiveMindSession, SelfBlog, Initiative, SignalCluster within configurable time window. `system_health_tool` aggregates HeartBeat, ComponentStatus, Celery success rate, ToolCallAggregate, Spider freshness into computed overall_assessment (healthy/degraded/critical). `error_summary_tool` queries FailureSignature, FailureDetection, failed ToolCallRecord, failed Celery tasks with computed severity. Intent routing for natural phrases ("what's been going on?", "how's the system?", "any errors?"). Hours extraction from natural language. No migrations. PR #974.
 - **Insight De-dup Bundling (968):** Memory Palace now bundles duplicate insight memories from the same conversation into a single expandable card. `source_id` exposed in `get_agent_memories()` and `list_all_memories()` APIs. Frontend `bundleInsights()` groups by `source_id`, `InsightBundleCard` shows collapsed "N agents" badge with expand/collapse. Also: remarkGfm import fix, frontend data plumbing audit (PR #970). No migrations.
 - **Content Deliberation Pipeline (964):** Phase 4 multi-agent content pipeline: Spider signals -> ClaimsPack -> ContentWriter draft (citing [C-xxxxxxxxxx] claims) -> 3-reviewer panel (Skeptic + FactCheck + DomainPersona) -> DecisionEnforcer (PUBLISH/REVISE/KILL) -> PublishGate -> SelfBlog with `stats_snapshot['deliberation']`. ClaimsPackBuilder queries SpiderData (72h) + SignalCluster (active) with deterministic claim IDs. Structured reviewer output with validation (failure -> FAIL verdict, not skip). Full pipeline runner with graceful degradation. v2 Celery task + API endpoint (`POST /api/v1/research/self-blog/generate-v2/`). Blog deliberation replay endpoint (`GET /api/blog/<uuid>/deliberation/`). Old v1 flow untouched for A/B testing. No migrations needed.
@@ -163,6 +164,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **970** | Surgical Moves Verification + ToolCallRecord Activation + Attention Coverage - CLI verify command, PA tool, API endpoint, frontend panel, __init_subclass__ recording wrapper, 2 new attention sections PRs #977-978 | `SESSION_970_SURGICAL_MOVES_VERIFICATION.md` |
 | **969b** | PA Live Telemetry - 3 tools (recent_activity, system_health, error_summary) for real-time system self-awareness, intent routing, natural language hours extraction PR #974 | `SESSION_969b_PA_LIVE_TELEMETRY.md` |
 | **969** | Orchestration Tab Enrichment + ORM Fix + Blog Diversity - metrics bar, HiveMind sessions, execution detail, field name fix, 10 diverse fallback topics PR #971-972 | `SESSION_969_ORCHESTRATION_ENRICHMENT.md` |
 | **968** | Insight De-dup Bundling - Memory Palace bundles duplicate insights by source_id, remarkGfm fix, frontend data plumbing PR #970 | `SESSION_968_INSIGHT_DEDUP_BUNDLING.md` |
@@ -178,12 +180,6 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity, conversation details | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
 | **903** | Signal Intelligence Wired + Celery OOM Fix - HiveMind provenance chain, spider task memory fix | `SESSION_903_SIGNAL_CELERY_FIX.md` |
 | **902** | Action Item Tracking - Extract & track next steps from conversation conclusions | `SESSION_902_ACTION_ITEM_TRACKING.md` |
-| **901** | Initiative Priority & Portfolio - 4 tabs, priority scoring, purpose/program categorization | `SESSION_901_INITIATIVE_PRIORITY.md` |
-| **900** | Signal Intelligence - SignalCluster, AutoTopic models for Origin & Trigger UI provenance | `SESSION_900_SIGNAL_INTELLIGENCE.md` |
-| **891** | Domain Content Context - 9 domains (finance, sports, crypto, etc.), unified router, cross-domain support | `SESSION_891_DOMAIN_CONTENT_CONTEXT.md` |
-| **890** | Podcast Quality Improvements - Anti-cliché, PodcastStyleProfile, host POV upgrade | `SESSION_890_PODCAST_QUALITY.md` |
-| **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
-| **886** | Content Feedback Loop + Experiment Audit - BlogPerformanceContextBuilder, cleaned 81 junk experiments, 87.5% success rate | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
 **Older sessions:** See `docs/handoffs/` directory (Sessions 197-901)
 
 ---
