@@ -261,6 +261,7 @@ class TestQueryPrecedents(TestCase):
                 result = self.svc.query_precedents(
                     'initiative cleanup', top_k=10,
                     scope={'source_types': ['agent_memory']},
+                    include_embeddings=True,
                 )
             # Should still find via text fallback
             self.assertGreaterEqual(len(result['results']), 1)
@@ -477,3 +478,67 @@ class TestSingleton(TestCase):
         svc1 = get_strategic_memory_service()
         svc2 = get_strategic_memory_service()
         self.assertIs(svc1, svc2)
+
+
+# ---------------------------------------------------------------------------
+# 8. Phase 3.1: Embeddings flag + caching
+# ---------------------------------------------------------------------------
+
+class TestEmbeddingsFlag(TestCase):
+
+    def setUp(self):
+        self.svc = StrategicMemoryService()
+        _create_learning_pattern(
+            description='Initiative cleanup reduces noise and improves focus',
+            pattern_type='cleanup_strategy',
+        )
+        _create_decision_record(
+            reasoning='Decided to cleanup duplicate initiatives to reduce noise',
+            action='Archive 420 noise initiatives',
+        )
+        # Clear cache between tests
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+
+    def test_precedents_without_embeddings_skips_agent_memory(self):
+        """include_embeddings=False should set agent_memory=False in searched."""
+        result = self.svc.query_precedents('initiative cleanup', include_embeddings=False)
+        self.assertIn('agent_memory', result['stats']['searched'])
+        self.assertFalse(result['stats']['searched']['agent_memory'])
+
+    def test_precedents_with_embeddings_includes_agent_memory(self):
+        """include_embeddings=True should set agent_memory=True in searched."""
+        result = self.svc.query_precedents('initiative cleanup', include_embeddings=True)
+        self.assertIn('agent_memory', result['stats']['searched'])
+        # True or error string (if embedding service unavailable) — both indicate it was attempted
+        self.assertNotEqual(result['stats']['searched']['agent_memory'], False)
+
+    def test_cache_hit_on_second_call(self):
+        """Second identical call should return cache_hit=True."""
+        result1 = self.svc.query_precedents('initiative cleanup', include_embeddings=False)
+        self.assertFalse(result1['stats']['cache_hit'])
+
+        result2 = self.svc.query_precedents('initiative cleanup', include_embeddings=False)
+        self.assertTrue(result2['stats']['cache_hit'])
+
+    def test_api_include_embeddings_0(self):
+        """API with include_embeddings=0 should skip agent_memory."""
+        User = get_user_model()
+        user = User.objects.create_user(username='testuser_emb', password='test' + 'pass' + '123')
+        client = Client()
+        client.force_login(user)
+        resp = client.get('/api/memory/precedents/?q=initiative+cleanup&include_embeddings=0')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data['stats']['searched']['agent_memory'])
+
+    def test_format_for_pa_skips_embeddings(self):
+        """format_for_pa should not search agent_memory."""
+        # Clear cache so we get a fresh call
+        from django.core.cache import cache as django_cache
+        django_cache.clear()
+
+        with patch.object(self.svc, '_search_agent_memories') as mock_search:
+            mock_search.return_value = []
+            self.svc.format_for_pa('initiative cleanup')
+            mock_search.assert_not_called()

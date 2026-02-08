@@ -25,9 +25,10 @@ def memory_precedents(request):
 
     top_k = min(int(request.GET.get('top_k', 10)), 50)
     full = request.GET.get('full', '0') == '1'
+    include_embeddings = request.GET.get('include_embeddings', '0') == '1'
 
     svc = get_strategic_memory_service()
-    result = svc.query_precedents(query=query, top_k=top_k)
+    result = svc.query_precedents(query=query, top_k=top_k, include_embeddings=include_embeddings)
 
     # Truncate summaries unless full=1
     if not full:
@@ -57,9 +58,10 @@ def memory_strategy(request):
         return JsonResponse({'error': 'objective parameter is required'}, status=400)
 
     top_k = min(int(request.GET.get('top_k', 5)), 20)
+    include_embeddings = request.GET.get('include_embeddings', '0') == '1'
 
     svc = get_strategic_memory_service()
-    result = svc.recommend_strategy(objective=objective, top_k=top_k)
+    result = svc.recommend_strategy(objective=objective, top_k=top_k, include_embeddings=include_embeddings)
 
     # Truncate precedent summaries in strategy response
     for r in result.get('precedents', []):
