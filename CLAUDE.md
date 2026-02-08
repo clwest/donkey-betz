@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 7, 2026 - Session 964
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **PA Initiative Audit: ACTIVE** | **Initiative Cleanup: 52 ACTIVE** | **Content Deliberation Pipeline: ACTIVE**
+**Last Updated:** February 7, 2026 - Session 968
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **PA Initiative Audit: ACTIVE** | **Initiative Cleanup: 52 ACTIVE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
@@ -20,6 +20,7 @@
 | **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
 
 ## Key Capabilities
+- **Insight De-dup Bundling (968):** Memory Palace now bundles duplicate insight memories from the same conversation into a single expandable card. `source_id` exposed in `get_agent_memories()` and `list_all_memories()` APIs. Frontend `bundleInsights()` groups by `source_id`, `InsightBundleCard` shows collapsed "N agents" badge with expand/collapse. Also: remarkGfm import fix, frontend data plumbing audit (PR #970). No migrations.
 - **Content Deliberation Pipeline (964):** Phase 4 multi-agent content pipeline: Spider signals -> ClaimsPack -> ContentWriter draft (citing [C-xxxxxxxxxx] claims) -> 3-reviewer panel (Skeptic + FactCheck + DomainPersona) -> DecisionEnforcer (PUBLISH/REVISE/KILL) -> PublishGate -> SelfBlog with `stats_snapshot['deliberation']`. ClaimsPackBuilder queries SpiderData (72h) + SignalCluster (active) with deterministic claim IDs. Structured reviewer output with validation (failure -> FAIL verdict, not skip). Full pipeline runner with graceful degradation. v2 Celery task + API endpoint (`POST /api/v1/research/self-blog/generate-v2/`). Blog deliberation replay endpoint (`GET /api/blog/<uuid>/deliberation/`). Old v1 flow untouched for A/B testing. No migrations needed.
 - **PA Initiative Audit + Cleanup (961c):** Added `audit` action to initiative tool that classifies initiatives into real/stalled/noise/duplicates using Jaccard similarity clustering (Session 906). Keyword routing for audit/classify/triage/cleanup. Structured formatter with counts, samples, and cleanup recommendations. Production cleanup: merged 94 duplicates across 14 clusters, archived 420 noise initiatives. Active initiatives reduced from 566 to 52. PR #960.
 - **PA Intelligence Upgrade (959):** Transformed the PA from a data listing tool into an analytical advisor. Wired 5 existing intelligence services (PAIntelligenceEnricher, BlogPerformanceContext, DomainContentContext, SpiderContext, AdvisorContext) into the PA response pipeline. Intent-to-enrichment mapping (12 intents, 14 aliases) determines which services fire per query. Relevance gating with regex tokenization prevents irrelevant context injection. Analytical prompt builder with intent-specific directives (content_review focuses on quality scores, initiatives on pipeline health, boardroom on triage urgency). Responses restructured: structured list always shown first, LLM analysis appended after separator. Expanded tool_dispatcher: blog quality scores (novelty, structure, publish_ready), initiative activity timestamps + critical action counts, boardroom ML confidence/priority/impact fields. Graceful degradation with individual try/except per enrichment service. PR #954.
@@ -159,6 +160,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **968** | Insight De-dup Bundling - Memory Palace bundles duplicate insights by source_id, remarkGfm fix, frontend data plumbing PR #970 | `SESSION_968_INSIGHT_DEDUP_BUNDLING.md` |
 | **964** | Phase 4 Content Deliberation Pipeline - ClaimsPack, 3-reviewer panel, DecisionEnforcer, PublishGate, v2 blog API | `SESSION_964_CONTENT_DELIBERATION_PIPELINE.md` |
 | **961c** | PA Initiative Audit + Cleanup - Audit action classifies real/stalled/noise/duplicates, merged 94 dupes, archived 420 noise, 52 active remain | `SESSION_961c_PA_INITIATIVE_AUDIT.md` |
 | **961b** | PA Initiative Display Fix - Raised limits, added total count, full names | `SESSION_961b_PA_INITIATIVE_DISPLAY_FIX.md` |
@@ -177,8 +179,6 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **890** | Podcast Quality Improvements - Anti-cliché, PodcastStyleProfile, host POV upgrade | `SESSION_890_PODCAST_QUALITY.md` |
 | **889** | Podcast Token Auth + SKIN Health Fix + Live Monitor Fix | `SESSION_889_COMPLETE.md` |
 | **886** | Content Feedback Loop + Experiment Audit - BlogPerformanceContextBuilder, cleaned 81 junk experiments, 87.5% success rate | `SESSION_886_CONTENT_FEEDBACK_LOOP.md` |
-| **885** | Celery Content Pipeline + Operations Tab Fix - dedicated celery-content worker | `SESSION_885_CELERY_CONTENT_PIPELINE.md` |
-
 **Older sessions:** See `docs/handoffs/` directory (Sessions 197-901)
 
 ---
