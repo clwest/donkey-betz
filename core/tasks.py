@@ -3,6 +3,7 @@ Celery Background Tasks for Unified Donkey Betz Platform
 Handles long-running operations like document isolation in the background
 
 Session 265 Phase 6: Added run_autonomy_cycle task for autonomous operation
+Session 969b: Touched to trigger Celery worker restart after PA telemetry deploy
 """
 
 from celery import shared_task
