@@ -39,8 +39,10 @@ import {
   List,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { bodyApi, llmRoutingApi } from '@/lib/api'
+import { api, bodyApi, llmRoutingApi, analyticsApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
+import { PanelStatusBanner } from '@/components/PanelStatusBanner'
+import { PanelDebugDrawer } from '@/components/PanelDebugDrawer'
 
 // Sub-tab configuration
 type InfraSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'
@@ -123,6 +125,8 @@ export function InfrastructureTab() {
       {activeSubTab === 'llm' && <LLMRoutingSubTab />}
       {activeSubTab === 'analytics' && <AnalyticsSubTab />}
       {activeSubTab === 'billing' && <BillingSubTab />}
+
+      <PanelDebugDrawer scope="workspace:infra" />
     </div>
   )
 }
@@ -330,11 +334,10 @@ function IntegrationSubTab() {
     queryKey: ['integration-system-health'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/system-health/')
-        if (response.ok) {
-          return response.json()
-        }
-        throw new Error('Failed to fetch')
+        const response = await api.get('/system-health/', {
+          headers: { 'X-UI-Scope': 'workspace:infra' },
+        })
+        return response.data
       } catch {
         return {
           metrics: { agents: 213, spiders: 77, scheduled_tasks: 233 },
@@ -539,11 +542,10 @@ function ServicesSubTab() {
     queryKey: ['services-stats-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/system-health/')
-        if (response.ok) {
-          const data = await response.json()
-          return data.metrics || {}
-        }
+        const response = await api.get('/system-health/', {
+          headers: { 'X-UI-Scope': 'workspace:infra' },
+        })
+        return response.data?.metrics || {}
       } catch {
         // Fallback
       }
@@ -656,10 +658,8 @@ function LLMRoutingSubTab() {
     queryKey: ['llm-providers-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/llm-routing/providers/')
-        if (response.ok) {
-          return response.json()
-        }
+        const response = await llmRoutingApi.providers()
+        return response.data
       } catch {
         // Fallback
       }
@@ -680,10 +680,8 @@ function LLMRoutingSubTab() {
     queryKey: ['llm-models-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/llm-routing/models/')
-        if (response.ok) {
-          return response.json()
-        }
+        const response = await llmRoutingApi.models()
+        return response.data
       } catch {
         // Fallback
       }
@@ -695,10 +693,8 @@ function LLMRoutingSubTab() {
     queryKey: ['llm-agent-configs-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/llm-routing/agent-configs/')
-        if (response.ok) {
-          return response.json()
-        }
+        const response = await llmRoutingApi.agentConfigs()
+        return response.data
       } catch {
         // Fallback
       }
@@ -940,10 +936,8 @@ function AnalyticsSubTab() {
     queryKey: ['analytics-overview-tab'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/analytics/overview/')
-        if (response.ok) {
-          return response.json()
-        }
+        const response = await analyticsApi.overview()
+        return response.data
       } catch {
         // Fallback
       }
@@ -1083,176 +1077,15 @@ function AnalyticsSubTab() {
 // ============ Billing Sub-Tab ============
 
 function BillingSubTab() {
-  const [expandedSection, setExpandedSection] = useState<string | null>(null)
-
-  // Session 860: Disabled - /api/billing/overview/ doesn't exist
-  // TODO: Create billing endpoint or use Stripe billing portal
-  const { data: billingData, refetch, isFetching } = useQuery({
-    queryKey: ['billing-overview-tab'],
-    queryFn: async () => {
-      // Return placeholder data - actual billing comes from Stripe
-      return {
-        current_month: 89.45,
-        previous_month: 156.22,
-        budget: 200,
-        projected: 112.50,
-      }
-    },
-    staleTime: Infinity, // Don't refetch placeholder data
-  })
-
-  const billing = billingData || { current_month: 89.45, previous_month: 156.22, budget: 200, projected: 112.50 }
-  const budgetUsed = (billing.current_month / billing.budget) * 100
-
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section)
-  }
-
   return (
     <div className="space-y-4">
-      <InlineHeaderRow title="Billing & Costs" onRefresh={refetch} isFetching={isFetching} />
+      <InlineHeaderRow title="Billing & Costs" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard
-          label="This Month"
-          value={`$${billing.current_month.toFixed(2)}`}
-          icon={DollarSign}
-          color="text-primary-400"
-          onClick={() => toggleSection('current')}
-          isExpanded={expandedSection === 'current'}
-        />
-        <StatCard
-          label="Last Month"
-          value={`$${billing.previous_month.toFixed(2)}`}
-          icon={Clock}
-          color="text-gray-400"
-          onClick={() => toggleSection('previous')}
-          isExpanded={expandedSection === 'previous'}
-        />
-        <StatCard
-          label="Budget"
-          value={`$${billing.budget}`}
-          icon={Shield}
-          color="text-accent-green"
-          onClick={() => toggleSection('budget')}
-          isExpanded={expandedSection === 'budget'}
-        />
-        <StatCard
-          label="Projected"
-          value={`$${billing.projected.toFixed(2)}`}
-          icon={TrendingUp}
-          color="text-accent-amber"
-          onClick={() => toggleSection('projected')}
-          isExpanded={expandedSection === 'projected'}
-        />
-      </div>
-
-      {/* Expanded Current Month */}
-      {expandedSection === 'current' && (
-        <div className="card">
-          <h4 className="text-sm font-medium text-gray-400 mb-3">This Month Breakdown</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Total Spent</p>
-              <p className="text-xl font-bold">${billing.current_month.toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Budget Remaining</p>
-              <p className="text-xl font-bold text-accent-green">${(billing.budget - billing.current_month).toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Expanded Previous Month */}
-      {expandedSection === 'previous' && (
-        <div className="card">
-          <h4 className="text-sm font-medium text-gray-400 mb-3">Last Month Summary</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Total Spent</p>
-              <p className="text-xl font-bold">${billing.previous_month.toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">vs Current Month</p>
-              <p className={cn('text-xl font-bold', billing.current_month < billing.previous_month ? 'text-accent-green' : 'text-accent-amber')}>
-                {billing.current_month < billing.previous_month ? '-' : '+'}${Math.abs(billing.current_month - billing.previous_month).toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Expanded Budget Details */}
-      {expandedSection === 'budget' && (
-        <div className="card">
-          <h4 className="text-sm font-medium text-gray-400 mb-3">Budget Details</h4>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Monthly Budget</p>
-              <p className="text-xl font-bold">${billing.budget}</p>
-            </div>
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Used</p>
-              <p className="text-xl font-bold">{budgetUsed.toFixed(1)}%</p>
-            </div>
-          </div>
-          <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
-            <div
-              className={cn(
-                'h-full rounded-full',
-                budgetUsed >= 90 ? 'bg-accent-red' :
-                budgetUsed >= 70 ? 'bg-accent-amber' :
-                'bg-accent-green'
-              )}
-              style={{ width: `${Math.min(budgetUsed, 100)}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Expanded Projected */}
-      {expandedSection === 'projected' && (
-        <div className="card">
-          <h4 className="text-sm font-medium text-gray-400 mb-3">Projected Costs</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">End of Month</p>
-              <p className="text-xl font-bold">${billing.projected.toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">vs Budget</p>
-              <p className={cn('text-xl font-bold', billing.projected <= billing.budget ? 'text-accent-green' : 'text-accent-red')}>
-                {billing.projected <= billing.budget ? 'Under' : 'Over'} Budget
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Budget Progress - Show when no section expanded */}
-      {!expandedSection && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-medium text-gray-400">Budget Usage</h4>
-            <span className="text-sm">{budgetUsed.toFixed(1)}% used</span>
-          </div>
-          <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
-            <div
-              className={cn(
-                'h-full rounded-full transition-all',
-                budgetUsed >= 90 ? 'bg-accent-red' :
-                budgetUsed >= 70 ? 'bg-accent-amber' :
-                'bg-accent-green'
-              )}
-              style={{ width: `${Math.min(budgetUsed, 100)}%` }}
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            ${billing.current_month.toFixed(2)} of ${billing.budget} budget used this month
-          </p>
-        </div>
-      )}
+      <PanelStatusBanner
+        status="unwired"
+        message="Billing endpoint not configured. Use Stripe billing portal for cost data."
+        endpoint="/api/billing/overview/"
+      />
     </div>
   )
 }
