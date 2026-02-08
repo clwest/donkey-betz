@@ -979,6 +979,49 @@ def generate_self_blog_api(request):
         }, status=500)
 
 
+@require_http_methods(["POST"])
+def generate_v2_blog_api(request):
+    """
+    Phase 4: Trigger v2 blog generation via deliberation pipeline.
+
+    POST body: same as generate_self_blog_api
+    Returns: {success, task_id, message}
+    """
+    try:
+        import json
+        from core.tasks import generate_self_blog_deliberation_task
+
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            data = {}
+
+        tone = data.get('tone', 'enthusiastic')
+        word_count = data.get('word_count', 1500)
+        topic_category = data.get('topic_category')
+
+        task = generate_self_blog_deliberation_task.delay(
+            tone=tone,
+            word_count=word_count,
+            topic_category=topic_category,
+        )
+
+        logger.info(f"[Phase 4] Deliberation blog task queued: {task.id}")
+
+        return JsonResponse({
+            'success': True,
+            'task_id': str(task.id),
+            'message': 'Deliberation blog generation started',
+        })
+
+    except Exception as e:
+        logger.error(f"[Phase 4] Error triggering deliberation blog: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
 @require_http_methods(["GET"])
 def self_blog_task_status_api(request, task_id):
     """

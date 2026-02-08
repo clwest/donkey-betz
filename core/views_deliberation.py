@@ -7,7 +7,7 @@ doc versions, evidence packs, traces, and replay.
 
 import logging
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 from django.db.models import Count
 
 from core.models_deliberation import (
@@ -281,4 +281,76 @@ def deliberation_replay(request, session_id):
         'contracts': contract_data,
         'trace': s.trace or {},
         'evidence_pack': s.evidence_pack or {},
+    })
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: Blog deliberation detail endpoint
+# ---------------------------------------------------------------------------
+
+@require_GET
+def blog_deliberation_detail(request, blog_id):
+    """
+    GET /api/blog/<uuid>/deliberation/ — Return deliberation replay for a blog.
+
+    Looks up stats_snapshot['deliberation']['session_id'] on SelfBlog,
+    then returns the full replay (turns + evidence + trace) inline.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+        blog = SelfBlog.objects.get(id=blog_id)
+    except Exception:
+        return JsonResponse({'error': 'Blog not found'}, status=404)
+
+    stats = blog.stats_snapshot or {}
+    delib = stats.get('deliberation', {})
+    session_id = delib.get('session_id') if isinstance(delib, dict) else None
+
+    if not session_id:
+        return JsonResponse({
+            'blog_id': str(blog.id),
+            'deliberation': None,
+            'message': 'No deliberation session linked',
+        })
+
+    try:
+        s = DeliberationSession.objects.get(id=session_id)
+    except DeliberationSession.DoesNotExist:
+        return JsonResponse({
+            'blog_id': str(blog.id),
+            'deliberation': None,
+            'message': f'Deliberation session {session_id} not found',
+        })
+
+    turns = DeliberationTurn.objects.filter(session_id=s.id).order_by('turn_number')
+    contracts = ContractRecord.objects.filter(session_id=s.id).order_by('created_at')
+
+    turn_data = [{
+        'turn_number': t.turn_number,
+        'agent_name': t.agent_name,
+        'role': t.role,
+        'content': t.content,
+        'created_at': t.created_at.isoformat() if t.created_at else None,
+    } for t in turns]
+
+    contract_data = [{
+        'contract_type': c.contract_type,
+        'contract_data': c.contract_data,
+        'created_at': c.created_at.isoformat() if c.created_at else None,
+    } for c in contracts]
+
+    return JsonResponse({
+        'blog_id': str(blog.id),
+        'deliberation': {
+            'session_id': str(s.id),
+            'status': s.status,
+            'objective': s.objective,
+            'participants': s.participants,
+            'decision': delib.get('decision'),
+            'review_verdicts': delib.get('review_verdicts', []),
+            'turns': turn_data,
+            'contracts': contract_data,
+            'trace': s.trace or {},
+            'evidence_pack': s.evidence_pack or {},
+        },
     })

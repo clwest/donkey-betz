@@ -20356,6 +20356,106 @@ The blog itself is proof of the capabilities you're describing.
 
 
 # =============================================================================
+# PHASE 4: Content Deliberation Pipeline — v2 blog generation via ClaimsPack
+# =============================================================================
+
+@shared_task(bind=True)
+def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
+    """
+    Phase 4: Generate a blog through the multi-agent deliberation pipeline.
+
+    Same signature as generate_self_blog_task but uses ContentDeliberationRunner
+    for ClaimsPack -> Draft -> 3-reviewer panel -> DecisionEnforcer -> PublishGate.
+
+    Args:
+        tone: Blog tone
+        word_count: Target word count
+        topic_category: Topic source ('trending', 'dreams', 'conversations', 'system', 'random')
+    """
+    import random
+    from datetime import timedelta
+    from django.utils import timezone
+
+    if topic_category is None or topic_category == 'random':
+        topic_category = random.choice(['trending', 'dreams', 'conversations', 'system'])
+
+    logger.info(f"[Phase 4] Starting deliberation blog: tone={tone}, category={topic_category}")
+
+    try:
+        # Reuse topic generation logic from the original task
+        blog_topic = f"AI and technology trends"  # default
+
+        if topic_category == 'trending':
+            try:
+                from core.models_unified_system import SpiderData
+                now = timezone.now()
+                recent = SpiderData.objects.filter(
+                    created_at__gte=now - timedelta(hours=48)
+                ).order_by('-created_at')[:20]
+                for entry in recent:
+                    raw = entry.raw_data
+                    if isinstance(raw, str):
+                        import json
+                        try:
+                            raw = json.loads(raw)
+                        except Exception:
+                            continue
+                    if isinstance(raw, dict):
+                        items = raw.get('items', [])
+                        for item in items:
+                            title = item.get('title', '')
+                            if title and len(title) > 15:
+                                blog_topic = title[:100]
+                                break
+                    if blog_topic != "AI and technology trends":
+                        break
+            except Exception as e:
+                logger.warning(f"[Phase 4] Trending topic fetch failed: {e}")
+
+        elif topic_category == 'system':
+            blog_topic = "How AI agents collaborate, learn, and evolve"
+
+        elif topic_category == 'dreams':
+            try:
+                from core.models_unified_system import AgentDream
+                dream = AgentDream.objects.order_by('-dreamed_at').first()
+                if dream and dream.title:
+                    blog_topic = dream.title[:100]
+            except Exception:
+                pass
+
+        elif topic_category == 'conversations':
+            try:
+                from core.models_unified_system import AgentConversation
+                convo = AgentConversation.objects.order_by('-started_at').first()
+                if convo and convo.topic:
+                    blog_topic = convo.topic[:100]
+            except Exception:
+                pass
+
+        from core.services.content_deliberation_runner import ContentDeliberationRunner
+        runner = ContentDeliberationRunner()
+        result = runner.run_blog(topic=blog_topic, voice=tone)
+
+        logger.info(
+            f"[Phase 4] Deliberation complete: status={result['status']}, "
+            f"decision={result['decision']}, blog={result['selfblog_id']}"
+        )
+        return {
+            'success': result['selfblog_id'] is not None,
+            'blog_id': result['selfblog_id'],
+            'status': result['status'],
+            'decision': result['decision'],
+            'deliberation_session_id': result['deliberation_session_id'],
+            'summary': result['summary'],
+        }
+
+    except Exception as e:
+        logger.error(f"[Phase 4] Deliberation task failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
 # SESSION 544: AUTONOMOUS REASONING ENGINE - THE THINKING LOOP
 # =============================================================================
 
