@@ -752,6 +752,114 @@ def self_blog_by_id_api(request, blog_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def related_self_blogs_api(request, blog_id):
+    """
+    Session 971: Find blogs related to a given blog.
+    Uses 3 signals: same initiative, tag overlap (Jaccard), title keyword overlap.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+        from django.db.models import Q
+
+        limit = int(request.GET.get('limit', 6))
+        source = SelfBlog.objects.filter(id=blog_id).first()
+        if not source:
+            return JsonResponse({'success': False, 'error': 'Blog not found'}, status=404)
+
+        # Stop words for title matching
+        STOP_WORDS = {
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+            'of', 'with', 'by', 'from', 'is', 'it', 'its', 'are', 'was', 'were',
+            'be', 'been', 'has', 'had', 'have', 'how', 'what', 'when', 'where',
+            'who', 'why', 'this', 'that', 'these', 'those', 'not', 'can', 'will',
+            'just', 'more', 'also', 'than', 'into', 'over', 'such', 'our', 'your',
+        }
+
+        import re
+
+        def title_keywords(title):
+            words = re.findall(r'[a-z]+', (title or '').lower())
+            return {w for w in words if len(w) >= 4 and w not in STOP_WORDS}
+
+        scored = {}  # blog_id -> (score, reason, blog)
+
+        # Signal 1: Same initiative (score 1.0)
+        if source.initiative_id:
+            siblings = SelfBlog.objects.filter(
+                initiative_id=source.initiative_id
+            ).exclude(id=blog_id).select_related()[:20]
+            for b in siblings:
+                scored[b.id] = (1.0, 'same_initiative', b)
+
+        # Signal 2: Tag overlap - Jaccard > 0.3 (score = jaccard * 0.8)
+        source_tags = set(source.tags or [])
+        if source_tags:
+            tag_q = Q()
+            for tag in source_tags:
+                tag_q |= Q(tags__contains=[tag])
+            tag_candidates = SelfBlog.objects.filter(
+                tag_q
+            ).exclude(id=blog_id).exclude(id__in=scored.keys())[:50]
+            for b in tag_candidates:
+                b_tags = set(b.tags or [])
+                if b_tags:
+                    intersection = source_tags & b_tags
+                    union = source_tags | b_tags
+                    jaccard = len(intersection) / len(union) if union else 0
+                    if jaccard > 0.3:
+                        scored[b.id] = (jaccard * 0.8, 'tag_overlap', b)
+
+        # Signal 3: Title keyword overlap (score = ratio * 0.5)
+        src_keywords = title_keywords(source.title)
+        if src_keywords:
+            kw_q = Q()
+            for kw in list(src_keywords)[:5]:
+                kw_q |= Q(title__icontains=kw)
+            title_candidates = SelfBlog.objects.filter(
+                kw_q
+            ).exclude(id=blog_id).exclude(id__in=scored.keys())[:50]
+            for b in title_candidates:
+                b_keywords = title_keywords(b.title)
+                if b_keywords:
+                    shared = src_keywords & b_keywords
+                    total = src_keywords | b_keywords
+                    ratio = len(shared) / len(total) if total else 0
+                    if ratio > 0.15:
+                        scored[b.id] = (ratio * 0.5, 'title_keywords', b)
+
+        # Sort by score descending, take top N
+        top = sorted(scored.values(), key=lambda x: x[0], reverse=True)[:limit]
+
+        related = []
+        for score, reason, b in top:
+            related.append({
+                'id': str(b.id),
+                'title': b.title,
+                'category': getattr(b, 'category', 'blog'),
+                'status': getattr(b, 'status', 'draft'),
+                'intro': (b.intro or '')[:200],
+                'tags': b.tags or [],
+                'word_count': b.word_count or 0,
+                'created_at': b.created_at.isoformat(),
+                'quality_score': b.quality_score,
+                'relatedness_score': round(score, 3),
+                'relatedness_reason': reason,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'blog_id': str(blog_id),
+            'blog_title': source.title,
+            'related': related,
+            'count': len(related),
+        })
+
+    except Exception as e:
+        logger.error(f"Error in related_self_blogs_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 @require_http_methods(["DELETE"])
 def delete_self_blog_api(request, blog_id):
     """
