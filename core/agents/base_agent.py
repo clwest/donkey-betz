@@ -226,6 +226,45 @@ class BaseAgent(ABC, TimeTravelMixin):
     enable_prompt_sharpening: bool = True  # Enable decisive language transformation
     sharpening_type: str = 'debate'  # 'debate', 'synthesis', or 'analysis'
 
+    # Session 970: Auto-wrap _execute_tool_call in subclasses with recording
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if '_execute_tool_call' in cls.__dict__:
+            original = cls.__dict__['_execute_tool_call']
+            def _wrapped_execute_tool_call(self, tool_name, arguments, _orig=original):
+                import time as _time
+                _start = _time.time()
+                _success = True
+                _result = None
+                _err_msg = ''
+                _err_type = ''
+                try:
+                    _result = _orig(self, tool_name, arguments)
+                    return _result
+                except Exception as _e:
+                    _success = False
+                    _err_msg = str(_e)
+                    _err_type = type(_e).__name__
+                    _result = {'error': _err_msg, 'error_type': _err_type}
+                    raise
+                finally:
+                    try:
+                        _latency = int((_time.time() - _start) * 1000)
+                        self._record_tool_call(
+                            tool_name=tool_name,
+                            arguments=arguments,
+                            result=_result,
+                            latency_ms=_latency,
+                            success=_success,
+                            error_message=_err_msg,
+                            error_type=_err_type,
+                        )
+                    except Exception:
+                        pass  # Never let recording break agent execution
+            _wrapped_execute_tool_call.__name__ = '_execute_tool_call'
+            _wrapped_execute_tool_call.__doc__ = original.__doc__
+            cls._execute_tool_call = _wrapped_execute_tool_call
+
     def __init__(self, user=None, health_check_mode: bool = False):
         """
         Initialize the agent.
