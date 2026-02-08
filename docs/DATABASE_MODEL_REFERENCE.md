@@ -2,7 +2,7 @@
 
 **Created:** Session 737 (January 9, 2026)
 **Purpose:** Complete reference for all database models
-**Last Updated:** Session 861 (January 28, 2026)
+**Last Updated:** Session 969b (February 8, 2026)
 
 ---
 
@@ -10,10 +10,10 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total Models** | 301+ |
-| **Active Models** (have data) | 174+ |
-| **Empty Models** (0 records) | 127 |
-| **Session 861 Models** | 10 (data persistence) |
+| **Total Models** | 386+ |
+| **Active Models** (have data) | 250+ |
+| **Empty Models** (0 records) | ~136 |
+| **Session 856-969b Models** | 30+ (diagnostic pipeline, signals, deliberation, initiatives, telemetry) |
 
 ---
 
@@ -391,6 +391,37 @@ from core.models_unified_system import (
     AgentLLMConfig,     # Agent configs (75)
     LLMCallLog,         # Call logs (10)
 )
+
+# === ADDED SESSIONS 856-969b ===
+
+# Diagnostic pipeline (Session 856)
+from core.models_diagnostic_pipeline import (
+    FailureSignature,   # Failure grouping by signature
+    FailureDetection,   # Raw failure recording
+    FailureDiagnosis,   # Root cause analysis
+    FailurePrescription,# Fix tracking
+)
+
+# Signal intelligence (Session 900)
+from core.models_signal_intelligence import (
+    SignalCluster,      # Spider signal clusters
+    AutoTopic,          # Auto-generated topics
+)
+
+# Heart/body health
+from core.models_heart import (
+    HeartBeat,          # System heartbeats
+    ComponentStatus,    # Component health
+)
+
+# Initiative pipeline (Session 901-902)
+from core.models_document_registry import (
+    Initiative,         # Strategic projects (52 active)
+    InitiativeActionItem,  # Tracked action items
+)
+
+# Celery results (external)
+from django_celery_results.models import TaskResult
 ```
 
 ---
@@ -473,7 +504,87 @@ SpiderAggregation.objects.filter(aggregation_type='daily_summary').first()
 
 ---
 
-## Empty Models (127 total)
+## Session 856 Models - Diagnostic Pipeline
+
+Failure analysis system: Detection -> Diagnosis -> Prescription. Import from `core.models_diagnostic_pipeline`.
+
+| Purpose | Model | Key Fields | Description |
+|---------|-------|------------|-------------|
+| Failure grouping | `FailureSignature` | `signature`, `category`, `status`, `occurrence_count`, `last_seen_at` | Groups failures by stable signature (e.g., OPENAI_429_QUOTA) |
+| Raw failure recording | `FailureDetection` | `signature` FK, `source_type`, `error_message`, `detected_at` | Phase 1: What happened |
+| Root cause analysis | `FailureDiagnosis` | `signature` 1:1, `root_cause`, `blast_radius`, `evidence_sources` | Phase 2: Why it happened |
+| Fix tracking | `FailurePrescription` | `diagnosis` FK, `scope`, `effort`, `priority_score`, `status` | Phase 3: What to do |
+
+**Key:** `FailureSignature.status` choices: active, known_outage, diagnosed, resolved, ignored. `FailureDetection.source_type` choices: experiment, agent_execution, spider, celery_task, api_call, provider.
+
+---
+
+## Session 900 Models - Signal Intelligence
+
+Signal clustering and auto-topic generation for initiative provenance. Import from `core.models_signal_intelligence`.
+
+| Purpose | Model | Key Fields | Description |
+|---------|-------|------------|-------------|
+| Signal clusters | `SignalCluster` | `detected_at`, `strength`, `confidence`, `novelty`, `status`, `keywords` | Groups spider signals into patterns |
+| Auto-generated topics | `AutoTopic` | `signal_cluster` FK, `topic`, `rationale`, `domain` | Why topics are chosen with rationale |
+
+**Key:** `SignalCluster.status` choices: active, processed, expired. Used by `recent_activity_tool` and signal aggregation service.
+
+---
+
+## Session 901-902 Models - Initiative Pipeline
+
+Initiative priority scoring and action item tracking. Import from `core.models_document_registry`.
+
+| Purpose | Model | Key Fields | Description |
+|---------|-------|------------|-------------|
+| Projects | `Initiative` | `updated_at`, `last_activity_at`, `impact_score`, `urgency`, `confidence`, `revenue_potential`, `status` | Strategic projects from conversations |
+| Action items | `InitiativeActionItem` | `initiative` FK, `status`, `priority`, `due_date`, `assigned_agent` | Tracked next steps from conclusions |
+
+**Key:** `Initiative.status` = 'ACTIVE' for live projects. `InitiativeActionItem.priority` choices: critical, high, medium, low. `InitiativeActionItem.status` choices: pending, in_progress, completed, blocked.
+
+---
+
+## Session 964 Models - Content Deliberation
+
+Multi-agent content review pipeline. No new migrations — uses existing `SelfBlog.stats_snapshot['deliberation']` JSON field.
+
+| Purpose | Model | Key Fields | Description |
+|---------|-------|------------|-------------|
+| Blog posts | `SelfBlog` | `quality_score`, `novelty_score`, `structure_score`, `publish_ready`, `gate_notes`, `tone`, `word_count`, `stats_snapshot` | Self-generated blog posts with deliberation data |
+
+**Key:** `stats_snapshot['deliberation']` contains: `claims_pack` (claim IDs, sources), `reviews` (3 reviewer verdicts), `decision` (PUBLISH/REVISE/KILL), `enforcement` details.
+
+---
+
+## Session 969b - PA Telemetry Tool Queries
+
+The 3 PA live telemetry tools query these models (no new models created):
+
+| Tool | Models Queried |
+|------|---------------|
+| `recent_activity_tool` | `TaskResult` (celery), `SpiderData`, `HiveMindSession`, `SelfBlog`, `Initiative`, `SignalCluster` |
+| `system_health_tool` | `HeartBeat`, `ComponentStatus`, `TaskResult`, `ToolCallAggregate`, `SpiderData` |
+| `error_summary_tool` | `FailureSignature`, `FailureDetection`, `ToolCallRecord`, `TaskResult` |
+
+**Import patterns:**
+```python
+# Diagnostic pipeline
+from core.models_diagnostic_pipeline import FailureSignature, FailureDetection
+
+# Signal intelligence
+from core.models_signal_intelligence import SignalCluster
+
+# Heart/body systems
+from core.models_heart import HeartBeat, ComponentStatus
+
+# Celery results (external)
+from django_celery_results.models import TaskResult
+```
+
+---
+
+## Empty Models (~136 total)
 
 These models exist but have no data yet. They represent features that are:
 - Not yet implemented
