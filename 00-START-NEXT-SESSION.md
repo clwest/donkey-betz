@@ -1,21 +1,41 @@
-# Session 977 - Start Here
+# Session 978 - Start Here
 
-**Previous Session:** 976 (SKIN Layer Gitignore Fix)
+**Previous Session:** 977 (PA Production Timeout Fix)
 **Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **SKIN Layer Output: GITIGNORED**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)**
 
 ---
 
-## Session 976 Summary (Just Completed)
+## Session 977 Summary (Just Completed)
 
-### SKIN Layer Auto-Generated Files — Gitignore Fix
+### PA Production Timeout Fix
 
-Fixed SKIN Layer Celery tasks writing auto-generated files (status reports, blog drafts, summaries) directly into the git repository root. The `_get_workspace_for_skin_layer()` helper now uses the "System Autonomous Workspace" rooted at `generated_content/` (already gitignored) instead of the "Donkey Betz" workspace (project root).
+PA tool-routed queries (initiatives, system health, errors, blogs) were timing out at 280s on Railway production. Fixed three layers:
+
+1. **Queue starvation** — Added dedicated `pa` queue routing + `celery-pa` worker (PRs #1016-1017)
+2. **async_to_sync deadlock** — Replaced with `new_event_loop()` + `run_until_complete()` (PRs #1018-1019)
+3. **Pipeline stalls** — Added 15s enrichment timeout, 60s LLM timeout, reduced reasoning effort + token limits (PR #1020)
+
+**Production results after fix:**
+| Query | Before | After |
+|-------|--------|-------|
+| "hello" | 3s | 3s |
+| "any errors recently?" | 280s+ timeout | 3.4s |
+| "how is the system doing?" | 280s+ timeout | 12.7s |
+| "how is everything?" | 280s+ timeout | 18.2s |
+| "what blogs?" | 280s+ timeout | 46.6s |
+| "show me my initiatives" | 280s+ timeout | 64.0s |
 
 **Changes:**
-- `core/tasks.py` — Rewrote `_get_workspace_for_skin_layer()` to prefer "System Autonomous Workspace" at `generated_content/`, with fallback creation
-- `.gitignore` — Added `/reports/`, `/summaries/`, `/content/blog_*.md` as safety net
-- Removed 59 auto-generated files from git tracking via `git rm --cached` (files remain on disk)
+- `core/settings.py` — PA queue routing in `CELERY_TASK_ROUTES`
+- `Procfile` — `celery-pa` worker + `pa` added to `celery-worker` queues
+- `Makefile` — `pa` queue added to local dev worker
+- `core/tasks.py` — `process_pa_chat_task` uses `new_event_loop()` instead of `async_to_sync`
+- `core/services/unified_pa_entrypoint.py` — 15s enrichment timeout, 60s LLM timeout, task_type "analysis"→"conversation", max_tokens 8000→4000, step-level timing logs
+
+### Session 976 Summary (Prior)
+
+SKIN Layer Gitignore Fix — Redirected auto-generated files to `generated_content/`, removed 59 files from git tracking.
 
 ### Session 975 Summary (Prior)
 
