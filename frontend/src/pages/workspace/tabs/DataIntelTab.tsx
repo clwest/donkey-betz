@@ -1,8 +1,8 @@
 /**
  * Session 971b: Data & Intel Tab — merged view of DataSources + Intelligence.
  *
- * Adapter that delegates to existing tab components via a unified sub-tab nav.
- * No content was moved — the original components render as-is.
+ * B1: Adapter delegating to original tab components (double nav).
+ * B3: Now passes controlledSubTab to suppress inner nav — single unified nav.
  */
 
 import { useState } from 'react'
@@ -72,9 +72,9 @@ export function DataIntelTab({ initialSubTab }: DataIntelTabProps) {
         ))}
       </div>
 
-      {/* Delegate to original components */}
-      {delegate === 'data' && <DataSourcesTab />}
-      {delegate === 'intel' && <IntelligenceTab />}
+      {/* Session 971b B3: controlledSubTab suppresses inner nav — single nav level */}
+      {delegate === 'data' && <DataSourcesTab controlledSubTab={activeSubTab} />}
+      {delegate === 'intel' && <IntelligenceTab controlledSubTab={activeSubTab} />}
     </div>
   )
 }

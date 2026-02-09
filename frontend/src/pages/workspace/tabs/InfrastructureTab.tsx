@@ -94,29 +94,37 @@ function getStatusIcon(status: string) {
   return XCircle
 }
 
-export function InfrastructureTab() {
-  const [activeSubTab, setActiveSubTab] = useState<InfraSubTab>('health')
+// Session 971b B3: controlledSubTab prop lets SystemTab drive navigation externally
+interface InfrastructureTabProps {
+  controlledSubTab?: string
+}
+
+export function InfrastructureTab({ controlledSubTab }: InfrastructureTabProps) {
+  const [internalSubTab, setInternalSubTab] = useState<InfraSubTab>('health')
+  const activeSubTab = (controlledSubTab as InfraSubTab) || internalSubTab
 
   return (
     <div className="space-y-4">
-      {/* Sub-tab Navigation */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {subTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveSubTab(tab.id)}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors',
-              activeSubTab === tab.id
-                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
-            )}
-          >
-            <tab.icon size={14} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Sub-tab Navigation — hidden when parent controls the sub-tab */}
+      {!controlledSubTab && (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {subTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setInternalSubTab(tab.id)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors',
+                activeSubTab === tab.id
+                  ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                  : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+              )}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Sub-tab Content */}
       {activeSubTab === 'health' && <BodyHealthSubTab />}

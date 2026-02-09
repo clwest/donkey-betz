@@ -40,29 +40,37 @@ const subTabs: Array<{ id: DataSubTab; label: string; icon: typeof Globe; descri
   { id: 'learning', label: 'Learning', icon: GraduationCap, description: 'Agent learning patterns' },
 ]
 
-export function DataSourcesTab() {
-  const [activeSubTab, setActiveSubTab] = useState<DataSubTab>('spiders')
+// Session 971b B3: controlledSubTab prop lets DataIntelTab drive navigation externally
+interface DataSourcesTabProps {
+  controlledSubTab?: string
+}
+
+export function DataSourcesTab({ controlledSubTab }: DataSourcesTabProps) {
+  const [internalSubTab, setInternalSubTab] = useState<DataSubTab>('spiders')
+  const activeSubTab = (controlledSubTab as DataSubTab) || internalSubTab
 
   return (
     <div className="space-y-4">
-      {/* Sub-tab Navigation */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {subTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveSubTab(tab.id)}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors',
-              activeSubTab === tab.id
-                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
-            )}
-          >
-            <tab.icon size={14} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Sub-tab Navigation — hidden when parent controls the sub-tab */}
+      {!controlledSubTab && (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {subTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setInternalSubTab(tab.id)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors',
+                activeSubTab === tab.id
+                  ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                  : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+              )}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Sub-tab Content */}
       {activeSubTab === 'spiders' && <SpidersSubTab />}
