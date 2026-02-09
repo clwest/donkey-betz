@@ -1494,23 +1494,25 @@ CELERY_BEAT_SCHEDULE = {
     # =========================================================================
     # Session 941: Boardroom Maintenance
     # =========================================================================
-    # Clean up junk items (spider_action, [Learned] items)
+    # Session 977: Tightened schedules — run every 4h to keep pace with spider ingestion
+    # Clean up junk items (spider_action >6h, arbitrage >12h, [Learned] items)
     'cleanup-boardroom-junk': {
         'task': 'core.tasks.cleanup_boardroom_junk',
-        'schedule': crontab(hour='*/6', minute=15),  # Every 6 hours at :15
+        'schedule': crontab(hour='*/4', minute=15),  # Every 4 hours at :15
     },
-    # Auto-approve low-risk items (insights, non-critical reviews, experiments, pipelines)
+    # Auto-approve low-risk items (insights, reviews, opportunities, spider low/med,
+    # experiments, pipelines, research, guidelines)
     'auto-approve-boardroom-items': {
         'task': 'core.tasks.auto_approve_boardroom_items',
-        'schedule': crontab(hour='*/6', minute=30),  # Every 6 hours at :30
+        'schedule': crontab(hour='*/4', minute=30),  # Every 4 hours at :30
     },
     # =========================================================================
-    # Session 971: Expired Boardroom Cleanup
+    # Session 971/977: Expired Boardroom Cleanup
     # =========================================================================
-    # Delete expired items and stale pending items (>30 days) to prevent indefinite accumulation
+    # Delete expired items, stale pending (>7d), stale drafts (>14d)
     'cleanup-expired-boardroom-items': {
         'task': 'core.tasks.cleanup_expired_boardroom_items',
-        'schedule': crontab(hour='*/12', minute=45),  # Every 12 hours at :45
+        'schedule': crontab(hour='*/6', minute=45),  # Every 6 hours at :45
     },
     # =========================================================================
     # Session 942: Experiment Cleanup
