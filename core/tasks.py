@@ -396,17 +396,18 @@ def run_learning_loop_cycle(lookback_days: int = 7):
 
 
 @shared_task
-def cleanup_boardroom_junk(spider_action_hours: int = 24):
+def cleanup_boardroom_junk(spider_action_hours: int = 6):
     """
-    Session 927: Clean up boardroom junk to prevent backlog accumulation.
+    Session 927/977: Clean up boardroom junk to prevent backlog accumulation.
 
     DELETES:
-    - spider_action items older than X hours (just news headlines)
+    - spider_action items older than 6h (news headlines go stale fast)
+    - arbitrage items older than 12h (time-sensitive, useless if old)
     - Items with [Learned] in title (auto-generated junk)
     - Draft decisions with [Learned] in topic
 
     Args:
-        spider_action_hours: Delete spider_action items older than this
+        spider_action_hours: Delete spider_action items older than this (default 6h)
 
     Returns:
         Dict with cleanup statistics
@@ -421,14 +422,17 @@ def cleanup_boardroom_junk(spider_action_hours: int = 24):
     try:
         now = timezone.now()
         spider_cutoff = now - timedelta(hours=spider_action_hours)
+        arbitrage_cutoff = now - timedelta(hours=12)
 
         stats = {
             'spider_actions_deleted': 0,
+            'arbitrage_deleted': 0,
             'learned_attention_deleted': 0,
             'learned_decisions_deleted': 0,
         }
 
         # 1. Delete old spider_action items (pending only, they're just news)
+        # Session 977: Reduced from 24h to 6h — headlines go stale quickly
         spider_deleted = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='spider_action',
@@ -436,14 +440,22 @@ def cleanup_boardroom_junk(spider_action_hours: int = 24):
         ).delete()
         stats['spider_actions_deleted'] = spider_deleted[0]
 
-        # 2. Delete [Learned] junk from HumanAttentionItem
+        # 2. Session 977: Delete old arbitrage items (time-sensitive, useless after 12h)
+        arb_deleted = HumanAttentionItem.objects.filter(
+            status='pending',
+            item_type='arbitrage',
+            created_at__lt=arbitrage_cutoff
+        ).delete()
+        stats['arbitrage_deleted'] = arb_deleted[0]
+
+        # 3. Delete [Learned] junk from HumanAttentionItem
         learned_hai = HumanAttentionItem.objects.filter(
             status='pending',
             title__icontains='[Learned]'
         ).delete()
         stats['learned_attention_deleted'] = learned_hai[0]
 
-        # 3. Delete [Learned] junk from AgentDecisionSummary (draft only)
+        # 4. Delete [Learned] junk from AgentDecisionSummary (draft only)
         learned_decisions = AgentDecisionSummary.objects.filter(
             status='draft',
             topic__icontains='[Learned]'
@@ -453,6 +465,7 @@ def cleanup_boardroom_junk(spider_action_hours: int = 24):
         total = sum(stats.values())
         logger.info(f"🧹 [BOARDROOM-CLEANUP] Complete - deleted {total} items "
                    f"(spider: {stats['spider_actions_deleted']}, "
+                   f"arbitrage: {stats['arbitrage_deleted']}, "
                    f"learned_attention: {stats['learned_attention_deleted']}, "
                    f"learned_decisions: {stats['learned_decisions_deleted']})")
 
@@ -466,15 +479,19 @@ def cleanup_boardroom_junk(spider_action_hours: int = 24):
 @shared_task
 def auto_approve_boardroom_items():
     """
-    Session 941: Auto-approve low-risk boardroom items to prevent backlog.
+    Session 941/977: Auto-approve low-risk boardroom items to prevent backlog.
 
     AUTO-APPROVES (HumanAttentionItem):
     - insight items (informational only)
     - review items with non-critical urgency
+    - opportunity items with non-critical urgency
+    - spider_action items with low/medium urgency (bulk noise)
 
     AUTO-PROMOTES (AgentDecisionSummary):
     - experiment decisions
     - pipeline decisions
+    - research decisions (informational, low risk)
+    - guideline decisions (advisory, low risk)
 
     Returns:
         Dict with auto-approve statistics
@@ -490,12 +507,15 @@ def auto_approve_boardroom_items():
         stats = {
             'insights_approved': 0,
             'reviews_approved': 0,
+            'opportunities_approved': 0,
+            'spider_actions_approved': 0,
             'experiments_promoted': 0,
             'pipelines_promoted': 0,
+            'research_promoted': 0,
+            'guidelines_promoted': 0,
         }
 
         # 1. Auto-approve insight items (informational)
-        # Session 971: Fixed status='approved' -> 'acted' (valid model status)
         insights = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='insight'
@@ -509,24 +529,56 @@ def auto_approve_boardroom_items():
         ).exclude(urgency='critical')
         stats['reviews_approved'] = reviews.update(status='acted', handled_at=now)
 
-        # 3. Auto-promote experiment decisions
+        # 3. Session 977: Auto-approve non-critical opportunity items
+        opportunities = HumanAttentionItem.objects.filter(
+            status='pending',
+            item_type='opportunity'
+        ).exclude(urgency='critical')
+        stats['opportunities_approved'] = opportunities.update(status='acted', handled_at=now)
+
+        # 4. Session 977: Auto-approve low/medium urgency spider_action items
+        # (high/critical spider_actions still need human review)
+        spider_low = HumanAttentionItem.objects.filter(
+            status='pending',
+            item_type='spider_action',
+            urgency__in=['low', 'medium']
+        )
+        stats['spider_actions_approved'] = spider_low.update(status='acted', handled_at=now)
+
+        # 5. Auto-promote experiment decisions
         stats['experiments_promoted'] = AgentDecisionSummary.objects.filter(
             status='draft',
             decision_type='experiment'
         ).update(status='canonical')
 
-        # 4. Auto-promote pipeline decisions
+        # 6. Auto-promote pipeline decisions
         stats['pipelines_promoted'] = AgentDecisionSummary.objects.filter(
             status='draft',
             decision_type='pipeline'
+        ).update(status='canonical')
+
+        # 7. Session 977: Auto-promote research decisions (informational)
+        stats['research_promoted'] = AgentDecisionSummary.objects.filter(
+            status='draft',
+            decision_type='research'
+        ).update(status='canonical')
+
+        # 8. Session 977: Auto-promote guideline decisions (advisory)
+        stats['guidelines_promoted'] = AgentDecisionSummary.objects.filter(
+            status='draft',
+            decision_type='guideline'
         ).update(status='canonical')
 
         total = sum(stats.values())
         logger.info(f"✅ [BOARDROOM-AUTO-APPROVE] Complete - processed {total} items "
                    f"(insights: {stats['insights_approved']}, "
                    f"reviews: {stats['reviews_approved']}, "
+                   f"opportunities: {stats['opportunities_approved']}, "
+                   f"spider_actions: {stats['spider_actions_approved']}, "
                    f"experiments: {stats['experiments_promoted']}, "
-                   f"pipelines: {stats['pipelines_promoted']})")
+                   f"pipelines: {stats['pipelines_promoted']}, "
+                   f"research: {stats['research_promoted']}, "
+                   f"guidelines: {stats['guidelines_promoted']})")
 
         return stats
 
@@ -538,14 +590,15 @@ def auto_approve_boardroom_items():
 @shared_task
 def cleanup_expired_boardroom_items(days_old: int = 7):
     """
-    Session 971: Delete expired boardroom items that have been sitting around.
-    Items with status='expired' are already past their useful life —
-    this removes them to prevent indefinite accumulation.
-    Also deletes very old pending items (>30 days) that were never triaged.
+    Session 971/977: Delete expired and stale boardroom items.
+    Items with status='expired' are past their useful life.
+    Pending items older than 7 days were never triaged = stale.
+    Stale draft decisions older than 14 days are also cleaned up.
     """
     from django.utils import timezone
     from datetime import timedelta
     from core.models_human_interface import HumanAttentionItem
+    from core.models_unified_system import AgentDecisionSummary
 
     logger.info("🗑️ [BOARDROOM-EXPIRED-CLEANUP] Starting expired item cleanup...")
 
@@ -554,24 +607,36 @@ def cleanup_expired_boardroom_items(days_old: int = 7):
         stats = {
             'expired_deleted': 0,
             'stale_pending_deleted': 0,
+            'stale_drafts_deleted': 0,
         }
 
         # 1. Delete all items with status='expired'
         expired = HumanAttentionItem.objects.filter(status='expired')
         stats['expired_deleted'] = expired.delete()[0]
 
-        # 2. Delete pending items older than 30 days (never triaged = stale)
-        stale_cutoff = now - timedelta(days=30)
+        # 2. Session 977: Delete pending items older than 7 days (was 30 days)
+        # If nobody triaged it in a week, it's stale
+        stale_cutoff = now - timedelta(days=7)
         stale = HumanAttentionItem.objects.filter(
             status='pending',
             created_at__lt=stale_cutoff
         )
         stats['stale_pending_deleted'] = stale.delete()[0]
 
+        # 3. Session 977: Delete draft decisions older than 14 days
+        # Product/architecture drafts that sit for 2 weeks are abandoned
+        draft_cutoff = now - timedelta(days=14)
+        stale_drafts = AgentDecisionSummary.objects.filter(
+            status='draft',
+            created_at__lt=draft_cutoff
+        )
+        stats['stale_drafts_deleted'] = stale_drafts.delete()[0]
+
         total = sum(stats.values())
         logger.info(f"🗑️ [BOARDROOM-EXPIRED-CLEANUP] Complete - deleted {total} items "
                    f"(expired: {stats['expired_deleted']}, "
-                   f"stale_pending: {stats['stale_pending_deleted']})")
+                   f"stale_pending: {stats['stale_pending_deleted']}, "
+                   f"stale_drafts: {stats['stale_drafts_deleted']})")
 
         return stats
 
