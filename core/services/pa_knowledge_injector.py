@@ -85,6 +85,18 @@ class PAKnowledgeInjector:
         'code fixes', 'automated fixes', 'what needs fixing'
     ]
 
+    # Session 972: Workspace/UI/feature awareness
+    WORKSPACE_TRIGGERS = [
+        'workspace', 'tab', 'tabs', 'page', 'pages', 'feature', 'features',
+        'mythology lab', 'mythology', 'docs index', 'documentation index',
+        'neural orchestra', 'advisors page', 'conversation contract', 'billing page',
+        'analytics dashboard', 'blog viewer', 'command center', 'initiatives tab',
+        'boardroom', 'content studio', 'system tab', 'operations tab',
+        'data & intel', 'dataintel', 'knowledge tab', 'learning tab',
+        'what is the', 'tell me about the', 'how do i use the', 'where is the',
+        'where can i find', 'navigate to', 'how to access',
+    ]
+
     # Cache settings
     CACHE_TTL_SECONDS = 60  # 1 minute cache for body health
     AGENT_ACTIVITY_CACHE_TTL = 300  # 5 minutes for agent stats
@@ -115,6 +127,7 @@ class PAKnowledgeInjector:
             'needs_body_systems': self._matches_trigger(query, self.BODY_SYSTEM_TRIGGERS),
             'needs_session': self._matches_trigger(query, self.SESSION_TRIGGERS),
             'needs_remediation': self._matches_trigger(query, self.REMEDIATION_TRIGGERS),
+            'needs_workspace': self._matches_trigger(query, self.WORKSPACE_TRIGGERS),
         }
 
     def _get_body_health_summary(self) -> Dict[str, Any]:
@@ -437,6 +450,108 @@ class PAKnowledgeInjector:
                 'error': str(e)
             }
 
+    def _get_workspace_knowledge(self) -> Dict[str, Any]:
+        """
+        Session 972: Get workspace tabs and standalone pages knowledge.
+
+        Returns hardcoded dict describing all 9 workspace tabs and 8 standalone pages
+        so the PA can accurately describe any platform feature.
+        """
+        return {
+            'workspace_tabs': [
+                {
+                    'name': 'Command Center',
+                    'route': '/',
+                    'description': 'AI chat interface with NowHub (Attention Queue, Active Work, System Pulse), natural language command routing',
+                },
+                {
+                    'name': 'Initiatives',
+                    'route': '/workspace?tab=initiatives',
+                    'description': 'Strategic project management with 5-stage pipeline (Research, Analysis, Strategy, Execution, Review), action items, signal intelligence, priority scoring',
+                },
+                {
+                    'name': 'Boardroom',
+                    'route': '/workspace?tab=boardroom',
+                    'description': 'Decision tracking, self-healing remediation, governance, human attention queue',
+                },
+                {
+                    'name': 'Content Studio',
+                    'route': '/workspace?tab=content',
+                    'description': 'Content creation and management hub',
+                    'sub_tabs': 'Gallery, Channels, Blogs, Podcast, Distribution, Dossiers, Voices, Files',
+                },
+                {
+                    'name': 'System',
+                    'route': '/workspace?tab=system',
+                    'description': 'Infrastructure monitoring and agent orchestration',
+                    'sub_tabs': 'Health, Services, LLM, Integration, Monitor, Workflows, HiveMind, Triggers',
+                },
+                {
+                    'name': 'Operations',
+                    'route': '/workspace?tab=operations',
+                    'description': 'Agent execution history, deliverables, report provenance, PDF export',
+                },
+                {
+                    'name': 'Data & Intel',
+                    'route': '/workspace?tab=dataintel',
+                    'description': 'Data sources and intelligence analysis',
+                    'sub_tabs': 'Spiders, Feed, Learning, Reasoning, Safety, Collective',
+                },
+                {
+                    'name': 'Knowledge',
+                    'route': '/workspace?tab=knowledge',
+                    'description': 'Documents, playbooks, audit dashboard, RAG observability',
+                },
+                {
+                    'name': 'Learning',
+                    'route': '/workspace?tab=learning',
+                    'description': 'Learning journeys, achievements, AI learning effectiveness tracking',
+                },
+            ],
+            'standalone_pages': [
+                {
+                    'name': 'Mythology Lab',
+                    'route': '/mythology-lab',
+                    'description': 'Hallucination detection and prevention — reviews flagged AI outputs, manages quarantine, tracks mutation patterns',
+                },
+                {
+                    'name': 'Advisors',
+                    'route': '/advisors',
+                    'description': '25 legendary advisor consultations across finance, tech, leadership (Buffett, Musk, etc.)',
+                },
+                {
+                    'name': 'Neural Orchestra',
+                    'route': '/neural-orchestra',
+                    'description': 'AI consciousness visualization — agent collaborations, learning insights, ecosystem feed',
+                },
+                {
+                    'name': 'Conversation Contract',
+                    'route': '/conversation-contract',
+                    'description': 'Quality analytics for agent conversations, compliance metrics',
+                },
+                {
+                    'name': 'Docs Index',
+                    'route': '/docs-index',
+                    'description': 'Documentation browser — 1700+ docs, status badges, cross-references, search',
+                },
+                {
+                    'name': 'Billing',
+                    'route': '/billing',
+                    'description': 'Stripe subscription management, payment methods, billing history',
+                },
+                {
+                    'name': 'Analytics',
+                    'route': '/analytics',
+                    'description': 'System-wide performance charts, top performers, anomaly detection',
+                },
+                {
+                    'name': 'Blog Viewer',
+                    'route': '/blog/{id}',
+                    'description': 'Blog display with quality metrics, approve/publish actions, related posts',
+                },
+            ],
+        }
+
     def get_context_for_query(self, query: str) -> Dict[str, Any]:
         """
         Main method: Get dynamic context based on query needs.
@@ -518,6 +633,10 @@ class PAKnowledgeInjector:
 
         if triggers['needs_remediation']:
             context['remediation_info'] = self._get_remediation_summary()
+
+        # Session 972: Workspace/UI knowledge
+        if triggers['needs_workspace']:
+            context['workspace_info'] = self._get_workspace_knowledge()
 
         logger.info(
             f"🧠 [Session 773/829] PA Knowledge injected: "
@@ -640,6 +759,20 @@ class PAKnowledgeInjector:
                 if rem.get('top_agents'):
                     agent_list = ", ".join([f"{a['agent']}({a['tasks']})" for a in rem['top_agents'][:3]])
                     parts.append(f"Top Agents: {agent_list}")
+
+        # Session 972: Workspace/UI knowledge section
+        if 'workspace_info' in context:
+            ws = context['workspace_info']
+            parts.append("\n### Platform Navigation & Features")
+            parts.append("\n**Workspace Tabs (9):**")
+            for tab in ws.get('workspace_tabs', []):
+                line = f"- **{tab['name']}** (`{tab['route']}`) — {tab['description']}"
+                if tab.get('sub_tabs'):
+                    line += f" | Sub-tabs: {tab['sub_tabs']}"
+                parts.append(line)
+            parts.append("\n**Standalone Pages (8):**")
+            for page in ws.get('standalone_pages', []):
+                parts.append(f"- **{page['name']}** (`{page['route']}`) — {page['description']}")
 
         return "\n".join(parts)
 
