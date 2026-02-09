@@ -4411,6 +4411,15 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 971b: Page-View Telemetry
+# =========================================================================
+from core.views_telemetry import page_view_api
+
+urlpatterns += [
+    path('api/v1/telemetry/page-view/', page_view_api, name='telemetry-page-view'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

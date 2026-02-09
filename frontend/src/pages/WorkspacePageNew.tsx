@@ -69,6 +69,7 @@ import {
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
+import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'  // Session 971b: Tab telemetry
 
 // Tab groups - 18 tabs in 5 logical clusters
 const tabGroups = [
@@ -663,6 +664,9 @@ export default function WorkspacePage() {
   const validTabs = allTabs.map(t => t.id)
   const initialTab = urlTab && validTabs.includes(urlTab) ? urlTab : 'command'
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab)
+
+  // Session 971b: Track workspace tab changes for telemetry
+  useWorkspaceTabTracking(activeTab)
 
   // Session 948: Sync URL when tab changes
   const handleTabChange = (tab: WorkspaceTab) => {
