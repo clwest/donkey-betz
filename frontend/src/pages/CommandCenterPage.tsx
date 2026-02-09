@@ -15,6 +15,8 @@ import {
 } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
+import { usePAStore } from '@/stores/paStore'
+import PAConversationSidebar from '@/components/PAConversationSidebar'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw, Activity,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
@@ -24,6 +26,7 @@ import {
   Volume2, VolumeX, Settings, Moon, Eye, Pause, Sliders,
   Bug, AlertTriangle, Wrench, ChevronDown, ChevronUp,
   ExternalLink, Workflow, Database, Sparkles as SparklesIcon,
+  PanelLeftClose, PanelLeftOpen, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -408,8 +411,24 @@ export default function CommandCenterPage() {
   const [searchParams] = useSearchParams()
   const initialMessage = searchParams.get('message') || ''
 
+  // Session 974: Shared PA store for conversation persistence
+  const paMessages = usePAStore((s) => s.messages)
+  const addPAMessage = usePAStore((s) => s.addMessage)
+  const clearPAMessages = usePAStore((s) => s.clearMessages)
+  const activeConversationId = usePAStore((s) => s.activeConversationId)
+  const setActiveConversationId = usePAStore((s) => s.setActiveConversationId)
+  const isChatSidebarOpen = usePAStore((s) => s.isSidebarOpen)
+  const toggleChatSidebar = usePAStore((s) => s.toggleSidebar)
+  const startNewConversation = usePAStore((s) => s.startNewConversation)
+  const fetchConversations = usePAStore((s) => s.fetchConversations)
+
+  // Adapt store messages to local Message type (timestamps are ISO strings in store)
+  const messages: Message[] = paMessages.map((m) => ({
+    ...m,
+    timestamp: new Date(m.timestamp),
+  }))
+
   // Chat state
-  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState(initialMessage)
   const [isRecording, setIsRecording] = useState(false)
   const [actionResult, setActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -559,34 +578,38 @@ export default function CommandCenterPage() {
   // Mutations
   // ============================================================================
 
-  // Chat
+  // Chat — Session 974: Use paChat with conversation_id for persistence
   const chatMutation = useMutation({
-    mutationFn: (message: string) => assistantApi.chat(message, { use_personal_assistant: true }),
+    mutationFn: (message: string) =>
+      assistantApi.paChat(message, { conversation_id: activeConversationId || undefined }),
     onSuccess: (response) => {
-      const rawContent = response.data.response || response.data.message || 'No response'
-      const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      const content = response.data.content || 'No response'
+      const toolNames = (response.data.tool_runs || []).map((r) => r.tool)
+      addPAMessage({
         role: 'assistant',
         content,
-        timestamp: new Date(),
-        tools_used: response.data.tools_used || [],
+        tools_used: toolNames,
+      })
+
+      // Track conversation_id from backend
+      if (response.data.conversation_id && !activeConversationId) {
+        setActiveConversationId(response.data.conversation_id)
       }
-      setMessages((prev) => [...prev, assistantMessage])
+
+      // Refresh conversation list after new message
+      fetchConversations()
 
       if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
-        setSpeakingMessageId(assistantMessage.id)
+        const msgId = Date.now().toString()
+        setSpeakingMessageId(msgId)
         ttsMutation.mutate(content)
       }
     },
     onError: () => {
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      addPAMessage({
         role: 'assistant',
         content: 'Sorry, there was an error processing your request. Please try again.',
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      })
     },
   })
 
@@ -611,30 +634,21 @@ export default function CommandCenterPage() {
     onSuccess: (response) => {
       const userText = response.data.user_text
       if (userText) {
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          role: 'user',
-          content: userText,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, userMessage])
+        addPAMessage({ role: 'user', content: userText })
       }
 
       const assistantResponse = response.data.assistant_message
       if (assistantResponse) {
         const rawContent = assistantResponse.response || assistantResponse.message || 'No response'
         const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+        addPAMessage({
           role: 'assistant',
           content,
-          timestamp: new Date(),
           tools_used: assistantResponse.tools_used || [],
-        }
-        setMessages((prev) => [...prev, assistantMessage])
+        })
 
         if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
-          speakMessage(assistantMessage.id, content)
+          speakMessage(Date.now().toString(), content)
         }
       }
     },
@@ -664,24 +678,22 @@ export default function CommandCenterPage() {
   })
 
   // Feedback
+  const updateMessageFeedback = usePAStore((s) => s.updateMessageFeedback)
   const feedbackMutation = useMutation({
     mutationFn: ({ messageId, rating }: { messageId: string; rating: 'positive' | 'negative' }) =>
       assistantApi.feedback(messageId, rating),
     onSuccess: (_, variables) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === variables.messageId ? { ...msg, feedback: variables.rating } : msg
-        )
-      )
+      updateMessageFeedback(variables.messageId, variables.rating)
       setActionResult({ type: 'success', message: 'Feedback recorded!' })
     },
   })
 
-  // Reset chat
+  // Reset chat — Session 974: Clears store + starts new conversation
   const resetMutation = useMutation({
     mutationFn: () => assistantApi.reset(),
     onSuccess: () => {
-      setMessages([])
+      clearPAMessages()
+      startNewConversation()
       setActionResult({ type: 'success', message: 'Conversation cleared' })
       queryClient.invalidateQueries({ queryKey: ['assistant-learning'] })
     },
@@ -768,17 +780,10 @@ export default function CommandCenterPage() {
     const text = messageText || input
     if (!text.trim() || chatMutation.isPending) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: text,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
+    addPAMessage({ role: 'user', content: text })
     setInput('')
     chatMutation.mutate(text)
-  }, [input, chatMutation])
+  }, [input, chatMutation, addPAMessage])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -856,7 +861,7 @@ export default function CommandCenterPage() {
   const regenerateResponse = (messageIndex: number) => {
     const userMessage = messages[messageIndex - 1]
     if (userMessage && userMessage.role === 'user') {
-      setMessages((prev) => prev.slice(0, messageIndex))
+      // Can't slice store messages directly, so just re-send
       chatMutation.mutate(userMessage.content)
     }
   }
@@ -887,11 +892,23 @@ export default function CommandCenterPage() {
       />
 
       <div className="flex flex-1 gap-4 overflow-hidden">
+        {/* Session 974: Conversation Sidebar */}
+        {isChatSidebarOpen && (
+          <PAConversationSidebar variant="panel" />
+        )}
+
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Chat Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
+              <button
+                onClick={toggleChatSidebar}
+                className="p-1.5 rounded-md hover:bg-dark-border text-gray-400 hover:text-white transition-colors"
+                title={isChatSidebarOpen ? 'Hide conversations' : 'Show conversations'}
+              >
+                {isChatSidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+              </button>
               <div className="h-9 w-9 rounded-lg bg-primary-600/20 flex items-center justify-center">
                 <Bot size={18} className="text-primary-400" />
               </div>
@@ -901,6 +918,15 @@ export default function CommandCenterPage() {
               </div>
             </div>
             <div className="flex gap-2">
+              {/* Session 974: New Chat */}
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => startNewConversation()}
+                title="New Chat"
+              >
+                <Plus size={14} />
+              </button>
+
               {/* Voice Settings */}
               <div className="relative">
                 <button

@@ -7,9 +7,12 @@ between REST and WebSocket endpoints.
 """
 
 import logging
+import time
+import uuid
 import asyncio
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
+from django.db.models import Max, Count
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -205,6 +208,7 @@ def unified_pa_chat(request):
         message = request.data.get('message', '').strip()
         context = request.data.get('context', {})
         generate_audio = request.data.get('generate_audio', False)
+        conversation_id = request.data.get('conversation_id')
 
         if not message:
             return Response({'error': 'Message is required'}, status=400)
@@ -212,11 +216,46 @@ def unified_pa_chat(request):
         pa = get_unified_pa(request.user)
 
         # Run async method in sync context
+        start_ms = time.time()
         response = async_to_sync(pa.process_message)(
             message=message,
             context=context,
             generate_audio=generate_audio
         )
+        elapsed_ms = int((time.time() - start_ms) * 1000)
+
+        # Session 974: Persist conversation to ChatConversation
+        try:
+            from core.models import ChatConversation
+
+            if not conversation_id:
+                conversation_id, _ = ChatConversation.get_or_create_session(
+                    user=request.user, platform='web'
+                )
+
+            is_first = not ChatConversation.objects.filter(
+                conversation_id=conversation_id
+            ).exists()
+
+            chat_row = ChatConversation.objects.create(
+                user=request.user,
+                conversation_id=conversation_id,
+                user_message=message,
+                assistant_response=response.content or '',
+                platform='web',
+                metadata={
+                    'trace_id': response.trace_id,
+                    'intent': response.intent,
+                    'routed_to': response.routed_to,
+                },
+                response_time_ms=response.latency_ms or elapsed_ms,
+                agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],
+            )
+
+            if is_first:
+                chat_row.generate_session_title()
+        except Exception as persist_err:
+            logger.warning(f"Failed to persist PA conversation: {persist_err}")
 
         return Response({
             'success': True,
@@ -229,6 +268,7 @@ def unified_pa_chat(request):
             'profile_completeness': response.profile_completeness,
             'latency_ms': response.latency_ms,
             'error': response.error,
+            'conversation_id': conversation_id,
         })
 
     except Exception as e:
@@ -890,4 +930,143 @@ def get_attention_stats(request):
         return Response({
             'success': False,
             'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# SESSION 974: PA CONVERSATION HISTORY ENDPOINTS
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_pa_conversations(request):
+    """
+    Session 974: List PA conversations for the current user.
+
+    Returns distinct conversation sessions with title, message count,
+    last message timestamp, and a preview of the first message.
+    """
+    try:
+        from core.models import ChatConversation
+
+        conversations = (
+            ChatConversation.objects
+            .filter(user=request.user, platform='web')
+            .values('conversation_id')
+            .annotate(
+                message_count=Count('id'),
+                last_message_at=Max('created_at'),
+            )
+            .order_by('-last_message_at')[:50]
+        )
+
+        results = []
+        for conv in conversations:
+            first_row = ChatConversation.objects.filter(
+                conversation_id=conv['conversation_id']
+            ).order_by('created_at').first()
+
+            results.append({
+                'conversation_id': conv['conversation_id'],
+                'title': first_row.session_title if first_row and first_row.session_title else (
+                    first_row.user_message[:50] + ('...' if first_row and len(first_row.user_message) > 50 else '')
+                    if first_row else 'Untitled'
+                ),
+                'message_count': conv['message_count'],
+                'last_message_at': conv['last_message_at'].isoformat() if conv['last_message_at'] else None,
+                'preview': first_row.user_message[:80] if first_row else '',
+            })
+
+        return Response({
+            'success': True,
+            'conversations': results,
+            'total': len(results),
+        })
+
+    except Exception as e:
+        logger.error(f"Error listing PA conversations: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
+            'conversations': [],
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_pa_conversation(request, conversation_id):
+    """
+    Session 974: Load all messages for a specific conversation.
+
+    Each ChatConversation row contains a user_message + assistant_response pair,
+    which we expand into separate message objects for the frontend.
+    """
+    try:
+        from core.models import ChatConversation
+
+        rows = ChatConversation.objects.filter(
+            conversation_id=conversation_id,
+            user=request.user,
+        ).order_by('created_at')
+
+        if not rows.exists():
+            return Response({
+                'success': False,
+                'error': 'Conversation not found',
+            }, status=404)
+
+        first_row = rows.first()
+        title = first_row.session_title if first_row and first_row.session_title else 'Untitled'
+
+        messages = []
+        for row in rows:
+            messages.append({
+                'id': f'{row.pk}-user',
+                'role': 'user',
+                'content': row.user_message,
+                'timestamp': row.created_at.isoformat(),
+            })
+            messages.append({
+                'id': f'{row.pk}-assistant',
+                'role': 'assistant',
+                'content': row.assistant_response,
+                'timestamp': row.created_at.isoformat(),
+                'tools_used': row.agents_used or [],
+            })
+
+        return Response({
+            'success': True,
+            'conversation_id': conversation_id,
+            'title': title,
+            'messages': messages,
+        })
+
+    except Exception as e:
+        logger.error(f"Error loading PA conversation {conversation_id}: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_pa_conversation(request):
+    """
+    Session 974: Start a new PA conversation.
+
+    Generates a new conversation_id. No DB row is created until the first
+    message is sent — this just reserves the ID.
+    """
+    try:
+        conversation_id = f"pa-{uuid.uuid4().hex[:12]}"
+        return Response({
+            'success': True,
+            'conversation_id': conversation_id,
+        })
+    except Exception as e:
+        logger.error(f"Error creating PA conversation: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
         }, status=500)
