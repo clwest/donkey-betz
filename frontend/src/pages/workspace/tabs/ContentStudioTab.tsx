@@ -3,6 +3,7 @@
 // Session 840: Enhanced with onClick handlers, detail modals, refresh buttons, and real data fallbacks
 // Session 857: Refactored for inline content viewing - removed external navigation
 // Session 861: Enhanced BlogDetailModal with full content viewing, approve/publish actions
+// Session 971b B2: Added Dossiers (ConceptForge), Voices, Files sub-tabs
 
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -42,9 +43,15 @@ import { api, contentApi, podcastApi, distributionApi, blogsApi, voiceMarketplac
 import { ErrorState } from '@/components/ErrorState'
 import { PanelStatusBanner } from '@/components/PanelStatusBanner'
 import { PanelDebugDrawer } from '@/components/PanelDebugDrawer'
+import { ConceptForgeTab } from './ConceptForgeTab'
+import { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
+import { FilesTab } from './FilesTab'
+import type { ContentStudioSubTab } from '../types'
 
 // Sub-tab configuration
-type ContentSubTab = 'gallery' | 'channels' | 'blogs' | 'documents' | 'podcast' | 'distribution'
+// Session 971b B2: Replaced local ContentSubTab with shared type from types.ts
+// 'documents' kept as internal-only ID (not in ContentStudioSubTab union) for backwards compat
+type ContentSubTab = ContentStudioSubTab | 'documents'
 
 const subTabs: Array<{ id: ContentSubTab; label: string; icon: typeof Image; description: string }> = [
   { id: 'gallery', label: 'Gallery', icon: Image, description: 'AI-generated visuals' },
@@ -53,10 +60,23 @@ const subTabs: Array<{ id: ContentSubTab; label: string; icon: typeof Image; des
   { id: 'documents', label: 'Documents', icon: FileText, description: 'Research & technical docs' },
   { id: 'podcast', label: 'Podcast', icon: Mic, description: 'Generated episodes' },
   { id: 'distribution', label: 'Distribution', icon: Share2, description: 'Platform publishing' },
+  // Session 971b B2: Absorbed from standalone tabs
+  { id: 'dossiers', label: 'Dossiers', icon: Sparkles, description: 'ConceptForge pipeline' },
+  { id: 'voices', label: 'Voices', icon: Music, description: 'Voice marketplace' },
+  { id: 'files', label: 'Files', icon: FileText, description: 'Workspace file browser' },
 ]
 
-export function ContentStudioTab() {
-  const [activeSubTab, setActiveSubTab] = useState<ContentSubTab>('gallery')
+interface ContentStudioTabProps {
+  initialSubTab?: string
+  activeWorkspaceId?: string
+}
+
+export function ContentStudioTab({ initialSubTab, activeWorkspaceId }: ContentStudioTabProps) {
+  const initial = (initialSubTab && subTabs.some(t => t.id === initialSubTab)
+    ? initialSubTab
+    : 'gallery') as ContentSubTab
+
+  const [activeSubTab, setActiveSubTab] = useState<ContentSubTab>(initial)
 
   return (
     <div className="space-y-4">
@@ -86,6 +106,11 @@ export function ContentStudioTab() {
       {activeSubTab === 'documents' && <DocumentsSubTab />}
       {activeSubTab === 'podcast' && <PodcastSubTab />}
       {activeSubTab === 'distribution' && <DistributionSubTab />}
+
+      {/* Session 971b B2: Delegated tabs (absorbed from standalone) */}
+      {activeSubTab === 'dossiers' && <ConceptForgeTab />}
+      {activeSubTab === 'voices' && <VoiceMarketplaceTab />}
+      {activeSubTab === 'files' && <FilesTab activeWorkspaceId={activeWorkspaceId} />}
 
       <PanelDebugDrawer scope="workspace:content" />
     </div>
