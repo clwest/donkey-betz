@@ -139,6 +139,7 @@ class UnifiedPAEntrypoint:
         'domain_context':   600,
         'advisor':          300,
         'strategic_memory':  400,
+        'learning_insights': 600,  # Session 972: Explicit cap for learning insights
     }
 
     # Stop words for relevance gating
@@ -1107,7 +1108,18 @@ class UnifiedPAEntrypoint:
                     )
                     text = result.get('context_text', '') if isinstance(result, dict) else ''
                     if text:
-                        # Session 972: Separate label so learning data isn't mixed with system status
+                        # Session 972: Surface metadata counts from enrichment
+                        meta = result.get('metadata', {}) if isinstance(result, dict) else {}
+                        if meta:
+                            parts = []
+                            if meta.get('knowledge_count'):
+                                parts.append(f"{meta['knowledge_count']} knowledge")
+                            if meta.get('experts_count'):
+                                parts.append(f"{meta['experts_count']} experts")
+                            if meta.get('trends_count'):
+                                parts.append(f"{meta['trends_count']} spider trends")
+                            if parts:
+                                text += f"\nSources: {', '.join(parts)}"
                         sections['learning_insights'] = text
 
                 elif service_key == 'blog_performance' and self.blog_performance_fn:
@@ -1134,6 +1146,15 @@ class UnifiedPAEntrypoint:
                     text = result.get('summary', '') if isinstance(result, dict) else ''
                     if text:
                         if is_direct or self._passes_relevance_gate(message, text):
+                            # Session 972: Surface market data and freshness
+                            market_data = result.get('market_data', {}) if isinstance(result, dict) else {}
+                            if isinstance(market_data, dict) and market_data.get('summary'):
+                                text += f"\nMarket: {market_data['summary']}"
+                            freshness = result.get('freshness', {}) if isinstance(result, dict) else {}
+                            if isinstance(freshness, dict) and freshness:
+                                quality = freshness.get('data_quality', 'unknown')
+                                hours = freshness.get('hours_covered', 0)
+                                text += f"\nData quality: {quality}, {hours}h window"
                             sections['spider_trends'] = text
 
                 elif service_key == 'advisor' and self.advisor_context_builder:
@@ -1143,10 +1164,22 @@ class UnifiedPAEntrypoint:
                     )
                     if isinstance(result, dict) and result.get('key_principles'):
                         principles = result['key_principles'][:3]
-                        sections['advisor'] = '\n'.join(
+                        parts = [
                             f"- {p}" if isinstance(p, str) else f"- {p}"
                             for p in principles
-                        )
+                        ]
+                        # Session 972: Surface frameworks, recommendation, advisor names
+                        frameworks = result.get('decision_frameworks', [])[:3]
+                        if frameworks:
+                            parts.append(f"Frameworks: {', '.join(str(f) for f in frameworks)}")
+                        approach = result.get('recommended_approach', '')
+                        if approach:
+                            parts.append(f"Recommendation: {str(approach)[:200]}")
+                        advisors = result.get('relevant_advisors', [])
+                        if advisors:
+                            names = [a.get('name', str(a)) if isinstance(a, dict) else str(a) for a in advisors]
+                            parts.append(f"Advisors: {', '.join(names)}")
+                        sections['advisor'] = '\n'.join(parts)
 
                 elif service_key == 'strategic_memory':
                     # Session 962 Phase 2: Strategic Memory Service
