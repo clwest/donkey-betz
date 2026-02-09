@@ -6,8 +6,12 @@ import GlobalAlertBanner, { useAlertBannerHeight } from '@/components/GlobalAler
 import GlobalPADock from '@/components/GlobalPADock'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useUnifiedStore } from '@/stores/unifiedStore'
+import { usePageTracking } from '@/hooks/usePageTracking'  // Session 971b: Route telemetry
 
 export default function Layout() {
+  // Session 971b: Track all route changes for telemetry
+  usePageTracking()
+
   const bannerHeight = useAlertBannerHeight()
 
   // Session 715: Wire system events to unified store
