@@ -2365,8 +2365,11 @@ Consider these trends when crafting the response to maximize relevance and engag
             # Build title from task
             title = f"{self.name}: {task[:50]}{'...' if len(task) > 50 else ''}"
 
-            # Build summary from result message
-            summary = result.message[:500] if result.message else "Agent completed with actionable output"
+            # Build summary from result message (word-boundary truncation)
+            if result.message and len(result.message) > 2000:
+                summary = result.message[:2000].rsplit(' ', 1)[0] + '...'
+            else:
+                summary = result.message or "Agent completed with actionable output"
 
             attention_bridge.create_agent_output_attention(
                 agent_name=self.name,
