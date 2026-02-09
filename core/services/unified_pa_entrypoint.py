@@ -2378,6 +2378,14 @@ Be helpful, conversational, and personalized. Address the user by name."""
                 system_prompt += f"\n\n{docs_summary}"
                 logger.debug(f"[{trace_id}] Added docs context to PA prompt ({len(docs_summary)} chars)")
 
+        # Session 972: Inject dynamic system knowledge (workspace, health, agents, etc.)
+        system_knowledge = context.get('system_knowledge', {})
+        if system_knowledge.get('has_dynamic_context') and self.knowledge_injector:
+            knowledge_text = self.knowledge_injector.format_for_prompt(system_knowledge)
+            if knowledge_text:
+                system_prompt += knowledge_text
+                logger.debug(f"[{trace_id}] Added system knowledge to PA prompt ({len(knowledge_text)} chars)")
+
         # Add conversation history
         history_text = ""
         for turn in context.get('conversation_history', [])[-6:]:
