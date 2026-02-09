@@ -1099,6 +1099,7 @@ from core.views_personal_assistant import (
     unified_pa_chat, unified_pa_context,  # Session 932: Unified PA REST endpoints
     pa_chat_status,  # Session 974b: Async PA chat polling
     list_pa_conversations, get_pa_conversation, create_pa_conversation,  # Session 974: Conversation history
+    trigger_boardroom_maintenance,  # Session 977: On-demand boardroom cleanup
 )
 from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
 from core.views_assistant_bypass import assistant_chat_bypass, get_task_progress
@@ -2323,6 +2324,8 @@ urlpatterns = [
     path('api/pa/conversations/', list_pa_conversations, name='pa-conversations-list'),
     path('api/pa/conversations/new/', create_pa_conversation, name='pa-conversations-new'),
     path('api/pa/conversations/<str:conversation_id>/', get_pa_conversation, name='pa-conversations-detail'),
+    # Session 977: On-demand boardroom maintenance trigger
+    path('api/pa/boardroom/maintenance/', trigger_boardroom_maintenance, name='boardroom-maintenance'),
 
     # Unified Assistant endpoints (The One True Assistant™)
     path('api/unified/chat/', unified_assistant_chat, name='unified-assistant-chat'),
