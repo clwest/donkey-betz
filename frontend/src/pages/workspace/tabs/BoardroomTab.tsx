@@ -432,21 +432,57 @@ export function BoardroomTab() {
     )
   }
 
+  // Session 972: Strip provenance markdown header from agent messages
+  const stripProvenance = (text: string): string => {
+    return text.replace(/^---\n## Report Provenance[\s\S]*?---\n?/, '').trim()
+  }
+
   // Session 972: Extract the richest content from payload.result_data
+  // Deep-searches sub-agent results (*_results.message, *_results.data.analysis)
   const extractResultContent = (resultData: unknown): string | null => {
     if (!resultData) return null
     if (typeof resultData === 'string') return resultData
     if (typeof resultData === 'object' && resultData !== null) {
       const data = resultData as Record<string, unknown>
-      // Try known content keys in priority order
-      for (const key of ['report', 'analysis', 'content', 'output', 'message', 'summary', 'result']) {
-        if (typeof data[key] === 'string' && (data[key] as string).length > 0) {
-          return data[key] as string
+
+      // 1. Try known content keys at top level (must be substantial)
+      for (const key of ['report', 'analysis', 'content', 'output', 'message', 'result']) {
+        if (typeof data[key] === 'string' && (data[key] as string).length > 100) {
+          const cleaned = stripProvenance(data[key] as string)
+          if (cleaned.length > 50) return cleaned
         }
       }
-      // Fall back to rendering key-value pairs for string/number values
+
+      // 2. Deep search: look for *_results objects with .message or .data.analysis
+      const subResults: string[] = []
+      for (const value of Object.values(data)) {
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          const sub = value as Record<string, unknown>
+          // Check .data.analysis (rich analysis text)
+          if (typeof sub.data === 'object' && sub.data !== null) {
+            const subData = sub.data as Record<string, unknown>
+            if (typeof subData.analysis === 'string' && subData.analysis.length > 50) {
+              subResults.push(subData.analysis)
+            }
+          }
+          // Check .message (agent output) — strip provenance header
+          if (typeof sub.message === 'string' && sub.message.length > 100) {
+            const cleaned = stripProvenance(sub.message)
+            if (cleaned.length > 50) {
+              subResults.push(cleaned)
+            }
+          }
+        }
+      }
+      if (subResults.length > 0) {
+        // Return the longest (richest) sub-result
+        return subResults.sort((a, b) => b.length - a.length)[0]
+      }
+
+      // 3. Fall back to key-value pairs, skipping metadata fields
+      const skipKeys = new Set(['discord_sent', 'validation_status', 'publishable', 'provenance'])
       const pairs = Object.entries(data)
-        .filter(([, v]) => typeof v === 'string' || typeof v === 'number')
+        .filter(([k, v]) => !skipKeys.has(k) && (typeof v === 'string' || typeof v === 'number'))
         .map(([k, v]) => `${k}: ${v}`)
       if (pairs.length > 0) return pairs.join('\n')
     }
@@ -464,11 +500,15 @@ export function BoardroomTab() {
     const taskText = typeof item.payload?.task === 'string' ? item.payload.task : null
     const agentName = typeof item.payload?.agent_name === 'string' ? item.payload.agent_name : null
 
+    // Clean summary: strip provenance header, skip if only metadata remains
+    const cleanSummary = item.summary ? stripProvenance(item.summary) : null
+    const showSummary = cleanSummary && cleanSummary.length > 10
+
     return (
       <div className="space-y-3 mt-2">
-        {/* Summary */}
-        {item.summary && (
-          <p className="text-sm text-gray-300 whitespace-pre-wrap">{item.summary}</p>
+        {/* Summary (with provenance header stripped) */}
+        {showSummary && (
+          <p className="text-sm text-gray-300 whitespace-pre-wrap">{cleanSummary}</p>
         )}
 
         {/* Rich content from result_data */}
