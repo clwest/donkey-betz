@@ -3386,11 +3386,11 @@ class ToolDispatcher:
         # 3. Health (latest heartbeat)
         try:
             from core.models_heart import HeartBeat
-            hb = HeartBeat.objects.order_by('-created_at').first()
+            hb = HeartBeat.objects.order_by('-recorded_at').first()
             if hb:
-                age_min = (now - hb.created_at).total_seconds() / 60
+                age_min = (now - hb.recorded_at).total_seconds() / 60
                 snapshot['health'] = {
-                    'status': getattr(hb, 'status', 'unknown'),
+                    'status': getattr(hb, 'overall_status', 'unknown'),
                     'score': getattr(hb, 'health_score', None),
                     'age_minutes': round(age_min, 1),
                 }
