@@ -992,14 +992,29 @@ def learning_loop_stats(request):
     if not request.user.is_authenticated:
         return api_error("Authentication required", status_code=401)
 
-    from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
+    try:
+        from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
 
-    orchestrator = get_learning_loop_orchestrator()
-    stats = orchestrator.get_learning_effectiveness_stats()
+        orchestrator = get_learning_loop_orchestrator()
+        stats = orchestrator.get_learning_effectiveness_stats()
 
-    return api_success({
-        'learning_loop': stats,
-    })
+        return api_success({
+            'learning_loop': stats,
+        })
+    except Exception:
+        return api_success({
+            'learning_loop': {
+                'total_active_learnings': 0,
+                'total_applied': 0,
+                'total_successful': 0,
+                'overall_effectiveness': 0,
+                'applied_patterns_count': 0,
+                'most_effective': [],
+                'least_effective': [],
+                'recent_learnings': [],
+                'by_pattern_type': [],
+            },
+        })
 
 
 @csrf_exempt
