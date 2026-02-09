@@ -691,8 +691,8 @@ def _dispatch_next_stage_tasks(initiative, stage_num: int):
         deliverable = Deliverable.objects.filter(initiative=initiative).first()
         if deliverable:
             content_type = deliverable.deliverable_type
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Deliverable lookup failed for initiative: {e}")
 
     # Get stage config
     stage_config = CONTENT_TYPE_STAGES.get(content_type, CONTENT_TYPE_STAGES['document'])

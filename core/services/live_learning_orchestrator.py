@@ -108,7 +108,7 @@ class LiveLearningLearningMixin:
             )
             return outcome_id
         except Exception as e:
-            logger.debug(f"Failed to record learning outcome: {e}")
+            logger.warning(f"Failed to record learning outcome: {e}")
             return None
 
     def _create_execution_memory(
@@ -135,7 +135,7 @@ class LiveLearningLearningMixin:
             )
             return memory
         except Exception as e:
-            logger.debug(f"Failed to create execution memory: {e}")
+            logger.warning(f"Failed to create execution memory: {e}")
             return None
 
     def _share_knowledge(
@@ -171,7 +171,7 @@ class LiveLearningLearningMixin:
             )
             return knowledge
         except Exception as e:
-            logger.debug(f"Failed to share knowledge: {e}")
+            logger.warning(f"Failed to share knowledge: {e}")
             return None
 
     def _get_shared_knowledge(
@@ -209,7 +209,7 @@ class LiveLearningLearningMixin:
                 for ks in queryset.order_by('-confidence_score')[:10]
             ]
         except Exception as e:
-            logger.debug(f"Failed to get shared knowledge: {e}")
+            logger.warning(f"Failed to get shared knowledge: {e}")
             return []
 
 

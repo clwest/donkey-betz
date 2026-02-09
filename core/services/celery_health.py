@@ -437,8 +437,8 @@ class CeleryHealthService:
                                 'expected_interval': str(max_interval),
                                 'status': 'never_run',
                             })
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Stale task check failed for task: {e}")
 
             return {
                 'count': len(stale),

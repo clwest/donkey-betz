@@ -460,8 +460,8 @@ class UnifiedPAEntrypoint:
                 try:
                     score = self.profile_service.get_completeness_score(self.user)
                     profile_completeness = int(score * 100)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Profile completeness score failed: {e}")
 
             logger.info(f"[{trace_id}] Completed in {latency_ms}ms")
 
@@ -523,7 +523,7 @@ class UnifiedPAEntrypoint:
                     'availability': profile.availability,
                 }
         except Exception as e:
-            logger.debug(f"Failed to load profile: {e}")
+            logger.warning(f"Failed to load profile: {e}")
 
         # Add dynamic system knowledge if relevant
         if self.knowledge_injector:
@@ -532,13 +532,13 @@ class UnifiedPAEntrypoint:
                 if knowledge_context.get('has_dynamic_context'):
                     context['system_knowledge'] = knowledge_context
             except Exception as e:
-                logger.debug(f"Failed to inject knowledge: {e}")
+                logger.warning(f"Failed to inject knowledge: {e}")
 
         # Add system stats
         try:
             context['system_stats'] = await self._get_system_stats()
         except Exception as e:
-            logger.debug(f"Failed to get system stats: {e}")
+            logger.warning(f"Failed to get system stats: {e}")
 
         # Session 943: Inject docs context so PA knows about system architecture,
         # recent sessions, and what we've been working on
@@ -1438,8 +1438,8 @@ Address the user by name occasionally."""
                     return result.get('response', structured_output)
             except asyncio.TimeoutError:
                 logger.warning(f"[{trace_id}] LLM fallback timed out after 60s")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"[{trace_id}] LLM synthesis fallback failed: {e}")
 
         return structured_output
 
