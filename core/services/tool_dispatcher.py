@@ -3010,13 +3010,13 @@ class ToolDispatcher:
             from core.models_heart import ComponentStatus
             components = list(
                 ComponentStatus.objects.all().values(
-                    'component_name', 'display_name', 'status', 'is_healthy',
-                    'last_checked_at', 'last_error'
+                    'component', 'display_name', 'status', 'is_healthy',
+                    'last_check', 'last_error'
                 )
             )
             for c in components:
-                if c.get('last_checked_at'):
-                    c['last_checked_at'] = c['last_checked_at'].isoformat()
+                if c.get('last_check'):
+                    c['last_check'] = c['last_check'].isoformat()
             healthy_count = sum(1 for c in components if c.get('is_healthy'))
             health['components'] = {
                 'total': len(components),
