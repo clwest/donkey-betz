@@ -1,7 +1,7 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 8, 2026 - Session 970
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | 14/14 SCI-FI UI | 47 Pages | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Prompt Sharpening: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Live Activity: ACTIVE** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Panel Output Quality: ENHANCED** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **PA Initiative Audit: ACTIVE** | **Initiative Cleanup: 52 ACTIVE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE** | **PA Live Telemetry: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
+**Last Updated:** February 8, 2026 - Session 971b
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | **Workspace: 9 TABS** (from 18) | **Bundle: 2,253 KB** (-26%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub** | **Page Telemetry: ACTIVE** | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
 
 ## System Stats
 | Component | Count | Details |
@@ -17,9 +17,10 @@
 | **Contracts** | 3 | ResearchContract, ExecutionMandate, SynthesisContract |
 | **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **Advisors** | 25 | Famous figures + domain experts |
-| **Frontend Bundle** | 1,948 KB | 12 workspace tabs (+Dossiers), collapsible sidebar |
+| **Frontend Bundle** | 2,253 KB | 9 workspace tabs (down from 18), 26 legacy redirects, collapsible sidebar |
 
 ## Key Capabilities
+- **UI + Discord Surface Reset (971b):** Consolidated navigation from 18 workspace tabs to 9 and 62 routes to 36. Seven PRs (#985-#990). (1) Page-view telemetry: fire-and-forget Redis counters via `usePageTracking()` hook, `POST /api/v1/telemetry/page-view/`. (2) Discord docs: `DISCORD_INTEGRATION.md` with all 112 commands, ACTIVE/DORMANT status, 12 notification channels. (3) Workspace shell reset: `normalizeWorkspaceTab()` maps 18 legacy tab IDs to 9 canonical; `legacyTabToSubTab()` preserves sub-tab context; SystemTab (Infra+Orch+Triggers), DataIntelTab (DataSources+Intelligence) adapters. (4) Content consolidation: Content Studio 6→9 sub-tabs (+Dossiers, Voices, Files via delegate pattern). (5) Double nav elimination: `controlledSubTab` prop on 4 original tabs suppresses inner nav when parent drives. (6) Legacy route cleanup: 26 standalone routes → `<Navigate replace>` redirects, 22 imports removed, bundle 3,062→2,249 KB (-26.5%). (7) Command Center "Now" hub: 3-panel strip (Attention Queue, Active Work, System Pulse) between header and PA chat, each clickable → workspace tab.
 - **Surgical Moves Verification + ToolCallRecord + Attention Coverage (970):** Three deliverables. (1) Verification CLI (`manage.py verify_surgical_moves`) runs real 4-turn debate then prints structured pass/warn/fail report for Phases 0-3; `--mode=report-only` checks existing sessions without LLM spend. PA tool `surgical_moves_status_tool` with intent routing ("deliberation status", "what deliberations"). API endpoint `GET /api/deliberation/sessions/<uuid>/verification-report/`. Frontend `SurgicalMovesPanel` + `VerificationReportModal` in Orchestration Monitor tab. (2) ToolCallRecord activation: `__init_subclass__` in BaseAgent auto-wraps every subclass `_execute_tool_call` with recording — all 50+ agents now produce audit trail, zero agent files changed. Verified on Railway: 6 rows in first 3 minutes. (3) Expanded SystemStateAggregator attention surface: deliberation health (stuck sessions, contractless completions) + signal cluster freshness (stale active, untriggered high-strength). 7 attention sections total. PRs #977, #978.
 - **PA Live Telemetry (969b):** 3 new PA tools for real-time system self-awareness. `recent_activity_tool` queries Celery tasks, SpiderData, HiveMindSession, SelfBlog, Initiative, SignalCluster within configurable time window. `system_health_tool` aggregates HeartBeat, ComponentStatus, Celery success rate, ToolCallAggregate, Spider freshness into computed overall_assessment (healthy/degraded/critical). `error_summary_tool` queries FailureSignature, FailureDetection, failed ToolCallRecord, failed Celery tasks with computed severity. Intent routing for natural phrases ("what's been going on?", "how's the system?", "any errors?"). Hours extraction from natural language. No migrations. PR #974.
 - **Insight De-dup Bundling (968):** Memory Palace now bundles duplicate insight memories from the same conversation into a single expandable card. `source_id` exposed in `get_agent_memories()` and `list_all_memories()` APIs. Frontend `bundleInsights()` groups by `source_id`, `InsightBundleCard` shows collapsed "N agents" badge with expand/collapse. Also: remarkGfm import fix, frontend data plumbing audit (PR #970). No migrations.
@@ -56,7 +57,7 @@
 - **Goal-Driven Conversations (826):** Objectives, success criteria, structured turn flows, topic-matched agents
 - **Self-Healing System (820-823):** Auto-discovers audits → assigns to agents → executes fixes → verifies
 - **SKIN Layer (695, 778):** All 74 agents write to real workspaces with rollback
-- **UI Consolidation (825):** 29 pages → 6 workspace tabs, collapsible sidebar
+- **UI Consolidation (825, 971b):** 29 pages → 18 tabs (825) → 9 tabs (971b), 26 legacy redirects, collapsible sidebar
 - **Context Optimization (806):** 70% token reduction via ToolCategoryRouter + LazyContextLoader
 - **Memory Safety (768):** Classification prevents test content from polluting learning
 - **Integration Complete (744):** All 5 phases done - spider data, learning, advisors flow to agents
@@ -95,9 +96,11 @@ open http://localhost:8000/ai-studio/
 | `core/conversation_orchestrator.py` | Multi-agent conversations |
 | `core/services/autonomous_remediation_orchestrator.py` | Self-healing system |
 | `core/services/signal_aggregation_service.py` | Signal clustering & auto-topic generation |
-| `core/services/unified_pa_entrypoint.py` | PA: 89 tools, intent routing, enrichment pipeline |
-| `core/services/tool_dispatcher.py` | PA: 47 tool handlers including 3 telemetry tools |
-| `frontend/src/pages/WorkspacePageNew.tsx` | Modular command center |
+| `core/services/unified_pa_entrypoint.py` | PA: 90 tools, intent routing, enrichment pipeline |
+| `core/services/tool_dispatcher.py` | PA: 48 tool handlers including 3 telemetry tools |
+| `frontend/src/pages/WorkspacePageNew.tsx` | 9-tab modular workspace orchestrator |
+| `frontend/src/pages/workspace/types.ts` | Tab types, normalizeWorkspaceTab(), legacyTabToSubTab() |
+| `frontend/src/pages/CommandCenterPage.tsx` | Command Center with "Now" hub + PA chat |
 
 ---
 
@@ -164,6 +167,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **971b** | UI + Discord Surface Reset - 18→9 workspace tabs, 26 legacy route redirects, -26% bundle, Command Center "Now" hub, page telemetry, Discord 112-command docs PRs #985-990 | `SESSION_971b_UI_SURFACE_RESET.md` |
 | **970** | Surgical Moves Verification + ToolCallRecord Activation + Attention Coverage - CLI verify command, PA tool, API endpoint, frontend panel, __init_subclass__ recording wrapper, 2 new attention sections PRs #977-978 | `SESSION_970_SURGICAL_MOVES_VERIFICATION.md` |
 | **969b** | PA Live Telemetry - 3 tools (recent_activity, system_health, error_summary) for real-time system self-awareness, intent routing, natural language hours extraction PR #974 | `SESSION_969b_PA_LIVE_TELEMETRY.md` |
 | **969** | Orchestration Tab Enrichment + ORM Fix + Blog Diversity - metrics bar, HiveMind sessions, execution detail, field name fix, 10 diverse fallback topics PR #971-972 | `SESSION_969_ORCHESTRATION_ENRICHMENT.md` |
@@ -178,9 +182,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | **920** | Panel/Advisor System Improvements - Dedupe, provenance headers, placeholder validation, extended DecisionSummary, estimate labeling, ExperimentCollisionService | `SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md` |
 | **918** | Report Provenance + PDF Export - Data source tracking, publishing gates, WeasyPrint PDF service, download button, pagination fix | `SESSION_918_REPORT_PROVENANCE.md` |
 | **904** | Initiative UI Overhaul - Stages view, comprehensive modal, live activity, conversation details | `SESSION_904_INITIATIVE_UI_OVERHAUL.md` |
-| **903** | Signal Intelligence Wired + Celery OOM Fix - HiveMind provenance chain, spider task memory fix | `SESSION_903_SIGNAL_CELERY_FIX.md` |
-| **902** | Action Item Tracking - Extract & track next steps from conversation conclusions | `SESSION_902_ACTION_ITEM_TRACKING.md` |
-**Older sessions:** See `docs/handoffs/` directory (Sessions 197-901)
+**Older sessions:** See `docs/handoffs/` directory (Sessions 197-903)
 
 ---
 
@@ -195,6 +197,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 | [DATABASE_MODEL_REFERENCE.md](docs/DATABASE_MODEL_REFERENCE.md) | Which DB table for what |
 | [API_PATH_POLICY.md](docs/API_PATH_POLICY.md) | API path conventions (`/api/` vs `/api/v1/`) |
 | [DREAM_INITIATIVE_WORKFLOW.md](docs/DREAM_INITIATIVE_WORKFLOW.md) | Dream → Initiative 5-stage pipeline |
+| [DISCORD_INTEGRATION.md](docs/DISCORD_INTEGRATION.md) | Discord bot: 112 commands, 12 channels |
 
 **Documentation Index:** Run `python manage.py build_docs_index` to regenerate `docs/INDEX.md`
 
