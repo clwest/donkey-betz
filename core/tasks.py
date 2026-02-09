@@ -34015,3 +34015,74 @@ def cleanup_audio_cache():
     except Exception as e:
         logger.error(f"[Session 926] ❌ Audio cache cleanup failed: {e}")
         return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# SESSION 974b: ASYNC PA CHAT PROCESSING
+# =============================================================================
+
+@shared_task(bind=True, time_limit=300, soft_time_limit=280)
+def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None):
+    """
+    Session 974b: Async PA chat processing to avoid Railway proxy timeouts.
+    Runs UnifiedPAEntrypoint in Celery worker, stores result in Redis via Celery result backend.
+    """
+    from django.contrib.auth import get_user_model
+    from asgiref.sync import async_to_sync
+
+    User = get_user_model()
+    user = User.objects.get(id=user_id)
+
+    from core.services.unified_pa_entrypoint import get_unified_pa
+    pa = get_unified_pa(user)
+
+    start_ms = time.time()
+    response = async_to_sync(pa.process_message)(
+        message=message,
+        context=context or {},
+        generate_audio=generate_audio
+    )
+    elapsed_ms = int((time.time() - start_ms) * 1000)
+
+    # Persist to ChatConversation (same logic as the former sync view)
+    try:
+        from core.models import ChatConversation
+
+        if not conversation_id:
+            conversation_id, _ = ChatConversation.get_or_create_session(user=user, platform='web')
+
+        is_first = not ChatConversation.objects.filter(conversation_id=conversation_id).exists()
+
+        chat_row = ChatConversation.objects.create(
+            user=user,
+            conversation_id=conversation_id,
+            user_message=message,
+            assistant_response=response.content or '',
+            platform='web',
+            metadata={
+                'trace_id': response.trace_id,
+                'intent': response.intent,
+                'routed_to': response.routed_to,
+            },
+            response_time_ms=response.latency_ms or elapsed_ms,
+            agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],
+        )
+
+        if is_first:
+            chat_row.generate_session_title()
+    except Exception as persist_err:
+        logger.warning(f"Failed to persist PA conversation: {persist_err}")
+
+    return {
+        'success': True,
+        'content': response.content,
+        'trace_id': response.trace_id,
+        'tool_runs': response.tool_runs,
+        'audio_url': response.audio_url,
+        'intent': response.intent,
+        'routed_to': response.routed_to,
+        'profile_completeness': response.profile_completeness,
+        'latency_ms': response.latency_ms,
+        'error': response.error,
+        'conversation_id': conversation_id,
+    }
