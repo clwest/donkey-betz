@@ -27,6 +27,10 @@ urlpatterns = [
     path('notifications/<uuid:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
 
+    # Session 972: Patterns and Guards (used by IntelligenceTab Safety sub-tab)
+    path('patterns/', views.list_patterns, name='patterns_list'),
+    path('guards/', views.list_guards, name='guards_list'),
+
     # Session 541: Mythology Quarantine API
     path('quarantine/', views.quarantine_list, name='quarantine_list'),
     path('quarantine/stats/', views.quarantine_stats, name='quarantine_stats'),

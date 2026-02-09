@@ -2468,7 +2468,7 @@ urlpatterns = [
 
     # Learning Loop Integration (Phase 1: Frontend Reality Fix)
     path('api/learning/stats/', learning_stats, name='learning-stats'),
-    path('api/learning/insights/', learning_insights, name='learning-insights'),
+    # Session 972: Removed duplicate api/learning/insights/ route — handled by list_insights at line 1883
 
     # Session 217: Chart.js Analytics API
     path('api/analytics/charts/agent-trends/', get_chart_agent_trends, name='chart-agent-trends'),
