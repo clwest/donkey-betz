@@ -273,6 +273,12 @@ mobile/.env.production
 backups/database/
 income_builder_outputs/
 
+# SKIN Layer auto-generated output (Session 976)
+# Status reports, blog drafts, and summaries should go to generated_content/
+/reports/
+/summaries/
+/content/blog_*.md
+
 # Agent Generated Content (Session 787)
 # These are ephemeral outputs from agent executions
 /analysis/
