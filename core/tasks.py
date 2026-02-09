@@ -25090,7 +25090,7 @@ def generate_human_attention_items():
         try:
             from core.models_unified_system import SpiderData
             recent_spider_data = SpiderData.objects.filter(
-                created_at__gte=timezone.now().defer('embedding') - timedelta(hours=1),
+                created_at__gte=timezone.now() - timedelta(hours=1),
                 data_type__in=['market_alert', 'security_alert', 'price_alert', 'breaking_news']
             )[:5]
 

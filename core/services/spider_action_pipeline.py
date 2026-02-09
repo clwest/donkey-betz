@@ -611,6 +611,15 @@ class SpiderActionPipeline:
         """Create a HumanAttentionItem for review."""
         try:
             from core.models_human_interface import HumanAttentionItem
+            from django.contrib.auth import get_user_model
+
+            # Session 978: user is required (non-nullable FK) — fall back to first admin
+            if user is None:
+                User = get_user_model()
+                user = User.objects.filter(is_staff=True, is_active=True).first()
+                if user is None:
+                    logger.error("No admin user found for spider attention item")
+                    return {'success': False, 'error': 'No admin user available'}
 
             # Determine urgency based on category and item attributes
             urgency = 'medium'
