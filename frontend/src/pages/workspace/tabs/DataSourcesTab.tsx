@@ -98,8 +98,8 @@ interface SpiderExecution {
   id: string
   spider_name: string
   status: string
-  items_count: number
-  created_at: string
+  items_collected: number
+  started_at: string
 }
 
 const SPIDER_CATEGORIES = [
@@ -1331,7 +1331,7 @@ function ExecutionRow({ execution, onClick }: { execution: any; onClick: () => v
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium truncate block">{execution.spider_name}</span>
           <span className="text-xs text-gray-500">
-            {execution.items_count || 0} items • {new Date(execution.created_at).toLocaleTimeString()}
+            {execution.items_collected || 0} items • {new Date(execution.started_at).toLocaleTimeString()}
           </span>
         </div>
       </div>
@@ -1542,11 +1542,11 @@ function ExecutionDetailModal({ execution, onClose }: { execution: SpiderExecuti
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Items Collected</p>
-              <p className="text-xl font-bold">{execution.items_count || 0}</p>
+              <p className="text-xl font-bold">{execution.items_collected || 0}</p>
             </div>
             <div className="p-3 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Executed At</p>
-              <p className="text-sm">{new Date(execution.created_at).toLocaleString()}</p>
+              <p className="text-sm">{new Date(execution.started_at).toLocaleString()}</p>
             </div>
           </div>
         </div>
