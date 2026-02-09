@@ -1,40 +1,40 @@
-# Session 971 - Start Here
+# Session 972 - Start Here
 
-**Previous Session:** 970 (Surgical Moves Verification + ToolCallRecord Activation + Attention Coverage)
+**Previous Session:** 971b (UI + Discord Surface Reset)
 **Date:** February 8, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** (cleaned from 568) | **Risk-Aware RAG: COMPLETE** | **Doc Classification: 562 DOCS** | **Boardroom ML: ACTIVE** | **Unified PA: ANALYTICAL ADVISOR** | **Voice System: COMPLETE** | **Learning Loop: REFINED** | **Agent Provenance: 26+ AGENTS** | **RAG Observability UI: COMPLETE** | **PA Intelligence Enrichment: ACTIVE** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **Insight De-dup Bundling: ACTIVE** | **Orchestration Enrichment: ACTIVE** | **Blog Diversity: ACTIVE** | **PA Live Telemetry: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
 
 ---
 
-## Session 970 Summary (Just Completed)
+## Session 971b Summary (Just Completed)
 
-### Surgical Moves Verification + Visibility (PR #977)
-Made Sessions 960-963 Surgical Moves Phases 0-3 visible, testable, and demoable:
+### UI + Discord Surface Reset — 7 PRs (#985-#990)
 
-- **Management command** `verify_surgical_moves` — runs real 4-turn debate then prints structured pass/warn/fail report; `--mode=report-only` checks existing sessions without LLM spend
-- **PA tool** `surgical_moves_status_tool` — intent routing for "deliberation status", "what deliberations", etc. Returns structured session/contract/evidence data
-- **API endpoint** `GET /api/deliberation/sessions/<uuid>/verification-report/` — enriched JSON with checks array
-- **Frontend** `SurgicalMovesPanel` + `VerificationReportModal` in Orchestration Monitor tab
+Consolidated the platform's navigation surface from 18 workspace tabs + 62 routes down to 9 tabs + 36 routes. Bundle reduced 26.4%.
 
-### ToolCallRecord Activation (PR #978)
-Fixed the wiring gap where `_execute_and_record_tool_call()` existed since Session 861 but was never called by any agent.
+**PR A+E — Telemetry + Discord Docs (#985)**
+- Fire-and-forget page-view tracking to Redis counters (debounced 500ms, never blocks UI)
+- `docs/DISCORD_INTEGRATION.md` — complete 112-command reference with ACTIVE/DORMANT status
 
-- **`__init_subclass__`** in BaseAgent auto-wraps every subclass's `_execute_tool_call` with recording
-- **Zero agent files touched** — all 50+ agents now produce audit trail automatically
-- **Verified on Railway:** 6 rows in first 3 minutes (ResearchAgent: web_search, spider_query, analyze_trends, reddit_search; SystemIntelligenceAgent: get_system_attention x2)
+**PR B1 — Workspace Shell Reset (#986)**
+- 18 tabs → 9 tabs: Command, Initiatives, Boardroom, Content, System, Ops, Data & Intel, Knowledge, Learn
+- `normalizeWorkspaceTab()` maps legacy `?tab=` params for backwards compat
+- `legacyTabToSubTab()` preserves sub-tab context during redirects
+- SystemTab (Infra + Orch + Triggers) and DataIntelTab (DataSources + Intelligence) adapters
 
-### Expanded Attention Coverage (PR #978)
-Added 2 new sections to SystemStateAggregator (now 7 total):
+**PR B2 — Content Consolidation (#987)**
+- Content Studio: 6 → 9 sub-tabs (+Dossiers, Voices, Files via delegate pattern)
 
-- **Deliberation health** — stuck sessions (>1h in_progress), contractless completions
-- **Signal cluster freshness** — stale active clusters (>48h), untriggered high-strength clusters
+**PR B3 — Double Nav Fix (#988)**
+- `controlledSubTab` prop on 4 original tabs suppresses inner nav when parent drives
 
-### Production System Review
-Verified SystemIntelligenceAgent report against Railway production DB:
-- 549 stale suggestions (accurate)
-- Celery running (48,543+ periodic task runs, results in Redis by design)
-- 47 completed DeliberationSessions, 87 ContractRecords
-- 18 SignalClusters, 615 fresh SpiderData/24h, 240 SelfBlogs/24h
+**PR C — Legacy Route Cleanup (#989)**
+- 26 standalone routes → `<Navigate replace>` to workspace tabs
+- 22 page imports removed → **-813 KB bundle** from tree-shaking
+
+**PR D — Command Center "Now" Hub (#990)**
+- Three-panel strip on `/`: Attention Queue, Active Work, System Pulse
+- Each panel clickable → navigates to relevant workspace tab
 
 ---
 
@@ -49,43 +49,65 @@ Verified SystemIntelligenceAgent report against Railway production DB:
 | Database Models | 386+ |
 | Services | 134 |
 | Celery Tasks | 261 |
-| Content Pipeline | v1 (direct) + v2 (deliberation) — with diverse fallbacks |
-| PA Tools | 90 (was 89, +surgical_moves_status) |
-| Tool Dispatcher Handlers | 48 |
-| Attention Sections | 7 (command_center, autonomous, research, pending_review, body_systems, deliberation, signal_clusters) |
+| Workspace Tabs | 9 (down from 18) |
+| Frontend Bundle | 2,253 KB (down from 3,062 KB) |
+| Frontend Routes | 36 (14 standalone + 22 redirects) |
+| PA Tools | 90 |
+| Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
+
+### 9-Tab Model
+
+| Group | Tabs | Sub-tabs |
+|-------|------|----------|
+| Core | Command, Initiatives, Boardroom | — |
+| Content | Content Studio | gallery, channels, blogs, documents, podcast, distribution, dossiers, voices, files |
+| System | System, Ops | health, services, llm, integration, monitor, workflows, hivemind, triggers |
+| Data | Data & Intel, Knowledge, Learn | spiders, feed, learning, reasoning, safety, collective |
 
 ---
 
 ## Known Issues / Open Items
 
-### ToolCallRecord Now Populating
-Data is flowing but no analytics dashboard exists yet. Consider building tool usage reports: by agent, latency percentiles, error rates, most-used tools.
+### Legacy Routes Expire in ~2-4 Weeks
+26 legacy routes redirect to workspace tabs. Telemetry counters track which routes still get traffic. After transition period, remove redirect routes entirely.
 
-### Celery Result Backend = Redis (Intentional)
-`CELERY_RESULT_BACKEND = 'redis://localhost:6379/3'` — results are NOT in `django_celery_results_taskresult`. This is by design. Only switch to `django-db` if task result visibility in Django admin is needed.
+### Billing + Analytics Orphaned
+`/billing` and `/analytics` are standalone pages with no home in the 9-tab model. Need an Admin tab or should be absorbed into an existing tab.
+
+### Content Studio Has 9 Sub-tabs
+Pushing visual limits — consider "More" dropdown or grouping if adding more.
+
+### ToolCallRecord Now Populating
+Data is flowing but no analytics dashboard exists yet.
 
 ### FailureSignature Table Empty
-The diagnostic pipeline (Session 856) has FailureSignature/FailureDetection models but 0 records in production. May need activation similar to the ToolCallRecord fix.
+The diagnostic pipeline (Session 856) has 0 records in production. May need activation.
 
 ---
 
 ## What Could Come Next
 
+### Admin Tab
+Create a dedicated workspace tab for Billing, Analytics, and system configuration pages.
+
+### Code-Splitting
+`React.lazy()` for workspace tabs — currently all 9 tabs are in the main bundle. Lazy-loading could cut initial load significantly.
+
+### Deep Sub-tab URLs
+Support `?tab=system&sub=monitor` for direct deep-linking to specific sub-tabs.
+
+### Sidebar Cleanup
+Sidebar still shows `/mythology-lab` (now in DataIntel > Safety) and `/agents` (agents list accessible via workspace). Consolidate to match 9-tab model.
+
+### Discord Command Pruning
+Use the ACTIVE/DORMANT audit in `DISCORD_INTEGRATION.md` to remove or fix non-functional commands.
+
 ### ToolCallRecord Analytics
-Now that data flows, build dashboards: tool usage by agent, latency percentiles, error rates, most-used tools. Could be a PA tool or frontend panel.
-
-### Initiative Staleness Check
-Add `_get_initiative_items()` to SystemStateAggregator for initiatives with no activity in 7+ days. 125 active in production — some may be stale.
-
-### FailureSignature Activation
-Investigate why FailureSignature has 0 records. The diagnostic pipeline (Session 856) may have the same "defined but never called" pattern as ToolCallRecord did.
-
-### PA Response Formatting for Telemetry
-Intent-specific LLM directives for telemetry tools (e.g., "Summarize concisely, highlight anomalies"). Currently tools return structured data formatted generically.
+Build dashboards: tool usage by agent, latency percentiles, error rates.
 
 ### Auto-Revision Loop
-If deliberation pipeline returns REVISE verdict, loop through reviewer feedback automatically instead of requiring manual re-trigger.
+If deliberation pipeline returns REVISE verdict, loop automatically instead of requiring manual re-trigger.
 
 ---
 
@@ -93,77 +115,24 @@ If deliberation pipeline returns REVISE verdict, loop through reviewer feedback 
 
 **Django settings module:** `core.settings` (NOT `config.settings`). Always use `DJANGO_SETTINGS_MODULE=core.settings`.
 
+**Workspace tab mapping (`types.ts`):**
+- `normalizeWorkspaceTab(tab)` — maps any of the 18 legacy tab IDs to 9 canonical IDs
+- `legacyTabToSubTab(tab)` — returns the sub-tab to pre-select (e.g., `orchestration → monitor`)
+- Both functions are in `frontend/src/pages/workspace/types.ts`
+
+**controlledSubTab pattern:**
+- When a parent tab (SystemTab, DataIntelTab) passes `controlledSubTab` to a child (InfrastructureTab, etc.), the child hides its own sub-tab nav and uses the parent's value
+- Without the prop, children work standalone with their own nav (backwards compatible)
+
 **PA entrypoint (`unified_pa_entrypoint.py`):**
 - Intent routing: `_detect_intent_and_route(message)` returns `(intent, tool_name)` tuple
-- Order matters: new intent blocks must go BEFORE existing ones that share keywords (e.g., "system" overlap)
-- `import re` inside elif branches: Python function-level scoping means each branch that uses `re` must have its own `import re`
+- Order matters: new intent blocks must go BEFORE existing ones that share keywords
 - Tool results: `ToolResult` dataclass with `.ok`, `.result`, `.trace_id`
-- Enrichment map: maps intent -> list of enrichment services (empty list = pure data, no LLM overlay)
-
-**Tool dispatcher (`tool_dispatcher.py`):**
-- Registration: `self.register("name", self._handle_method)` in `__init__`
-- Handler signature: `(tool_name, payload, user_id, trace_id) -> Dict`
-- Singleton: `get_tool_dispatcher()` at file end
-- Each data source wrapped in try/except for graceful degradation
 
 **BaseAgent `__init_subclass__` (Session 970):**
 - Auto-wraps `_execute_tool_call` in subclasses with ToolCallRecord recording
-- Uses `_orig` default arg to capture original method per-class (avoids closure bug)
 - Recording in `finally` with bare `except: pass` — can never break agent execution
-- Base class method is NOT wrapped (only subclasses that define `_execute_tool_call` in their `__dict__`)
 
-**Model field gotchas (verified):**
-- `SignalCluster`: in `core.models_signal_intelligence` (NOT `models_unified_system`), use `detected_at` (NOT `updated_at`)
-- `LearningPattern`: use `success_when_applied` (NOT `times_successful`)
-- `FailureDetection`: use `detected_at` (NOT `created_at`)
+**Model field gotchas:**
+- `SignalCluster`: in `core.models_signal_intelligence`, use `detected_at` (NOT `updated_at`)
 - `AgentDecisionSummary`: does NOT have a `confidence` field
-- `SelfBlog`: `quality_score`, `novelty_score`, `structure_score`, `publish_ready`, `gate_notes`
-- `Initiative`: `updated_at`, `last_activity_at`, `impact_score`, `urgency`, `confidence`, `revenue_potential`
-
-**Git workflow:** Pre-commit hook blocks direct commits to `main`. Must use feature branches, PRs, then merge.
-
-**Railway deployment:** Auto-deploys from main. Verify with `railway deployment list`. Logs: `railway logs -n 50`.
-
----
-
-## Key Files Reference
-
-### Session 970 Files
-| File | Purpose |
-|------|---------|
-| `core/management/commands/verify_surgical_moves.py` | CLI verification of Surgical Moves Phases 0-3 |
-| `core/agents/base_agent.py` | `__init_subclass__` ToolCallRecord recording wrapper |
-| `core/services/system_state_aggregator.py` | 2 new attention sections (deliberation + signal clusters) |
-| `core/services/tool_dispatcher.py` | `surgical_moves_status_tool` handler |
-| `core/services/unified_pa_entrypoint.py` | Intent routing for surgical moves status |
-| `core/views_deliberation.py` | Verification report API endpoint |
-| `frontend/src/pages/workspace/tabs/OrchestrationTab.tsx` | SurgicalMovesPanel + VerificationReportModal |
-
-### PA Tool System
-| File | Purpose |
-|------|---------|
-| `core/services/unified_pa_entrypoint.py` | 90 PA tools, intent routing, enrichment pipeline |
-| `core/services/pa_intelligence_enricher.py` | 5 enrichment services wired to PA |
-
----
-
-## Recent Session History
-
-| Session | Focus | PRs |
-|---------|-------|-----|
-| **970** | Surgical Moves Verification + ToolCallRecord activation + Attention Coverage | #977, #978 |
-| **969b** | PA Live Telemetry — 3 tools for real-time system self-awareness | #974 |
-| **969** | Orchestration enrichment, execution detail fix, ORM fix, blog diversity | #971, #972 |
-| **968** | Insight De-dup Bundling + remarkGfm fix + frontend data plumbing | #970 |
-| **964** | Phase 4 Content Deliberation Pipeline - ClaimsPack, 3-reviewer panel, DecisionEnforcer, v2 blog API | - |
-| **961c** | PA Initiative Audit + Cleanup - audit action, merged 94 dupes, archived 420 noise | #960 |
-| **961b** | PA Initiative Display Fix - raised limits, total count, full names | #959 |
-| **960** | Phase 0 Connectors - SourceInfo/Claim extensions, doc tracking, DecisionEnforcer fallback | - |
-| **959** | PA Intelligence Upgrade - Analytical advisor with enrichment pipeline | #954 |
-| **957** | RAG Observability Frontend - Complete UI dashboard | #943 |
-| **954-956** | Doc Classification + Boardroom ML + Initiative Cleanup + Learning Loop + RAG Observability | #935-#942 |
-| **953** | Agent Provenance Expansion - 18 agents with provenance tracking | - |
-
----
-
-**Session 971 Focus: Your choice! See "What Could Come Next" above.**
