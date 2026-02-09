@@ -221,7 +221,7 @@ def handle_validation_queued_event(event: Event):
         except ImportError:
             pass
         except Exception as e:
-            logger.debug(f"Could not send Discord notification: {e}")
+            logger.warning(f"Could not send Discord notification: {e}")
 
 
 def handle_validation_decided_event(event: Event):
@@ -291,7 +291,7 @@ def handle_outcome_recorded_event(event: Event):
                 f"consider triggering ML model retraining"
             )
     except Exception as e:
-        logger.debug(f"Could not check outcome count: {e}")
+        logger.warning(f"Could not check outcome count: {e}")
 
 
 def handle_model_trained_event(event: Event):
@@ -325,7 +325,7 @@ def handle_model_trained_event(event: Event):
     except ImportError:
         pass
     except Exception as e:
-        logger.debug(f"Could not send Discord notification: {e}")
+        logger.warning(f"Could not send Discord notification: {e}")
 
 
 def handle_system_alert_event(event: Event):
@@ -361,7 +361,7 @@ def handle_system_alert_event(event: Event):
         except ImportError:
             pass
         except Exception as e:
-            logger.debug(f"Could not send Discord notification: {e}")
+            logger.warning(f"Could not send Discord notification: {e}")
 
 
 # =============================================================================

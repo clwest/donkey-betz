@@ -490,8 +490,8 @@ def get_rhythm_status() -> Dict[str, Any]:
         ).order_by('-created_at').first()
         if recent:
             last_feedback = recent.created_at.isoformat()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"FounderFeedback lookup failed: {e}")
 
     # Quick summary of initiative status
     from core.models_document_registry import Initiative
@@ -540,8 +540,8 @@ def _get_rhythm_recommendations(
                 recommendations.append(
                     f"Weekly feedback overdue ({days_since} days since last submission)"
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Feedback date parsing failed: {e}")
     else:
         recommendations.append("No weekly feedback submitted yet - start the feedback loop")
 

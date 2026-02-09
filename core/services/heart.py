@@ -281,8 +281,8 @@ class HeartMonitorService:
                 recent_activity = AgentActivity.objects.filter(
                     created_at__gte=one_hour_ago
                 ).count()
-            except Exception:
-                pass  # AgentActivity model may not exist
+            except Exception as e:
+                logger.warning(f"AgentActivity check failed: {e}")
 
             is_healthy = total_agents >= 50
             status_level = 'healthy' if total_agents >= 70 else ('degraded' if total_agents >= 50 else 'critical')
@@ -328,8 +328,8 @@ class HeartMonitorService:
                 recent_executions = SpiderExecutionLog.objects.filter(
                     started_at__gte=thirty_min_ago
                 ).count()
-            except Exception:
-                pass  # SpiderExecutionLog may not have recent entries
+            except Exception as e:
+                logger.warning(f"SpiderExecutionLog check failed: {e}")
 
             is_healthy = spider_count >= 50
             status_level = 'healthy' if spider_count >= 70 else ('degraded' if spider_count >= 50 else 'critical')
@@ -376,8 +376,8 @@ class HeartMonitorService:
                 recent_ops = WorkspaceOperation.objects.filter(
                     created_at__gte=one_hour_ago
                 ).count()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"WorkspaceOperation check failed: {e}")
 
             response_time_ms = int((time.time() - start) * 1000)
 

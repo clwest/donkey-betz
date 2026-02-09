@@ -1095,8 +1095,8 @@ class AutonomousActionExecutor:
                 initiative = Initiative.objects.filter(
                     name__icontains=topic[:100]
                 ).order_by('-created_at').first()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Initiative lookup failed for topic: {e}")
 
             if not initiative:
                 # Create new initiative

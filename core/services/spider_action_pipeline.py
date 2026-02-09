@@ -794,7 +794,7 @@ Context from Spider Data:
             )
         except Exception as e:
             # Non-critical - just log
-            logger.debug(f"Could not track spider action (model may not exist): {e}")
+            logger.warning(f"Could not track spider action (model may not exist): {e}")
 
     def _build_attention_description(self, item: Dict[str, Any], category: str) -> str:
         """Build a description for the attention item."""

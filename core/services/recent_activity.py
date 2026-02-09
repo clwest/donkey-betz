@@ -125,7 +125,7 @@ class RecentActivityService:
                 })
 
         except Exception as e:
-            self.logger.debug(f"Error getting dreams: {e}")
+            self.logger.warning(f"Error getting dreams: {e}")
 
         return activities
 
@@ -166,7 +166,7 @@ class RecentActivityService:
                 })
 
         except Exception as e:
-            self.logger.debug(f"Error getting conversations: {e}")
+            self.logger.warning(f"Error getting conversations: {e}")
 
         return activities
 
@@ -218,7 +218,7 @@ class RecentActivityService:
                 })
 
         except Exception as e:
-            self.logger.debug(f"Error getting decisions: {e}")
+            self.logger.warning(f"Error getting decisions: {e}")
 
         return activities
 
@@ -266,7 +266,7 @@ class RecentActivityService:
                 })
 
         except Exception as e:
-            self.logger.debug(f"Error getting pilots: {e}")
+            self.logger.warning(f"Error getting pilots: {e}")
 
         return activities
 
