@@ -34020,8 +34020,8 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
     Session 974b: Async PA chat processing to avoid Railway proxy timeouts.
     Runs UnifiedPAEntrypoint in Celery worker, stores result in Redis via Celery result backend.
     """
+    import asyncio
     from django.contrib.auth import get_user_model
-    from asgiref.sync import async_to_sync
 
     User = get_user_model()
     user = User.objects.get(id=user_id)
@@ -34030,11 +34030,13 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
     pa = get_unified_pa(user)
 
     start_ms = time.time()
-    response = async_to_sync(pa.process_message)(
+    # Session 976: Use asyncio.run() instead of async_to_sync to avoid
+    # deadlock in Celery's --pool=threads worker
+    response = asyncio.run(pa.process_message(
         message=message,
         context=context or {},
         generate_audio=generate_audio
-    )
+    ))
     elapsed_ms = int((time.time() - start_ms) * 1000)
 
     # Persist to ChatConversation (same logic as the former sync view)
