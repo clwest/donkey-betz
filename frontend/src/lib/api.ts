@@ -972,6 +972,29 @@ export interface UnifiedPAResponse {
   conversation_id?: string
 }
 
+// Session 974b: Async PA chat dispatch response
+export interface PAChatAsyncResponse {
+  success: boolean
+  task_id: string
+  status: 'processing'
+}
+
+// Session 974b: Async PA chat status polling response
+export interface PAChatStatusResponse {
+  success: boolean
+  status: 'processing' | 'completed' | 'failed'
+  content?: string
+  trace_id?: string
+  tool_runs?: ToolRun[]
+  audio_url?: string | null
+  intent?: string | null
+  routed_to?: string | null
+  profile_completeness?: number
+  latency_ms?: number
+  error?: string
+  conversation_id?: string
+}
+
 // Session 974: Conversation history types
 export interface ConversationSummary {
   conversation_id: string
@@ -996,9 +1019,13 @@ export const assistantApi = {
     api.post('/assistant/chat/', { message, ...options }),
 
   // Session 934: UnifiedPA chat - dedicated endpoint with full tool_runs visibility
-  // Session 974: Added conversation_id for conversation persistence
+  // Session 974b: Returns task_id for async polling (Celery)
   paChat: (message: string, options?: { context?: Record<string, unknown>; generate_audio?: boolean; conversation_id?: string }) =>
-    api.post<UnifiedPAResponse>('/pa/chat/', { message, ...options }),
+    api.post<PAChatAsyncResponse>('/pa/chat/', { message, ...options }),
+
+  // Session 974b: Poll async PA chat task status
+  paChatStatus: (taskId: string) =>
+    api.get<PAChatStatusResponse>(`/pa/chat/status/${taskId}/`),
 
   // Session 934: Get PA context info (available tools, system state)
   getPAContext: () => api.get('/pa/context/'),

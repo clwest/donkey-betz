@@ -1,36 +1,32 @@
-# Session 974 - Start Here
+# Session 975 - Start Here
 
-**Previous Session:** 973 (PA Live-First Upgrade)
+**Previous Session:** 974b (PA Async Celery)
 **Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY**
 
 ---
 
-## Session 973 Summary (Just Completed)
+## Session 974b Summary (Just Completed)
 
-### PA Live-First Upgrade — PRs #1004-#1007
+### PA Chat Async Processing — Celery + Polling
 
-Transformed the PA from a documentation narrator into a live-data COO when handling broad system questions. Previously, "What updates have been made?" fell through to `general` intent and reformatted CLAUDE.md. Now routes to `system_overview` intent → `status_snapshot_tool` which queries 9 models for real counts.
+Fixed Railway proxy timeouts for complex PA queries (GPT-5.1 takes 117-172s, Railway times out at ~30s). The PA chat endpoint now dispatches a Celery task and returns a `task_id` instantly. The frontend polls every 2 seconds until the result is ready.
 
-**status_snapshot_tool:**
-- 9 cheap `.count()` queries: Initiative, ToolCallRecord, HeartBeat, SpiderData, HiveMindSession, SignalCluster, TaskResult, FailureDetection, SelfBlog
-- Each section in own `try/except` — graceful degradation
-- 60-second Django cache on `pa:status_snapshot`
+**Backend:**
+- `process_pa_chat_task` — Celery task with 5 min time limit, runs UnifiedPA + persists to ChatConversation
+- `unified_pa_chat` — now returns `{task_id, status: 'processing'}` instantly
+- `pa_chat_status` — new `GET /api/pa/chat/status/<task_id>/` polling endpoint using `AsyncResult`
 
-**system_overview intent:**
-- 17 trigger phrases: "how is everything", "what updates", "platform overview", "executive summary", etc.
-- Enrichment: `intelligence_enricher`
-- Analytical directive: COO-level pulse check, max 3-5 bullets, OBSERVED vs EXPECTED separation
+**Frontend (3 consumers updated):**
+- GlobalPADock, CommandCenterPage, AssistantPage all use async dispatch + 2s interval polling
+- `isBusy = chatMutation.isPending || isPolling` for all loading/disabled states
+- Interval cleanup on unmount
 
-**Direct response hardening:**
-- `_generate_direct_response` role changed from "Personal Assistant" to "operational advisor"
-- Prevents doc narration for `general` intent fallthrough
+**Pattern:** Follows existing blog v2 deliberation pattern (`views_research_demo.py:1091`).
 
-**4 Railway bugs fixed iteratively:**
-- Handler signature (missing `tool_name`, was async → sync)
-- Model import paths (HeartBeat in `core.models_heart`, SpiderData in `core.models_unified_system`, FailureDetection in `core.models_diagnostic_pipeline`)
-- Formatter indentation (must be inside `isinstance(dict)` block)
-- HeartBeat field names (`recorded_at` not `created_at`, `overall_status` not `status`)
+### Session 974 Summary (Prior)
+
+PA Conversation History — ChatGPT-style sidebar with conversation list, load/resume, new chat. `ChatConversation` model with `conversation_id`, `session_title`, auto-title generation. PR #1011.
 
 ---
 
@@ -44,11 +40,11 @@ Transformed the PA from a documentation narrator into a live-data COO when handl
 | Active Initiatives | 52 (cleaned from 568 in Session 961c) |
 | Database Models | 386+ |
 | Services | 134 |
-| Celery Tasks | 261 |
+| Celery Tasks | 262 (+process_pa_chat_task) |
 | Workspace Tabs | 9 (down from 18) |
 | Frontend Bundle | 2,253 KB (down from 3,062 KB) |
 | Frontend Routes | 36 (14 standalone + 22 redirects) |
-| PA Tools | 91 (+status_snapshot_tool) |
+| PA Tools | 91 |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 
@@ -64,6 +60,9 @@ Transformed the PA from a documentation narrator into a live-data COO when handl
 ---
 
 ## Known Issues / Open Items
+
+### Railway PA Timeout — JUST FIXED
+Session 974b offloaded PA processing to Celery. Needs production verification on Railway.
 
 ### Legacy Routes Expire in ~2-4 Weeks
 26 legacy routes redirect to workspace tabs. Telemetry counters track which routes still get traffic. After transition period, remove redirect routes entirely.
@@ -124,6 +123,11 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - Intent routing: `_detect_intent_and_route(message)` returns `(intent, tool_name)` tuple
 - Order matters: new intent blocks must go BEFORE existing ones that share keywords
 - Tool results: `ToolResult` dataclass with `.ok`, `.result`, `.trace_id`
+
+**PA async processing (Session 974b):**
+- `unified_pa_chat` dispatches `process_pa_chat_task.delay()` → returns `task_id`
+- Frontend polls `GET /api/pa/chat/status/<task_id>/` every 2s
+- Celery task handles persistence to `ChatConversation`
 
 **ToolDispatcher handler signature (Session 973):**
 - Must be `def handler(self, tool_name: str, payload: Dict, user_id: Optional[int], trace_id: str)` — sync, not async

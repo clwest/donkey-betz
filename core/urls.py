@@ -1097,6 +1097,7 @@ from core.views_personal_assistant import (
     get_attention_items,  # Session 574: Attention items for PA UI
     get_unified_attention, get_attention_stats,  # Session 932: Unified attention aggregator
     unified_pa_chat, unified_pa_context,  # Session 932: Unified PA REST endpoints
+    pa_chat_status,  # Session 974b: Async PA chat polling
     list_pa_conversations, get_pa_conversation, create_pa_conversation,  # Session 974: Conversation history
 )
 from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
@@ -2316,6 +2317,7 @@ urlpatterns = [
     path('api/assistant/attention/stats/', get_attention_stats, name='assistant-attention-stats'),
     # Session 932: Unified PA REST endpoints (same behavior as WebSocket)
     path('api/pa/chat/', unified_pa_chat, name='unified-pa-chat'),
+    path('api/pa/chat/status/<str:task_id>/', pa_chat_status, name='pa-chat-status'),
     path('api/pa/context/', unified_pa_context, name='unified-pa-context'),
     # Session 974: PA conversation history endpoints
     path('api/pa/conversations/', list_pa_conversations, name='pa-conversations-list'),

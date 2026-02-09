@@ -444,6 +444,10 @@ export default function CommandCenterPage() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
 
+  // Session 974b: Async polling state
+  const [isPolling, setIsPolling] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -453,6 +457,13 @@ export default function CommandCenterPage() {
   const queryClient = useQueryClient()
   const { isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
+
+  // Session 974b: Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
 
   // Session 948: Navigate to Workspace tabs
   const goToWorkspace = useCallback((tab?: string) => {
@@ -578,32 +589,55 @@ export default function CommandCenterPage() {
   // Mutations
   // ============================================================================
 
-  // Chat — Session 974: Use paChat with conversation_id for persistence
+  // Chat — Session 974b: Async dispatch + polling via Celery
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
       assistantApi.paChat(message, { conversation_id: activeConversationId || undefined }),
     onSuccess: (response) => {
-      const content = response.data.content || 'No response'
-      const toolNames = (response.data.tool_runs || []).map((r) => r.tool)
-      addPAMessage({
-        role: 'assistant',
-        content,
-        tools_used: toolNames,
-      })
+      const taskId = response.data.task_id
+      setIsPolling(true)
 
-      // Track conversation_id from backend
-      if (response.data.conversation_id && !activeConversationId) {
-        setActiveConversationId(response.data.conversation_id)
-      }
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await assistantApi.paChatStatus(taskId)
+          if (status.data.status === 'completed') {
+            if (pollRef.current) clearInterval(pollRef.current)
+            pollRef.current = null
+            setIsPolling(false)
 
-      // Refresh conversation list after new message
-      fetchConversations()
+            const content = status.data.content || 'No response'
+            const toolNames = (status.data.tool_runs || []).map((r) => r.tool)
+            addPAMessage({ role: 'assistant', content, tools_used: toolNames })
 
-      if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
-        const msgId = Date.now().toString()
-        setSpeakingMessageId(msgId)
-        ttsMutation.mutate(content)
-      }
+            if (status.data.conversation_id && !activeConversationId) {
+              setActiveConversationId(status.data.conversation_id)
+            }
+            fetchConversations()
+
+            if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
+              const msgId = Date.now().toString()
+              setSpeakingMessageId(msgId)
+              ttsMutation.mutate(content)
+            }
+          } else if (status.data.status === 'failed') {
+            if (pollRef.current) clearInterval(pollRef.current)
+            pollRef.current = null
+            setIsPolling(false)
+            addPAMessage({
+              role: 'assistant',
+              content: status.data.error || 'Sorry, there was an error. Please try again.',
+            })
+          }
+        } catch {
+          if (pollRef.current) clearInterval(pollRef.current)
+          pollRef.current = null
+          setIsPolling(false)
+          addPAMessage({
+            role: 'assistant',
+            content: 'Sorry, there was an error. Please try again.',
+          })
+        }
+      }, 2000)
     },
     onError: () => {
       addPAMessage({
@@ -612,6 +646,8 @@ export default function CommandCenterPage() {
       })
     },
   })
+
+  const isBusy = chatMutation.isPending || isPolling
 
   // Voice transcription
   const transcribeMutation = useMutation({
@@ -778,12 +814,12 @@ export default function CommandCenterPage() {
 
   const sendMessage = useCallback((messageText?: string) => {
     const text = messageText || input
-    if (!text.trim() || chatMutation.isPending) return
+    if (!text.trim() || isBusy) return
 
     addPAMessage({ role: 'user', content: text })
     setInput('')
     chatMutation.mutate(text)
-  }, [input, chatMutation, addPAMessage])
+  }, [input, isBusy, chatMutation, addPAMessage])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1114,7 +1150,7 @@ export default function CommandCenterPage() {
                           <button
                             onClick={() => regenerateResponse(index)}
                             className="p-1 rounded hover:bg-dark-border"
-                            disabled={chatMutation.isPending}
+                            disabled={isBusy}
                           >
                             <RefreshCw size={12} className="text-gray-400" />
                           </button>
@@ -1144,7 +1180,7 @@ export default function CommandCenterPage() {
               ))
             )}
 
-            {chatMutation.isPending && (
+            {isBusy && (
               <div className="flex gap-2 justify-start">
                 <div className="h-7 w-7 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
                   <Bot size={14} className="text-primary-400" />
@@ -1187,14 +1223,14 @@ export default function CommandCenterPage() {
                 onKeyPress={handleKeyPress}
                 placeholder={isRecording ? 'Recording...' : 'Type your message...'}
                 className="input flex-1 text-sm"
-                disabled={chatMutation.isPending || isRecording || voiceChatMutation.isPending}
+                disabled={isBusy || isRecording || voiceChatMutation.isPending}
               />
               <button
                 onClick={() => sendMessage()}
-                disabled={chatMutation.isPending || !input.trim() || voiceChatMutation.isPending}
+                disabled={isBusy || !input.trim() || voiceChatMutation.isPending}
                 className="btn btn-sm btn-primary"
               >
-                {chatMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                {isBusy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
           </div>
