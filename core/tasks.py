@@ -520,21 +520,21 @@ def auto_approve_boardroom_items():
             status='pending',
             item_type='insight'
         )
-        stats['insights_approved'] = insights.update(status='acted', updated_at=now)
+        stats['insights_approved'] = insights.update(status='acted', decided_at=now)
 
         # 2. Auto-approve non-critical review items
         reviews = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='review'
         ).exclude(urgency='critical')
-        stats['reviews_approved'] = reviews.update(status='acted', updated_at=now)
+        stats['reviews_approved'] = reviews.update(status='acted', decided_at=now)
 
         # 3. Session 977: Auto-approve non-critical opportunity items
         opportunities = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='opportunity'
         ).exclude(urgency='critical')
-        stats['opportunities_approved'] = opportunities.update(status='acted', updated_at=now)
+        stats['opportunities_approved'] = opportunities.update(status='acted', decided_at=now)
 
         # 4. Session 977: Auto-approve low/medium urgency spider_action items
         # (high/critical spider_actions still need human review)
@@ -543,7 +543,7 @@ def auto_approve_boardroom_items():
             item_type='spider_action',
             urgency__in=['low', 'medium']
         )
-        stats['spider_actions_approved'] = spider_low.update(status='acted', updated_at=now)
+        stats['spider_actions_approved'] = spider_low.update(status='acted', decided_at=now)
 
         # 5. Auto-promote experiment decisions
         stats['experiments_promoted'] = AgentDecisionSummary.objects.filter(
