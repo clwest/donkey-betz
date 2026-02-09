@@ -462,6 +462,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/learning/journeys/active/',  # Active journeys
         '/api/learning/achievements/',  # Achievements
         '/api/learning/templates/',  # Journey templates
+
+        # Session 972: Page-view telemetry (fire-and-forget counters, non-sensitive)
+        '/api/v1/telemetry/',  # Page view tracking
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
