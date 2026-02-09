@@ -1371,9 +1371,9 @@ RULES:
                     context=system_prompt,
                     agent_name="UnifiedPA",
                     task_type="analysis",
-                    # Session 973: Increased from 2000 to 4000 — analytical responses
-                    # were truncating on detailed content review and system overview queries
-                    max_tokens=4000
+                    # Session 973: Increased to 8000 — GPT-5.1 supports 128K output tokens;
+                    # analytical responses were truncating on multi-item content reviews
+                    max_tokens=8000
                 )
                 if result.get('success'):
                     llm_analysis = result.get('response', '')
@@ -1401,7 +1401,8 @@ Address the user by name occasionally."""
                     context=system_prompt,
                     agent_name="UnifiedPA",
                     task_type="conversation",
-                    max_tokens=2000
+                    # Session 973: Increased from 2000 to 4000 for fallback summarization
+                    max_tokens=4000
                 )
                 if result.get('success'):
                     return result.get('response', structured_output)
