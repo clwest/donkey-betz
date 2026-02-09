@@ -96,6 +96,21 @@ class AgentFeedbackService:
             f"rating={rating}, execution={execution_id}"
         )
 
+        # Session 972: Trigger FeedbackProcessor learning pipeline
+        try:
+            from core.models_feedback_processing import get_feedback_processor
+            processor = get_feedback_processor()
+            star_rating = {1: 5, 0: 3, -1: 1}.get(rating, 3)
+            processor.process_execution_feedback(
+                agent_name=agent.name,
+                user_rating=star_rating,
+                task_type=task_description[:50] if task_description else '',
+                feedback_text=feedback_text or '',
+                execution_context=context_snapshot or {},
+            )
+        except Exception as e:
+            logger.warning(f"Learning trigger from feedback failed: {e}")
+
         # Also record in the existing AgentLearningService for deep learning
         self._sync_to_learning_service(user, agent, rating, context_snapshot)
 
