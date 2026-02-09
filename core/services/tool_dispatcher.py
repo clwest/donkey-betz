@@ -3345,7 +3345,7 @@ class ToolDispatcher:
             }
 
 
-    async def _handle_status_snapshot(self, payload: Dict[str, Any], user_id: int, trace_id: str) -> Dict[str, Any]:
+    def _handle_status_snapshot(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
         """
         Session 973: Cheap system status snapshot for broad overview questions.
         9 count() queries, cached 60s.
