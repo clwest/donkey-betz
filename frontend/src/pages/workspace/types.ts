@@ -1,25 +1,30 @@
 // Session 825: Workspace types - centralized type definitions
 // Extracted from WorkspacePage.tsx for modular architecture
+// Session 971b: Updated for 9-tab model (from 18)
 
+// New canonical tab IDs (9 tabs)
 export type WorkspaceTab =
   | 'command'
+  | 'initiatives'
+  | 'boardroom'
+  | 'content'       // Session 971b: ContentStudio (absorbs conceptforge, voices, files in B2)
+  | 'system'        // Session 971b: Merged Infra + Orchestration + Triggers
+  | 'operations'
+  | 'dataintel'     // Session 971b: Merged DataSources + Intelligence
+  | 'knowledge'
+  | 'learning'
+  // Legacy tab IDs kept for normalizeWorkspaceTab() compatibility
   | 'infrastructure'
   | 'orchestration'
-  | 'content'
-  | 'consciousness'
-  | 'intelligence'
+  | 'triggers'
   | 'datasources'
+  | 'intelligence'
   | 'governance'
-  | 'initiatives'  // Session 847: Initiative Pipeline Dashboard
-  | 'knowledge'
+  | 'consciousness'
+  | 'conceptforge'
+  | 'career'
+  | 'voices'
   | 'files'
-  | 'operations'
-  | 'triggers'  // Session 861B: WorkspaceTrigger autopilot queue
-  | 'conceptforge'  // Session 865: ConceptForge Dossier Pipeline
-  | 'career'  // Session 866: ATS Resume Optimizer
-  | 'voices'  // Session 869: Voice Marketplace
-  | 'learning'  // Session 870: Learning Journey Dashboard
-  | 'boardroom'  // Session 927: Boardroom Decision Hub
 
 // Sub-tab types for each main tab
 export type InfrastructureSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'
@@ -28,6 +33,59 @@ export type ConsciousnessSubTab = 'memory' | 'orchestra' | 'mood' | 'relationshi
 export type IntelligenceSubTab = 'reasoning' | 'safety' | 'collective'
 export type DataSourcesSubTab = 'spiders' | 'feed' | 'learning'
 export type ContentStudioSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' | 'distribution'
+
+// Session 971b: New merged tab sub-tab types
+export type SystemSubTab = 'health' | 'integration' | 'services' | 'llm' | 'monitor' | 'workflows' | 'hivemind' | 'triggers'
+export type DataIntelSubTab = 'spiders' | 'feed' | 'learning' | 'reasoning' | 'collective' | 'safety'
+
+/**
+ * Session 971b: Normalize legacy tab params to new canonical IDs.
+ * Old bookmarks like ?tab=infrastructure still work for 2-4 weeks.
+ */
+export function normalizeWorkspaceTab(tab: string): WorkspaceTab {
+  const mapping: Record<string, WorkspaceTab> = {
+    // New canonical IDs (pass through)
+    command: 'command',
+    initiatives: 'initiatives',
+    boardroom: 'boardroom',
+    content: 'content',
+    system: 'system',
+    operations: 'operations',
+    dataintel: 'dataintel',
+    knowledge: 'knowledge',
+    learning: 'learning',
+
+    // Legacy → new mappings
+    infrastructure: 'system',
+    orchestration: 'system',
+    triggers: 'system',
+    datasources: 'dataintel',
+    intelligence: 'dataintel',
+    governance: 'boardroom',       // Governance absorbed into Boardroom
+    consciousness: 'knowledge',    // AI Mind → Knowledge (temporary until B2+)
+    conceptforge: 'content',       // Dossiers → Content Studio
+    career: 'content',             // Career → Content Studio (temporary)
+    voices: 'content',             // Voices → Content Studio
+    files: 'content',              // Files → Content Studio
+  }
+
+  return mapping[tab] || 'command'
+}
+
+/**
+ * Session 971b: Map legacy tab to a default sub-tab in the new merged tab.
+ * So ?tab=orchestration lands on the "monitor" sub-tab within System.
+ */
+export function legacyTabToSubTab(tab: string): string | undefined {
+  const mapping: Record<string, string> = {
+    infrastructure: 'health',
+    orchestration: 'monitor',
+    triggers: 'triggers',
+    datasources: 'spiders',
+    intelligence: 'reasoning',
+  }
+  return mapping[tab]
+}
 
 // Workspace context for project understanding
 export interface WorkspaceContext {

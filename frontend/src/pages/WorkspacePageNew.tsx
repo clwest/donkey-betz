@@ -14,26 +14,17 @@ import {
   Wifi,
   WifiOff,
   Target,
-  Shield,
   BookOpen,
-  FolderTree,
   History,
   Plus,
   Server,
-  Workflow,
   GitBranch,
   Palette,
   Database,
-  Sparkles,
-  Lightbulb,
   FileText,
   Code,
   Terminal,
   ChevronRight,
-  Zap,  // Session 861B: Triggers tab icon
-  FlaskConical,  // Session 865: ConceptForge tab icon
-  Briefcase,  // Session 866: Career tab icon
-  Mic,  // Session 869: Voice Marketplace tab icon
   GraduationCap,  // Session 870: Learning Journey tab icon
   Gavel,  // Session 927: Boardroom tab icon
 } from 'lucide-react'
@@ -47,31 +38,25 @@ import { CompactBreadcrumb } from '@/components/Breadcrumb'
 import SmartOutputRenderer from '@/components/SmartOutputRenderer'
 
 // Import modular workspace components
+// Session 971b: Reduced to 9 canonical tabs — legacy tabs still importable
 import {
   CommandTab,
-  GovernanceTab,
   KnowledgeTab,
   OperationsTab,
-  FilesTab,
-  InfrastructureTab,
-  OrchestrationTab,
   ContentStudioTab,
-  DataSourcesTab,
-  AIConsciousnessTab,
-  IntelligenceTab,
-  InitiativesTab,  // Session 847: Initiative Pipeline Dashboard
-  TriggersTab,  // Session 861B: WorkspaceTrigger Autopilot Queue
-  ConceptForgeTab,  // Session 865: ConceptForge Dossier Pipeline
-  CareerTab,  // Session 866: ATS Resume Optimizer
-  VoiceMarketplaceTab,  // Session 869: Voice Marketplace
-  LearningJourneyTab,  // Session 870: Learning Journey Dashboard
-  BoardroomTab,  // Session 927: Boardroom Decision Hub
+  InitiativesTab,
+  BoardroomTab,
+  LearningJourneyTab,
+  // Session 971b: Merged adapter tabs
+  SystemTab,
+  DataIntelTab,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
+import { normalizeWorkspaceTab, legacyTabToSubTab } from './workspace/types'
 import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'  // Session 971b: Tab telemetry
 
-// Tab groups - 18 tabs in 5 logical clusters
+// Session 971b: Tab groups — 9 tabs in 4 logical clusters (down from 18 in 5)
 const tabGroups = [
   {
     label: 'Core',
@@ -85,35 +70,21 @@ const tabGroups = [
     label: 'Content',
     tabs: [
       { id: 'content' as WorkspaceTab, label: 'Content', icon: Palette },
-      { id: 'conceptforge' as WorkspaceTab, label: 'Dossiers', icon: FlaskConical },
-      { id: 'voices' as WorkspaceTab, label: 'Voices', icon: Mic },
     ],
   },
   {
     label: 'System',
     tabs: [
-      { id: 'infrastructure' as WorkspaceTab, label: 'Infra', icon: Server },
-      { id: 'orchestration' as WorkspaceTab, label: 'Orch', icon: Workflow },
+      { id: 'system' as WorkspaceTab, label: 'System', icon: Server },
       { id: 'operations' as WorkspaceTab, label: 'Ops', icon: History },
-      { id: 'triggers' as WorkspaceTab, label: 'Triggers', icon: Zap },
-      { id: 'governance' as WorkspaceTab, label: 'Gov', icon: Shield },
     ],
   },
   {
     label: 'Data',
     tabs: [
-      { id: 'datasources' as WorkspaceTab, label: 'Data', icon: Database },
-      { id: 'intelligence' as WorkspaceTab, label: 'Intel', icon: Lightbulb },
+      { id: 'dataintel' as WorkspaceTab, label: 'Data & Intel', icon: Database },
       { id: 'knowledge' as WorkspaceTab, label: 'Knowledge', icon: BookOpen },
-      { id: 'files' as WorkspaceTab, label: 'Files', icon: FolderTree },
-    ],
-  },
-  {
-    label: 'AI',
-    tabs: [
-      { id: 'consciousness' as WorkspaceTab, label: 'AI Mind', icon: Sparkles },
       { id: 'learning' as WorkspaceTab, label: 'Learn', icon: GraduationCap },
-      { id: 'career' as WorkspaceTab, label: 'Career', icon: Briefcase },
     ],
   },
 ]
@@ -658,11 +629,18 @@ function OperationContentModal({
 export default function WorkspacePage() {
   // Session 948: URL tab routing - support /workspace?tab=initiatives
   const [searchParams, setSearchParams] = useSearchParams()
-  const urlTab = searchParams.get('tab') as WorkspaceTab | null
+  const rawUrlTab = searchParams.get('tab') || ''
 
-  // Core state - initialize from URL param if valid
+  // Session 971b: Normalize legacy tab params (e.g., ?tab=infrastructure → system)
   const validTabs = allTabs.map(t => t.id)
-  const initialTab = urlTab && validTabs.includes(urlTab) ? urlTab : 'command'
+  const normalizedTab = rawUrlTab ? normalizeWorkspaceTab(rawUrlTab) : 'command'
+  const initialTab = validTabs.includes(normalizedTab) ? normalizedTab : 'command'
+
+  // Session 971b: Track which legacy sub-tab the user was targeting
+  const [legacySubTab, setLegacySubTab] = useState<string | undefined>(
+    () => legacyTabToSubTab(rawUrlTab)
+  )
+
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab)
 
   // Session 971b: Track workspace tab changes for telemetry
@@ -671,15 +649,25 @@ export default function WorkspacePage() {
   // Session 948: Sync URL when tab changes
   const handleTabChange = (tab: WorkspaceTab) => {
     setActiveTab(tab)
+    setLegacySubTab(undefined)  // Clear legacy sub-tab hint on manual switch
     setSearchParams({ tab }, { replace: true })
   }
 
   // Session 948: Handle external navigation (e.g., from Command Center)
+  // Session 971b: Normalize incoming tab params
   useEffect(() => {
-    if (urlTab && validTabs.includes(urlTab) && urlTab !== activeTab) {
-      setActiveTab(urlTab)
+    if (rawUrlTab) {
+      const normalized = normalizeWorkspaceTab(rawUrlTab)
+      if (validTabs.includes(normalized) && normalized !== activeTab) {
+        setActiveTab(normalized)
+        setLegacySubTab(legacyTabToSubTab(rawUrlTab))
+      }
+      // Update URL to canonical tab name if it was a legacy value
+      if (rawUrlTab !== normalized) {
+        setSearchParams({ tab: normalized }, { replace: true })
+      }
     }
-  }, [urlTab])
+  }, [rawUrlTab])
 
   const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
@@ -912,7 +900,7 @@ export default function WorkspacePage() {
             ))}
           </div>
 
-          {/* Tab Content */}
+          {/* Session 971b: Tab Content — 9 canonical tabs */}
           {activeTab === 'command' && (
             <CommandTab
               setActiveTab={handleTabChange}
@@ -921,25 +909,20 @@ export default function WorkspacePage() {
             />
           )}
 
-          {activeTab === 'infrastructure' && <InfrastructureTab />}
+          {activeTab === 'initiatives' && <InitiativesTab />}
 
-          {activeTab === 'orchestration' && <OrchestrationTab />}
+          {activeTab === 'boardroom' && <BoardroomTab />}
 
           {activeTab === 'content' && <ContentStudioTab />}
 
-          {activeTab === 'datasources' && <DataSourcesTab />}
-
-          {activeTab === 'consciousness' && <AIConsciousnessTab />}
-
-          {activeTab === 'intelligence' && <IntelligenceTab />}
-
-          {activeTab === 'initiatives' && <InitiativesTab />}
-
-          {activeTab === 'governance' && <GovernanceTab />}
-
-          {activeTab === 'knowledge' && <KnowledgeTab />}
-
-          {activeTab === 'files' && <FilesTab activeWorkspaceId={activeWorkspace.id} />}
+          {/* Session 971b: Merged System tab (Infra + Orch + Triggers) */}
+          {activeTab === 'system' && (
+            <SystemTab
+              initialSubTab={legacySubTab}
+              showSuccess={showSuccess}
+              showError={showError}
+            />
+          )}
 
           {activeTab === 'operations' && (
             <OperationsTab
@@ -950,25 +933,14 @@ export default function WorkspacePage() {
             />
           )}
 
-          {/* Session 861B: WorkspaceTrigger Autopilot Queue */}
-          {activeTab === 'triggers' && (
-            <TriggersTab showSuccess={showSuccess} showError={showError} />
+          {/* Session 971b: Merged Data & Intel tab (DataSources + Intelligence) */}
+          {activeTab === 'dataintel' && (
+            <DataIntelTab initialSubTab={legacySubTab} />
           )}
 
-          {/* Session 865: ConceptForge Dossier Pipeline */}
-          {activeTab === 'conceptforge' && <ConceptForgeTab />}
+          {activeTab === 'knowledge' && <KnowledgeTab />}
 
-          {/* Session 866: Career Tab - ATS Resume Optimizer */}
-          {activeTab === 'career' && <CareerTab />}
-
-          {/* Session 869: Voice Marketplace */}
-          {activeTab === 'voices' && <VoiceMarketplaceTab />}
-
-          {/* Session 870: Learning Journey Dashboard */}
           {activeTab === 'learning' && <LearningJourneyTab />}
-
-          {/* Session 927: Boardroom Decision Hub */}
-          {activeTab === 'boardroom' && <BoardroomTab />}
         </>
       )}
 
