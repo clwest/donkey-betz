@@ -16,7 +16,7 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
 import {
-  Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw,
+  Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw, Activity,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
   ChevronRight, CheckCircle, XCircle, Zap, MessageSquare,
   Heart, TrendingUp, Lightbulb, Palette, Settings2,
