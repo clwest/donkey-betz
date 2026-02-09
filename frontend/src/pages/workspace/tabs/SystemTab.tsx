@@ -1,8 +1,8 @@
 /**
  * Session 971b: System Tab — merged view of Infrastructure + Orchestration + Triggers.
  *
- * This is an adapter that delegates to existing tab components via a unified
- * sub-tab navigation. No content was moved — the original components render as-is.
+ * B1: Adapter delegating to original tab components (double nav).
+ * B3: Now passes controlledSubTab to suppress inner nav — single unified nav.
  */
 
 import { useState } from 'react'
@@ -81,12 +81,9 @@ export function SystemTab({ initialSubTab, showSuccess, showError }: SystemTabPr
         ))}
       </div>
 
-      {/* Delegate to original components.
-          We render the full original tab but it will show its own sub-tab nav.
-          This is intentional for B1 — keeps existing components untouched.
-          In B3, we'll inline sub-tab content directly. */}
-      {delegate === 'infra' && <InfrastructureTab />}
-      {delegate === 'orch' && <OrchestrationTab />}
+      {/* Session 971b B3: controlledSubTab suppresses inner nav — single nav level */}
+      {delegate === 'infra' && <InfrastructureTab controlledSubTab={activeSubTab} />}
+      {delegate === 'orch' && <OrchestrationTab controlledSubTab={activeSubTab} />}
       {delegate === 'triggers' && (
         <TriggersTab showSuccess={showSuccess} showError={showError} />
       )}
