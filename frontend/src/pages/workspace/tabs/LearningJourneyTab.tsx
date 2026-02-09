@@ -31,7 +31,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { platformApi } from '@/lib/api'
+import { api } from '@/lib/api'
 
 // Sub-tab configuration
 type LearningSubTab = 'dashboard' | 'journeys' | 'templates' | 'effectiveness'
@@ -172,7 +172,7 @@ function DashboardSubTab() {
   const { data: analytics, isLoading, isError, refetch } = useQuery({
     queryKey: ['learning-analytics'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/learning/journeys/analytics/')
+      const res = await api.get('/api/learning/journeys/analytics/')
       return res.data as Analytics
     },
   })
@@ -180,7 +180,7 @@ function DashboardSubTab() {
   const { data: achievementsData } = useQuery({
     queryKey: ['learning-achievements'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/learning/achievements/')
+      const res = await api.get('/api/learning/achievements/')
       return res.data as { achievements: Achievement[]; total_points: number }
     },
   })
@@ -188,7 +188,7 @@ function DashboardSubTab() {
   const { data: activeJourneys } = useQuery({
     queryKey: ['learning-journeys-active'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/learning/journeys/active/')
+      const res = await api.get('/api/learning/journeys/active/')
       return res.data as { journeys: LearningJourney[]; total: number }
     },
   })
@@ -358,14 +358,14 @@ function JourneysSubTab() {
     queryFn: async () => {
       let url = '/api/learning/journeys/'
       if (statusFilter === 'active') url = '/api/learning/journeys/active/'
-      const res = await platformApi.get(url)
+      const res = await api.get(url)
       return res.data as { journeys: LearningJourney[]; total: number }
     },
   })
 
   const pauseMutation = useMutation({
     mutationFn: async (journeyId: string) => {
-      const res = await platformApi.post(`/api/learning/journeys/${journeyId}/pause/`)
+      const res = await api.post(`/api/learning/journeys/${journeyId}/pause/`)
       return res.data
     },
     onSuccess: () => {
@@ -375,7 +375,7 @@ function JourneysSubTab() {
 
   const resumeMutation = useMutation({
     mutationFn: async (journeyId: string) => {
-      const res = await platformApi.post(`/api/learning/journeys/${journeyId}/resume/`)
+      const res = await api.post(`/api/learning/journeys/${journeyId}/resume/`)
       return res.data
     },
     onSuccess: () => {
@@ -484,14 +484,14 @@ function TemplatesSubTab() {
   const { data: templatesData, isLoading, isError, refetch } = useQuery({
     queryKey: ['learning-templates'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/learning/templates/')
+      const res = await api.get('/api/learning/templates/')
       return res.data as { templates: LearningTemplate[] }
     },
   })
 
   const startJourneyMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      const res = await platformApi.post('/api/learning/journeys/start/', { template_id: templateId })
+      const res = await api.post('/api/learning/journeys/start/', { template_id: templateId })
       return res.data
     },
     onSuccess: () => {
@@ -883,7 +883,7 @@ function JourneyDetailModal({
 
   const completeStepMutation = useMutation({
     mutationFn: async (stepNumber: number) => {
-      const res = await platformApi.post(
+      const res = await api.post(
         `/api/learning/journeys/${journey.id}/step/${stepNumber}/complete/`
       )
       return res.data
@@ -896,7 +896,7 @@ function JourneyDetailModal({
 
   const startStepMutation = useMutation({
     mutationFn: async (stepNumber: number) => {
-      const res = await platformApi.post(
+      const res = await api.post(
         `/api/learning/journeys/${journey.id}/step/${stepNumber}/start/`
       )
       return res.data
@@ -1133,7 +1133,7 @@ function EffectivenessSubTab() {
   const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ['learning-loop-stats'],
     queryFn: async () => {
-      const res = await platformApi.get('/api/learning/loop/stats/')
+      const res = await api.get('/api/learning/loop/stats/')
       return res.data as LearningLoopStats
     },
     refetchInterval: 60000, // Refresh every minute
@@ -1142,7 +1142,7 @@ function EffectivenessSubTab() {
   // Track learning outcome mutation
   const trackMutation = useMutation({
     mutationFn: async ({ patternId, wasSuccessful }: { patternId: string; wasSuccessful: boolean }) => {
-      const res = await platformApi.post('/api/learning/loop/track/', {
+      const res = await api.post('/api/learning/loop/track/', {
         pattern_id: patternId,
         was_successful: wasSuccessful,
       })
@@ -1156,7 +1156,7 @@ function EffectivenessSubTab() {
   // Run learning cycle mutation
   const runCycleMutation = useMutation({
     mutationFn: async () => {
-      const res = await platformApi.post('/api/learning/loop/run/')
+      const res = await api.post('/api/learning/loop/run/')
       return res.data
     },
     onSuccess: () => {
