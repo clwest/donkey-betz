@@ -26,6 +26,8 @@ import {
   FileText,
   List,
   AlertTriangle,
+  Target,
+  BarChart2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { spiderIntegrationApi, spiderFeedApi, learningApi } from '@/lib/api'
@@ -670,10 +672,46 @@ interface LearningInsight {
   created_at: string
 }
 
+// Session 972: Types for learning loop effectiveness data
+interface LoopPattern {
+  id: string
+  description: string
+  effectiveness: number
+  times_applied: number
+  pattern_type: string
+}
+
+interface LoopLearning {
+  id: string
+  description: string
+  pattern_type: string
+  confidence: number
+  created_at: string
+}
+
+interface LoopTypeStats {
+  pattern_type: string
+  count: number
+  avg_confidence: number
+}
+
+interface LoopStats {
+  total_active_learnings: number
+  total_applied: number
+  total_successful: number
+  overall_effectiveness: number
+  applied_patterns_count: number
+  most_effective: LoopPattern[]
+  least_effective: LoopPattern[]
+  recent_learnings: LoopLearning[]
+  by_pattern_type: LoopTypeStats[]
+}
+
 function LearningSubTab() {
   const [selectedPattern, setSelectedPattern] = useState<LearningPattern | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
+  const [showAllLearnings, setShowAllLearnings] = useState(false)
 
   const { data: statsData, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['learning-stats-tab'],
@@ -690,6 +728,16 @@ function LearningSubTab() {
       return res.data
     },
   })
+
+  // Session 972: Learning loop effectiveness stats
+  const { data: loopStatsRaw } = useQuery({
+    queryKey: ['learning-loop-stats'],
+    queryFn: async () => {
+      const res = await learningApi.loopStats()
+      return res.data
+    },
+  })
+  const loopStats: LoopStats | null = loopStatsRaw?.learning_loop || loopStatsRaw?.data?.learning_loop || null
 
   // Session 860: Fixed incorrect API paths - use /api/learning/ not /api/v1/learning/
   // Note: API returns { success: true, data: { patterns: [...] } }, so extract res.data.data
@@ -892,6 +940,130 @@ function LearningSubTab() {
                 <div className="text-xs text-gray-500">This Week</div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 972: Decision Patterns — most & least effective */}
+      {!expandedSection && loopStats && (loopStats.most_effective?.length > 0 || loopStats.least_effective?.length > 0) && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <Target size={16} className="text-accent-green" />
+            <h4 className="text-sm font-medium text-gray-400">Decision Patterns</h4>
+          </div>
+          {loopStats.most_effective?.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Most Effective</p>
+              <div className="space-y-2">
+                {loopStats.most_effective.map((p) => (
+                  <div key={p.id} className="p-3 bg-accent-green/5 border border-accent-green/20 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium text-gray-200 truncate flex-1 mr-2">{p.description}</p>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">{p.pattern_type}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent-green rounded-full"
+                          style={{ width: `${Math.round(p.effectiveness * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-accent-green font-medium">{Math.round(p.effectiveness * 100)}%</span>
+                      <span className="text-xs text-gray-500">{p.times_applied}x</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {loopStats.least_effective?.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Needs Review</p>
+              <div className="space-y-2">
+                {loopStats.least_effective.map((p) => (
+                  <div key={p.id} className="p-3 bg-accent-amber/5 border border-accent-amber/20 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium text-gray-200 truncate flex-1 mr-2">{p.description}</p>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">{p.pattern_type}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent-amber rounded-full"
+                          style={{ width: `${Math.round(p.effectiveness * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-accent-amber font-medium">{Math.round(p.effectiveness * 100)}%</span>
+                      <span className="text-xs text-gray-500">{p.times_applied}x</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session 972: Recent Learnings */}
+      {!expandedSection && loopStats && loopStats.recent_learnings && loopStats.recent_learnings.length > 0 && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen size={16} className="text-primary-400" />
+            <h4 className="text-sm font-medium text-gray-400">Recent Learnings</h4>
+          </div>
+          <div className="space-y-2">
+            {(showAllLearnings ? loopStats.recent_learnings : loopStats.recent_learnings.slice(0, 5)).map((l) => (
+              <div key={l.id} className="flex items-center gap-3 p-2 bg-gray-800/50 rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-200 truncate">{l.description}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">{l.pattern_type}</span>
+                    <span className="text-xs text-gray-500">
+                      {l.confidence > 0.8 ? 'High' : l.confidence > 0.5 ? 'Medium' : 'Low'} confidence
+                    </span>
+                    <span className="text-xs text-gray-600">
+                      {new Date(l.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {loopStats.recent_learnings.length > 5 && (
+            <button
+              onClick={() => setShowAllLearnings(!showAllLearnings)}
+              className="w-full mt-2 py-1.5 text-xs text-primary-400 hover:text-primary-300"
+            >
+              {showAllLearnings ? 'Show less' : `Show more (${loopStats.recent_learnings.length - 5} more)`}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Session 972: Pattern Distribution */}
+      {!expandedSection && loopStats && loopStats.by_pattern_type && loopStats.by_pattern_type.length > 0 && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart2 size={16} className="text-accent-cyan" />
+            <h4 className="text-sm font-medium text-gray-400">Pattern Distribution</h4>
+          </div>
+          <div className="space-y-2">
+            {loopStats.by_pattern_type.map((t) => {
+              const maxCount = Math.max(...loopStats.by_pattern_type.map((x) => x.count))
+              const pct = maxCount > 0 ? (t.count / maxCount) * 100 : 0
+              return (
+                <div key={t.pattern_type} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400 w-28 truncate">{t.pattern_type}</span>
+                  <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-accent-cyan/70 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-xs text-gray-400 w-8 text-right">{t.count}</span>
+                  <span className="text-xs text-gray-500 w-12 text-right">
+                    {t.avg_confidence != null ? `${Math.round(t.avg_confidence * 100)}%` : '-'}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

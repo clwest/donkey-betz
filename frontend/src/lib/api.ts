@@ -743,6 +743,8 @@ export const learningApi = {
   // Session 860: Added patterns and insights endpoints
   patterns: (limit = 50) => api.get('/learning/patterns/', { params: { limit } }),
   insights: (limit = 20) => api.get('/learning/insights/', { params: { limit } }),
+  // Session 972: Learning loop effectiveness stats
+  loopStats: () => api.get('/learning/loop/stats/'),
 }
 
 // Session 935: User Learning System API (Session 930 backend)
