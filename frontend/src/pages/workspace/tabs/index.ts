@@ -1,4 +1,5 @@
 // Session 825: Workspace tabs barrel export
+// Session 971b: Added SystemTab, DataIntelTab adapters for 9-tab model
 export { CommandTab } from './CommandTab'
 export { GovernanceTab } from './GovernanceTab'
 export { KnowledgeTab } from './KnowledgeTab'
@@ -43,3 +44,7 @@ export { LearningJourneyTab } from './LearningJourneyTab'
 
 // Session 927: Boardroom Tab - Decision Hub
 export { BoardroomTab } from './BoardroomTab'
+
+// Session 971b: Merged adapter tabs (9-tab model)
+export { SystemTab } from './SystemTab'
+export { DataIntelTab } from './DataIntelTab'
