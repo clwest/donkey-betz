@@ -1,11 +1,13 @@
 /**
  * Session 948: Global PA Dock
+ * Session 974: Switched to paChat API with conversation_id, added history overlay
  *
  * A persistent, dockable chat panel that appears on every page.
  * - Slides in from the right side
  * - Can be minimized to a floating button
  * - Preserves chat history across page navigations
  * - Aware of current page context
+ * - Shares state with CommandCenterPage via paStore
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -13,12 +15,13 @@ import { useLocation } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import {
   Bot, User, Send, X, Minus, Maximize2, MessageSquare,
-  Loader2, Copy, ThumbsUp, ThumbsDown, Trash2, Sparkles,
+  Loader2, Copy, ThumbsUp, ThumbsDown, Trash2, Clock, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { assistantApi } from '@/lib/api'
 import { usePAStore } from '@/stores/paStore'
 import { ChatMarkdown } from './ChatMarkdown'
+import PAConversationSidebar from './PAConversationSidebar'
 
 export default function GlobalPADock() {
   const location = useLocation()
@@ -31,6 +34,8 @@ export default function GlobalPADock() {
     isDockMinimized,
     messages,
     currentInput,
+    activeConversationId,
+    isSidebarOpen,
     toggleDock,
     closeDock,
     minimizeDock,
@@ -40,6 +45,10 @@ export default function GlobalPADock() {
     clearMessages,
     setCurrentInput,
     setCurrentPage,
+    setActiveConversationId,
+    toggleSidebar,
+    startNewConversation,
+    fetchConversations,
   } = usePAStore()
 
   const [localInput, setLocalInput] = useState(currentInput)
@@ -56,33 +65,40 @@ export default function GlobalPADock() {
 
   // Auto-scroll to bottom
   useEffect(() => {
-    if (isDockOpen && !isDockMinimized) {
+    if (isDockOpen && !isDockMinimized && !isSidebarOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages, isDockOpen, isDockMinimized])
+  }, [messages, isDockOpen, isDockMinimized, isSidebarOpen])
 
   // Focus input when dock opens
   useEffect(() => {
-    if (isDockOpen && !isDockMinimized) {
+    if (isDockOpen && !isDockMinimized && !isSidebarOpen) {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [isDockOpen, isDockMinimized])
+  }, [isDockOpen, isDockMinimized, isSidebarOpen])
 
-  // Chat mutation
+  // Session 974: Chat mutation using paChat with conversation_id
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
-      assistantApi.chat(message, {
-        use_personal_assistant: true,
+      assistantApi.paChat(message, {
         context: { current_page: location.pathname },
+        conversation_id: activeConversationId || undefined,
       }),
     onSuccess: (response) => {
-      const rawContent = response.data.response || response.data.message || 'No response'
-      const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
+      const content = response.data.content || 'No response'
+      const toolNames = (response.data.tool_runs || []).map((r) => r.tool)
       addMessage({
         role: 'assistant',
         content,
-        tools_used: response.data.tools_used || [],
+        tools_used: toolNames,
       })
+
+      // Track conversation_id from backend
+      if (response.data.conversation_id && !activeConversationId) {
+        setActiveConversationId(response.data.conversation_id)
+      }
+
+      fetchConversations()
     },
     onError: () => {
       addMessage({
@@ -179,6 +195,25 @@ export default function GlobalPADock() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {/* Session 974: History toggle */}
+          <button
+            onClick={toggleSidebar}
+            className={cn(
+              'p-1.5 rounded hover:bg-dark-border text-gray-400 hover:text-white',
+              isSidebarOpen && 'bg-primary-600/20 text-primary-400'
+            )}
+            title="Conversation history"
+          >
+            <Clock size={14} />
+          </button>
+          {/* New chat */}
+          <button
+            onClick={() => startNewConversation()}
+            className="p-1.5 rounded hover:bg-dark-border text-gray-400 hover:text-white"
+            title="New chat"
+          >
+            <Plus size={14} />
+          </button>
           <button
             onClick={clearMessages}
             className="p-1.5 rounded hover:bg-dark-border text-gray-400 hover:text-accent-red"
@@ -204,142 +239,153 @@ export default function GlobalPADock() {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-auto p-3 space-y-3">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <Bot size={32} className="mb-2 opacity-50" />
-            <p className="text-sm mb-1">How can I help?</p>
-            <p className="text-xs text-gray-500">I'm available on any page</p>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn('flex gap-2', message.role === 'user' ? 'justify-end' : 'justify-start')}
-            >
-              {message.role === 'assistant' && (
-                <div className="h-6 w-6 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
-                  <Bot size={12} className="text-primary-400" />
-                </div>
-              )}
+      {/* Messages or Sidebar Overlay */}
+      <div className="flex-1 overflow-auto p-3 space-y-3 relative">
+        {/* Session 974: Conversation history overlay */}
+        {isSidebarOpen && (
+          <PAConversationSidebar variant="overlay" />
+        )}
 
-              <div className={cn('max-w-[80%] group', message.role === 'user' && 'order-first')}>
+        {!isSidebarOpen && (
+          <>
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <Bot size={32} className="mb-2 opacity-50" />
+                <p className="text-sm mb-1">How can I help?</p>
+                <p className="text-xs text-gray-500">I'm available on any page</p>
+              </div>
+            ) : (
+              messages.map((message) => (
                 <div
-                  className={cn(
-                    'rounded-lg px-3 py-2 text-sm',
-                    message.role === 'user'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-dark-bg border border-dark-border'
-                  )}
+                  key={message.id}
+                  className={cn('flex gap-2', message.role === 'user' ? 'justify-end' : 'justify-start')}
                 >
-                  {message.role === 'assistant' ? (
-                    <ChatMarkdown content={message.content} />
-                  ) : (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.role === 'assistant' && (
+                    <div className="h-6 w-6 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
+                      <Bot size={12} className="text-primary-400" />
+                    </div>
                   )}
-                  {message.tools_used && message.tools_used.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-dark-border/50">
-                      {message.tools_used.map((tool) => (
-                        <span
-                          key={tool}
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400"
+
+                  <div className={cn('max-w-[80%] group', message.role === 'user' && 'order-first')}>
+                    <div
+                      className={cn(
+                        'rounded-lg px-3 py-2 text-sm',
+                        message.role === 'user'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-dark-bg border border-dark-border'
+                      )}
+                    >
+                      {message.role === 'assistant' ? (
+                        <ChatMarkdown content={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+                      {message.tools_used && message.tools_used.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-dark-border/50">
+                          {message.tools_used.map((tool) => (
+                            <span
+                              key={tool}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400"
+                            >
+                              {tool}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Message actions */}
+                    {message.role === 'assistant' && (
+                      <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => copyMessage(message.content)}
+                          className="p-1 rounded hover:bg-dark-border"
                         >
-                          {tool}
-                        </span>
-                      ))}
+                          <Copy size={10} className="text-gray-400" />
+                        </button>
+                        <button
+                          onClick={() => updateMessageFeedback(message.id, 'positive')}
+                          className={cn(
+                            'p-1 rounded hover:bg-dark-border',
+                            message.feedback === 'positive' && 'bg-accent-green/20'
+                          )}
+                        >
+                          <ThumbsUp
+                            size={10}
+                            className={message.feedback === 'positive' ? 'text-accent-green' : 'text-gray-400'}
+                          />
+                        </button>
+                        <button
+                          onClick={() => updateMessageFeedback(message.id, 'negative')}
+                          className={cn(
+                            'p-1 rounded hover:bg-dark-border',
+                            message.feedback === 'negative' && 'bg-accent-red/20'
+                          )}
+                        >
+                          <ThumbsDown
+                            size={10}
+                            className={message.feedback === 'negative' ? 'text-accent-red' : 'text-gray-400'}
+                          />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {message.role === 'user' && (
+                    <div className="h-6 w-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                      <User size={12} className="text-white" />
                     </div>
                   )}
                 </div>
+              ))
+            )}
 
-                {/* Message actions */}
-                {message.role === 'assistant' && (
-                  <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => copyMessage(message.content)}
-                      className="p-1 rounded hover:bg-dark-border"
-                    >
-                      <Copy size={10} className="text-gray-400" />
-                    </button>
-                    <button
-                      onClick={() => updateMessageFeedback(message.id, 'positive')}
-                      className={cn(
-                        'p-1 rounded hover:bg-dark-border',
-                        message.feedback === 'positive' && 'bg-accent-green/20'
-                      )}
-                    >
-                      <ThumbsUp
-                        size={10}
-                        className={message.feedback === 'positive' ? 'text-accent-green' : 'text-gray-400'}
-                      />
-                    </button>
-                    <button
-                      onClick={() => updateMessageFeedback(message.id, 'negative')}
-                      className={cn(
-                        'p-1 rounded hover:bg-dark-border',
-                        message.feedback === 'negative' && 'bg-accent-red/20'
-                      )}
-                    >
-                      <ThumbsDown
-                        size={10}
-                        className={message.feedback === 'negative' ? 'text-accent-red' : 'text-gray-400'}
-                      />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {message.role === 'user' && (
-                <div className="h-6 w-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                  <User size={12} className="text-white" />
+            {chatMutation.isPending && (
+              <div className="flex gap-2 justify-start">
+                <div className="h-6 w-6 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
+                  <Bot size={12} className="text-primary-400" />
                 </div>
-              )}
-            </div>
-          ))
-        )}
-
-        {chatMutation.isPending && (
-          <div className="flex gap-2 justify-start">
-            <div className="h-6 w-6 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
-              <Bot size={12} className="text-primary-400" />
-            </div>
-            <div className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin text-primary-400" />
-                <span className="text-xs text-gray-400">Thinking...</span>
+                <div className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin text-primary-400" />
+                    <span className="text-xs text-gray-400">Thinking...</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+            <div ref={messagesEndRef} />
+          </>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="border-t border-dark-border p-3 flex-shrink-0">
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={localInput}
-            onChange={(e) => setLocalInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask anything..."
-            className="input flex-1 text-sm py-2"
-            disabled={chatMutation.isPending}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={chatMutation.isPending || !localInput.trim()}
-            className="btn btn-sm btn-primary px-3"
-          >
-            {chatMutation.isPending ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Send size={14} />
-            )}
-          </button>
+      {!isSidebarOpen && (
+        <div className="border-t border-dark-border p-3 flex-shrink-0">
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={localInput}
+              onChange={(e) => setLocalInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask anything..."
+              className="input flex-1 text-sm py-2"
+              disabled={chatMutation.isPending}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={chatMutation.isPending || !localInput.trim()}
+              className="btn btn-sm btn-primary px-3"
+            >
+              {chatMutation.isPending ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Send size={14} />
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
