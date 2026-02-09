@@ -1,40 +1,36 @@
-# Session 972 - Start Here
+# Session 974 - Start Here
 
-**Previous Session:** 971b (UI + Discord Surface Reset)
-**Date:** February 8, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
+**Previous Session:** 973 (PA Live-First Upgrade)
+**Date:** February 9, 2026
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS**
 
 ---
 
-## Session 971b Summary (Just Completed)
+## Session 973 Summary (Just Completed)
 
-### UI + Discord Surface Reset — 7 PRs (#985-#990)
+### PA Live-First Upgrade — PRs #1004-#1007
 
-Consolidated the platform's navigation surface from 18 workspace tabs + 62 routes down to 9 tabs + 36 routes. Bundle reduced 26.4%.
+Transformed the PA from a documentation narrator into a live-data COO when handling broad system questions. Previously, "What updates have been made?" fell through to `general` intent and reformatted CLAUDE.md. Now routes to `system_overview` intent → `status_snapshot_tool` which queries 9 models for real counts.
 
-**PR A+E — Telemetry + Discord Docs (#985)**
-- Fire-and-forget page-view tracking to Redis counters (debounced 500ms, never blocks UI)
-- `docs/DISCORD_INTEGRATION.md` — complete 112-command reference with ACTIVE/DORMANT status
+**status_snapshot_tool:**
+- 9 cheap `.count()` queries: Initiative, ToolCallRecord, HeartBeat, SpiderData, HiveMindSession, SignalCluster, TaskResult, FailureDetection, SelfBlog
+- Each section in own `try/except` — graceful degradation
+- 60-second Django cache on `pa:status_snapshot`
 
-**PR B1 — Workspace Shell Reset (#986)**
-- 18 tabs → 9 tabs: Command, Initiatives, Boardroom, Content, System, Ops, Data & Intel, Knowledge, Learn
-- `normalizeWorkspaceTab()` maps legacy `?tab=` params for backwards compat
-- `legacyTabToSubTab()` preserves sub-tab context during redirects
-- SystemTab (Infra + Orch + Triggers) and DataIntelTab (DataSources + Intelligence) adapters
+**system_overview intent:**
+- 17 trigger phrases: "how is everything", "what updates", "platform overview", "executive summary", etc.
+- Enrichment: `intelligence_enricher`
+- Analytical directive: COO-level pulse check, max 3-5 bullets, OBSERVED vs EXPECTED separation
 
-**PR B2 — Content Consolidation (#987)**
-- Content Studio: 6 → 9 sub-tabs (+Dossiers, Voices, Files via delegate pattern)
+**Direct response hardening:**
+- `_generate_direct_response` role changed from "Personal Assistant" to "operational advisor"
+- Prevents doc narration for `general` intent fallthrough
 
-**PR B3 — Double Nav Fix (#988)**
-- `controlledSubTab` prop on 4 original tabs suppresses inner nav when parent drives
-
-**PR C — Legacy Route Cleanup (#989)**
-- 26 standalone routes → `<Navigate replace>` to workspace tabs
-- 22 page imports removed → **-813 KB bundle** from tree-shaking
-
-**PR D — Command Center "Now" Hub (#990)**
-- Three-panel strip on `/`: Attention Queue, Active Work, System Pulse
-- Each panel clickable → navigates to relevant workspace tab
+**4 Railway bugs fixed iteratively:**
+- Handler signature (missing `tool_name`, was async → sync)
+- Model import paths (HeartBeat in `core.models_heart`, SpiderData in `core.models_unified_system`, FailureDetection in `core.models_diagnostic_pipeline`)
+- Formatter indentation (must be inside `isinstance(dict)` block)
+- HeartBeat field names (`recorded_at` not `created_at`, `overall_status` not `status`)
 
 ---
 
@@ -52,7 +48,7 @@ Consolidated the platform's navigation surface from 18 workspace tabs + 62 route
 | Workspace Tabs | 9 (down from 18) |
 | Frontend Bundle | 2,253 KB (down from 3,062 KB) |
 | Frontend Routes | 36 (14 standalone + 22 redirects) |
-| PA Tools | 90 |
+| PA Tools | 91 (+status_snapshot_tool) |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
 
@@ -128,6 +124,16 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - Intent routing: `_detect_intent_and_route(message)` returns `(intent, tool_name)` tuple
 - Order matters: new intent blocks must go BEFORE existing ones that share keywords
 - Tool results: `ToolResult` dataclass with `.ok`, `.result`, `.trace_id`
+
+**ToolDispatcher handler signature (Session 973):**
+- Must be `def handler(self, tool_name: str, payload: Dict, user_id: Optional[int], trace_id: str)` — sync, not async
+- `tool_name` is the first param after `self`
+
+**Model import paths (Session 973):**
+- `HeartBeat`: `core.models_heart` (NOT `core.models`)
+- `SpiderData`: `core.models_unified_system` (NOT `ai_core.models`)
+- `FailureDetection`: `core.models_diagnostic_pipeline` (NOT `core.models`)
+- `HeartBeat` uses `recorded_at` (NOT `created_at`) and `overall_status` (NOT `status`)
 
 **BaseAgent `__init_subclass__` (Session 970):**
 - Auto-wraps `_execute_tool_call` in subclasses with ToolCallRecord recording
