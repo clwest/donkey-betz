@@ -1058,3 +1058,52 @@ def create_pa_conversation(request):
             'success': False,
             'error': str(e),
         }, status=500)
+
+
+# =============================================================================
+# SESSION 977: Boardroom Maintenance Trigger
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_boardroom_maintenance(request):
+    """
+    Session 977: Run all three boardroom maintenance tasks immediately.
+    Requires authentication. Runs synchronously (not via Celery) for instant results.
+    """
+    if not request.user.is_staff:
+        return Response({'success': False, 'error': 'Staff only'}, status=403)
+
+    from core.tasks import (
+        cleanup_boardroom_junk,
+        auto_approve_boardroom_items,
+        cleanup_expired_boardroom_items,
+    )
+
+    results = {}
+    try:
+        results['cleanup_junk'] = cleanup_boardroom_junk()
+    except Exception as e:
+        results['cleanup_junk'] = {'error': str(e)}
+
+    try:
+        results['auto_approve'] = auto_approve_boardroom_items()
+    except Exception as e:
+        results['auto_approve'] = {'error': str(e)}
+
+    try:
+        results['expired_cleanup'] = cleanup_expired_boardroom_items()
+    except Exception as e:
+        results['expired_cleanup'] = {'error': str(e)}
+
+    total_processed = sum(
+        sum(v for v in r.values() if isinstance(v, int))
+        for r in results.values()
+        if isinstance(r, dict) and 'error' not in r
+    )
+
+    return Response({
+        'success': True,
+        'total_processed': total_processed,
+        'details': results,
+    })
