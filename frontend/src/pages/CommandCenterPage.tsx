@@ -11,7 +11,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
-  assistantApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi
+  assistantApi, userLearningApi, bodyApi, humanApi, homeApi, agentsApi, orchestrationApi
 } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
@@ -267,6 +267,140 @@ function Toast({ result, onClose }: { result: { type: 'success' | 'error'; messa
 }
 
 // ============================================================================
+// Session 971b D: "Now" Hub — Attention + Active Work + System Pulse
+// ============================================================================
+
+interface NowHubProps {
+  pendingDecisions: PendingDecision[]
+  runningExecutions: Array<{ id: string; workflow_name?: string | null; agent_name?: string | null; status: string; current_step?: number | null; total_steps?: number | null }>
+  bodyHealthScore: number
+  agentsActive: number
+  systemHealth: string
+  onNavigate: (tab: string) => void
+}
+
+function NowHub({ pendingDecisions, runningExecutions, bodyHealthScore, agentsActive, systemHealth, onNavigate }: NowHubProps) {
+  const urgentItems = pendingDecisions.filter(d => d.urgency === 'critical' || d.urgency === 'high')
+  const hasContent = urgentItems.length > 0 || runningExecutions.length > 0
+
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-4">
+      {/* Attention Queue */}
+      <button
+        onClick={() => onNavigate('boardroom')}
+        className="bg-dark-card border border-dark-border rounded-lg p-3 text-left hover:border-primary-500/30 transition-colors group"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <Bell size={12} />
+            Attention
+          </div>
+          {urgentItems.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-accent-red/20 text-accent-red">
+              {urgentItems.length}
+            </span>
+          )}
+        </div>
+        {urgentItems.length > 0 ? (
+          <div className="space-y-1">
+            {urgentItems.slice(0, 2).map(item => (
+              <div key={item.id} className="flex items-center gap-2 text-sm">
+                <span className={cn(
+                  'w-1.5 h-1.5 rounded-full shrink-0',
+                  item.urgency === 'critical' ? 'bg-accent-red' : 'bg-accent-amber'
+                )} />
+                <span className="text-gray-300 truncate">{item.title}</span>
+              </div>
+            ))}
+            {urgentItems.length > 2 && (
+              <span className="text-xs text-gray-500">+{urgentItems.length - 2} more</span>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No urgent items</p>
+        )}
+      </button>
+
+      {/* Active Work */}
+      <button
+        onClick={() => onNavigate('system')}
+        className="bg-dark-card border border-dark-border rounded-lg p-3 text-left hover:border-primary-500/30 transition-colors group"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <Workflow size={12} />
+            Active Work
+          </div>
+          {runningExecutions.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
+              {runningExecutions.length}
+            </span>
+          )}
+        </div>
+        {runningExecutions.length > 0 ? (
+          <div className="space-y-1">
+            {runningExecutions.slice(0, 2).map(exec => (
+              <div key={exec.id} className="flex items-center gap-2 text-sm">
+                <Loader2 size={12} className="animate-spin text-blue-400 shrink-0" />
+                <span className="text-gray-300 truncate">
+                  {exec.agent_name || exec.workflow_name || 'Agent task'}
+                </span>
+                {exec.total_steps && exec.current_step && (
+                  <span className="text-xs text-gray-500 shrink-0">
+                    {exec.current_step}/{exec.total_steps}
+                  </span>
+                )}
+              </div>
+            ))}
+            {runningExecutions.length > 2 && (
+              <span className="text-xs text-gray-500">+{runningExecutions.length - 2} more</span>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No active tasks</p>
+        )}
+      </button>
+
+      {/* System Pulse */}
+      <button
+        onClick={() => onNavigate('system')}
+        className="bg-dark-card border border-dark-border rounded-lg p-3 text-left hover:border-primary-500/30 transition-colors group"
+      >
+        <div className="flex items-center gap-2 text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+          <Activity size={12} />
+          System Pulse
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Health</span>
+            <span className={cn(
+              'font-medium',
+              bodyHealthScore >= 80 ? 'text-accent-green' :
+              bodyHealthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
+            )}>
+              {bodyHealthScore.toFixed(0)}%
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Agents</span>
+            <span className="text-gray-300">{agentsActive} active</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Status</span>
+            <span className={cn(
+              'font-medium',
+              systemHealth === 'healthy' ? 'text-accent-green' : 'text-accent-amber'
+            )}>
+              {systemHealth === 'healthy' ? 'Healthy' : 'Degraded'}
+            </span>
+          </div>
+        </div>
+      </button>
+    </div>
+  )
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -371,6 +505,14 @@ export default function CommandCenterPage() {
     queryFn: () => humanApi.attentionStream({ limit: 20 }),
     enabled: isAuthenticated,
     refetchInterval: 30000,
+  })
+
+  // Session 971b D: Running executions for "Now" hub
+  const { data: runningExecsData } = useQuery({
+    queryKey: ['running-executions'],
+    queryFn: () => orchestrationApi.listExecutions({ status: 'running', limit: 5 }),
+    enabled: isAuthenticated,
+    refetchInterval: 15000,
   })
 
   // System control state
@@ -571,6 +713,7 @@ export default function CommandCenterPage() {
 
   const pendingDecisions: PendingDecision[] = pendingDecisionsData?.data?.items || []
   const pendingCount = pendingDecisions.length
+  const runningExecutions = runningExecsData?.data?.executions || []
 
   const systemState: SystemState = controlData?.data?.system_state || {
     system_paused: false,
@@ -731,6 +874,16 @@ export default function CommandCenterPage() {
         bodySystems={bodySystems}
         showWhileAway={showWhileAway}
         setShowWhileAway={setShowWhileAway}
+      />
+
+      {/* Session 971b D: "Now" Hub — Attention + Active Work + Pulse */}
+      <NowHub
+        pendingDecisions={pendingDecisions}
+        runningExecutions={runningExecutions}
+        bodyHealthScore={bodyHealthScore}
+        agentsActive={bootData?.quick_stats?.agents_active || 0}
+        systemHealth={bootData?.quick_stats?.system_health || 'healthy'}
+        onNavigate={goToWorkspace}
       />
 
       <div className="flex flex-1 gap-4 overflow-hidden">
