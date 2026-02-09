@@ -480,8 +480,8 @@ class EventBus:
         """Increment a metric counter."""
         try:
             self.redis_client.incr(f"mi:metrics:{metric_name}")
-        except Exception:
-            pass  # Don't fail on metrics
+        except Exception as e:
+            logger.warning(f"Event bus metric increment failed ({metric_name}): {e}")
 
     def get_stream_info(self, stream: EventStream) -> Dict[str, Any]:
         """Get information about a stream."""
@@ -526,8 +526,8 @@ class EventBus:
 
         try:
             stats['dead_letter_count'] = self.redis_client.xlen(self.DEAD_LETTER_STREAM)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Dead letter queue stats failed: {e}")
 
         return stats
 

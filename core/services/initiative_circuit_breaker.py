@@ -58,8 +58,8 @@ def is_creation_paused_by_db() -> bool:
             if isinstance(setting.value, str):
                 return setting.value.lower() in ('true', '1', 'yes')
             return bool(setting.value)
-    except Exception:
-        pass  # Model might not exist or DB error
+    except Exception as e:
+        logger.warning(f"Initiative circuit breaker check failed: {e}")
     return False
 
 

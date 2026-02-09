@@ -563,7 +563,7 @@ class GateProgressionPipeline:
                 gate=gate
             ).exclude(status='completed').values_list('title', flat=True)[:5])
 
-            decision_title = getattr(gate.decision, 'title', 'Unknown')
+            decision_title = getattr(gate.decision, 'topic', 'Unknown')
             summary = (
                 f"Gate for '{decision_title}' has been stuck in progress for 48+ hours. "
                 f"Incomplete items: {', '.join(incomplete) if incomplete else 'Unknown'}. "
