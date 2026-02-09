@@ -913,7 +913,12 @@ export default function WorkspacePage() {
 
           {activeTab === 'boardroom' && <BoardroomTab />}
 
-          {activeTab === 'content' && <ContentStudioTab />}
+          {activeTab === 'content' && (
+            <ContentStudioTab
+              initialSubTab={legacySubTab}
+              activeWorkspaceId={activeWorkspace?.id}
+            />
+          )}
 
           {/* Session 971b: Merged System tab (Infra + Orch + Triggers) */}
           {activeTab === 'system' && (
