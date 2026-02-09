@@ -4424,6 +4424,27 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Stock Intelligence Dashboard
+# =========================================================================
+from core.views_stock_intelligence import (
+    stock_dashboard,
+    stock_briefs,
+    stock_brief_detail,
+    stock_alerts,
+    stock_predictions,
+    stock_sec_filings,
+)
+
+urlpatterns += [
+    path('api/stocks/dashboard/', stock_dashboard, name='stock-dashboard'),
+    path('api/stocks/briefs/', stock_briefs, name='stock-briefs'),
+    path('api/stocks/briefs/<uuid:brief_id>/', stock_brief_detail, name='stock-brief-detail'),
+    path('api/stocks/alerts/', stock_alerts, name='stock-alerts'),
+    path('api/stocks/predictions/', stock_predictions, name='stock-predictions'),
+    path('api/stocks/sec-filings/', stock_sec_filings, name='stock-sec-filings'),
+]
+
+# =========================================================================
 # Session 971b: Page-View Telemetry
 # =========================================================================
 from core.views_telemetry import page_view_api
