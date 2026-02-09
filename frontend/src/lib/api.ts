@@ -969,6 +969,24 @@ export interface UnifiedPAResponse {
   profile_completeness: number
   latency_ms: number
   error?: string
+  conversation_id?: string
+}
+
+// Session 974: Conversation history types
+export interface ConversationSummary {
+  conversation_id: string
+  title: string
+  message_count: number
+  last_message_at: string | null
+  preview: string
+}
+
+export interface ConversationMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+  tools_used?: string[]
 }
 
 export const assistantApi = {
@@ -978,11 +996,24 @@ export const assistantApi = {
     api.post('/assistant/chat/', { message, ...options }),
 
   // Session 934: UnifiedPA chat - dedicated endpoint with full tool_runs visibility
-  paChat: (message: string, options?: { context?: Record<string, unknown>; generate_audio?: boolean }) =>
+  // Session 974: Added conversation_id for conversation persistence
+  paChat: (message: string, options?: { context?: Record<string, unknown>; generate_audio?: boolean; conversation_id?: string }) =>
     api.post<UnifiedPAResponse>('/pa/chat/', { message, ...options }),
 
   // Session 934: Get PA context info (available tools, system state)
   getPAContext: () => api.get('/pa/context/'),
+
+  // Session 974: Conversation history endpoints
+  listConversations: () =>
+    api.get<{ success: boolean; conversations: ConversationSummary[]; total: number }>('/pa/conversations/'),
+
+  getConversation: (conversationId: string) =>
+    api.get<{ success: boolean; conversation_id: string; title: string; messages: ConversationMessage[] }>(
+      `/pa/conversations/${conversationId}/`
+    ),
+
+  createConversation: () =>
+    api.post<{ success: boolean; conversation_id: string }>('/pa/conversations/new/'),
 
   // Voice Input (Speech-to-Text via Whisper)
   transcribe: (audioBlob: Blob) => {
