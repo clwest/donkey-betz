@@ -189,6 +189,8 @@ export default function AssistantPage() {
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [showSidebar, setShowSidebar] = useState(true)
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('context')
+  const [isPolling, setIsPolling] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -201,6 +203,13 @@ export default function AssistantPage() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Session 974b: Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
 
   // Persist voice settings changes
   useEffect(() => {
@@ -284,39 +293,69 @@ export default function AssistantPage() {
     },
   })
 
-  // Session 934: Use UnifiedPA endpoint for enhanced visibility
+  // Session 934/974b: Use UnifiedPA endpoint — async dispatch + polling
   const chatMutation = useMutation({
     mutationFn: (message: string) => assistantApi.paChat(message),
     onSuccess: (response) => {
-      const data = response.data
-      // Ensure content is always a string
-      const content = typeof data.content === 'string' ? data.content : JSON.stringify(data.content)
+      const taskId = response.data.task_id
+      setIsPolling(true)
 
-      const assistantMessage: Message = {
-        id: data.trace_id || (Date.now() + 1).toString(),
-        role: 'assistant',
-        content,
-        timestamp: new Date(),
-        // Session 934: Include tool_runs with full details
-        tool_runs: data.tool_runs || [],
-        tools_used: data.tool_runs?.map(t => t.tool) || [],
-        trace_id: data.trace_id,
-        intent: data.intent || undefined,
-        routed_to: data.routed_to || undefined,
-        latency_ms: data.latency_ms,
-      }
-      setMessages((prev) => [...prev, assistantMessage])
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await assistantApi.paChatStatus(taskId)
+          if (status.data.status === 'completed') {
+            if (pollRef.current) clearInterval(pollRef.current)
+            pollRef.current = null
+            setIsPolling(false)
 
-      // Update profile completeness if available
-      if (data.profile_completeness !== undefined) {
-        queryClient.setQueryData(['profile-completeness'], data.profile_completeness)
-      }
+            const data = status.data
+            const content = typeof data.content === 'string' ? data.content : JSON.stringify(data.content)
 
-      // Session 894: Auto-play TTS if enabled
-      if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
-        setSpeakingMessageId(assistantMessage.id)
-        ttsMutation.mutate(content)
-      }
+            const assistantMessage: Message = {
+              id: data.trace_id || (Date.now() + 1).toString(),
+              role: 'assistant',
+              content,
+              timestamp: new Date(),
+              tool_runs: data.tool_runs || [],
+              tools_used: data.tool_runs?.map((t: ToolRun) => t.tool) || [],
+              trace_id: data.trace_id,
+              intent: data.intent || undefined,
+              routed_to: data.routed_to || undefined,
+              latency_ms: data.latency_ms,
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+
+            if (data.profile_completeness !== undefined) {
+              queryClient.setQueryData(['profile-completeness'], data.profile_completeness)
+            }
+
+            if (voiceSettings.autoPlayTTS && voiceSettings.voiceOutputEnabled) {
+              setSpeakingMessageId(assistantMessage.id)
+              ttsMutation.mutate(content)
+            }
+          } else if (status.data.status === 'failed') {
+            if (pollRef.current) clearInterval(pollRef.current)
+            pollRef.current = null
+            setIsPolling(false)
+            setMessages((prev) => [...prev, {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: status.data.error || 'Sorry, there was an error. Please try again.',
+              timestamp: new Date(),
+            }])
+          }
+        } catch {
+          if (pollRef.current) clearInterval(pollRef.current)
+          pollRef.current = null
+          setIsPolling(false)
+          setMessages((prev) => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: 'Sorry, there was an error. Please try again.',
+            timestamp: new Date(),
+          }])
+        }
+      }, 2000)
     },
     onError: (error) => {
       const errorMessage: Message = {
@@ -329,6 +368,8 @@ export default function AssistantPage() {
       console.error('PA Chat error:', error)
     },
   })
+
+  const isBusy = chatMutation.isPending || isPolling
 
   // Voice transcription mutation (transcribe only - puts text in input)
   const transcribeMutation = useMutation({
@@ -523,7 +564,7 @@ export default function AssistantPage() {
 
   const sendMessage = async (messageText?: string) => {
     const text = messageText || input
-    if (!text.trim() || chatMutation.isPending) return
+    if (!text.trim() || isBusy) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -939,7 +980,7 @@ export default function AssistantPage() {
                           onClick={() => regenerateResponse(index)}
                           className="p-1 rounded hover:bg-dark-border"
                           title="Regenerate"
-                          disabled={chatMutation.isPending}
+                          disabled={isBusy}
                         >
                           <RefreshCw size={14} className="text-gray-400" />
                         </button>
@@ -977,7 +1018,7 @@ export default function AssistantPage() {
             ))
           )}
 
-          {chatMutation.isPending && (
+          {isBusy && (
             <div className="flex gap-3 justify-start">
               <div className="h-8 w-8 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
                 <Bot size={16} className="text-primary-400" />
@@ -1029,14 +1070,14 @@ export default function AssistantPage() {
                     : 'Type your message...'
               }
               className="input flex-1"
-              disabled={chatMutation.isPending || isRecording || voiceChatMutation.isPending}
+              disabled={isBusy || isRecording || voiceChatMutation.isPending}
             />
             <button
               onClick={() => sendMessage()}
-              disabled={chatMutation.isPending || !input.trim() || voiceChatMutation.isPending}
+              disabled={isBusy || !input.trim() || voiceChatMutation.isPending}
               className="btn btn-primary"
             >
-              {chatMutation.isPending ? (
+              {isBusy ? (
                 <Loader2 size={20} className="animate-spin" />
               ) : (
                 <Send size={20} />

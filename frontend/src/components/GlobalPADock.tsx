@@ -52,6 +52,15 @@ export default function GlobalPADock() {
   } = usePAStore()
 
   const [localInput, setLocalInput] = useState(currentInput)
+  const [isPolling, setIsPolling] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
 
   // Update current page context
   useEffect(() => {
@@ -77,7 +86,7 @@ export default function GlobalPADock() {
     }
   }, [isDockOpen, isDockMinimized, isSidebarOpen])
 
-  // Session 974: Chat mutation using paChat with conversation_id
+  // Session 974b: Chat mutation — dispatches Celery task, then polls for result
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
       assistantApi.paChat(message, {
@@ -85,20 +94,44 @@ export default function GlobalPADock() {
         conversation_id: activeConversationId || undefined,
       }),
     onSuccess: (response) => {
-      const content = response.data.content || 'No response'
-      const toolNames = (response.data.tool_runs || []).map((r) => r.tool)
-      addMessage({
-        role: 'assistant',
-        content,
-        tools_used: toolNames,
-      })
+      const taskId = response.data.task_id
+      setIsPolling(true)
 
-      // Track conversation_id from backend
-      if (response.data.conversation_id && !activeConversationId) {
-        setActiveConversationId(response.data.conversation_id)
-      }
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await assistantApi.paChatStatus(taskId)
+          if (status.data.status === 'completed') {
+            if (pollRef.current) clearInterval(pollRef.current)
+            pollRef.current = null
+            setIsPolling(false)
 
-      fetchConversations()
+            const content = status.data.content || 'No response'
+            const toolNames = (status.data.tool_runs || []).map((r) => r.tool)
+            addMessage({ role: 'assistant', content, tools_used: toolNames })
+
+            if (status.data.conversation_id && !activeConversationId) {
+              setActiveConversationId(status.data.conversation_id)
+            }
+            fetchConversations()
+          } else if (status.data.status === 'failed') {
+            if (pollRef.current) clearInterval(pollRef.current)
+            pollRef.current = null
+            setIsPolling(false)
+            addMessage({
+              role: 'assistant',
+              content: status.data.error || 'Sorry, there was an error. Please try again.',
+            })
+          }
+        } catch {
+          if (pollRef.current) clearInterval(pollRef.current)
+          pollRef.current = null
+          setIsPolling(false)
+          addMessage({
+            role: 'assistant',
+            content: 'Sorry, there was an error. Please try again.',
+          })
+        }
+      }, 2000)
     },
     onError: () => {
       addMessage({
@@ -108,8 +141,10 @@ export default function GlobalPADock() {
     },
   })
 
+  const isBusy = chatMutation.isPending || isPolling
+
   const sendMessage = useCallback(() => {
-    if (!localInput.trim() || chatMutation.isPending) return
+    if (!localInput.trim() || isBusy) return
 
     addMessage({
       role: 'user',
@@ -117,7 +152,7 @@ export default function GlobalPADock() {
     })
     chatMutation.mutate(localInput)
     setLocalInput('')
-  }, [localInput, chatMutation, addMessage])
+  }, [localInput, isBusy, chatMutation, addMessage])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -340,7 +375,7 @@ export default function GlobalPADock() {
               ))
             )}
 
-            {chatMutation.isPending && (
+            {isBusy && (
               <div className="flex gap-2 justify-start">
                 <div className="h-6 w-6 rounded-full bg-primary-600/20 flex items-center justify-center flex-shrink-0">
                   <Bot size={12} className="text-primary-400" />
@@ -370,14 +405,14 @@ export default function GlobalPADock() {
               onKeyPress={handleKeyPress}
               placeholder="Ask anything..."
               className="input flex-1 text-sm py-2"
-              disabled={chatMutation.isPending}
+              disabled={isBusy}
             />
             <button
               onClick={sendMessage}
-              disabled={chatMutation.isPending || !localInput.trim()}
+              disabled={isBusy || !localInput.trim()}
               className="btn btn-sm btn-primary px-3"
             >
-              {chatMutation.isPending ? (
+              {isBusy ? (
                 <Loader2 size={14} className="animate-spin" />
               ) : (
                 <Send size={14} />

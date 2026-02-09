@@ -178,33 +178,25 @@ def get_learning_summary(request):
 def unified_pa_chat(request):
     """
     Session 932: Chat through UnifiedPAEntrypoint exclusively.
-
-    This endpoint does NOT fall back to legacy - it will error if UnifiedPA fails.
-    Use this for clients that want consistent behavior with WebSocket.
+    Session 974b: Dispatches to Celery task for async processing to avoid
+    Railway proxy timeouts. Returns task_id for polling via pa_chat_status.
 
     Request body:
     {
         "message": "User's message",
         "context": {} // Optional additional context
         "generate_audio": false // Optional TTS
+        "conversation_id": "pa-xxxxx" // Optional conversation ID
     }
 
     Response:
     {
         "success": true,
-        "content": "Response text...",
-        "trace_id": "pa-123-abc",
-        "tool_runs": [{"tool": "...", "ok": true, "latency_ms": 234}],
-        "audio_url": null,
-        "intent": "...",
-        "routed_to": "...",
-        "profile_completeness": 65,
-        "latency_ms": 1500
+        "task_id": "celery-task-uuid",
+        "status": "processing"
     }
     """
     try:
-        from core.services.unified_pa_entrypoint import get_unified_pa
-
         message = request.data.get('message', '').strip()
         context = request.data.get('context', {})
         generate_audio = request.data.get('generate_audio', False)
@@ -213,62 +205,20 @@ def unified_pa_chat(request):
         if not message:
             return Response({'error': 'Message is required'}, status=400)
 
-        pa = get_unified_pa(request.user)
+        from core.tasks import process_pa_chat_task
 
-        # Run async method in sync context
-        start_ms = time.time()
-        response = async_to_sync(pa.process_message)(
+        task = process_pa_chat_task.delay(
+            user_id=request.user.id,
             message=message,
             context=context,
-            generate_audio=generate_audio
+            generate_audio=generate_audio,
+            conversation_id=conversation_id,
         )
-        elapsed_ms = int((time.time() - start_ms) * 1000)
-
-        # Session 974: Persist conversation to ChatConversation
-        try:
-            from core.models import ChatConversation
-
-            if not conversation_id:
-                conversation_id, _ = ChatConversation.get_or_create_session(
-                    user=request.user, platform='web'
-                )
-
-            is_first = not ChatConversation.objects.filter(
-                conversation_id=conversation_id
-            ).exists()
-
-            chat_row = ChatConversation.objects.create(
-                user=request.user,
-                conversation_id=conversation_id,
-                user_message=message,
-                assistant_response=response.content or '',
-                platform='web',
-                metadata={
-                    'trace_id': response.trace_id,
-                    'intent': response.intent,
-                    'routed_to': response.routed_to,
-                },
-                response_time_ms=response.latency_ms or elapsed_ms,
-                agents_used=[r.get('tool', '') for r in (response.tool_runs or [])],
-            )
-
-            if is_first:
-                chat_row.generate_session_title()
-        except Exception as persist_err:
-            logger.warning(f"Failed to persist PA conversation: {persist_err}")
 
         return Response({
             'success': True,
-            'content': response.content,
-            'trace_id': response.trace_id,
-            'tool_runs': response.tool_runs,
-            'audio_url': response.audio_url,
-            'intent': response.intent,
-            'routed_to': response.routed_to,
-            'profile_completeness': response.profile_completeness,
-            'latency_ms': response.latency_ms,
-            'error': response.error,
-            'conversation_id': conversation_id,
+            'task_id': str(task.id),
+            'status': 'processing',
         })
 
     except Exception as e:
@@ -281,6 +231,44 @@ def unified_pa_chat(request):
             'detail': str(e),
             'trace_id': None,
         }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pa_chat_status(request, task_id):
+    """
+    Session 974b: Poll async PA chat task status.
+
+    Returns processing/completed/failed with full response on completion.
+    """
+    try:
+        from celery.result import AsyncResult
+        from celery import current_app
+
+        result = AsyncResult(task_id, app=current_app)
+
+        if result.successful():
+            task_result = result.result or {}
+            return Response({
+                'success': True,
+                'status': 'completed',
+                **task_result,
+            })
+        elif result.failed():
+            return Response({
+                'success': False,
+                'status': 'failed',
+                'error': str(result.result) if result.result else 'Processing failed',
+            })
+        else:
+            return Response({
+                'success': True,
+                'status': 'processing',
+            })
+
+    except Exception as e:
+        logger.error(f"Error checking PA chat status: {e}")
+        return Response({'success': False, 'error': str(e)}, status=500)
 
 
 @api_view(['GET'])
