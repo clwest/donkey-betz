@@ -79,14 +79,14 @@ class UnifiedPAEntrypoint:
     # Session 959: Intent-to-enrichment mapping
     # Determines which intelligence services fire for each intent
     INTENT_ENRICHMENT_MAP = {
-        'content_review':    ['blog_performance', 'domain_context', 'spider_trends'],
+        'content_review':    ['blog_performance', 'domain_context', 'spider_trends', 'strategic_memory'],
         'opportunities':     ['spider_trends', 'domain_context', 'advisor'],
         'predictions':       ['spider_trends', 'domain_context'],
-        'initiatives':       ['intelligence_enricher'],
-        'boardroom':         ['intelligence_enricher'],
+        'initiatives':       ['intelligence_enricher', 'strategic_memory'],
+        'boardroom':         ['intelligence_enricher', 'strategic_memory'],
         'system_health':     ['intelligence_enricher'],
         'spider_data':       ['domain_context'],
-        'execution_history': ['intelligence_enricher'],
+        'execution_history': ['intelligence_enricher', 'strategic_memory'],
         'learning_patterns': ['spider_trends'],
         'pilots':            ['intelligence_enricher'],
         'gates':             ['intelligence_enricher'],
@@ -1107,7 +1107,8 @@ class UnifiedPAEntrypoint:
                     )
                     text = result.get('context_text', '') if isinstance(result, dict) else ''
                     if text:
-                        sections['system_brief'] = text
+                        # Session 972: Separate label so learning data isn't mixed with system status
+                        sections['learning_insights'] = text
 
                 elif service_key == 'blog_performance' and self.blog_performance_fn:
                     text = await asyncio.to_thread(
@@ -1245,6 +1246,7 @@ RULES:
         # Add enrichment sections (only if non-empty)
         section_labels = {
             'system_brief': 'SYSTEM BRIEF',
+            'learning_insights': 'LEARNING INSIGHTS',
             'spider_trends': 'REAL-TIME TRENDS',
             'blog_performance': 'PERFORMANCE CONTEXT',
             'domain_context': 'DOMAIN CONTEXT',
@@ -1255,6 +1257,13 @@ RULES:
             text = enrichment_sections.get(key, '')
             if text:
                 parts.append(f"\n=== {label} ===\n{text}")
+
+        # Session 972: Inject system knowledge (workspace, health, agents, etc.) into tool-based responses
+        system_knowledge = context.get('system_knowledge', {})
+        if system_knowledge.get('has_dynamic_context') and self.knowledge_injector:
+            knowledge_text = self.knowledge_injector.format_for_prompt(system_knowledge)
+            if knowledge_text:
+                parts.append(knowledge_text)
 
         # Add the data to analyze
         tool_str = str(tool_result)
@@ -1624,6 +1633,21 @@ Address the user by name occasionally."""
                     response += f"- **Drafts:** {drafts}\n"
                     response += f"- **Published:** {published}\n"
 
+                    # Session 972: Surface quality aggregate metrics
+                    avg_q = tool_result.get('avg_quality')
+                    avg_n = tool_result.get('avg_novelty')
+                    avg_s = tool_result.get('avg_structure')
+                    if avg_q is not None:
+                        response += f"\n**Quality Averages:**\n"
+                        response += f"- Quality: {avg_q:.0%}\n"
+                        if avg_n is not None:
+                            response += f"- Novelty: {avg_n:.0%}\n"
+                        if avg_s is not None:
+                            response += f"- Structure: {avg_s:.0%}\n"
+                        pr_count = tool_result.get('publish_ready_count')
+                        if pr_count is not None:
+                            response += f"- Publish-ready: {pr_count}\n"
+
                     if by_type:
                         response += "\n**Ready by type:**\n"
                         for t, c in by_type.items():
@@ -1632,18 +1656,35 @@ Address the user by name occasionally."""
                     return response
 
                 elif action == 'details':
-                    title = tool_result.get('title', 'Untitled')
-                    content_type = tool_result.get('type', 'document')
-                    status = tool_result.get('status', 'unknown')
-                    quality = tool_result.get('quality_score', 0)
-                    preview = tool_result.get('content_preview', '')[:300]
-                    item_id = tool_result.get('id', '')
+                    # Session 972: Also surface gate_notes, tone, word_count
+                    blog = tool_result.get('blog', tool_result)
+                    title = blog.get('title', 'Untitled')
+                    content_type = blog.get('content_type', blog.get('type', 'document'))
+                    status = blog.get('status', 'unknown')
+                    quality = blog.get('quality_score', 0)
+                    preview = blog.get('content_preview', '')[:300]
+                    item_id = blog.get('id', '')
 
                     response = f"**{title}**\n\n"
                     response += f"- Type: {content_type}\n"
                     response += f"- Status: {status}\n"
                     response += f"- Quality: {quality:.0%}\n"
-                    response += f"- Agent: {tool_result.get('agent_name', 'Unknown')}\n"
+                    novelty = blog.get('novelty_score')
+                    structure = blog.get('structure_score')
+                    if novelty is not None:
+                        response += f"- Novelty: {novelty:.0%}\n"
+                    if structure is not None:
+                        response += f"- Structure: {structure:.0%}\n"
+                    tone = blog.get('tone', '')
+                    if tone:
+                        response += f"- Tone: {tone}\n"
+                    word_count = blog.get('word_count', 0)
+                    if word_count:
+                        response += f"- Words: {word_count:,}\n"
+                    response += f"- Agent: {blog.get('agent_name', 'Unknown')}\n"
+                    gate_notes = blog.get('gate_notes', '')
+                    if gate_notes:
+                        response += f"\n**Editorial Notes:** {gate_notes}\n"
                     response += f"\n**Preview:**\n{preview}..."
 
                     if status == 'ready':
