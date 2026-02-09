@@ -374,32 +374,50 @@ class UnifiedPAEntrypoint:
                 )
 
             # 1. Build context
+            t0 = time.time()
             full_context = await self._build_context(message, context)
+            logger.info(f"[{trace_id}] Step 1 _build_context: {int((time.time()-t0)*1000)}ms")
 
             # 2. Detect intent and route
             intent, routed_to = self._detect_intent_and_route(message)
+            logger.info(f"[{trace_id}] Step 2 intent={intent} routed_to={routed_to}")
 
             # 3. Execute (tool or direct response)
             tool_runs = []
             if routed_to:
                 # Execute via ToolDispatcher
+                t1 = time.time()
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=routed_to,
                     payload=self._build_tool_payload(message, intent, context),
                     user_id=self.user.id
                 )
+                logger.info(f"[{trace_id}] Step 3a tool_dispatch: {int((time.time()-t1)*1000)}ms ok={tool_result.ok}")
                 tool_runs.append(tool_result.to_dict())
 
                 if tool_result.ok:
                     # Session 959: Enrich tool result with intelligence context
-                    enrichment_sections = await self._enrich_tool_result(
-                        message, intent, tool_result.result, trace_id
-                    )
+                    # Session 977: Cap enrichment at 15s to prevent pipeline stalls
+                    t2 = time.time()
+                    try:
+                        enrichment_sections = await asyncio.wait_for(
+                            self._enrich_tool_result(
+                                message, intent, tool_result.result, trace_id
+                            ),
+                            timeout=15.0
+                        )
+                    except asyncio.TimeoutError:
+                        logger.warning(f"[{trace_id}] Enrichment timed out after 15s, proceeding without")
+                        enrichment_sections = {}
+                    logger.info(f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
+
                     # Generate response from tool result + enrichment
+                    t3 = time.time()
                     content = await self._generate_response_from_tool(
                         message, intent, tool_result.result, full_context, trace_id,
                         enrichment_sections=enrichment_sections
                     )
+                    logger.info(f"[{trace_id}] Step 3c generate_response: {int((time.time()-t3)*1000)}ms")
                 else:
                     # Tool failed - generate error response
                     content = f"I encountered an issue: {tool_result.error_message}. " \
@@ -1359,26 +1377,35 @@ RULES:
         structured_output = self._format_tool_result(tool_result, intent, user_name)
 
         # If we have enrichment, get LLM analysis and APPEND it to structured output
+        # Session 977: Cap LLM call at 60s to prevent pipeline stalls
         if has_enrichment:
             system_prompt = self._build_analytical_prompt(
                 message, intent, tool_result, enrichment_sections,
                 user_name, context
             )
             try:
-                result = await asyncio.to_thread(
-                    self.llm_enforcer.enforce_real_ai,
-                    prompt=f"Analyze and advise on this data: {tool_result}",
-                    context=system_prompt,
-                    agent_name="UnifiedPA",
-                    task_type="analysis",
-                    # Session 973: Increased to 8000 — GPT-5.1 supports 128K output tokens;
-                    # analytical responses were truncating on multi-item content reviews
-                    max_tokens=8000
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.llm_enforcer.enforce_real_ai,
+                        prompt=f"Analyze and advise on this data: {tool_result}",
+                        context=system_prompt,
+                        agent_name="UnifiedPA",
+                        # Session 977: Changed from "analysis" (medium reasoning, slow) to
+                        # "conversation" (low reasoning, fast). The structured data is already
+                        # computed; the LLM just needs to summarize, not deep-reason.
+                        task_type="conversation",
+                        # Session 977: Reduced from 8000 to 4000. Analytical prompt already
+                        # says "max 3-5 bullets" — 4000 tokens is plenty.
+                        max_tokens=4000
+                    ),
+                    timeout=60.0
                 )
                 if result.get('success'):
                     llm_analysis = result.get('response', '')
                     if llm_analysis:
                         return f"{structured_output}\n\n---\n\n{llm_analysis}"
+            except asyncio.TimeoutError:
+                logger.warning(f"[{trace_id}] LLM analysis timed out after 60s, returning structured output")
             except Exception as e:
                 logger.warning(f"[{trace_id}] LLM analysis failed: {e}")
 
@@ -1395,17 +1422,22 @@ Generate a helpful, conversational response summarizing this information for {us
 Be concise but informative. Use bullet points for lists.
 Address the user by name occasionally."""
             try:
-                result = await asyncio.to_thread(
-                    self.llm_enforcer.enforce_real_ai,
-                    prompt=f"Summarize this tool result: {tool_result}",
-                    context=system_prompt,
-                    agent_name="UnifiedPA",
-                    task_type="conversation",
-                    # Session 973: Increased from 2000 to 4000 for fallback summarization
-                    max_tokens=4000
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.llm_enforcer.enforce_real_ai,
+                        prompt=f"Summarize this tool result: {tool_result}",
+                        context=system_prompt,
+                        agent_name="UnifiedPA",
+                        task_type="conversation",
+                        # Session 977: Reduced from 4000 to 2000 to keep PA responses fast
+                        max_tokens=2000
+                    ),
+                    timeout=60.0
                 )
                 if result.get('success'):
                     return result.get('response', structured_output)
+            except asyncio.TimeoutError:
+                logger.warning(f"[{trace_id}] LLM fallback timed out after 60s")
             except Exception:
                 pass
 
