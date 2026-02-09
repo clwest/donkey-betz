@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 import logging
 
 from .models import (
-    FlaggedHallucination, HallucinationReview, MythologyAlert, 
-    MythologyEvent, MythPattern
+    FlaggedHallucination, HallucinationReview, MythologyAlert,
+    MythologyEvent, MythPattern, MythologyGuard
 )
 from .services import (
     HallucinationFlaggingService, HallucinationVerificationService
@@ -1077,3 +1077,58 @@ def quarantine_stats(request):
     except Exception as e:
         logger.exception(f"Quarantine stats error: {e}")
         return Response({'error': str(e)}, status=500)
+
+
+# Session 972: Patterns and Guards list endpoints (requested by IntelligenceTab Safety sub-tab)
+
+@api_view(['GET'])
+@permission_classes([])
+def list_patterns(request):
+    """GET /api/mythology/patterns/ — list active myth patterns."""
+    try:
+        limit = int(request.GET.get('limit', 20))
+        patterns = MythPattern.objects.filter(is_active=True).order_by('-frequency_count')[:limit]
+        return Response({
+            'success': True,
+            'patterns': [{
+                'id': str(p.id),
+                'pattern_type': p.pattern_type,
+                'description': p.description,
+                'frequency_count': p.frequency_count,
+                'times_prevented': p.times_prevented,
+                'prevention_success_rate': p.prevention_success_rate,
+                'severity_weight': p.severity_weight,
+                'last_seen': p.last_seen.isoformat() if p.last_seen else None,
+                'detection_keywords': p.detection_keywords,
+            } for p in patterns],
+            'count': len(patterns),
+        })
+    except Exception as e:
+        logger.exception(f"List patterns error: {e}")
+        return Response({'success': True, 'patterns': [], 'count': 0})
+
+
+@api_view(['GET'])
+@permission_classes([])
+def list_guards(request):
+    """GET /api/mythology/guards/ — list active mythology guards."""
+    try:
+        limit = int(request.GET.get('limit', 20))
+        guards = MythologyGuard.objects.filter(is_active=True).order_by('-priority')[:limit]
+        return Response({
+            'success': True,
+            'guards': [{
+                'id': str(g.id),
+                'name': g.name,
+                'description': g.description,
+                'guard_type': g.guard_type,
+                'times_triggered': g.times_triggered,
+                'times_successful': g.times_successful,
+                'effectiveness_rate': g.effectiveness_rate,
+                'priority': g.priority,
+            } for g in guards],
+            'count': len(guards),
+        })
+    except Exception as e:
+        logger.exception(f"List guards error: {e}")
+        return Response({'success': True, 'guards': [], 'count': 0})
