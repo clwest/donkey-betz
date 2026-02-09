@@ -1175,8 +1175,8 @@ class CollectiveIntelligenceService:
                         'usefulness': round(t.usefulness_score, 2),
                         'time': t.created_at.isoformat() if t.created_at else None
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to get recent transfers: {e}")
 
             # Message stats
             total_messages = InterAgentMessage.objects.count()

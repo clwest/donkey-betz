@@ -1268,8 +1268,8 @@ def execute_agent_task(
             try:
                 from core.models import Experiment
                 experiment = Experiment.objects.filter(id=experiment_id).first()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Experiment lookup failed for {experiment_id}: {e}")
 
         execution_record = None
         if agent_obj:
@@ -1498,8 +1498,8 @@ def execute_initiative_stage_task(
                 agent_name=agent_name,
                 task_result={'success': False, 'error': str(e)},
             )
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"Failed to record stage task failure: {e2}")
 
         if self.request.retries < self.max_retries:
             raise self.retry(exc=e)
@@ -1690,7 +1690,7 @@ def run_spider_by_category(self, category: str):
                         duration_seconds=time.time() - spider_start_time
                     )
             except Exception as spider_error:
-                logger.debug(f"Spider {spider_name} failed: {spider_error}")
+                logger.warning(f"Spider {spider_name} failed: {spider_error}")
                 # Session 484: Mark error
                 execution_log.complete_error(
                     error_message=str(spider_error),
@@ -2323,8 +2323,8 @@ def process_core_spider_data():
                 spider_data.is_processed = True
                 spider_data.processed_at = timezone.now()
                 spider_data.save(update_fields=['is_processed', 'processed_at'])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to mark spider_data {spider_data.id} as processed: {e}")
 
     results['remaining'] = total_unprocessed - results['processed']
 
@@ -2549,7 +2549,7 @@ def run_spider_network(self):
                     'timestamp': timezone.now().isoformat()
                 }))
             except Exception as redis_error:
-                logger.debug(f"Redis publish failed (non-critical): {redis_error}")
+                logger.warning(f"Redis publish failed (non-critical): {redis_error}")
 
             # Session 484: Mark execution as successful
             execution_log.source_urls_attempted = source_urls if source_urls else [SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0] if spider_name in SPIDER_TARGET_URLS else 'internal']
@@ -2583,8 +2583,8 @@ def run_spider_network(self):
                     spider_name=spider_name,
                     error_message=str(e)[:500]
                 )
-            except Exception:
-                pass
+            except Exception as e2:
+                logger.warning(f"Discord spider error notification failed: {e2}")
 
     # Session 423: Calculate batch duration and send summary to Discord
     batch_duration = time.time() - batch_start_time
@@ -2772,8 +2772,8 @@ def execute_single_spider_lightweight(spider_name: str):
                 source_url='on-demand-execution',
                 status='success' if item_count > 0 else 'partial'
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to create execution log for {spider_name}: {e}")
 
         if spider_data:
             logger.info(f"✅ Spider {spider_name} executed: {item_count} unique items (dedup: {dedup_stats['duplicates']} removed)")
@@ -2798,8 +2798,8 @@ def execute_single_spider_lightweight(spider_name: str):
                 error_message=str(e)[:500],
                 source_url='on-demand-execution'
             )
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"Discord spider error notification failed: {e2}")
 
         logger.error(f"❌ Spider {spider_name} execution failed: {e}")
         return {
@@ -3028,8 +3028,8 @@ def _collect_yahoo_finance() -> list:
                     'day_low': info.get('dayLow', 0),
                     'type': 'stock_etf'
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Stock ticker fetch failed: {e}")
     except ImportError:
         items.append({'message': 'yfinance not available'})
     return items
@@ -3114,8 +3114,8 @@ def _collect_financial_default() -> list:
                     'change': info.get('regularMarketChangePercent', 0),
                     'volume': info.get('regularMarketVolume', 0),
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Stock ticker fetch failed: {e}")
     except ImportError:
         items.append({'message': 'yfinance not available'})
     return items
@@ -3644,8 +3644,8 @@ def execute_scheduled_workflow(self, schedule_id: str):
             schedule = ScheduledWorkflow.objects.get(id=schedule_id)
             schedule.last_run_at = timezone.now()
             schedule.save()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to update schedule {schedule_id} last_run_at: {e}")
 
         # Retry with exponential backoff
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
@@ -6106,8 +6106,8 @@ def agent_think_and_synthesize():
                 'insights_created': insights_created,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (synthesis_complete): {e}")
 
         logger.info(f"💭 [THINKING] Synthesis complete: {insights_created} new insights created")
 
@@ -6433,8 +6433,8 @@ def validate_knowledge_sources():
                 'data': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (knowledge_validation): {e}")
 
         return {
             'status': 'success',
@@ -6724,8 +6724,8 @@ def embed_daily_agent_learning():
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (embeddings_complete): {e}")
 
         logger.info(
             f"📚 [EMBEDDINGS] Daily embedding complete: "
@@ -7033,8 +7033,8 @@ def embed_agent_activity(hours: int = 2):
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (activity_embeddings): {e}")
 
         logger.info(
             f"🧠 [EMBEDDINGS] Agent activity embedding complete: "
@@ -7271,7 +7271,7 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                     policy_context = policy_service.get_policies_for_agent(current_speaker.name)
                 except Exception as e:
                     policy_context = ""
-                    logger.debug(f"Could not get policy context: {e}")
+                    logger.warning(f"Could not get policy context: {e}")
 
                 # Session 324: Get spider intelligence for real-world context
                 # Session 790: Enhanced to support persona agents with domain-specific data
@@ -7321,7 +7321,7 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                                 spider_context = '\n'.join(spider_parts)
                                 logger.info(f"🕷️ [CONVERSATIONS] Injected spider intelligence for {topic[:30]}")
                 except Exception as e:
-                    logger.debug(f"Could not get spider intelligence: {e}")
+                    logger.warning(f"Could not get spider intelligence: {e}")
 
                 # Session 365: Get agent mood context for personality-influenced responses
                 mood_context = ""
@@ -7335,7 +7335,7 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                             mood_context = f"\n\n== YOUR CURRENT MOOD: {mood_emoji} {mood_obj.current_mood.upper()} ==\n{mood_modifier}"
                             logger.debug(f"🎭 [CONVERSATIONS] {current_speaker.name} mood: {mood_obj.current_mood}")
                 except Exception as e:
-                    logger.debug(f"Could not get mood context: {e}")
+                    logger.warning(f"Could not get mood context: {e}")
 
                 # Session 362: Build knowledge context with data source attribution
                 knowledge_context_parts = []
@@ -7649,8 +7649,8 @@ OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
                                                 conclusion += block.text
                                         conclusion = conclusion.strip()
                                     logger.info(f"💬 [CONVERSATIONS] Conclusion via Claude fallback")
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logger.warning(f"💬 [CONVERSATIONS] Claude fallback conclusion failed: {e}")
                             else:
                                 break
 
@@ -7856,7 +7856,7 @@ Operating Constraints:
                             logger.info(f"🎭 [MOOD] {agent.name}: {old_mood} -> {mood_obj.current_mood} after conversation")
 
                 except Exception as e:
-                    logger.debug(f"Could not update mood after conversation: {e}")
+                    logger.warning(f"Could not update mood after conversation: {e}")
 
             else:
                 # Session 846: Mark conversation as abandoned if no messages were generated
@@ -7881,8 +7881,8 @@ Operating Constraints:
                 },
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (conversation_cycle): {e}")
 
         logger.info(
             f"💬 [CONVERSATIONS] Cycle complete: "
@@ -8173,7 +8173,7 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                                 mood_context = f"\n\n== YOUR CURRENT MOOD: {mood_emoji} {mood_obj.current_mood.upper()} ==\n{mood_modifier}"
                                 logger.debug(f"🎭 [MULTI-AGENT] {current_agent.name} mood: {mood_obj.current_mood}")
                     except Exception as e:
-                        logger.debug(f"Could not get mood context: {e}")
+                        logger.warning(f"Could not get mood context: {e}")
 
                     # Session 781: Build de-duplication context
                     opener_context = ""
@@ -8513,7 +8513,7 @@ Next Steps:
                         logger.info(f"🏛️ [BOARDROOM] Extracted decision from panel: {decision.topic}")
                         stats['decisions_extracted'] = stats.get('decisions_extracted', 0) + 1
                 except Exception as e:
-                    logger.debug(f"Could not extract decision from panel: {e}")
+                    logger.warning(f"Could not extract decision from panel: {e}")
 
                 # Process for Living Projects
                 try:
@@ -8524,7 +8524,7 @@ Next Steps:
                         logger.info(f"👥 [MULTI-AGENT] Created {len(insights)} insights from panel")
                         stats['living_insights'] = stats.get('living_insights', 0) + len(insights)
                 except Exception as e:
-                    logger.debug(f"Could not process panel for living projects: {e}")
+                    logger.warning(f"Could not process panel for living projects: {e}")
 
                 # Session 365: Update panel agent moods based on conversation outcomes
                 try:
@@ -8591,7 +8591,7 @@ Next Steps:
                             logger.info(f"🎭 [MOOD] {agent.name}: {old_mood} -> {mood_obj.current_mood} after panel")
 
                 except Exception as e:
-                    logger.debug(f"Could not update mood after panel: {e}")
+                    logger.warning(f"Could not update mood after panel: {e}")
 
             else:
                 # Session 846: Mark conversation as abandoned if no messages were generated
@@ -8621,8 +8621,8 @@ Next Steps:
                 },
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (multi_agent_cycle): {e}")
 
         logger.info(
             f"👥 [MULTI-AGENT] Cycle complete: "
@@ -9597,8 +9597,8 @@ Next Steps:
                 'message_count': len(messages),
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (project_conversation): {e}")
 
         logger.info(f"🗣️ [PROJECT-CONVERSATION] Complete: {len(messages)} messages between {initiator.name} and {responder.name}")
 
@@ -9759,8 +9759,8 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                     if pref.dream_type in agent_type_weights:
                         # Further boost types that this specific agent is good at
                         agent_type_weights[pref.dream_type] += pref.preference_score * 0.3
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"💭 [DREAMS] Agent preference lookup failed: {e}")
 
             for _ in range(dreams_per_agent):
                 # Pick a random knowledge item as inspiration (or use agent specialty)
@@ -9845,7 +9845,7 @@ def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2
                         continue  # Skip - this topic was used too recently
 
                 except Exception as blacklist_err:
-                    logger.debug(f"💭 [DREAMS] Blacklist check error (proceeding): {blacklist_err}")
+                    logger.warning(f"💭 [DREAMS] Blacklist check error (proceeding): {blacklist_err}")
 
                 # Session 249: Pick dream type using weighted random selection
                 # instead of uniform random
@@ -9965,7 +9965,7 @@ Guidelines:
                         tracker = TopicDiversityTracker.get_or_create_topic(topic)
                         tracker.record_dream_use()
                     except Exception as tracker_err:
-                        logger.debug(f"💭 [DREAMS] Topic tracking failed (non-critical): {tracker_err}")
+                        logger.warning(f"💭 [DREAMS] Topic tracking failed (non-critical): {tracker_err}")
 
                     # Session 419: Send Discord notification
                     try:
@@ -9992,7 +9992,7 @@ Guidelines:
                             'vividness_score': vividness
                         })
                     except Exception as event_err:
-                        logger.debug(f"System event emission failed: {event_err}")
+                        logger.warning(f"System event emission failed: {event_err}")
 
                 except Exception as e:
                     logger.warning(f"💭 [DREAMS] Failed to generate dream for {agent.name}: {e}")
@@ -10008,8 +10008,8 @@ Guidelines:
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (dreams_generated): {e}")
 
         logger.info(
             f"💭 [DREAMS] Dream cycle complete: "
@@ -10262,8 +10262,8 @@ Example: 0.8|AI Content Studio"""
                         dream.project = project
                         stats['dreams_linked_to_projects'] += 1
                         logger.debug(f"🎯 [DREAM-PRODUCTIZATION] Linked dream '{dream.title[:30]}' to project '{project.project_name}'")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"🎯 [DREAM-PRODUCTIZATION] Failed to link dream to project {matched_project_id}: {e}")
 
                 # Step 5: Auto-promote high-scoring dreams
                 if composite >= promote_threshold:
@@ -10303,8 +10303,8 @@ Example: 0.8|AI Content Studio"""
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (dream_productization): {e}")
 
         logger.info(
             f"🎯 [DREAM-PRODUCTIZATION] Cycle complete: "
@@ -10648,8 +10648,8 @@ Format: numbered list of steps."""
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (dream_implementation): {e}")
 
         logger.info(
             f"🚀 [DREAM-IMPLEMENTATION] Complete: "
@@ -10749,8 +10749,8 @@ def cleanup_stale_dreams(self, max_age_hours: int = 72):
                 'oldest_hours': round(oldest_age, 1),
                 'timestamp': now.isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (dream_cleanup): {e}")
 
         return {
             'status': 'success',
@@ -10917,8 +10917,8 @@ def execute_dream_implementations(self, max_implementations: int = 5):
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (dream_execution): {e}")
 
         logger.info(
             f"⚡ [EXECUTION-ENGINE] Complete: "
@@ -11495,8 +11495,8 @@ NEXT_STEPS:
                     'knowledge_added': exploration.related_knowledge_added,
                     'timestamp': timezone.now().isoformat()
                 }))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Redis publish failed (dream_exploration): {e}")
 
             logger.info(
                 f"🚀 [EXPLORE] Completed exploration of '{dream.title}' "
@@ -11562,8 +11562,8 @@ def run_hive_mind_session(self, session_id: str):
                 'participant_count': contributions.count(),
                 'participants': participant_names[:5]  # Limit for size
             })
-        except Exception:
-            pass  # Non-critical
+        except Exception as e:
+            logger.warning(f"🧠 [HIVE MIND] Session context serialization failed: {e}")
 
         client = OpenAI()
         total_thinking_time = 0
@@ -11895,8 +11895,8 @@ Include this DecisionSummary block NOW."""
             session = HiveMindSession.objects.get(id=session_id)
             session.status = 'failed'
             session.save()
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"🧠 [HIVE MIND] Failed to mark session {session_id} as failed: {e2}")
         return {'status': 'failed', 'error': str(e)}
 
 
@@ -11918,7 +11918,7 @@ def broadcast_hive_mind_update(session, contribution, status):
             'timestamp': timezone.now().isoformat()
         }))
     except Exception as e:
-        logger.debug(f"Failed to broadcast hive mind update: {e}")
+        logger.warning(f"Failed to broadcast hive mind update: {e}")
 
 
 def broadcast_hive_mind_status(session, status):
@@ -11936,7 +11936,7 @@ def broadcast_hive_mind_status(session, status):
             'timestamp': timezone.now().isoformat()
         }))
     except Exception as e:
-        logger.debug(f"Failed to broadcast hive mind status: {e}")
+        logger.warning(f"Failed to broadcast hive mind status: {e}")
 
 
 # =============================================================================
@@ -12254,7 +12254,7 @@ def backfill_conversation_embeddings(self, batch_size: int = 50):
                 else:
                     stats['failed'] += 1
             except Exception as e:
-                logger.debug(f"Failed to generate embedding for conversation {conv.id}: {e}")
+                logger.warning(f"Failed to generate embedding for conversation {conv.id}: {e}")
                 stats['failed'] += 1
 
         logger.info(
@@ -12624,7 +12624,7 @@ def broadcast_relationship_status():
             )
             logger.debug("⚔️ [RELATIONSHIPS] Broadcast relationship status")
         except Exception as ws_error:
-            logger.debug(f"⚔️ [RELATIONSHIPS] WebSocket broadcast skipped: {ws_error}")
+            logger.warning(f"⚔️ [RELATIONSHIPS] WebSocket broadcast skipped: {ws_error}")
 
         return {'status': 'success'}
 
@@ -12672,10 +12672,10 @@ def process_agent_activity_xp():
                         evolution.award_xp(5, 'conversation', f'Participated in conversation: {convo.topic[:50] if convo.topic else "Agent discussion"}')
                         agents_awarded += 1
                         total_xp_awarded += 5
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"📈 [EVOLUTION] XP award failed for conversation: {e}")
         except Exception as e:
-            logger.debug(f"📈 [EVOLUTION] Conversation XP check skipped: {e}")
+            logger.warning(f"📈 [EVOLUTION] Conversation XP check skipped: {e}")
 
         # Award XP for dreams
         # Session 748: Fixed - AgentDream uses 'dreamed_at' not 'created_at'
@@ -12691,10 +12691,10 @@ def process_agent_activity_xp():
                         evolution.award_xp(3, 'dream', f'Generated dream: {dream.title[:50] if dream.title else "Creative dream"}')
                         agents_awarded += 1
                         total_xp_awarded += 3
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"📈 [EVOLUTION] XP award failed for dream: {e}")
         except Exception as e:
-            logger.debug(f"📈 [EVOLUTION] Dream XP check skipped: {e}")
+            logger.warning(f"📈 [EVOLUTION] Dream XP check skipped: {e}")
 
         # Award XP for learning
         # Session 748: Fixed - AgentLearning uses 'teacher_agent' and 'student_agent' not 'agent'
@@ -12711,18 +12711,18 @@ def process_agent_activity_xp():
                         evolution.award_xp(8, 'mentorship', f'Taught: {learning.learning_type}')
                         agents_awarded += 1
                         total_xp_awarded += 8
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"📈 [EVOLUTION] XP award failed for mentorship: {e}")
                 if learning.student_agent:
                     try:
                         evolution, _ = AgentEvolution.objects.get_or_create(agent=learning.student_agent)
                         evolution.award_xp(8, 'learning', f'Learned: {learning.learning_type}')
                         agents_awarded += 1
                         total_xp_awarded += 8
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"📈 [EVOLUTION] XP award failed for learning: {e}")
         except Exception as e:
-            logger.debug(f"📈 [EVOLUTION] Learning XP check skipped: {e}")
+            logger.warning(f"📈 [EVOLUTION] Learning XP check skipped: {e}")
 
         logger.info(f"📈 [EVOLUTION] Awarded {total_xp_awarded} XP to {agents_awarded} agent activities")
 
@@ -12842,7 +12842,7 @@ def broadcast_evolution_status():
             )
             logger.debug("📈 [EVOLUTION] Broadcast evolution status")
         except Exception as ws_error:
-            logger.debug(f"📈 [EVOLUTION] WebSocket broadcast skipped: {ws_error}")
+            logger.warning(f"📈 [EVOLUTION] WebSocket broadcast skipped: {ws_error}")
 
         return {'status': 'success'}
 
@@ -13342,8 +13342,8 @@ def auto_resolve_knowledge_gaps(self):
                 'gaps_resolved': len(resolvable_gaps),
                 'items_created': total_created
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Redis publish failed (knowledge_gaps): {e}")
 
         return {
             'status': 'success',
@@ -13731,8 +13731,8 @@ def collect_training_data():
                     'topics': stats.get('topics_found', []),
                 }
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Channel layer broadcast failed (reddit): {e}")
 
         return {
             'status': 'success',
@@ -13847,8 +13847,8 @@ def collect_training_data_full():
                     'topics': stats.get('topics_found', []),
                 }
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Channel layer broadcast failed (hackernews): {e}")
 
         return {
             'status': 'success',
@@ -14120,8 +14120,8 @@ def send_proactive_opportunity_alerts():
                     top_categories=list(set(o.category for o in new_opportunities if o.category))[:3],
                     avg_score=sum(o.match_score or 0 for o in new_opportunities) / len(new_opportunities)
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Proactive alert stats recording failed: {e}")
 
         logger.info(f"🔔 [SESSION 437] Proactive alerts complete: {alerts_sent} sent")
 
@@ -14286,8 +14286,8 @@ def generate_content_package(self, package_id: str):
             package = ContentPackage.objects.get(id=package_id)
             package.status = PackageStatus.FAILED
             package.save(update_fields=['status'])
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"Failed to mark package {package_id} as FAILED: {e2}")
 
         # Retry with exponential backoff
         raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
@@ -14351,7 +14351,7 @@ def generate_ai_series(self, series_id: str):
                     series.ab_variant_id = ab_test_style['variant_id']
                     series.save(update_fields=['ab_experiment_id', 'ab_variant_id'] if hasattr(series, 'ab_experiment_id') else [])
         except Exception as ab_err:
-            logger.debug(f"A/B test lookup skipped: {ab_err}")
+            logger.warning(f"A/B test lookup skipped: {ab_err}")
 
         # Build the task prompt - include A/B test style if assigned
         style_instruction = ""
@@ -14434,8 +14434,8 @@ Each episode should have: title, synopsis, images, script, voiceover, and video.
             from core.models_ai_series import AISeries
             series = AISeries.objects.get(id=series_id)
             series.fail(str(e))
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"Failed to mark series {series_id} as failed: {e2}")
 
         # Retry with exponential backoff
         raise self.retry(exc=e, countdown=120 * (2 ** self.request.retries))
@@ -14938,7 +14938,7 @@ def check_market_events_and_rerun():
                         })
                         logger.info(f"📡 [SESSION 465] Large price move detected: {ticker} {price_change_pct:+.2f}%")
             except Exception as e:
-                logger.debug(f"Failed to check {ticker}: {e}")
+                logger.warning(f"Failed to check {ticker}: {e}")
                 continue
 
         # 2. Check for high-impact SEC filings (reuse existing check)
@@ -14953,7 +14953,7 @@ def check_market_events_and_rerun():
                 })
                 logger.info(f"📡 [SESSION 465] High-impact SEC filings detected: {sec_results.get('alerts_sent', 0)}")
         except Exception as e:
-            logger.debug(f"SEC check failed: {e}")
+            logger.warning(f"SEC check failed: {e}")
 
         # 3. Check if we've already run today (avoid duplicate re-runs)
         today = date.today()
@@ -14971,7 +14971,7 @@ def check_market_events_and_rerun():
                         'high_severity': high_severity_count
                     }
         except Exception as e:
-            logger.debug(f"Brief check failed: {e}")
+            logger.warning(f"Brief check failed: {e}")
 
         # 4. If significant events found, trigger re-run
         if significant_events:
@@ -17703,8 +17703,8 @@ def run_blockchain_security_monitor():
                 session.error_message = str(e)
                 session.completed_at = timezone.now()
                 session.save()
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"Failed to mark session as failed: {e2}")
 
         return {'success': False, 'error': str(e)}
 
@@ -17937,8 +17937,8 @@ def run_stock_market_intelligence():
                 session.error_message = str(e)
                 session.completed_at = timezone.now()
                 session.save()
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"Failed to mark session as failed: {e2}")
 
         return {'success': False, 'error': str(e)}
 
@@ -18094,8 +18094,8 @@ def process_trigger_events(event_ids: list):
                     event.status = 'failed'
                     event.error_message = str(e)
                     event.save(update_fields=['status', 'error_message'])
-                except Exception:
-                    pass
+                except Exception as e2:
+                    logger.warning(f"Failed to mark trigger event {event_id} as failed: {e2}")
 
         logger.info(
             f"✅ Trigger events processed: {len(event_ids)} events, "
@@ -18170,13 +18170,13 @@ def _create_blockchain_alert_from_trigger(event) -> 'BlockchainSecurityAlert':
         try:
             eth_value = float(str(first_item['value']).replace(',', ''))
             value_usd = Decimal(str(eth_value * 3500))  # Approx ETH price
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"ETH value parsing failed: {e}")
     elif 'market_cap' in first_item:
         try:
             value_usd = Decimal(str(first_item.get('market_cap', 0)))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Market cap parsing failed: {e}")
 
     alert = BlockchainSecurityAlert.objects.create(
         alert_type=alert_type,
@@ -18245,8 +18245,8 @@ def _create_stock_alert_from_trigger(event) -> 'StockMarketAlert':
             current_price = Decimal(str(first_item['regularMarketPrice']))
         if 'regularMarketChangePercent' in first_item:
             price_change = Decimal(str(first_item['regularMarketChangePercent']))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Price change parsing failed: {e}")
 
     alert = StockMarketAlert.objects.create(
         alert_type=alert_type,
@@ -18401,8 +18401,8 @@ def start_resolve_render(self, job_id: str, video_ids: list, template: str, colo
             job.status = 'error'
             job.error_message = str(e)
             job.save()
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"🎬 [RESOLVE] Failed to mark job {job_id} as error: {e2}")
         return {'status': 'error', 'error': str(e)}
 
 
@@ -18510,8 +18510,8 @@ def poll_resolve_job_status(self, job_id: str):
             job.status = 'error'
             job.error_message = 'Render timed out after 30 minutes'
             job.save()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"🎬 [RESOLVE] Failed to mark job {job_id} as timed out: {e}")
         logger.error(f"🎬 [RESOLVE] Render timed out: {job_id}")
         return {'status': 'error', 'error': 'Timeout'}
 
@@ -19946,8 +19946,8 @@ Use the generate_podcast_script tool to create the full script with speaker labe
             episode.status = 'failed'
             episode.error_message = str(e)[:500]
             episode.save()
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"🎙️ [PODCAST] Failed to mark episode {episode_id} as failed: {e2}")
 
         return {'status': 'error', 'error': str(e)}
 
@@ -20537,8 +20537,8 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
                 dream = AgentDream.objects.order_by('-dreamed_at').first()
                 if dream and dream.title:
                     blog_topic = dream.title[:100]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"📝 [BLOG] Dream topic extraction failed: {e}")
 
         elif topic_category == 'conversations':
             try:
@@ -20546,8 +20546,8 @@ def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1
                 convo = AgentConversation.objects.order_by('-started_at').first()
                 if convo and convo.topic:
                     blog_topic = convo.topic[:100]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"📝 [BLOG] Conversation topic extraction failed: {e}")
 
         # Session 969: Diversified fallback when no topic was found
         if not blog_topic:
@@ -21162,8 +21162,8 @@ def execute_single_artifact(self, artifact_id: str):
                 'status': execution.status,
                 'execution_time_ms': execution.execution_time_ms
             })
-        except Exception:
-            pass  # Non-critical
+        except Exception as e:
+            logger.warning(f"System event emission failed (agent_execution): {e}")
 
         return {
             'success': execution.status == 'completed',
@@ -23180,8 +23180,8 @@ def auto_complete_pilots():
                         'outcome': 'success',
                         'hours_running': p['hours_running']
                     })
-            except Exception:
-                pass  # Non-critical
+            except Exception as e:
+                logger.warning(f"System event emission failed (pilot_completed): {e}")
         else:
             logger.info("🚀 [SESSION 594] No pilots eligible for auto-completion")
         
@@ -23722,7 +23722,7 @@ def monitor_celery_health():
             if stuck_operations > 0:
                 warnings.append(f"⚠️ {stuck_operations} workspace operations stuck in pending state > 1 hour")
         except Exception as e:
-            logger.debug(f"Could not check WorkspaceOperations: {e}")
+            logger.warning(f"Could not check WorkspaceOperations: {e}")
 
         # === Send Alerts ===
         if issues:
@@ -23782,8 +23782,8 @@ def monitor_celery_health():
                 f"**Error:** {str(e)}\n\nThe health monitoring task itself failed. Check logs.",
                 status_type="error"
             )
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning(f"Discord emergency alert also failed: {e2}")
 
         return {'success': False, 'error': str(e)}
 
@@ -24692,8 +24692,8 @@ def _process_single_gate(gate) -> dict:
             'decision_id': str(decision.id) if decision else None,
             'status': 'running'
         })
-    except Exception:
-        pass  # Non-critical
+    except Exception as e:
+        logger.warning(f"System event emission failed (pilot_started): {e}")
 
     # 5. Mark gate as pilot started
     gate.pilot_started_at = timezone.now()
@@ -25032,7 +25032,7 @@ def generate_human_attention_items():
                 attention_bridge.create_pilot_gate_attention(gate)
                 stats['pilot_gates'] += 1
         except Exception as e:
-            logger.debug(f"Pilot gate check skipped: {e}")
+            logger.warning(f"Pilot gate check failed: {e}")
 
         # 2. Check for recent failed agent executions
         try:
@@ -25054,7 +25054,7 @@ def generate_human_attention_items():
                     attention_bridge.create_agent_execution_attention(execution)
                     stats['failed_executions'] += 1
         except Exception as e:
-            logger.debug(f"Agent execution check skipped: {e}")
+            logger.warning(f"Agent execution check failed: {e}")
 
         # 3. Check system health
         try:
@@ -25084,7 +25084,7 @@ def generate_human_attention_items():
                 )
                 stats['system_alerts'] += 1
         except Exception as e:
-            logger.debug(f"System health check skipped: {e}")
+            logger.warning(f"System health check failed: {e}")
 
         # 4. Check for high-value spider data
         try:
@@ -25105,7 +25105,7 @@ def generate_human_attention_items():
                 )
                 stats['high_value_spiders'] += 1
         except Exception as e:
-            logger.debug(f"Spider data check skipped: {e}")
+            logger.warning(f"Spider data check failed: {e}")
 
         total = sum(stats.values())
         logger.info(f"🧑 [HUMAN INTERFACE] Generated {total} attention items: {stats}")
@@ -29188,8 +29188,8 @@ def _extract_agent_output_content(result, task_description: str) -> str:
             try:
                 formatted = json.dumps(filtered_data, indent=2, default=str)
                 return f"## Agent Output Data\n\n```json\n{formatted[:8000]}\n```"
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Agent output JSON formatting failed: {e}")
 
     # Ultimate fallback - Session 887: Include more diagnostic info
     keys_info = list(data.keys()) if data else []
@@ -29542,7 +29542,7 @@ def _get_next_task_for_agent(agent_name: str) -> dict | None:
         return None
 
     except Exception as e:
-        logger.debug(f"Error getting next task for {agent_name}: {e}")
+        logger.warning(f"Error getting next task for {agent_name}: {e}")
         return None
 
 
@@ -31926,8 +31926,8 @@ def run_triggered_conversation(
                     if session.initiative_id:
                         try:
                             session.initiative.update_activity()
-                        except Exception:
-                            pass  # Non-critical
+                        except Exception as e:
+                            logger.warning(f"Initiative activity update failed for session {hive_session_id}: {e}")
             except Exception as e:
                 logger.warning(f"Could not update HiveMindSession: {e}")
 
@@ -31955,8 +31955,8 @@ def run_triggered_conversation(
                 if session:
                     session.status = 'failed'
                     session.save(update_fields=['status'])
-            except Exception:
-                pass
+            except Exception as e2:
+                logger.warning(f"Failed to mark HiveMindSession {hive_session_id} as failed: {e2}")
 
         # Retry on transient failures
         if self.request.retries < self.max_retries:

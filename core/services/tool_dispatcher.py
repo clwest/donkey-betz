@@ -1205,7 +1205,7 @@ class ToolDispatcher:
                         via='PA'
                     )
                 except Exception as e:
-                    logger.debug(f"Failed to record learning: {e}")
+                    logger.warning(f"Failed to record learning: {e}")
 
             return {
                 'action': 'approve_attention',
@@ -1250,7 +1250,7 @@ class ToolDispatcher:
                         via='PA'
                     )
                 except Exception as e:
-                    logger.debug(f"Failed to record learning: {e}")
+                    logger.warning(f"Failed to record learning: {e}")
 
             return {
                 'action': 'ignore_attention',
@@ -1291,7 +1291,7 @@ class ToolDispatcher:
                         via='PA'
                     )
                 except Exception as e:
-                    logger.debug(f"Failed to record learning: {e}")
+                    logger.warning(f"Failed to record learning: {e}")
 
             return {
                 'action': 'promote_decision',
@@ -1334,7 +1334,7 @@ class ToolDispatcher:
                         via='PA'
                     )
                 except Exception as e:
-                    logger.debug(f"Failed to record learning: {e}")
+                    logger.warning(f"Failed to record learning: {e}")
 
             return {
                 'action': 'reject_decision',

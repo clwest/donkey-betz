@@ -81,7 +81,15 @@ class OrchestrationApprovalService:
         expires_at = timezone.now() + timedelta(hours=timeout_hours) if timeout_hours else None
 
         # Create attention item
+        # Session 978: triggered_by is nullable — fall back to first admin
         user = execution.triggered_by
+        if user is None:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.filter(is_staff=True, is_active=True).first()
+        if user is None:
+            logger.error("No user available for orchestration approval gate")
+            return None
 
         try:
             attention_item = HumanAttentionItem.objects.create(
@@ -152,7 +160,15 @@ class OrchestrationApprovalService:
             logger.error(f"No step execution found for step {step.order}")
             return None
 
+        # Session 978: triggered_by is nullable — fall back to first admin
         user = execution.triggered_by
+        if user is None:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.filter(is_staff=True, is_active=True).first()
+        if user is None:
+            logger.error("No user available for orchestration error review gate")
+            return None
 
         try:
             attention_item = HumanAttentionItem.objects.create(
