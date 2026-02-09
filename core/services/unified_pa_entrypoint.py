@@ -2245,59 +2245,59 @@ Address the user by name occasionally."""
                 else:
                     return str(tool_result)
 
+            # Session 973: System overview snapshot formatter
+            elif intent == 'system_overview':
+                lines = [f"**System Pulse**, {user_name}:\n"]
+
+                health = tool_result.get('health', {})
+                if 'error' not in health:
+                    status = health.get('status', 'unknown')
+                    score = health.get('score')
+                    age = health.get('age_minutes', '?')
+                    score_str = f" ({score})" if score is not None else ""
+                    lines.append(f"- **Health:** {status}{score_str} — last heartbeat {age} min ago")
+                else:
+                    lines.append(f"- **Health:** data unavailable")
+
+                init = tool_result.get('initiatives', {})
+                if 'error' not in init:
+                    lines.append(f"- **Initiatives:** {init.get('active', 0)} active, {init.get('updated_24h', 0)} updated (24h)")
+
+                tc = tool_result.get('tool_calls_24h', {})
+                if 'error' not in tc:
+                    failed_str = f" ({tc.get('failed', 0)} failed)" if tc.get('failed', 0) > 0 else ""
+                    lines.append(f"- **Tool calls (24h):** {tc.get('total', 0)}{failed_str}")
+
+                sp = tool_result.get('spiders_24h', {})
+                if 'error' not in sp:
+                    lines.append(f"- **Spiders (24h):** {sp.get('items', 0)} items from {sp.get('active_spiders', 0)} spiders")
+
+                convos = tool_result.get('conversations_24h', {})
+                if 'error' not in convos:
+                    lines.append(f"- **Conversations (24h):** {convos.get('count', 0)}")
+
+                signals = tool_result.get('signal_clusters', {})
+                if 'error' not in signals:
+                    lines.append(f"- **Signal clusters:** {signals.get('active', 0)} active")
+
+                celery = tool_result.get('celery_24h', {})
+                if 'error' not in celery:
+                    failed_str = f" ({celery.get('failed', 0)} failed)" if celery.get('failed', 0) > 0 else ""
+                    lines.append(f"- **Celery tasks (24h):** {celery.get('total', 0)}{failed_str}")
+
+                errors = tool_result.get('errors_24h', {})
+                if 'error' not in errors:
+                    lines.append(f"- **Errors (24h):** {errors.get('count', 0)}")
+
+                blogs = tool_result.get('blogs_24h', {})
+                if 'error' not in blogs:
+                    lines.append(f"- **Blogs (24h):** {blogs.get('total', 0)} total, {blogs.get('published', 0)} published")
+
+                lines.append("\n*Want me to drill into any of these?*")
+                return "\n".join(lines)
+
             else:
                 return str(tool_result)
-
-        # Session 973: System overview snapshot formatter
-        elif intent == 'system_overview' and isinstance(tool_result, dict):
-            lines = [f"**System Pulse**, {user_name}:\n"]
-
-            health = tool_result.get('health', {})
-            if 'error' not in health:
-                status = health.get('status', 'unknown')
-                score = health.get('score')
-                age = health.get('age_minutes', '?')
-                score_str = f" ({score})" if score is not None else ""
-                lines.append(f"- **Health:** {status}{score_str} — last heartbeat {age} min ago")
-            else:
-                lines.append(f"- **Health:** data unavailable")
-
-            init = tool_result.get('initiatives', {})
-            if 'error' not in init:
-                lines.append(f"- **Initiatives:** {init.get('active', 0)} active, {init.get('updated_24h', 0)} updated (24h)")
-
-            tc = tool_result.get('tool_calls_24h', {})
-            if 'error' not in tc:
-                failed_str = f" ({tc.get('failed', 0)} failed)" if tc.get('failed', 0) > 0 else ""
-                lines.append(f"- **Tool calls (24h):** {tc.get('total', 0)}{failed_str}")
-
-            sp = tool_result.get('spiders_24h', {})
-            if 'error' not in sp:
-                lines.append(f"- **Spiders (24h):** {sp.get('items', 0)} items from {sp.get('active_spiders', 0)} spiders")
-
-            convos = tool_result.get('conversations_24h', {})
-            if 'error' not in convos:
-                lines.append(f"- **Conversations (24h):** {convos.get('count', 0)}")
-
-            signals = tool_result.get('signal_clusters', {})
-            if 'error' not in signals:
-                lines.append(f"- **Signal clusters:** {signals.get('active', 0)} active")
-
-            celery = tool_result.get('celery_24h', {})
-            if 'error' not in celery:
-                failed_str = f" ({celery.get('failed', 0)} failed)" if celery.get('failed', 0) > 0 else ""
-                lines.append(f"- **Celery tasks (24h):** {celery.get('total', 0)}{failed_str}")
-
-            errors = tool_result.get('errors_24h', {})
-            if 'error' not in errors:
-                lines.append(f"- **Errors (24h):** {errors.get('count', 0)}")
-
-            blogs = tool_result.get('blogs_24h', {})
-            if 'error' not in blogs:
-                lines.append(f"- **Blogs (24h):** {blogs.get('total', 0)} total, {blogs.get('published', 0)} published")
-
-            lines.append("\n*Want me to drill into any of these?*")
-            return "\n".join(lines)
 
         else:
             return str(tool_result)

@@ -3385,7 +3385,7 @@ class ToolDispatcher:
 
         # 3. Health (latest heartbeat)
         try:
-            from core.models import HeartBeat
+            from core.models_heart import HeartBeat
             hb = HeartBeat.objects.order_by('-created_at').first()
             if hb:
                 age_min = (now - hb.created_at).total_seconds() / 60
@@ -3401,7 +3401,7 @@ class ToolDispatcher:
 
         # 4. Spiders (24h)
         try:
-            from ai_core.models import SpiderData
+            from core.models_unified_system import SpiderData
             items = SpiderData.objects.filter(created_at__gte=last_24h).count()
             distinct_spiders = SpiderData.objects.filter(created_at__gte=last_24h).values('spider_name').distinct().count()
             snapshot['spiders_24h'] = {'items': items, 'active_spiders': distinct_spiders}
@@ -3435,7 +3435,7 @@ class ToolDispatcher:
 
         # 8. Errors (24h)
         try:
-            from core.models import FailureDetection
+            from core.models_diagnostic_pipeline import FailureDetection
             errors = FailureDetection.objects.filter(detected_at__gte=last_24h).count()
             snapshot['errors_24h'] = {'count': errors}
         except Exception as e:
