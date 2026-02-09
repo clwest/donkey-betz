@@ -26,6 +26,7 @@ import {
   Brain,
   Sparkles,
   History,
+  Code,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { humanApi, decisionsApi } from '@/lib/api'
@@ -60,6 +61,7 @@ interface AttentionItem {
   ml_recommendation?: string
   ml_confidence?: number
   ml_prediction?: MLPrediction
+  payload?: Record<string, unknown>
 }
 
 interface Decision {
@@ -430,6 +432,98 @@ export function BoardroomTab() {
     )
   }
 
+  // Session 972: Extract the richest content from payload.result_data
+  const extractResultContent = (resultData: unknown): string | null => {
+    if (!resultData) return null
+    if (typeof resultData === 'string') return resultData
+    if (typeof resultData === 'object' && resultData !== null) {
+      const data = resultData as Record<string, unknown>
+      // Try known content keys in priority order
+      for (const key of ['report', 'analysis', 'content', 'output', 'message', 'summary', 'result']) {
+        if (typeof data[key] === 'string' && (data[key] as string).length > 0) {
+          return data[key] as string
+        }
+      }
+      // Fall back to rendering key-value pairs for string/number values
+      const pairs = Object.entries(data)
+        .filter(([, v]) => typeof v === 'string' || typeof v === 'number')
+        .map(([k, v]) => `${k}: ${v}`)
+      if (pairs.length > 0) return pairs.join('\n')
+    }
+    return null
+  }
+
+  // Session 972: Attention Item Detail component for expanded view
+  const AttentionItemDetail = ({ item }: { item: AttentionItem }) => {
+    const [showRaw, setShowRaw] = useState(false)
+    const [showFull, setShowFull] = useState(false)
+    const TEXT_LIMIT = 5000
+
+    const resultData = item.payload?.result_data
+    const richContent = extractResultContent(resultData)
+    const taskText = typeof item.payload?.task === 'string' ? item.payload.task : null
+    const agentName = typeof item.payload?.agent_name === 'string' ? item.payload.agent_name : null
+
+    return (
+      <div className="space-y-3 mt-2">
+        {/* Summary */}
+        {item.summary && (
+          <p className="text-sm text-gray-300 whitespace-pre-wrap">{item.summary}</p>
+        )}
+
+        {/* Rich content from result_data */}
+        {richContent && richContent !== item.summary && (
+          <div className="mt-2">
+            <span className="text-xs text-gray-500 uppercase font-medium">Agent Output</span>
+            <div className="mt-1 p-3 bg-dark-bg rounded-lg border border-dark-border">
+              <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
+                {showFull ? richContent : (richContent.length > TEXT_LIMIT ? richContent.slice(0, TEXT_LIMIT) + '...' : richContent)}
+              </pre>
+              {richContent.length > TEXT_LIMIT && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowFull(!showFull) }}
+                  className="mt-2 text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                >
+                  {showFull ? 'Show less' : `Show full (${Math.round(richContent.length / 1000)}k chars)`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Task and agent context */}
+        {(taskText || agentName) && (
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            {agentName && <span>Agent: <span className="text-gray-400">{agentName}</span></span>}
+            {taskText && <span className="truncate max-w-md">Task: <span className="text-gray-400">{taskText}</span></span>}
+          </div>
+        )}
+
+        {/* ML Prediction */}
+        <MLPredictionPanel item={item} />
+
+        {/* Raw data toggle */}
+        {item.payload && Object.keys(item.payload).length > 0 && (
+          <div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowRaw(!showRaw) }}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              <Code size={12} />
+              <span>Raw Data</span>
+              {showRaw ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+            {showRaw && (
+              <pre className="mt-2 p-3 bg-dark-bg rounded-lg border border-dark-border text-xs text-gray-400 overflow-x-auto max-h-64 overflow-y-auto">
+                {JSON.stringify(item.payload, null, 2)}
+              </pre>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const isBulkPending = bulkDecideMutation.isPending || bulkPromoteMutation.isPending || bulkRejectMutation.isPending
 
   return (
@@ -663,11 +757,8 @@ export function BoardroomTab() {
                   </div>
                   {expandedItems.has(item.id) && (
                     <div className="px-4 pb-3 pt-0 border-t border-dark-border bg-dark-bg/50">
-                      {item.summary && (
-                        <p className="text-sm text-gray-300 mt-2">{item.summary}</p>
-                      )}
-                      {/* Session 956: Enhanced ML Prediction Panel */}
-                      <MLPredictionPanel item={item} />
+                      {/* Session 972: Full attention item detail with payload rendering */}
+                      <AttentionItemDetail item={item} />
                     </div>
                   )}
                 </div>
