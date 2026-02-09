@@ -32,7 +32,7 @@ export type OrchestrationSubTab = 'monitor' | 'workflows' | 'automation' | 'hive
 export type ConsciousnessSubTab = 'memory' | 'orchestra' | 'mood' | 'relationships' | 'capsules' | 'timetravel'
 export type IntelligenceSubTab = 'reasoning' | 'safety' | 'collective'
 export type DataSourcesSubTab = 'spiders' | 'feed' | 'learning'
-export type ContentStudioSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' | 'distribution'
+export type ContentStudioSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' | 'distribution' | 'dossiers' | 'voices' | 'files'
 
 // Session 971b: New merged tab sub-tab types
 export type SystemSubTab = 'health' | 'integration' | 'services' | 'llm' | 'monitor' | 'workflows' | 'hivemind' | 'triggers'
@@ -83,6 +83,9 @@ export function legacyTabToSubTab(tab: string): string | undefined {
     triggers: 'triggers',
     datasources: 'spiders',
     intelligence: 'reasoning',
+    conceptforge: 'dossiers',
+    voices: 'voices',
+    files: 'files',
   }
   return mapping[tab]
 }
