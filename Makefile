@@ -235,7 +235,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 	else \
 		echo "-> Starting Celery default worker (4 threads, default queue)..."; \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=4 \
-			--queues=default,agents,sports,content,ml \
+			--queues=default,agents,sports,content,ml,pa \
 			--hostname=default@%h > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
 		sleep 1; \
 	fi
