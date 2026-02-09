@@ -1,37 +1,25 @@
-# Session 976 - Start Here
+# Session 977 - Start Here
 
-**Previous Session:** 975 (Stock Intelligence Dashboard)
+**Previous Session:** 976 (SKIN Layer Gitignore Fix)
 **Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **SKIN Layer Output: GITIGNORED**
 
 ---
 
-## Session 975 Summary (Just Completed)
+## Session 976 Summary (Just Completed)
 
-### Stock Intelligence Dashboard — Standalone Page
+### SKIN Layer Auto-Generated Files — Gitignore Fix
 
-Created a dedicated `/stocks` page with sidebar entry to surface stock market data that previously only went to Discord. 6 read-only API endpoints, 5 sub-tabs, zero migrations.
+Fixed SKIN Layer Celery tasks writing auto-generated files (status reports, blog drafts, summaries) directly into the git repository root. The `_get_workspace_for_skin_layer()` helper now uses the "System Autonomous Workspace" rooted at `generated_content/` (already gitignored) instead of the "Donkey Betz" workspace (project root).
 
-**Backend (6 endpoints):**
-- `GET /api/stocks/dashboard/` — Overview stats (latest brief, alert counts, prediction accuracy, SEC count)
-- `GET /api/stocks/briefs/` — Paginated MarketIntelligenceBrief list
-- `GET /api/stocks/briefs/<uuid>/` — Full brief detail with JSON fields
-- `GET /api/stocks/alerts/` — Filterable alerts (type, symbol, action, bookmarked)
-- `GET /api/stocks/predictions/` — Predictions with aggregate accuracy stats
-- `GET /api/stocks/sec-filings/` — SEC Edgar SpiderData entries
+**Changes:**
+- `core/tasks.py` — Rewrote `_get_workspace_for_skin_layer()` to prefer "System Autonomous Workspace" at `generated_content/`, with fallback creation
+- `.gitignore` — Added `/reports/`, `/summaries/`, `/content/blog_*.md` as safety net
+- Removed 59 auto-generated files from git tracking via `git rm --cached` (files remain on disk)
 
-**Frontend (5 sub-tabs):**
-- Overview: stats cards, latest brief, alert breakdown, prediction performance
-- Market Briefs: paginated, click-to-expand with opportunities/debate zones/risks
-- Alerts: filter by type/symbol/bookmarked, color-coded badges, bull/bear bars
-- SEC Filings: Spider data from sec_edgar
-- Predictions: table with 7D/30D accuracy, correctness badges, aggregate stats
+### Session 975 Summary (Prior)
 
-**Models used (zero migrations):** MarketIntelligenceBrief, StockMarketAlert, PredictionOutcome, SpiderData
-
-### Session 974b Summary (Prior)
-
-PA Async Processing — Celery task for PA chat, polling endpoint, 3 frontend consumers updated, fixes Railway proxy timeouts.
+Stock Intelligence Dashboard — Standalone `/stocks` page with 6 API endpoints, 5 sub-tabs, zero migrations.
 
 ---
 
@@ -155,6 +143,11 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - `MarketIntelligenceBrief`: `core.models_unified_system` — timestamp is `generated_at` (NOT `created_at`)
 - `StockMarketAlert`: `core.models_autonomous_alerts` — timestamp is `detected_at`
 - `PredictionOutcome`: `core.models_unified_system` — `was_correct_7_days`/`was_correct_30_days` are nullable booleans
+
+**SKIN Layer workspace (Session 976):**
+- `_get_workspace_for_skin_layer()` now returns "System Autonomous Workspace" at `generated_content/`
+- All 5 SKIN tasks use this one helper — no call-site changes needed
+- `generated_content/` is gitignored (line 57 of `.gitignore`)
 
 **BaseAgent `__init_subclass__` (Session 970):**
 - Auto-wraps `_execute_tool_call` in subclasses with ToolCallRecord recording
