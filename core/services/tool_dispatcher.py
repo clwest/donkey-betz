@@ -168,6 +168,9 @@ class ToolDispatcher:
         # Session 970: Surgical moves verification tool
         self.register("surgical_moves_status_tool", self._handle_surgical_moves_status)
 
+        # Session 973: Status snapshot for broad system overview
+        self.register("status_snapshot_tool", self._handle_status_snapshot)
+
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
     def register(self, tool_name: str, handler: Callable):
@@ -3340,6 +3343,118 @@ class ToolDispatcher:
                 'runs': [],
                 'error': str(e),
             }
+
+
+    async def _handle_status_snapshot(self, payload: Dict[str, Any], user_id: int, trace_id: str) -> Dict[str, Any]:
+        """
+        Session 973: Cheap system status snapshot for broad overview questions.
+        9 count() queries, cached 60s.
+        """
+        from django.core.cache import cache
+
+        cache_key = 'pa:status_snapshot'
+        cached = cache.get(cache_key)
+        if cached:
+            logger.debug(f"[{trace_id}] Status snapshot served from cache")
+            return cached
+
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+
+        snapshot = {}
+
+        # 1. Initiatives
+        try:
+            from core.models import Initiative
+            active = Initiative.objects.filter(status='active').count()
+            updated_24h = Initiative.objects.filter(updated_at__gte=last_24h).count()
+            snapshot['initiatives'] = {'active': active, 'updated_24h': updated_24h}
+        except Exception as e:
+            snapshot['initiatives'] = {'error': str(e)}
+
+        # 2. Tool calls (24h)
+        try:
+            from core.models import ToolCallRecord
+            total = ToolCallRecord.objects.filter(created_at__gte=last_24h).count()
+            failed = ToolCallRecord.objects.filter(created_at__gte=last_24h, success=False).count()
+            snapshot['tool_calls_24h'] = {'total': total, 'failed': failed}
+        except Exception as e:
+            snapshot['tool_calls_24h'] = {'error': str(e)}
+
+        # 3. Health (latest heartbeat)
+        try:
+            from core.models import HeartBeat
+            hb = HeartBeat.objects.order_by('-created_at').first()
+            if hb:
+                age_min = (now - hb.created_at).total_seconds() / 60
+                snapshot['health'] = {
+                    'status': getattr(hb, 'status', 'unknown'),
+                    'score': getattr(hb, 'health_score', None),
+                    'age_minutes': round(age_min, 1),
+                }
+            else:
+                snapshot['health'] = {'status': 'no_data'}
+        except Exception as e:
+            snapshot['health'] = {'error': str(e)}
+
+        # 4. Spiders (24h)
+        try:
+            from ai_core.models import SpiderData
+            items = SpiderData.objects.filter(created_at__gte=last_24h).count()
+            distinct_spiders = SpiderData.objects.filter(created_at__gte=last_24h).values('spider_name').distinct().count()
+            snapshot['spiders_24h'] = {'items': items, 'active_spiders': distinct_spiders}
+        except Exception as e:
+            snapshot['spiders_24h'] = {'error': str(e)}
+
+        # 5. Conversations (24h)
+        try:
+            from core.models import HiveMindSession
+            convos = HiveMindSession.objects.filter(created_at__gte=last_24h).count()
+            snapshot['conversations_24h'] = {'count': convos}
+        except Exception as e:
+            snapshot['conversations_24h'] = {'error': str(e)}
+
+        # 6. Signal clusters (active)
+        try:
+            from core.models import SignalCluster
+            active_clusters = SignalCluster.objects.filter(status='active').count()
+            snapshot['signal_clusters'] = {'active': active_clusters}
+        except Exception as e:
+            snapshot['signal_clusters'] = {'error': str(e)}
+
+        # 7. Celery tasks (24h)
+        try:
+            from django_celery_results.models import TaskResult
+            total = TaskResult.objects.filter(date_created__gte=last_24h).count()
+            failed = TaskResult.objects.filter(date_created__gte=last_24h, status='FAILURE').count()
+            snapshot['celery_24h'] = {'total': total, 'failed': failed}
+        except Exception as e:
+            snapshot['celery_24h'] = {'error': str(e)}
+
+        # 8. Errors (24h)
+        try:
+            from core.models import FailureDetection
+            errors = FailureDetection.objects.filter(detected_at__gte=last_24h).count()
+            snapshot['errors_24h'] = {'count': errors}
+        except Exception as e:
+            snapshot['errors_24h'] = {'error': str(e)}
+
+        # 9. Blogs (24h)
+        try:
+            from core.models import SelfBlog
+            total = SelfBlog.objects.filter(created_at__gte=last_24h).count()
+            published = SelfBlog.objects.filter(created_at__gte=last_24h, publish_ready=True).count()
+            snapshot['blogs_24h'] = {'total': total, 'published': published}
+        except Exception as e:
+            snapshot['blogs_24h'] = {'error': str(e)}
+
+        snapshot['generated_at'] = now.isoformat()
+
+        cache.set(cache_key, snapshot, 60)
+        logger.info(f"[{trace_id}] Status snapshot generated and cached")
+        return snapshot
 
 
 # Singleton instance

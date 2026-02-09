@@ -97,6 +97,8 @@ class UnifiedPAEntrypoint:
         'error_summary':       [],
         # Session 970: Surgical moves verification — pure data
         'surgical_moves_status': [],
+        # Session 973: Broad system overview — light enrichment
+        'system_overview': ['intelligence_enricher'],
     }
 
     # Alias map: normalize variant intent names to canonical names
@@ -124,6 +126,9 @@ class UnifiedPAEntrypoint:
         'deliberation_status': 'surgical_moves_status',
         'verification_status': 'surgical_moves_status',
         'moves_status': 'surgical_moves_status',
+        # Session 973: System overview aliases
+        'overview': 'system_overview',
+        'executive_summary': 'system_overview',
     }
 
     # Intents where spider_trends and domain_context always apply (no relevance gate)
@@ -615,6 +620,17 @@ class UnifiedPAEntrypoint:
         ]):
             return ('error_summary', 'error_summary_tool')
 
+        # Session 973: Broad system overview — "how is everything?", "what updates?"
+        if any(phrase in message_lower for phrase in [
+            'how is everything', 'how\'s everything', 'overall system',
+            'platform overview', 'system overview', 'give me a summary',
+            'what\'s the state', 'state of the system', 'general status',
+            'what updates', 'platform updates', 'system updates',
+            'executive summary', 'big picture', 'how is the platform doing',
+            'overall status', 'overall health',
+        ]):
+            return ('system_overview', 'status_snapshot_tool')
+
         # System health patterns (body vitals)
         if any(word in message_lower for word in [
             'health', 'status', 'vitals', 'body', 'system health'
@@ -1038,6 +1054,10 @@ class UnifiedPAEntrypoint:
             hours_match = re.search(r'(\d+)\s*(?:hour|hr|h)', msg_lower)
             payload['hours'] = int(hours_match.group(1)) if hours_match else 4
 
+        # Session 973: Status snapshot payload
+        elif intent == 'system_overview':
+            payload['action'] = 'snapshot'
+
         # Session 970: Surgical moves status tool payload
         elif intent == 'surgical_moves_status':
             import re
@@ -1266,6 +1286,15 @@ RULES:
             'boardroom': (
                 "FOCUS: Summarize the decision landscape. Highlight urgency levels. "
                 "Recommend triage order. Note any items linked to active initiatives."
+            ),
+            'system_overview': (
+                "Broad system overview. COO-level pulse check.\n"
+                "- Max 3-5 bullet points of insight\n"
+                "- Lead with most important observation (anomaly, risk, or positive trend)\n"
+                "- Compare numbers to expectations\n"
+                "- Separate OBSERVED (from data above) vs EXPECTED (design intent)\n"
+                "- End with: Want me to drill into any of these?\n"
+                "- Do NOT restate every number — user already sees the structured data"
             ),
         }
 
@@ -2218,6 +2247,58 @@ Address the user by name occasionally."""
 
             else:
                 return str(tool_result)
+
+        # Session 973: System overview snapshot formatter
+        elif intent == 'system_overview' and isinstance(tool_result, dict):
+            lines = [f"**System Pulse**, {user_name}:\n"]
+
+            health = tool_result.get('health', {})
+            if 'error' not in health:
+                status = health.get('status', 'unknown')
+                score = health.get('score')
+                age = health.get('age_minutes', '?')
+                score_str = f" ({score})" if score is not None else ""
+                lines.append(f"- **Health:** {status}{score_str} — last heartbeat {age} min ago")
+            else:
+                lines.append(f"- **Health:** data unavailable")
+
+            init = tool_result.get('initiatives', {})
+            if 'error' not in init:
+                lines.append(f"- **Initiatives:** {init.get('active', 0)} active, {init.get('updated_24h', 0)} updated (24h)")
+
+            tc = tool_result.get('tool_calls_24h', {})
+            if 'error' not in tc:
+                failed_str = f" ({tc.get('failed', 0)} failed)" if tc.get('failed', 0) > 0 else ""
+                lines.append(f"- **Tool calls (24h):** {tc.get('total', 0)}{failed_str}")
+
+            sp = tool_result.get('spiders_24h', {})
+            if 'error' not in sp:
+                lines.append(f"- **Spiders (24h):** {sp.get('items', 0)} items from {sp.get('active_spiders', 0)} spiders")
+
+            convos = tool_result.get('conversations_24h', {})
+            if 'error' not in convos:
+                lines.append(f"- **Conversations (24h):** {convos.get('count', 0)}")
+
+            signals = tool_result.get('signal_clusters', {})
+            if 'error' not in signals:
+                lines.append(f"- **Signal clusters:** {signals.get('active', 0)} active")
+
+            celery = tool_result.get('celery_24h', {})
+            if 'error' not in celery:
+                failed_str = f" ({celery.get('failed', 0)} failed)" if celery.get('failed', 0) > 0 else ""
+                lines.append(f"- **Celery tasks (24h):** {celery.get('total', 0)}{failed_str}")
+
+            errors = tool_result.get('errors_24h', {})
+            if 'error' not in errors:
+                lines.append(f"- **Errors (24h):** {errors.get('count', 0)}")
+
+            blogs = tool_result.get('blogs_24h', {})
+            if 'error' not in blogs:
+                lines.append(f"- **Blogs (24h):** {blogs.get('total', 0)} total, {blogs.get('published', 0)} published")
+
+            lines.append("\n*Want me to drill into any of these?*")
+            return "\n".join(lines)
+
         else:
             return str(tool_result)
 
@@ -2429,18 +2510,27 @@ The next session should review and address these items.
         docs_context = context.get('docs_context', {})
 
         # Build system context
-        system_prompt = f"""You are the Personal Assistant for {user_name} in the Unified AI Platform.
+        system_prompt = f"""You are the operational advisor for {user_name} in the Unified AI Platform.
 
-SYSTEM CAPABILITIES:
-- {stats.get('agent_count', 74)} AI Agents available
-- {stats.get('spider_count', 77)} Active Spiders collecting data
-- {stats.get('advisor_count', 25)} Legendary Advisors
+You are NOT a documentation narrator. Do NOT recite system capabilities from design documents.
+You are an operational advisor with live system access.
+
+If asked about system state, activity, or updates, suggest a targeted question like:
+- "How's the system?" for health check
+- "What's been going on?" for recent activity
+- "Any errors?" for error summary
+- "How is everything?" for a full system pulse
+
+For broad questions, keep answers to 5 bullet points max.
+
+SYSTEM STATS:
+- {stats.get('agent_count', 74)} AI Agents | {stats.get('spider_count', 77)} Spiders | {stats.get('advisor_count', 25)} Advisors
 
 USER PROFILE:
 - Skills: {profile.get('skills', 'Not specified')}
 - Goals: {profile.get('goals', 'Not specified')}
 
-Be helpful, conversational, and personalized. Address the user by name."""
+Be concise, conversational, and personalized. Address the user by name."""
 
         # Session 943: Add docs context so PA knows about system architecture and recent work
         if docs_context.get('has_docs'):
