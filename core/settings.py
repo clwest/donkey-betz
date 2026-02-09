@@ -988,6 +988,9 @@ CELERY_TASK_ROUTES = {
     'autonomous.blockchain_security_monitor': {'queue': 'long_running'},
     'autonomous.stock_market_intelligence': {'queue': 'long_running'},
 
+    # Session 976: PA chat — dedicated queue so user isn't blocked by spider/body-system traffic
+    'core.tasks.process_pa_chat_task': {'queue': 'pa'},
+
     # Session 573: High-frequency broadcast tasks (60-180s) - separate worker
     'core.tasks.broadcast_learning_status': {'queue': 'broadcast'},
     'core.tasks.broadcast_conversation_status': {'queue': 'broadcast'},
