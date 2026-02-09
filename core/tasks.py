@@ -27328,60 +27328,53 @@ def promote_to_shared_knowledge(min_confidence: float = 0.7):
 
 def _get_workspace_for_skin_layer():
     """
-    Session 885/909/910: Helper to get an active workspace for SKIN layer tasks.
+    Session 885/909/910/976: Helper to get an active workspace for SKIN layer tasks.
 
-    Session 910: Now uses centralized platform_config for configurable workspace selection.
+    Session 976: Now prefers "System Autonomous Workspace" (rooted at generated_content/)
+    to prevent auto-generated files from polluting the git repository.
 
     Looks for workspaces in this order:
-    1. Primary workspace from platform_config (configurable, default: "Donkey Betz")
-    2. Codebase workspace (type='codebase')
-    3. Any active workspace with allow_file_write=True, ordered by total_operations
-    4. System user's workspace
+    1. "System Autonomous Workspace" (generated_content/ — gitignored)
+    2. Fallback: create one at generated_content/
 
     Returns:
         Tuple of (user, workspace) or (None, None) if not found
     """
     from django.contrib.auth import get_user_model
     from core.models_skin_layer import ProjectWorkspace
+    import os
 
     User = get_user_model()
 
-    # Session 910: Use centralized platform config for primary workspace
-    try:
-        from core.services.platform_config import get_primary_workspace
-        workspace = get_primary_workspace()
-        if workspace:
-            return workspace.user, workspace
-    except Exception as e:
-        logger.debug(f"Platform config unavailable, using fallback: {e}")
-
-    # 2. Try codebase workspace
+    # Session 976: Prefer System Autonomous Workspace (rooted at generated_content/)
     workspace = ProjectWorkspace.objects.filter(
-        workspace_type='codebase',
-        is_active=True,
-        allow_file_write=True
+        name='System Autonomous Workspace'
     ).first()
-
     if workspace:
         return workspace.user, workspace
 
-    # 3. Try any active workspace that allows writes (order by most established)
-    workspace = ProjectWorkspace.objects.filter(
-        is_active=True,
-        allow_file_write=True
-    ).order_by('-total_operations').first()
+    # Fallback: create one at generated_content/
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    content_dir = os.path.join(project_root, 'generated_content')
+    os.makedirs(content_dir, exist_ok=True)
 
-    if workspace:
-        return workspace.user, workspace
-
-    # 4. Try superuser's workspace as last resort
     user = User.objects.filter(is_superuser=True).first()
-    if user:
-        workspace = ProjectWorkspace.objects.filter(user=user, is_active=True).first()
-        if workspace:
-            return user, workspace
+    if not user:
+        user = User.objects.first()
+    if not user:
+        return None, None
 
-    return None, None
+    workspace = ProjectWorkspace.objects.create(
+        user=user,
+        name='System Autonomous Workspace',
+        root_path=content_dir,
+        workspace_type='local',
+        is_active=True,
+        allow_file_write=True,
+        protected_paths=['.env', '.env.local', 'secrets/', 'credentials/'],
+    )
+    logger.info(f"Created System Autonomous Workspace at {content_dir}")
+    return user, workspace
 
 
 @shared_task(name='core.tasks.agent_workspace_status_report')
