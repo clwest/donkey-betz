@@ -48,43 +48,46 @@ def list_success_patterns(request):
     if not request.user.is_authenticated:
         return api_error("Authentication required", status_code=401)
 
-    pattern_type = request.GET.get('type')  # Filter by pattern type
-    min_confidence = float(request.GET.get('min_confidence', 50))
-    include_global = request.GET.get('include_global', 'true').lower() == 'true'
+    try:
+        pattern_type = request.GET.get('type')  # Filter by pattern type
+        min_confidence = float(request.GET.get('min_confidence', 50))
+        include_global = request.GET.get('include_global', 'true').lower() == 'true'
 
-    # Build query
-    query = Q(user=request.user)
-    if include_global:
-        query |= Q(is_global=True)
+        # Build query
+        query = Q(user=request.user)
+        if include_global:
+            query |= Q(is_global=True)
 
-    patterns = SuccessPattern.objects.filter(query, is_active=True)
+        patterns = SuccessPattern.objects.filter(query, is_active=True)
 
-    if pattern_type:
-        patterns = patterns.filter(pattern_type=pattern_type)
+        if pattern_type:
+            patterns = patterns.filter(pattern_type=pattern_type)
 
-    patterns = patterns.filter(confidence_score__gte=min_confidence)
-    patterns = patterns.order_by('-success_rate', '-confidence_score')[:50]
+        patterns = patterns.filter(confidence_score__gte=min_confidence)
+        patterns = patterns.order_by('-success_rate', '-confidence_score')[:50]
 
-    return api_success({
-        'patterns': [{
-            'id': str(p.id),
-            'type': p.pattern_type,
-            'name': p.pattern_name,
-            'description': p.pattern_description,
-            'attributes': p.pattern_attributes,
-            'success_rate': float(p.success_rate),
-            'avg_revenue': float(p.avg_revenue_per_success),
-            'total_revenue': float(p.total_revenue_attributed),
-            'confidence': float(p.confidence_score),
-            'sample_size': p.sample_size,
-            'statistically_significant': p.statistical_significance,
-            'best_platforms': p.best_platforms,
-            'best_upload_times': p.best_upload_times,
-            'is_global': p.is_global,
-        } for p in patterns],
-        'count': len(patterns),
-        'pattern_types': dict(SuccessPattern._meta.get_field('pattern_type').choices),
-    })
+        return api_success({
+            'patterns': [{
+                'id': str(p.id),
+                'type': p.pattern_type,
+                'name': p.pattern_name,
+                'description': p.pattern_description,
+                'attributes': p.pattern_attributes,
+                'success_rate': float(p.success_rate),
+                'avg_revenue': float(p.avg_revenue_per_success),
+                'total_revenue': float(p.total_revenue_attributed),
+                'confidence': float(p.confidence_score),
+                'sample_size': p.sample_size,
+                'statistically_significant': p.statistical_significance,
+                'best_platforms': p.best_platforms,
+                'best_upload_times': p.best_upload_times,
+                'is_global': p.is_global,
+            } for p in patterns],
+            'count': len(patterns),
+            'pattern_types': dict(SuccessPattern._meta.get_field('pattern_type').choices),
+        })
+    except Exception:
+        return api_success({'patterns': [], 'count': 0, 'pattern_types': {}})
 
 
 @csrf_exempt
@@ -605,43 +608,46 @@ def list_insights(request):
     if not request.user.is_authenticated:
         return api_error("Authentication required", status_code=401)
 
-    insight_type = request.GET.get('type')
-    priority = request.GET.get('priority')
-    unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
+    try:
+        insight_type = request.GET.get('type')
+        priority = request.GET.get('priority')
+        unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
 
-    insights = DistributionInsight.objects.filter(
-        user=request.user,
-        is_still_relevant=True,
-        is_dismissed=False
-    )
+        insights = DistributionInsight.objects.filter(
+            user=request.user,
+            is_still_relevant=True,
+            is_dismissed=False
+        )
 
-    if insight_type:
-        insights = insights.filter(insight_type=insight_type)
-    if priority:
-        insights = insights.filter(priority=priority)
-    if unread_only:
-        insights = insights.filter(is_read=False)
+        if insight_type:
+            insights = insights.filter(insight_type=insight_type)
+        if priority:
+            insights = insights.filter(priority=priority)
+        if unread_only:
+            insights = insights.filter(is_read=False)
 
-    insights = insights.order_by('-created_at')[:50]
+        insights = insights.order_by('-created_at')[:50]
 
-    return api_success({
-        'insights': [{
-            'id': str(i.id),
-            'type': i.insight_type,
-            'priority': i.priority,
-            'title': i.title,
-            'message': i.message,
-            'recommended_actions': i.recommended_actions,
-            'potential_impact': float(i.potential_revenue_impact) if i.potential_revenue_impact else None,
-            'confidence': float(i.confidence_level),
-            'is_read': i.is_read,
-            'is_acted_upon': i.is_acted_upon,
-            'created_at': i.created_at.isoformat(),
-        } for i in insights],
-        'unread_count': DistributionInsight.objects.filter(
-            user=request.user, is_read=False, is_still_relevant=True
-        ).count(),
-    })
+        return api_success({
+            'insights': [{
+                'id': str(i.id),
+                'type': i.insight_type,
+                'priority': i.priority,
+                'title': i.title,
+                'message': i.message,
+                'recommended_actions': i.recommended_actions,
+                'potential_impact': float(i.potential_revenue_impact) if i.potential_revenue_impact else None,
+                'confidence': float(i.confidence_level),
+                'is_read': i.is_read,
+                'is_acted_upon': i.is_acted_upon,
+                'created_at': i.created_at.isoformat(),
+            } for i in insights],
+            'unread_count': DistributionInsight.objects.filter(
+                user=request.user, is_read=False, is_still_relevant=True
+            ).count(),
+        })
+    except Exception:
+        return api_success({'insights': [], 'unread_count': 0})
 
 
 @csrf_exempt
