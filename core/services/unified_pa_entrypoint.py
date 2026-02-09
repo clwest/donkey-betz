@@ -1371,7 +1371,9 @@ RULES:
                     context=system_prompt,
                     agent_name="UnifiedPA",
                     task_type="analysis",
-                    max_tokens=2000
+                    # Session 973: Increased from 2000 to 4000 — analytical responses
+                    # were truncating on detailed content review and system overview queries
+                    max_tokens=4000
                 )
                 if result.get('success'):
                     llm_analysis = result.get('response', '')
