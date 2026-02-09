@@ -22,6 +22,7 @@ import BlogViewerPage from '@/pages/BlogViewerPage'  // Session 742: Blog viewer
 import BillingPage from '@/pages/BillingPage'  // Session 745: Billing & subscriptions
 import AnalyticsDashboardPage from '@/pages/AnalyticsDashboardPage'  // Session 745: Analytics dashboard
 import DocsIndexPage from '@/pages/DocsIndexPage'  // Session 784: Documentation Index Browser
+import StockIntelligencePage from '@/pages/StockIntelligencePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -59,6 +60,7 @@ function App() {
         <Route path="betting" element={<BettingPage />} />
         <Route path="legal" element={<LegalPage />} />
         <Route path="portfolio" element={<PortfolioPage />} />
+        <Route path="stocks" element={<StockIntelligencePage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="workspace" element={<WorkspacePage />} />
 
