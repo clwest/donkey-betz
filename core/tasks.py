@@ -34030,13 +34030,18 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
     pa = get_unified_pa(user)
 
     start_ms = time.time()
-    # Session 976: Use asyncio.run() instead of async_to_sync to avoid
-    # deadlock in Celery's --pool=threads worker
-    response = asyncio.run(pa.process_message(
-        message=message,
-        context=context or {},
-        generate_audio=generate_audio
-    ))
+    # Session 976: Run async PA in a fresh event loop to avoid deadlock
+    # in Celery's --pool=threads worker. async_to_sync and asyncio.run()
+    # can both fail if an event loop already exists in the thread.
+    loop = asyncio.new_event_loop()
+    try:
+        response = loop.run_until_complete(pa.process_message(
+            message=message,
+            context=context or {},
+            generate_audio=generate_audio
+        ))
+    finally:
+        loop.close()
     elapsed_ms = int((time.time() - start_ms) * 1000)
 
     # Persist to ChatConversation (same logic as the former sync view)
