@@ -1129,6 +1129,112 @@ export const bettingApi = {
   cancelWager: (wagerId: string) => api.post(`/v1/betting/wagers/${wagerId}/cancel/`),
 }
 
+// Stock Intelligence Dashboard
+export interface StockDashboard {
+  success: boolean
+  latest_brief: {
+    id: string
+    brief_date: string
+    executive_summary: string
+    total_stocks_analyzed: number
+    debate_zone_count: number
+    situation_health: string
+  } | null
+  total_briefs: number
+  total_alerts: number
+  alert_counts_by_type: Record<string, number>
+  prediction_accuracy_7d: number | null
+  prediction_accuracy_30d: number | null
+  total_predictions: number
+  sec_filings_count: number
+}
+
+export interface MarketBrief {
+  id: string
+  brief_date: string
+  brief_type: string
+  executive_summary: string
+  total_stocks_analyzed: number
+  debate_zone_count: number
+  situation_health: string
+  confidence_distribution: Record<string, number>
+  generated_at: string | null
+}
+
+export interface MarketBriefDetail {
+  id: string
+  brief_date: string
+  brief_type: string
+  executive_summary: string
+  high_conviction_opportunities: unknown[]
+  debate_zone: unknown[]
+  bullish_opportunities: unknown[]
+  bearish_warnings: unknown[]
+  risk_alerts: unknown[]
+  changes_from_yesterday: Record<string, unknown>
+  is_first_brief: boolean
+  total_stocks_analyzed: number
+  confidence_distribution: Record<string, number>
+  debate_zone_count: number
+  situation_health: string
+  gpt_success_rate: number
+  generated_at: string | null
+}
+
+export interface StockAlert {
+  id: string
+  alert_type: string
+  symbol: string
+  company_name: string
+  sector: string
+  title: string
+  summary: string
+  bull_case: string
+  bear_case: string
+  disagreement_level: string
+  confidence_score: number
+  bull_score: number
+  bear_score: number
+  current_price: number | null
+  price_change_24h: number | null
+  recommended_action: string
+  bookmarked: boolean
+  detected_at: string | null
+}
+
+export interface PredictionOutcome {
+  id: string
+  ticker: string
+  prediction_type: string
+  conviction_level: string
+  predicted_move: number
+  price_at_prediction: number
+  prediction_date: string
+  price_after_7_days: number | null
+  price_after_30_days: number | null
+  actual_move_7_days: number | null
+  actual_move_30_days: number | null
+  was_correct_7_days: boolean | null
+  was_correct_30_days: boolean | null
+  accuracy_score_7_days: number | null
+  accuracy_score_30_days: number | null
+  was_in_debate_zone: boolean
+  outcome_calculated: boolean
+}
+
+export const stockApi = {
+  dashboard: () => api.get('/stocks/dashboard/'),
+  briefs: (params?: { limit?: number; offset?: number }) =>
+    api.get('/stocks/briefs/', { params }),
+  briefDetail: (id: string) => api.get(`/stocks/briefs/${id}/`),
+  alerts: (params?: { limit?: number; offset?: number; type?: string; symbol?: string; bookmarked?: boolean }) =>
+    api.get('/stocks/alerts/', { params }),
+  predictions: (params?: { limit?: number; offset?: number; ticker?: string }) =>
+    api.get('/stocks/predictions/', { params }),
+  secFilings: (params?: { limit?: number; offset?: number }) =>
+    api.get('/stocks/sec-filings/', { params }),
+}
+
 // Legacy learning API (older endpoints - kept for backwards compatibility)
 export const legacyLearningApi = {
   // Dashboard & Profile

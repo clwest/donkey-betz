@@ -51,6 +51,7 @@ const navItems = [
 
   // Core Navigation
   { path: '/agents', label: 'Agents', icon: Bot },
+  { path: '/stocks', label: 'Stock Intelligence', icon: TrendingUp },
 
   // Domain Features - Session 899: Commented out for YouTube demo focus
   // { path: '/betting', label: 'Betting', icon: TrendingUp },

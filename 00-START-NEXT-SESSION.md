@@ -1,32 +1,37 @@
-# Session 975 - Start Here
+# Session 976 - Start Here
 
-**Previous Session:** 974b (PA Async Celery)
+**Previous Session:** 975 (Stock Intelligence Dashboard)
 **Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE**
 
 ---
 
-## Session 974b Summary (Just Completed)
+## Session 975 Summary (Just Completed)
 
-### PA Chat Async Processing — Celery + Polling
+### Stock Intelligence Dashboard — Standalone Page
 
-Fixed Railway proxy timeouts for complex PA queries (GPT-5.1 takes 117-172s, Railway times out at ~30s). The PA chat endpoint now dispatches a Celery task and returns a `task_id` instantly. The frontend polls every 2 seconds until the result is ready.
+Created a dedicated `/stocks` page with sidebar entry to surface stock market data that previously only went to Discord. 6 read-only API endpoints, 5 sub-tabs, zero migrations.
 
-**Backend:**
-- `process_pa_chat_task` — Celery task with 5 min time limit, runs UnifiedPA + persists to ChatConversation
-- `unified_pa_chat` — now returns `{task_id, status: 'processing'}` instantly
-- `pa_chat_status` — new `GET /api/pa/chat/status/<task_id>/` polling endpoint using `AsyncResult`
+**Backend (6 endpoints):**
+- `GET /api/stocks/dashboard/` — Overview stats (latest brief, alert counts, prediction accuracy, SEC count)
+- `GET /api/stocks/briefs/` — Paginated MarketIntelligenceBrief list
+- `GET /api/stocks/briefs/<uuid>/` — Full brief detail with JSON fields
+- `GET /api/stocks/alerts/` — Filterable alerts (type, symbol, action, bookmarked)
+- `GET /api/stocks/predictions/` — Predictions with aggregate accuracy stats
+- `GET /api/stocks/sec-filings/` — SEC Edgar SpiderData entries
 
-**Frontend (3 consumers updated):**
-- GlobalPADock, CommandCenterPage, AssistantPage all use async dispatch + 2s interval polling
-- `isBusy = chatMutation.isPending || isPolling` for all loading/disabled states
-- Interval cleanup on unmount
+**Frontend (5 sub-tabs):**
+- Overview: stats cards, latest brief, alert breakdown, prediction performance
+- Market Briefs: paginated, click-to-expand with opportunities/debate zones/risks
+- Alerts: filter by type/symbol/bookmarked, color-coded badges, bull/bear bars
+- SEC Filings: Spider data from sec_edgar
+- Predictions: table with 7D/30D accuracy, correctness badges, aggregate stats
 
-**Pattern:** Follows existing blog v2 deliberation pattern (`views_research_demo.py:1091`).
+**Models used (zero migrations):** MarketIntelligenceBrief, StockMarketAlert, PredictionOutcome, SpiderData
 
-### Session 974 Summary (Prior)
+### Session 974b Summary (Prior)
 
-PA Conversation History — ChatGPT-style sidebar with conversation list, load/resume, new chat. `ChatConversation` model with `conversation_id`, `session_title`, auto-title generation. PR #1011.
+PA Async Processing — Celery task for PA chat, polling endpoint, 3 frontend consumers updated, fixes Railway proxy timeouts.
 
 ---
 
@@ -40,13 +45,14 @@ PA Conversation History — ChatGPT-style sidebar with conversation list, load/r
 | Active Initiatives | 52 (cleaned from 568 in Session 961c) |
 | Database Models | 386+ |
 | Services | 134 |
-| Celery Tasks | 262 (+process_pa_chat_task) |
+| Celery Tasks | 262 |
 | Workspace Tabs | 9 (down from 18) |
 | Frontend Bundle | 2,253 KB (down from 3,062 KB) |
-| Frontend Routes | 36 (14 standalone + 22 redirects) |
+| Frontend Routes | 37 (15 standalone + 22 redirects) |
 | PA Tools | 91 |
 | Attention Sections | 7 |
 | LLM Providers | 6 (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini) |
+| Standalone Pages | `/stocks`, `/advisors`, `/neural-orchestra`, `/conversation-contract`, `/mythology-lab`, `/billing`, `/analytics`, `/docs-index` |
 
 ### 9-Tab Model
 
@@ -82,6 +88,12 @@ The diagnostic pipeline (Session 856) has 0 records in production. May need acti
 ---
 
 ## What Could Come Next
+
+### Stock Intelligence v2
+- PATCH endpoint for bookmark toggle and user notes on alerts
+- Watchlist feature (tracked symbols with notifications)
+- Prediction accuracy dashboard with charts over time
+- Wire alerts to PA intent routing ("show me bull alerts", "any risk alerts?")
 
 ### Admin Tab
 Create a dedicated workspace tab for Billing, Analytics, and system configuration pages.
@@ -138,6 +150,11 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - `SpiderData`: `core.models_unified_system` (NOT `ai_core.models`)
 - `FailureDetection`: `core.models_diagnostic_pipeline` (NOT `core.models`)
 - `HeartBeat` uses `recorded_at` (NOT `created_at`) and `overall_status` (NOT `status`)
+
+**Stock models (Session 975):**
+- `MarketIntelligenceBrief`: `core.models_unified_system` — timestamp is `generated_at` (NOT `created_at`)
+- `StockMarketAlert`: `core.models_autonomous_alerts` — timestamp is `detected_at`
+- `PredictionOutcome`: `core.models_unified_system` — `was_correct_7_days`/`was_correct_30_days` are nullable booleans
 
 **BaseAgent `__init_subclass__` (Session 970):**
 - Auto-wraps `_execute_tool_call` in subclasses with ToolCallRecord recording
