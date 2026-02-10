@@ -238,13 +238,33 @@ class NervousService:
             start = time.time()
             try:
                 import redis
-                redis_url = getattr(settings, 'CHANNEL_LAYERS', {}).get('default', {}).get('CONFIG', {}).get('hosts', [('127.0.0.1', 6379)])
-                if isinstance(redis_url, list) and redis_url:
-                    host, port = redis_url[0] if isinstance(redis_url[0], tuple) else ('127.0.0.1', 6379)
-                else:
-                    host, port = '127.0.0.1', 6379
+                hosts = getattr(settings, 'CHANNEL_LAYERS', {}).get('default', {}).get('CONFIG', {}).get('hosts', [('127.0.0.1', 6379)])
 
-                r = redis.Redis(host=host, port=port, socket_timeout=2)
+                r = None
+                display_host = 'unknown'
+
+                if isinstance(hosts, list) and hosts:
+                    first = hosts[0]
+                    if isinstance(first, str):
+                        # URL string (e.g. from REDIS_URL env var)
+                        r = redis.from_url(first, socket_timeout=2)
+                        # Mask credentials in URL for display
+                        _cred_pattern = r'://.*@'
+                        display_host = re.sub(_cred_pattern, '://***@', first).split('?')[0]
+                    elif isinstance(first, tuple) and len(first) >= 2:
+                        # Tuple like ('127.0.0.1', 6379)
+                        r = redis.Redis(host=first[0], port=first[1], socket_timeout=2)
+                        display_host = f"{first[0]}:{first[1]}"
+
+                if r is None:
+                    # Fallback: try REDIS_URL from settings or localhost
+                    fallback_url = getattr(settings, 'REDIS_URL', None)
+                    if fallback_url:
+                        r = redis.from_url(fallback_url, socket_timeout=2)
+                    else:
+                        r = redis.Redis(host='127.0.0.1', port=6379, socket_timeout=2)
+                    display_host = 'redis-fallback'
+
                 r.ping()
                 ping_ms = (time.time() - start) * 1000
 
@@ -256,8 +276,7 @@ class NervousService:
                     'connected': True,
                     'redis_ping_ms': round(ping_ms, 2),
                     'redis_clients': connected_clients,
-                    'host': host,
-                    'port': port,
+                    'host': display_host,
                 }
             except Exception as e:
                 return {
@@ -397,15 +416,28 @@ class NervousService:
             }
 
     def _get_message_stats(self) -> dict:
-        """Get message throughput statistics."""
-        # Note: Without active message tracking, we provide estimated stats
-        # Future enhancement: Add message counting middleware
-        return {
-            'messages_24h': 0,
-            'messages_per_second': 0,
-            'avg_latency_ms': 0,
-            'note': 'Message tracking not yet implemented - coming soon',
-        }
+        """Get message throughput statistics from CeleryTaskEvent."""
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+
+            now = timezone.now()
+            day_ago = now - timedelta(hours=24)
+            count_24h = CeleryTaskEvent.objects.filter(timestamp__gte=day_ago).count()
+            mps = round(count_24h / 86400, 4) if count_24h > 0 else 0
+
+            return {
+                'messages_24h': count_24h,
+                'messages_per_second': mps,
+                'avg_latency_ms': 0,
+            }
+        except Exception as e:
+            logger.warning(f"[NERVOUS] CeleryTaskEvent query failed (table may not exist): {e}")
+            return {
+                'messages_24h': 0,
+                'messages_per_second': 0,
+                'avg_latency_ms': 0,
+                'note': 'CeleryTaskEvent unavailable',
+            }
 
     def _calculate_health_score(
         self,
@@ -445,8 +477,9 @@ class NervousService:
             score -= 5
 
         # Activity (20% weight)
-        # Without message tracking, assume healthy activity
-        # Future: track actual message throughput
+        if messages.get('messages_24h', 0) == 0 and 'note' not in messages:
+            # Genuinely zero activity (tracking is wired but nothing happened)
+            score -= 10
 
         return max(0, min(100, score))
 
