@@ -715,7 +715,12 @@ class UnifiedPAEntrypoint:
             'what blogs', 'blogs written', 'written by agents', 'agent written',
             'list blogs', 'show blogs', 'blog posts', 'what reports',
             'reports written', 'what has been written', 'produced by agents',
-            'agent outputs', 'agent content', 'agent created'
+            'agent outputs', 'agent content', 'agent created',
+            # Session 986: Blog content reading patterns
+            'reading the blog', 'the blog titled', 'blog titled',
+            'about the blog', 'blog called', 'read the blog',
+            'blog accuracy', 'accurate is the blog', 'accurate is that',
+            'about this blog', 'about that blog'
         ]):
             return ('content_review', 'content_review_tool')
 
@@ -976,6 +981,30 @@ class UnifiedPAEntrypoint:
                 id_match = re.search(r'([a-f0-9-]{36}|[a-f0-9]{8,})', msg_lower)
                 if id_match:
                     payload['id'] = id_match.group(1)
+            # Session 986: Read/analyze specific blog content by title
+            elif any(phrase in msg_lower for phrase in [
+                'reading', 'read the', 'how accurate', 'accuracy',
+                'about the blog', 'blog titled', 'blog called',
+                'section titled', 'section called', 'section on',
+                'about this blog', 'about that blog',
+            ]):
+                payload['action'] = 'read'
+                import re
+                # Extract blog title from quoted strings or "blog titled/called X"
+                title_match = (
+                    re.search(r'["\u201c]([^"\u201d]+)["\u201d]', message)  # quoted
+                    or re.search(r"'([^']{5,})'", message)  # single-quoted (min 5 chars to skip contractions)
+                    or re.search(r'blog\s+(?:titled|called)\s+(.+?)(?:\s*[-\u2014]\s*|\s+how\b|\s+is\b|$)', message, re.IGNORECASE)
+                )
+                if title_match:
+                    payload['title'] = title_match.group(1).strip()
+                # Extract section title
+                section_match = (
+                    re.search(r"section\s+(?:on|titled|called)\s+['\u2018\u201c\"](.*?)['\u2019\u201d\"]", message, re.IGNORECASE)
+                    or re.search(r"section\s+(?:on|titled|called)\s+(.+?)(?:\?|$)", message, re.IGNORECASE)
+                )
+                if section_match:
+                    payload['section'] = section_match.group(1).strip().rstrip('?')
             else:
                 # Default to list (ready for review)
                 payload['action'] = 'list'
@@ -1353,6 +1382,16 @@ RULES:
 
         canonical_intent = self.INTENT_ALIASES.get(intent, intent)
         directive = intent_directives.get(canonical_intent, '')
+
+        # Session 986: Override directive when reading specific blog content
+        if canonical_intent == 'content_review' and isinstance(tool_result, dict) and tool_result.get('action') == 'read':
+            directive = (
+                "FOCUS: The user is asking about specific blog content shown above.\n"
+                "- Analyze the accuracy and quality of the claims made\n"
+                "- Flag any statements that seem unsubstantiated or oversimplified\n"
+                "- Note what's well-supported vs speculative\n"
+                "- Keep response focused on the content, not metrics"
+            )
 
         parts = [base]
         if directive:
@@ -1853,6 +1892,45 @@ Address the user by name occasionally."""
                         return f"Archived: **{title}**"
                     else:
                         return f"Failed to archive: {tool_result}"
+
+                # Session 986: Blog content reading
+                elif action == 'read':
+                    error = tool_result.get('error')
+                    if error:
+                        available = tool_result.get('available_sections', [])
+                        response = f"{error}"
+                        if available:
+                            response += "\n\nAvailable sections:\n"
+                            for h in available:
+                                response += f"- {h}\n"
+                        return response
+
+                    blog = tool_result.get('blog', {})
+                    title = blog.get('title', 'Untitled')
+                    quality = blog.get('quality_score')
+                    word_count = blog.get('word_count', 0)
+
+                    single_section = tool_result.get('section')
+                    sections = tool_result.get('sections', [])
+
+                    if single_section:
+                        header = single_section.get('header', '')
+                        content = single_section.get('content', '')
+                        response = f"**{title}**"
+                        if quality is not None:
+                            response += f" (quality: {quality:.0%})"
+                        response += f"\n\n## {header}\n\n{content}"
+                    else:
+                        response = f"**{title}**"
+                        if quality is not None:
+                            response += f" (quality: {quality:.0%}, {word_count:,} words)"
+                        response += "\n"
+                        for sec in sections:
+                            header = sec.get('header', '')
+                            content = sec.get('content', '')
+                            response += f"\n## {header}\n\n{content}\n"
+
+                    return response
 
                 # Session 971: Related blogs formatting
                 elif action == 'related':

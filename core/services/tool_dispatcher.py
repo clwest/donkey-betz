@@ -1981,9 +1981,124 @@ class ToolDispatcher:
                 'related': related,
             }
 
+        elif action == 'read':
+            # Session 986: Read full blog content by title for analysis
+            title = payload.get('title', '')
+            section_filter = payload.get('section', '')
+
+            if not title:
+                return {
+                    'action': 'read',
+                    'error': 'No blog title provided. Try: "read the blog titled \'Your Title Here\'"',
+                }
+
+            # Search by title (case-insensitive contains)
+            blog = base_qs.filter(title__icontains=title).first()
+            if not blog:
+                # Fall back to all SelfBlog categories, not just 'blog'
+                blog = SelfBlog.objects.filter(title__icontains=title).first()
+            if not blog:
+                return {
+                    'action': 'read',
+                    'error': f'No blog found matching "{title}".',
+                }
+
+            # Build content from structured fields
+            sections_data = blog.sections or []  # list of {header, content}
+            intro = blog.intro or ''
+            conclusion = blog.conclusion or ''
+
+            if section_filter:
+                # Extract a specific section
+                matched_section = None
+                for sec in sections_data:
+                    header = sec.get('header', '') or sec.get('title', '')
+                    if section_filter.lower() in header.lower():
+                        matched_section = sec
+                        break
+
+                if matched_section:
+                    header = matched_section.get('header', '') or matched_section.get('title', '')
+                    content = matched_section.get('content', '')
+                    return {
+                        'action': 'read',
+                        'source': 'SelfBlog',
+                        'blog': {
+                            'id': str(blog.id),
+                            'title': blog.title,
+                            'status': blog.status,
+                            'quality_score': blog.quality_score,
+                            'word_count': blog.word_count or 0,
+                            'created_at': blog.created_at.isoformat() if blog.created_at else None,
+                        },
+                        'section': {
+                            'header': header,
+                            'content': content,
+                        },
+                        'total_sections': len(sections_data),
+                    }
+                else:
+                    # Section not found — return available headers
+                    headers = [
+                        s.get('header', '') or s.get('title', '')
+                        for s in sections_data if s.get('header') or s.get('title')
+                    ]
+                    return {
+                        'action': 'read',
+                        'source': 'SelfBlog',
+                        'blog': {
+                            'id': str(blog.id),
+                            'title': blog.title,
+                        },
+                        'error': f'Section "{section_filter}" not found.',
+                        'available_sections': headers,
+                    }
+            else:
+                # Return full blog content (all sections)
+                full_sections = []
+                if intro:
+                    full_sections.append({'header': 'Introduction', 'content': intro})
+                for sec in sections_data:
+                    header = sec.get('header', '') or sec.get('title', '')
+                    content = sec.get('content', '')
+                    full_sections.append({'header': header, 'content': content})
+                if conclusion:
+                    full_sections.append({'header': 'Conclusion', 'content': conclusion})
+
+                # Cap total content at ~4000 chars
+                total_chars = sum(len(s['content']) for s in full_sections)
+                if total_chars > 4000:
+                    # Truncate last sections to fit
+                    budget = 4000
+                    for sec in full_sections:
+                        if budget <= 0:
+                            sec['content'] = '[truncated]'
+                        elif len(sec['content']) > budget:
+                            sec['content'] = sec['content'][:budget] + '...'
+                            budget = 0
+                        else:
+                            budget -= len(sec['content'])
+
+                return {
+                    'action': 'read',
+                    'source': 'SelfBlog',
+                    'blog': {
+                        'id': str(blog.id),
+                        'title': blog.title,
+                        'status': blog.status,
+                        'quality_score': blog.quality_score,
+                        'novelty_score': blog.novelty_score,
+                        'structure_score': blog.structure_score,
+                        'word_count': blog.word_count or 0,
+                        'created_at': blog.created_at.isoformat() if blog.created_at else None,
+                    },
+                    'sections': full_sections,
+                    'total_sections': len(full_sections),
+                }
+
         else:
             raise ValueError(
-                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details, related"
+                f"Unknown action for blog query: {action}. Valid actions: list, recent, stats, details, related, read"
             )
 
     def _handle_initiative(
