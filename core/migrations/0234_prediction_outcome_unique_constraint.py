@@ -10,31 +10,23 @@ from django.db import migrations, models
 def deduplicate_prediction_outcomes(apps, schema_editor):
     """
     Session 980: Remove duplicate PredictionOutcome rows before adding unique constraint.
-    Keeps the most recently updated row per (brief, ticker, prediction_type) group.
+    Uses raw SQL for maximum reliability in migration context.
+    Keeps one row per (brief_id, ticker, prediction_type) group, deletes the rest.
     """
-    PredictionOutcome = apps.get_model('core', 'PredictionOutcome')
-    from django.db.models import Count, Max
-
-    duplicates = (
-        PredictionOutcome.objects
-        .values('brief', 'ticker', 'prediction_type')
-        .annotate(cnt=Count('id'), max_updated=Max('updated_at'))
-        .filter(cnt__gt=1)
-    )
-    total_deleted = 0
-    for dup in duplicates:
-        # Keep the most recently updated row, delete the rest
-        rows = PredictionOutcome.objects.filter(
-            brief=dup['brief'],
-            ticker=dup['ticker'],
-            prediction_type=dup['prediction_type'],
-        ).order_by('-updated_at')
-        # Delete all except the first (newest)
-        ids_to_delete = list(rows.values_list('id', flat=True)[1:])
-        deleted, _ = PredictionOutcome.objects.filter(id__in=ids_to_delete).delete()
-        total_deleted += deleted
-    if total_deleted:
-        print(f"\n  Deleted {total_deleted} duplicate PredictionOutcome rows")
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        # Delete all but the newest (by created_at) row per group
+        cursor.execute("""
+            DELETE FROM core_predictionoutcome
+            WHERE id NOT IN (
+                SELECT DISTINCT ON (brief_id, ticker, prediction_type) id
+                FROM core_predictionoutcome
+                ORDER BY brief_id, ticker, prediction_type, created_at DESC
+            )
+        """)
+        deleted = cursor.rowcount
+        if deleted:
+            print(f"\n  Deleted {deleted} duplicate PredictionOutcome rows")
 
 
 class Migration(migrations.Migration):
