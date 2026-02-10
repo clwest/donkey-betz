@@ -492,6 +492,14 @@ class ToolDispatcher:
                 'id', 'title', 'status', 'priority', 'created_at', 'opportunity_id'
             ))
 
+            # Session 987: Serialize UUIDs and datetimes
+            for t in tasks:
+                t['id'] = str(t['id'])
+                if t.get('opportunity_id'):
+                    t['opportunity_id'] = str(t['opportunity_id'])
+                if t.get('created_at'):
+                    t['created_at'] = t['created_at'].isoformat()
+
             return {'action': 'list', 'count': len(tasks), 'tasks': tasks}
 
         elif action == 'stats':
@@ -607,6 +615,13 @@ class ToolDispatcher:
             revenues = list(base_qs.order_by('-created_at')[:limit].values(
                 'id', 'amount', 'source', 'status', 'created_at', 'description'
             ))
+
+            # Session 987: Serialize UUIDs and datetimes
+            for r in revenues:
+                r['id'] = str(r['id'])
+                if r.get('created_at'):
+                    r['created_at'] = r['created_at'].isoformat()
+
             return {'action': 'list', 'count': len(revenues), 'revenues': revenues}
 
         else:
@@ -2166,7 +2181,7 @@ class ToolDispatcher:
                 )
             )
 
-            # Add action item counts (including critical)
+            # Add action item counts (including critical) + serialize
             for item in items:
                 item['pending_actions'] = InitiativeActionItem.objects.filter(
                     initiative_id=item['id'],
@@ -2177,6 +2192,11 @@ class ToolDispatcher:
                     status='pending',
                     priority='critical'
                 ).count()
+                # Session 987: Serialize UUIDs and datetimes
+                item['id'] = str(item['id'])
+                for dt_field in ('created_at', 'updated_at', 'last_activity_at'):
+                    if item.get(dt_field):
+                        item[dt_field] = item[dt_field].isoformat()
 
             return {
                 'action': 'list',
@@ -2335,12 +2355,22 @@ class ToolDispatcher:
                 .values('id', 'title', 'status', 'priority', 'due_date', 'assigned_agent')
             )
 
+            # Session 987: Serialize UUIDs and datetimes
+            for ai in action_items:
+                ai['id'] = str(ai['id'])
+                if ai.get('due_date'):
+                    ai['due_date'] = ai['due_date'].isoformat()
+
             # Get stage info
             stages = list(
                 initiative.stages.all()
                 .order_by('stage_number')
                 .values('stage_number', 'status', 'completed_at')
             )
+
+            for s in stages:
+                if s.get('completed_at'):
+                    s['completed_at'] = s['completed_at'].isoformat()
 
             return {
                 'action': 'details',
@@ -2883,7 +2913,9 @@ class ToolDispatcher:
                 'created_at', 'trace_id'
             ))
 
+            # Session 987: Serialize UUIDs and datetimes
             for item in items:
+                item['id'] = str(item['id'])
                 if item.get('created_at'):
                     item['created_at'] = item['created_at'].isoformat()
 
