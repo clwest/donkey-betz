@@ -17946,6 +17946,13 @@ class PredictionOutcome(models.Model):
         verbose_name = "Prediction Outcome"
         verbose_name_plural = "Prediction Outcomes"
         ordering = ['-prediction_date', 'ticker']
+        # Session 980: Prevent duplicate predictions per brief/ticker/type
+        constraints = [
+            models.UniqueConstraint(
+                fields=['brief', 'ticker', 'prediction_type'],
+                name='unique_prediction_per_brief_ticker_type',
+            ),
+        ]
         indexes = [
             models.Index(fields=['-prediction_date']),
             models.Index(fields=['ticker', '-prediction_date']),
