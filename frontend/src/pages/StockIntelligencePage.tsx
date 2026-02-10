@@ -646,13 +646,86 @@ function JsonSection({ title, items, color }: { title: string; items: unknown[];
   return (
     <div>
       <h4 className={cn('text-xs font-medium uppercase mb-2', color)}>{title} ({items.length})</h4>
-      <div className="space-y-1">
-        {items.slice(0, 5).map((item, idx) => (
-          <div key={idx} className="text-xs text-gray-400 bg-gray-800/50 rounded px-2 py-1">
-            {typeof item === 'string' ? item : JSON.stringify(item, null, 0).slice(0, 200)}
-          </div>
-        ))}
-        {items.length > 5 && <span className="text-xs text-gray-500">+{items.length - 5} more</span>}
+      <div className="space-y-2">
+        {items.slice(0, 10).map((item, idx) => {
+          if (typeof item === 'string') {
+            return (
+              <div key={idx} className="text-xs text-gray-400 bg-gray-800/50 rounded px-2 py-1">
+                {item}
+              </div>
+            )
+          }
+          const obj = item as Record<string, unknown>
+          const ticker = obj.ticker as string | undefined
+          const recommendation = obj.recommendation as string | undefined
+          const confidence = obj.confidence as string | undefined
+          const reasoning = obj.reasoning as string | undefined
+          const bullCase = (obj.bull_case || obj.bull_rebuttal) as Record<string, unknown> | undefined
+          const bearCase = (obj.bear_case || obj.bear_rebuttal) as Record<string, unknown> | undefined
+          const bullArgs = (bullCase?.arguments as string[]) || []
+          const bearArgs = (bearCase?.arguments as string[]) || []
+          const bullRisks = (bullCase?.risks as string[]) || []
+          const bearRisks = (bearCase?.risks as string[]) || []
+          const targetUp = (bullCase?.target_upside as string) || ''
+          const targetDown = (bearCase?.target_downside as string) || ''
+
+          return (
+            <div key={idx} className="bg-gray-800/50 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-mono font-bold text-white">{ticker || `Item ${idx + 1}`}</span>
+                {recommendation && (
+                  <span className={cn('text-xs px-1.5 py-0.5 rounded', {
+                    'bg-green-500/20 text-green-400': recommendation === 'BULLISH',
+                    'bg-red-500/20 text-red-400': recommendation === 'BEARISH',
+                    'bg-purple-500/20 text-purple-400': recommendation === 'DEBATE',
+                    'bg-gray-500/20 text-gray-400': recommendation === 'NEUTRAL' || recommendation === 'MIXED',
+                  })}>{recommendation}</span>
+                )}
+                {confidence && (
+                  <span className="text-xs text-gray-500">{confidence} confidence</span>
+                )}
+                {targetUp && <span className="text-xs text-green-400 ml-auto">{targetUp}</span>}
+                {targetDown && <span className="text-xs text-red-400 ml-auto">{targetDown}</span>}
+              </div>
+
+              {reasoning && <p className="text-xs text-gray-400 italic">{reasoning}</p>}
+
+              {bullArgs.length > 0 && (
+                <div>
+                  <span className="text-xs text-green-500 font-medium">Bull:</span>
+                  <ul className="ml-3 mt-0.5 space-y-0.5">
+                    {bullArgs.slice(0, 3).map((arg, i) => (
+                      <li key={i} className="text-xs text-gray-400">- {arg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {bearArgs.length > 0 && (
+                <div>
+                  <span className="text-xs text-red-500 font-medium">Bear:</span>
+                  <ul className="ml-3 mt-0.5 space-y-0.5">
+                    {bearArgs.slice(0, 3).map((arg, i) => (
+                      <li key={i} className="text-xs text-gray-400">- {arg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(bullRisks.length > 0 || bearRisks.length > 0) && (
+                <div>
+                  <span className="text-xs text-orange-500 font-medium">Risks:</span>
+                  <ul className="ml-3 mt-0.5 space-y-0.5">
+                    {[...bullRisks, ...bearRisks].slice(0, 3).map((risk, i) => (
+                      <li key={i} className="text-xs text-gray-500">- {risk}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )
+        })}
+        {items.length > 10 && <span className="text-xs text-gray-500">+{items.length - 10} more</span>}
       </div>
     </div>
   )
