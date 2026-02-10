@@ -46,7 +46,7 @@ def list_success_patterns(request):
     List discovered success patterns for the user.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         pattern_type = request.GET.get('type')  # Filter by pattern type
@@ -98,7 +98,7 @@ def pattern_detail(request, pattern_id):
     Get detailed information about a success pattern.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         pattern = SuccessPattern.objects.get(
@@ -106,7 +106,7 @@ def pattern_detail(request, pattern_id):
             Q(user=request.user) | Q(is_global=True)
         )
     except SuccessPattern.DoesNotExist:
-        return api_error("Pattern not found", status_code=404)
+        return api_error("Pattern not found", status=404)
 
     return api_success({
         'pattern': {
@@ -142,7 +142,7 @@ def analyze_patterns(request):
     Trigger pattern analysis for the user's distribution history.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     # Get user's successful distributions
     distributions = ContentDistribution.objects.filter(
@@ -269,7 +269,7 @@ def predict_performance(request):
     Uses ContentScoringEngine from learning_engine.py
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         data = json.loads(request.body)
@@ -394,7 +394,7 @@ def list_predictions(request):
     List recent performance predictions.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     limit = int(request.GET.get('limit', 20))
     predictions = ContentPerformancePrediction.objects.filter(
@@ -431,7 +431,7 @@ def get_pricing_optimization(request):
     Get pricing optimization recommendations using PricingEngine.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     platform = request.GET.get('platform', 'etsy')
     content_type = request.GET.get('content_type', 'image')
@@ -494,7 +494,7 @@ def get_learning_profile(request):
     Get user's learning profile with insights.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     # Get or create profile
     profile, created = UserLearningProfile.objects.get_or_create(
@@ -567,7 +567,7 @@ def update_learning_profile(request):
     Update user's learning preferences.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         data = json.loads(request.body)
@@ -606,7 +606,7 @@ def list_insights(request):
     List AI-generated insights for the user.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         insight_type = request.GET.get('type')
@@ -658,7 +658,7 @@ def generate_insights(request):
     Generate new insights based on recent activity.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     insights_created = []
 
@@ -761,7 +761,7 @@ def mark_insight_read(request, insight_id):
     Mark an insight as read.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         insight = DistributionInsight.objects.get(id=insight_id, user=request.user)
@@ -769,7 +769,7 @@ def mark_insight_read(request, insight_id):
         insight.save()
         return api_success({'message': 'Insight marked as read'})
     except DistributionInsight.DoesNotExist:
-        return api_error("Insight not found", status_code=404)
+        return api_error("Insight not found", status=404)
 
 
 @csrf_exempt
@@ -780,7 +780,7 @@ def dismiss_insight(request, insight_id):
     Dismiss an insight.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         insight = DistributionInsight.objects.get(id=insight_id, user=request.user)
@@ -788,7 +788,7 @@ def dismiss_insight(request, insight_id):
         insight.save()
         return api_success({'message': 'Insight dismissed'})
     except DistributionInsight.DoesNotExist:
-        return api_error("Insight not found", status_code=404)
+        return api_error("Insight not found", status=404)
 
 
 # ============================================================
@@ -803,7 +803,7 @@ def get_performance_comparison(request):
     Get user's performance compared to benchmarks.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     comparison_type = request.GET.get('type', 'platform')
     scope_value = request.GET.get('scope', 'all')
@@ -918,7 +918,7 @@ def learning_dashboard(request):
     Get comprehensive learning dashboard data.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     # Get profile
     profile, _ = UserLearningProfile.objects.get_or_create(user=request.user)
@@ -989,9 +989,6 @@ def learning_loop_stats(request):
 
     Returns stats on active learnings, effectiveness rates, and recent patterns.
     """
-    if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
-
     try:
         from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
 
@@ -1029,7 +1026,7 @@ def track_learning_outcome(request):
         was_successful: boolean indicating outcome
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     try:
         data = json.loads(request.body)
@@ -1054,7 +1051,7 @@ def track_learning_outcome(request):
             'was_successful': was_successful,
         })
     else:
-        return api_error("Failed to track learning outcome", status_code=400)
+        return api_error("Failed to track learning outcome", status=400)
 
 
 @csrf_exempt
@@ -1068,7 +1065,7 @@ def run_learning_cycle(request):
     to extract actionable learning patterns.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
 
@@ -1092,7 +1089,7 @@ def get_agent_learnings(request):
         max_learnings: Maximum number of learnings (default 5)
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_error("Authentication required", status=401)
 
     agent_name = request.GET.get('agent_name')
     if not agent_name:
