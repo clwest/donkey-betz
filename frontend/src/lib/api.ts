@@ -1222,6 +1222,27 @@ export interface PredictionOutcome {
   outcome_calculated: boolean
 }
 
+export interface TickerLookupResult {
+  success: boolean
+  symbol: string
+  live_quote: Record<string, unknown> | null
+  alerts: { results: StockAlert[]; total: number }
+  predictions: { results: PredictionOutcome[]; total: number }
+  brief_mentions: Array<{
+    brief_id: string
+    brief_date: string
+    mentions: Array<{
+      section: string
+      ticker: string
+      recommendation: string | null
+      confidence: string | null
+      reasoning: string | null
+    }>
+  }>
+  sec_filings: { results: Array<{ id: string; spider_name: string; source_url: string; data_type: string; raw_data: Record<string, unknown>; relevance_score: number; created_at: string | null }>; total: number }
+  spider_data: { results: Array<{ id: string; spider_name: string; source_url: string; data_type: string; summary: string; relevance_score: number; created_at: string | null }>; total: number }
+}
+
 export const stockApi = {
   dashboard: () => api.get('/stocks/dashboard/'),
   briefs: (params?: { limit?: number; offset?: number }) =>
@@ -1233,6 +1254,8 @@ export const stockApi = {
     api.get('/stocks/predictions/', { params }),
   secFilings: (params?: { limit?: number; offset?: number }) =>
     api.get('/stocks/sec-filings/', { params }),
+  tickerLookup: (symbol: string) =>
+    api.get<TickerLookupResult>(`/stocks/ticker/${symbol.toUpperCase()}/`),
 }
 
 // Legacy learning API (older endpoints - kept for backwards compatibility)

@@ -15,11 +15,12 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { stockApi, type StockDashboard, type MarketBrief, type MarketBriefDetail, type StockAlert, type PredictionOutcome } from '@/lib/api'
+import { stockApi, type StockDashboard, type MarketBrief, type MarketBriefDetail, type StockAlert, type PredictionOutcome, type TickerLookupResult } from '@/lib/api'
 
 // Sub-tab config
-type SubTab = 'overview' | 'briefs' | 'alerts' | 'sec' | 'predictions'
+type SubTab = 'ticker' | 'overview' | 'briefs' | 'alerts' | 'sec' | 'predictions'
 const subTabs: Array<{ id: SubTab; label: string; icon: typeof TrendingUp }> = [
+  { id: 'ticker', label: 'Ticker Lookup', icon: Search },
   { id: 'overview', label: 'Overview', icon: BarChart2 },
   { id: 'briefs', label: 'Market Briefs', icon: FileText },
   { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
@@ -49,7 +50,7 @@ const actionConfig: Record<string, { label: string; color: string }> = {
 }
 
 export default function StockIntelligencePage() {
-  const [activeTab, setActiveTab] = useState<SubTab>('overview')
+  const [activeTab, setActiveTab] = useState<SubTab>('ticker')
 
   return (
     <div className="space-y-4 p-6">
@@ -78,6 +79,7 @@ export default function StockIntelligencePage() {
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'ticker' && <TickerLookupTab />}
       {activeTab === 'overview' && <OverviewTab />}
       {activeTab === 'briefs' && <BriefsTab />}
       {activeTab === 'alerts' && <AlertsTab />}
@@ -85,6 +87,378 @@ export default function StockIntelligencePage() {
       {activeTab === 'predictions' && <PredictionsTab />}
     </div>
   )
+}
+
+// =============================================================================
+// Ticker Lookup Tab
+// =============================================================================
+
+const momentumConfig: Record<string, { label: string; color: string }> = {
+  STRONG_BULLISH: { label: 'Strong Bullish', color: 'bg-green-500/20 text-green-400' },
+  BULLISH: { label: 'Bullish', color: 'bg-green-500/15 text-green-300' },
+  SLIGHTLY_BULLISH: { label: 'Slightly Bullish', color: 'bg-green-500/10 text-green-200' },
+  SLIGHTLY_BEARISH: { label: 'Slightly Bearish', color: 'bg-red-500/10 text-red-200' },
+  BEARISH: { label: 'Bearish', color: 'bg-red-500/15 text-red-300' },
+  STRONG_BEARISH: { label: 'Strong Bearish', color: 'bg-red-500/20 text-red-400' },
+}
+
+const signalConfig: Record<string, { label: string; color: string }> = {
+  STRONG_BUY: { label: 'Strong Buy', color: 'bg-green-500/20 text-green-400' },
+  BUY: { label: 'Buy', color: 'bg-green-500/15 text-green-300' },
+  HOLD: { label: 'Hold', color: 'bg-gray-500/20 text-gray-300' },
+  SELL: { label: 'Sell', color: 'bg-red-500/15 text-red-300' },
+  STRONG_SELL: { label: 'Strong Sell', color: 'bg-red-500/20 text-red-400' },
+}
+
+const volatilityConfig: Record<string, { label: string; color: string }> = {
+  LOW: { label: 'Low', color: 'bg-blue-500/10 text-blue-300' },
+  MODERATE: { label: 'Moderate', color: 'bg-yellow-500/15 text-yellow-300' },
+  HIGH: { label: 'High', color: 'bg-orange-500/20 text-orange-400' },
+  EXTREME: { label: 'Extreme', color: 'bg-red-500/20 text-red-400' },
+}
+
+const sectionLabels: Record<string, string> = {
+  high_conviction_opportunities: 'High Conviction',
+  debate_zone: 'Debate Zone',
+  bullish_opportunities: 'Bullish',
+  bearish_warnings: 'Bearish',
+}
+
+function TickerLookupTab() {
+  const [inputValue, setInputValue] = useState('')
+  const [searchSymbol, setSearchSymbol] = useState('')
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['ticker-lookup', searchSymbol],
+    queryFn: () => stockApi.tickerLookup(searchSymbol).then(r => r.data as TickerLookupResult),
+    enabled: !!searchSymbol,
+  })
+
+  const handleSearch = () => {
+    const trimmed = inputValue.trim().toUpperCase()
+    if (trimmed) setSearchSymbol(trimmed)
+  }
+
+  const quote = data?.live_quote as Record<string, unknown> | null | undefined
+  const analysis = quote?.analysis as Record<string, unknown> | undefined
+  const companyName = quote?.company_name ? String(quote.company_name) : ''
+  const sector = quote?.sector ? String(quote.sector) : ''
+  const industry = quote?.industry ? String(quote.industry) : ''
+  const currentPrice = Number(quote?.current_price || 0)
+  const changePct = quote?.change_percent != null ? Number(quote.change_percent) : null
+
+  return (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="flex gap-2">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Enter ticker symbol (e.g. AAPL)"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="w-full bg-gray-800 border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500"
+          />
+        </div>
+        <button
+          onClick={handleSearch}
+          disabled={!inputValue.trim() || isLoading}
+          className="px-4 py-2 rounded-lg bg-primary-500/20 text-primary-400 border border-primary-500/30 text-sm font-medium hover:bg-primary-500/30 disabled:opacity-40 transition-colors"
+        >
+          {isFetching ? <Loader2 size={14} className="animate-spin" /> : 'Lookup'}
+        </button>
+      </div>
+
+      {!searchSymbol && (
+        <div className="text-gray-500 text-center py-12 text-sm">
+          Enter a ticker symbol above to see everything the platform knows about it.
+        </div>
+      )}
+
+      {isLoading && <LoadingSpinner />}
+
+      {data && !isLoading && (
+        <div className="space-y-4">
+          {/* Live Quote Hero Card */}
+          {quote ? (
+            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-mono font-bold text-white">{data.symbol}</span>
+                    {companyName && <span className="text-sm text-gray-400">{companyName}</span>}
+                  </div>
+                  {sector && (
+                    <span className="text-xs text-gray-500">{sector}{industry ? ` / ${industry}` : ''}</span>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-white">
+                    ${currentPrice.toFixed(2)}
+                  </div>
+                  {changePct != null && (
+                    <div className={cn('text-sm font-medium', changePct >= 0 ? 'text-green-400' : 'text-red-400')}>
+                      {changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Stats grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 pt-3 border-t border-dark-border">
+                {([
+                  { label: 'Open', value: quote.open as number | undefined },
+                  { label: 'Prev Close', value: quote.previous_close as number | undefined },
+                  { label: 'Volume', value: quote.volume as number | undefined, fmt: 'volume' as const },
+                  { label: 'Mkt Cap', value: quote.market_cap as number | undefined, fmt: 'cap' as const },
+                  { label: 'Day Low', value: quote.day_low as number | undefined },
+                  { label: 'Day High', value: quote.day_high as number | undefined },
+                  { label: '52w Low', value: quote.fifty_two_week_low as number | undefined },
+                  { label: '52w High', value: quote.fifty_two_week_high as number | undefined },
+                ] as Array<{ label: string; value: number | undefined; fmt?: 'volume' | 'cap' }>).map(({ label, value, fmt }) => (
+                  <div key={label} className="text-center">
+                    <div className="text-xs text-gray-500">{label}</div>
+                    <div className="text-sm font-medium text-gray-300">
+                      {value != null
+                        ? fmt === 'volume' ? Number(value).toLocaleString()
+                        : fmt === 'cap' ? formatMarketCap(Number(value))
+                        : `$${Number(value).toFixed(2)}`
+                        : '--'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : searchSymbol && (
+            <div className="bg-dark-card border border-dark-border rounded-lg p-4 text-center text-gray-500 text-sm">
+              No live quote available for {data.symbol}
+            </div>
+          )}
+
+          {/* Analysis Card */}
+          {analysis && (
+            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-300 mb-3">Analysis</h3>
+              <div className="flex flex-wrap gap-2">
+                {analysis.momentum ? <AnalysisBadge prefix="Momentum" value={String(analysis.momentum)} config={momentumConfig} /> : null}
+                {analysis.volatility ? <AnalysisBadge prefix="Volatility" value={String(analysis.volatility)} config={volatilityConfig} /> : null}
+                {analysis.trading_signal ? <AnalysisBadge prefix="Signal" value={String(analysis.trading_signal)} config={signalConfig} /> : null}
+              </div>
+              {analysis.price_position != null && typeof analysis.price_position === 'object' && (analysis.price_position as Record<string, unknown>).percentage != null && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                    <span>52-Week Range Position</span>
+                    <span>{Number((analysis.price_position as Record<string, unknown>).percentage).toFixed(0)}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary-500 rounded-full" style={{ width: `${Math.min(100, Math.max(0, Number((analysis.price_position as Record<string, unknown>).percentage)))}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Alerts Section */}
+          <CollapsibleSection title="Alerts" count={data.alerts.total}>
+            {data.alerts.results.length === 0 ? (
+              <EmptyState message="No alerts for this ticker." />
+            ) : (
+              <div className="space-y-3">
+                {data.alerts.results.map((alert) => {
+                  const typeConf = alertTypeConfig[alert.alert_type] || { label: alert.alert_type, color: 'bg-gray-500/20 text-gray-400' }
+                  const actConf = actionConfig[alert.recommended_action] || { label: alert.recommended_action, color: 'text-gray-400' }
+                  return (
+                    <div key={alert.id} className="bg-gray-800/50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className={cn('px-2 py-0.5 rounded text-xs', typeConf.color)}>{typeConf.label}</span>
+                        <span className={cn('text-xs font-medium', actConf.color)}>{actConf.label}</span>
+                        {alert.detected_at && <span className="text-xs text-gray-500 ml-auto">{new Date(alert.detected_at).toLocaleDateString()}</span>}
+                      </div>
+                      <h4 className="text-sm text-white">{alert.title}</h4>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{alert.summary}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden flex">
+                          <div className="bg-green-500 h-full" style={{ width: `${alert.bull_score}%` }} />
+                          <div className="bg-red-500 h-full" style={{ width: `${alert.bear_score}%` }} />
+                        </div>
+                        <span className="text-xs text-gray-500">{alert.confidence_score.toFixed(0)}% conf</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* Predictions Section */}
+          <CollapsibleSection title="Predictions" count={data.predictions.total}>
+            {data.predictions.results.length === 0 ? (
+              <EmptyState message="No predictions for this ticker." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-dark-border text-left text-xs text-gray-500">
+                      <th className="pb-2 pr-3">Type</th>
+                      <th className="pb-2 pr-3">Conviction</th>
+                      <th className="pb-2 pr-3">Predicted</th>
+                      <th className="pb-2 pr-3">Actual 7D</th>
+                      <th className="pb-2 pr-3">7D</th>
+                      <th className="pb-2 pr-3">30D</th>
+                      <th className="pb-2">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.predictions.results.map((p) => (
+                      <tr key={p.id} className="border-b border-dark-border/50">
+                        <td className="py-2 pr-3">
+                          <span className={cn('px-1.5 py-0.5 rounded text-xs', p.prediction_type === 'BULL' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400')}>
+                            {p.prediction_type === 'BULL' ? <TrendingUp size={10} className="inline mr-1" /> : <TrendingDown size={10} className="inline mr-1" />}
+                            {p.prediction_type}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3 text-xs text-gray-400">{p.conviction_level}</td>
+                        <td className={cn('py-2 pr-3 text-xs', p.predicted_move >= 0 ? 'text-green-400' : 'text-red-400')}>
+                          {p.predicted_move >= 0 ? '+' : ''}{p.predicted_move.toFixed(1)}%
+                        </td>
+                        <td className={cn('py-2 pr-3 text-xs', p.actual_move_7_days != null ? (p.actual_move_7_days >= 0 ? 'text-green-400' : 'text-red-400') : 'text-gray-600')}>
+                          {p.actual_move_7_days != null ? `${p.actual_move_7_days >= 0 ? '+' : ''}${p.actual_move_7_days.toFixed(1)}%` : '--'}
+                        </td>
+                        <td className="py-2 pr-3"><CorrectnessBadge value={p.was_correct_7_days} /></td>
+                        <td className="py-2 pr-3"><CorrectnessBadge value={p.was_correct_30_days} /></td>
+                        <td className="py-2 text-xs text-gray-500">{p.prediction_date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* Brief Mentions Section */}
+          <CollapsibleSection title="Brief Mentions" count={data.brief_mentions.length}>
+            {data.brief_mentions.length === 0 ? (
+              <EmptyState message="Not mentioned in any recent briefs." />
+            ) : (
+              <div className="space-y-2">
+                {data.brief_mentions.map((bm) => (
+                  <div key={bm.brief_id} className="bg-gray-800/50 rounded-lg p-3">
+                    <div className="text-sm font-medium text-white mb-1">{bm.brief_date}</div>
+                    {bm.mentions.map((m, idx) => (
+                      <div key={idx} className="flex items-center gap-2 flex-wrap text-xs mt-1">
+                        <span className="px-1.5 py-0.5 rounded bg-primary-500/15 text-primary-300">
+                          {sectionLabels[m.section] || m.section}
+                        </span>
+                        {m.recommendation && (
+                          <span className={cn('px-1.5 py-0.5 rounded', {
+                            'bg-green-500/20 text-green-400': m.recommendation === 'BULLISH',
+                            'bg-red-500/20 text-red-400': m.recommendation === 'BEARISH',
+                            'bg-purple-500/20 text-purple-400': m.recommendation === 'DEBATE',
+                            'bg-gray-500/20 text-gray-400': !['BULLISH', 'BEARISH', 'DEBATE'].includes(m.recommendation),
+                          })}>{m.recommendation}</span>
+                        )}
+                        {m.confidence && <span className="text-gray-500">{m.confidence}</span>}
+                        {m.reasoning && <span className="text-gray-400 truncate max-w-md">{m.reasoning}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* SEC Filings Section */}
+          <CollapsibleSection title="SEC Filings" count={data.sec_filings.total}>
+            {data.sec_filings.results.length === 0 ? (
+              <EmptyState message="No SEC filings found." />
+            ) : (
+              <div className="space-y-2">
+                {data.sec_filings.results.map((f) => {
+                  const items = (f.raw_data?.items as Array<Record<string, string>>) || []
+                  return (
+                    <div key={f.id} className="bg-gray-800/50 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-white">{f.data_type || 'SEC Filing'}</span>
+                        <span className="text-xs text-gray-500">{f.created_at ? new Date(f.created_at).toLocaleDateString() : ''}</span>
+                      </div>
+                      {items.length > 0 ? (
+                        <div className="space-y-1">
+                          {items.slice(0, 3).map((item, idx) => (
+                            <div key={idx} className="text-xs text-gray-400">
+                              <span className="text-gray-300 font-medium">{item.title || item.name || `Item ${idx + 1}`}</span>
+                              {item.description && <span className="ml-2">{item.description.slice(0, 120)}</span>}
+                            </div>
+                          ))}
+                          {items.length > 3 && <span className="text-xs text-gray-500">+{items.length - 3} more</span>}
+                        </div>
+                      ) : f.source_url ? (
+                        <a href={f.source_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary-400 hover:underline">{f.source_url}</a>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* Spider Data Section */}
+          <CollapsibleSection title="Spider Data" count={data.spider_data.total}>
+            {data.spider_data.results.length === 0 ? (
+              <EmptyState message="No spider data mentioning this ticker." />
+            ) : (
+              <div className="space-y-2">
+                {data.spider_data.results.map((s) => (
+                  <div key={s.id} className="bg-gray-800/50 rounded-lg p-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 text-xs">{s.spider_name}</span>
+                        {s.data_type && <span className="text-xs text-gray-500">{s.data_type}</span>}
+                      </div>
+                      <p className="text-sm text-gray-300 truncate">{s.summary || 'No summary'}</p>
+                    </div>
+                    <span className="text-xs text-gray-500 flex-shrink-0">{s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CollapsibleSection>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function formatMarketCap(value: number): string {
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`
+  return `$${value.toLocaleString()}`
+}
+
+function CollapsibleSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(true)
+  return (
+    <div className="bg-dark-card border border-dark-border rounded-lg">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-gray-300">{title}</h3>
+          <span className="px-1.5 py-0.5 rounded bg-gray-700 text-xs text-gray-400">{count}</span>
+        </div>
+        {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+      </button>
+      {isOpen && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  )
+}
+
+function AnalysisBadge({ prefix, value, config }: { prefix: string; value: string; config: Record<string, { label: string; color: string }> }) {
+  const cfg = config[value] || { label: value, color: 'bg-gray-500/20 text-gray-400' }
+  return <span className={cn('px-2 py-1 rounded text-xs', cfg.color)}>{prefix}: {cfg.label}</span>
 }
 
 // =============================================================================
