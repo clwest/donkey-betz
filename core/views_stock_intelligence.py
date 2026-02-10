@@ -321,3 +321,192 @@ def stock_sec_filings(request):
     except Exception as e:
         logger.exception("Error fetching SEC filings")
         return Response({'success': False, 'error': str(e)}, status=500)
+
+
+# List of financial spider names whose raw_data may reference ticker symbols
+FINANCIAL_SPIDERS = [
+    'yahoo_finance', 'polygon', 'coingecko', 'sec_edgar',
+]
+
+# Brief JSON fields that contain per-ticker entries
+BRIEF_TICKER_FIELDS = [
+    'high_conviction_opportunities',
+    'debate_zone',
+    'bullish_opportunities',
+    'bearish_warnings',
+]
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ticker_lookup(request, symbol):
+    """
+    Unified single-ticker intelligence.
+
+    Aggregates live quote, alerts, predictions, brief mentions,
+    SEC filings, and spider data for one symbol.
+    """
+    symbol = symbol.upper().strip()
+    result = {
+        'success': True,
+        'symbol': symbol,
+        'live_quote': None,
+        'alerts': {'results': [], 'total': 0},
+        'predictions': {'results': [], 'total': 0},
+        'brief_mentions': [],
+        'sec_filings': {'results': [], 'total': 0},
+        'spider_data': {'results': [], 'total': 0},
+    }
+
+    # 1. Live quote via MarketDataService
+    try:
+        from core.services.market_data_service import get_market_data_service
+        svc = get_market_data_service()
+        quote = svc.get_stock_details(symbol)
+        if quote and not quote.get('error'):
+            result['live_quote'] = quote
+    except Exception as e:
+        logger.warning(f"Ticker lookup live quote error for {symbol}: {e}")
+
+    # 2. Alerts
+    try:
+        alert_qs = StockMarketAlert.objects.filter(
+            symbol__iexact=symbol
+        ).order_by('-detected_at')
+        result['alerts']['total'] = alert_qs.count()
+        for a in alert_qs[:20]:
+            result['alerts']['results'].append({
+                'id': str(a.id),
+                'alert_type': a.alert_type,
+                'symbol': a.symbol,
+                'company_name': a.company_name,
+                'sector': a.sector,
+                'title': a.title,
+                'summary': a.summary,
+                'bull_case': a.bull_case,
+                'bear_case': a.bear_case,
+                'disagreement_level': a.disagreement_level,
+                'confidence_score': float(a.confidence_score),
+                'bull_score': a.bull_score,
+                'bear_score': a.bear_score,
+                'current_price': float(a.current_price) if a.current_price else None,
+                'price_change_24h': float(a.price_change_24h) if a.price_change_24h else None,
+                'recommended_action': a.recommended_action,
+                'bookmarked': a.bookmarked,
+                'detected_at': a.detected_at.isoformat() if a.detected_at else None,
+            })
+    except Exception as e:
+        logger.warning(f"Ticker lookup alerts error for {symbol}: {e}")
+
+    # 3. Predictions
+    try:
+        pred_qs = PredictionOutcome.objects.filter(
+            ticker__iexact=symbol
+        ).order_by('-prediction_date')
+        result['predictions']['total'] = pred_qs.count()
+        for p in pred_qs[:20]:
+            result['predictions']['results'].append({
+                'id': str(p.id),
+                'ticker': p.ticker,
+                'prediction_type': p.prediction_type,
+                'conviction_level': p.conviction_level,
+                'predicted_move': float(p.predicted_move),
+                'price_at_prediction': float(p.price_at_prediction),
+                'prediction_date': p.prediction_date.isoformat(),
+                'price_after_7_days': float(p.price_after_7_days) if p.price_after_7_days else None,
+                'price_after_30_days': float(p.price_after_30_days) if p.price_after_30_days else None,
+                'actual_move_7_days': float(p.actual_move_7_days) if p.actual_move_7_days else None,
+                'actual_move_30_days': float(p.actual_move_30_days) if p.actual_move_30_days else None,
+                'was_correct_7_days': p.was_correct_7_days,
+                'was_correct_30_days': p.was_correct_30_days,
+                'accuracy_score_7_days': p.accuracy_score_7_days,
+                'accuracy_score_30_days': p.accuracy_score_30_days,
+                'was_in_debate_zone': p.was_in_debate_zone,
+                'outcome_calculated': p.outcome_calculated,
+            })
+    except Exception as e:
+        logger.warning(f"Ticker lookup predictions error for {symbol}: {e}")
+
+    # 4. Brief mentions — scan recent briefs for ticker in JSON fields
+    try:
+        recent_briefs = MarketIntelligenceBrief.objects.all()[:30]
+        for brief in recent_briefs:
+            mentions = []
+            for field_name in BRIEF_TICKER_FIELDS:
+                items = getattr(brief, field_name, None) or []
+                if not isinstance(items, list):
+                    continue
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    if (item.get('ticker', '') or '').upper() == symbol:
+                        mentions.append({
+                            'section': field_name,
+                            'ticker': item.get('ticker'),
+                            'recommendation': item.get('recommendation'),
+                            'confidence': item.get('confidence'),
+                            'reasoning': item.get('reasoning'),
+                        })
+            if mentions:
+                result['brief_mentions'].append({
+                    'brief_id': str(brief.id),
+                    'brief_date': brief.brief_date.isoformat(),
+                    'mentions': mentions,
+                })
+    except Exception as e:
+        logger.warning(f"Ticker lookup brief mentions error for {symbol}: {e}")
+
+    # 5. SEC filings — search by company name prefix from alerts or live quote
+    try:
+        company_name = None
+        # Try to get company name from alerts first (cheapest)
+        if result['alerts']['results']:
+            company_name = result['alerts']['results'][0].get('company_name')
+        # Fall back to live quote
+        if not company_name and result['live_quote']:
+            company_name = result['live_quote'].get('company_name') or result['live_quote'].get('name')
+
+        if company_name:
+            # Use the first word of the company name to avoid suffix mismatches
+            search_term = company_name.split()[0] if company_name else symbol
+            sec_qs = SpiderData.objects.filter(
+                spider_name='sec_edgar',
+                raw_data__icontains=search_term,
+            ).order_by('-created_at')
+            result['sec_filings']['total'] = sec_qs.count()
+            for f in sec_qs[:10]:
+                result['sec_filings']['results'].append({
+                    'id': str(f.id),
+                    'spider_name': f.spider_name,
+                    'source_url': f.source_url,
+                    'data_type': f.data_type,
+                    'raw_data': f.raw_data,
+                    'relevance_score': f.relevance_score,
+                    'created_at': f.created_at.isoformat() if f.created_at else None,
+                })
+    except Exception as e:
+        logger.warning(f"Ticker lookup SEC filings error for {symbol}: {e}")
+
+    # 6. Spider data — recent mentions across financial spiders
+    try:
+        spider_qs = SpiderData.objects.filter(
+            spider_name__in=FINANCIAL_SPIDERS,
+            raw_data__icontains=symbol,
+        ).exclude(
+            spider_name='sec_edgar',  # Already covered above
+        ).order_by('-created_at')
+        result['spider_data']['total'] = spider_qs.count()
+        for s in spider_qs[:10]:
+            result['spider_data']['results'].append({
+                'id': str(s.id),
+                'spider_name': s.spider_name,
+                'source_url': s.source_url,
+                'data_type': s.data_type,
+                'summary': (s.raw_data or {}).get('summary') or (s.raw_data or {}).get('title', ''),
+                'relevance_score': s.relevance_score,
+                'created_at': s.created_at.isoformat() if s.created_at else None,
+            })
+    except Exception as e:
+        logger.warning(f"Ticker lookup spider data error for {symbol}: {e}")
+
+    return Response(result)
