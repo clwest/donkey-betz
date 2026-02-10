@@ -1329,8 +1329,12 @@ RULES:
                 "Recommend preventive actions before problems escalate."
             ),
             'boardroom': (
-                "FOCUS: Summarize the decision landscape. Highlight urgency levels. "
-                "Recommend triage order. Note any items linked to active initiatives."
+                "FOCUS: The user's pending items are already listed above.\n"
+                "- Max 3-5 bullets of INSIGHT only — do NOT restate counts or item lists\n"
+                "- Lead with critical/high items: what they are and why they matter\n"
+                "- Identify patterns (e.g., most items from one source, or a spike)\n"
+                "- Recommend a triage strategy (what to handle first, what to bulk-dismiss)\n"
+                "- If item volume is high, suggest bulk actions to reduce noise"
             ),
             'stock_intelligence': (
                 "FOCUS: Analyze stock market intelligence. Highlight bull/bear consensus, "
@@ -1506,12 +1510,28 @@ Address the user by name occasionally."""
                             if val > 0:
                                 label = level.upper() if level == 'critical' else level
                                 response += f"  - {val} {label} urgency\n"
-                        # Session 971: Show attention type breakdown
-                        att_by_type = attention.get('by_type', {})
-                        if att_by_type:
-                            response += "  **By type:**\n"
-                            for atype, acount in sorted(att_by_type.items(), key=lambda x: x[1], reverse=True):
-                                response += f"    - {atype}: {acount}\n"
+
+                    # Session 985: Show top critical/high items inline
+                    top_items = tool_result.get('top_items', [])
+                    if top_items:
+                        response += f"\n**Needs your attention now:**\n"
+                        for item in top_items[:8]:
+                            raw_title = str(item.get('title', 'Untitled'))
+                            source = item.get('source_agent', '')
+                            # Strip redundant agent prefix from title
+                            if source and raw_title.startswith(f"{source}: "):
+                                raw_title = raw_title[len(source) + 2:]
+                            # Truncate at word boundary
+                            if len(raw_title) > 70:
+                                raw_title = raw_title[:67].rsplit(' ', 1)[0] + '...'
+                            urgency = item.get('urgency', '')
+                            item_id = str(item.get('id', ''))[:8]
+                            tag = urgency.upper() if urgency == 'critical' else urgency
+                            line = f"  • **{raw_title}** [{tag}]"
+                            if source:
+                                line += f" from {source}"
+                            line += f" `{item_id}`"
+                            response += line + "\n"
 
                     if decisions.get('count', 0) > 0:
                         dec_count = decisions['count']
@@ -1521,7 +1541,7 @@ Address the user by name occasionally."""
                         for dtype, dcount in sorted(by_type.items(), key=lambda x: x[1], reverse=True):
                             response += f"  - {dcount} {dtype}\n"
 
-                    response += "\nI can help you list, approve, ignore, promote, or reject items."
+                    response += "\nSay 'list critical' or 'list high' to see more, or 'approve item [id]' to act."
                     return response
 
                 elif action in ['list_attention', 'list_decisions']:
