@@ -1,42 +1,31 @@
-# Session 986 - Start Here
+# Session 987 - Start Here
 
-**Previous Session:** 985 (PA Boardroom Response Improvement + Celery OOM Deep Fix)
+**Previous Session:** 986 (Nervous System 60% Health Fix)
 **Date:** February 10, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE** | **PA Boardroom: ACTIONABLE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE** | **PA Boardroom: ACTIONABLE** | **Nervous System: FIXED**
 
 ---
 
-## Session 985 Summary (Just Completed)
+## Session 986 Summary (Just Completed)
 
-### PA Boardroom Response Improvement
+### Nervous System 60% Health Fix
 
-**Problem:** PA response to "What needs my attention?" was generic -- stats action returned only aggregate counts (585 attention, 282 decisions) with no actual items. LLM analysis was 500+ words of vague advice restating the same counts.
+**Problem:** Nervous system health was 60% on Railway but 100% locally. Two measurement bugs.
 
-**Root cause (code path traced):**
-1. `_handle_boardroom` stats action returned counts by urgency/type but zero items
-2. Boardroom analytical directive was vague ("Summarize the decision landscape")
-3. No conciseness constraints on LLM output for boardroom intent
+**Root cause:**
+1. `_check_channel_layer()` assumed `CHANNEL_LAYERS.CONFIG.hosts` was `(host, port)` tuples, but `settings.py` provides URL strings. On Railway, fell back to `127.0.0.1:6379` (doesn't exist) -> Redis "disconnected" -> -40 points.
+2. `_get_message_stats()` was hardcoded to zeros with "not yet implemented" note. Activity level permanently "dormant".
 
-**Fix (3 changes, no migrations):**
-1. **`tool_dispatcher.py`**: Stats action now fetches top 10 critical/high items with title, urgency, source_agent, priority_score, ID
-2. **`unified_pa_entrypoint.py` formatter**: New "Needs your attention now" section shows up to 8 top items inline with agent prefix stripped and word-boundary truncation
-3. **`unified_pa_entrypoint.py` directive**: Boardroom LLM prompt now has "Max 3-5 bullets of INSIGHT only", pattern identification, triage strategy, bulk action recommendations
+**Fix (1 file, 3 changes, no migrations):**
+1. **`core/services/nervous.py` `_check_channel_layer`**: Handle URL strings via `redis.from_url()`, keep tuple support, add `REDIS_URL` fallback
+2. **`core/services/nervous.py` `_get_message_stats`**: Wire to `CeleryTaskEvent` for real task throughput data
+3. **`core/services/nervous.py` `_calculate_health_score`**: Mild -10 penalty for genuinely zero activity (vs no penalty when tracking unavailable)
 
-**Result:** PA now shows the 6 critical items (3 StockAuditCoordinator alerts, 3 ContentWriterAgent reviews) inline with IDs for immediate action, followed by concise LLM insight.
+**Expected:** Railway score 60% -> ~90-100%. Local stays ~100%.
 
-### Celery Worker OOM Deep Fix
+### Session 985 Summary (Prior)
 
-**Problem:** celery-worker crashed with OOM after Session 984's prefork migration. Heavy ML libraries (torch ~500MB, sklearn ~100MB, transformers ~200MB) loaded at module level into Celery parent process via import chain: `core/assistant/__init__.py` -> `personal_ai_assistant.py` -> `ml/core/ml_engine.py`.
-
-**Fix (6 files, no migrations):**
-1. **`Procfile`**: All workers reduced to `-c 1`, `--max-memory-per-child=200000`
-2. **`ml/core/ml_engine.py`**: Moved torch/sklearn/transformers to lazy imports inside methods; `MLConfig.device` uses `_detect_device()` helper
-3. **`core/personal_ai_assistant.py`**: Wrapped MLEngine import in `try/except ImportError`
-4. **`intelligence/orchestration/agent_advisor_bridge.py`**: Wrapped ML imports in `try/except ImportError`
-5. **`self_awareness/embeddings.py`**: Moved `cosine_similarity` import inside method
-6. **`core/tasks.py`**: Added `.iterator()` to 3 unbounded `.objects.all()` loops
-
-**Expected:** Parent process drops from ~800MB to ~200MB. Peak memory ~400MB vs ~800MB+.
+PA Boardroom Response Improvement (top items inline, concise LLM directive) + Celery OOM Deep Fix (lazy ML imports). PRs #1049.
 
 ### Session 984 Summary (Prior)
 
@@ -89,9 +78,6 @@ Migration 0234 showed that `AddConstraint` during blue-green deploy can hang on 
 ### Migration 0235 Needs Running on Railway
 `CeleryTaskEvent` table must be created via `python manage.py migrate` on next deploy. No lock risk -- it's a simple `CreateModel`.
 
-### Nervous System Score (60%) -- Measurement Gap
-Nervous system health is 60% likely because Redis channel layer connectivity check fails or WebSocket consumer count is low. Message throughput tracking is "not yet implemented" (hardcoded to 0). Investigate whether this is a real Redis/WebSocket issue or another measurement bug.
-
 ### Muscular System Score (60.5%) -- Agent Performance
 Muscular health reflects actual agent execution success rates. Some agent groups may be hitting daily execution limits or running slow. Investigate `AgentExecution` records for underperforming groups.
 
@@ -120,9 +106,8 @@ The diagnostic pipeline (Session 856) has 0 records in production. May need acti
 - Check CeleryTaskEvent table is populated after migration 0235
 
 ### Body Health Improvements
-- Investigate nervous system 60% score -- is Redis channel layer connected? WebSocket consumers registered?
 - Investigate muscular system 60.5% -- which agent groups are underperforming?
-- Add message throughput tracking to nervous system (currently hardcoded to 0)
+- Verify nervous system score improved on Railway after deploy (was 60%, fix in Session 986)
 
 ### Ticker Lookup Enhancements
 - Wire ticker lookup to PA: "look up AAPL" routes to ticker_lookup endpoint
