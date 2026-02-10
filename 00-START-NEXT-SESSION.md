@@ -1,25 +1,26 @@
 # Session 981 - Start Here
 
-**Previous Session:** 980 (Market Brief Save Guard)
+**Previous Session:** 980 (Stock Intelligence Production Hardening)
 **Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS**
 
 ---
 
 ## Session 980 Summary (Just Completed)
 
-### Market Brief Save Guard
+### Stock Intelligence Production Hardening (9 PRs: #1030-#1038)
 
-Fixed "0 stocks analyzed" bug in Market Intelligence Brief. When bull/bear agents fail (timeout/GPT error/market data error), the coordinator was saving an empty brief that overwrote good data via `update_or_create`.
+Five production issues fixed across the Stock Intelligence dashboard:
 
-**Three fixes:**
-1. **Save guard** — `_save_brief_for_tomorrow` skips saving when `total_stocks_analyzed == 0`, preserving previous good brief
-2. **Agent failure logging** — Explicit warning logs when BullCase/BearCase agents return errors, plus case count info logging
-3. **Weekend fallback** — `_load_previous_brief` falls back to the most recent brief within 5 days (with `total_stocks_analyzed > 0`) when yesterday has no brief — handles Monday morning and failed run scenarios
+1. **Brief save guard (PR #1030):** `_save_brief_for_tomorrow` skips saving when `total_stocks_analyzed == 0`, preserving previous good brief. Added agent failure logging and 5-day weekend fallback for `_load_previous_brief`.
 
-**File changed:** `core/agents/stocks/market_intelligence_coordinator.py`
+2. **Prediction dedup (PRs #1031-1032):** New `_parse_target_move` regex parser handles bull/bear targets like `"25%+"`, `"-25% or more"`. Predictions use `update_or_create` keyed on `(brief, ticker, prediction_type)`. Added `UniqueConstraint` via migration 0234 with raw SQL dedup. Cleaned 1,230 duplicate rows in production.
 
-No migrations. No frontend changes.
+3. **Railway deploy fixes (PRs #1033-1036):** Migration 0234 hung on lock during blue-green deploy. Increased healthcheck to 600s via Railway GraphQL API. Temporarily removed `migrate` from start command. Learned: `sh -c '...'` wrapper required for `$PORT` expansion. Migration manually applied + faked after deploy.
+
+4. **Brief detail UI (PR #1037):** Replaced `JsonSection` raw JSON dump with structured cards — ticker, recommendation badge (color-coded BULLISH/BEARISH/DEBATE), confidence, target prices, bull/bear arguments, risk factors.
+
+5. **Alert quality + dedup (PR #1038):** Lowered Yahoo Finance threshold 5%→2%. Removed `'rally'` keyword. Added title-based dedup (seen_titles set + 12h DB check). Reduced news items 5→3. Cleaned 319 duplicate alerts in production (402→84 unique).
 
 ### Session 979 Summary (Prior)
 
@@ -39,7 +40,7 @@ PA Production Timeout Fix — Dedicated pa queue, async_to_sync deadlock fix, en
 | Spiders | 77 (72 working, 5 need API keys) |
 | Advisors | 25 |
 | Active Initiatives | 52 (cleaned from 568 in Session 961c) |
-| Database Models | 386+ |
+| Database Models | 390+ (added 4 in migration 0234) |
 | Services | 134 |
 | Celery Tasks | 262 |
 | Workspace Tabs | 9 (down from 18) |
@@ -63,8 +64,8 @@ PA Production Timeout Fix — Dedicated pa queue, async_to_sync deadlock fix, en
 
 ## Known Issues / Open Items
 
-### Railway PA Timeout — JUST FIXED
-Session 974b offloaded PA processing to Celery. Needs production verification on Railway.
+### Railway Deploy: Migration Lock Risk
+Migration 0234 showed that `AddConstraint` during blue-green deploy can hang on lock. For future migrations with exclusive locks, consider: (a) run migration manually before deploy, or (b) temporarily skip migrate in start command.
 
 ### Legacy Routes Expire in ~2-4 Weeks
 26 legacy routes redirect to workspace tabs. Telemetry counters track which routes still get traffic. After transition period, remove redirect routes entirely.
@@ -151,6 +152,13 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - `MarketIntelligenceBrief`: `core.models_unified_system` — timestamp is `generated_at` (NOT `created_at`)
 - `StockMarketAlert`: `core.models_autonomous_alerts` — timestamp is `detected_at`
 - `PredictionOutcome`: `core.models_unified_system` — `was_correct_7_days`/`was_correct_30_days` are nullable booleans
+- `PredictionOutcome` has UniqueConstraint on `(brief, ticker, prediction_type)` (Session 980)
+
+**Railway deploy (Session 980):**
+- Start command is in Railway GraphQL API (`serviceInstanceUpdate` mutation), NOT `entrypoint.sh` or `railway.toml`
+- Service ID: `a840dd35-1f56-4053-a3cc-bc15f92c79e6`, Environment ID: `4045e5be-c118-4e3a-8931-c071f50ad119`
+- Must use `sh -c '...'` wrapper for `$PORT` environment variable expansion
+- Migrations with exclusive locks can hang during blue-green deploy
 
 **SKIN Layer workspace (Session 976):**
 - `_get_workspace_for_skin_layer()` now returns "System Autonomous Workspace" at `generated_content/`
