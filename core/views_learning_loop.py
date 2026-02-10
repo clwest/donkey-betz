@@ -989,9 +989,6 @@ def learning_loop_stats(request):
 
     Returns stats on active learnings, effectiveness rates, and recent patterns.
     """
-    if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
-
     try:
         from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
 
