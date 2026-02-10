@@ -2460,6 +2460,13 @@ app.conf.imports = (
 )
 
 
+# Session 983: Connect Celery task telemetry signals.
+# Writes CeleryTaskEvent rows on task_prerun/task_postrun/task_failure
+# so status_snapshot_tool can report accurate Celery execution counts
+# regardless of the CELERY_RESULT_BACKEND setting.
+import core.celery_telemetry  # noqa: F401  — signal handlers connect on import
+
+
 @app.task(bind=True)
 def debug_task(self):
     """Debug task to test Celery configuration."""

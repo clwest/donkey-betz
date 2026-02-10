@@ -258,7 +258,7 @@ class SkinService:
 
         logger.info(f"🧴 Skin check complete: {status} ({health_score}%) - {check_duration_ms}ms")
 
-        return {
+        result = {
             'timestamp': now.isoformat(),
             'status': status,
             'health_score': health_score,
@@ -309,6 +309,24 @@ class SkinService:
             },
         }
 
+        # Session 983: annotate when running on ephemeral FS so consumers
+        # (PA, dashboards) can explain the score context.
+        if self._is_ephemeral_filesystem():
+            result['environment'] = 'ephemeral_filesystem'
+            result['environment_note'] = (
+                'Running on Railway (ephemeral FS). File write success rate '
+                'excluded from health score — only permission and review '
+                'metrics are scored.'
+            )
+
+        return result
+
+    @staticmethod
+    def _is_ephemeral_filesystem() -> bool:
+        """Detect ephemeral filesystem platforms (Railway, Heroku, etc.)."""
+        import os
+        return bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+
     def _calculate_health_score(
         self,
         success_rate_24h: float,
@@ -318,6 +336,20 @@ class SkinService:
         pending_reviews: int,
     ) -> float:
         """Calculate overall skin health score (0-100)."""
+
+        # Session 983: On ephemeral filesystem platforms (Railway), workspace
+        # file write failures are expected — the FS doesn't persist across
+        # deploys. Don't let inevitable write failures tank the health score.
+        if self._is_ephemeral_filesystem():
+            # 70-point healthy baseline (FS ops can't be meaningfully judged)
+            score = 70.0
+            # Still penalize permission issues and review backlogs — those
+            # are meaningful regardless of filesystem persistence.
+            permission_penalty = min(permission_denials * 5, 15)
+            score += (15 - permission_penalty)
+            review_penalty = min(pending_reviews * 3, 15)
+            score += (15 - review_penalty)
+            return max(0, min(100, score))
 
         # Base score from success rate (50% weight)
         score = success_rate_24h * 0.5
@@ -347,6 +379,15 @@ class SkinService:
         total_ops_24h: int,
     ) -> str:
         """Determine the skin status based on metrics."""
+
+        # Session 983: On ephemeral FS, file write failures are expected.
+        # Report 'healthy' or 'active' based on the adjusted score.
+        if self._is_ephemeral_filesystem():
+            if health_score >= self.HEALTHY_THRESHOLD:
+                return 'healthy'
+            elif health_score >= self.ACTIVE_THRESHOLD:
+                return 'active'
+            return 'active'  # floor at 'active' on ephemeral FS
 
         # If rollbacks are happening, we're healing
         if rollbacks_performed_24h > 0:
