@@ -496,6 +496,7 @@ def auto_approve_boardroom_items():
     Returns:
         Dict with auto-approve statistics
     """
+    from datetime import timedelta
     from django.utils import timezone
     from core.models_human_interface import HumanAttentionItem
     from core.models_unified_system import AgentDecisionSummary
@@ -504,6 +505,9 @@ def auto_approve_boardroom_items():
 
     try:
         now = timezone.now()
+        # Session 984: Only auto-approve items that have been pending for 24+ hours.
+        # This ensures items stay visible in the Boardroom for a full day before clearing.
+        age_cutoff = now - timedelta(hours=24)
         stats = {
             'insights_approved': 0,
             'reviews_approved': 0,
@@ -515,33 +519,37 @@ def auto_approve_boardroom_items():
             'guidelines_promoted': 0,
         }
 
-        # 1. Auto-approve insight items (informational)
+        # 1. Auto-approve insight items older than 24h (informational)
         insights = HumanAttentionItem.objects.filter(
             status='pending',
-            item_type='insight'
+            item_type='insight',
+            created_at__lt=age_cutoff
         )
         stats['insights_approved'] = insights.update(status='acted', decided_at=now)
 
-        # 2. Auto-approve non-critical review items
+        # 2. Auto-approve non-critical review items older than 24h
         reviews = HumanAttentionItem.objects.filter(
             status='pending',
-            item_type='review'
+            item_type='review',
+            created_at__lt=age_cutoff
         ).exclude(urgency='critical')
         stats['reviews_approved'] = reviews.update(status='acted', decided_at=now)
 
-        # 3. Session 977: Auto-approve non-critical opportunity items
+        # 3. Session 977: Auto-approve non-critical opportunity items older than 24h
         opportunities = HumanAttentionItem.objects.filter(
             status='pending',
-            item_type='opportunity'
+            item_type='opportunity',
+            created_at__lt=age_cutoff
         ).exclude(urgency='critical')
         stats['opportunities_approved'] = opportunities.update(status='acted', decided_at=now)
 
-        # 4. Session 977: Auto-approve low/medium urgency spider_action items
+        # 4. Session 977: Auto-approve low/medium urgency spider_action items older than 24h
         # (high/critical spider_actions still need human review)
         spider_low = HumanAttentionItem.objects.filter(
             status='pending',
             item_type='spider_action',
-            urgency__in=['low', 'medium']
+            urgency__in=['low', 'medium'],
+            created_at__lt=age_cutoff
         )
         stats['spider_actions_approved'] = spider_low.update(status='acted', decided_at=now)
 
@@ -25061,6 +25069,8 @@ def generate_human_attention_items():
             'failed_executions': 0,
             'system_alerts': 0,
             'high_value_spiders': 0,
+            'stock_alerts': 0,
+            'content_ready': 0,
         }
 
         # 1. Check for pilot gates pending approval
@@ -25073,25 +25083,17 @@ def generate_human_attention_items():
         except Exception as e:
             logger.warning(f"Pilot gate check failed: {e}")
 
-        # 2. Check for recent failed agent executions
+        # 2. Check for recent failed agent executions (Session 984: widened from 6 hardcoded agents to all)
         try:
             from core.models_unified_system import AgentExecution
             recent_failures = AgentExecution.objects.filter(
                 status='failed',
-                created_at__gte=timezone.now() - timedelta(hours=1)
-            ).select_related('template')[:10]
-
-            critical_agents = [
-                'ThinkingAgent', 'ArbitrageDetector', 'PredictionMarketAnalyst',
-                'BlockchainAuditCoordinator', 'StockAuditCoordinator',
-                'SystemIntelligenceAgent',
-            ]
+                created_at__gte=timezone.now() - timedelta(hours=4)
+            ).select_related('template')[:20]
 
             for execution in recent_failures:
-                agent_name = execution.template.name if execution.template else ''
-                if agent_name in critical_agents:
-                    attention_bridge.create_agent_execution_attention(execution)
-                    stats['failed_executions'] += 1
+                attention_bridge.create_agent_execution_attention(execution)
+                stats['failed_executions'] += 1
         except Exception as e:
             logger.warning(f"Agent execution check failed: {e}")
 
@@ -25126,25 +25128,85 @@ def generate_human_attention_items():
             logger.warning(f"System health check failed: {e}")
 
         # 4. Check for high-value spider data
+        # Session 984: Fixed data_type filter — old values (market_alert, security_alert, etc.)
+        # never matched any actual spider data. Real types from base_spider.py:
+        # opportunity, market_data, news, trend_data, competitor_info, job_posting, etc.
         try:
             from core.models_unified_system import SpiderData
             recent_spider_data = SpiderData.objects.filter(
-                created_at__gte=timezone.now() - timedelta(hours=1),
-                data_type__in=['market_alert', 'security_alert', 'price_alert', 'breaking_news']
-            )[:5]
+                created_at__gte=timezone.now() - timedelta(hours=4),
+                data_type__in=['opportunity', 'market_data', 'news', 'trend_data', 'competitor_info']
+            ).order_by('-created_at')[:10]
 
             for data in recent_spider_data:
+                title = ''
+                if data.raw_data and isinstance(data.raw_data, dict):
+                    title = data.raw_data.get('title', '')
+                if not title:
+                    title = f"Spider Data: {data.data_type.replace('_', ' ').title()}"
                 attention_bridge.create_spider_alert(
                     spider_name=data.spider_name,
                     alert_type=data.data_type,
-                    title=f"Spider Alert: {data.data_type.replace('_', ' ').title()}",
-                    summary=str(data.raw_data)[:200] if data.raw_data else 'New data available',
+                    title=title[:200],
+                    summary=str(data.raw_data)[:300] if data.raw_data else 'New data available',
                     data=data.raw_data,
                     urgency='medium'
                 )
                 stats['high_value_spiders'] += 1
         except Exception as e:
             logger.warning(f"Spider data check failed: {e}")
+
+        # 5. Session 984: Check for recent stock market alerts
+        try:
+            from core.models_autonomous_alerts import StockMarketAlert
+            recent_alerts = StockMarketAlert.objects.filter(
+                detected_at__gte=timezone.now() - timedelta(hours=4)
+            ).order_by('-detected_at')[:5]
+
+            for alert in recent_alerts:
+                urgency = 'high' if alert.alert_type in ['risk_alert', 'anomaly_detected'] else 'medium'
+                attention_bridge.create_spider_alert(
+                    spider_name='stock_intelligence',
+                    alert_type=alert.alert_type,
+                    title=f"{alert.symbol}: {alert.title}"[:200],
+                    summary=alert.summary[:300] if alert.summary else f"{alert.alert_type} for {alert.symbol}",
+                    data={
+                        'symbol': alert.symbol,
+                        'alert_type': alert.alert_type,
+                        'bull_score': alert.bull_score,
+                        'bear_score': alert.bear_score,
+                        'recommended_action': alert.recommended_action,
+                    },
+                    urgency=urgency
+                )
+                stats['stock_alerts'] += 1
+        except Exception as e:
+            logger.warning(f"Stock alert check failed: {e}")
+
+        # 6. Session 984: Check for publish-ready blog content awaiting review
+        try:
+            from core.models_unified_system import SelfBlog
+            ready_blogs = SelfBlog.objects.filter(
+                publish_ready=True,
+                created_at__gte=timezone.now() - timedelta(hours=24)
+            ).order_by('-created_at')[:3]
+
+            for blog in ready_blogs:
+                attention_bridge.create_system_alert(
+                    alert_type='content_ready',
+                    title=f"Blog Ready: {blog.title}"[:200] if blog.title else "New blog ready for review",
+                    summary=f"Quality: {blog.quality_score:.0f}% | Novelty: {blog.novelty_score:.0f}% | {blog.word_count} words",
+                    urgency='low',
+                    payload={
+                        'blog_id': str(blog.id),
+                        'quality_score': blog.quality_score,
+                        'novelty_score': blog.novelty_score,
+                        'word_count': blog.word_count,
+                    }
+                )
+                stats['content_ready'] += 1
+        except Exception as e:
+            logger.warning(f"Blog content check failed: {e}")
 
         total = sum(stats.values())
         logger.info(f"🧑 [HUMAN INTERFACE] Generated {total} attention items: {stats}")
