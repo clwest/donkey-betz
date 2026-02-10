@@ -1104,6 +1104,17 @@ class ToolDispatcher:
                 .values_list('item_type', 'count')
             )
 
+            # Session 985: Fetch top critical/high items so PA can reference
+            # actual items instead of just counts
+            top_items = list(
+                attention_qs.filter(urgency__in=['critical', 'high'])
+                .order_by('-priority_score', '-created_at')[:10]
+                .values(
+                    'id', 'title', 'urgency', 'item_type',
+                    'source_agent', 'priority_score', 'created_at'
+                )
+            )
+
             # Get decision stats
             decision_count = decisions_qs.count()
             decisions_by_type = dict(
@@ -1125,6 +1136,7 @@ class ToolDispatcher:
                     'count': decision_count,
                     'by_type': decisions_by_type,
                 },
+                'top_items': top_items,
             }
 
         elif action == 'list_attention':
