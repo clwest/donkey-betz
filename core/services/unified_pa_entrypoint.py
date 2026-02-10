@@ -1336,9 +1336,9 @@ RULES:
                 "Flag any that need fact-checking against spider data. Recommend a publishing strategy."
             ),
             'opportunities': (
-                "FOCUS: Evaluate viability and urgency of each opportunity. "
-                "Cross-reference with spider trends. Prioritize by ROI potential. "
-                "Flag time-sensitive items."
+                "FOCUS: Max 3-5 bullets of INSIGHT only — do NOT repeat the list. "
+                "Group by viability tier (quick wins vs stretch). Note duplicates. "
+                "Flag time-sensitive items. Recommend 2-3 to apply to first."
             ),
             'initiatives': (
                 "FOCUS: Assess pipeline health. Identify bottlenecks, blockers, and stale items "
@@ -1956,6 +1956,77 @@ Address the user by name occasionally."""
 
                     blog_id = tool_result.get('blog_id', '')
                     response += f"\nView in browser: `/blog/{blog_id}`"
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 987: Opportunity results formatting
+            elif intent == 'opportunities':
+                action = tool_result.get('action', '')
+
+                if action == 'list':
+                    items = tool_result.get('opportunities', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No active opportunities found, {user_name}."
+
+                    # Deduplicate by title (keep first occurrence)
+                    seen_titles = set()
+                    unique_items = []
+                    for item in items:
+                        title = item.get('title', '')
+                        if title not in seen_titles:
+                            seen_titles.add(title)
+                            unique_items.append(item)
+
+                    response = f"Found {count} opportunities ({len(unique_items)} unique):\n\n"
+                    for item in unique_items[:10]:
+                        title = item.get('title', 'Untitled')[:55]
+                        opp_type = (item.get('opportunity_type') or 'unknown').replace('_', ' ')
+                        score = item.get('match_score', 0)
+                        item_id = str(item.get('id', ''))[:8]
+                        response += f"- **{title}** ({opp_type}, match: {score}%) `{item_id}`\n"
+
+                    if len(unique_items) > 10:
+                        response += f"\n...and {len(unique_items) - 10} more unique opportunities."
+
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total', 0)
+                    by_status = tool_result.get('by_status', {})
+                    by_type = tool_result.get('by_type', {})
+                    revenue = tool_result.get('total_potential_revenue', '0')
+
+                    response = f"Opportunity stats, {user_name}:\n\n"
+                    response += f"- **Total:** {total}\n"
+                    response += f"- **Potential revenue:** ${revenue}\n"
+                    if by_status:
+                        status_str = ', '.join(f"{s}: {c}" for s, c in by_status.items())
+                        response += f"- **By status:** {status_str}\n"
+                    if by_type:
+                        type_str = ', '.join(f"{t.replace('_', ' ')}: {c}" for t, c in by_type.items())
+                        response += f"- **By type:** {type_str}\n"
+
+                    return response
+
+                elif action == 'get':
+                    opp = tool_result.get('opportunity', {})
+                    title = opp.get('title', 'Untitled')
+                    desc = opp.get('description', '')[:200]
+                    opp_type = (opp.get('opportunity_type') or 'unknown').replace('_', ' ')
+                    score = opp.get('match_score', 0)
+                    revenue = opp.get('potential_revenue', '0')
+
+                    response = f"**{title}**\n\n"
+                    response += f"- Type: {opp_type}\n"
+                    response += f"- Match score: {score}%\n"
+                    response += f"- Potential revenue: ${revenue}\n"
+                    if desc:
+                        response += f"\n{desc}..."
+
                     return response
 
                 else:
