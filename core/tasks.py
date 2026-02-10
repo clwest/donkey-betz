@@ -29304,6 +29304,73 @@ def _extract_agent_output_content(result, task_description: str) -> str:
     return f'Execution completed for: {task_description}\n\nAgent data keys: {keys_info}{content_preview}'
 
 
+# ==========================================================================
+# SESSION 987: Pre-flight data requirements for single-agent tasks
+# ==========================================================================
+AGENT_DATA_REQUIREMENTS = {
+    'PerformanceAnalystAgent': {
+        'models': [
+            ('core.models_autonomous_studio.ContentChannel', {}, 1, 'content channels'),
+        ],
+        'description': 'content performance analysis',
+    },
+    'OpportunityScoringAgent': {
+        'models': [
+            ('core.models_unified_system.Opportunity', {'status__in': ['active', 'pending']}, 1, 'opportunities'),
+        ],
+        'description': 'opportunity scoring',
+    },
+    'TrendAnalysisAgent': {
+        'models': [
+            ('core.models_unified_system.SpiderData', {'data_type': 'trend_data'}, 5, 'trend data points'),
+        ],
+        'description': 'trend analysis',
+    },
+}
+
+
+def _preflight_check_agent_data(agent_name: str, topic: str = '') -> dict:
+    """
+    Session 987: Check if the required data exists before running an agent.
+    Returns {'proceed': True/False, 'reason': str, 'counts': dict}.
+    """
+    import importlib
+
+    # Direct match or topic references an agent with requirements
+    reqs = AGENT_DATA_REQUIREMENTS.get(agent_name)
+    if not reqs and topic:
+        for req_agent, req_data in AGENT_DATA_REQUIREMENTS.items():
+            if req_agent in topic:
+                reqs = req_data
+                agent_name = req_agent  # for logging
+                break
+
+    if not reqs:
+        return {'proceed': True, 'reason': 'no requirements defined'}
+
+    counts = {}
+    missing = []
+    for model_path, filters, min_count, label in reqs['models']:
+        try:
+            module_path, class_name = model_path.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            Model = getattr(module, class_name)
+            count = Model.objects.filter(**filters).count()
+            counts[label] = count
+            if count < min_count:
+                missing.append(f"{label}: {count}/{min_count}")
+        except Exception as e:
+            logger.warning(f"[Session 987] Preflight model check failed for {model_path}: {e}")
+            # Don't block on import errors — let the agent try
+            counts[label] = -1
+
+    if missing:
+        reason = f"Insufficient data for {reqs['description']}: {', '.join(missing)}"
+        return {'proceed': False, 'reason': reason, 'counts': counts}
+
+    return {'proceed': True, 'reason': 'all data requirements met', 'counts': counts}
+
+
 @shared_task(name='core.tasks.universal_agent_workspace_output')
 def universal_agent_workspace_output(
     agent_name: str,
@@ -29405,6 +29472,22 @@ def universal_agent_workspace_output(
                 'error': f'Could not find agent class: {agent_name}',
                 'run_mode': run_mode
             }
+
+        # Session 987: Pre-flight data check — skip if required data doesn't exist
+        if run_mode == 'production' and trigger == 'schedule':
+            preflight = _preflight_check_agent_data(agent_name, actual_topic)
+            if not preflight['proceed']:
+                logger.warning(
+                    f"[Session 987] Pre-flight SKIP: {agent_name} — {preflight['reason']}"
+                )
+                return {
+                    'success': False,
+                    'agent': agent_name,
+                    'error': f"Pre-flight check: {preflight['reason']}",
+                    'run_mode': run_mode,
+                    'preflight_skip': True,
+                    'preflight_counts': preflight.get('counts', {}),
+                }
 
         # Execute agent
         agent = agent_class()
