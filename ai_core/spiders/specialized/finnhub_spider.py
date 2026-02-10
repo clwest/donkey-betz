@@ -31,9 +31,13 @@ class FinnhubSpider:
     }
 
     # Tracked symbols
+    # Session 981: Sector-diverse tracked symbols (was all tech + 3 others)
     TRACKED_SYMBOLS = [
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
-        'JPM', 'V', 'UNH'
+        'AAPL', 'MSFT', 'NVDA',       # Tech
+        'JPM', 'GS', 'V',             # Finance
+        'UNH', 'LLY',                 # Healthcare
+        'XOM', 'CVX',                 # Energy
+        'WMT', 'CAT', 'BA',           # Consumer / Industrial
     ]
 
     # Market sections
