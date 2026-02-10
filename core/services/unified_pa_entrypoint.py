@@ -85,6 +85,7 @@ class UnifiedPAEntrypoint:
         'initiatives':       ['intelligence_enricher', 'strategic_memory'],
         'boardroom':         ['intelligence_enricher', 'strategic_memory'],
         'system_health':     ['intelligence_enricher'],
+        'stock_intelligence': ['domain_context', 'spider_trends'],
         'spider_data':       ['domain_context'],
         'execution_history': ['intelligence_enricher', 'strategic_memory'],
         'learning_patterns': ['spider_trends'],
@@ -133,7 +134,7 @@ class UnifiedPAEntrypoint:
 
     # Intents where spider_trends and domain_context always apply (no relevance gate)
     DIRECT_RELEVANCE_INTENTS = {
-        'content_review', 'opportunities', 'predictions', 'spider_data',
+        'content_review', 'opportunities', 'predictions', 'spider_data', 'stock_intelligence',
     }
 
     # Per-section character caps to prevent any one source dominating
@@ -765,10 +766,18 @@ class UnifiedPAEntrypoint:
         ]):
             return ('initiatives', 'initiative_tool')
 
-        # Session 948: Spider data patterns
+        # Session 979: Stock intelligence patterns (before spider_data to avoid overlap)
+        if any(phrase in message_lower for phrase in [
+            'stock', 'stocks', 'market brief', 'market briefs', 'sec filing',
+            'sec filings', 'edgar', 'stock intelligence', 'stock alert',
+            'stock prediction', 'bull case', 'bear case', 'stock dashboard',
+        ]):
+            return ('stock_intelligence', 'stock_intelligence_tool')
+
+        # Session 948: Spider data patterns — removed bare 'intelligence' (too broad)
         if any(word in message_lower for word in [
             'spider', 'spiders', 'crawl', 'crawled', 'collected data',
-            'intelligence', 'news feed', 'what have spiders', 'spider data'
+            'spider intelligence', 'news feed', 'what have spiders', 'spider data'
         ]):
             return ('spider_data', 'spider_data_tool')
 
@@ -1091,6 +1100,24 @@ class UnifiedPAEntrypoint:
             if uuid_match:
                 payload['session_id'] = uuid_match.group(0)
 
+        # Session 979: Stock intelligence payload
+        elif intent == 'stock_intelligence':
+            msg_lower = message.lower()
+            if any(w in msg_lower for w in ['brief', 'briefs', 'summary']):
+                payload['action'] = 'briefs'
+            elif any(w in msg_lower for w in ['alert', 'alerts']):
+                payload['action'] = 'alerts'
+            elif any(w in msg_lower for w in ['predict', 'prediction', 'predictions', 'accuracy']):
+                payload['action'] = 'predictions'
+            elif any(w in msg_lower for w in ['sec', 'filing', 'edgar']):
+                payload['action'] = 'sec_filings'
+            else:
+                payload['action'] = 'overview'
+
+        # Session 979: Spider data default — override 'list' which is not a valid action
+        elif intent == 'spider_data':
+            payload['action'] = 'recent'
+
         # Add any context
         payload['context'] = context
 
@@ -1304,6 +1331,10 @@ RULES:
             'boardroom': (
                 "FOCUS: Summarize the decision landscape. Highlight urgency levels. "
                 "Recommend triage order. Note any items linked to active initiatives."
+            ),
+            'stock_intelligence': (
+                "FOCUS: Analyze stock market intelligence. Highlight bull/bear consensus, "
+                "significant alerts, and prediction accuracy trends. Keep it actionable."
             ),
             'system_overview': (
                 "Broad system overview. COO-level pulse check.\n"
@@ -2073,6 +2104,107 @@ Address the user by name occasionally."""
                         for cat, cnt in list(by_category.items())[:5]:
                             response += f"- {cat}: {cnt} items\n"
 
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 979: Stock intelligence results formatting
+            elif intent == 'stock_intelligence':
+                action = tool_result.get('action', '')
+
+                if action == 'overview':
+                    brief = tool_result.get('latest_brief')
+                    total_briefs = tool_result.get('total_briefs', 0)
+                    total_alerts = tool_result.get('total_alerts', 0)
+                    acc_7d = tool_result.get('prediction_accuracy_7d')
+                    acc_30d = tool_result.get('prediction_accuracy_30d')
+                    sec_count = tool_result.get('sec_filings_count', 0)
+
+                    response = f"Stock Intelligence Overview, {user_name}:\n\n"
+                    response += f"- **Market Briefs:** {total_briefs}\n"
+                    response += f"- **Active Alerts:** {total_alerts}\n"
+                    if acc_7d is not None:
+                        response += f"- **Prediction Accuracy (7D):** {acc_7d}%\n"
+                    if acc_30d is not None:
+                        response += f"- **Prediction Accuracy (30D):** {acc_30d}%\n"
+                    response += f"- **SEC Filings:** {sec_count}\n"
+                    if brief:
+                        response += f"\n**Latest Brief** ({brief.get('brief_date', 'N/A')}):\n"
+                        response += f"{brief.get('executive_summary', 'No summary')[:200]}\n"
+                    return response
+
+                elif action == 'briefs':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No market briefs found, {user_name}."
+                    response = f"Market Intelligence Briefs ({total} total):\n\n"
+                    for b in items[:6]:
+                        date = b.get('brief_date', 'N/A')[:10]
+                        summary = b.get('executive_summary', '')[:80]
+                        analyzed = b.get('total_stocks_analyzed', 0)
+                        response += f"- **{date}** ({analyzed} stocks): {summary}...\n"
+                    if total > 6:
+                        response += f"\n...and {total - 6} more briefs."
+                    return response
+
+                elif action == 'alerts':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No stock alerts found, {user_name}."
+                    response = f"Stock Alerts ({total} total):\n\n"
+                    for a in items[:8]:
+                        symbol = a.get('symbol', '???')
+                        title = a.get('title', 'Untitled')[:50]
+                        atype = a.get('alert_type', '')
+                        action_rec = a.get('recommended_action', '')
+                        response += f"- **{symbol}** [{atype}]: {title}"
+                        if action_rec:
+                            response += f" ({action_rec})"
+                        response += "\n"
+                    if total > 8:
+                        response += f"\n...and {total - 8} more alerts."
+                    return response
+
+                elif action == 'predictions':
+                    items = tool_result.get('items', [])
+                    stats = tool_result.get('stats', {})
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No stock predictions found, {user_name}."
+                    response = f"Stock Predictions ({total} total):\n\n"
+                    if stats:
+                        acc_7 = stats.get('accuracy_7d_pct')
+                        acc_30 = stats.get('accuracy_30d_pct')
+                        if acc_7 is not None:
+                            response += f"- **7-Day Accuracy:** {acc_7}%\n"
+                        if acc_30 is not None:
+                            response += f"- **30-Day Accuracy:** {acc_30}%\n"
+                        response += "\n"
+                    for p in items[:6]:
+                        ticker = p.get('ticker', '???')
+                        pred_type = p.get('prediction_type', '')
+                        conviction = p.get('conviction_level', '')
+                        correct_7 = p.get('was_correct_7_days')
+                        icon = '?' if correct_7 is None else ('Y' if correct_7 else 'N')
+                        response += f"- **{ticker}** ({pred_type}, {conviction}) 7D: {icon}\n"
+                    return response
+
+                elif action == 'sec_filings':
+                    items = tool_result.get('items', [])
+                    total = tool_result.get('total', 0)
+                    if total == 0:
+                        return f"No SEC filings found, {user_name}."
+                    response = f"SEC Edgar Filings ({total} total):\n\n"
+                    for f in items[:6]:
+                        url = f.get('source_url', '')
+                        date = str(f.get('created_at', ''))[:10]
+                        dtype = f.get('data_type', 'filing')
+                        response += f"- [{dtype}] {url[:60]} ({date})\n"
+                    if total > 6:
+                        response += f"\n...and {total - 6} more filings."
                     return response
 
                 else:
