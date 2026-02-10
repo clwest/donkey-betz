@@ -2831,10 +2831,11 @@ class ToolDispatcher:
 
         sections = {}
 
-        # 1. Celery tasks
+        # 1. Celery tasks — Session 983: use CeleryTaskEvent (our own
+        # telemetry) instead of TaskResult (empty when backend=redis)
         try:
-            from django_celery_results.models import TaskResult
-            task_qs = TaskResult.objects.filter(date_done__gte=cutoff)
+            from core.models_celery_telemetry import CeleryTaskEvent
+            task_qs = CeleryTaskEvent.objects.filter(started_at__gte=cutoff)
             by_status = dict(
                 task_qs.values('status')
                 .annotate(n=Count('id'))
@@ -3031,11 +3032,11 @@ class ToolDispatcher:
         except Exception as e:
             health['components'] = {'error': str(e)}
 
-        # 3. Celery health (last 1 hour)
+        # 3. Celery health (last 1 hour) — Session 983: CeleryTaskEvent
         try:
-            from django_celery_results.models import TaskResult
+            from core.models_celery_telemetry import CeleryTaskEvent
             one_hour_ago = now - timedelta(hours=1)
-            task_qs = TaskResult.objects.filter(date_done__gte=one_hour_ago)
+            task_qs = CeleryTaskEvent.objects.filter(started_at__gte=one_hour_ago)
             by_status = dict(
                 task_qs.values('status')
                 .annotate(n=Count('id'))
@@ -3206,12 +3207,12 @@ class ToolDispatcher:
         except Exception as e:
             errors['failed_tool_calls'] = {'error': str(e)}
 
-        # 4. Failed Celery tasks grouped by task name
+        # 4. Failed Celery tasks grouped by task name — Session 983: CeleryTaskEvent
         try:
-            from django_celery_results.models import TaskResult
-            failed_tasks = TaskResult.objects.filter(
+            from core.models_celery_telemetry import CeleryTaskEvent
+            failed_tasks = CeleryTaskEvent.objects.filter(
                 status='FAILURE',
-                date_done__gte=cutoff
+                started_at__gte=cutoff,
             )
             by_task = dict(
                 failed_tasks.values('task_name')
@@ -3588,11 +3589,13 @@ class ToolDispatcher:
         except Exception as e:
             snapshot['signal_clusters'] = {'error': str(e)}
 
-        # 7. Celery tasks (24h)
+        # 7. Celery tasks (24h) — Session 983: query CeleryTaskEvent instead
+        # of django_celery_results.TaskResult (which stays empty when
+        # CELERY_RESULT_BACKEND is Redis, not django-db).
         try:
-            from django_celery_results.models import TaskResult
-            total = TaskResult.objects.filter(date_created__gte=last_24h).count()
-            failed = TaskResult.objects.filter(date_created__gte=last_24h, status='FAILURE').count()
+            from core.models_celery_telemetry import CeleryTaskEvent
+            total = CeleryTaskEvent.objects.filter(started_at__gte=last_24h).count()
+            failed = CeleryTaskEvent.objects.filter(started_at__gte=last_24h, status='FAILURE').count()
             snapshot['celery_24h'] = {'total': total, 'failed': failed}
         except Exception as e:
             snapshot['celery_24h'] = {'error': str(e)}
@@ -3608,11 +3611,43 @@ class ToolDispatcher:
         # 9. Blogs (24h)
         try:
             from core.models import SelfBlog
-            total = SelfBlog.objects.filter(created_at__gte=last_24h).count()
+            total_blogs = SelfBlog.objects.filter(created_at__gte=last_24h).count()
             published = SelfBlog.objects.filter(created_at__gte=last_24h, publish_ready=True).count()
-            snapshot['blogs_24h'] = {'total': total, 'published': published}
+            snapshot['blogs_24h'] = {'total': total_blogs, 'published': published}
         except Exception as e:
             snapshot['blogs_24h'] = {'error': str(e)}
+
+        # 10. Session 983: Actuator score — did the system actually DO things?
+        # Sensors (spiders, signals) ingest data; actuators turn it into outputs.
+        try:
+            from core.models import Initiative, SelfBlog as _SB, HumanAttentionItem
+            actuators = {}
+
+            # Initiatives promoted to active in last 24h
+            actuators['initiatives_activated'] = Initiative.objects.filter(
+                status='active', updated_at__gte=last_24h
+            ).count()
+
+            # Publish-ready blog content (available for promotion)
+            actuators['blogs_publish_ready'] = _SB.objects.filter(publish_ready=True).count()
+
+            # Human decisions made (items triaged in boardroom)
+            actuators['decisions_made'] = HumanAttentionItem.objects.filter(
+                decided_at__gte=last_24h
+            ).count()
+
+            # Deliverables produced
+            try:
+                from core.models import Deliverable
+                actuators['deliverables_created'] = Deliverable.objects.filter(
+                    created_at__gte=last_24h
+                ).count()
+            except Exception:
+                actuators['deliverables_created'] = 0
+
+            snapshot['actuators_24h'] = actuators
+        except Exception as e:
+            snapshot['actuators_24h'] = {'error': str(e)}
 
         snapshot['generated_at'] = now.isoformat()
 
