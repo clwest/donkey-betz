@@ -380,6 +380,135 @@ class ConversationOrchestrator:
 
         return ""
 
+    def _preflight_check_objective(self, text: str) -> Dict[str, Any]:
+        """
+        Session 987: Pre-flight data validation for agent conversations.
+
+        Detects when an objective/topic references upstream data dependencies
+        (agent names, data sources), queries whether that data exists, and
+        either injects it as rich context or rewrites the objective to something
+        achievable — preventing dead-loop conversations where agents spend all
+        turns politely asking each other for data neither has.
+
+        Args:
+            text: The objective or topic string to check
+
+        Returns:
+            Dict with has_data, injected_context, missing_sources, rewritten_objective
+        """
+        result = {
+            'has_data': True,
+            'injected_context': '',
+            'missing_sources': [],
+            'rewritten_objective': None,
+        }
+
+        if not text:
+            return result
+
+        # Agent name → query config mapping (extensible)
+        AGENT_DATA_QUERIES = {
+            'OpportunityScoringAgent': {
+                'model_path': 'core.models_unified_system.Opportunity',
+                'filters': {
+                    'match_score__gte': 50,
+                    'status__in': ['active', 'pending', 'applied', 'accepted'],
+                },
+                'order': '-match_score',
+                'fields': ['title', 'match_score', 'opportunity_type', 'source'],
+                'label': 'scored opportunities',
+                'rewrite': (
+                    'Identify and propose the top content topics based on recent '
+                    'spider intelligence and market signals, then analyze the '
+                    'competitive landscape for each'
+                ),
+            },
+            'TrendAnalysisAgent': {
+                'model_path': 'core.models_unified_system.SpiderData',
+                'filters': {'data_type': 'trend_data', 'is_actionable': True},
+                'order': '-relevance_score',
+                'fields': ['spider_name', 'relevance_score', 'data_type'],
+                'label': 'trend signals',
+                'rewrite': (
+                    'Analyze recent spider data to identify emerging trends and '
+                    'propose actionable content or investment themes'
+                ),
+            },
+        }
+
+        text_lower = text.lower()
+        matched_agents = []
+        for agent_name in AGENT_DATA_QUERIES:
+            # Match full name or partial (e.g. "OpportunityScoring" without "Agent")
+            if agent_name.lower() in text_lower or agent_name.replace('Agent', '').lower() in text_lower:
+                matched_agents.append(agent_name)
+
+        if not matched_agents:
+            return result
+
+        from datetime import timedelta
+        from django.utils import timezone
+        cutoff = timezone.now() - timedelta(days=30)
+
+        injected_parts = []
+        for agent_name in matched_agents:
+            config = AGENT_DATA_QUERIES[agent_name]
+            try:
+                # Dynamic model import
+                module_path, model_name = config['model_path'].rsplit('.', 1)
+                import importlib
+                module = importlib.import_module(module_path)
+                Model = getattr(module, model_name)
+
+                filters = dict(config['filters'])
+                filters['created_at__gte'] = cutoff
+                qs = Model.objects.filter(**filters).order_by(config['order'])[:6]
+                rows = list(qs.values_list(*config['fields']))
+
+                if rows:
+                    # Format as numbered list
+                    lines = [f"Data from {agent_name} ({config['label']}, last 30 days):"]
+                    for i, row in enumerate(rows, 1):
+                        parts = [f"{f}={v}" for f, v in zip(config['fields'], row)]
+                        lines.append(f"  {i}. {', '.join(parts)}")
+                    injected_parts.append('\n'.join(lines))
+                    logger.info(
+                        f"[Session 987] Pre-flight: {agent_name} returned {len(rows)} rows"
+                    )
+                else:
+                    result['has_data'] = False
+                    result['missing_sources'].append(config['label'])
+                    logger.warning(
+                        f"[Session 987] Pre-flight: {agent_name} returned 0 rows "
+                        f"(filters={filters})"
+                    )
+            except Exception as e:
+                logger.warning(f"[Session 987] Pre-flight query failed for {agent_name}: {e}")
+                # Don't mark as missing — query failure ≠ no data
+                continue
+
+        result['injected_context'] = '\n\n'.join(injected_parts)
+
+        # If any source is missing, attempt a rewrite
+        if result['missing_sources']:
+            # Try agent-specific rewrite first
+            for agent_name in matched_agents:
+                config = AGENT_DATA_QUERIES[agent_name]
+                if config['label'] in result['missing_sources'] and config.get('rewrite'):
+                    result['rewritten_objective'] = config['rewrite']
+                    break
+
+            # Fallback: prepend a note if no specific rewrite matched
+            if not result['rewritten_objective']:
+                missing_labels = ', '.join(result['missing_sources'])
+                result['rewritten_objective'] = (
+                    f"NOTE: No {missing_labels} data is currently available. "
+                    f"Focus on identifying what data would be needed and "
+                    f"proposing a collection strategy. Original goal: {text}"
+                )
+
+        return result
+
     def _select_agents_for_topic(
         self,
         topic: str,
@@ -779,6 +908,19 @@ class ConversationOrchestrator:
 
         logger.info(f"Starting conversation: {agent1['name']} <-> {agent2['name']} on '{topic}'")
 
+        # Session 987: Pre-flight data validation — detect data dependencies,
+        # inject upstream data or rewrite objective to avoid dead-loop conversations
+        preflight = self._preflight_check_objective(objective or topic)
+        if preflight.get('injected_context'):
+            logger.info(f"[Session 987] Pre-flight: injected {len(preflight['injected_context'])} chars of dependency data")
+        if preflight.get('missing_sources'):
+            logger.warning(f"[Session 987] Pre-flight: missing data for {preflight['missing_sources']}")
+            if preflight.get('rewritten_objective'):
+                original_objective = objective
+                objective = str(preflight['rewritten_objective'])
+                topic = objective  # topic is also used in prompts
+                logger.info(f"[Session 987] Objective rewritten: '{str(original_objective)[:80]}' → '{objective[:80]}'")
+
         # Session 786: Store topic for retry prompts in _generate_message
         self._current_topic = topic
 
@@ -849,6 +991,12 @@ class ConversationOrchestrator:
         agent2_rich_context = self._get_rich_context(agent2['name'], topic) if ENABLE_RICH_CONTEXT else ""
         if agent1_rich_context or agent2_rich_context:
             logger.info(f"🧠 [Session 826] Rich context injected for agents")
+
+        # Session 987: Append pre-flight dependency data to rich context
+        if preflight.get('injected_context'):
+            preflight_block = f"\n**Available Data (pre-fetched):**\n{preflight['injected_context']}"
+            agent1_rich_context = (agent1_rich_context or "") + preflight_block
+            agent2_rich_context = (agent2_rich_context or "") + preflight_block
 
         for turn in range(num_turns):
             # Alternate between agents
