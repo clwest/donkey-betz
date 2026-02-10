@@ -168,6 +168,9 @@ class ToolDispatcher:
         # Session 970: Surgical moves verification tool
         self.register("surgical_moves_status_tool", self._handle_surgical_moves_status)
 
+        # Session 979: Stock intelligence tool for PA access to market data
+        self.register("stock_intelligence_tool", self._handle_stock_intelligence)
+
         # Session 973: Status snapshot for broad system overview
         self.register("status_snapshot_tool", self._handle_status_snapshot)
 
@@ -2443,9 +2446,9 @@ class ToolDispatcher:
             }
 
         else:
-            raise ValueError(
-                f"Unknown action: {action}. Valid actions: recent, by_spider, by_category, search, stats"
-            )
+            logger.warning(f"Unknown spider_data action '{action}', defaulting to 'recent'")
+            payload['action'] = 'recent'
+            return self._handle_spider_data(tool_name, payload, user_id, trace_id)
 
     def _handle_execution_history(
         self,
@@ -3344,6 +3347,167 @@ class ToolDispatcher:
                 'error': str(e),
             }
 
+
+    def _handle_stock_intelligence(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 979: Stock intelligence tool for PA access to market data.
+
+        Surfaces MarketIntelligenceBrief, StockMarketAlert, PredictionOutcome,
+        and SEC Edgar filings — the same data as the /stocks dashboard.
+
+        Actions:
+        - overview: Dashboard summary (default)
+        - briefs: Recent market briefs
+        - alerts: Stock alerts
+        - predictions: Prediction outcomes with accuracy
+        - sec_filings: SEC Edgar spider data
+        """
+        from core.models_unified_system import MarketIntelligenceBrief, PredictionOutcome, SpiderData
+        from core.models_autonomous_alerts import StockMarketAlert
+        from django.db.models import Count, Avg
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'overview')
+        limit = payload.get('limit', 10)
+
+        if action == 'overview':
+            # Mirrors views_stock_intelligence.stock_dashboard
+            latest_brief = MarketIntelligenceBrief.objects.first()
+            latest_brief_data = None
+            if latest_brief:
+                latest_brief_data = {
+                    'id': str(latest_brief.id),
+                    'brief_date': latest_brief.brief_date.isoformat(),
+                    'executive_summary': latest_brief.executive_summary[:300],
+                    'total_stocks_analyzed': latest_brief.total_stocks_analyzed,
+                    'debate_zone_count': latest_brief.debate_zone_count,
+                    'situation_health': latest_brief.situation_health,
+                }
+
+            alert_counts = dict(
+                StockMarketAlert.objects.values_list('alert_type')
+                .annotate(count=Count('id'))
+                .values_list('alert_type', 'count')
+            )
+            total_alerts = sum(alert_counts.values())
+
+            predictions_eval = PredictionOutcome.objects.filter(was_correct_7_days__isnull=False)
+            total_predictions = predictions_eval.count()
+            correct_7d = predictions_eval.filter(was_correct_7_days=True).count()
+            accuracy_7d = round((correct_7d / total_predictions) * 100, 1) if total_predictions > 0 else None
+
+            predictions_30d = PredictionOutcome.objects.filter(was_correct_30_days__isnull=False)
+            total_30d = predictions_30d.count()
+            correct_30d = predictions_30d.filter(was_correct_30_days=True).count()
+            accuracy_30d = round((correct_30d / total_30d) * 100, 1) if total_30d > 0 else None
+
+            sec_count = SpiderData.objects.filter(spider_name='sec_edgar').count()
+            total_briefs = MarketIntelligenceBrief.objects.count()
+
+            return {
+                'action': 'overview',
+                'latest_brief': latest_brief_data,
+                'total_briefs': total_briefs,
+                'total_alerts': total_alerts,
+                'alert_counts_by_type': alert_counts,
+                'prediction_accuracy_7d': accuracy_7d,
+                'prediction_accuracy_30d': accuracy_30d,
+                'total_predictions': total_predictions,
+                'sec_filings_count': sec_count,
+            }
+
+        elif action == 'briefs':
+            qs = MarketIntelligenceBrief.objects.all()
+            total = qs.count()
+            briefs = qs[:limit]
+            items = []
+            for b in briefs:
+                items.append({
+                    'id': str(b.id),
+                    'brief_date': b.brief_date.isoformat(),
+                    'brief_type': b.brief_type,
+                    'executive_summary': b.executive_summary[:300],
+                    'total_stocks_analyzed': b.total_stocks_analyzed,
+                    'debate_zone_count': b.debate_zone_count,
+                    'situation_health': b.situation_health,
+                })
+            return {'action': 'briefs', 'items': items, 'total': total}
+
+        elif action == 'alerts':
+            qs = StockMarketAlert.objects.all()
+            total = qs.count()
+            alerts = qs[:limit]
+            items = []
+            for a in alerts:
+                items.append({
+                    'id': str(a.id),
+                    'alert_type': a.alert_type,
+                    'symbol': a.symbol,
+                    'company_name': a.company_name,
+                    'title': a.title,
+                    'summary': a.summary[:200],
+                    'confidence_score': float(a.confidence_score),
+                    'bull_score': a.bull_score,
+                    'bear_score': a.bear_score,
+                    'recommended_action': a.recommended_action,
+                    'detected_at': a.detected_at.isoformat() if a.detected_at else None,
+                })
+            return {'action': 'alerts', 'items': items, 'total': total}
+
+        elif action == 'predictions':
+            qs = PredictionOutcome.objects.all()
+            total = qs.count()
+            predictions = qs[:limit]
+            items = []
+            for p in predictions:
+                items.append({
+                    'id': str(p.id),
+                    'ticker': p.ticker,
+                    'prediction_type': p.prediction_type,
+                    'conviction_level': p.conviction_level,
+                    'predicted_move': float(p.predicted_move),
+                    'prediction_date': p.prediction_date.isoformat(),
+                    'was_correct_7_days': p.was_correct_7_days,
+                    'was_correct_30_days': p.was_correct_30_days,
+                })
+
+            evaluated = qs.filter(was_correct_7_days__isnull=False)
+            eval_count = evaluated.count()
+            correct_7d = evaluated.filter(was_correct_7_days=True).count()
+            correct_30d = evaluated.filter(was_correct_30_days=True).count()
+            stats = {
+                'evaluated_count': eval_count,
+                'accuracy_7d_pct': round((correct_7d / eval_count) * 100, 1) if eval_count else None,
+                'accuracy_30d_pct': round((correct_30d / eval_count) * 100, 1) if eval_count else None,
+            }
+            return {'action': 'predictions', 'items': items, 'total': total, 'stats': stats}
+
+        elif action == 'sec_filings':
+            qs = SpiderData.objects.filter(spider_name='sec_edgar').order_by('-created_at')
+            total = qs.count()
+            filings = qs[:limit]
+            items = []
+            for f in filings:
+                items.append({
+                    'id': str(f.id),
+                    'source_url': f.source_url,
+                    'data_type': f.data_type,
+                    'relevance_score': f.relevance_score,
+                    'created_at': f.created_at.isoformat() if f.created_at else None,
+                })
+            return {'action': 'sec_filings', 'items': items, 'total': total}
+
+        else:
+            logger.warning(f"Unknown stock_intelligence action '{action}', defaulting to overview")
+            payload['action'] = 'overview'
+            return self._handle_stock_intelligence(tool_name, payload, user_id, trace_id)
 
     def _handle_status_snapshot(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
         """
