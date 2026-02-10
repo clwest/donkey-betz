@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-02-10 14:34
+**Generated:** 2026-02-10 16:49
 **Current Session:** 987
 **Total Documentation:** 1719 files | 609,798 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,548 |
+| Total cross-references | 2,549 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 138 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/priorities/README.md` | 59 | PRIORITIES |
+| `docs/archive/old-structure/status/README.md` | 59 | STATUS |
 | `docs/AGENTS.md` | 49 | Agent Reference |
 | `docs/INDEX.md` | 42 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 34 | Platform Capabilities |
@@ -205,8 +205,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 348 | 2026-02-10 14:13 |
-| SESSION_986_NERVOUS_SYSTEM_REDIS_FIX.md | handoffs | 103 | 2026-02-10 14:13 |
+| SESSION_986_NERVOUS_SYSTEM_REDIS_FIX.md | handoffs | 103 | 2026-02-10 15:08 |
+| INDEX.md | docs | 348 | 2026-02-10 15:08 |
 | SESSION_985_PA_BOARDROOM_RESPONSE_IMPROVEMENT.md | handoffs | 177 | 2026-02-10 12:38 |
 | SESSION_983_CELERY_OBSERVABILITY_AND_SKIN_FIX.md | handoffs | 80 | 2026-02-10 11:08 |
 | SESSION_984_BOARDROOM_FEEDERS_AND_CELERY_OOM.md | handoffs | 90 | 2026-02-10 10:50 |
