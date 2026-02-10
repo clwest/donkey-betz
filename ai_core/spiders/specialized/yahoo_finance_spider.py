@@ -25,26 +25,32 @@ class YahooFinanceSpider:
 
     name = "yahoo_finance"
 
-    # Default symbols to track
+    # Session 981: Sector-diverse default symbols (was tech-heavy)
     DEFAULT_SYMBOLS = [
         # Market Indices
         "^GSPC",   # S&P 500
         "^DJI",    # Dow Jones
         "^IXIC",   # NASDAQ
-        # Tech Giants
+        # Tech (3)
         "AAPL",    # Apple
         "MSFT",    # Microsoft
-        "GOOGL",   # Alphabet
-        "AMZN",    # Amazon
-        "META",    # Meta
         "NVDA",    # NVIDIA
-        "TSLA",    # Tesla
-        # Other Popular
+        # Finance (3)
         "JPM",     # JPMorgan
+        "GS",      # Goldman Sachs
         "V",       # Visa
+        # Healthcare (2)
+        "UNH",     # UnitedHealth
+        "LLY",     # Eli Lilly
+        # Consumer (2)
         "WMT",     # Walmart
-        "JNJ",     # Johnson & Johnson
-        "DIS",     # Disney
+        "COST",    # Costco
+        # Energy (2)
+        "XOM",     # Exxon
+        "CVX",     # Chevron
+        # Industrial (2)
+        "CAT",     # Caterpillar
+        "BA",      # Boeing
     ]
 
     def __init__(self):
