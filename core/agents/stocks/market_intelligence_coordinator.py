@@ -177,6 +177,17 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             bear_results = self._run_bear_case(tickers, context)
             risk_results = self._run_risk_assessment(tickers, context)
 
+            # Session 980: Log agent health for debugging 0-stock briefs
+            bull_count = len(bull_results.get('bull_cases', []))
+            bear_count = len(bear_results.get('bear_cases', []))
+            bull_error = bull_results.get('error')
+            bear_error = bear_results.get('error')
+            if bull_error:
+                logger.warning(f"BullCaseAgent failed: {bull_error}")
+            if bear_error:
+                logger.warning(f"BearCaseAgent failed: {bear_error}")
+            logger.info(f"Agent results: {bull_count} bull cases, {bear_count} bear cases")
+
             # 3.5 PREDICTION MARKETS: Get crowd wisdom from Kalshi (Session 558)
             prediction_market_signals = self._get_prediction_market_signals(context)
 
@@ -326,16 +337,30 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             if 'previous_brief' in context:
                 return context['previous_brief']
 
-            # Load yesterday's brief from database
+            # Try yesterday first (most common case)
             yesterday = date.today() - timedelta(days=1)
 
             try:
                 previous = MarketIntelligenceBrief.objects.get(brief_date=yesterday)
-                logger.info(f"📚 Loaded previous brief from {yesterday}")
+                logger.info(f"Loaded previous brief from {yesterday}")
                 return previous.to_dict()
             except MarketIntelligenceBrief.DoesNotExist:
-                logger.info(f"📚 No previous brief found for {yesterday} - first run")
-                return None
+                pass
+
+            # Session 980: Fallback — load most recent brief within last 5 days
+            # Handles weekend gaps and failed runs that saved 0-stock briefs
+            cutoff = date.today() - timedelta(days=5)
+            recent = MarketIntelligenceBrief.objects.filter(
+                brief_date__gte=cutoff,
+                brief_date__lt=date.today(),
+                total_stocks_analyzed__gt=0,
+            ).order_by('-brief_date').first()
+            if recent:
+                logger.info(f"Loaded fallback brief from {recent.brief_date} (yesterday had no brief)")
+                return recent.to_dict()
+
+            logger.info("No previous brief found in last 5 days - first run")
+            return None
 
         except Exception as e:
             logger.warning(f"Could not load previous brief: {e}")
@@ -914,6 +939,14 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
             # Get pre-calculated metrics from brief
             total_stocks = brief.get('total_stocks_analyzed', 0)
             gpt_success_rate = brief.get('gpt_success_rate', 0.0)
+
+            # Session 980: Guard against saving 0-stock briefs — preserves previous good data
+            if total_stocks == 0:
+                logger.warning(
+                    f"Skipping brief save for {today}: 0 stocks analyzed. "
+                    f"Bull/bear agents likely failed. Preserving previous brief."
+                )
+                return
 
             # Create or update today's brief
             brief_obj, created = MarketIntelligenceBrief.objects.update_or_create(
