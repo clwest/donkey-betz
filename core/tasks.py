@@ -17768,6 +17768,15 @@ def run_stock_market_intelligence():
 
         alerts_generated = []
 
+        # Session 980: Track titles seen this cycle to avoid duplicates
+        seen_titles = set()
+        # Also check recent alerts in DB to avoid cross-cycle duplicates
+        recent_titles = set(
+            StockMarketAlert.objects.filter(
+                detected_at__gte=timezone.now() - timedelta(hours=12)
+            ).values_list('title', flat=True)
+        )
+
         # Analyze each spider data record
         for data in spider_data[:50]:
             raw = data.raw_data or {}
@@ -17779,8 +17788,9 @@ def run_stock_market_intelligence():
                     symbol = item.get('symbol', '')
                     price_change = item.get('regularMarketChangePercent', 0) or 0
 
-                    # Significant movement
-                    if abs(price_change) > 5:
+                    # Session 980: Lowered from 5% to 2% — 5% was too rare,
+                    # resulting in zero bull/bear/debate alerts
+                    if abs(price_change) > 2:
                         # Run Bull vs Bear analysis (Property #3: Internal Disagreement)
                         is_bullish = price_change > 0
 
@@ -17807,11 +17817,17 @@ def run_stock_market_intelligence():
 
                         alert_type = 'high_conviction_bull' if bull_score > 60 else 'high_conviction_bear' if bear_score > 60 else 'debate_zone'
 
+                        alert_title = f"{'📈' if is_bullish else '📉'} {symbol}: {price_change:+.1f}%"
+                        # Session 980: Dedup — skip if we already created an alert for this symbol+type recently
+                        if alert_title in seen_titles or alert_title in recent_titles:
+                            continue
+                        seen_titles.add(alert_title)
+
                         alert = StockMarketAlert.objects.create(
                             alert_type=alert_type,
                             symbol=symbol,
                             company_name=item.get('shortName', symbol),
-                            title=f"{'📈' if is_bullish else '📉'} {symbol}: {price_change:+.1f}%",
+                            title=alert_title,
                             summary=f"{item.get('shortName', symbol)} moved {price_change:+.1f}% today. Current price: ${item.get('regularMarketPrice', 0):.2f}",
                             bull_case=bull_case,
                             bear_case=bear_case,
@@ -17838,11 +17854,17 @@ def run_stock_market_intelligence():
                 for item in items[:5]:
                     form_type = item.get('form', '')
                     if form_type in ['13F', '13D', '13G', '4']:  # Institutional/insider filings
+                        sec_title = f"🏛️ SEC Filing: {form_type} - {item.get('company', 'Unknown')[:30]}"
+                        # Session 980: Dedup
+                        if sec_title in seen_titles or sec_title in recent_titles:
+                            continue
+                        seen_titles.add(sec_title)
+
                         alert = StockMarketAlert.objects.create(
                             alert_type='institutional_activity',
                             symbol=item.get('ticker', 'UNKNOWN'),
                             company_name=item.get('company', 'Unknown'),
-                            title=f"🏛️ SEC Filing: {form_type} - {item.get('company', 'Unknown')[:30]}",
+                            title=sec_title,
                             summary=f"New {form_type} filing detected. Company: {item.get('company', 'Unknown')}. Filed by: {item.get('filer', 'Unknown')}",
                             bull_case="Institutional interest often precedes price movement",
                             bear_case="Filing may indicate selling or position reduction",
@@ -17856,15 +17878,22 @@ def run_stock_market_intelligence():
             # Business news sentiment
             if data.spider_name in ['business_news', 'bloomberg']:
                 items = raw.get('items', []) if isinstance(raw, dict) else []
-                for item in items[:5]:
+                for item in items[:3]:  # Session 980: Reduced from 5 to 3 to limit noise
                     title = item.get('title', '') or item.get('headline', '')
                     # Look for market-moving keywords
-                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout', 'rally']
+                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout']
+                    # Session 980: Removed 'rally' — too common, was generating 90%+ of all alerts
                     if any(kw in title.lower() for kw in keywords):
+                        alert_title = f"📰 {title[:60]}..."
+                        # Session 980: Dedup — skip duplicate headlines
+                        if alert_title in seen_titles or alert_title in recent_titles:
+                            continue
+                        seen_titles.add(alert_title)
+
                         alert = StockMarketAlert.objects.create(
                             alert_type='momentum_shift',
                             symbol='MARKET',
-                            title=f"📰 {title[:60]}...",
+                            title=alert_title,
                             summary=f"Market-moving news: {title}. Source: {data.spider_name}",
                             disagreement_level='mild',
                             confidence_score=Decimal('0.55'),
