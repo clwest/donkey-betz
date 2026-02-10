@@ -1,14 +1,14 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** February 9, 2026 - Session 977
-**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | **Workspace: 9 TABS** (from 18) | **Bundle: 2,253 KB** (-26%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub** | **Page Telemetry: ACTIVE** | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)**
+**Last Updated:** February 9, 2026 - Session 980
+**Status:** Component Health: 100% | Integration Score: 95% | Data Display: 98% | Django Web App | 9 BODY SYSTEMS | **Workspace: 9 TABS** (from 18) | **Bundle: 2,253 KB** (-26%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub** | **Page Telemetry: ACTIVE** | **AI OS Boot Experience** | **Modular Workspace** | Self-Executing | **Celery Health Monitoring: ACTIVE** | **Executive Function: ACTIVE** | **Contracts: 3** | **Auto-Spawning: ACTIVE** | **Content Feedback Loop: ACTIVE** | **Domain Context Injection: ACTIVE** | **Signal Intelligence: WIRED** | **Initiative Priority: COMPLETE** | **Action Item Tracking: COMPLETE** | **Initiative UI: OVERHAULED** | **Report Provenance: ACTIVE** | **PDF Export: ACTIVE** | **Universal Agent Voice: ACTIVE** | **Initiative Conversations: ACTIVE** | **Agent Provenance: 18 AGENTS** | **PA Intelligence Enrichment: ACTIVE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE**
 
 ## System Stats
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Agents** | 76 | All synced + DecisionEnforcerAgent ("Prefrontal Cortex") |
 | **Spiders** | 77 | 72 working, 5 need API keys |
-| **PA Tools** | 91 | +body tools for all 9 systems, +3 live telemetry tools, +surgical_moves_status, +status_snapshot |
+| **PA Tools** | 92 | +body tools for all 9 systems, +3 live telemetry tools, +surgical_moves_status, +status_snapshot, +stock_intelligence |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
 | **LLM Models** | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
 | **Database Models** | 386+ | Including Deliverable, AuditReport, SignalCluster, AutoTopic, InitiativeActionItem, ToolCallRecord, DecisionRecord, ResearchResult |
@@ -20,6 +20,8 @@
 | **Frontend Bundle** | 2,253 KB | 9 workspace tabs (down from 18), 26 legacy redirects, collapsible sidebar |
 
 ## Key Capabilities
+- **Market Brief Save Guard (980):** Fixed "0 stocks analyzed" bug in Market Intelligence Brief. When bull/bear agents fail (timeout/GPT error), the coordinator was saving an empty brief that overwrote good data. Three fixes: (1) `_save_brief_for_tomorrow` guard skips saving when `total_stocks_analyzed == 0`, preserving previous good brief. (2) Explicit warning logs when agents return errors plus case count logging. (3) `_load_previous_brief` falls back to the most recent brief within 5 days (with `total_stocks_analyzed > 0`) when yesterday has no brief — handles weekend gaps and failed runs.
+- **Stock Intelligence PA Routing (979):** Wired Session 975's stock dashboard data to the PA. New `stock_intelligence` intent (before `spider_data` to avoid overlap) routes stock/market/SEC queries to `stock_intelligence_tool` with 5 actions (overview, briefs, alerts, predictions, sec_filings). Fixed misrouting bug: bare `'intelligence'` keyword in spider_data was catching "stock intelligence" queries and crashing with invalid `'list'` action. Made `spider_data_tool` defensive — unknown actions fall back to `'recent'` instead of raising `ValueError`. PR #1029.
 - **PA Production Timeout Fix (977):** Fixed PA tool-routed queries (initiatives, system health, errors, blogs) timing out at 280s on Railway. Three-layer fix: (1) Dedicated `pa` queue routing + `celery-pa` worker to prevent queue starvation behind spider/initiative tasks (PRs #1016-1017). (2) Replaced `async_to_sync` deadlock with `new_event_loop()` + `run_until_complete()` (PRs #1018-1019). (3) Added 15s enrichment timeout, 60s LLM timeout, reduced reasoning effort ("analysis"→"conversation"), reduced max_tokens (8000→4000), step-level timing logs (PR #1020). Results: "hello" 3s, errors 3.4s, health 12.7s, overview 18.2s, blogs 46.6s, initiatives 64s. All previously timed out.
 - **SKIN Layer Gitignore Fix (976):** Fixed SKIN Layer Celery tasks writing auto-generated files into the git repo root. `_get_workspace_for_skin_layer()` now uses "System Autonomous Workspace" at `generated_content/` (gitignored). Added `/reports/`, `/summaries/`, `/content/blog_*.md` to `.gitignore`. Removed 59 committed auto-generated files from git tracking. All 5 SKIN tasks use one helper — zero call-site changes.
 - **Stock Intelligence Dashboard (975):** Dedicated `/stocks` page with sidebar entry surfaces stock market data previously only in Discord. 6 read-only API endpoints: dashboard overview (latest brief, alert counts, prediction accuracy, SEC count), paginated briefs, brief detail with full JSON fields, filterable alerts (type/symbol/action/bookmarked), predictions with 7D/30D accuracy stats, SEC Edgar filings. Frontend: 5 sub-tabs (Overview, Market Briefs, Alerts, SEC Filings, Predictions) with color-coded alert badges, bull/bear score bars, expandable brief detail, prediction accuracy table. Models: `MarketIntelligenceBrief`, `StockMarketAlert`, `PredictionOutcome`, `SpiderData`. Zero migrations.
@@ -103,7 +105,7 @@ open http://localhost:8000/ai-studio/
 | `core/services/autonomous_remediation_orchestrator.py` | Self-healing system |
 | `core/services/signal_aggregation_service.py` | Signal clustering & auto-topic generation |
 | `core/services/unified_pa_entrypoint.py` | PA: 90 tools, intent routing, enrichment pipeline |
-| `core/services/tool_dispatcher.py` | PA: 49 tool handlers including 3 telemetry tools + status_snapshot |
+| `core/services/tool_dispatcher.py` | PA: 50 tool handlers including 3 telemetry tools, status_snapshot, stock_intelligence |
 | `frontend/src/pages/WorkspacePageNew.tsx` | 9-tab modular workspace orchestrator |
 | `frontend/src/pages/workspace/types.ts` | Tab types, normalizeWorkspaceTab(), legacyTabToSubTab() |
 | `frontend/src/pages/CommandCenterPage.tsx` | Command Center with "Now" hub + PA chat |
@@ -173,6 +175,8 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **980** | Market Brief Save Guard - Prevent 0-stock briefs from overwriting good data, agent failure logging, 5-day fallback brief loading for weekend gaps | `SESSION_980_FIX_0_STOCK_BRIEF_SAVE.md` |
+| **979** | Stock Intelligence PA Routing - New stock_intelligence intent + tool (5 actions), fixed 'intelligence' keyword misrouting to spider_data, defensive spider_data fallback PR #1029 | `SESSION_979_STOCK_INTELLIGENCE_PA_ROUTING.md` |
 | **977** | PA Production Timeout Fix - Dedicated pa queue, async_to_sync deadlock fix, 15s enrichment timeout, 60s LLM timeout, reduced reasoning effort, step-level timing. Results: 3-64s (was 280s+ timeout) PRs #1016-1020 | `SESSION_977_PA_TIMEOUT_FIX.md` |
 | **976** | SKIN Layer Gitignore Fix - Redirect auto-generated output to generated_content/, add gitignore patterns, remove 59 committed files from tracking | `SESSION_976_SKIN_LAYER_GITIGNORE_FIX.md` |
 | **975** | Stock Intelligence Dashboard - Standalone /stocks page, 6 API endpoints, 5 sub-tabs (Overview, Briefs, Alerts, SEC, Predictions), sidebar entry, zero migrations | `SESSION_975_STOCK_INTELLIGENCE_DASHBOARD.md` |

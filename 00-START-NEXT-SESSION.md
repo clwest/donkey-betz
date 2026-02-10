@@ -1,45 +1,33 @@
-# Session 978 - Start Here
+# Session 981 - Start Here
 
-**Previous Session:** 977 (PA Production Timeout Fix)
+**Previous Session:** 980 (Market Brief Save Guard)
 **Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,253 KB** (-26.4%) | **26 Legacy Routes → Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE**
 
 ---
 
-## Session 977 Summary (Just Completed)
+## Session 980 Summary (Just Completed)
 
-### PA Production Timeout Fix
+### Market Brief Save Guard
 
-PA tool-routed queries (initiatives, system health, errors, blogs) were timing out at 280s on Railway production. Fixed three layers:
+Fixed "0 stocks analyzed" bug in Market Intelligence Brief. When bull/bear agents fail (timeout/GPT error/market data error), the coordinator was saving an empty brief that overwrote good data via `update_or_create`.
 
-1. **Queue starvation** — Added dedicated `pa` queue routing + `celery-pa` worker (PRs #1016-1017)
-2. **async_to_sync deadlock** — Replaced with `new_event_loop()` + `run_until_complete()` (PRs #1018-1019)
-3. **Pipeline stalls** — Added 15s enrichment timeout, 60s LLM timeout, reduced reasoning effort + token limits (PR #1020)
+**Three fixes:**
+1. **Save guard** — `_save_brief_for_tomorrow` skips saving when `total_stocks_analyzed == 0`, preserving previous good brief
+2. **Agent failure logging** — Explicit warning logs when BullCase/BearCase agents return errors, plus case count info logging
+3. **Weekend fallback** — `_load_previous_brief` falls back to the most recent brief within 5 days (with `total_stocks_analyzed > 0`) when yesterday has no brief — handles Monday morning and failed run scenarios
 
-**Production results after fix:**
-| Query | Before | After |
-|-------|--------|-------|
-| "hello" | 3s | 3s |
-| "any errors recently?" | 280s+ timeout | 3.4s |
-| "how is the system doing?" | 280s+ timeout | 12.7s |
-| "how is everything?" | 280s+ timeout | 18.2s |
-| "what blogs?" | 280s+ timeout | 46.6s |
-| "show me my initiatives" | 280s+ timeout | 64.0s |
+**File changed:** `core/agents/stocks/market_intelligence_coordinator.py`
 
-**Changes:**
-- `core/settings.py` — PA queue routing in `CELERY_TASK_ROUTES`
-- `Procfile` — `celery-pa` worker + `pa` added to `celery-worker` queues
-- `Makefile` — `pa` queue added to local dev worker
-- `core/tasks.py` — `process_pa_chat_task` uses `new_event_loop()` instead of `async_to_sync`
-- `core/services/unified_pa_entrypoint.py` — 15s enrichment timeout, 60s LLM timeout, task_type "analysis"→"conversation", max_tokens 8000→4000, step-level timing logs
+No migrations. No frontend changes.
 
-### Session 976 Summary (Prior)
+### Session 979 Summary (Prior)
 
-SKIN Layer Gitignore Fix — Redirected auto-generated files to `generated_content/`, removed 59 files from git tracking.
+Stock Intelligence PA Routing — New `stock_intelligence` intent + tool (5 actions), fixed 'intelligence' keyword misrouting to spider_data. PR #1029.
 
-### Session 975 Summary (Prior)
+### Session 977 Summary (Prior)
 
-Stock Intelligence Dashboard — Standalone `/stocks` page with 6 API endpoints, 5 sub-tabs, zero migrations.
+PA Production Timeout Fix — Dedicated pa queue, async_to_sync deadlock fix, enrichment/LLM timeouts. Results: 3-64s (was 280s+). PRs #1016-1020.
 
 ---
 
