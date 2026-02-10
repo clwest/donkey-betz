@@ -366,19 +366,138 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             logger.warning(f"Could not load previous brief: {e}")
             return None
 
+    # Session 981: Sector-diverse ticker pools for rotation
+    # Each run picks from different sectors so briefs aren't all-tech
+    SECTOR_POOLS = {
+        'tech': ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'CRM', 'ORCL', 'ADBE', 'INTC', 'AMD', 'AVGO', 'QCOM', 'NFLX'],
+        'finance': ['JPM', 'GS', 'MS', 'BAC', 'WFC', 'C', 'BLK', 'SCHW', 'AXP', 'V', 'MA'],
+        'healthcare': ['UNH', 'JNJ', 'PFE', 'ABBV', 'MRK', 'LLY', 'TMO', 'ABT', 'BMY', 'AMGN'],
+        'consumer': ['WMT', 'COST', 'HD', 'MCD', 'NKE', 'SBUX', 'TGT', 'LOW', 'PG', 'KO', 'PEP'],
+        'energy': ['XOM', 'CVX', 'COP', 'SLB', 'EOG', 'OXY', 'PSX', 'VLO', 'MPC', 'HAL'],
+        'industrial': ['CAT', 'DE', 'BA', 'HON', 'UPS', 'RTX', 'LMT', 'GE', 'MMM', 'UNP'],
+    }
+    # Anchor tickers always included (1 broad market + 1 bellwether)
+    ANCHOR_TICKERS = ['SPY']
+
     def _select_tickers(self, context: Dict, spider_context: Dict) -> List[str]:
-        """Select tickers to analyze based on signals and watchlist."""
-        # Priority order:
-        # 1. User's portfolio (if provided)
-        # 2. Trending from spiders (news mentions)
-        # 3. Default watchlist (large caps)
+        """
+        Select tickers to analyze based on signals, alerts, and sector rotation.
+
+        Session 981: Dynamic ticker selection replacing hardcoded tech-only list.
+        Priority order:
+          1. User portfolio (if provided)
+          2. Anchor tickers (SPY — always included for market context)
+          3. Signal-driven picks from recent alerts and spider data
+          4. Sector rotation picks to ensure diversity
+        """
+        import random
+        from datetime import timedelta as td
 
         user_portfolio = context.get('portfolio', [])
         if user_portfolio:
             return user_portfolio[:10]
 
-        # Default watchlist
-        return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'SPY', 'QQQ', 'VTI']
+        selected = list(self.ANCHOR_TICKERS)  # Start with anchors
+        seen = set(selected)
+
+        # --- Signal-driven picks: tickers appearing in recent alerts ---
+        try:
+            from core.models_autonomous_alerts import StockMarketAlert
+            from django.utils import timezone as tz
+
+            cutoff = tz.now() - td(hours=24)
+            alert_symbols = (
+                StockMarketAlert.objects
+                .filter(detected_at__gte=cutoff)
+                .exclude(symbol__in=['', 'SPY', 'QQQ', 'VTI', 'DIA', 'IWM'])
+                .values_list('symbol', flat=True)
+            )
+            # Count occurrences — most-mentioned symbols are most interesting
+            from collections import Counter
+            symbol_counts = Counter(alert_symbols)
+            for symbol, _ in symbol_counts.most_common(4):
+                if symbol not in seen:
+                    selected.append(symbol)
+                    seen.add(symbol)
+        except Exception as e:
+            logger.warning(f"Could not load alert signals for ticker selection: {e}")
+
+        # --- Signal-driven picks: tickers from recent spider data ---
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone as tz
+            import re
+
+            cutoff = tz.now() - td(hours=12)
+            financial_spiders = ['yahoo_finance', 'finnhub', 'bloomberg', 'business_news']
+            recent_spider = SpiderData.objects.filter(
+                spider_name__in=financial_spiders,
+                created_at__gte=cutoff,
+            ).defer('embedding', 'item_embeddings').order_by('-created_at')[:20]
+
+            # Extract symbols from spider raw_data
+            spider_symbols = []
+            ticker_pattern = re.compile(r'\b([A-Z]{1,5})\b')
+            # Known valid tickers to filter noise from random uppercase words
+            all_known = set()
+            for pool in self.SECTOR_POOLS.values():
+                all_known.update(pool)
+
+            for data in recent_spider:
+                raw = data.raw_data or {}
+                items = raw.get('items', []) if isinstance(raw, dict) else []
+                for item in items[:5]:
+                    sym = item.get('symbol', '') or item.get('ticker', '')
+                    if sym and sym in all_known and sym not in seen:
+                        spider_symbols.append(sym)
+
+            # Add top spider-mentioned symbols
+            spider_counts = Counter(spider_symbols)
+            for symbol, _ in spider_counts.most_common(3):
+                if symbol not in seen:
+                    selected.append(symbol)
+                    seen.add(symbol)
+        except Exception as e:
+            logger.warning(f"Could not load spider signals for ticker selection: {e}")
+
+        # --- Sector rotation: fill remaining slots from diverse sectors ---
+        remaining = 10 - len(selected)
+        if remaining > 0:
+            # Determine which sectors are already represented
+            sector_for_ticker = {}
+            for sector, tickers in self.SECTOR_POOLS.items():
+                for t in tickers:
+                    sector_for_ticker[t] = sector
+
+            represented_sectors = {sector_for_ticker.get(t) for t in selected if t in sector_for_ticker}
+            # Prioritize under-represented sectors
+            all_sectors = list(self.SECTOR_POOLS.keys())
+            random.shuffle(all_sectors)
+            # Put unrepresented sectors first
+            all_sectors.sort(key=lambda s: s in represented_sectors)
+
+            picks_per_sector = max(1, remaining // len(all_sectors))
+            for sector in all_sectors:
+                if remaining <= 0:
+                    break
+                pool = [t for t in self.SECTOR_POOLS[sector] if t not in seen]
+                if not pool:
+                    continue
+                picks = random.sample(pool, min(picks_per_sector, len(pool)))
+                for t in picks:
+                    if remaining <= 0:
+                        break
+                    selected.append(t)
+                    seen.add(t)
+                    remaining -= 1
+
+        logger.info(
+            f"Selected {len(selected)} tickers: {selected} "
+            f"(anchors: {len(self.ANCHOR_TICKERS)}, "
+            f"signal-driven: {len(selected) - len(self.ANCHOR_TICKERS) - max(0, 10 - len(selected))}, "
+            f"rotation: {max(0, len(selected) - len(self.ANCHOR_TICKERS))})"
+        )
+        return selected[:10]
 
     def _run_bull_case(self, tickers: List[str], context: Dict) -> Dict[str, Any]:
         """Run the Bull Case Agent with timeout protection."""
