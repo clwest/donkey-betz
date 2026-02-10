@@ -465,6 +465,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 972: Page-view telemetry (fire-and-forget counters, non-sensitive)
         '/api/v1/telemetry/',  # Page view tracking
+
+        # Session 987: Deliberation APIs (read-only for Orchestration Monitor tab)
+        '/api/deliberation/',  # Deliberation sessions, turns, contracts, verification
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
