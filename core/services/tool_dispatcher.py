@@ -425,6 +425,12 @@ class ToolDispatcher:
                 'id', 'title', 'status', 'opportunity_type', 'match_score', 'created_at'
             ))
 
+            # Session 987: Serialize UUIDs and datetimes for clean display
+            for opp in opportunities:
+                opp['id'] = str(opp['id'])
+                if opp.get('created_at'):
+                    opp['created_at'] = opp['created_at'].isoformat()
+
             return {'action': 'list', 'count': len(opportunities), 'opportunities': opportunities}
 
         elif action == 'get':
