@@ -1,32 +1,36 @@
-# Session 985 - Start Here
+# Session 986 - Start Here
 
-**Previous Session:** 984 (Boardroom Feeder Fix + Celery Worker OOM)
-**Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE**
+**Previous Session:** 985 (PA Boardroom Response Improvement)
+**Date:** February 10, 2026
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE** | **PA Boardroom: ACTIONABLE**
 
 ---
 
-## Session 984 Summary (Just Completed)
+## Session 985 Summary (Just Completed)
 
-### Boardroom Feeder Fix (PR #1043)
+### PA Boardroom Response Improvement
 
-**Root cause:** Boardroom Attention Items were all stale (2/8 or older) because: (1) `auto_approve_boardroom_items` ran every 4h and instantly approved ALL non-critical pending items, and (2) `generate_human_attention_items` Section 4 filtered for `data_type` values (`market_alert`, `security_alert`, etc.) that matched zero actual spider data.
+**Problem:** PA response to "What needs my attention?" was generic -- stats action returned only aggregate counts (585 attention, 282 decisions) with no actual items. LLM analysis was 500+ words of vague advice restating the same counts.
 
-**Fix:** Added 24h age gate on auto-approve so items stay visible for a full day. Fixed Section 4 data_type filter to real spider types (`opportunity`, `market_data`, `news`, `trend_data`, `competitor_info`). Widened agent failure monitoring from 6 hardcoded agents to all. Added new feeders for stock market alerts and publish-ready blog content.
+**Root cause (code path traced):**
+1. `_handle_boardroom` stats action returned counts by urgency/type but zero items
+2. Boardroom analytical directive was vague ("Summarize the decision landscape")
+3. No conciseness constraints on LLM output for boardroom intent
 
-### Celery Worker OOM Fix (PR #1044)
+**Fix (3 changes, no migrations):**
+1. **`tool_dispatcher.py`**: Stats action now fetches top 10 critical/high items with title, urgency, source_agent, priority_score, ID
+2. **`unified_pa_entrypoint.py` formatter**: New "Needs your attention now" section shows up to 8 top items inline with agent prefix stripped and word-boundary truncation
+3. **`unified_pa_entrypoint.py` directive**: Boardroom LLM prompt now has "Max 3-5 bullets of INSIGHT only", pattern identification, triage strategy, bulk action recommendations
 
-**Root cause:** `--pool=threads` makes `max_tasks_per_child` a no-op (threads share one process, memory never recycles). With 261+ tasks and LLM/spider loads, memory grew until Railway OOM-killed the worker.
+**Result:** PA now shows the 6 critical items (3 StockAuditCoordinator alerts, 3 ContentWriterAgent reviews) inline with IDs for immediate action, followed by concise LLM insight.
 
-**Fix:** Switched all Railway workers from `--pool=threads` to `--pool=prefork` (Linux-safe). Added `--max-tasks-per-child=50` and `--max-memory-per-child=300000` (300MB). Reduced concurrency (celery-worker 4->2, content 4->2, long-running 2->1). Prefetch multiplier 4->1. macOS local dev unchanged (Makefile still uses threads).
+### Session 984 Summary (Prior)
+
+Boardroom Feeder Fix (24h age gate, real spider data_types) + Celery Worker OOM Fix (prefork pool). PRs #1043-1044.
 
 ### Session 983 Summary (Prior)
 
 Celery Observability Fix (CeleryTaskEvent model) + Skin Health Scoring Fix (Railway ephemeral FS). PR #1042.
-
-### Session 982 Summary (Prior)
-
-Unified Single-Stock Ticker Lookup — 6-source aggregation endpoint + default "Ticker Lookup" sub-tab. PR #1041.
 
 ---
 
@@ -165,6 +169,12 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 **Boardroom auto-approve (Session 984):**
 - Items have 24h age gate before auto-approval (prevents stale Boardroom)
 - `create_attention_item` has built-in dedup (source_type + item_type + title)
+
+**PA boardroom response quality (Session 985):**
+- `_handle_boardroom` stats action returns `top_items` (top 10 critical/high by priority_score)
+- `_format_tool_result` shows items inline under "Needs your attention now"
+- Boardroom LLM directive: "Max 3-5 bullets of INSIGHT only" -- do NOT restate counts
+- To improve other PA intents, follow same pattern: enrich tool data + constrain LLM directive
 
 **Workspace tab mapping (`types.ts`):**
 - `normalizeWorkspaceTab(tab)` -- maps any of the 18 legacy tab IDs to 9 canonical IDs
