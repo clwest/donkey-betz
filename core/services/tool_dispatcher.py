@@ -877,8 +877,12 @@ class ToolDispatcher:
                 )
             )
             # Flatten decision__topic to topic for cleaner response
+            # Session 987: Serialize UUIDs and datetimes for clean display
             for gate in gates:
                 gate['topic'] = gate.pop('decision__topic', '')
+                gate['id'] = str(gate['id'])
+                if gate.get('created_at'):
+                    gate['created_at'] = gate['created_at'].isoformat()
             return {'action': 'list', 'count': len(gates), 'gates': gates}
 
         elif action == 'stats':
@@ -914,6 +918,11 @@ class ToolDispatcher:
                     'id', 'name', 'status', 'outcome', 'created_at'
                 )
             )
+            # Session 987: Serialize UUIDs and datetimes for clean display
+            for pilot in pilots:
+                pilot['id'] = str(pilot['id'])
+                if pilot.get('created_at'):
+                    pilot['created_at'] = pilot['created_at'].isoformat()
             return {'action': 'list', 'count': len(pilots), 'pilots': pilots}
 
         elif action == 'running':
@@ -922,6 +931,11 @@ class ToolDispatcher:
                     'id', 'name', 'status', 'created_at'
                 )
             )
+            # Session 987: Serialize UUIDs and datetimes for clean display
+            for pilot in pilots:
+                pilot['id'] = str(pilot['id'])
+                if pilot.get('created_at'):
+                    pilot['created_at'] = pilot['created_at'].isoformat()
             return {'action': 'running', 'count': len(pilots), 'pilots': pilots}
 
         elif action == 'stats':
@@ -1053,6 +1067,11 @@ class ToolDispatcher:
                     'id', 'task', 'success', 'created_at'
                 )
             )
+            # Session 987: Serialize UUIDs and datetimes for clean display
+            for thought in thoughts:
+                thought['id'] = str(thought['id'])
+                if thought.get('created_at'):
+                    thought['created_at'] = thought['created_at'].isoformat()
             return {'action': 'thoughts', 'count': len(thoughts), 'thoughts': thoughts}
 
         elif action == 'trigger':

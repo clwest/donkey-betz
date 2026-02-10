@@ -1346,8 +1346,9 @@ RULES:
                 "Recommend which initiatives need attention now."
             ),
             'spider_data': (
-                "FOCUS: Identify patterns and clusters in the spider data. "
-                "Highlight emerging trends. Suggest applications and next actions."
+                "FOCUS: Max 3-5 bullets of INSIGHT only — do NOT repeat the list. "
+                "Identify patterns and clusters. Highlight emerging trends. "
+                "Suggest actionable next steps based on the data."
             ),
             'execution_history': (
                 "FOCUS: Identify declining agents and systemic failures. "
@@ -1366,8 +1367,9 @@ RULES:
                 "- If item volume is high, suggest bulk actions to reduce noise"
             ),
             'stock_intelligence': (
-                "FOCUS: Analyze stock market intelligence. Highlight bull/bear consensus, "
-                "significant alerts, and prediction accuracy trends. Keep it actionable."
+                "FOCUS: Max 3-5 bullets of INSIGHT only — do NOT repeat the list. "
+                "Highlight bull/bear consensus, significant alerts, and prediction accuracy. "
+                "Flag any contrarian signals. Recommend 1-2 actionable next steps."
             ),
             'system_overview': (
                 "Broad system overview. COO-level pulse check.\n"
@@ -1377,6 +1379,36 @@ RULES:
                 "- Separate OBSERVED (from data above) vs EXPECTED (design intent)\n"
                 "- End with: Want me to drill into any of these?\n"
                 "- Do NOT restate every number — user already sees the structured data"
+            ),
+            # Session 987: Added missing directives
+            'learning_patterns': (
+                "FOCUS: Max 3-5 bullets. Highlight highest-confidence patterns and "
+                "what they mean for strategy. Note any declining patterns. "
+                "Recommend how to apply the top learnings."
+            ),
+            'feedback': (
+                "FOCUS: Max 3-5 bullets. Prioritize bugs over feature requests. "
+                "Identify recurring themes. Recommend which items to address first."
+            ),
+            'gates': (
+                "FOCUS: Max 3-5 bullets. Highlight blocked or high-risk gates. "
+                "Assess readiness trajectory. Recommend which gates need action."
+            ),
+            'pilots': (
+                "FOCUS: Max 3-5 bullets. Assess active pilot performance. "
+                "Highlight failing or stuck pilots. Recommend next steps."
+            ),
+            'reasoning': (
+                "FOCUS: Max 3-5 bullets. Summarize thinking cycle outcomes. "
+                "Highlight any noteworthy insights generated."
+            ),
+            'recent_activity': (
+                "FOCUS: Max 3-5 bullets. Highlight the most significant activity. "
+                "Note any unusual patterns or spikes. Keep it brief."
+            ),
+            'error_summary': (
+                "FOCUS: Max 3-5 bullets. Lead with highest-severity issues. "
+                "Group related errors. Recommend fixes for recurring failures."
             ),
         }
 
@@ -1485,8 +1517,13 @@ RULES:
 
         # Fallback: no enrichment or LLM failed
         # For non-structured intents without enrichment, use original LLM summarization
+        # Session 987: All intents with proper formatters skip generic LLM fallback
         if intent not in ['initiatives', 'brainstorming', 'content_review',
-                          'boardroom', 'decision_management']:
+                          'boardroom', 'decision_management', 'opportunities',
+                          'spider_data', 'stock_intelligence', 'execution_history',
+                          'learning_patterns', 'feedback', 'system_overview',
+                          'gates', 'pilots', 'predictions', 'reasoning',
+                          'system_health']:
             system_prompt = f"""You are a helpful AI assistant.
 The user asked: "{message}"
 You executed a tool and got this result:
@@ -1656,10 +1693,98 @@ Address the user by name occasionally."""
                 score = vitals.get('health_score', 0)
                 return f"System health: {health.upper()} ({score}%)"
 
-            elif intent in ['predictions', 'pilots', 'gates']:
+            # Session 987: Predictions formatter
+            elif intent == 'predictions':
+                if tool_result.get('deprecated'):
+                    return tool_result.get('message', 'Predictions tool is deprecated. Use stock intelligence instead.')
+                return str(tool_result)
+
+            # Session 987: Gates formatter
+            elif intent == 'gates':
                 action = tool_result.get('action', 'list')
-                count = tool_result.get('count', 0)
-                return f"Found {count} {intent}: {tool_result}"
+
+                if action == 'list':
+                    gates = tool_result.get('gates', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No readiness gates found, {user_name}."
+
+                    response = f"Readiness Gates ({count}):\n\n"
+                    for gate in gates[:10]:
+                        summary = (gate.get('summary') or 'No summary')[:50]
+                        status = gate.get('status', 'unknown')
+                        risk = gate.get('risk_level', '')
+                        topic = gate.get('topic', '')[:30]
+                        gate_id = str(gate.get('id', ''))[:8]
+                        risk_badge = f" [{risk}]" if risk else ""
+                        topic_str = f" — {topic}" if topic else ""
+                        response += f"- **{summary}**{topic_str} ({status}{risk_badge}) `{gate_id}`\n"
+
+                    if count > 10:
+                        response += f"\n...and {count - 10} more gates."
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total', 0)
+                    by_status = tool_result.get('by_status', {})
+                    by_risk = tool_result.get('by_risk_level', {})
+
+                    response = f"Gate Stats, {user_name}:\n\n"
+                    response += f"- **Total gates:** {total}\n"
+                    if by_status:
+                        status_str = ', '.join(f"{s}: {c}" for s, c in by_status.items())
+                        response += f"- **By status:** {status_str}\n"
+                    if by_risk:
+                        risk_str = ', '.join(f"{r}: {c}" for r, c in by_risk.items())
+                        response += f"- **By risk:** {risk_str}\n"
+                    return response
+
+                else:
+                    return str(tool_result)
+
+            # Session 987: Pilots formatter
+            elif intent == 'pilots':
+                action = tool_result.get('action', 'list')
+
+                if action in ['list', 'running']:
+                    pilots = tool_result.get('pilots', [])
+                    count = tool_result.get('count', 0)
+                    label = "Running" if action == 'running' else "All"
+
+                    if count == 0:
+                        return f"No {'running ' if action == 'running' else ''}pilots found, {user_name}."
+
+                    response = f"{label} Pilots ({count}):\n\n"
+                    for pilot in pilots[:10]:
+                        name = (pilot.get('name') or 'Unnamed')[:40]
+                        status = pilot.get('status', 'unknown')
+                        outcome = pilot.get('outcome', '')
+                        pilot_id = str(pilot.get('id', ''))[:8]
+                        outcome_str = f" — {outcome}" if outcome else ""
+                        response += f"- **{name}** ({status}{outcome_str}) `{pilot_id}`\n"
+
+                    if count > 10:
+                        response += f"\n...and {count - 10} more pilots."
+                    return response
+
+                elif action == 'stats':
+                    total = tool_result.get('total', 0)
+                    by_status = tool_result.get('by_status', {})
+                    by_outcome = tool_result.get('by_outcome', {})
+
+                    response = f"Pilot Stats, {user_name}:\n\n"
+                    response += f"- **Total pilots:** {total}\n"
+                    if by_status:
+                        status_str = ', '.join(f"{s}: {c}" for s, c in by_status.items())
+                        response += f"- **By status:** {status_str}\n"
+                    if by_outcome:
+                        outcome_str = ', '.join(f"{o}: {c}" for o, c in by_outcome.items())
+                        response += f"- **By outcome:** {outcome_str}\n"
+                    return response
+
+                else:
+                    return str(tool_result)
 
             # Session 943: Brainstorming results formatting
             elif intent == 'brainstorming':
@@ -2631,6 +2756,71 @@ Address the user by name occasionally."""
 
                 lines.append("\n*Want me to drill into any of these?*")
                 return "\n".join(lines)
+
+            # Session 987: Agent execution formatter (image, video, content_writer, etc.)
+            elif intent in ['agent_execution', 'image_creation', 'video_creation',
+                            'content_writing', 'image_generation', 'video_generation']:
+                agent = tool_result.get('agent', 'Agent')
+                success = tool_result.get('success', False)
+                output = tool_result.get('output', '')
+
+                if not success:
+                    return f"**{agent}** could not complete the task."
+
+                # Truncate long outputs
+                output_str = str(output)
+                if len(output_str) > 500:
+                    output_str = output_str[:500] + '...'
+
+                return f"**{agent}** completed successfully:\n\n{output_str}"
+
+            # Session 987: Web search / research formatter
+            elif intent in ['web_search', 'research']:
+                query = tool_result.get('query', '')
+                results = tool_result.get('results', '')
+
+                results_str = str(results)
+                if len(results_str) > 800:
+                    results_str = results_str[:800] + '...'
+
+                response = f"Search results for **\"{query}\"**:\n\n{results_str}"
+                return response
+
+            # Session 987: Reasoning engine formatter
+            elif intent == 'reasoning':
+                action = tool_result.get('action', '')
+
+                if action == 'status':
+                    engine = tool_result.get('engine', 'ThinkingAgent')
+                    status = tool_result.get('status', 'unknown')
+                    return f"**{engine}**: {status}"
+
+                elif action == 'thoughts':
+                    thoughts = tool_result.get('thoughts', [])
+                    count = tool_result.get('count', 0)
+
+                    if count == 0:
+                        return f"No thinking cycles found, {user_name}."
+
+                    response = f"Recent Thinking Cycles ({count}):\n\n"
+                    for t in thoughts[:8]:
+                        task = (t.get('task') or 'Unknown task')[:60]
+                        success = t.get('success', False)
+                        icon = 'Y' if success else 'N'
+                        created = str(t.get('created_at', ''))[:16]
+                        response += f"- [{icon}] {task} ({created})\n"
+
+                    return response
+
+                elif action == 'trigger':
+                    if tool_result.get('triggered'):
+                        output = str(tool_result.get('output', ''))[:300]
+                        return f"Thinking cycle triggered.\n\n{output}"
+                    else:
+                        return f"Could not trigger thinking cycle: {tool_result.get('error', 'unknown error')}"
+
+                else:
+                    return str(tool_result)
 
             else:
                 return str(tool_result)
