@@ -14918,8 +14918,15 @@ def check_market_events_and_rerun():
 
         market_service = MarketDataService()
 
-        # Default watchlist
-        watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'SPY', 'QQQ', 'VTI']
+        # Session 981: Sector-diverse watchlist (was all tech + ETFs)
+        watchlist = [
+            'SPY',                          # Broad market
+            'AAPL', 'MSFT', 'NVDA',        # Tech
+            'JPM', 'GS',                   # Finance
+            'UNH', 'LLY',                  # Healthcare
+            'XOM', 'CVX',                  # Energy
+            'WMT', 'CAT', 'BA',           # Consumer / Industrial
+        ]
 
         significant_events = []
 
@@ -19434,10 +19441,13 @@ def run_sec_filing_analyzer(self):
         # SEC filing types to track
         filing_types = ['10-K', '10-Q', '8-K', '13F', 'S-1', 'DEF 14A', '4']
 
-        # Major companies to watch (default watchlist)
+        # Session 981: Sector-diverse SEC watchlist
         major_tickers = [
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
-            'BRK', 'JPM', 'V', 'UNH', 'MA', 'HD', 'PG', 'JNJ'
+            'AAPL', 'MSFT', 'NVDA', 'GOOGL',   # Tech
+            'JPM', 'GS', 'BLK', 'V',           # Finance
+            'UNH', 'LLY', 'PFE',               # Healthcare
+            'XOM', 'CVX',                       # Energy
+            'WMT', 'CAT', 'BA',                # Consumer / Industrial
         ]
 
         filings_analyzed = 0
