@@ -1,26 +1,32 @@
-# Session 983 - Start Here
+# Session 985 - Start Here
 
-**Previous Session:** 982 (Unified Single-Stock Ticker Lookup)
+**Previous Session:** 984 (Boardroom Feeder Fix + Celery Worker OOM)
 **Date:** February 9, 2026
-**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS**
+**Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE**
 
 ---
 
-## Session 982 Summary (Just Completed)
+## Session 984 Summary (Just Completed)
 
-### Unified Single-Stock Ticker Lookup (PR #1041)
+### Boardroom Feeder Fix (PR #1043)
 
-New `/api/stocks/ticker/<symbol>/` endpoint aggregates 6 data sources for any ticker symbol: live quote (via MarketDataService), alerts, predictions, brief mentions (scans JSON fields of last 30 briefs), SEC filings (by company name), and spider data (by symbol). Per-section fault isolation — if one source fails, others still return.
+**Root cause:** Boardroom Attention Items were all stale (2/8 or older) because: (1) `auto_approve_boardroom_items` ran every 4h and instantly approved ALL non-critical pending items, and (2) `generate_human_attention_items` Section 4 filtered for `data_type` values (`market_alert`, `security_alert`, etc.) that matched zero actual spider data.
 
-New "Ticker Lookup" sub-tab is now the default view on the Stock Intelligence page. Search bar with auto-uppercase, hero quote card with 8-stat grid, color-coded analysis badges (momentum/volatility/signal), 52-week range position bar, and collapsible sections for all data types with count badges.
+**Fix:** Added 24h age gate on auto-approve so items stay visible for a full day. Fixed Section 4 data_type filter to real spider types (`opportunity`, `market_data`, `news`, `trend_data`, `competitor_info`). Widened agent failure monitoring from 6 hardcoded agents to all. Added new feeders for stock market alerts and publish-ready blog content.
 
-### Session 981 Summary (Prior)
+### Celery Worker OOM Fix (PR #1044)
 
-Dynamic Ticker Selection — Sector rotation for market briefs. PR #1040.
+**Root cause:** `--pool=threads` makes `max_tasks_per_child` a no-op (threads share one process, memory never recycles). With 261+ tasks and LLM/spider loads, memory grew until Railway OOM-killed the worker.
 
-### Session 980 Summary (Prior)
+**Fix:** Switched all Railway workers from `--pool=threads` to `--pool=prefork` (Linux-safe). Added `--max-tasks-per-child=50` and `--max-memory-per-child=300000` (300MB). Reduced concurrency (celery-worker 4->2, content 4->2, long-running 2->1). Prefetch multiplier 4->1. macOS local dev unchanged (Makefile still uses threads).
 
-Stock Intelligence Production Hardening — 9 PRs (#1030-#1038): brief save guard, prediction dedup, Railway deploy fixes, brief detail UI cards, alert quality dedup.
+### Session 983 Summary (Prior)
+
+Celery Observability Fix (CeleryTaskEvent model) + Skin Health Scoring Fix (Railway ephemeral FS). PR #1042.
+
+### Session 982 Summary (Prior)
+
+Unified Single-Stock Ticker Lookup — 6-source aggregation endpoint + default "Ticker Lookup" sub-tab. PR #1041.
 
 ---
 
@@ -32,7 +38,7 @@ Stock Intelligence Production Hardening — 9 PRs (#1030-#1038): brief save guar
 | Spiders | 77 (72 working, 5 need API keys) |
 | Advisors | 25 |
 | Active Initiatives | 52 (cleaned from 568 in Session 961c) |
-| Database Models | 390+ |
+| Database Models | 391+ (added CeleryTaskEvent) |
 | Services | 134 |
 | Celery Tasks | 262 |
 | Workspace Tabs | 9 (down from 18) |
@@ -56,8 +62,20 @@ Stock Intelligence Production Hardening — 9 PRs (#1030-#1038): brief save guar
 
 ## Known Issues / Open Items
 
+### Railway Deploy: Verify Celery Prefork
+After deploy, monitor celery-worker memory over 4+ hours. Look for "child process exiting" messages in Railway logs confirming child recycling is working. If prefork causes issues, fall back to `--pool=solo` (single process, no concurrency, but does recycle).
+
 ### Railway Deploy: Migration Lock Risk
 Migration 0234 showed that `AddConstraint` during blue-green deploy can hang on lock. For future migrations with exclusive locks, consider: (a) run migration manually before deploy, or (b) temporarily skip migrate in start command.
+
+### Migration 0235 Needs Running on Railway
+`CeleryTaskEvent` table must be created via `python manage.py migrate` on next deploy. No lock risk -- it's a simple `CreateModel`.
+
+### Nervous System Score (60%) -- Measurement Gap
+Nervous system health is 60% likely because Redis channel layer connectivity check fails or WebSocket consumer count is low. Message throughput tracking is "not yet implemented" (hardcoded to 0). Investigate whether this is a real Redis/WebSocket issue or another measurement bug.
+
+### Muscular System Score (60.5%) -- Agent Performance
+Muscular health reflects actual agent execution success rates. Some agent groups may be hitting daily execution limits or running slow. Investigate `AgentExecution` records for underperforming groups.
 
 ### Legacy Routes Expire in ~2-4 Weeks
 26 legacy routes redirect to workspace tabs. Telemetry counters track which routes still get traffic. After transition period, remove redirect routes entirely.
@@ -78,6 +96,16 @@ The diagnostic pipeline (Session 856) has 0 records in production. May need acti
 
 ## What Could Come Next
 
+### Post-Deploy Monitoring
+- Verify celery-worker memory stays stable with prefork pool
+- Verify Boardroom shows fresh attention items from widened feeders
+- Check CeleryTaskEvent table is populated after migration 0235
+
+### Body Health Improvements
+- Investigate nervous system 60% score -- is Redis channel layer connected? WebSocket consumers registered?
+- Investigate muscular system 60.5% -- which agent groups are underperforming?
+- Add message throughput tracking to nervous system (currently hardcoded to 0)
+
 ### Ticker Lookup Enhancements
 - Wire ticker lookup to PA: "look up AAPL" routes to ticker_lookup endpoint
 - Add historical price chart (sparkline or mini chart component)
@@ -87,6 +115,10 @@ The diagnostic pipeline (Session 856) has 0 records in production. May need acti
 ### Stock Intelligence v2
 - PATCH endpoint for bookmark toggle and user notes on alerts
 - Prediction accuracy dashboard with charts over time
+
+### CeleryTaskEvent Analytics
+- Dashboard showing task execution stats, success rates by task name, queue utilization
+- Integrate with ToolCallRecord for end-to-end execution tracing
 
 ### Admin Tab
 Create a dedicated workspace tab for Billing, Analytics, and system configuration pages.
@@ -114,6 +146,25 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 ## Critical Patterns & Gotchas
 
 **Django settings module:** `core.settings` (NOT `config.settings`). Always use `DJANGO_SETTINGS_MODULE=core.settings`.
+
+**Model registration:** Both `core/models.py` (file) and `core/models/` (package) exist. Django uses the **package** (`core/models/__init__.py`). New model imports must use `from ..models_xxx import ClassName` pattern with `app_label = 'core'` in Meta.
+
+**Celery task counting:** DO NOT query `django_celery_results.TaskResult` -- it's empty when `CELERY_RESULT_BACKEND=redis`. Use `CeleryTaskEvent` from `core.models_celery_telemetry` instead.
+
+**Celery pool on Railway (Session 984):**
+- Procfile uses `--pool=prefork` (Linux-safe, enables child recycling via `max_tasks_per_child`)
+- `--pool=threads` makes `max_tasks_per_child` a NO-OP (threads share one process)
+- macOS local dev MUST use `--pool=threads` via Makefile (prefork causes SIGSEGV)
+- `--max-memory-per-child=300000` (300MB) kills bloated children
+
+**Spider data_type values (Session 984):**
+- Real types from `base_spider.py`: `opportunity`, `job_posting`, `market_data`, `competitor_info`, `trend_data`, `user_feedback`, `product_info`, `pricing_data`, `content_idea`, `collaboration`, `news`, `research`, `tool_discovery`, `learning_resource`
+- Default fallback is `'research'`
+- DO NOT use `market_alert`, `security_alert`, `price_alert`, `breaking_news` -- these don't exist
+
+**Boardroom auto-approve (Session 984):**
+- Items have 24h age gate before auto-approval (prevents stale Boardroom)
+- `create_attention_item` has built-in dedup (source_type + item_type + title)
 
 **Workspace tab mapping (`types.ts`):**
 - `normalizeWorkspaceTab(tab)` -- maps any of the 18 legacy tab IDs to 9 canonical IDs
@@ -143,6 +194,7 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - `SpiderData`: `core.models_unified_system` (NOT `ai_core.models`)
 - `FailureDetection`: `core.models_diagnostic_pipeline` (NOT `core.models`)
 - `HeartBeat` uses `recorded_at` (NOT `created_at`) and `overall_status` (NOT `status`)
+- `CeleryTaskEvent`: `core.models_celery_telemetry` (Session 983)
 
 **Stock models (Session 975):**
 - `MarketIntelligenceBrief`: `core.models_unified_system` -- timestamp is `generated_at` (NOT `created_at`)
@@ -162,10 +214,11 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 - Must use `sh -c '...'` wrapper for `$PORT` environment variable expansion
 - Migrations with exclusive locks can hang during blue-green deploy
 
-**SKIN Layer workspace (Session 976):**
-- `_get_workspace_for_skin_layer()` now returns "System Autonomous Workspace" at `generated_content/`
+**SKIN Layer (Sessions 976, 983):**
+- `_get_workspace_for_skin_layer()` returns "System Autonomous Workspace" at `generated_content/`
 - All 5 SKIN tasks use this one helper -- no call-site changes needed
 - `generated_content/` is gitignored (line 57 of `.gitignore`)
+- On Railway, SKIN health uses 70-point baseline (file writes excluded from scoring)
 
 **BaseAgent `__init_subclass__` (Session 970):**
 - Auto-wraps `_execute_tool_call` in subclasses with ToolCallRecord recording
