@@ -133,6 +133,34 @@ No migrations. No frontend changes. No new dependencies.
 
 ---
 
+## Celery Worker OOM Deep Fix
+
+### Problem
+celery-worker crashed with OOM on Railway after Session 984's prefork migration. Root cause: heavy ML libraries loaded at module level into the Celery parent process (~800MB).
+
+### Import Chain Traced
+1. `core/assistant/__init__.py` -> `base.py` -> `core/personal_ai_assistant.py` line 19: bare `from ml.core.ml_engine import MLEngine`
+2. `ml/core/ml_engine.py` lines 20-25: `import torch` (~500MB) + `from sklearn.ensemble import ...` (~100MB) + `from transformers import pipeline` (~200MB)
+3. These load into the parent process at Django init, inherited by ALL child processes
+
+### Fixes (6 files)
+
+| File | Change |
+|------|--------|
+| `Procfile` | All workers: `-c 1`, `--max-memory-per-child=200000` (was `-c 2`, 300000) |
+| `ml/core/ml_engine.py` | Moved `import torch`, `from sklearn`, `from transformers` to inside methods. `MLConfig.device` now uses `_detect_device()` helper with lazy torch import |
+| `core/personal_ai_assistant.py` | Wrapped `from ml.core.ml_engine import MLEngine` in `try/except ImportError` |
+| `intelligence/orchestration/agent_advisor_bridge.py` | Wrapped `from ml.core.ml_engine import PatternPrediction` and `MLService` in `try/except ImportError` |
+| `self_awareness/embeddings.py` | Moved `from sklearn.metrics.pairwise import cosine_similarity` inside the one method that uses it |
+| `core/tasks.py` | Added `.iterator()` to 3 unbounded `.objects.all()` loops (lines 12529, 12758, 25704) |
+
+### Expected Impact
+- Parent process memory: ~800MB -> ~200MB (torch/sklearn/transformers no longer loaded at init)
+- Child process recycling: max 200MB per child, recycled after 50 tasks
+- Peak memory: ~400MB (parent + 1 child) vs ~800MB+ (parent + 2 children with ML loaded)
+
+---
+
 ## Patterns for Future Sessions
 
 **PA response quality improvements follow this pattern:**
@@ -141,3 +169,9 @@ No migrations. No frontend changes. No new dependencies.
 3. Enrich the tool response with actionable data (items, not just counts)
 4. Constrain the LLM directive with max bullets, "do NOT restate", lead-with-X rules
 5. Test on Railway production data before deploying
+
+**Celery memory management:**
+- NEVER import torch/sklearn/transformers at module level -- use lazy imports inside methods
+- Module-level imports in files reachable from `core/assistant/__init__.py` load into Celery parent process
+- Check import chains: `core/assistant/` -> `personal_ai_assistant.py` -> `ml/core/ml_engine.py`
+- Use `.iterator()` on queryset loops to avoid loading entire tables into memory

@@ -17,8 +17,14 @@ from intelligence.models.advisor_network import (
     Advisor, AdvisorCategory, AdvisorCollaboration
 )
 from intelligence.services.advisor_network_service import AdvisorNetworkService
-from ml.core.ml_engine import PatternPrediction
-from ml_intelligence.ml_service import MLService
+try:
+    from ml.core.ml_engine import PatternPrediction
+except ImportError:
+    PatternPrediction = None
+try:
+    from ml_intelligence.ml_service import MLService
+except ImportError:
+    MLService = None
 
 logger = logging.getLogger(__name__)
 

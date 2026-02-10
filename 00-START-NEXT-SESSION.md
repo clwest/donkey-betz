@@ -1,6 +1,6 @@
 # Session 986 - Start Here
 
-**Previous Session:** 985 (PA Boardroom Response Improvement)
+**Previous Session:** 985 (PA Boardroom Response Improvement + Celery OOM Deep Fix)
 **Date:** February 10, 2026
 **Status:** 76 Agents | 77 Spiders (ALL MAPPED) | 25 Advisors | 139 Personas | **52 ACTIVE INITIATIVES** | **Workspace: 9 TABS** (down from 18) | **Bundle: 2,305 KB** | **26 Legacy Routes -> Redirects** | **Command Center "Now" Hub: ACTIVE** | **Page Telemetry: ACTIVE** | **Discord Docs: 112 COMMANDS** | **Risk-Aware RAG: COMPLETE** | **Unified PA: ANALYTICAL ADVISOR** | **Phase 0-4 Deliberation: COMPLETE** | **Content Deliberation Pipeline: ACTIVE** | **PA Live Telemetry: ACTIVE** | **PA Status Snapshot: ACTIVE** | **Surgical Moves Verification: ACTIVE** | **ToolCallRecord: LIVE** | **Attention Coverage: 7 SECTIONS** | **PA Conversation History: ACTIVE** | **PA Async Processing: CELERY** | **Stock Intelligence Dashboard: ACTIVE** | **Stock Intelligence PA: WIRED** | **Ticker Lookup: ACTIVE** | **SKIN Layer Output: GITIGNORED** | **PA Production: FAST (3-64s)** | **Market Brief Save Guard: ACTIVE** | **Prediction Dedup: CONSTRAINED** | **Alert Quality: DEDUPED** | **Brief Detail UI: CARDS** | **Celery Telemetry: ACTIVE** | **Skin Ephemeral FS: FIXED** | **Boardroom Feeders: WIDENED** | **Celery Prefork: ACTIVE** | **PA Boardroom: ACTIONABLE**
 
@@ -23,6 +23,20 @@
 3. **`unified_pa_entrypoint.py` directive**: Boardroom LLM prompt now has "Max 3-5 bullets of INSIGHT only", pattern identification, triage strategy, bulk action recommendations
 
 **Result:** PA now shows the 6 critical items (3 StockAuditCoordinator alerts, 3 ContentWriterAgent reviews) inline with IDs for immediate action, followed by concise LLM insight.
+
+### Celery Worker OOM Deep Fix
+
+**Problem:** celery-worker crashed with OOM after Session 984's prefork migration. Heavy ML libraries (torch ~500MB, sklearn ~100MB, transformers ~200MB) loaded at module level into Celery parent process via import chain: `core/assistant/__init__.py` -> `personal_ai_assistant.py` -> `ml/core/ml_engine.py`.
+
+**Fix (6 files, no migrations):**
+1. **`Procfile`**: All workers reduced to `-c 1`, `--max-memory-per-child=200000`
+2. **`ml/core/ml_engine.py`**: Moved torch/sklearn/transformers to lazy imports inside methods; `MLConfig.device` uses `_detect_device()` helper
+3. **`core/personal_ai_assistant.py`**: Wrapped MLEngine import in `try/except ImportError`
+4. **`intelligence/orchestration/agent_advisor_bridge.py`**: Wrapped ML imports in `try/except ImportError`
+5. **`self_awareness/embeddings.py`**: Moved `cosine_similarity` import inside method
+6. **`core/tasks.py`**: Added `.iterator()` to 3 unbounded `.objects.all()` loops
+
+**Expected:** Parent process drops from ~800MB to ~200MB. Peak memory ~400MB vs ~800MB+.
 
 ### Session 984 Summary (Prior)
 
@@ -155,11 +169,17 @@ If deliberation pipeline returns REVISE verdict, loop automatically instead of r
 
 **Celery task counting:** DO NOT query `django_celery_results.TaskResult` -- it's empty when `CELERY_RESULT_BACKEND=redis`. Use `CeleryTaskEvent` from `core.models_celery_telemetry` instead.
 
-**Celery pool on Railway (Session 984):**
-- Procfile uses `--pool=prefork` (Linux-safe, enables child recycling via `max_tasks_per_child`)
+**Celery pool on Railway (Sessions 984-985):**
+- Procfile uses `--pool=prefork -c 1` (Linux-safe, enables child recycling via `max_tasks_per_child`)
 - `--pool=threads` makes `max_tasks_per_child` a NO-OP (threads share one process)
 - macOS local dev MUST use `--pool=threads` via Makefile (prefork causes SIGSEGV)
-- `--max-memory-per-child=300000` (300MB) kills bloated children
+- `--max-memory-per-child=200000` (200MB) kills bloated children (300MB for long_running)
+
+**ML imports MUST be lazy (Session 985):**
+- NEVER `import torch`, `from sklearn`, `from transformers` at module level
+- These load ~800MB into Celery parent process via: `core/assistant/` -> `personal_ai_assistant.py` -> `ml_engine.py`
+- Always use `try/except ImportError` or import inside the method that uses them
+- Follow the existing pattern in `_create_default_model` and `_initialize_nlp_models`
 
 **Spider data_type values (Session 984):**
 - Real types from `base_spider.py`: `opportunity`, `job_posting`, `market_data`, `competitor_info`, `trend_data`, `user_feedback`, `product_info`, `pricing_data`, `content_idea`, `collaboration`, `news`, `research`, `tool_discovery`, `learning_resource`
