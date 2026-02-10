@@ -983,14 +983,47 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
         except Exception as e:
             logger.error(f"Failed to save brief: {e}")
 
+    @staticmethod
+    def _parse_target_move(target_str: str) -> float:
+        """
+        Parse predicted move from bull/bear agent target strings.
+
+        Session 980: Handles actual agent output formats:
+          Bull: '25%+', '15-20%', '10%', '20%+ (recovery play)'
+          Bear: '-25% or more', '-15% to -20%', '-10%', '-15%+ (pullback from highs)'
+
+        For ranges like '15-20%', returns the midpoint (17.5).
+        For '25%+' / '-25% or more', returns the base number.
+        """
+        import re
+        if not target_str:
+            return 0.0
+
+        # Strip non-numeric suffixes: "(recovery play)", "or more", etc.
+        cleaned = re.sub(r'\(.*?\)', '', target_str).strip()
+        cleaned = cleaned.replace('or more', '').replace('+', '').strip()
+
+        # Try range format: "15-20%" or "-15% to -20%"
+        range_match = re.search(r'(-?\d+(?:\.\d+)?)\s*%?\s*(?:to|-)\s*(-?\d+(?:\.\d+)?)\s*%?', cleaned)
+        if range_match:
+            low = float(range_match.group(1))
+            high = float(range_match.group(2))
+            return round((low + high) / 2, 2)
+
+        # Try single number: "25%", "-10%", "10"
+        single_match = re.search(r'(-?\d+(?:\.\d+)?)', cleaned)
+        if single_match:
+            return float(single_match.group(1))
+
+        return 0.0
+
     def _record_predictions_for_learning(self, brief_obj, brief: Dict) -> None:
         """
         Record all predictions as PredictionOutcome records for learning loop tracking.
 
-        This enables the system to:
-        1. Track prediction accuracy over time
-        2. Learn which market conditions lead to accurate predictions
-        3. Adjust confidence scores based on track record
+        Session 980: Uses update_or_create keyed on (brief, ticker, prediction_type)
+        to prevent duplicate rows on re-runs. Reads target_upside/target_downside
+        (actual agent output keys) instead of nonexistent 'target' key.
         """
         from core.models_unified_system import PredictionOutcome
         from core.services.market_data_service import MarketDataService
@@ -999,12 +1032,12 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
             market_service = MarketDataService()
             today = date.today()
 
-            # Get all bull/bear analyses from context
             bull_analyses = brief.get('_internal_bull_analyses', [])
             bear_analyses = brief.get('_internal_bear_analyses', [])
 
-            # Track which stocks are in debate zone
             debate_zone_tickers = {d.get('ticker') for d in brief.get('debate_zone', [])}
+            created_count = 0
+            updated_count = 0
 
             # Record bull predictions
             for analysis in bull_analyses:
@@ -1012,38 +1045,35 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
                 if not ticker:
                     continue
 
-                # Get current price
                 stock_data = market_service.get_stock_details(ticker)
                 if not stock_data or 'current_price' not in stock_data:
                     continue
 
                 current_price = float(stock_data['current_price'])
+                predicted_move = self._parse_target_move(analysis.get('target_upside', ''))
 
-                # Parse predicted move from target
-                target_str = analysis.get('target', '+0%')
-                try:
-                    predicted_move = float(target_str.replace('%', '').replace('+', ''))
-                except:
-                    predicted_move = 0.0
-
-                # Find opposing bear conviction
                 bear_analysis = next((b for b in bear_analyses if b.get('ticker') == ticker), None)
                 opposite_conviction = bear_analysis.get('conviction', 'LOW') if bear_analysis else 'LOW'
 
-                # Create prediction record
-                PredictionOutcome.objects.create(
+                _, created = PredictionOutcome.objects.update_or_create(
                     brief=brief_obj,
                     ticker=ticker,
                     prediction_type='BULL',
-                    conviction_level=analysis.get('conviction', 'LOW'),
-                    predicted_move=predicted_move,
-                    price_at_prediction=current_price,
-                    prediction_date=today,
-                    was_in_debate_zone=(ticker in debate_zone_tickers),
-                    opposite_conviction=opposite_conviction,
-                    market_regime=stock_data.get('market_regime'),
-                    volatility_level=stock_data.get('volatility'),
+                    defaults={
+                        'conviction_level': analysis.get('conviction', 'LOW'),
+                        'predicted_move': predicted_move,
+                        'price_at_prediction': current_price,
+                        'prediction_date': today,
+                        'was_in_debate_zone': (ticker in debate_zone_tickers),
+                        'opposite_conviction': opposite_conviction,
+                        'market_regime': stock_data.get('market_regime'),
+                        'volatility_level': stock_data.get('volatility'),
+                    },
                 )
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
 
             # Record bear predictions
             for analysis in bear_analyses:
@@ -1056,34 +1086,35 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
                     continue
 
                 current_price = float(stock_data['current_price'])
+                predicted_move = self._parse_target_move(analysis.get('target_downside', ''))
 
-                # Parse predicted move (should be negative for bear)
-                target_str = analysis.get('target', '-0%')
-                try:
-                    predicted_move = float(target_str.replace('%', '').replace('+', ''))
-                except:
-                    predicted_move = 0.0
-
-                # Find opposing bull conviction
                 bull_analysis = next((b for b in bull_analyses if b.get('ticker') == ticker), None)
                 opposite_conviction = bull_analysis.get('conviction', 'LOW') if bull_analysis else 'LOW'
 
-                PredictionOutcome.objects.create(
+                _, created = PredictionOutcome.objects.update_or_create(
                     brief=brief_obj,
                     ticker=ticker,
                     prediction_type='BEAR',
-                    conviction_level=analysis.get('conviction', 'LOW'),
-                    predicted_move=predicted_move,
-                    price_at_prediction=current_price,
-                    prediction_date=today,
-                    was_in_debate_zone=(ticker in debate_zone_tickers),
-                    opposite_conviction=opposite_conviction,
-                    market_regime=stock_data.get('market_regime'),
-                    volatility_level=stock_data.get('volatility'),
+                    defaults={
+                        'conviction_level': analysis.get('conviction', 'LOW'),
+                        'predicted_move': predicted_move,
+                        'price_at_prediction': current_price,
+                        'prediction_date': today,
+                        'was_in_debate_zone': (ticker in debate_zone_tickers),
+                        'opposite_conviction': opposite_conviction,
+                        'market_regime': stock_data.get('market_regime'),
+                        'volatility_level': stock_data.get('volatility'),
+                    },
                 )
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
 
-            prediction_count = len(bull_analyses) + len(bear_analyses)
-            logger.info(f"📊 Recorded {prediction_count} predictions for learning loop tracking")
+            logger.info(
+                f"Predictions recorded: {created_count} created, {updated_count} updated "
+                f"(from {len(bull_analyses)} bull + {len(bear_analyses)} bear analyses)"
+            )
 
         except Exception as e:
             logger.error(f"Failed to record predictions for learning: {e}")
