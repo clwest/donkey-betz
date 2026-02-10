@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from django.conf import settings
 from django.utils import timezone
-from sklearn.metrics.pairwise import cosine_similarity
+# Session 985: sklearn loaded lazily to reduce Celery parent process memory
 
 from content.ai_providers import AIProviderManager
 from .models import CodeEmbedding, CodebaseSnapshot
@@ -761,6 +761,7 @@ class SemanticCodeSearchEngine:
             vec2 = np.array(embedding2).reshape(1, -1)
             
             # Calculate cosine similarity
+            from sklearn.metrics.pairwise import cosine_similarity
             similarity = cosine_similarity(vec1, vec2)[0][0]
             
             return float(similarity)

@@ -16,13 +16,18 @@ except ImportError:
     MLX_AVAILABLE = False
     logging.warning("MLX not available - falling back to standard frameworks")
 
-# Core ML Libraries
-import torch
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
-import joblib
+# Session 985: Heavy ML libraries loaded lazily to avoid ~800MB in Celery parent process
+# torch (~500MB), sklearn (~100MB), transformers (~200MB) now imported inside methods
+import joblib  # lightweight, ok at module level
 
-# HuggingFace Integration
-from transformers import pipeline
+def _detect_device() -> str:
+    """Detect best available device without loading torch at import time."""
+    try:
+        import torch
+        return "mps" if torch.backends.mps.is_available() else "cpu"
+    except ImportError:
+        return "cpu"
+
 
 @dataclass
 class MLConfig:
@@ -33,7 +38,11 @@ class MLConfig:
     max_memory_gb: float = 8.0  # Reserve 10GB for system
     inference_timeout: int = 5000  # 5 second timeout
     batch_size: int = 32
-    device: str = "mps" if torch.backends.mps.is_available() else "cpu"
+    device: str = ""  # Set in __post_init__
+
+    def __post_init__(self):
+        if not self.device:
+            self.device = _detect_device()
 
 @dataclass
 class PatternPrediction:
@@ -123,6 +132,7 @@ class MLEngine:
     def _create_default_model(self, model_name: str):
         """Create default model if none exists"""
         from sklearn.neural_network import MLPRegressor
+        from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
 
         if model_name == 'sports_crypto_lstm':
             # Simple LSTM-like model using scikit-learn for now
@@ -195,8 +205,10 @@ class MLEngine:
     def _initialize_nlp_models(self):
         """Initialize NLP models for sentiment analysis"""
         try:
+            import torch
+            from transformers import pipeline as hf_pipeline
             # Use DistilBERT for fast local sentiment analysis
-            self.sentiment_analyzer = pipeline(
+            self.sentiment_analyzer = hf_pipeline(
                 "sentiment-analysis",
                 model="distilbert-base-uncased-finetuned-sst-2-english",
                 device=0 if torch.backends.mps.is_available() else -1

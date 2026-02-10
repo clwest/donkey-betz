@@ -12526,7 +12526,7 @@ def evolve_agent_relationships():
     try:
         from core.models_unified_system import AgentRelationship
 
-        relationships = AgentRelationship.objects.all()
+        relationships = AgentRelationship.objects.all().iterator()
         evolved_count = 0
 
         for rel in relationships:
@@ -12755,7 +12755,7 @@ def check_level_milestones():
     try:
         from core.models_unified_system import AgentEvolution, LevelMilestone
 
-        evolutions = AgentEvolution.objects.all()
+        evolutions = AgentEvolution.objects.all().iterator()
         milestones_created = 0
 
         for evo in evolutions:
@@ -25701,7 +25701,7 @@ def reset_daily_respiratory_stats():
 
     try:
         count = 0
-        for status in RespiratoryStatus.objects.all():
+        for status in RespiratoryStatus.objects.all().iterator():
             status.reset_daily_stats()
             status.save()
             count += 1
