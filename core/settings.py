@@ -1523,6 +1523,56 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.cleanup_halted_experiments',
         'schedule': crontab(hour=3, minute=0),  # Daily at 3:00 AM
     },
+    # =========================================================================
+    # Session 987: Signal-to-Action Pipeline — 7 missing tasks
+    # Without these, spider data is collected but never processed, clustered,
+    # surfaced to the boardroom, or acted upon.
+    # =========================================================================
+    # Stage 2: Process raw spider data (sets is_processed=True)
+    # This is the critical bottleneck — everything downstream depends on it
+    'process-core-spider-data': {
+        'task': 'core.tasks.process_core_spider_data',
+        'schedule': crontab(minute='*/2'),  # Every 2 minutes (matches task docstring)
+    },
+    # Stage 3: Cluster processed spider data into SignalClusters
+    'aggregate-spider-signals': {
+        'task': 'aggregate_spider_signals',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+    },
+    # Stage 4: Convert AutoTopics into HiveMind conversations
+    'process-pending-auto-topics': {
+        'task': 'process_pending_auto_topics',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+    },
+    # Stage 5: Generate boardroom attention items from system events
+    'generate-human-attention-items': {
+        'task': 'core.tasks.generate_human_attention_items',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+    },
+    # Stage 5b: Create actionable items from spider findings
+    'process-spider-actions': {
+        'task': 'core.tasks.process_spider_actions',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+    },
+    # Stage 5c: Surface high-scoring opportunities
+    'process-high-scoring-opportunities': {
+        'task': 'core.tasks.process_high_scoring_opportunities',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes
+    },
+    # Stage 6: Progress initiative gates
+    'process-gate-progression': {
+        'task': 'core.tasks.process_gate_progression',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+    },
+    # =========================================================================
+    # Session 987: Blog Publishing Pipeline
+    # =========================================================================
+    # Evaluate unscored draft blogs through PublishGate (quality/novelty/structure)
+    'evaluate-unscored-blogs': {
+        'task': 'core.tasks.evaluate_unscored_blogs',
+        'schedule': crontab(hour='*/2', minute=10),  # Every 2 hours at :10
+        'kwargs': {'limit': 20},
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
