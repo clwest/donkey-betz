@@ -428,6 +428,8 @@ class UnifiedPAEntrypoint:
                 # Session 948: Special handling for user feedback - be honest about limitations
                 if intent == 'user_feedback':
                     content = await self._generate_honest_feedback_response(message, full_context, trace_id)
+                elif intent == 'capabilities':
+                    content = self._generate_capabilities_response(full_context.get('user_name', 'there'))
                 else:
                     content = await self._generate_direct_response(message, full_context, trace_id)
 
@@ -809,6 +811,15 @@ class UnifiedPAEntrypoint:
             'list feedback', 'feedback stats'
         ]):
             return ('feedback', 'feedback_tool')
+
+        # Session 987: Self-awareness — PA knows its own capabilities
+        if any(phrase in message_lower for phrase in [
+            'what can you do', 'what do you do', 'what are you capable',
+            'your capabilities', 'what tools', 'what areas',
+            'have access to', 'what can you access', 'help me with',
+            'your features', 'what do you have', 'what can i ask',
+        ]):
+            return ('capabilities', None)
 
         # Default: no tool, direct response
         return ('general', None)
@@ -2944,6 +2955,49 @@ The next session should review and address these items.
         except Exception as e:
             logger.warning(f"Could not log feedback to database: {e}")
             return False
+
+    def _generate_capabilities_response(self, user_name: str = 'there') -> str:
+        """Session 987: PA self-awareness — returns actual capabilities from real tool registry."""
+        return (
+            f"Here's what I can help you with, {user_name}:\n\n"
+            "**System Health & Monitoring**\n"
+            "Body vitals, system health checks, recent activity, error summaries, status snapshots\n"
+            "Try: \"how's the system?\", \"any errors?\", \"what's been happening?\"\n\n"
+            "**Boardroom & Decisions**\n"
+            "Attention queue, draft decisions, approve/reject items, triage\n"
+            "Try: \"what needs my attention?\", \"show decisions\"\n\n"
+            "**Initiatives & Projects**\n"
+            "Pipeline overview, stages, action items, audit/cleanup\n"
+            "Try: \"show initiatives\", \"active projects\", \"audit initiatives\"\n\n"
+            "**Content & Blogs**\n"
+            "Review, publish, archive, quality stats, read blog posts\n"
+            "Try: \"show blogs\", \"content stats\", \"publish-ready posts\"\n\n"
+            "**Spider Intelligence**\n"
+            "Recent spider data, filter by source or category, search findings\n"
+            "Try: \"what have spiders found?\", \"spider data on crypto\"\n\n"
+            "**Stock Intelligence**\n"
+            "Market briefs, alerts, predictions, SEC filings, accuracy stats\n"
+            "Try: \"stock overview\", \"market alerts\", \"SEC filings\"\n\n"
+            "**Opportunities**\n"
+            "Jobs, gigs, and income opportunities from the spider network\n"
+            "Try: \"any opportunities?\", \"show jobs\"\n\n"
+            "**Agent Execution**\n"
+            "Run any of 76 agents for research, content creation, analysis, audits\n"
+            "Try: \"create an image\", \"write a blog post\", \"run a security audit\"\n\n"
+            "**Reasoning & Deliberation**\n"
+            "Multi-agent debates, surgical moves verification, thinking sessions\n"
+            "Try: \"deliberation status\", \"trigger a thinking session\"\n\n"
+            "**Learning & Feedback**\n"
+            "System learning patterns, feedback queue, experiment results\n"
+            "Try: \"what has the system learned?\", \"show feedback\"\n\n"
+            "**Gates & Pilots**\n"
+            "Readiness gates, pilot experiments, prediction stats\n"
+            "Try: \"show gates\", \"running pilots\", \"prediction stats\"\n\n"
+            "**What I can't do:** Read raw database tables not exposed via tools, "
+            "execute shell commands, access external services not wired in (email, drives), "
+            "or see API keys/credentials.\n\n"
+            "Just ask naturally — I'll route to the right tool."
+        )
 
     async def _generate_honest_feedback_response(
         self,
