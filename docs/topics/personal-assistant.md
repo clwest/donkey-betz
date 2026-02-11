@@ -32,10 +32,10 @@ Two files handle everything:
 | 16 | content_writing | content_writer_agent | write, draft, compose |
 | 17 | research | web_search | search, find, research, trending |
 | 18 | agent_execution | universal_agent_tool | run agent, execute agent |
-| 19 | initiatives | initiative_tool | initiative, project, pipeline |
+| 19 | initiatives | initiative_tool | initiative, project, pipeline (runs BEFORE boardroom) |
 | 20 | stock_intelligence | stock_intelligence_tool | stock, market brief, SEC filing |
 | 21 | spider_data | spider_data_tool | spider, crawled, news feed |
-| 22 | execution_history | execution_history_tool | agent history, agent failures |
+| 22 | execution_history | execution_history_tool | agent history, agents been doing, agent conversations, deliberations |
 | 23 | learning_patterns | learning_patterns_tool | learning, patterns |
 | 24 | feedback | feedback_tool | feedback queue, bug reports |
 | 25 | revenue | revenue_tracker_tool | revenue, earnings, financial |
